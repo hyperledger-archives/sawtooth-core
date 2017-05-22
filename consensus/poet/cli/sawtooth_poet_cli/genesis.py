@@ -36,7 +36,7 @@ import sawtooth_validator.protobuf.batch_pb2 as batch_pb
 
 SIMUATOR_MODULE = \
     'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
-SGX_MODULE = 'sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave'
+SGX_MODULE = 'poet_enclave_sgx.poet_enclave'
 
 VR_NAMESPACE = sha256('validator_registry'.encode()).hexdigest()[0:6]
 VALIDATOR_MAP_ADDRESS = \

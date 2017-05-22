@@ -251,10 +251,8 @@ class ValidatorRegistryTransactionHandler(object):
             raise ValueError('Evidence payload does not include PSE manifest')
 
         expected_pse_manifest_hash = \
-            base64.b64encode(
-                hashlib.sha256(
-                    pse_manifest.encode()).hexdigest().encode()).decode()
-
+            hashlib.sha256(
+                base64.b64decode(pse_manifest.encode())).hexdigest()
         if pse_manifest_hash.upper() != expected_pse_manifest_hash.upper():
             raise \
                 ValueError(

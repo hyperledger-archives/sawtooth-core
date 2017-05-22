@@ -179,7 +179,8 @@ class _PoetEnclaveSimulator(object):
                 'poet_private_key': cls._poet_private_key
             }
             sealed_signup_data = \
-                base64.b64encode(bytes(dict2json(signup_data).encode()))
+                base64.b64encode(
+                    dict2json(signup_data).encode()).decode('utf-8')
 
             # Build up a fake SGX quote containing:
             # 1. The basename
@@ -226,9 +227,7 @@ class _PoetEnclaveSimulator(object):
                     base64.b64encode(sgx_quote.serialize_to_bytes()).decode(),
                 'pseManifestStatus': 'OK',
                 'pseManifestHash':
-                    base64.b64encode(
-                        hashlib.sha256(
-                            pse_manifest).hexdigest().encode()).decode(),
+                    hashlib.sha256(base64.b64decode(pse_manifest)).hexdigest(),
                 'nonce': nonce,
                 'timestamp': timestamp
             }
@@ -283,7 +282,7 @@ class _PoetEnclaveSimulator(object):
         # we can convert back to a dictionary we can use to get the
         # data we need
         signup_data = \
-            json2dict(base64.b64decode(sealed_signup_data).decode())
+            json2dict(base64.b64decode(sealed_signup_data.encode()).decode())
 
         with cls._lock:
             cls._poet_public_key = str(signup_data.get('poet_public_key'))

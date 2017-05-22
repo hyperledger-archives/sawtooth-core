@@ -190,9 +190,7 @@ class ValidatorRegistryMessageFactory(object):
                 base64.b64encode(sgx_quote.serialize_to_bytes()).decode()),
             ('pseManifestStatus', 'OK'),
             ('pseManifestHash',
-                base64.b64encode(
-                    hashlib.sha256(
-                        pse_manifest).hexdigest().encode()).decode()),
+                hashlib.sha256(base64.b64decode(pse_manifest)).hexdigest()),
             ('nonce', nonce),
             ('timestamp', timestamp)
         ])
@@ -235,9 +233,9 @@ class ValidatorRegistryMessageFactory(object):
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
-            transaction_id="a48b383fe5c577471640f49e1e5341a9ed40a992125207e7c5"
-                           "dbecb21d6f5cc1002726c7ab6ab6e5bb1d13c4b2b65004156f"
-                           "6afaa573ab7aa3a0c41ed5c74b8f"
+            transaction_id="0103c991863cae73630fe0a9b8988ad35840a3994ad010cd4c"
+                           "60f17ca70b2054115bd5bdb0233f745826a61db0d83a32365f"
+                           "e4026b39a731b0e457a5f09be194"
         ).SerializeToString()
 
         address = self._key_to_address(self.public_key)
@@ -250,9 +248,9 @@ class ValidatorRegistryMessageFactory(object):
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
-            transaction_id="a48b383fe5c577471640f49e1e5341a9ed40a992125207e7c5"
-                           "dbecb21d6f5cc1002726c7ab6ab6e5bb1d13c4b2b65004156f"
-                           "6afaa573ab7aa3a0c41ed5c74b8f"
+            transaction_id="0103c991863cae73630fe0a9b8988ad35840a3994ad010cd4c"
+                           "60f17ca70b2054115bd5bdb0233f745826a61db0d83a32365f"
+                           "e4026b39a731b0e457a5f09be194"
         ).SerializeToString()
 
         address = self._key_to_address(self.public_key)

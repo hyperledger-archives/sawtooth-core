@@ -89,7 +89,7 @@ class TestPoetKeyStateStore(unittest.TestCase):
         mock_lmdb.return_value = {
             'ppk_1':
                 poet_key_state_store.PoetKeyState(
-                    sealed_signup_data=base64.b64encode(b'sealed_1'),
+                    sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
                     has_been_refreshed=False)
         }
 
@@ -109,7 +109,7 @@ class TestPoetKeyStateStore(unittest.TestCase):
         mock_lmdb.return_value = {
             'ppk_1':
                 poet_key_state_store.PoetKeyState(
-                    sealed_signup_data=base64.b64encode(b'sealed_1'),
+                    sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
                     has_been_refreshed=False)
         }
 
@@ -133,7 +133,7 @@ class TestPoetKeyStateStore(unittest.TestCase):
         mock_lmdb.return_value = {
             'ppk_1':
                 poet_key_state_store.PoetKeyState(
-                    sealed_signup_data=base64.b64encode(b'sealed_1'),
+                    sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
                     has_been_refreshed=False)
         }
 
@@ -183,12 +183,12 @@ class TestPoetKeyStateStore(unittest.TestCase):
         # Set some values and verify that the length reflects it
         store['ppk_1'] = \
             poet_key_state_store.PoetKeyState(
-                sealed_signup_data=base64.b64encode(b'sealed_1'),
+                sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
                 has_been_refreshed=False)
         self.assertEqual(len(store), 1)
         store['ppk_2'] =  \
             poet_key_state_store.PoetKeyState(
-                sealed_signup_data=base64.b64encode(b'sealed_2'),
+                sealed_signup_data=base64.b64encode(b'sealed_2').decode(),
                 has_been_refreshed=False)
         self.assertEqual(len(store), 2)
 
@@ -219,11 +219,11 @@ class TestPoetKeyStateStore(unittest.TestCase):
         # Set some values, do some deletes and verify store state is valid
         store['ppk_1'] = \
             poet_key_state_store.PoetKeyState(
-                sealed_signup_data=base64.b64encode(b'sealed_1'),
+                sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
                 has_been_refreshed=False)
         store['ppk_2'] =  \
             poet_key_state_store.PoetKeyState(
-                sealed_signup_data=base64.b64encode(b'sealed_2'),
+                sealed_signup_data=base64.b64encode(b'sealed_2').decode(),
                 has_been_refreshed=False)
 
         del store['ppk_1']
@@ -257,12 +257,12 @@ class TestPoetKeyStateStore(unittest.TestCase):
         # Set some values and verify that store has keys
         store['ppk_1'] = \
             poet_key_state_store.PoetKeyState(
-                sealed_signup_data=base64.b64encode(b'sealed_1'),
+                sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
                 has_been_refreshed=False)
         self.assertTrue('ppk_1' in store)
         store['ppk_2'] =  \
             poet_key_state_store.PoetKeyState(
-                sealed_signup_data=base64.b64encode(b'sealed_2'),
+                sealed_signup_data=base64.b64encode(b'sealed_2').decode(),
                 has_been_refreshed=False)
         self.assertTrue('ppk_1' in store)
         self.assertTrue('ppk_2' in store)
@@ -302,7 +302,7 @@ class TestPoetKeyStateStore(unittest.TestCase):
             store[ppk] = \
                 poet_key_state_store.PoetKeyState(
                     sealed_signup_data=base64.b64encode(
-                        'sealed for {}'.format(ppk).encode()),
+                        'sealed for {}'.format(ppk).encode()).decode(),
                     has_been_refreshed=False)
 
         iterated_ppks = []
@@ -359,7 +359,7 @@ class TestPoetKeyStateStore(unittest.TestCase):
             store[ppk] = \
                 poet_key_state_store.PoetKeyState(
                     sealed_signup_data=base64.b64encode(
-                        'sealed for {}'.format(ppk).encode()),
+                        'sealed for {}'.format(ppk).encode()).decode(),
                     has_been_refreshed=False)
 
         self.assertEqual(len(store.poet_public_keys), len(ppks))
@@ -399,30 +399,30 @@ class TestPoetKeyStateStore(unittest.TestCase):
         # Store a key and verify that returns correct value
         store['ppk_1'] = \
             poet_key_state_store.PoetKeyState(
-                sealed_signup_data=base64.b64encode(b'sealed_1'),
+                sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
                 has_been_refreshed=False)
         poet_key_state = store['ppk_1']
         self.assertEqual(
             poet_key_state.sealed_signup_data,
-            base64.b64encode(b'sealed_1'))
+            base64.b64encode(b'sealed_1').decode())
         self.assertFalse(poet_key_state.has_been_refreshed)
 
         # Store another key and verify that returns correct value
         store['ppk_2'] =  \
             poet_key_state_store.PoetKeyState(
-                sealed_signup_data=base64.b64encode(b'sealed_2'),
+                sealed_signup_data=base64.b64encode(b'sealed_2').decode(),
                 has_been_refreshed=True)
 
         poet_key_state = store['ppk_2']
         self.assertEqual(
             poet_key_state.sealed_signup_data,
-            base64.b64encode(b'sealed_2'))
+            base64.b64encode(b'sealed_2').decode())
         self.assertTrue(poet_key_state.has_been_refreshed)
 
         poet_key_state = store['ppk_1']
         self.assertEqual(
             poet_key_state.sealed_signup_data,
-            base64.b64encode(b'sealed_1'))
+            base64.b64encode(b'sealed_1').decode())
         self.assertFalse(poet_key_state.has_been_refreshed)
 
         # Delete a key and verify that existing key still returns correct
@@ -431,7 +431,7 @@ class TestPoetKeyStateStore(unittest.TestCase):
         poet_key_state = store['ppk_2']
         self.assertEqual(
             poet_key_state.sealed_signup_data,
-            base64.b64encode(b'sealed_2'))
+            base64.b64encode(b'sealed_2').decode())
         self.assertTrue(poet_key_state.has_been_refreshed)
 
     @patch('sawtooth_poet.poet_consensus.poet_key_state_store.'
@@ -453,7 +453,7 @@ class TestPoetKeyStateStore(unittest.TestCase):
                 store['ppk_1'] = poet_key_state
 
         # Store invalid sealed_signup_data field
-        for sealed_signup_data in [[], {}, (), 1, 1.0, '', True]:
+        for sealed_signup_data in [[], {}, (), 1, 1.0, b'', True]:
             with self.assertRaises(ValueError):
                 store['ppk_1'] = \
                     poet_key_state_store.PoetKeyState(
@@ -464,11 +464,12 @@ class TestPoetKeyStateStore(unittest.TestCase):
         with self.assertRaises(ValueError):
             store['ppk_1'] = \
                 poet_key_state_store.PoetKeyState(
-                    sealed_signup_data=base64.b64encode(b'sealed_1')[1:],
+                    sealed_signup_data=base64.b64encode(
+                        b'sealed_1').decode()[1:],
                     has_been_refreshed=False)
 
         # Store non-bool has_been_refreshed field
-        sealed_signup_data = base64.b64encode(b'sealed')
+        sealed_signup_data = base64.b64encode(b'sealed').decode()
         for has_been_refreshed in [[], {}, (), 1, 1.0, '']:
             with self.assertRaises(ValueError):
                 store['ppk_1'] = \
@@ -494,7 +495,7 @@ class TestPoetKeyStateStore(unittest.TestCase):
                 _ = store['ppk']
 
         # Verify an invalid deserialization of sealed signup data
-        for sealed_signup_data in [[], {}, (), 1, 1.0, '', True]:
+        for sealed_signup_data in [[], {}, (), 1, 1.0, True]:
             mock_lmdb.return_value.__getitem__.return_value = \
                 (sealed_signup_data, False)
             with self.assertRaises(ValueError):
@@ -502,12 +503,12 @@ class TestPoetKeyStateStore(unittest.TestCase):
 
         # Verify corrupted base64 sealed signup data
         mock_lmdb.return_value.__getitem__.return_value = \
-            (base64.b64encode(b'sealed_1')[1:], False)
+            (base64.b64encode(b'sealed_1').decode()[1:], False)
         with self.assertRaises(ValueError):
             _ = store['ppk']
 
         # Verify an invalid deserialization of has been revoked
-        sealed_signup_data = base64.b64encode(b'sealed')
+        sealed_signup_data = base64.b64encode(b'sealed').decode()
         for has_been_refreshed in [[], {}, (), 1, 1.0, '']:
             mock_lmdb.return_value.__getitem__.return_value = \
                 (sealed_signup_data, has_been_refreshed)
