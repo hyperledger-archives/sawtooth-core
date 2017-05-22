@@ -29,10 +29,12 @@ class XoMessageFactory:
             family_version="1.0",
             namespace="",
             private=private,
-            public=public
-        )
+            public=public)
+
         self._factory.namespace = self._factory.sha512(
             "xo".encode("utf-8"))[0:6]
+
+        self.public_key = self._factory.get_public_key()
 
     def _game_to_address(self, game):
         return self._factory.namespace + \
@@ -92,6 +94,3 @@ class XoMessageFactory:
     def create_set_response(self, game):
         addresses = [self._game_to_address(game)]
         return self._factory.create_set_response(addresses)
-
-    def get_public_key(self):
-        return self._factory.get_public_key()
