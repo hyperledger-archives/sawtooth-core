@@ -25,15 +25,28 @@ LOGGER = logging.getLogger(__name__)
 
 
 # namespace
-def hash_name(name):
+def _hash_name(name):
     return hashlib.sha512(name.encode('utf-8')).hexdigest()
 
 FAMILY_NAME = 'xo'
-XO_NAMESPACE = hash_name(FAMILY_NAME)[:6]
+XO_NAMESPACE = _hash_name(FAMILY_NAME)[:6]
 
 
 def make_xo_address(name):
-    return XO_NAMESPACE + hash_name(name)
+    return XO_NAMESPACE + _hash_name(name)
+
+
+# encodings
+def decode_txn_payload(payload):
+    return payload.decode().split(',')
+
+
+def decode_state_data(state_data):
+    return state_data.decode().split(',')
+
+
+def encode_state_data(board, state, player_1, player_2, name):
+    return ','.join([board, state, player_1, player_2, name]).encode()
 
 
 class XoTransactionHandler:
@@ -56,150 +69,185 @@ class XoTransactionHandler:
     def apply(self, transaction, state_store):
 
         # 1. Deserialize the transaction and verify it is valid
-        header = TransactionHeader()
-        header.ParseFromString(transaction.header)
-
-        # The transaction signer is the player
-        player = header.signer_pubkey
-
-        try:
-            # The payload is csv utf-8 encoded string
-            name, action, space = transaction.payload.decode().split(",")
-        except ValueError:
-            raise InvalidTransaction("Invalid payload serialization")
-
-        if name == "":
-            raise InvalidTransaction("Name is required")
-
-        if action == "":
-            raise InvalidTransaction("Action is required")
-
-        elif action == "take":
-            try:
-                space = int(space)
-            except ValueError:
-                raise InvalidTransaction(
-                    "Space could not be converted as an integer."
-                )
-
-            if space < 1 or space > 9:
-                raise InvalidTransaction("Invalid space {}".format(space))
-
-        if action not in ("take", "create"):
-            raise InvalidTransaction("Invalid Action : '{}'".format(action))
+        signer, name, action, space = _unpack_transaction(transaction)
 
         # 2. Retrieve the game data from state storage
+        board, state, player_1, player_2, stored_name = \
+            _get_state_data(state_store, name)
 
-        # Use the namespace prefix + the has of the game name to create the
-        # storage address
-        game_address = make_xo_address(name)
-
-        # Get data from address
-        state_entries = state_store.get([game_address])
-
-        # state_store.get() returns a list. If no data has been stored yet
-        # at the given address, it will be empty.
-        if len(state_entries) != 0:
-            try:
-                board, state, player1, player2, stored_name = \
-                    state_entries[0].data.decode().split(",")
-            except ValueError:
-                raise InternalError("Failed to deserialize game data.")
-
-            # NOTE: Since the game data is stored in a Merkle tree, there is a
-            # small chance of collision. A more correct usage would be to store
-            # a dictionary of games so that multiple games could be store at
-            # the same location. See the python intkey handler for an example
-            # of this.
-            if stored_name != name:
-                raise InternalError("Hash collision")
-
-        else:
-            board = state = player1 = player2 = None
+        # NOTE: Since the game data is stored in a Merkle tree, there is a
+        # small chance of collision. A more correct usage would be to store
+        # a dictionary of games so that multiple games could be store at
+        # the same location. See the python intkey handler for an example
+        # of this.
+        if stored_name and stored_name != name:
+            raise InternalError('Hash collision')
 
         # 3. Validate the game data
-        if action == "create" and board is not None:
-            raise InvalidTransaction("Invalid Action: Game already exists.")
-
-        elif action == "take":
-            if board is None:
-                raise InvalidTransaction(
-                    "Invalid Action: Take requires an existing game."
-                )
-            else:
-                if state in ("P1-WIN", "P2-WIN", "TIE"):
-                    raise InvalidTransaction(
-                        "Invalid Action: Game has ended."
-                    )
-                elif state not in ("P1-NEXT", "P2-NEXT"):
-                    raise InternalError(
-                        "Game has reached an invalid state: {}".format(state))
+        _validate_state_data(action, board, state)
 
         # 4. Apply the transaction
-        if action == "create":
-            board = "---------"
-            state = "P1-NEXT"
-            player1 = ""
-            player2 = ""
-
-        elif action == "take":
-            # Assign players if new game
-            if player1 == "":
-                player1 = player
-
-            elif player2 == "":
-                player2 = player
-
-            # Verify player identity and take space
-            lboard = list(board)
-
-            if lboard[space - 1] != '-':
-                raise InvalidTransaction(
-                    "Invalid Action: Space already taken."
-                )
-
-            if state == "P1-NEXT" and player == player1:
-                lboard[space - 1] = "X"
-                state = "P2-NEXT"
-
-            elif state == "P2-NEXT" and player == player2:
-                lboard[space - 1] = "O"
-                state = "P1-NEXT"
-
-            else:
-                raise InvalidTransaction(
-                    "Not this player's turn: {}".format(player[:6])
-                )
-            board = "".join(lboard)
-
-            # Update game state
-            if _is_win(board, "X"):
-                state = "P1-WIN"
-            elif _is_win(board, "O"):
-                state = "P2-WIN"
-            elif '-' not in board:
-                state = "TIE"
+        upd_board, upd_state, upd_player_1, upd_player_2 = _play_xo(
+            action, space, signer,
+            board, state, player_1, player_2)
 
         # 5. Log for tutorial usage
-        if action == "create":
-            _display("Player {} created a game.".format(player[:6]))
-
-        elif action == "take":
-            _display(
-                "Player {} takes space: {}\n\n".format(player[:6], space) +
-                _game_data_to_str(board, state, player1, player2, name)
-            )
+        _log_turn(
+            name, action, space, signer,
+            upd_board, upd_state,
+            upd_player_1, upd_player_2)
 
         # 6. Put the game data back in state storage
-        addresses = state_store.set([
-            StateEntry(
-                address=game_address,
-                data=",".join([board, state, player1, player2, name]).encode()
-            )
-        ])
+        _store_game_data(
+            state_store, name, upd_board,
+            upd_state, upd_player_1, upd_player_2)
 
-        if len(addresses) < 1:
-            raise InternalError("State Error")
+
+# transactions
+
+def _unpack_transaction(transaction):
+    header = TransactionHeader()
+    header.ParseFromString(transaction.header)
+    signer = header.signer_pubkey
+
+    try:
+        name, action, space = decode_txn_payload(transaction.payload)
+    except:
+        raise InvalidTransaction('Invalid payload serialization')
+
+    _validate_name(name)
+    _validate_action_and_space(action, space)
+
+    if action == 'take':
+        space = int(space)
+
+    return signer, name, action, space
+
+
+def _validate_name(name):
+    if not name:
+        raise InvalidTransaction('Name is required')
+
+
+def _validate_action_and_space(action, space):
+    if not action:
+        raise InvalidTransaction('Action is required')
+
+    if action not in ('create', 'take'):
+        raise InvalidTransaction('Invalid action')
+
+    # if action == 'create', ignore space
+
+    if action == 'take':
+        try:
+            assert int(space) in range(1, 10)
+        except (ValueError, AssertionError):
+            raise InvalidTransaction(
+                'Space must be an integer in {}'.format(range(1, 10)))
+
+
+# state
+
+def _get_state_data(state_store, name):
+    address = make_xo_address(name)
+
+    state_entries = state_store.get([address])
+
+    try:
+        state_data = state_entries[0].data
+        return decode_state_data(state_data)
+    except (IndexError, ValueError):
+        entry_len = 5
+        return [None for _ in range(entry_len)]
+    except:
+        raise InternalError('Failed to deserialize game data')
+
+
+def _validate_state_data(action, board, state):
+    if action == 'create':
+        if board is not None:
+            raise InvalidTransaction(
+                'Invalid action: Game already exists.')
+
+    elif action == 'take':
+        if board is None:
+            raise InvalidTransaction(
+                'Invalid action: Take requires an existing game.')
+
+        if any([mark not in ('X', 'O', '-') for mark in board]):
+            raise InternalError(
+                'Invalid board: {}'.format(board))
+
+        if state in ('P1-WIN', 'P2-WIN', 'TIE'):
+            raise InvalidTransaction(
+                'Invalid Action: Game has ended.')
+        elif state not in ('P1-NEXT', 'P2-NEXT', 'P1-WIN', 'P2-WIN', 'TIE'):
+            raise InternalError(
+                'Game has reached an invalid state: {}'.format(state))
+
+
+def _store_game_data(state_store, name, board, state, player_1, player_2):
+    addresses = state_store.set([
+        StateEntry(
+            address=make_xo_address(name),
+            data=encode_state_data(board, state, player_1, player_2, name),
+        )
+    ])
+
+    if not addresses:
+        raise InternalError('State error')
+
+
+# game logic
+
+def _play_xo(action, space, signer, board, state, player_1, player_2):
+    if action == 'create':
+        board = '---------'
+        state = 'P1-NEXT'
+        player_1 = ''
+        player_2 = ''
+
+        return board, state, player_1, player_2
+
+    elif action == 'take':
+        # Assign players if new game
+        if player_1 == '':
+            player_1 = signer
+
+        elif player_2 == '':
+            player_2 = signer
+
+        # Verify player identity and take space
+        lboard = list(board)
+
+        if lboard[space - 1] != '-':
+            raise InvalidTransaction(
+                'Invalid Action: Space already taken.'
+            )
+
+        if state == 'P1-NEXT' and signer == player_1:
+            lboard[space - 1] = 'X'
+            state = 'P2-NEXT'
+
+        elif state == 'P2-NEXT' and signer == player_2:
+            lboard[space - 1] = 'O'
+            state = 'P1-NEXT'
+
+        else:
+            raise InvalidTransaction(
+                "Not this player's turn: {}".format(signer[:6])
+            )
+        board = ''.join(lboard)
+
+        # Update game state
+        if _is_win(board, 'X'):
+            state = 'P1-WIN'
+        elif _is_win(board, 'O'):
+            state = 'P2-WIN'
+        elif '-' not in board:
+            state = 'TIE'
+
+        return board, state, player_1, player_2
 
 
 def _is_win(board, letter):
@@ -215,33 +263,46 @@ def _is_win(board, letter):
     return False
 
 
-def _game_data_to_str(board, state, player1, player2, name):
-    board = list(board.replace("-", " "))
-    out = ""
-    out += "GAME: {}\n".format(name)
-    out += "PLAYER 1: {}\n".format(player1[:6])
-    out += "PLAYER 2: {}\n".format(player2[:6])
-    out += "STATE: {}\n".format(state)
-    out += "\n"
-    out += "{} | {} | {}\n".format(board[0], board[1], board[2])
-    out += "---|---|---\n"
-    out += "{} | {} | {}\n".format(board[3], board[4], board[5])
-    out += "---|---|---\n"
-    out += "{} | {} | {}".format(board[6], board[7], board[8])
+# display
+
+def _log_turn(name, action, space, signer, board, state, player_1, player_2):
+    if action == 'create':
+        _display('Player {} created a game.'.format(signer[:6]))
+
+    elif action == 'take':
+        _display(
+            'Player {} takes space: {}\n\n'.format(signer[:6], space) +
+            _game_data_to_str(board, state, player_1, player_2, name)
+        )
+
+
+def _game_data_to_str(board, state, player_1, player_2, name):
+    board = list(board.replace('-', ' '))
+    out = ''
+    out += 'GAME: {}\n'.format(name)
+    out += 'PLAYER 1: {}\n'.format(player_1[:6])
+    out += 'PLAYER 2: {}\n'.format(player_2[:6])
+    out += 'STATE: {}\n'.format(state)
+    out += '\n'
+    out += '{} | {} | {}\n'.format(board[0], board[1], board[2])
+    out += '---|---|---\n'
+    out += '{} | {} | {}\n'.format(board[3], board[4], board[5])
+    out += '---|---|---\n'
+    out += '{} | {} | {}'.format(board[6], board[7], board[8])
     return out
 
 
 def _display(msg):
-    n = msg.count("\n")
+    n = msg.count('\n')
 
     if n > 0:
-        msg = msg.split("\n")
+        msg = msg.split('\n')
         length = max(len(line) for line in msg)
     else:
         length = len(msg)
         msg = [msg]
 
-    LOGGER.debug("+" + (length + 2) * "-" + "+")
+    LOGGER.debug('+' + (length + 2) * '-' + '+')
     for line in msg:
-        LOGGER.debug("+ " + line.center(length) + " +")
-    LOGGER.debug("+" + (length + 2) * "-" + "+")
+        LOGGER.debug('+ ' + line.center(length) + ' +')
+    LOGGER.debug('+' + (length + 2) * '-' + '+')
