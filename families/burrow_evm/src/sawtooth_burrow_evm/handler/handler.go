@@ -3,10 +3,13 @@ package handler
 import (
 	"crypto/sha512"
 	"encoding/hex"
+	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
 	"strings"
 )
+
+var logger *logging.Logger = logging.Get()
 
 type BurrowEVMPayload struct {
 	Data []byte
