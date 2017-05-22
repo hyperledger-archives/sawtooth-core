@@ -259,7 +259,7 @@ class XOHandler extends TransactionHandler {
           throw new InvalidTransaction(`Action must be create or take not ${update.action}`)
         }
 
-        let address = XO_NAMESPACE + _hash(update.name)
+        let address = XO_NAMESPACE + _hash(update.name).slice(-64)
 
         return state.get([address]).then(handlerFn(state, address, update, player))
           .then((addresses) => {

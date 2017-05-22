@@ -33,7 +33,7 @@ XO_NAMESPACE = _hash_name(FAMILY_NAME)[:6]
 
 
 def make_xo_address(name):
-    return XO_NAMESPACE + _hash_name(name)
+    return XO_NAMESPACE + _hash_name(name)[-64:]
 
 
 # encodings
