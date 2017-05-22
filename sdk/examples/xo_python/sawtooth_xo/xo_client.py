@@ -30,6 +30,11 @@ from sawtooth_sdk.protobuf.batch_pb2 import Batch
 from sawtooth_xo.xo_exceptions import XoException
 
 
+# encodings
+def encode_txn_payload(action, name, space):
+    return ','.join([action, name, space]).encode()
+
+
 def _sha512(data):
     return hashlib.sha512(data).hexdigest()
 
@@ -49,10 +54,10 @@ class XoClient:
         self._public_key = signing.generate_pubkey(self._private_key)
 
     def create(self, name):
-        return self._send_xo_txn(name, "create")
+        return self._send_xo_txn("create", name)
 
     def take(self, name, space):
-        return self._send_xo_txn(name, "take", space)
+        return self._send_xo_txn("take", name, space)
 
     def list(self):
         xo_prefix = self._get_prefix()
@@ -110,10 +115,10 @@ class XoClient:
 
         return result.text
 
-    def _send_xo_txn(self, name, action, space=""):
+    def _send_xo_txn(self, action, name, space=""):
 
         # Serialization is just a delimited utf-8 encoded string
-        payload = ",".join([name, action, str(space)]).encode()
+        payload = encode_txn_payload(action, name, str(space))
 
         # Construct the address
         address = self._get_address(name)

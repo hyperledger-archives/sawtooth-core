@@ -111,7 +111,7 @@ def _unpack_transaction(transaction):
     signer = header.signer_pubkey
 
     try:
-        name, action, space = decode_txn_payload(transaction.payload)
+        action, name, space = decode_txn_payload(transaction.payload)
     except:
         raise InvalidTransaction('Invalid payload serialization')
 

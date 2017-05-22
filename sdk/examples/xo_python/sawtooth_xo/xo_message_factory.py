@@ -16,6 +16,11 @@
 from sawtooth_processor_test.message_factory import MessageFactory
 
 
+# encodings
+def encode_txn_payload(action, name, space):
+    return ','.join([action, name, str(space)]).encode()
+
+
 class XoMessageFactory:
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
@@ -39,10 +44,8 @@ class XoMessageFactory:
     def create_tp_response(self, status):
         return self._factory.create_tp_response(status)
 
-    def _create_txn(self, txn_function, game, action, space=None):
-        payload = ",".join([
-            str(game), str(action), str(space)
-        ]).encode()
+    def _create_txn(self, txn_function, action, game, space=None):
+        payload = encode_txn_payload(action, game, space)
 
         addresses = [self._game_to_address(game)]
 
@@ -50,11 +53,11 @@ class XoMessageFactory:
 
     def create_tp_process_request(self, action, game, space=None):
         txn_function = self._factory.create_tp_process_request
-        return self._create_txn(txn_function, game, action, space)
+        return self._create_txn(txn_function, action, game, space)
 
     def create_transaction(self, game, action, space=None):
         txn_function = self._factory.create_transaction
-        return self._create_txn(txn_function, game, action, space)
+        return self._create_txn(txn_function, action, game, space)
 
     def create_get_request(self, game):
         addresses = [self._game_to_address(game)]

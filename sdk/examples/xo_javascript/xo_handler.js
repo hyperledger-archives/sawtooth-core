@@ -33,9 +33,10 @@ const _decodeRequest = (payload) =>
   new Promise((resolve, reject) => {
     payload = payload.toString().split(",")
     if (payload.length == 3){
-      resolve({name: payload[0],
-              action: payload[1],
-              space: payload[2]});
+      resolve({
+        action: payload[0],
+        name: payload[1],
+        space: payload[2]});
     }
     else {
       let reason = new InvalidTransaction("Invalid payload serialization")
