@@ -21,7 +21,7 @@ from sawtooth_cli.exceptions import CliException
 
 
 def add_state_parser(subparsers, parent_parser):
-    """Adds arguments parsers for the batch list and batch show commands
+    """Adds arguments parsers for the state list and state show commands
 
         Args:
             subparsers: Add parsers to this subparser object
