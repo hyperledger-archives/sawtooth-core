@@ -500,6 +500,191 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_data_list(response, 3)
         self.assert_leaves_match(leaves, response['data'])
 
+    @unittest_run_loop
+    async def test_state_list_sorted(self):
+        """Verifies GET /state can send proper sort controls.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three leaves with addresses/data of:
+                * 'a': b'3'
+                * 'b': b'5'
+                * 'c': b'7'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - sort controls with a key of 'address'
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - a link property ending in '/state?head=2&sort=address'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - three leaves that match those in Protobuf response
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        leaves = Mocks.make_leaves(a=b'3', b=b'5', c=b'7')
+        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+
+        response = await self.get_assert_200('/state?sort=address')
+        page_controls = Mocks.make_paging_controls()
+        sorting = Mocks.make_sort_controls('address')
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/state?head=2&sort=address')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_leaves_match(leaves, response['data'])
+
+    @unittest_run_loop
+    async def test_batch_list_with_bad_sort(self):
+        """Verifies a GET /state with a bad sort breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INVALID_PAGING
+
+        It should send back a JSON response with:
+            - a response status of 400
+            - an error property with a code of 57
+        """
+        self.stream.preset_response(self.status.INVALID_SORT)
+        response = await self.get_assert_status('/state?sort=bad', 400)
+
+        self.assert_has_valid_error(response, 57)
+
+    @unittest_run_loop
+    async def test_state_list_sorted_in_reverse(self):
+        """Verifies a GET /state can send proper sort parameters.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three leaves with addresses/data of:
+                * 'c': b'7'
+                * 'b': b'5'
+                * 'a': b'3'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - sort controls with a key of 'address' that is reversed
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - a link property ending in '/state?head=2&sort=-address'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - three leaves that match those in Protobuf response
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        leaves = Mocks.make_leaves(c=b'7', b=b'5', a=b'3')
+        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+
+        response = await self.get_assert_200('/state?sort=-address')
+        page_controls = Mocks.make_paging_controls()
+        sorting = Mocks.make_sort_controls('address', reverse=True)
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/state?head=2&sort=-address')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_leaves_match(leaves, response['data'])
+
+    @unittest_run_loop
+    async def test_state_list_sorted_by_length(self):
+        """Verifies a GET /state can send proper sort parameters.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three leaves with addresses/data of:
+                * 'c': b'7'
+                * 'b': b'45'
+                * 'a': b'123'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - sort controls with a key of 'value' sorted by length
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - a link property ending in '/state?head=2&sort=value.length'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - three leaves that match those in Protobuf response
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        leaves = Mocks.make_leaves(c=b'7', b=b'45', a=b'123')
+        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+
+        response = await self.get_assert_200('/state?sort=value.length')
+        page_controls = Mocks.make_paging_controls()
+        sorting = Mocks.make_sort_controls('value', compare_length=True)
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response, '/state?head=2&sort=value.length')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_leaves_match(leaves, response['data'])
+
+    @unittest_run_loop
+    async def test_state_list_sorted_by_many_keys(self):
+        """Verifies a GET /state can send proper sort parameters.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three leaves with addresses/data of:
+                * 'c': b'7'
+                * 'b': b'5'
+                * 'a': b'3'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - multiple sort controls with:
+                * a key of 'address' that is reversed
+                * a key of 'value' that is sorted by length
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - link with '/state?head=2&sort=-address,value.length'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - three leaves that match those in Protobuf response
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        leaves = Mocks.make_leaves(c=b'7', b=b'5', a=b'3')
+        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+
+        response = await self.get_assert_200(
+            '/state?sort=-address,value.length')
+        page_controls = Mocks.make_paging_controls()
+        sorting = (Mocks.make_sort_controls('address', reverse=True) +
+                   Mocks.make_sort_controls('value', compare_length=True))
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response,
+            '/state?head=2&sort=-address,value.length')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_leaves_match(leaves, response['data'])
+
 
 class StateGetTests(BaseApiTest):
 
