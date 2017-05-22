@@ -146,6 +146,10 @@ Error Codes and Descriptions
      - Invalid Paging Query
      - The validator rejected the paging request submitted. One or more of the
        'min', 'max', or 'count' query parameters were invalid or out of range.
+   * - 57
+     - Invalid Sort Query
+     - The validator rejected the sort request submitted. Most likely one of
+       the keys specified was not found in the resources sorted.
    * - 62
      - Invalid State Address
      - The state address submitted was invalid. Returned when attempting to

@@ -189,6 +189,14 @@ class PagingInvalid(_ApiError):
                "out of range.")
 
 
+class SortInvalid(_ApiError):
+    api_code = 57
+    status_code = 400
+    title = 'Invalid Sort Query'
+    message = ("The sort request failed as written. Some of the keys "
+               "specified were not valid.")
+
+
 class InvalidStateAddress(_ApiError):
     api_code = 62
     status_code = 400
