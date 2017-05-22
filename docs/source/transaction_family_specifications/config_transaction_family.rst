@@ -1,5 +1,5 @@
 ***************************************
-Config Transaction Family Specification 
+Config Transaction Family Specification
 ***************************************
 
 Overview
@@ -40,10 +40,10 @@ State
 =====
 
 This section describes in detail how config settings are stored and addressed using
-the config transaction family. 
+the config transaction family.
 
 The configuration data consists of setting/value pairs. A setting is the name
-for the item of configuration data. The value is the data in the form of a string. 
+for the item of configuration data. The value is the data in the form of a string.
 
 Settings
 --------
@@ -71,7 +71,7 @@ The config transaction family uses the following settings for its own configurat
 +------------------------------------------+-------------------------------------------------------------+
 
 .. note::
-	*sawtooth.config.vote.proposals* is a base64 encoded string of the 
+	*sawtooth.config.vote.proposals* is a base64 encoded string of the
 	protobuf message *ConfigCandidates*. This setting cannot be modified
 	by a proposal or a vote.
 
@@ -96,7 +96,7 @@ The following protocol buffers definition defines setting entries:
 	    repeated Entry entries = 1;
 	}
 
-sawtooth.config.vote.proposals 
+sawtooth.config.vote.proposals
 ------------------------------
 
 The setting 'sawtooth.config.vote.proposals' is stored as defined by the
@@ -247,7 +247,7 @@ Dependencies
 None.
 
 
-Family 
+Family
 ------
 
 - family_name: "sawtooth_config"
