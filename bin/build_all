@@ -220,6 +220,7 @@ then
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_intkey_go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_burrow_evm
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_xo_go
         docker_run sawtooth-dev-go
     }
 
@@ -259,10 +260,13 @@ then
         rm -rf $build_dir
         mkdir -p $build_dir
         cp $top_dir/docker/sawtooth-int-tp_intkey_go $build_dir
+        cp $top_dir/docker/sawtooth-int-tp_xo_go $build_dir
         cp $top_dir/sdk/examples/intkey_go/bin/tp_intkey_go \
             $build_dir
         cp $top_dir/docker/sawtooth-int-tp_burrow_evm $build_dir
         cp $top_dir/families/burrow_evm/bin/tp_burrow_evm \
+            $build_dir
+        cp $top_dir/sdk/examples/xo_go/bin/tp_xo_go \
             $build_dir
         ls $build_dir
 
@@ -270,6 +274,8 @@ then
             sawtooth-tp_intkey_go
         docker_build $build_dir/sawtooth-int-tp_burrow_evm $build_dir/ \
             sawtooth-tp_burrow_evm
+        docker_build $build_dir/sawtooth-int-tp_xo_go $build_dir/ \
+            sawtooth-tp_xo_go
     }
 
     build_java() {

@@ -18,7 +18,9 @@ PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/simulator
 PYTHONPATH=$PYTHONPATH:/project/sawtooth-core/consensus/poet/simulator/tests
 export PYTHONPATH
 
-GOPATH=/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go
+GOPATH=/project/sawtooth-core/sdk/go
+GOPATH=$GOPATH:/project/sawtooth-core/sdk/examples/intkey_go
+GOPATH=$GOPATH:/project/sawtooth-core/sdk/examples/xo_go
 GOBIN=/project/sawtooth-core/sdk/go/bin
 export GOPATH
 
