@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+cd $top_dir/sdk/examples/xo_java
+java -cp target/xo_java-1.0-SNAPSHOT.jar sawtooth.examples.xo.XoTransactionProcessor $*

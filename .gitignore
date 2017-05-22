@@ -56,6 +56,8 @@
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
 /sdk/examples/intkey_java/target/
 /sdk/examples/noop_python/**/__pycache__/
+/sdk/examples/xo_java/dependency-reduced-pom.xml
+/sdk/examples/xo_java/target/
 /sdk/java/target/
 /sdk/go/src/sawtooth_sdk/protobuf/
 /sdk/go/src/github.com/

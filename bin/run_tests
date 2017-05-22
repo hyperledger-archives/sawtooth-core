@@ -263,6 +263,10 @@ test_java_sdk() {
     copy_coverage .coverage.java_sdk
     run_docker_test intkey-java-smoke -s integration_test
     copy_coverage .coverage.intkey-java-smoke
+    run_docker_test ./sdk/examples/xo_python/tests/tp-xo-java.yaml -s validator
+    copy_coverage .coverage.tp-xo-javas
+    run_docker_test xo-java-smoke -s integration_test
+    copy_coverage .coverage.xo-java-smoke
 }
 
 test_javascript_sdk() {
