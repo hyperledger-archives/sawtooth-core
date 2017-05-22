@@ -250,9 +250,12 @@ test_validator() {
 test_go_sdk() {
     run_docker_test ./sdk/go/tests/unit_go_client.yaml -s go_client
     run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-go.yaml -s validator
+    run_docker_test ./sdk/examples/xo_python/tests/tp-xo-go.yaml -s validator
     copy_coverage .coverage.go_sdk
     run_docker_test intkey-go-smoke -s integration_test
     copy_coverage .coverage.intkey-go-smoke
+    run_docker_test xo-go-smoke -s integration_test
+    copy_coverage .coverage.xo-go-smoke
 }
 
 test_java_sdk() {
