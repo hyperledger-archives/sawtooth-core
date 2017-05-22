@@ -54,7 +54,7 @@ Settings are namespaced using dots:
 Setting (Examples)                            Value
 ============================================= ============
 sawtooth.poet.target_wait_time                5
-sawtooth.validator.max_transactions_per_bloc  1000
+sawtooth.validator.max_transactions_per_block 1000
 ============================================= ============
 
 
@@ -171,7 +171,7 @@ buffers code:
 	:caption: File: sawtooth-core/families/config/protos/config.proto
 
 	// Configuration Setting Payload
-	// - Contains either a propsal or a vote.
+	// - Contains either a proposal or a vote.
 	message ConfigPayload {
 	    // The action indicates data is contained within this payload
 	    enum Action {
@@ -296,6 +296,6 @@ by the public key and vote pair.
 
 Validation of configuration settings is as follows:
 
-- *sawtooth.config.vote.approval_threshold* must be a postive integer and must
+- *sawtooth.config.vote.approval_threshold* must be a positive integer and must
   be between 1 and the number of authorized keys, inclusive
 - *sawtooth.config.vote.proposals* may not be set by a proposal
