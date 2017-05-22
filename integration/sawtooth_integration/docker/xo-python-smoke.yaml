@@ -86,4 +86,5 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing"
+        /project/sawtooth-core/signing:\
+        /project/sawtooth-core/cli"

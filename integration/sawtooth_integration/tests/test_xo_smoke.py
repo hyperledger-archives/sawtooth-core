@@ -13,52 +13,104 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import time
+import shlex
 import logging
 import unittest
-import traceback
-import time
 import subprocess
 
+from sawtooth_cli.rest_client import RestClient
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.DEBUG)
 
+LOGGER = logging.getLogger(__name__)
+
+
+REST_API = ''
 
 class TestXoSmoke(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest_api:8080'])
+        cls.client = XoClient('http://rest_api:8080')
+        wait_for_rest_apis([cls.client.url[len('http://'):]])
 
     def test_xo_smoke(self):
+        game_cmds = (
+            'xo init --url {}'.format(self.client.url[len('http://'):]),
+            'xo create nunzio',
+            'xo take nunzio 1',
+            'xo take nunzio 4',
+            'xo take nunzio 2',
+            'xo take nunzio 2',
+            'xo take nunzio 5',
+            'xo create tony',
+            'xo take tony 9',
+            'xo take tony 8',
+            'xo take nunzio 3',
+            'xo take nunzio 7',
+            'xo take tony 6',
+        )
 
-        cmds = [
-            ['xo', 'init', '--url', 'rest_api:8080'],
-            ['xo', 'create', 'game0'],
+        for cmd in game_cmds:
+            _send_xo_cmd(cmd)
+
+        # This onerous sleep should be removed once
+        # the xo --wait command is fixed.
+        time.sleep(30)
+
+        self.verify_game('nunzio', 'XXXOO----', 'P1-WIN')
+        self.verify_game('tony', '-----X-OX', 'P2-NEXT')
+
+        LOGGER.info(
+            "Verifying that XO CLI commands don't blow up (but nothing else)")
+
+        cli_cmds = (
+            'xo list',
+            'xo show nunzio',
+            'xo show tony',
+            'xo reset',
+        )
+
+        for cmd in cli_cmds:
+            _send_xo_cmd(cmd)
+
+    def verify_game(self, game_name, expected_board, expected_turn):
+        LOGGER.info('Verifying game: {}'.format(game_name))
+
+        board, turn, _, _, _ = self.client.get_game(game_name)
+
+        self.assertEqual(
+            board,
+            expected_board,
+            'Wrong board -- expected: {} -- actual: {}'.format(
+                expected_board, board))
+
+        self.assertEqual(
+            turn,
+            expected_turn,
+            'Wrong turn -- expected: {} -- actual: {}'.format(
+                expected_turn, turn))
+
+
+def _send_xo_cmd(cmd_str):
+    LOGGER.info('Sending {}'.format(cmd_str))
+
+    subprocess.run(
+        shlex.split(cmd_str),
+        check=True)
+
+
+class XoClient(RestClient):
+    def list_games(self):
+        xo_prefix = '5b7349'
+
+        return [
+            game.decode().split(',')
+            for game in self.get_data(xo_prefix)
         ]
 
-        for i in (0, 1, 2, 3, 4, 5, 6, 8, 7, 9, 10):
-            cmds += [['xo', 'take', 'game0', str(i)]]
-
-        cmds += [
-            ['xo', 'show', 'game0'],
-            ['xo', 'list'],
-            ['xo', 'reset'],
-        ]
-
-        for cmd in cmds:
-            self._run(cmd)
-
-    def _run(self, args):
-        try:
-            LOGGER.debug("Running %s", " ".join(args))
-            proc = subprocess.run(
-                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-            LOGGER.debug(proc.stdout.decode())
-        except subprocess.CalledProcessError as err:
-            LOGGER.debug(err)
-            LOGGER.debug(err.stderr.decode())
-            traceback.print_exc()
-            self.fail(self.__class__.__name__)
+    def get_game(self, name):
+        for game in self.list_games():
+            if game[4] == name:
+                return game
