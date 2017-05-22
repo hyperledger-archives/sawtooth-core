@@ -24,13 +24,22 @@ from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 LOGGER = logging.getLogger(__name__)
 
 
-class XoTransactionHandler:
-    def __init__(self, namespace_prefix):
-        self._namespace_prefix = namespace_prefix
+# namespace
+def hash_name(name):
+    return hashlib.sha512(name.encode('utf-8')).hexdigest()
 
+FAMILY_NAME = 'xo'
+XO_NAMESPACE = hash_name(FAMILY_NAME)[:6]
+
+
+def make_xo_address(name):
+    return XO_NAMESPACE + hash_name(name)
+
+
+class XoTransactionHandler:
     @property
     def family_name(self):
-        return 'xo'
+        return FAMILY_NAME
 
     @property
     def family_versions(self):
@@ -42,7 +51,7 @@ class XoTransactionHandler:
 
     @property
     def namespaces(self):
-        return [self._namespace_prefix]
+        return [XO_NAMESPACE]
 
     def apply(self, transaction, state_store):
 
@@ -83,8 +92,7 @@ class XoTransactionHandler:
 
         # Use the namespace prefix + the has of the game name to create the
         # storage address
-        game_address = self._namespace_prefix \
-            + hashlib.sha512(name.encode("utf-8")).hexdigest()
+        game_address = make_xo_address(name)
 
         # Get data from address
         state_entries = state_store.get([game_address])
