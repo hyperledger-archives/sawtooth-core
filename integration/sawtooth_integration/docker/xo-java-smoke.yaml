@@ -28,37 +28,15 @@ services:
     command: tp_settings -vv tcp://validator:4004
     stop_signal: SIGKILL
 
-  tp_xo_python:
-    image: sawtooth-tp_xo_python:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    depends_on:
-      - validator
-    command: tp_xo_python -vv tcp://validator:4004
-    stop_signal: SIGKILL
-
-  tp_xo_javascript:
-    image: sawtooth-tp_xo_javascript:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    depends_on:
-      - validator
-    command: tp_xo_javascript tcp://validator:4004
-    stop_signal: SIGKILL
-
   tp_xo_java:
     image: sawtooth-tp_xo_java:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
     depends_on:
       - validator
-    command: tp_xo_java tcp://validator:40000
+    command: tp_xo_java tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
@@ -85,7 +63,7 @@ services:
       - 4004
       - 8080
     depends_on:
-      - validator
+     - validator
     command: rest_api -v --connect tcp://validator:4004 --bind rest_api:8080
     stop_signal: SIGKILL
 

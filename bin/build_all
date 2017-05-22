@@ -227,6 +227,7 @@ then
     build_java() {
         docker_build docker/sawtooth-dev-java docker/ sawtooth-dev-java
         docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_intkey_java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_xo_java
         docker_run sawtooth-dev-java
     }
 
@@ -282,6 +283,7 @@ then
         warn "Installed java images not implemented, building mounted instead"
         docker_build docker/sawtooth-dev-java docker/ sawtooth-dev-java
         docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_intkey_java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_xo_java
         docker_run sawtooth-dev-java
     }
 
