@@ -256,7 +256,7 @@ class XOHandler extends TransactionHandler {
         } else if (update.action === 'take') {
           handlerFn = _handleTake
         } else {
-          throw new InvalidTransaction(`Action must be create or take not ${verb}`)
+          throw new InvalidTransaction(`Action must be create or take not ${update.action}`)
         }
 
         let address = XO_NAMESPACE + _hash(update.name)
