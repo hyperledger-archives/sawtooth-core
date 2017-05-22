@@ -15,7 +15,8 @@ go get -u \
     github.com/golang/protobuf/protoc-gen-go \
     github.com/pebbe/zmq4 \
     github.com/brianolson/cbor_go \
-    github.com/satori/go.uuid
+    github.com/satori/go.uuid \
+    github.com/btcsuite/btcd/btcec
 
 chown -R $VAGRANT_USER:$VAGRANT_USER $GOPATH
 chown -R $VAGRANT_USER:$VAGRANT_USER $GOPATH/bin

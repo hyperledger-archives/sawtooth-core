@@ -95,7 +95,8 @@ class RestClient(object):
         if code == 200:
             return json_result
         elif code == 404:
-            return None
+            raise CliException('There is no resource with the identifier "{}"'.
+                               format(path.split('/')[-1]))
         else:
             raise CliException("({}): {}".format(code, json_result))
 

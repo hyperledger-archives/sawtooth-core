@@ -1,5 +1,5 @@
 ***************************************
-Config Transaction Family Specification 
+Config Transaction Family Specification
 ***************************************
 
 Overview
@@ -40,10 +40,10 @@ State
 =====
 
 This section describes in detail how config settings are stored and addressed using
-the config transaction family. 
+the config transaction family.
 
 The configuration data consists of setting/value pairs. A setting is the name
-for the item of configuration data. The value is the data in the form of a string. 
+for the item of configuration data. The value is the data in the form of a string.
 
 Settings
 --------
@@ -54,7 +54,7 @@ Settings are namespaced using dots:
 Setting (Examples)                            Value
 ============================================= ============
 sawtooth.poet.target_wait_time                5
-sawtooth.validator.max_transactions_per_bloc  1000
+sawtooth.validator.max_transactions_per_block 1000
 ============================================= ============
 
 
@@ -71,7 +71,7 @@ The config transaction family uses the following settings for its own configurat
 +------------------------------------------+-------------------------------------------------------------+
 
 .. note::
-	*sawtooth.config.vote.proposals* is a base64 encoded string of the 
+	*sawtooth.config.vote.proposals* is a base64 encoded string of the
 	protobuf message *ConfigCandidates*. This setting cannot be modified
 	by a proposal or a vote.
 
@@ -96,7 +96,7 @@ The following protocol buffers definition defines setting entries:
 	    repeated Entry entries = 1;
 	}
 
-sawtooth.config.vote.proposals 
+sawtooth.config.vote.proposals
 ------------------------------
 
 The setting 'sawtooth.config.vote.proposals' is stored as defined by the
@@ -104,7 +104,7 @@ following protocol buffers definition. The value returned by this  setting is
 a base64 encoded *ConfigCandidates* message:
 
 .. code-block:: protobuf
-	:caption: File: sawtooth-core/core_transactions/config/protos/config.proto
+	:caption: File: sawtooth-core/families/config/protos/config.proto
 
 	// Contains the vote counts for a given proposal.
 	message ConfigCandidate {
@@ -137,16 +137,28 @@ a base64 encoded *ConfigCandidates* message:
 Addressing
 ----------
 
-When a setting is read or changed, it is accessed by addressing it using the following algorithm:
+When a setting is read or changed, it is accessed by addressing it using the
+following algorithm:
 
-Addresses for the config transaction family are set by adding a sha256 hash 
-of the setting name to the config namespace of '000000'. For example, the 
-setting *sawtooth.config.vote.proposals* could be set like this:
+Setting keys are broken into four parts, based on the dots in the string. For
+example, the address for the key `a.b.c` is computed based on `a`, `b`, `c` and
+the empty string.  A longer key, for example `a.b.c.d.e`, is still broken into
+four parts, but the remain pieces are in the last part: `a`, `b`, `c` and `d.e`.
+
+Each of these pieces has a short hash computed (the first 16 characters of its
+SHA256 hash in hex) and is joined into a single address, with the config
+namespace (`000000`) added at the beginning.
+
+For example, the setting *sawtooth.config.vote.proposals* could be set like
+this:
 
 .. code-block:: pycon
 
-	>>> '000000' + hashlib.sha256('sawtooth.config.vote.proposals').hexdigest()
-	'000000041706776ff37b8d2a75450422d8bdbe894f6988b012ae0a5ec751434eadc014'
+	>>> '000000' + hashlib.sha256('sawtooth'.encode()).hexdigest()[:16] + \
+            hashlib.sha256('config'.encode()).hexdigest()[:16] + \
+            hashlib.sha256('vote'.encode()).hexdigest()[:16] + \
+            hashlib.sha256('proposals'.encode()).hexdigest()[:16]
+        '000000a87cb5eafdcca6a8b79606fb3afea5bdab274474a6aa82c1c0cbf0fbcaf64c0b'
 
 
 Transaction Payload
@@ -156,10 +168,10 @@ Config transaction family payloads are defined by the following protocol
 buffers code:
 
 .. code-block:: protobuf
-	:caption: File: sawtooth-core/core_transactions/config/protos/config.proto
+	:caption: File: sawtooth-core/families/config/protos/config.proto
 
 	// Configuration Setting Payload
-	// - Contains either a propsal or a vote.
+	// - Contains either a proposal or a vote.
 	message ConfigPayload {
 	    // The action indicates data is contained within this payload
 	    enum Action {
@@ -235,7 +247,7 @@ Dependencies
 None.
 
 
-Family 
+Family
 ------
 
 - family_name: "sawtooth_config"
@@ -284,6 +296,6 @@ by the public key and vote pair.
 
 Validation of configuration settings is as follows:
 
-- *sawtooth.config.vote.approval_threshold* must be a postive integer and must
+- *sawtooth.config.vote.approval_threshold* must be a positive integer and must
   be between 1 and the number of authorized keys, inclusive
 - *sawtooth.config.vote.proposals* may not be set by a proposal

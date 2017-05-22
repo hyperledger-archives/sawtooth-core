@@ -212,7 +212,7 @@ class PostBatchTests(BaseApiTest):
             batches=batches,
             wait_for_commit=True,
             timeout=4)
-        self.assertEqual(200, request.status)
+        self.assertEqual(202, request.status)
 
         response = await request.json()
         self.assert_has_valid_link(response, '/batch_status?id=pending')

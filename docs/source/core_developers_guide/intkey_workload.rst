@@ -5,7 +5,7 @@ The Workload Generator
 Overview
 --------
 
-Sawtooth Lake has a workload generator that can be used to generate a
+Sawtooth has a workload generator that can be used to generate a
 synthetic transaction workload.  The workload generator attempts to generate
 transactions at a relatively steady rate across the network of validators that
 are specified. In its simplest form, the workload generator is started as

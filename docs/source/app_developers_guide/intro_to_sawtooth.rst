@@ -47,7 +47,7 @@ test networks. In this case, you need to create a genesis block when
 instantiating a new network.
 
 The genesis block contains some initial values that are necessary when a
-Sawtooth Lake distributed ledger is created and used for the first time.
+Sawtooth distributed ledger is created and used for the first time.
 
 To create the genesis block, log in to the development environment CLI and run
 the following command:
@@ -140,7 +140,7 @@ To stop the transaction processor, press CTRL-c.
 Multi-language support for transaction processors
 =================================================
 
-Sawtooth Lake includes additional transaction processors:
+Sawtooth includes additional transaction processors:
 
 * tp_config
 
@@ -227,7 +227,7 @@ is shown below:
 Config Transaction Family Usage
 ===============================
 
-Sawtooth Lake provides a :doc:`config transaction family
+Sawtooth provides a :doc:`config transaction family
 <../transaction_family_specifications/config_transaction_family>` that stores on-
 chain configuration settings, along with a config family transaction
 processor written in Python.
@@ -463,43 +463,6 @@ In Docker:
 
   DATA: "b'\xa1fcCTdcH\x192B'"
   HEAD: "0c4364c6d5181282a1c7653038ec9515cb0530c6bfcb46f16e79b77cb524491676638339e8ff8e3cc57155c6d920e6a4d1f53947a31dc02908bcf68a91315ad5"
-
-
-Using Sawtooth Cluster To Start A Network
-=========================================
-
-.. caution::
-
-  The sawtooth cluster command is not intended for use inside the Docker
-  environment.
-
-The `sawtooth cluster` command can be used to start a network of validators
-and transaction processors.
-
-The following command will start a network of two validators and two transaction processors:
-
-.. code-block:: console
-
-  $ sawtooth cluster start --count 2 -m subprocess -P tp_intkey_python
-
-You can view the running processes that are part of the network with the
-following command:
-
-.. code-block:: console
-
-  $ ps -ef | grep python
-  ubuntu   26036 22422 14 22:59 pts/0    00:00:02 python /project/sawtooth-core/bin/sawtooth cluster start --count 2 -m subprocess -P tp_intkey_python
-  ubuntu   26039 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/validator --component-endpoint 0.0.0.0:40000 --network-endpoint tcp://0.0.0.0:8800
-  ubuntu   26040 26036  8 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/tp_intkey_python 0.0.0.0:40000
-  ubuntu   26041 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/validator --component-endpoint 0.0.0.0:40001 --network-endpoint tcp://0.0.0.0:8801
-  ubuntu   26042 26036  7 23:00 pts/0    00:00:00 python3 /project/sawtooth-core/bin/tp_intkey_python 0.0.0.0:40001
-
-
-To submit sample transactions, follow the steps above under
-`Creating and submitting transactions`_.
-
-To stop a running network that was started using the subprocess management
-method, simply press CTRL-c.
 
 
 Next Steps

@@ -10,6 +10,9 @@
 - name: Benjamin Bollen
   user: benjaminbollen
 
+- name: Jordan Byrd
+  user: jabyrd3
+
 - name: Naissa Conde
   user: nconde
 
@@ -34,8 +37,14 @@
 - name: Jamie Jason
   user: jjason
 
+- name: Feihu Jiang
+  user: feihujiang
+
 - name: Boyd Johnson
   user: boydjohnson
+
+- name: Ry Jones
+  user: ryjones
 
 - name: Adam Ludvik
   user: aludvik
@@ -49,11 +58,20 @@
 - name: Cian Montgomery
   user: cintel
 
+- name: Dalmo Manoel Veras Neto
+  user: verasnt
+
 - name: Todd Ojala
   user: ojalatodd
+
+- name: Kelly Olson
+  user: ineffectualproperty
 
 - name: Darian Plumb
   user: dplumb94
 
 - name: Peter Schwarz
   user: peterschwarz
+
+- name: Mark Wagner
+  user: n1zyz

@@ -3,18 +3,18 @@ Introduction
 ************
 
 
-Sawtooth Lake is an enterprise distributed ledger (aka blockchain) project.
+Hyperledger Sawtooth is an enterprise distributed ledger (aka blockchain) project.
 Our design philosophy targets keeping distributed ledgers *distributed* and
 making smart contracts *safe* - particularly for enterprise use.
 
-In fitting with this enterprise focus, Sawtooth Lake is also highly modular.
+In fitting with this enterprise focus, Sawtooth is also highly modular.
 This enables enterprises and consortia to make policy decisions that they are
 best equipped to make.
 
 We are an open source project under the Hyperledger umbrella. We welcome
 working with individuals and companies interested in the advancement of
 distributed ledger technology. Please see the community section for ways to
-interact with and become a part of the Sawtooth Lake community.
+interact with and become a part of the Sawtooth community.
 
 
 Sawtooth's Ledger
@@ -37,7 +37,7 @@ Distributed ledgers generally consist of three basic components:
     * A protocol used to build consensus among participants around
       which transactions will be accepted by the ledger.
 
-In Sawtooth Lake the data model and transaction language are implemented
+In Sawtooth the data model and transaction language are implemented
 in a “transaction family”. While we expect users to build custom transaction
 families that reflect the unique requirements of their ledgers, we provide
 three transaction families that are sufficient for building, testing and
@@ -86,9 +86,9 @@ algorithms and uses multiple rounds of explicit votes to achieve consensus.
 developed consensus protocols that extend traditional BFT for open
 participation.
 
-Sawtooth Lake abstracts the core concepts of consensus and isolates consensus
+Sawtooth abstracts the core concepts of consensus and isolates consensus
 from transaction semantics. The interface supports plugging in various
-consensus implementations. Sawtooth Lake provides two such implementations:
+consensus implementations. Sawtooth provides two such implementations:
 dev_mode and PoET.
 
 Dev_mode is a simplified random leader algorithm that is useful
@@ -147,10 +147,10 @@ likelihood that the population of validators will be large, increasing
 the robustness of the consensus algorithm.
 
 
-Getting Sawtooth Lake
+Getting Sawtooth
 =====================
 
-The Sawtooth Lake platform is distributed in source code form with
+The Sawtooth platform is distributed in source code form with
 an Apache license. You can get the code `here
 <https://github.com/hyperledger/sawtooth-core>`_ and start building your own
 distributed ledger.
@@ -161,7 +161,7 @@ Repositories
 One repository contains all of the the code needed:
 
 sawtooth-core
-    Contains fundamental classes used throughout the Sawtooth Lake project, as well as:
+    Contains fundamental classes used throughout the Sawtooth project, as well as:
 
     * The implementation of the validator process which runs on each node
     * SDKs for writing transaction processing or validation logic in a variety

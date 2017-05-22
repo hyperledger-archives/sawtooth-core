@@ -20,7 +20,7 @@ class MockGossip():
         self.broadcasted = {}
         self.sent = {}
 
-    def broadcast(self, message, message_type):
+    def broadcast(self, message, message_type, exclude):
         if message_type in self.broadcasted:
             self.broadcasted[message_type] += [message]
         else:

@@ -65,3 +65,10 @@ class PeeringException(Exception):
     Indicates that a request to peer with this validator should not be allowed.
     """
     pass
+
+
+class PossibleForkDetectedError(Exception):
+    """Exception thrown when a possible fork has occurred while iterating
+    through the block store.
+    """
+    pass

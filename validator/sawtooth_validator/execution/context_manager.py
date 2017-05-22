@@ -439,7 +439,8 @@ class _ContextFuture(object):
 
     def result(self):
         with self._condition:
-            self._condition.wait_for(lambda: self._result_is_set)
+            if self._wait_for_tree:
+                self._condition.wait_for(lambda: self._result_is_set)
             return self._result
 
     def set_result(self, result, from_tree=False):

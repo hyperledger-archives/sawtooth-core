@@ -1,12 +1,16 @@
-*******************
-Installing Sawtooth
-*******************
+*******************************
+Installing Hyperledger Sawtooth
+*******************************
 
-The easiest way to install Sawtooth is with apt-get.
+The easiest way to install Hyperledger Sawtooth is with apt-get.
 
 .. note::
 
   These instructions have been tested on Ubuntu 16.04 only.
+
+.. note::
+
+  Coming soon: instructions for using Yum and RPMs.
 
 Add the signing key:
 

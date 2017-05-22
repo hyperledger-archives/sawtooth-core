@@ -31,7 +31,7 @@ class TestStateCurrentRequests(ClientHandlerTestCase):
 
     def test_state_current_request(self):
         """Verifies requests for the current merkle root work properly.
-        Should respond with a the hard-coded mock merkle_root of '123'.
+        Should respond with a hard-coded mock merkle_root of '123'.
         """
         response = self.make_request()
 

@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import ProcessPoolExecutor
 import hashlib
 import logging
 import os
@@ -54,9 +53,13 @@ from sawtooth_validator.state import client_handlers
 from sawtooth_validator.state.config_view import ConfigViewFactory
 from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
 from sawtooth_validator.state.state_delta_processor import \
-    StateDeltaSubscriberHandler
+    StateDeltaAddSubscriberHandler
+from sawtooth_validator.state.state_delta_processor import \
+    StateDeltaSubscriberValidationHandler
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaUnsubscriberHandler
+from sawtooth_validator.state.state_delta_processor import \
+    GetStateDeltaEventsHandler
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
@@ -139,10 +142,10 @@ class Validator(object):
         self._dispatcher = Dispatcher()
 
         thread_pool = ThreadPoolExecutor(max_workers=10)
-        process_pool = ProcessPoolExecutor(max_workers=3)
+        sig_pool = ThreadPoolExecutor(max_workers=3)
 
         self._thread_pool = thread_pool
-        self._process_pool = process_pool
+        self._sig_pool = sig_pool
 
         self._service = Interconnect(component_endpoint,
                                      self._dispatcher,
@@ -305,7 +308,7 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             signature_verifier.GossipMessageSignatureVerifier(),
-            process_pool)
+            sig_pool)
 
         # GOSSIP_MESSAGE 3) Determines if we should broadcast the
         # message to our peers. It is important that this occur prior
@@ -342,7 +345,7 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             signature_verifier.GossipBlockResponseSignatureVerifier(),
-            process_pool)
+            sig_pool)
 
         # GOSSIP_BLOCK_RESPONSE 3) Send message to completer
         self._network_dispatcher.add_handler(
@@ -376,7 +379,7 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
             signature_verifier.GossipBatchResponseSignatureVerifier(),
-            process_pool)
+            sig_pool)
 
         # GOSSIP_BATCH_RESPONSE 3) Send message to completer
         self._network_dispatcher.add_handler(
@@ -393,7 +396,7 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             signature_verifier.BatchListSignatureVerifier(),
-            process_pool)
+            sig_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
@@ -466,14 +469,25 @@ class Validator(object):
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
 
+        # State Delta Subscription Handlers
         self._dispatcher.add_handler(
             validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
-            StateDeltaSubscriberHandler(state_delta_processor),
+            StateDeltaSubscriberValidationHandler(state_delta_processor),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
+            StateDeltaAddSubscriberHandler(state_delta_processor),
             thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
             StateDeltaUnsubscriberHandler(state_delta_processor),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_GET_EVENTS_REQUEST,
+            GetStateDeltaEventsHandler(block_store, state_delta_store),
             thread_pool)
 
     def start(self):
@@ -508,9 +522,9 @@ class Validator(object):
 
         self._service.stop()
 
-        self._process_pool.shutdown(wait=True)
         self._network_thread_pool.shutdown(wait=True)
         self._thread_pool.shutdown(wait=True)
+        self._sig_pool.shutdown(wait=True)
 
         self._executor.stop()
         self._context_manager.stop()

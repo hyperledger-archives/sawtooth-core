@@ -42,6 +42,9 @@ import sawtooth_signing as signing
 CONFIG_NAMESPACE = '000000'
 DEFAULT_COL_WIDTH = 15
 
+_MAX_KEY_PARTS = 4
+_ADDRESS_PART_SIZE = 16
+
 
 def add_config_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the config command and
@@ -592,7 +595,14 @@ def _config_outputs(key):
     ]
 
 
+def _short_hash(in_str):
+    return hashlib.sha256(in_str.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
+
+
 def _key_to_address(key):
     """Creates the state address for a given setting key.
     """
-    return CONFIG_NAMESPACE + hashlib.sha256(key.encode()).hexdigest()
+    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+    key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
+
+    return CONFIG_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)

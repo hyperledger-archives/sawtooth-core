@@ -99,6 +99,21 @@ class SerialScheduler(Scheduler):
                             state_hash=state_hash)
                 else:
                     self._previous_context_id = self._previous_valid_batch_c_id
+                    required_state_hash = self._required_state_hashes.get(
+                        batch_signature)
+                    if self._last_in_batch[-1] == txn_signature and \
+                            required_state_hash is None:
+                        # This is only needed for block publishing, where
+                        # the state hash is for state changes in all valid
+                        # batches.
+                        s_hash = self._compute_merkle_root(
+                            required_state_root=required_state_hash)
+                        for t_id in self._last_in_batch[::-1]:
+                            b_id = self._txn_to_batch[t_id]
+                            if self._batch_statuses[b_id].is_valid:
+                                self._batch_statuses[b_id].state_hash = s_hash
+                                # found the last valid batch, so break out
+                                break
 
                 is_last_batch = \
                     len(self._batch_statuses) == len(self._last_in_batch)
@@ -173,16 +188,19 @@ class SerialScheduler(Scheduler):
             state_hash (str): The merkle root calculated from the previous
                 state hash and the state changes from the context_id
         """
-        state_hash = self._squash(
-            state_root=self._previous_state_hash,
-            context_ids=[self._previous_valid_batch_c_id],
-            persist=self._always_persist)
-        if self._always_persist is True:
-            return state_hash
-        if state_hash == required_state_root:
-            self._squash(state_root=self._previous_state_hash,
-                         context_ids=[self._previous_valid_batch_c_id],
-                         persist=True)
+
+        state_hash = None
+        if self._previous_valid_batch_c_id is not None:
+            state_hash = self._squash(
+                state_root=self._previous_state_hash,
+                context_ids=[self._previous_valid_batch_c_id],
+                persist=self._always_persist)
+            if self._always_persist is True:
+                return state_hash
+            if state_hash == required_state_root:
+                self._squash(state_root=self._previous_state_hash,
+                             context_ids=[self._previous_valid_batch_c_id],
+                             persist=True)
         return state_hash
 
     def complete(self, block):

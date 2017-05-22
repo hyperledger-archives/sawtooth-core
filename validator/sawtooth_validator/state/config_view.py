@@ -14,11 +14,21 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
+from functools import lru_cache
 
 from sawtooth_validator.protobuf.setting_pb2 import Setting
 
 
 CONFIG_STATE_NAMESPACE = '000000'
+_MAX_KEY_PARTS = 4
+_ADDRESS_PART_SIZE = 16
+
+
+def _short_hash(byte_str):
+    return hashlib.sha256(byte_str).hexdigest()[:_ADDRESS_PART_SIZE]
+
+
+_EMPTY_PART = _short_hash(b'')
 
 
 class ConfigView(object):
@@ -95,9 +105,33 @@ class ConfigView(object):
             return default_value
 
     @staticmethod
+    @lru_cache(maxsize=128)
     def setting_address(key):
-        return CONFIG_STATE_NAMESPACE + \
-            hashlib.sha256(key.encode()).hexdigest()
+        """Computes the radix address for the given setting key.
+
+        Keys are broken into four parts, based on the dots in the string. For
+        example, the key `a.b.c` address is computed based on `a`, `b`, `c` and
+        the empty string. A longer key, for example `a.b.c.d.e`, is still
+        broken into four parts, but the remaining pieces are in the last part:
+        `a`, `b`, `c` and `d.e`.
+
+        Each of these peices has a short hash computed (the first 16 characters
+        of its SHA256 hash in hex), and is joined into a single address, with
+        the config namespace (`000000`) added at the beginning.
+
+        Args:
+            key (str): the setting key
+        Returns:
+            str: the computed address
+        """
+        # split the key into 4 parts, maximum
+        key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+        # compute the short hash of each part
+        addr_parts = [_short_hash(x.encode()) for x in key_parts]
+        # pad the parts with the empty hash, if needed
+        addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
+
+        return CONFIG_STATE_NAMESPACE + ''.join(addr_parts)
 
 
 class ConfigViewFactory(object):

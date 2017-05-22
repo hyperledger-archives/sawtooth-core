@@ -5,56 +5,20 @@
 Environment Setup
 *****************
 
-Overview
-========
+This section walks through the process of setting up Hyperledger Sawtooth for
+the purposes of application development.  After this setup, you will be ready
+to perform application development tasks, such as implementing business logic
+with transaction families and writing clients which use Sawtooth's REST API.
 
-This tutorial walks through the process of setting up Hyperledger Sawtooth for
-the purposes of app development. If you want to set up your environment for
-core development, please continue with the :doc:`/core_developers_guide`.
+There are two options presented here for installing and running Sawtooth:
 
-At the end, you will be ready to perform app development tasks, such as
-creating new transaction families or handlers as described in the
-:ref:`transaction-family-tutorial`.
+  - :ref:`env-docker-compose`
+  - :ref:`env-ubuntu`
 
-Commands in this tutorial can be run via Terminal.app on MacOS, Git Bash on
-Windows, etc.
-
-
-Installing Sawtooth on Ubuntu Linux
-===================================
-
-You can install Sawtooth directly on your Ubuntu Linux machine, using the following steps:
-
-Prerequisites
--------------
-
-Ubuntu 16.04 or later
-
-
-Installation
-------------
-
-Run the following commands from a terminal window, as root or with `sudo`:
-
-.. code-block:: console
-
-  $ echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc/apt/sources.list
-  $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63
-  $ apt-get update && apt-get install -y sawtooth
-
-
-Next Steps
-----------
-
-Continue on to :doc:`intro_to_sawtooth`
-
+.. _env-docker-compose:
 
 Installing Sawtooth Using Docker Compose 
 ========================================
-
-
-Docker Instructions
-===================
 
 Prerequisites
 -------------
@@ -66,56 +30,34 @@ The following tools are required:
 * `Docker Compose <https://docs.docker.com/compose/install/>`_ (Linux only)
 
 
-Step One: Clone Repository
---------------------------
+Download the Docker Compose File
+--------------------------------
 
-You'll need to have git installed in order to clone the Sawtooth Lake source
-code repository. You can find up-to-date installation instructions here:
+A docker compose file is provided which defines the process for constructing
+a sawtooth environment, including the container images to download and the
+network settings.
 
-* `Git install instructions <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_
+This docker compose file can serve as the basis for your own multi-container
+sawtooth development environment or application.
 
-.. note:: 
-
-  When checking out Sawtooth Lake on Windows for use with vagrant, you should
-  take steps to ensure that Windows-style CRLF line endings are not added to
-  the code. The bash scripts used by your vagrant VM will not run correctly 
-  with CRLF line endings. Git uses a configuration setting, *core.autocrlf*,
-  to control whether or not LF-style line endings are automatically converted
-  to CRLF-style line endings. `This setting should be set in such a way that 
-  CRLFs are not introduced into your repository 
-  <https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration>`_.
-
-Open up a terminal and run the following:
-
-.. code-block:: console
-
-   % cd $HOME
-   % mkdir project
-   % cd project
-   % git clone https://github.com/hyperledger/sawtooth-core.git
-
-.. note::
-
-  On a Windows environment, the suggested version of the last command
-  above is:
-
-  .. code-block:: console
-
-      C:\> git clone https://github.com/hyperledger/sawtooth-core.git
-      --config core.autocrlf=false
+Download the docker compose file `here <./sawtooth-default.yaml>`_.
 
 
 Environment Startup
 -------------------
 
-To start up the environment, run:
+To start up the environment, perform the following tasks:
+
+1. Open a terminal window.
+2. Change your working directory to the same directory where you saved the
+   docker compose file. *Example command on a Linux system:* '$ cd ~/Downloads'
+3. Run the following command:
 
 .. code-block:: console
 
-  % cd sawtooth-core
-  % docker-compose -f docker/compose/sawtooth-demo.yaml up
+  % docker-compose -f sawtooth-default.yaml up
 
-Downloading the docker images that comprise the Sawtooth Lake demo
+Downloading the docker images that comprise the Sawtooth demo
 environment can take serveral minutes. Once you see the containers
 registering and creating intial blocks you can move on to the next step.
 
@@ -154,7 +96,7 @@ Resetting The Environment
 If the environment needs to be reset for any reason, it can be returned to
 the default state by logging out of the client container, then pressing
 CTRL-c from the window where you originally ran docker-compose. Once the
-containers have all shut down run 'docker-compose -f sawtooth-demo.yaml down'.
+containers have all shut down run 'docker-compose -f sawtooth-default.yaml down'.
 
 .. code-block:: console
 
@@ -171,7 +113,36 @@ containers have all shut down run 'docker-compose -f sawtooth-demo.yaml down'.
   Stopping compose_tp_intkey_python_1 ... done
   Stopping compose_validator_1 ... done
 
-  % docker-compose -f docker/compose/sawtooth-demo.yaml down
+  % docker-compose -f sawtooth-default.yaml down
+
+Next Steps
+----------
+
+Continue on to :doc:`intro_to_sawtooth`
+
+.. _env-ubuntu:
+
+Installing Sawtooth on Ubuntu 16.04
+===================================
+
+You can install Sawtooth directly on your Ubuntu machine, using the
+following steps:
+
+Prerequisites
+-------------
+
+Ubuntu 16.04 or later
+
+Installation
+------------
+
+Run the following commands from a terminal window, as root or with `sudo`:
+
+.. code-block:: console
+
+  $ echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc/apt/sources.list
+  $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63
+  $ apt-get update && apt-get install -y sawtooth
 
 Next Steps
 ----------

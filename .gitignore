@@ -21,8 +21,8 @@
 /consensus/**/protobuf/
 
 /core/sawtooth_core.egg-info/
-/core_transactions/config/sawtooth_config/protobuf/
-/core_transactions/**/__pycache__/
+/families/config/sawtooth_config/protobuf/
+/families/**/__pycache__/
 
 /coverage
 /coverage/html
@@ -52,11 +52,13 @@
 /sdk/examples/intkey_javascript/node_modules/
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
 /sdk/examples/intkey_java/target/
+/sdk/examples/noop_python/**/__pycache__/
 /sdk/java/target/
 /sdk/go/src/sawtooth_sdk/protobuf/
 /sdk/go/src/github.com/
 /sdk/go/bin/
 /sdk/examples/intkey_go/bin/
+/sdk/examples/noop_go/bin/
 /sdk/go/pkg/
 
 /signing/build/

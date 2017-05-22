@@ -93,9 +93,15 @@ class BlockResponderHandler(Handler):
         if block is None:
             # No block found, broadcast original message to other peers
             # and add to pending requests
-            self._responder.add_request(block_id, connection_id)
-            self._gossip.broadcast(block_request_message,
-                                   validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
+            if block_id == "HEAD":
+                LOGGER.debug("No chain head available. Cannot respond to block"
+                             " requests.")
+            else:
+                self._responder.add_request(block_id, connection_id)
+                self._gossip.broadcast(
+                    block_request_message,
+                    validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
+                    exclude=[connection_id])
         else:
             LOGGER.debug("Responding to block requests: %s",
                          block.get_block().header_signature)
@@ -158,7 +164,8 @@ class BatchByBatchIdResponderHandler(Handler):
                                         connection_id)
             self._gossip.broadcast(
                 batch_request_message,
-                validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
+                validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
+                exclude=[connection_id])
         else:
             LOGGER.debug("Responding to batch requests %s",
                          batch.header_signature)
@@ -206,7 +213,8 @@ class BatchByTransactionIdResponderHandler(Handler):
             self._gossip.broadcast(
                 batch_request_message,
                 validator_pb2.Message.
-                GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST)
+                GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
+                exclude=[connection_id])
 
         elif unfound_txn_ids != []:
             new_request = network_pb2.GossipBatchByTransactionIdRequest()
@@ -217,7 +225,8 @@ class BatchByTransactionIdResponderHandler(Handler):
             self._gossip.broadcast(
                 new_request,
                 validator_pb2.Message.
-                GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST)
+                GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
+                exclude=[connection_id])
 
         if batches != []:
             for batch in batches:

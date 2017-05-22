@@ -3,8 +3,9 @@ Testing a Transaction Processor
 *******************************
 
 Say we've written a transaction processor -- how can it be tested? In this
-section, we'll see how to test the XO transaction processor described in
-:doc:`txn_family_tutorial` against a mock validator.
+section, we'll see how to test the XO transaction processor described in the
+language-specific tutorials that show you how to write your own transaction
+family (see the :doc:`/app_developers_guide`) against a mock validator.
 
 Communication with the Validator
 ================================
