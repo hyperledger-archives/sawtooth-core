@@ -17,10 +17,15 @@ import logging
 import sys
 import argparse
 import os
+import netifaces
 
 import sawtooth_signing as signing
 
 from sawtooth_validator.config.path import load_path_config
+from sawtooth_validator.config.validator import load_default_validator_config
+from sawtooth_validator.config.validator import load_toml_validator_config
+from sawtooth_validator.config.validator import merge_validator_config
+from sawtooth_validator.config.validator import ValidatorConfig
 from sawtooth_validator.config.logs import get_log_config
 from sawtooth_validator.server.core import Validator
 from sawtooth_validator.server.keys import load_identity_signing_key
@@ -42,11 +47,9 @@ def parse_args(args):
                         type=str)
     parser.add_argument('--network-endpoint',
                         help='Network endpoint URL',
-                        default='tcp://127.0.0.1:8800',
                         type=str)
     parser.add_argument('--component-endpoint',
                         help='Validator component service endpoint',
-                        default='tcp://127.0.0.1:40000',
                         type=str)
     parser.add_argument('--peering',
                         help='The type of peering approach the validator '
@@ -58,11 +61,9 @@ def parse_args(args):
                              'will be processed first, prior to the topology '
                              'buildout starting',
                         choices=['static', 'dynamic'],
-                        default='static',
                         type=str)
     parser.add_argument('--public-uri',
                         help='Advertised network endpoint URL',
-                        required=True,
                         type=str)
     parser.add_argument('--join',
                         help='uri(s) to connect to in order to initially '
@@ -137,6 +138,26 @@ def _split_comma_append_args(arg_list):
     return new_arg_list
 
 
+def load_validator_config(first_config, config_dir):
+    default_validator_config = load_default_validator_config()
+    conf_file = os.path.join(config_dir, 'validator.toml')
+
+    toml_config = load_toml_validator_config(conf_file)
+
+    return merge_validator_config(
+        configs=[first_config, toml_config, default_validator_config])
+
+
+def create_validator_config(opts):
+    return ValidatorConfig(
+        bind_network=opts.network_endpoint,
+        bind_component=opts.component_endpoint,
+        endpoint=opts.public_uri,
+        peering=opts.peering,
+        seeds=opts.join,
+        peers=opts.peers)
+
+
 def main(args=sys.argv[1:]):
     opts = parse_args(args)
     verbose_level = opts.verbose
@@ -153,6 +174,14 @@ def main(args=sys.argv[1:]):
 
     try:
         path_config = load_path_config(config_dir=opts.config_dir)
+    except LocalConfigurationError as local_config_err:
+        LOGGER.error(str(local_config_err))
+        sys.exit(1)
+
+    try:
+        opts_config = create_validator_config(opts)
+        validator_config = \
+            load_validator_config(opts_config, path_config.config_dir)
     except LocalConfigurationError as local_config_err:
         LOGGER.error(str(local_config_err))
         sys.exit(1)
@@ -194,17 +223,31 @@ def main(args=sys.argv[1:]):
                            human_readable_name='Log'):
         init_errors = True
 
+    endpoint = validator_config.endpoint
+    if endpoint is None:
+        # Need to use join here to get the string "0.0.0.0". Otherwise,
+        # bandit thinks we are binding to all interfaces and returns a
+        # Medium security risk.
+        interfaces = ["*", ".".join(["0", "0", "0", "0"])]
+        interfaces += netifaces.interfaces()
+        endpoint = validator_config.network_endpoint
+        for interface in interfaces:
+            if interface in validator_config.network_endpoint:
+                LOGGER.error("Endpoint must be set when using %s", interface)
+                init_errors = True
+                break
+
     if init_errors:
         LOGGER.error("Initialization errors occurred (see previous log "
                      "ERROR messages), shutting down.")
         sys.exit(1)
 
-    validator = Validator(opts.network_endpoint,
-                          opts.component_endpoint,
-                          opts.public_uri,
-                          opts.peering,
-                          opts.join,
-                          opts.peers,
+    validator = Validator(validator_config.bind_network,
+                          validator_config.bind_component,
+                          endpoint,
+                          validator_config.peering,
+                          validator_config.seeds,
+                          validator_config.peers,
                           path_config.data_dir,
                           path_config.config_dir,
                           identity_signing_key)
