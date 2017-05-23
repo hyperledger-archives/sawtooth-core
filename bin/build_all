@@ -172,7 +172,7 @@ docker_run() {
             --env http_proxy=$http_proxy \
             --env HTTPS_PROXY=$HTTPS_PROXY \
             --env HTTP_PROXY=$HTTP_PROXY \
-            $tag 
+            $tag
     fi
 }
 
@@ -234,6 +234,7 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest_api
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_config
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_intkey_python
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_supplychain_python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_validator_registry
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_xo_python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
