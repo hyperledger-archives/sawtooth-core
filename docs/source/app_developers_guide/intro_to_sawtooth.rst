@@ -33,9 +33,10 @@ Validator Start-up Process
 
 .. caution::
 
-  Genesis block and validator startup are handled for you if you're using the
-  Docker workflow. You can skip to `Multi-language support for transaction processors`_
-  if you'd like, or keep reading to better understand the startup process.
+  Genesis block, validator and rest_api startup are handled for you if you're
+  using the Docker workflow. You can skip to `Multi-language support for
+  transaction processors`_ if you'd like, or keep reading to better understand
+  the startup process.
 
 Create Genesis Block
 --------------------
@@ -47,22 +48,27 @@ test networks. In this case, you need to create a genesis block when
 instantiating a new network.
 
 The genesis block contains some initial values that are necessary when a
-Sawtooth distributed ledger is created and used for the first time.
+Sawtooth distributed ledger is created and used for the first time. 
+One of the settings in the genesis block that should be set is the 
+key that is authorized to set and change configuration settings, as 
+shown below using the **sawtooth config genesis** command. 
 
 To create the genesis block, log in to the development environment CLI and run
 the following command:
 
 .. code-block:: console
 
-  $ sawtooth admin genesis
-  Generating /home/ubuntu/sawtooth/data/genesis.batch
+  $ sawtooth keygen my_key
+  $ sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv
+  $ sawtooth admin genesis config-genesis.batch
+  Generating /var/lib/sawtooth/genesis.batch
 
 
 .. note::
 
   If you need to delete previously existing block-chain data before running a
-  validator in the vagrant environment, simply run the following command:
-  `rm /home/ubuntu/sawtooth/data/*`
+  validator, simply run the following command:
+  `rm /var/lib/sawtooth/*`
 
 
 Start Validator
@@ -135,6 +141,18 @@ The transaction processor produces the following output:
   Family Usage`_ for more information.
 
 To stop the transaction processor, press CTRL-c.
+
+
+Starting the Rest API
+=====================
+
+In order to configure a running validator, submit batches, and query the state
+of the ledger, you must start the REST API application. Run the following
+command to start the rest api:
+
+.. code-block:: console
+
+  rest_api --stream-url tcp://127.0.0.1:40000
 
 
 Multi-language support for transaction processors
@@ -265,7 +283,8 @@ Step Two: Starting the Rest API
 -------------------------------
 
 In order to configure a running validator, you must start the REST API
-application. Run the following command to start the rest api:
+application. Run the following command to start the REST API, if it hasn't
+already been started.
 
 .. code-block:: console
 
@@ -289,17 +308,35 @@ following commands from the Linux CLI:
 
 .. code-block:: console
 
-  $ sawtooth keygen my_key
   $ sawtooth config proposal create --key /home/ubuntu/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
 
-Or from the Docker CLI:
+Or using Docker:
+
+.. note::
+
+  The config command needs to use a key generated in the validator container.
+  Thus, you must open a terminal window running in the validator container,
+  rather than the client container (for the following command only).
+  Run the following command from your host machine's CLI:
 
 .. code-block:: console
 
-  $ sawtooth keygen my_key
-  $ sawtooth config proposal create --key /root/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]' --url http://rest_api:8080
+  % docker exec -it compose_validator_1 bash
 
-A TP_PROCESS_REQUEST message appears in the logging output of the validator.
+Then run the following commands from the validator container:
+
+.. code-block:: console
+
+  $ sawtooth config proposal create --key /root/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]' --url http://rest_api:8080
+  $ sawtooth config settings list --url http://rest_api:8080
+
+A TP_PROCESS_REQUEST message appears in the logging output of the validator,
+and output similar to the following appears in the validator terminal:
+
+.. code-block:: console
+
+  sawtooth.config.vote.authorized_keys: 035bd41bf6ea872...
+  sawtooth.validator.transaction_families: [{"family": "in...
 
 
 Viewing Blocks and State
