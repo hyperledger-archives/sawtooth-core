@@ -44,9 +44,9 @@ Prerequisites
 This tutorial assumes that you have gone through :doc:`/app_developers_guide/intro_to_sawtooth` and are
 familiar with the concepts introduced there.
 
-Prior to going through this tutorial, you should have a working Vagrant
-environment running to which you can login.  Specific setup instructions are
-available in :doc:`/app_developers_guide/environment_setup`.
+Prior to going through this tutorial, you should have a working Sawtooth
+environment.  Specific setup instructions are available
+in :doc:`/app_developers_guide/environment_setup`.
 
 The Transaction Processor
 =========================
