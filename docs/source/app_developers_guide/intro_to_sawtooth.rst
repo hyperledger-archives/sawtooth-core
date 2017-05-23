@@ -210,8 +210,8 @@ Or from the Docker CLI:
   $ intkey load -f batches.intkey -U http://rest_api:8080
 
 You can observe the processing of the intkey transactions by observing the
-logging output of the validator. A truncated example of the validator's output
-is shown below:
+logging output of the intkey transaction processor. A truncated example of
+the intkey transaction processor's output is shown below:
 
 .. code-block:: console
 
