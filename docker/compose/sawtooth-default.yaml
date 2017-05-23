@@ -50,7 +50,9 @@ services:
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawtooth keygen my_key && \
+        sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && \
+        sawtooth admin genesis config-genesis.batch && \
         validator -vv \
           --public-uri tcp://validator:8800 \
           --component-endpoint tcp://eth0:40000 \
