@@ -58,7 +58,7 @@ def add_genesis_parser(subparsers, parent_parser):
     parser.add_argument(
         '-k', '--key',
         type=str,
-        help='path to transaction signing key in WIF format')
+        help='name of file containing transaction signing key')
 
     parser.add_argument(
         '-o', '--output',
@@ -194,7 +194,7 @@ def _create_batch(pubkey, signing_key, transactions):
 
 
 def _read_signing_keys(key_filename):
-    """Reads the given file as a WIF formatted key.
+    """Reads the given file as a default-encoded private key
 
     Args:
         key_filename: The filename where the key is stored. If None,
