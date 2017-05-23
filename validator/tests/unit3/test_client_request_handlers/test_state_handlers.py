@@ -402,7 +402,7 @@ class TestStateListRequests(ClientHandlerTestCase):
                 * a total resource count of 2
             - a list of leaves with 1 item
             - that item is an instance of Leaf
-            - that has a header_signature of 'b-0'
+            - that Leaf has an address of 'b' and data of b'4'
         """
         response = self.make_paged_request(count=1, start_index=1, head_id='B-1')
 
@@ -426,7 +426,7 @@ class TestStateListRequests(ClientHandlerTestCase):
             - a paging response with a total resource count of 1
             - a list of leaves with 1 item
             - that item is an instance of Leaf
-            - that has a header_signature of 'b-0'
+            - that Leaf has an address of 'b' and data of b'5'
         """
         response = self.make_paged_request(count=1, start_index=0, address='b')
 
