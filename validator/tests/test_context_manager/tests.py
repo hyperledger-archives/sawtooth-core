@@ -235,7 +235,7 @@ class TestContextManager(unittest.TestCase):
         # 2)
         squash = self.context_manager.get_squash_handler()
         resulting_state_hash = squash(self.first_state_hash, [context_id],
-                                      persist=True)
+                                      persist=True, clean_up=True)
 
         # 3)
         final_state_to_update = {self._create_address(a): v for a, v in
@@ -294,7 +294,7 @@ class TestContextManager(unittest.TestCase):
         # 1)
         squash = self.context_manager.get_squash_handler()
         resulting_state_hash = squash(self.first_state_hash, [context_id],
-                                      persist=True)
+                                      persist=True, clean_up=True)
         # 2
         self.assertIsNotNone(resulting_state_hash)
         self.assertEquals(resulting_state_hash, self.first_state_hash)
@@ -360,7 +360,8 @@ class TestContextManager(unittest.TestCase):
         sh1 = squash(
             state_root=self.first_state_hash,
             context_ids=[context_id1],
-            persist=True)
+            persist=True,
+            clean_up=True)
         # 2)
         context_a = self.context_manager.create_context(
             state_hash=sh1,
@@ -486,8 +487,8 @@ class TestContextManager(unittest.TestCase):
         sh1 = squash(
             state_root=sh0,
             context_ids=[ctx_1],
-            persist=True
-        )
+            persist=True,
+            clean_up=True)
 
         # 2)
         context_1 = self.context_manager.create_context(
@@ -543,7 +544,8 @@ class TestContextManager(unittest.TestCase):
         cm_state_root = squash(
             state_root=sh1,
             context_ids=[context_n],
-            persist=False)
+            persist=False,
+            clean_up=True)
 
         tree = MerkleDatabase(self.database_results)
         calc_state_root = tree.update({self._create_address('aaaa'): b'1',
@@ -603,7 +605,8 @@ class TestContextManager(unittest.TestCase):
         sh1 = squash(
             state_root=self.first_state_hash,
             context_ids=[context_1],
-            persist=True)
+            persist=True,
+            clean_up=True)
 
         # 2)
         inputs_2a = [self._create_address('cc'),
@@ -706,7 +709,8 @@ class TestContextManager(unittest.TestCase):
             state_root=sh1,
             context_ids=[context_3_2a_1, context_3_2a_2,
                          context_3_2b_1, context_3_2b_2],
-            persist=False)
+            persist=False,
+            clean_up=True)
 
         tree = MerkleDatabase(self.database_results)
         state_hash_from_1 = tree.update(
@@ -830,7 +834,8 @@ class TestContextManager(unittest.TestCase):
             sh1 = squash(
                 state_root=sh0,
                 context_ids=[ctx_1, ctx_2],
-                persist=True)
+                persist=True,
+                clean_up=True)
             self.fail("squash of two contexts with a duplicate address")
         except Exception:
             pass

@@ -531,13 +531,8 @@ class ContextManager(object):
                                        type=StateChange.SET)
                            for addr, value in updates.items()]
                 self._state_delta_store.save_state_deltas(state_hash, changes)
-
-                # clean up all contexts that are involved in being squashed.
-                base_c_ids = []
-                for c_id in context_ids:
-                    base_c_ids += self._contexts[c_id].base_context_ids
-                all_context_ids = base_c_ids + context_ids
-                self.delete_context(all_context_ids)
+            if clean_up:
+                self.delete_context(context_ids_already_searched)
             return state_hash
         return _squash
 
