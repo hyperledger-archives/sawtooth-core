@@ -127,6 +127,7 @@ class RouteHandler(object):
             link = link.replace('batch_status', 'batches')
 
         return self._wrap_response(
+            request,
             data=data,
             metadata={'link': link},
             status=status)
@@ -185,6 +186,7 @@ class RouteHandler(object):
             metadata = None
 
         return self._wrap_response(
+            request,
             data=response.get('batch_statuses'),
             metadata=metadata)
 
@@ -246,6 +248,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=response['value'],
             metadata=self._get_metadata(request, response))
 
@@ -301,6 +304,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_block(response['block']),
             metadata=self._get_metadata(request, response))
 
@@ -357,6 +361,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_batch(response['batch']),
             metadata=self._get_metadata(request, response))
 
@@ -415,6 +420,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_transaction(response['transaction']),
             metadata=self._get_metadata(request, response))
 
@@ -505,7 +511,15 @@ class RouteHandler(object):
                 trap.check(content.status)
 
     @staticmethod
-    def _wrap_response(data=None, metadata=None, status=200):
+    def add_cors_headers(request, headers):
+        if 'Origin' in request.headers:
+            headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+            headers["Access-Control-Allow-Methods"] = "GET,POST"
+            headers["Access-Control-Allow-Headers"] =\
+                "Origin, X-Requested-With, Content-Type, Accept"
+
+    @staticmethod
+    def _wrap_response(request, data=None, metadata=None, status=200):
         """Creates the JSON response envelope to be sent back to the client.
         """
         envelope = metadata or {}
@@ -513,9 +527,13 @@ class RouteHandler(object):
         if data is not None:
             envelope['data'] = data
 
+        headers = {}
+        RouteHandler.add_cors_headers(request, headers)
+
         return web.Response(
             status=status,
             content_type='application/json',
+            headers=headers,
             text=json.dumps(
                 envelope,
                 indent=2,
@@ -537,6 +555,7 @@ class RouteHandler(object):
         # If there are no resources, there should be nothing else in paging
         if total == 0:
             return cls._wrap_response(
+                request,
                 data=data,
                 metadata={'head': head, 'link': link, 'paging': paging})
 
@@ -567,6 +586,7 @@ class RouteHandler(object):
                 paging['previous'] = build_pg_url(start - count)
 
         return cls._wrap_response(
+            request,
             data=data,
             metadata={'head': head, 'link': link, 'paging': paging})
 
