@@ -92,6 +92,12 @@ async def access_logger(app, handler):
     return logging_handler
 
 
+async def cors_handler(request):
+    headers = {}
+    RouteHandler.add_cors_headers(request, headers)
+    return web.Response(headers=headers)
+
+
 def start_rest_api(host, port, stream, timeout):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
@@ -101,6 +107,8 @@ def start_rest_api(host, port, stream, timeout):
     # Add routes to the web app
     LOGGER.info('Creating handlers for validator at %s', stream.url)
     handler = RouteHandler(loop, stream, timeout)
+
+    app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
 
     app.router.add_post('/batches', handler.submit_batches)
     app.router.add_get('/batch_status', handler.list_statuses)
