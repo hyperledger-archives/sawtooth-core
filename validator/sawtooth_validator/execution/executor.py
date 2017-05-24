@@ -156,12 +156,22 @@ class TransactionExecutorThread(object):
                     is_valid=False,
                     context_id=None)
                 continue
-
-            context_id = self._context_manager.create_context(
-                state_hash=txn_info.state_hash,
-                base_contexts=txn_info.base_context_ids,
-                inputs=list(header.inputs),
-                outputs=list(header.outputs))
+            try:
+                context_id = self._context_manager.create_context(
+                    state_hash=txn_info.state_hash,
+                    base_contexts=txn_info.base_context_ids,
+                    inputs=list(header.inputs),
+                    outputs=list(header.outputs))
+            except KeyError:
+                LOGGER.warning(
+                    "Error creating context for transaction %s, "
+                    "scheduler provided a base context that was not "
+                    "in the context manager.", txn.header_signature)
+                self._scheduler.set_transaction_execution_result(
+                    txn_signature=txn.header_signature,
+                    is_valid=False,
+                    context_id=None)
+                continue
             content = processor_pb2.TpProcessRequest(
                 header=txn.header,
                 payload=txn.payload,
