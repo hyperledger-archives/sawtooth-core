@@ -302,6 +302,9 @@ test_xo() {
     copy_coverage .coverage.tp-xo-javascript
     run_docker_test xo-javascript-smoke -s integration_test
     copy_coverage .coverage.xo-javascript-smoke
+    # all languages
+    run_docker_test xo-all-lang-smoke
+    copy_coverage .coverage.xo-all-lang-smoke
 }
 
 copy_coverage() {
