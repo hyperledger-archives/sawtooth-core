@@ -32,7 +32,7 @@ import sawtooth_signing as signing
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb
-
+from sawtooth_validator.state.config_view import ConfigView
 
 SIMUATOR_MODULE = \
     'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
@@ -135,15 +135,21 @@ def do_genesis(args):
     # Create a transaction header and transaction for the validator
     # registry update amd then hand it off to the batch publisher to
     # send out.
-    addresses = [validator_entry_address, VALIDATOR_MAP_ADDRESS]
+    output_addresses = [validator_entry_address, VALIDATOR_MAP_ADDRESS]
+    input_addresses = \
+        output_addresses + \
+        [ConfigView.setting_address('sawtooth.poet.report_public_key_pem'),
+         ConfigView.setting_address('sawtooth.poet.'
+                                    'valid_enclave_measurements'),
+         ConfigView.setting_address('sawtooth.poet.valid_basename')]
 
     header = \
         txn_pb.TransactionHeader(
             signer_pubkey=pubkey,
             family_name='sawtooth_validator_registry',
             family_version='1.0',
-            inputs=addresses,
-            outputs=addresses,
+            inputs=input_addresses,
+            outputs=output_addresses,
             dependencies=[],
             payload_encoding="application/protobuf",
             payload_sha512=sha512(serialized).hexdigest(),

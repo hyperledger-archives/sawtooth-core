@@ -24,6 +24,7 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
+from sawtooth_validator.state.config_view import ConfigView
 
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
@@ -153,17 +154,23 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # Create a transaction header and transaction for the validator
         # registry update amd then hand it off to the batch publisher to
         # send out.
-        addresses = \
+        output_addresses = \
             [validator_entry_address,
              PoetBlockPublisher._validator_map_address]
+        input_addresses = \
+            output_addresses + \
+            [ConfigView.setting_address('sawtooth.poet.report_public_key_pem'),
+             ConfigView.setting_address('sawtooth.poet.'
+                                        'valid_enclave_measurements'),
+             ConfigView.setting_address('sawtooth.poet.valid_basename')]
 
         header = \
             txn_pb.TransactionHeader(
                 signer_pubkey=block_header.signer_pubkey,
                 family_name='sawtooth_validator_registry',
                 family_version='1.0',
-                inputs=addresses,
-                outputs=addresses,
+                inputs=input_addresses,
+                outputs=output_addresses,
                 dependencies=[],
                 payload_encoding="application/protobuf",
                 payload_sha512=hashlib.sha512(serialized).hexdigest(),
