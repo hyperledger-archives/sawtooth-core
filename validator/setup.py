@@ -59,6 +59,7 @@ setup(
         "sawtooth-signing",
         "toml",
         "pyzmq",
+        "netifaces"
     ],
     data_files=data_files,
     entry_points={
