@@ -168,10 +168,10 @@ class ValidatorRegistryTransactionHandler(object):
     def namespaces(self):
         return [VAL_REG_NAMESPACE]
 
-    def verify_signup_info(self,
-                           signup_info,
-                           originator_public_key_hash,
-                           val_reg_payload):
+    def _verify_signup_info(self,
+                            signup_info,
+                            originator_public_key_hash,
+                            val_reg_payload):
 
         # Verify the attestation verification report signature
         proof_data_dict = json.loads(signup_info.proof_data)
@@ -377,7 +377,7 @@ class ValidatorRegistryTransactionHandler(object):
         signup_info = val_reg_payload.signup_info
 
         try:
-            self.verify_signup_info(
+            self._verify_signup_info(
                 signup_info=signup_info,
                 originator_public_key_hash=public_key_hash,
                 val_reg_payload=val_reg_payload)
