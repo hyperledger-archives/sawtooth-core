@@ -734,6 +734,7 @@ class TestContextManager(unittest.TestCase):
                                          "manager calculated merkle hashes "
                                          "are the same")
 
+    @unittest.skip("Necessary to catch scheduler bugs--Depth-first search")
     def test_check_for_bad_combination(self):
         """Tests that the context manager will raise
         an exception if asked to combine contexts, either via base contexts 
