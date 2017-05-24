@@ -21,6 +21,8 @@ import tempfile
 
 from sawtooth_validator.config.path import load_path_config
 from sawtooth_validator.exceptions import LocalConfigurationError
+from sawtooth_validator.config.validator import load_default_validator_config
+from sawtooth_validator.config.validator import load_toml_validator_config
 
 
 class TestPathConfig(unittest.TestCase):
@@ -131,6 +133,96 @@ class TestPathConfig(unittest.TestCase):
                 fd.write(os.linesep)
 
             self.assertRaises(LocalConfigurationError, load_path_config)
+        finally:
+            os.environ.clear()
+            os.environ.update(orig_environ)
+            shutil.rmtree(directory)
+
+
+class TestValidatorConfig(unittest.TestCase):
+
+    def test_validator_config_defaults(self):
+        """Tests the default validator configuration when no other configs.
+        The defaults should be as follows:
+            - bind_network = "tcp://127.0.0.1:8800"
+            - bind_component = "tcp://127.0.0.1:40000"
+            - peering = "static"
+            - endpoint = None
+        """
+        config = load_default_validator_config()
+        self.assertEquals(config.bind_network, "tcp://127.0.0.1:8800")
+        self.assertEquals(config.bind_component, "tcp://127.0.0.1:40000")
+        self.assertEquals(config.endpoint, None)
+        self.assertEquals(config.peering, "static")
+
+    def test_validator_config_load_from_file(self):
+        """Tests loading config settings from a TOML configuration file.
+
+        Creates a temporary directory and writes a validator.toml config file,
+        then loads that config and verifies all the validator settings are
+        their expected values.
+
+        The test also attempts to avoid environment variables from interfering
+        with the test by clearing os.environ and restoring it after the test.
+        """
+        orig_environ = dict(os.environ)
+        os.environ.clear()
+        directory = tempfile.mkdtemp(prefix="test-path-config-")
+        try:
+            os.environ['SAWTOOTH_HOME'] = directory
+
+            config_dir = os.path.join(directory, 'etc')
+            os.mkdir(config_dir)
+            filename = os.path.join(config_dir, 'validator.toml')
+            with open(filename, 'w') as fd:
+                fd.write('bind = ["network:tcp://test:8800",'
+                         '"component:tcp://test:40000"]')
+                fd.write(os.linesep)
+                fd.write('peering = "dynamic"')
+                fd.write(os.linesep)
+                fd.write('endpoint = "tcp://test:8800"')
+                fd.write(os.linesep)
+                fd.write('peers = ["tcp://peer:8801"]')
+                fd.write(os.linesep)
+                fd.write('seeds = ["tcp://peer:8802"]')
+
+            config = load_toml_validator_config(filename)
+            self.assertEqual(config.bind_network, "tcp://test:8800")
+            self.assertEqual(config.bind_component, "tcp://test:40000")
+            self.assertEqual(config.peering, "dynamic")
+            self.assertEqual(config.endpoint, "tcp://test:8800")
+            self.assertEqual(config.peers, ["tcp://peer:8801"])
+            self.assertEqual(config.seeds, ["tcp://peer:8802"])
+        finally:
+            os.environ.clear()
+            os.environ.update(orig_environ)
+            shutil.rmtree(directory)
+
+    def test_path_config_invalid_setting_in_file(self):
+        """Tests detecting invalid settings defined in a TOML configuration
+        file.
+
+        Creates a temporary directory and writes a validator.toml config file
+        with an invalid setting inside, then loads that config and verifies an exception is thrown.
+
+
+        The test also attempts to avoid environment variables from interfering
+        with the test by clearing os.environ and restoring it after the test.
+        """
+        orig_environ = dict(os.environ)
+        os.environ.clear()
+        directory = tempfile.mkdtemp(prefix="test-path-config-")
+        try:
+            os.environ['SAWTOOTH_HOME'] = directory
+
+            config_dir = os.path.join(directory, 'etc')
+            os.mkdir(config_dir)
+            filename = os.path.join(config_dir, 'validator.toml')
+            with open(filename, 'w') as fd:
+                fd.write('invalid = "a value"')
+                fd.write(os.linesep)
+            with self.assertRaises(LocalConfigurationError):
+                load_toml_validator_config(filename)
         finally:
             os.environ.clear()
             os.environ.update(orig_environ)
