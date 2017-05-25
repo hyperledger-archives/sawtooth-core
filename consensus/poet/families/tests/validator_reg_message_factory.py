@@ -35,6 +35,8 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
 from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorMap
 
+from sawtooth_sdk.protobuf.setting_pb2 import Setting
+
 
 class ValidatorRegistryMessageFactory(object):
     # The basename and enclave measurement values we will put into the enclave
@@ -287,3 +289,34 @@ class ValidatorRegistryMessageFactory(object):
     def create_set_response_validator_map(self):
         addresses = [self._key_to_address("validator_map")]
         return self._factory.create_set_response(addresses)
+
+    def create_get_request_report_key_pem(self):
+        return \
+            self._factory.create_get_request(
+                ['000000a87cb5eafdcca6a87ccc804f5546a'
+                 'b8e97a7d614626e4500e3b0c44298fc1c14'])
+
+    def create_get_response_report_key_pem(self, pem=None):
+        setting = Setting()
+        if pem is not None:
+            entry = Setting.Entry(key='sawtooth.poet.report_public_key_pem',
+                                  value=pem)
+            setting.entries.extend([entry])
+
+        data = setting.SerializeToString()
+        return self._factory.create_get_response(
+            {'000000a87cb5eafdcca6a87ccc804f5546a'
+             'b8e97a7d614626e4500e3b0c44298fc1c14': data})
+
+    def create_get_response_simulator_report_key_pem(self, pem=None):
+        pem = '''-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMvzZi8GT+lI9KeZiInn
+4CvFTiuyid+IN4dP1+mhTnfxX+I/ntt8LUKZMbI1R1izOUoxJRoX6VQ4S9VgDLEC
+PW6QlkeLI1eqe4DiYb9+J5ANhq4+XkhwgCUUFwpfqSfXWCHimjaGsZHbavl5nv/6
+IbZJL/2YzE37IzJdES16JCfmIUrk6TUqL0WgrWXyweTIoVSbld0M29kToSkMXLsj
+8vbQbTiKwViWhYlzi0cQIo7PiAss66lAW0X6AM7ZJYyAcfSjSLR4guMz76Og8aRk
+jtsjEEkq7Ndz5H8hllWUoHpxGDqLhM9O1/h+QdvTz7luZgpeJ5KB92vYL6yOlSxM
+fQIDAQAB
+-----END PUBLIC KEY-----'''
+
+        return self.create_get_response_report_key_pem(pem=pem)

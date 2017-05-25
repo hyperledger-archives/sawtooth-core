@@ -61,6 +61,15 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
+        # Expect Request for the address for report key PEM
+        received = self.validator.expect(
+            self.factory.create_get_request_report_key_pem())
+
+        # Respond with simulator report key PEM
+        self.validator.respond(
+            self.factory.create_get_response_simulator_report_key_pem(),
+            received)
+
         # Expect Request for the ValidatorMap
         received = self.validator.expect(
             self.factory.create_get_request_validator_map())
@@ -102,6 +111,15 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         # Send validator registry payload
         self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
+
+        # Expect Request for the address for report key PEM
+        received = self.validator.expect(
+            self.factory.create_get_request_report_key_pem())
+
+        # Respond with simulator report key PEM
+        self.validator.respond(
+            self.factory.create_get_response_simulator_report_key_pem(),
+            received)
 
         # Expect Request for the ValidatorMap
         received = self.validator.expect(
@@ -209,9 +227,18 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
 
+        # Expect Request for the address for report key PEM
+        received = self.validator.expect(
+            self.factory.create_get_request_report_key_pem())
+
+        # Respond with simulator report key PEM
+        self.validator.respond(
+            self.factory.create_get_response_simulator_report_key_pem(),
+            received)
+
         self._expect_invalid_transaction()
 
-    def _test_bad_signup_info(self, signup_info):
+    def _test_bad_signup_info(self, signup_info, expect_key_pem=True):
         payload = ValidatorRegistryPayload(
             verb="reg",
             name="val_1",
@@ -221,6 +248,17 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         # Send validator registry payload
         self.validator.send(
             self.factory.create_tp_process_request(payload.id, payload))
+
+        if expect_key_pem:
+            # Expect Request for the address for report key PEM
+            received = self.validator.expect(
+                self.factory.create_get_request_report_key_pem())
+
+            # Respond with simulator report key PEM
+            self.validator.respond(
+                self.factory.create_get_response_simulator_report_key_pem(),
+                received)
+
         self._expect_invalid_transaction()
 
     def test_invalid_verification_report(self):
@@ -234,7 +272,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         # Verification Report is None
         proof_data = signup_info.proof_data
         signup_info.proof_data = json.dumps({})
-        self._test_bad_signup_info(signup_info)
+        self._test_bad_signup_info(signup_info, expect_key_pem=False)
 
         # ------------------------------------------------------
         # No verification signature
@@ -243,7 +281,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
         signup_info.proof_data = json.dumps(proof_data_dict)
 
-        self._test_bad_signup_info(signup_info)
+        self._test_bad_signup_info(signup_info, expect_key_pem=False)
 
         # ------------------------------------------------------
         # Bad verification signature
@@ -551,3 +589,31 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
                 evidence_payload=proof_data_dict.get('evidence_payload'))
 
         self._test_bad_signup_info(signup_info)
+
+    def test_missing_report_key_pem(self):
+        """
+        Testing validator registry unable to retrieve the report public key
+        PEM from the config setting.
+        """
+        signup_info = self.factory.create_signup_info(
+            self.factory.pubkey_hash, "000")
+
+        payload = ValidatorRegistryPayload(
+            verb="reg", name="val_1", id=self.factory.public_key,
+            signup_info=signup_info)
+
+        # Send validator registry payload
+        self.validator.send(
+            self.factory.create_tp_process_request(payload.id, payload))
+
+        # Expect Request for the address for report key PEM
+        received = self.validator.expect(
+            self.factory.create_get_request_report_key_pem())
+
+        # Respond with empty report key PEM
+        self.validator.respond(
+            self.factory.create_get_response_report_key_pem(),
+            received)
+
+        # Expect that the transaction will be rejected
+        self._expect_invalid_transaction()
