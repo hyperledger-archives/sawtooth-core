@@ -17,7 +17,7 @@ import sys
 import toml
 
 
-def _get_config_dir():
+def get_config_dir():
     """Returns the sawtooth configuration directory based on the
     SAWTOOTH_HOME environment variable (if set) or OS defaults.
     """
@@ -50,7 +50,7 @@ def _get_dir(toml_config_setting,
     Returns:
         directory (str): The path.
     """
-    conf_file = os.path.join(_get_config_dir(), 'path.toml')
+    conf_file = os.path.join(get_config_dir(), 'path.toml')
     if os.path.exists(conf_file):
         with open(conf_file) as fd:
             raw_config = fd.read()
@@ -80,7 +80,7 @@ def _get_log_config(filename=None):
         log_config (dict): The dictionary to pass to logging.config.dictConfig
     """
     if filename is not None:
-        conf_file = os.path.join(_get_config_dir(), filename)
+        conf_file = os.path.join(get_config_dir(), filename)
     if os.path.exists(conf_file):
         with open(conf_file) as fd:
             raw_config = fd.read()
