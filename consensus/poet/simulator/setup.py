@@ -20,6 +20,14 @@ import subprocess
 
 from setuptools import setup, find_packages
 
+if os.name == 'nt':
+    conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"
+else:
+    conf_dir = "/etc/sawtooth"
+
+data_files = [
+    (conf_dir, ['packaging/simulator_rk_pub.pem']),
+]
 
 setup(name='sawtooth-poet-simulator',
       version=subprocess.check_output(
@@ -36,4 +44,5 @@ setup(name='sawtooth-poet-simulator',
           'sawtooth-signing',
           'sawtooth-validator',
           ],
+      data_files=data_files,
       entry_points={})
