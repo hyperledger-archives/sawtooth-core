@@ -66,9 +66,11 @@ def _ascii_encode_dict(item):
         return OrderedDict(
             (_ascii_encode_dict(key), _ascii_encode_dict(item[key]))
             for key in sorted(item.keys()))
-    elif isinstance(item, list):
+
+    if isinstance(item, list):
         return [_ascii_encode_dict(element) for element in item]
-    elif isinstance(item, str):
+
+    if isinstance(item, str):
         return item
-    else:
-        return item
+
+    return item
