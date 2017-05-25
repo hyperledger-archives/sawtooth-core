@@ -162,6 +162,14 @@ class _PoetEnclaveSimulator(object):
         cls._anti_sybil_id = hashlib.sha256(validator_id.encode()).hexdigest()
 
     @classmethod
+    def get_enclave_measurement(cls):
+        return cls.__VALID_ENCLAVE_MEASUREMENT__.hex()
+
+    @classmethod
+    def get_enclave_basename(cls):
+        return cls.__VALID_BASENAME__.hex()
+
+    @classmethod
     def create_signup_info(cls,
                            originator_public_key_hash,
                            nonce):
@@ -474,6 +482,14 @@ class _PoetEnclaveSimulator(object):
 
 def initialize(config_dir):
     _PoetEnclaveSimulator.initialize(config_dir=config_dir)
+
+
+def get_enclave_measurement():
+    return _PoetEnclaveSimulator.get_enclave_measurement()
+
+
+def get_enclave_basename():
+    return _PoetEnclaveSimulator.get_enclave_basename()
 
 
 def create_signup_info(validator_address,
