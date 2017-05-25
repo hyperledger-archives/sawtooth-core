@@ -90,8 +90,17 @@ class XOHandler extends TransactionHandler {
       .then((update) => {
         let header = TransactionHeader.decode(transactionProcessRequest.header)
         let player = header.signerPubkey
-        if (!update.name) {
+
+        let name = update.name
+        if (!name) {
           throw new InvalidTransaction('Name is required')
+        }
+
+        console.log(`${name.indexOf('|')}`)
+
+        if (name.indexOf(',') !== -1 || name.indexOf('|') !== -1) {
+          throw new InvalidTransaction(
+            'Name cannot contain "," or "|"')
         }
 
         if (!update.action) {

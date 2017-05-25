@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+from unittest import skip
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
@@ -52,6 +53,16 @@ class TestXo(TransactionProcessorTestCase):
 
         self.expect_invalid()
 
+    @skip('JS throws InternalError instead of InvalidTransaction')
+    def test_too_many_commas(self):
+        self.send_transaction('comma,action', 'name', 5)
+
+        self.expect_invalid()
+
+        self.send_transaction('action', 'comma,action', 6)
+
+        self.expect_invalid()
+
     # create
 
     def test_create_game_valid(self):
@@ -77,6 +88,11 @@ class TestXo(TransactionProcessorTestCase):
         self.send_get_response(
             game='already-created',
             board='---------')
+
+        self.expect_invalid()
+
+    def test_create_bar_name(self):
+        self.create_game('has|bar')
 
         self.expect_invalid()
 

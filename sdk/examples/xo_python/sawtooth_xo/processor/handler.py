@@ -141,6 +141,12 @@ def _validate_name(name):
     if not name:
         raise InvalidTransaction('Name is required')
 
+    bad_chars = ',', '|'
+
+    if any([bad_char in name for bad_char in bad_chars]):
+        raise InvalidTransaction(
+            'Name cannot contain "," or "|"')
+
 
 def _validate_action_and_space(action, space):
     if not action:
