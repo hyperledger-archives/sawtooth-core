@@ -252,7 +252,7 @@ def start_processors(num, processor_func):
 # rest_api
 
 def rest_api_cmd(num):
-    return 'rest_api --stream-url {s} --port {p}'.format(
+    return 'rest_api --stream-url {s} --port {p} --host 127.0.0.1'.format(
         s=connenction_address(num),
         p=(8080 + num)
     )

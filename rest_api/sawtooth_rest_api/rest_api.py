@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
 import sys
 import time
 import logging
@@ -25,7 +26,12 @@ from sawtooth_sdk.client.log import init_console_logging
 from sawtooth_sdk.client.log import log_configuration
 from sawtooth_sdk.client.config import get_log_config
 from sawtooth_sdk.client.config import get_log_dir
+from sawtooth_sdk.client.config import get_config_dir
 from sawtooth_rest_api.route_handlers import RouteHandler
+from sawtooth_rest_api.config import load_default_rest_api_config
+from sawtooth_rest_api.config import load_toml_rest_api_config
+from sawtooth_rest_api.config import merge_rest_api_config
+from sawtooth_rest_api.config import RestApiConfig
 
 
 LOGGER = logging.getLogger(__name__)
@@ -36,17 +42,13 @@ def parse_args(args):
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--port',
-                        help='The port for the api to run on',
-                        default=8080)
+                        help='The port for the api to run on')
     parser.add_argument('--host',
-                        help='The host for the api to run on',
-                        default="127.0.0.1")
+                        help='The host for the api to run on')
     parser.add_argument('--stream-url',
-                        help='The url to connect to a running Validator',
-                        default='tcp://localhost:40000')
+                        help='The url to connect to a running Validator')
     parser.add_argument('--timeout',
-                        help='Seconds to wait for a validator response',
-                        default=300)
+                        help='Seconds to wait for a validator response')
     parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
@@ -143,12 +145,32 @@ def start_rest_api(host, port, stream, timeout):
     web.run_app(app, host=host, port=port, access_log=None)
 
 
+def load_rest_api_config(first_config):
+    default_config = load_default_rest_api_config()
+    config_dir = get_config_dir()
+    conf_file = os.path.join(config_dir, 'rest_api.toml')
+
+    toml_config = load_toml_rest_api_config(conf_file)
+    return merge_rest_api_config(
+        configs=[first_config, toml_config, default_config])
+
+
 def main():
     stream = None
     try:
         opts = parse_args(sys.argv[1:])
-        stream = Stream(opts.stream_url)
-
+        bind = None
+        if opts.host is not None:
+            if opts.port is not None:
+                bind = [opts.host + ":" + opts.port]
+            else:
+                bind = [opts.host + ":" + "8080"]
+        opts_config = RestApiConfig(
+            bind=bind,
+            connect=opts.stream_url,
+            timeout=opts.timeout)
+        rest_api_config = load_rest_api_config(opts_config)
+        stream = Stream(rest_api_config.connect)
         log_config = get_log_config(filename="rest_api_log_config.toml")
         if log_config is not None:
             log_configuration(log_config=log_config)
@@ -157,11 +179,12 @@ def main():
             log_configuration(log_dir=log_dir, name="sawtooth_rest_api")
         init_console_logging(verbose_level=opts.verbose)
 
+        host, port = rest_api_config.bind[0].split(":")
         start_rest_api(
-            opts.host,
-            int(opts.port),
+            host,
+            int(port),
             stream,
-            int(opts.timeout))
+            int(rest_api_config.timeout))
         # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
