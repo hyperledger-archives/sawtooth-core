@@ -81,9 +81,10 @@ def add_create_parser(subparsers, parent_parser):
 
     parser.add_argument(
         '--wait',
-        action='store_true',
-        default=False,
-        help='wait for this commit before exiting')
+        nargs='?',
+        const=sys.maxsize,
+        type=int,
+        help='wait for game to commit, set an integer to specify a timeout')
 
 
 def add_init_parser(subparsers, parent_parser):
@@ -272,7 +273,12 @@ def do_create(args, config):
 
     client = XoClient(base_url=url,
                       keyfile=key_file)
-    response = client.create(name)
+
+    if args.wait and args.wait > 0:
+        response = client.create(name, wait=args.wait)
+    else:
+        response = client.create(name)
+
     print("Response: {}".format(response))
 
 
