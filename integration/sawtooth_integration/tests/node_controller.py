@@ -133,10 +133,16 @@ def validator_cmds(num,
         '-o config-genesis.batch'
     ])
 
+    with open(
+        '/project/sawtooth-core/consensus/poet/simulator/packaging/'
+        'simulator_rk_pub.pem') as fd:
+        public_key_pem = fd.read()
+
     config_proposal = ' '.join([
         'sawtooth config proposal create',
         '-k {}'.format(priv),
         'sawtooth.consensus.algorithm=poet',
+        'sawtooth.poet.report_public_key_pem="{}"'.format(public_key_pem),
         'sawtooth.poet.target_wait_time={}'.format(target_wait_time),
         'sawtooth.poet.initial_wait_time={}'.format(initial_wait_time),
         'sawtooth.poet.minimum_wait_time={}'.format(minimum_wait_time),
