@@ -394,6 +394,170 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual('b-0', response.batches[0].header_signature)
 
+    def test_batch_list_sorted_by_key(self):
+        """Verifies batch list requests work sorted by header_signature.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of batches with 3 items
+            - the items are instances of Batch
+            - the first item has a header_signature of 'b-0'
+            - the last item has a header_signature of 'b-2'
+        """
+        controls = self.make_sort_controls('header_signature')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-0', response.batches[0].header_signature)
+        self.assertEqual('b-2', response.batches[2].header_signature)
+
+    def test_batch_list_sorted_by_bad_key(self):
+        """Verifies batch list requests break properly sorted by a bad key.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of INVALID_SORT
+            - that head_id, paging, and batches are missing
+        """
+        controls = self.make_sort_controls('bad')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.INVALID_SORT, response.status)
+        self.assertFalse(response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.batches)
+
+    def test_batch_list_sorted_by_nested_key(self):
+        """Verifies batch list requests work sorted by header.signer_pubkey.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of batches with 3 items
+            - the items are instances of Batch
+            - the first item has a header_signature of 'b-0'
+            - the last item has a header_signature of 'b-2'
+        """
+        controls = self.make_sort_controls('header', 'signer_pubkey')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-0', response.batches[0].header_signature)
+        self.assertEqual('b-2', response.batches[2].header_signature)
+
+    def test_batch_list_sorted_by_implied_header(self):
+        """Verifies batch list requests work sorted by an implicit header key.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of batches with 3 items
+            - the items are instances of Batch
+            - the first item has a header_signature of 'b-0'
+            - the last item has a header_signature of 'b-2'
+        """
+        controls = self.make_sort_controls('signer_pubkey')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-0', response.batches[0].header_signature)
+        self.assertEqual('b-2', response.batches[2].header_signature)
+
+    def test_batch_list_sorted_in_reverse(self):
+        """Verifies batch list requests work sorted by a key in reverse.
+
+        Queries the default mock block store with three blocks:
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of batches with 3 items
+            - the items are instances of Batch
+            - the first item has a header_signature of 'b-2'
+            - the last item has a header_signature of 'b-0'
+        """
+        controls = self.make_sort_controls('header_signature', reverse=True)
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-2', response.batches[0].header_signature)
+        self.assertEqual('b-0', response.batches[2].header_signature)
+
+    def test_batch_list_sorted_by_length(self):
+        """Verifies batch list requests work sorted by a property's length.
+
+        Queries the default mock block store with two added blocks:
+            {header_signature: 'B-long', batches: [{header_signature: 'b-long' ...}] ...}
+            {header_signature: 'B-longest', batches: [{header_signature: 'b-longest' ...}] ...}
+            {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
+            {header_signature: 'B-1', batches: [{header_signature: 'b-1' ...}] ...}
+            {header_signature: 'B-0', batches: [{header_signature: 'b-0' ...}] ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-long', the latest
+            - a paging response showing all 5 resources returned
+            - a list of batches with 5 items
+            - the items are instances of Batch
+            - the second to last item has a header_signature of 'B-long'
+            - the last item has a header_signature of 'B-longest'
+        """
+        self.add_blocks('longest', 'long')
+        controls = self.make_sort_controls(
+            'header_signature', compare_length=True)
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-long', response.head_id)
+        self.assert_valid_paging(response, total=5)
+        self.assertEqual(5, len(response.batches))
+        self.assert_all_instances(response.batches, Batch)
+        self.assertEqual('b-long', response.batches[3].header_signature)
+        self.assertEqual('b-longest', response.batches[4].header_signature)
+
 
 class TestBatchGetRequests(ClientHandlerTestCase):
     def setUp(self):

@@ -58,6 +58,18 @@ message PagingResponse {
     int32 total_resources = 4;
 }
 
+// Sorting controls to be sent with List requests. More than one can be sent.
+// If so, the first is used, and additional controls are tie-breakers.
+// Attributes:
+//     keys: Nested set of keys to sort by (i.e. ['header', 'signer_pubkey'])
+//     reverse: Whether or not to reverse the sort (i.e. descending order)
+//     compare_length: Sorts by value length, rather than the property itself
+message SortControls {
+    repeated string keys = 1;
+    bool reverse = 2;
+    bool compare_length = 3;
+}
+
 // Submits a list of Batches to be added to the blockchain.
 // If `wait_for_commit` is set to true, the validator will wait to respond
 // until all batches are committed, or until the specified `timeout`
@@ -165,6 +177,7 @@ message ClientStateListRequest {
     }
     string address = 3;
     PagingControls paging = 4;
+    repeated SortControls sorting = 5;
 }
 
 // A response that lists the data Entries from the state's merkle tree,
@@ -178,6 +191,7 @@ message ClientStateListRequest {
 //   * NO_ROOT - the head block or merkle_root specified was not found
 //   * NO_RESOURCE - the head/root specified is valid, but contains no data
 //   * INVALID_PAGING - the paging controls were malformed or out of range
+//   * INVALID_SORT - the sorting controls were malformed or invalid
 
 message ClientStateListResponse {
     enum Status {
@@ -187,6 +201,7 @@ message ClientStateListResponse {
         NO_ROOT = 3;
         NO_RESOURCE = 4;
         INVALID_PAGING = 5;
+        INVALID_SORT = 6;
     }
     Status status = 1;
     repeated Leaf leaves = 2;
@@ -240,6 +255,7 @@ message ClientBlockListRequest {
     string head_id = 1;
     repeated string block_ids = 2;
     PagingControls paging = 3;
+    repeated SortControls sorting = 4;
 }
 
 // A response that lists a chain of blocks with the newest at the beginning,
@@ -252,6 +268,7 @@ message ClientBlockListRequest {
 //   * NO_ROOT - the head block specified was not found
 //   * NO_RESOURCE - no blocks were found with the parameters specified
 //   * INVALID_PAGING - the paging controls were malformed or out of range
+//   * INVALID_SORT - the sorting controls were malformed or invalid
 message ClientBlockListResponse {
     enum Status {
         OK = 0;
@@ -260,6 +277,7 @@ message ClientBlockListResponse {
         NO_ROOT = 3;
         NO_RESOURCE = 4;
         INVALID_PAGING = 5;
+        INVALID_SORT = 6;
     }
     Status status = 1;
     repeated Block blocks = 2;
@@ -297,6 +315,7 @@ message ClientBatchListRequest {
     string head_id = 1;
     repeated string batch_ids = 2;
     PagingControls paging = 3;
+    repeated SortControls sorting = 4;
 }
 
 // A response that lists batches from newest to oldest.
@@ -308,6 +327,7 @@ message ClientBatchListRequest {
 //   * NO_ROOT - the head block specified was not found
 //   * NO_RESOURCE - no batches were found with the parameters specified
 //   * INVALID_PAGING - the paging controls were malformed or out of range
+//   * INVALID_SORT - the sorting controls were malformed or invalid
 message ClientBatchListResponse {
     enum Status {
         OK = 0;
@@ -316,6 +336,7 @@ message ClientBatchListResponse {
         NO_ROOT = 3;
         NO_RESOURCE = 4;
         INVALID_PAGING = 5;
+        INVALID_SORT = 6;
     }
     Status status = 1;
     repeated Batch batches = 2;
@@ -352,6 +373,7 @@ message ClientTransactionListRequest {
     string head_id = 1;
     repeated string transaction_ids = 2;
     PagingControls paging = 3;
+    repeated SortControls sorting = 4;
 }
 
 // A response that lists transactions from newest to oldest.
@@ -363,6 +385,7 @@ message ClientTransactionListRequest {
 //   * NO_ROOT - the head block specified was not found
 //   * NO_RESOURCE - no txns were found with the parameters specified
 //   * INVALID_PAGING - the paging controls were malformed or out of range
+//   * INVALID_SORT - the sorting controls were malformed or invalid
 message ClientTransactionListResponse {
     enum Status {
         OK = 0;
@@ -371,6 +394,7 @@ message ClientTransactionListResponse {
         NO_ROOT = 3;
         NO_RESOURCE = 4;
         INVALID_PAGING = 5;
+        INVALID_SORT = 6;
     }
     Status status = 1;
     repeated Transaction transactions = 2;

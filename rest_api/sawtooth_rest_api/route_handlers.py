@@ -208,6 +208,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientStateListRequest(
             head_id=request.url.query.get('head', None),
             address=request.url.query.get('address', None),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -270,6 +271,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientBlockListRequest(
             head_id=request.url.query.get('head', None),
             block_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -326,6 +328,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientBatchListRequest(
             head_id=request.url.query.get('head', None),
             batch_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -383,6 +386,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientTransactionListRequest(
             head_id=request.url.query.get('head', None),
             transaction_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -502,6 +506,12 @@ class RouteHandler(object):
         try:
             if content.status == proto.INVALID_PAGING:
                 raise errors.PagingInvalid()
+        except AttributeError:
+            pass
+
+        try:
+            if content.status == proto.INVALID_SORT:
+                raise errors.SortInvalid()
         except AttributeError:
             pass
 
@@ -738,6 +748,37 @@ class RouteHandler(object):
             end_id=controls.get('end_id', None),
             start_index=start_index,
             count=count)
+
+    @staticmethod
+    def _get_sorting_message(request):
+        """Parses the sort query into a list of SortControls protobuf messages.
+        """
+        control_list = []
+        sort_query = request.url.query.get('sort', None)
+        if sort_query is None:
+            return control_list
+
+        for key_string in sort_query.split(','):
+            if key_string[0] == '-':
+                reverse = True
+                key_string = key_string[1:]
+            else:
+                reverse = False
+
+            keys = key_string.split('.')
+
+            if keys[-1] == 'length':
+                compare_length = True
+                keys.pop()
+            else:
+                compare_length = False
+
+            control_list.append(client_pb2.SortControls(
+                keys=keys,
+                reverse=reverse,
+                compare_length=compare_length))
+
+        return control_list
 
     def _set_wait(self, request, validator_query):
         """Parses the `wait` query parameter, and sets the corresponding

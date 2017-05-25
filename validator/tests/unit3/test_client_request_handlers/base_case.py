@@ -44,6 +44,15 @@ class ClientHandlerTestCase(unittest.TestCase):
         paging_request = client_pb2.PagingControls(**paging_args)
         return self.make_request(paging=paging_request, **kwargs)
 
+    def make_sort_controls(self, *keys, reverse=False, compare_length=False):
+        """Creates a SortControls object and returns it in a list. Use
+        concatenation to combine multiple SortControls.
+        """
+        return [client_pb2.SortControls(
+            keys=keys,
+            reverse=reverse,
+            compare_length=compare_length)]
+
     def _serialize(self, **kwargs):
         request = self._request_proto(**kwargs)
         return request.SerializeToString()
@@ -63,6 +72,12 @@ class ClientHandlerTestCase(unittest.TestCase):
         Simulates what block store would look like if genesis had not been run.
         """
         del self._store.store['chain_head_id']
+
+    def add_blocks(self, *base_ids):
+        """Adds new blocks to a test case's block store with specified base_ids.
+        """
+        for base_id in base_ids:
+            self._store.add_block(base_id)
 
     def assert_all_instances(self, items, cls):
         """Checks that all items in a collection are instances of a class
