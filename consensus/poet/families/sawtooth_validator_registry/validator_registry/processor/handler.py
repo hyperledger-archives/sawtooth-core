@@ -29,6 +29,7 @@ from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_sdk.protobuf.setting_pb2 import Setting
 
 from sawtooth_poet_common import sgx_structs
 from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
@@ -45,6 +46,62 @@ VAL_REG_NAMESPACE = \
     hashlib.sha256("validator_registry".encode()).hexdigest()[0:6]
 
 
+# Constants to be used when constructing config namespace addresses
+_CONFIG_NAMESPACE = '000000'
+_CONFIG_MAX_KEY_PARTS = 4
+_CONFIG_ADDRESS_PART_SIZE = 16
+
+
+def _config_short_hash(byte_str):
+    # Computes the SHA 256 hash and truncates to be the length
+    # of an address part (see _config_key_to_address for information on
+    return hashlib.sha256(byte_str).hexdigest()[:_CONFIG_ADDRESS_PART_SIZE]
+
+_CONFIG_ADDRESS_PADDING = _config_short_hash(byte_str=b'')
+
+
+def _config_key_to_address(key):
+    """Computes the address for the given setting key.
+
+     Keys are broken into four parts, based on the dots in the string. For
+     example, the key `a.b.c` address is computed based on `a`, `b`, `c` and
+     padding. A longer key, for example `a.b.c.d.e`, is still
+     broken into four parts, but the remaining pieces are in the last part:
+     `a`, `b`, `c` and `d.e`.
+
+     Each of these pieces has a short hash computed (the first
+     _CONFIG_ADDRESS_PART_SIZE characters of its SHA256 hash in hex), and is
+     joined into a single address, with the config namespace
+     (_CONFIG_NAMESPACE) added at the beginning.
+
+     Args:
+         key (str): the setting key
+     Returns:
+         str: the computed address
+     """
+    # Split the key into _CONFIG_MAX_KEY_PARTS parts, maximum, compute the
+    # short hash of each, and then pad if necessary
+    key_parts = key.split('.', maxsplit=_CONFIG_MAX_KEY_PARTS - 1)
+    addr_parts = [_config_short_hash(byte_str=x.encode()) for x in key_parts]
+    addr_parts.extend(
+        [_CONFIG_ADDRESS_PADDING] * (_CONFIG_MAX_KEY_PARTS - len(addr_parts)))
+    return _CONFIG_NAMESPACE + ''.join(addr_parts)
+
+
+def _get_state(state, address, value_type):
+    try:
+        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
+    except FutureTimeoutError:
+        LOGGER.warning('Timeout occurred on state.get([%s])', address)
+        raise InternalError('Unable to get {}'.format(address))
+
+    value = value_type()
+    if entries_list:
+        value.ParseFromString(entries_list[0].data)
+
+    return value
+
+
 def _get_address(key):
     address = VAL_REG_NAMESPACE + hashlib.sha256(key.encode()).hexdigest()
     return address
@@ -53,20 +110,12 @@ def _get_address(key):
 def _get_validator_state(state, validator_id=None):
     if validator_id is None:
         address = _get_address('validator_map')
-        validator_state = ValidatorMap()
+        value_type = ValidatorMap
     else:
-        validator_state = ValidatorInfo()
         address = _get_address(validator_id)
-    try:
-        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
-    except FutureTimeoutError:
-        LOGGER.warning('Timeout occured on state.get([%s])', address)
-        raise InternalError('Unable to get {}'.format(address))
+        value_type = ValidatorInfo
 
-    if len(entries_list) != 0:
-        validator_state.ParseFromString(entries_list[0].data)
-
-    return validator_state
+    return _get_state(state=state, address=address, value_type=value_type)
 
 
 def _update_validator_state(state,
@@ -120,6 +169,19 @@ def _set_data(state, address, data):
             'Failed to save value on address {}'.format(address))
 
 
+def _get_config_setting(state, key):
+    setting = \
+        _get_state(
+            state=state,
+            address=_config_key_to_address(key),
+            value_type=Setting)
+    for setting_entry in setting.entries:
+        if setting_entry.key == key:
+            return setting_entry.value
+
+    raise KeyError('Setting for {} not found'.format(key))
+
+
 class ValidatorRegistryTransactionHandler(object):
 
     # The basename and enclave measurement values we expect to find
@@ -133,24 +195,8 @@ class ValidatorRegistryTransactionHandler(object):
             'c99f21955e38dbb03d2ca838d3af6e43'
             'ef438926ed02db4cc729380c8c7a174e')
 
-    # The report public key PEM is used to create the public key used to
-    # verify the signature on the attestation verification reports.
-    __REPORT_PUBLIC_KEY_PEM__ = \
-        '-----BEGIN PUBLIC KEY-----\n' \
-        'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMvzZi8GT+lI9KeZiInn\n' \
-        '4CvFTiuyid+IN4dP1+mhTnfxX+I/ntt8LUKZMbI1R1izOUoxJRoX6VQ4S9VgDLEC\n' \
-        'PW6QlkeLI1eqe4DiYb9+J5ANhq4+XkhwgCUUFwpfqSfXWCHimjaGsZHbavl5nv/6\n' \
-        'IbZJL/2YzE37IzJdES16JCfmIUrk6TUqL0WgrWXyweTIoVSbld0M29kToSkMXLsj\n' \
-        '8vbQbTiKwViWhYlzi0cQIo7PiAss66lAW0X6AM7ZJYyAcfSjSLR4guMz76Og8aRk\n' \
-        'jtsjEEkq7Ndz5H8hllWUoHpxGDqLhM9O1/h+QdvTz7luZgpeJ5KB92vYL6yOlSxM\n' \
-        'fQIDAQAB\n' \
-        '-----END PUBLIC KEY-----'
-
     def __init__(self):
-        self._report_public_key = \
-            serialization.load_pem_public_key(
-                self.__REPORT_PUBLIC_KEY_PEM__.encode(),
-                backend=backends.default_backend())
+        pass
 
     @property
     def family_name(self):
@@ -171,7 +217,8 @@ class ValidatorRegistryTransactionHandler(object):
     def _verify_signup_info(self,
                             signup_info,
                             originator_public_key_hash,
-                            val_reg_payload):
+                            val_reg_payload,
+                            state):
 
         # Verify the attestation verification report signature
         proof_data_dict = json.loads(signup_info.proof_data)
@@ -183,8 +230,27 @@ class ValidatorRegistryTransactionHandler(object):
         if signature is None:
             raise ValueError('Signature is missing from proof data')
 
+        # Try to get the report key from the configuration setting.  If it
+        # is not there or we cannot parse it, fail verification.
         try:
-            self._report_public_key.verify(
+            report_public_key_pem = \
+                _get_config_setting(
+                    state=state,
+                    key='sawtooth.poet.report_public_key_pem')
+            report_public_key = \
+                serialization.load_pem_public_key(
+                    report_public_key_pem.encode(),
+                    backend=backends.default_backend())
+        except KeyError:
+            raise \
+                ValueError(
+                    'Report public key configuration setting '
+                    '(sawtooth.poet.report_public_key_pem) not found.')
+        except (TypeError, ValueError) as error:
+            raise ValueError('Failed to parse public key: {}'.format(error))
+
+        try:
+            report_public_key.verify(
                 base64.b64decode(signature.encode()),
                 verification_report.encode(),
                 padding.PKCS1v15(),
@@ -380,7 +446,8 @@ class ValidatorRegistryTransactionHandler(object):
             self._verify_signup_info(
                 signup_info=signup_info,
                 originator_public_key_hash=public_key_hash,
-                val_reg_payload=val_reg_payload)
+                val_reg_payload=val_reg_payload,
+                state=state)
 
         except ValueError as error:
             raise InvalidTransaction(
