@@ -19,8 +19,7 @@ import hashlib
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
-from sawtooth_validator_registry.validator_reg_message_factory \
-    import ValidatorRegistryMessageFactory
+from validator_reg_message_factory import ValidatorRegistryMessageFactory
 
 from sawtooth_poet_common import sgx_structs
 from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
