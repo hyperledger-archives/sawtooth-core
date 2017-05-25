@@ -74,12 +74,22 @@ async def access_logger(app, handler):
 
         def log_response(response):
             # pylint: disable=protected-access
-            LOGGER.info(
-                'Response %s: %s status, %sB size, in %.3fs',
-                request_name,
-                response._status,
-                response._headers.get('Content-Length', 'UNKNOWN'),
-                time.time() - start_time)
+            content_length = response._headers.get('Content-Length',
+                                                   'UNKNOWN')
+            if content_length == 'UNKNOWN':
+                LOGGER.info(
+                    'Response %s: %s status, %s size, in %.3fs',
+                    request_name,
+                    response._status,
+                    content_length,
+                    time.time() - start_time)
+            else:
+                LOGGER.info(
+                    'Response %s: %s status, %sB size, in %.3fs',
+                    request_name,
+                    response._status,
+                    content_length,
+                    time.time() - start_time)
 
         try:
             response = await handler(request)
