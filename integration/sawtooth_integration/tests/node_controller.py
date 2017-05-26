@@ -138,11 +138,22 @@ def validator_cmds(num,
         'simulator_rk_pub.pem') as fd:
         public_key_pem = fd.read()
 
+    # Use the poet CLI to get the enclave measurement so that we can put the
+    # value in the settings config for the validator registry transaction
+    # processor
+    result = \
+        subprocess.run(
+            ['poet', 'enclave', 'measurement'],
+            stdout=subprocess.PIPE)
+    enclave_measurement = result.stdout.decode('utf-8')
+
     config_proposal = ' '.join([
         'sawtooth config proposal create',
         '-k {}'.format(priv),
         'sawtooth.consensus.algorithm=poet',
         'sawtooth.poet.report_public_key_pem="{}"'.format(public_key_pem),
+        'sawtooth.poet.valid_enclave_measurements={}'.format(
+            enclave_measurement),
         'sawtooth.poet.target_wait_time={}'.format(target_wait_time),
         'sawtooth.poet.initial_wait_time={}'.format(initial_wait_time),
         'sawtooth.poet.minimum_wait_time={}'.format(minimum_wait_time),

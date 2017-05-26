@@ -190,10 +190,6 @@ class ValidatorRegistryTransactionHandler(object):
         bytes.fromhex(
             'b785c58b77152cbe7fd55ee3851c4990'
             '00000000000000000000000000000000')
-    __VALID_ENCLAVE_MEASUREMENT__ = \
-        bytes.fromhex(
-            'c99f21955e38dbb03d2ca838d3af6e43'
-            'ef438926ed02db4cc729380c8c7a174e')
 
     def __init__(self):
         pass
@@ -248,6 +244,27 @@ class ValidatorRegistryTransactionHandler(object):
                     '(sawtooth.poet.report_public_key_pem) not found.')
         except (TypeError, ValueError) as error:
             raise ValueError('Failed to parse public key: {}'.format(error))
+
+        # Retrieve the valid enclave measurement values, converting the comma-
+        # delimited list. If it is not there, or fails to parse correctly,
+        # fail verification.
+        try:
+            valid_measurements = \
+                _get_config_setting(
+                    state=state,
+                    key='sawtooth.poet.valid_enclave_measurements')
+            valid_enclave_mesaurements = \
+                [bytes.fromhex(m) for m in valid_measurements.split(',')]
+        except KeyError:
+            raise \
+                ValueError(
+                    'Valid enclave measurements configuration setting '
+                    '(sawtooth.poet.valid_enclave_measurements) not found.')
+        except ValueError as error:
+            raise \
+                ValueError(
+                    'Failed to parse enclave measurement: {}'.format(
+                        valid_measurements))
 
         try:
             report_public_key.verify(
@@ -377,21 +394,16 @@ class ValidatorRegistryTransactionHandler(object):
                         sgx_quote.report_body.report_data.d.hex(),
                         expected_report_data.hex()))
 
-        # Compare the enclave measurement against the expected valid enclave
-        # measurement.
-        #
-        # NOTE - this is only a temporary check.  Instead of checking against
-        # a predefined enclave measurement value, we should be configured with
-        # a set of one or more enclave measurement values that we will
-        # consider as valid.
-
-        if sgx_quote.report_body.mr_enclave.m != \
-                self.__VALID_ENCLAVE_MEASUREMENT__:
+        # Verify that the enclave measurement is in the list of valid
+        # enclave measurements.
+        if sgx_quote.report_body.mr_enclave.m not in \
+                valid_enclave_mesaurements:
             raise \
                 ValueError(
-                    'AVR enclave measurement [{0}] not equal to [{1}]'.format(
+                    'AVR enclave measurement [{}] not in list of valid '
+                    'enclave measurements [{}]'.format(
                         sgx_quote.report_body.mr_enclave.m.hex(),
-                        self.__VALID_ENCLAVE_MEASUREMENT__.hex()))
+                        valid_measurements))
 
         # Compare the enclave basename in the verification report against the
         # expected enclave basename.

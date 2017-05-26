@@ -308,7 +308,7 @@ class ValidatorRegistryMessageFactory(object):
             {'000000a87cb5eafdcca6a87ccc804f5546a'
              'b8e97a7d614626e4500e3b0c44298fc1c14': data})
 
-    def create_get_response_simulator_report_key_pem(self, pem=None):
+    def create_get_response_simulator_report_key_pem(self):
         pem = '''-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMvzZi8GT+lI9KeZiInn
 4CvFTiuyid+IN4dP1+mhTnfxX+I/ntt8LUKZMbI1R1izOUoxJRoX6VQ4S9VgDLEC
@@ -320,3 +320,28 @@ fQIDAQAB
 -----END PUBLIC KEY-----'''
 
         return self.create_get_response_report_key_pem(pem=pem)
+
+    def create_get_request_enclave_measurements(self):
+        return \
+            self._factory.create_get_request(
+                ['000000a87cb5eafdcca6a87ccc804f5546a'
+                 'b8e39ccaeec28506829e3b0c44298fc1c14'])
+
+    def create_get_response_enclave_measurements(self, measurements=None):
+        setting = Setting()
+        if measurements is not None:
+            entry = Setting.Entry(key='sawtooth.poet.'
+                                      'valid_enclave_measurements',
+                                  value=measurements)
+            setting.entries.extend([entry])
+
+        data = setting.SerializeToString()
+        return self._factory.create_get_response(
+            {'000000a87cb5eafdcca6a87ccc804f5546a'
+             'b8e39ccaeec28506829e3b0c44298fc1c14': data})
+
+    def create_get_response_simulator_enclave_measurements(self):
+        return \
+            self.create_get_response_enclave_measurements(
+                measurements='c99f21955e38dbb03d2ca838d3af6e43'
+                             'ef438926ed02db4cc729380c8c7a174e')
