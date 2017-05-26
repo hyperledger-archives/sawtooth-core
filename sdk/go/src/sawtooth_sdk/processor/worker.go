@@ -40,7 +40,6 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 
 	// Receive work off of the queue until the queue is closed
 	for msg := range queue {
-		logger.Infof("(%v) Received new process request", id)
 		request := &processor_pb2.TpProcessRequest{}
 		err = proto.Unmarshal(msg.GetContent(), request)
 		if err != nil {
@@ -70,11 +69,6 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 		state := NewState(connection, contextId)
 
 		// Run the handler
-		logger.Debugf(
-			"(%v) Passing request with context id %v to handler (%v, %v, %v, %v)",
-			id, contextId, handler.FamilyName(), handler.FamilyVersion,
-			handler.Encoding(), handler.Namespaces(),
-		)
 		err = handler.Apply(request, state)
 
 		// Process the handler response
@@ -82,10 +76,10 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 		if err != nil {
 			switch e := err.(type) {
 			case *InvalidTransactionError:
-				logger.Warnf("(%v) Invalid Transaction: %v", id, e)
+				logger.Warnf("(%v) %v", id, e)
 				response.Status = processor_pb2.TpProcessResponse_INVALID_TRANSACTION
 			case *InternalError:
-				logger.Warnf("(%v) Internal Error %v", id, e)
+				logger.Warnf("(%v) %v", id, e)
 				response.Status = processor_pb2.TpProcessResponse_INTERNAL_ERROR
 			default:
 				logger.Errorf("(%v) Unknown error: %v", id, err)
@@ -110,7 +104,6 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 			logger.Errorf("(%v) Error sending TpProcessResponse: %v", id, err)
 			break
 		}
-		logger.Infof("(%v) Responded with %v", id, response.Status)
 	}
 
 	// Queue has closed, so send shutdown signal
@@ -121,8 +114,6 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 	)
 	if err != nil {
 		logger.Errorf("(%v) Error sending shutdown: %v", id, err)
-	} else {
-		logger.Debugf("(%v) Sent shutdown message to router", id)
 	}
 }
 
@@ -161,9 +152,7 @@ func shutdown(context *zmq.Context, uri string, queue chan *validator_pb2.Messag
 	defer connection.Close()
 	id := "shutdown"
 
-	logger.Debugf("Shutdown handler waiting")
 	<-wait
-	logger.Debugf("Shutdown handler got shutdown message; Unregistering")
 
 	// Send a request to be unregistered
 	data, err := proto.Marshal(&processor_pb2.TpUnregisterRequest{})
@@ -197,11 +186,9 @@ func shutdown(context *zmq.Context, uri string, queue chan *validator_pb2.Messag
 			"Expected TP_UNREGISTER_RESPONSE but got %v", msg.GetMessageType(),
 		)
 	}
-	logger.Debugf("(%v) Unregister response received.", id)
 
 	// Close the work queue, telling the worker threads there's no more work
 	close(queue)
-	logger.Debugf("(%v) Queue closed", id)
 
 	err = connection.SendMsg(
 		validator_pb2.Message_DEFAULT,
