@@ -78,3 +78,14 @@ These checks are:
 * The build must pass on Jenkins
 * The PR must be approved by at least two reviewers and there cannot be 
   outstanding changes requested
+
++**Integrating Github Commits with JIRA**
+
+You can link JIRA issues to your Hyperledger Sawtooth github commits to integrate
+the developer's activity with the associated issue. JIRA uses the issue key to
+associate the commit with the issue, so the commit can be summarized in the
+development panel for the JIRA issue.
+
+When you make a commit, add the JIRA issue key to the end of the commit message. 
+Alternatively, you can add the JIRA issue key to the branch name. Either method 
+should integrate your commit with the JIRA issue it references.
