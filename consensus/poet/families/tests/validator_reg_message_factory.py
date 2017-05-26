@@ -345,3 +345,28 @@ fQIDAQAB
             self.create_get_response_enclave_measurements(
                 measurements='c99f21955e38dbb03d2ca838d3af6e43'
                              'ef438926ed02db4cc729380c8c7a174e')
+
+    def create_get_request_enclave_basenames(self):
+        return \
+            self._factory.create_get_request(
+                ['000000a87cb5eafdcca6a87ccc804f5546a'
+                 'b8ebec3b47bc008b27de3b0c44298fc1c14'])
+
+    def create_get_response_enclave_basenames(self, basenames=None):
+        setting = Setting()
+        if basenames is not None:
+            entry = Setting.Entry(key='sawtooth.poet.'
+                                      'valid_enclave_basenames',
+                                  value=basenames)
+            setting.entries.extend([entry])
+
+        data = setting.SerializeToString()
+        return self._factory.create_get_response(
+            {'000000a87cb5eafdcca6a87ccc804f5546a'
+             'b8ebec3b47bc008b27de3b0c44298fc1c14': data})
+
+    def create_get_response_simulator_enclave_basenames(self):
+        return \
+            self.create_get_response_enclave_basenames(
+                basenames='b785c58b77152cbe7fd55ee3851c4990'
+                          '00000000000000000000000000000000')
