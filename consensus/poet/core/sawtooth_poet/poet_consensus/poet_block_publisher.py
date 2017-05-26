@@ -160,9 +160,10 @@ class PoetBlockPublisher(BlockPublisherInterface):
         input_addresses = \
             output_addresses + \
             [ConfigView.setting_address('sawtooth.poet.report_public_key_pem'),
-             ConfigView.setting_address('sawtooth.poet.'
-                                        'valid_enclave_measurements'),
-             ConfigView.setting_address('sawtooth.poet.valid_basename')]
+             ConfigView.setting_address(
+                 'sawtooth.poet.valid_enclave_measurements'),
+             ConfigView.setting_address(
+                 'sawtooth.poet.valid_enclave_basenames')]
 
         header = \
             txn_pb.TransactionHeader(

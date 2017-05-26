@@ -128,7 +128,7 @@ def do_genesis(args):
         [ConfigView.setting_address('sawtooth.poet.report_public_key_pem'),
          ConfigView.setting_address('sawtooth.poet.'
                                     'valid_enclave_measurements'),
-         ConfigView.setting_address('sawtooth.poet.valid_basename')]
+         ConfigView.setting_address('sawtooth.poet.valid_enclave_basenames')]
 
     header = \
         txn_pb.TransactionHeader(
