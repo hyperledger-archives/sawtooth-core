@@ -18,7 +18,8 @@ go get -u \
     github.com/satori/go.uuid \
     github.com/btcsuite/btcd/btcec \
     gopkg.in/fatih/set.v0 \
-    golang.org/x/crypto/ripemd160
+    golang.org/x/crypto/ripemd160 \
+    github.com/jessevdk/go-flags
 
 chown -R $VAGRANT_USER:$VAGRANT_USER $GOPATH
 chown -R $VAGRANT_USER:$VAGRANT_USER $GOPATH/bin

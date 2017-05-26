@@ -51,7 +51,8 @@ RUN mkdir /go \
     github.com/satori/go.uuid \
     github.com/btcsuite/btcd/btcec \
     gopkg.in/fatih/set.v0 \
-    golang.org/x/crypto/ripemd160
+    golang.org/x/crypto/ripemd160 \
+    github.com/jessevdk/go-flags
 
 EXPOSE 40000/tcp
 
