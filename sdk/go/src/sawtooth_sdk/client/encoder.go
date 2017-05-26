@@ -33,7 +33,7 @@ type Encoder struct {
 func NewEncoder(privkey []byte, defaults TransactionParams) *Encoder {
 	return &Encoder{
 		privkey:  privkey,
-		pubkey:   Encode(GenPubKey(privkey), "hex"),
+		pubkey:   MustEncode(GenPubKey(privkey)),
 		defaults: defaults,
 	}
 }
@@ -56,7 +56,7 @@ func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transa
 		Dependencies: self.defaults.Dependencies,
 
 		// Set unique fields
-		PayloadSha512: Encode(SHA512(payload), "hex"),
+		PayloadSha512: MustEncode(SHA512(payload)),
 		SignerPubkey:  self.pubkey,
 	}
 
@@ -101,7 +101,7 @@ func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transa
 	if err != nil {
 		panic(err)
 	}
-	hs := Encode(Sign(hb, self.privkey), "hex")
+	hs := MustEncode(Sign(hb, self.privkey))
 
 	transaction := &transaction_pb2.Transaction{
 		Header:          hb,
@@ -173,7 +173,7 @@ func (self *Encoder) NewBatch(transactions []*Transaction) *Batch {
 		panic(err)
 	}
 
-	hs := Encode(Sign(hb, self.privkey), "hex")
+	hs := MustEncode(Sign(hb, self.privkey))
 
 	batch := &batch_pb2.Batch{
 		Header:          hb,
@@ -224,28 +224,20 @@ func ParseBatches(b []byte) ([]*Batch, error) {
 
 // -- Encoding --
 
-// Encode converts the given byte slice to a string using the given encoding.
-func Encode(key []byte, encoding string) string {
-	switch encoding {
-	case "hex":
-		return strings.ToLower(hex.EncodeToString(key))
-	default:
-		panic("Unsupported encoding: " + encoding)
-	}
+// MustEncode converts the given byte slice to a lower-case hex-encoded string.
+// Panics if encoding fails.
+func MustEncode(data []byte) string {
+	return strings.ToLower(hex.EncodeToString(data))
 }
 
-// Decode converts the given string to a byte slice using the given encoding.
-func Decode(encoded, encoding string) []byte {
-	switch encoding {
-	case "hex":
-		bytes, err := hex.DecodeString(encoded)
-		if err != nil {
-			panic("Couldn't decode")
-		}
-		return bytes
-	default:
-		panic("Unsupported encoding: " + encoding)
+// MustDecode converts the given lower-case, hex-encoded string to a byte slice
+// and panics if decoding fails.
+func MustDecode(encoded string) []byte {
+	bytes, err := hex.DecodeString(encoded)
+	if err != nil {
+		panic("Couldn't decode")
 	}
+	return bytes
 }
 
 // -- Wrap Protobuf --
