@@ -14,12 +14,13 @@
 # ------------------------------------------------------------------------------
 from hashlib import sha512
 from hashlib import sha256
-import importlib
 import os
 import time
 
 from sawtooth_poet_cli import config
 from sawtooth_poet_cli.exceptions import CliException
+from sawtooth_poet_cli.poet_enclave_module_wrapper import \
+    PoetEnclaveModuleWrapper
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 from sawtooth_poet.poet_consensus.poet_key_state_store \
     import PoetKeyState
@@ -33,10 +34,6 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb
 from sawtooth_validator.state.config_view import ConfigView
-
-SIMUATOR_MODULE = \
-    'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
-SGX_MODULE = 'poet_enclave_sgx.poet_enclave'
 
 VR_NAMESPACE = sha256('validator_registry'.encode()).hexdigest()[0:6]
 VALIDATOR_MAP_ADDRESS = \
@@ -74,29 +71,18 @@ def do_genesis(args):
     file, whose location is determined by the args.  The signup data, generated
     by the selected enclave, is also stored in a well-known location.
     """
-    if args.enclave_module == 'simulator':
-        module_name = SIMUATOR_MODULE
-    elif args.enclave_module == 'sgx':
-        module_name = SGX_MODULE
-    else:
-        raise AssertionError('Unknown enclave module: {}'.format(
-            args.enclave_module))
-
-    try:
-        poet_enclave_module = importlib.import_module(module_name)
-    except ImportError as e:
-        raise AssertionError(str(e))
-
-    poet_enclave_module.initialize(config.get_config_dir())
-
     pubkey, signing_key = _read_signing_keys(args.key)
 
     public_key_hash = sha256(pubkey.encode()).hexdigest()
-    signup_info = SignupInfo.create_signup_info(
-        poet_enclave_module=poet_enclave_module,
-        validator_address=pubkey,
-        originator_public_key_hash=public_key_hash,
-        nonce=NULL_BLOCK_IDENTIFIER)
+
+    with PoetEnclaveModuleWrapper(
+            enclave_module=args.enclave_module,
+            config_dir=config.get_config_dir()) as poet_enclave_module:
+        signup_info = SignupInfo.create_signup_info(
+            poet_enclave_module=poet_enclave_module,
+            validator_address=pubkey,
+            originator_public_key_hash=public_key_hash,
+            nonce=NULL_BLOCK_IDENTIFIER)
 
     print(
         'Writing key state for PoET public key: {}...{}'.format(
