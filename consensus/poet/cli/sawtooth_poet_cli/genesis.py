@@ -61,7 +61,7 @@ def add_genesis_parser(subparsers, parent_parser):
         '-o', '--output',
         default='poet-genesis.batch',
         type=str,
-        help='the name of the file to ouput the resulting batches')
+        help='the name of the file to output the resulting batches')
 
 
 def do_genesis(args):
