@@ -147,6 +147,15 @@ def validator_cmds(num,
             stdout=subprocess.PIPE)
     enclave_measurement = result.stdout.decode('utf-8')
 
+    # Use the poet CLI to get the enclave basename so that we can put the
+    # value in the settings config for the validator registry transaction
+    # processor
+    result = \
+        subprocess.run(
+            ['poet', 'enclave', 'basename'],
+            stdout=subprocess.PIPE)
+    enclave_basename = result.stdout.decode('utf-8')
+
     config_proposal = ' '.join([
         'sawtooth config proposal create',
         '-k {}'.format(priv),
@@ -154,6 +163,7 @@ def validator_cmds(num,
         'sawtooth.poet.report_public_key_pem="{}"'.format(public_key_pem),
         'sawtooth.poet.valid_enclave_measurements={}'.format(
             enclave_measurement),
+        'sawtooth.poet.valid_enclave_basenames={}'.format(enclave_basename),
         'sawtooth.poet.target_wait_time={}'.format(target_wait_time),
         'sawtooth.poet.initial_wait_time={}'.format(initial_wait_time),
         'sawtooth.poet.minimum_wait_time={}'.format(minimum_wait_time),

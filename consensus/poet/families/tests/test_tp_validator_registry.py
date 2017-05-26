@@ -79,6 +79,15 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             self.factory.create_get_response_simulator_enclave_measurements(),
             received)
 
+        # Expect Request for the address for valid enclave basenames
+        received = self.validator.expect(
+            self.factory.create_get_request_enclave_basenames())
+
+        # Respond with the simulator valid enclave basenames
+        self.validator.respond(
+            self.factory.create_get_response_simulator_enclave_basenames(),
+            received)
+
         # Expect Request for the ValidatorMap
         received = self.validator.expect(
             self.factory.create_get_request_validator_map())
@@ -137,6 +146,15 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         # Respond with the simulator valid enclave measurements
         self.validator.respond(
             self.factory.create_get_response_simulator_enclave_measurements(),
+            received)
+
+        # Expect Request for the address for valid enclave basenames
+        received = self.validator.expect(
+            self.factory.create_get_request_enclave_basenames())
+
+        # Respond with the simulator valid enclave basenames
+        self.validator.respond(
+            self.factory.create_get_response_simulator_enclave_basenames(),
             received)
 
         # Expect Request for the ValidatorMap
@@ -263,6 +281,15 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             self.factory.create_get_response_simulator_enclave_measurements(),
             received)
 
+        # Expect Request for the address for valid enclave basenames
+        received = self.validator.expect(
+            self.factory.create_get_request_enclave_basenames())
+
+        # Respond with the simulator valid enclave basenames
+        self.validator.respond(
+            self.factory.create_get_response_simulator_enclave_basenames(),
+            received)
+
         self._expect_invalid_transaction()
 
     def _test_bad_signup_info(self, signup_info, expect_config=True):
@@ -294,6 +321,15 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             self.validator.respond(
                 self.factory.
                 create_get_response_simulator_enclave_measurements(),
+                received)
+
+            # Expect Request for the address for valid enclave basenames
+            received = self.validator.expect(
+                self.factory.create_get_request_enclave_basenames())
+
+            # Respond with the simulator valid enclave basenames
+            self.validator.respond(
+                self.factory.create_get_response_simulator_enclave_basenames(),
                 received)
 
         self._expect_invalid_transaction()
@@ -753,6 +789,99 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         self.validator.respond(
             self.factory.create_get_response_enclave_measurements(
                 measurements='invalid'),
+            received)
+
+        # Expect that the transaction will be rejected
+        self._expect_invalid_transaction()
+
+    def test_missing_enclave_basenames(self):
+        """
+        Testing validator registry unable to retrieve the valid enclave
+        basenames from the config setting.
+        """
+        signup_info = self.factory.create_signup_info(
+            self.factory.pubkey_hash, "000")
+
+        payload = ValidatorRegistryPayload(
+            verb="reg", name="val_1", id=self.factory.public_key,
+            signup_info=signup_info)
+
+        # Send validator registry payload
+        self.validator.send(
+            self.factory.create_tp_process_request(payload.id, payload))
+
+        # Expect Request for the address for report key PEM
+        received = self.validator.expect(
+            self.factory.create_get_request_report_key_pem())
+
+        # Respond with the simulator report key PEM
+        self.validator.respond(
+            self.factory.create_get_response_simulator_report_key_pem(),
+            received)
+
+        # Expect Request for the address for valid enclave measurements
+        received = self.validator.expect(
+            self.factory.create_get_request_enclave_measurements())
+
+        # Respond with simulator valid enclave measurements
+        self.validator.respond(
+            self.factory.create_get_response_simulator_enclave_measurements(),
+            received)
+
+        # Expect Request for the address for valid enclave basenames
+        received = self.validator.expect(
+            self.factory.create_get_request_enclave_basenames())
+
+        # Respond with empty enclave basenames
+        self.validator.respond(
+            self.factory.create_get_response_enclave_basenames(),
+            received)
+
+        # Expect that the transaction will be rejected
+        self._expect_invalid_transaction()
+
+    def test_invalid_enclave_basenames(self):
+        """
+        Testing validator registry unable to successfully parse the valid
+        enclave basenames from the config setting.
+        """
+        signup_info = self.factory.create_signup_info(
+            self.factory.pubkey_hash, "000")
+
+        payload = ValidatorRegistryPayload(
+            verb="reg", name="val_1", id=self.factory.public_key,
+            signup_info=signup_info)
+
+        # Send validator registry payload
+        self.validator.send(
+            self.factory.create_tp_process_request(payload.id, payload))
+
+        # Expect Request for the address for report key PEM
+        received = self.validator.expect(
+            self.factory.create_get_request_report_key_pem())
+
+        # Respond with the simulator report key PEM
+        self.validator.respond(
+            self.factory.create_get_response_simulator_report_key_pem(),
+            received)
+
+        # Expect Request for the address for valid enclave measurements
+        received = self.validator.expect(
+            self.factory.create_get_request_enclave_measurements())
+
+        # Respond with simulator valid enclave measurements
+        self.validator.respond(
+            self.factory.create_get_response_simulator_enclave_measurements(),
+            received)
+
+        # Expect Request for the address for valid enclave basenames
+        received = self.validator.expect(
+            self.factory.create_get_request_enclave_basenames())
+
+        # Respond with empty enclave basenames
+        self.validator.respond(
+            self.factory.create_get_response_enclave_basenames(
+                basenames='invalid'),
             received)
 
         # Expect that the transaction will be rejected

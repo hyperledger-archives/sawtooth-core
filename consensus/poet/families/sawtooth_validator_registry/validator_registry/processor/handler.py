@@ -183,14 +183,6 @@ def _get_config_setting(state, key):
 
 
 class ValidatorRegistryTransactionHandler(object):
-
-    # The basename and enclave measurement values we expect to find
-    # in the enclave quote in the attestation verification report.
-    __VALID_BASENAME__ = \
-        bytes.fromhex(
-            'b785c58b77152cbe7fd55ee3851c4990'
-            '00000000000000000000000000000000')
-
     def __init__(self):
         pass
 
@@ -265,6 +257,26 @@ class ValidatorRegistryTransactionHandler(object):
                 ValueError(
                     'Failed to parse enclave measurement: {}'.format(
                         valid_measurements))
+
+        # Retrieve the valid enclave basename value. If it is not there, or
+        # fails to parse correctly, fail verification.
+        try:
+            valid_basenames = \
+                _get_config_setting(
+                    state=state,
+                    key='sawtooth.poet.valid_enclave_basenames')
+            valid_enclave_basenames = \
+                [bytes.fromhex(b) for b in valid_basenames.split(',')]
+        except KeyError:
+            raise \
+                ValueError(
+                    'Valid enclave basenames configuration setting '
+                    '(sawtooth.poet.valid_enclave_basenames) not found.')
+        except ValueError:
+            raise \
+                ValueError(
+                    'Failed to parse enclave basename: {}'.format(
+                        valid_basenames))
 
         try:
             report_public_key.verify(
@@ -405,19 +417,15 @@ class ValidatorRegistryTransactionHandler(object):
                         sgx_quote.report_body.mr_enclave.m.hex(),
                         valid_measurements))
 
-        # Compare the enclave basename in the verification report against the
-        # expected enclave basename.
-        #
-        # NOTE - this is only a temporary check.  Instead of checking against
-        # a predefined enclave basename value, we should be configured with a
-        # set of one or more enclave basenames that we will consider as valid.
-
-        if sgx_quote.basename.name != self.__VALID_BASENAME__:
+        # Verify that the enclave basename is in the list of valid
+        # enclave basenames
+        if sgx_quote.basename.name not in valid_enclave_basenames:
             raise \
                 ValueError(
-                    'AVR enclave basename [{0}] not equal to [{1}]'.format(
+                    'AVR enclave basename [{}] not in list of valid '
+                    'enclave basenames [{}]'.format(
                         sgx_quote.basename.name.hex(),
-                        self.__VALID_BASENAME__.hex()))
+                        valid_basenames))
 
         # Verify that the nonce in the verification report matches the nonce
         # in the transaction payload submitted
