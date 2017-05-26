@@ -162,6 +162,10 @@ class _PoetEnclaveSimulator(object):
         cls._anti_sybil_id = hashlib.sha256(validator_id.encode()).hexdigest()
 
     @classmethod
+    def shutdown(cls):
+        pass
+
+    @classmethod
     def get_enclave_measurement(cls):
         return cls.__VALID_ENCLAVE_MEASUREMENT__.hex()
 
@@ -482,6 +486,10 @@ class _PoetEnclaveSimulator(object):
 
 def initialize(config_dir):
     _PoetEnclaveSimulator.initialize(config_dir=config_dir)
+
+
+def shutdown():
+    _PoetEnclaveSimulator.shutdown()
 
 
 def get_enclave_measurement():
