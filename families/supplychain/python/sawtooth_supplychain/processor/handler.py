@@ -75,7 +75,8 @@ class SupplyChainHandler(object):
             payload = SupplyChainPayload()
             payload.ParseFromString(transaction.payload)
 
-            LOGGER.debug("SupplyChainHandler.apply action: %s", payload.action)
+            LOGGER.debug("SupplyChainHandler.apply action: %s",
+                         SupplyChainPayload.Action.Name(payload.action))
 
             if payload.action == SupplyChainPayload.AGENT_CREATE:
                 self._agent_create(state, originator, payload.data)
@@ -102,6 +103,7 @@ class SupplyChainHandler(object):
         txn_data.ParseFromString(data)
 
         agent_addr = Addressing.agent_address(originator)
+        LOGGER.debug("_agent_create: %s %s", originator, agent_addr)
         state_items = self._get(state, [agent_addr])
         agents = state_items.get(agent_addr, AgentContainer())
 

@@ -32,14 +32,13 @@ message Record {
     }
     repeated AgentRecord owners = 3; // ordered list of the owners, current
     // owner is first in the list. List is ordered in chronological order oldest
-    // to most recent. The first by defition is the creator of the record. The
-    // last is the current owner of the record.
+    // to most recent. The first by definition is the creator of the record.
+    // The last is the current owner of the record.
     repeated AgentRecord custodians = 4; // ordered list of custodians.
     // current owner is first in the list. Same ordering as the owners list.
 
     bool final = 5; // is the record finalized, finalized records cannot be
     // changed.
-
 }
 
 // Setting Container for on-chain configuration key/value pairs

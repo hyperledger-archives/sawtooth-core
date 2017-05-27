@@ -1,0 +1,98 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  tp_supplychain_python:
+    image: sawtooth-tp_supplychain_python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: tp_supplychain_python tcp://validator:4004 -vvv
+    stop_signal: SIGKILL
+
+  tp_settings:
+    image: sawtooth-tp_settings:$ISOLATION_ID
+    container_name: sawtooth-tp_settings-default
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    entrypoint: tp_settings -vv tcp://validator:4004
+
+  validator:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    # start the validator with an empty genesis batch
+    entrypoint: "bash -c \"\
+        sawtooth admin keygen && \
+        sawtooth keygen my_key && \
+        sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && \
+        sawtooth admin genesis config-genesis.batch && \
+        validator -vv \
+          --endpoint tcp://validator:8800 \
+          --bind component:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
+        \""
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/families/supplychain/python:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing"
+
+  restapi:
+    image: sawtooth-rest_api:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - validator
+    entrypoint: rest_api --connect tcp://validator:4004 --bind restapi:8080 -vvv
+
+  int-supplychain-python:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    command: nose2-3
+        -v
+        --log-level DEBUG
+        -c /project/sawtooth-core/families/supplychain/python/nose2.cfg
+        -s /project/sawtooth-core/families/supplychain/python/tests
+        test_supplychain_integration.TestSupplyChainIntegration
+    stop_signal: SIGKILL
+    depends_on:
+      - restapi
+      - tp_supplychain_python
+    environment:
+      RESTAPI_URL: 'restapi:8080'
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/families/supplychain/python:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing"
