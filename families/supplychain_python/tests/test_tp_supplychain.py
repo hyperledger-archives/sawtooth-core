@@ -24,7 +24,7 @@ from sawtooth_processor_test.transaction_processor_test_case \
 
 from sawtooth_supplychain_test.supplychain_message_factory \
     import SupplychainMessageFactory
-import sawtooth_supplychain.addressing as addressing
+import sawtooth_supplychain.common.addressing as addressing
 
 LOGGER = logging.getLogger(__name__)
 

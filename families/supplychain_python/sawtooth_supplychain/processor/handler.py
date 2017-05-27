@@ -21,7 +21,7 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
-import sawtooth_supplychain.addressing as addressing
+import sawtooth_supplychain.common.addressing as addressing
 
 
 LOGGER = logging.getLogger(__name__)
