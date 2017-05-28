@@ -62,6 +62,12 @@ def main(args=sys.argv[1:]):
             "consensus/poet/families/sawtooth_validator_registry/protos")
     protoc(proto_dir, "consensus/poet/common", "sawtooth_poet_common/protobuf")
 
+    # 4. Generate supplychain protos
+    proto_dir = JOIN(TOP_DIR, "families/supplychain/protos")
+    protoc(proto_dir, "families/supplychain/python",
+        "sawtooth_supplychain/protobuf")
+
+
 
 def protoc(src_dir, base_dir, pkg, language="python"):
     if language == "python":

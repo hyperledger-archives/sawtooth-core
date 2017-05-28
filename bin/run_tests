@@ -153,6 +153,9 @@ main() {
                 config)
                     test_config
                     ;;
+                supplychain)
+                    test_supplychain
+                    ;;
                 validator)
                     test_validator
                     ;;
@@ -227,6 +230,11 @@ test_config() {
     copy_coverage .coverage.config
     run_docker_test config-smoke -s integration_test
     copy_coverage .coverage.config-smoke
+}
+
+test_supplychain() {
+    run_docker_test ./families/supplychain/python/tests/tp-supplychain-python.yaml -s validator
+    copy_coverage .coverage.config
 }
 
 test_validator() {

@@ -14,5 +14,5 @@
 # ------------------------------------------------------------------------------
 
 
-class SupplychainException(Exception):
+class SupplyChainException(Exception):
     pass
