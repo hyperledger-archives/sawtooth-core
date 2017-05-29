@@ -23,8 +23,6 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    depends_on:
-      - validator
     command: tp_config -vv tcp://validator:40000
     stop_signal: SIGKILL
 
@@ -34,8 +32,6 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-    depends_on:
-      - validator
     command: tp_xo_javascript tcp://validator:40000
     stop_signal: SIGKILL
 
@@ -62,8 +58,6 @@ services:
     expose:
       - 40000
       - 8080
-    depends_on:
-     - validator
     command: rest_api -v --stream-url tcp://validator:40000 --host rest_api
     stop_signal: SIGKILL
 
@@ -73,10 +67,6 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 8080
-    depends_on:
-      - validator
-      - rest_api
-    # Wait for rest_api
     command: nose2-3
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
         -v
@@ -86,4 +76,6 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/integration:\
+        /project/sawtooth-core/sdk/examples/xo_python:\
+        /project/sawtooth-core/cli:\
         /project/sawtooth-core/signing"

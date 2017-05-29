@@ -13,15 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 import sys
 import argparse
 
 from sawtooth_sdk.processor.core import TransactionProcessor
-from sawtooth_sdk.client.config import get_log_dir
-from sawtooth_sdk.client.config import get_log_config
-from sawtooth_sdk.client.log import init_console_logging
-from sawtooth_sdk.client.log import log_configuration
+from sawtooth_sdk.client.config import get_log_dir, get_log_config
+from sawtooth_sdk.client.log import init_console_logging, log_configuration
 from sawtooth_xo.processor.handler import XoTransactionHandler
 
 
@@ -60,8 +57,7 @@ def main(args=sys.argv[1:]):
 
         # The prefix should eventually be looked up from the
         # validator's namespace registry.
-        xo_prefix = hashlib.sha512('xo'.encode("utf-8")).hexdigest()[0:6]
-        handler = XoTransactionHandler(namespace_prefix=xo_prefix)
+        handler = XoTransactionHandler()
 
         processor.add_handler(handler)
 

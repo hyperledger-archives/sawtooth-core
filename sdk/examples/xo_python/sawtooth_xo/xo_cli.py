@@ -222,11 +222,8 @@ def do_list(args, config):
     if game_list is not None:
         fmt = "%-15s %-15.15s %-15.15s %-9s %s"
         print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE'))
-        for game_data in game_list:
-
-            board, game_state, player1, player2, name = \
-                game_data.decode().split(",")
-
+        for name, game_data in game_list.items():
+            board, game_state, player1, player2 = game_data
             print(fmt % (name, player1[:6], player2[:6], board, game_state))
     else:
         raise XoException("Could not retrieve game listing.")
@@ -239,26 +236,36 @@ def do_show(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url, keyfile=key_file)
-    game = client.show(name).decode()
+    game = client.show(name)
 
     if game is not None:
 
-        board_str, game_state, player1, player2, name = \
-            game.split(",")
+        board, game_state, player1, player2 = game
 
-        board = list(board_str.replace("-", " "))
+        game_info = '\n'.join([
+            'GAME: {}'.format(name),
+            'PLAYER 1: {}'.format(player1[:6]),
+            'PLAYER 2: {}'.format(player2[:6]),
+            'STATE: {}'.format(game_state),
+        ])
 
-        print("GAME:     : {}".format(name))
-        print("PLAYER 1  : {}".format(player1[:6]))
-        print("PLAYER 2  : {}".format(player2[:6]))
-        print("STATE     : {}".format(game_state))
-        print("")
-        print("  {} | {} | {}".format(board[0], board[1], board[2]))
-        print(" ---|---|---")
-        print("  {} | {} | {}".format(board[3], board[4], board[5]))
-        print(" ---|---|---")
-        print("  {} | {} | {}".format(board[6], board[7], board[8]))
-        print("")
+        side_length = 1
+        while side_length ** 2 < len(board):
+            side_length += 1
+
+        rows = [
+            board.replace('-', ' ')[i:i + side_length]
+            for i in range(0, len(board), side_length)
+        ]
+
+        divider = ' \n' + '|'.join(['---' for _ in range(side_length)]) + '\n'
+
+        format_board = divider.join([' ' + ' | '.join(row) for row in rows])
+
+        print('\n\n'.join([
+            game_info,
+            format_board,
+        ]) + '\n')
 
     else:
         raise XoException("Game not found: {}".format(name))
