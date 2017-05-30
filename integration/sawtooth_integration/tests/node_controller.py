@@ -143,7 +143,7 @@ def validator_cmds(num,
         '-o config.batch'
     ])
 
-    poet = 'poet genesis -o poet.batch'
+    poet = 'poet genesis -k {} -o poet.batch'.format(priv)
 
     genesis = ' '.join([
         'sawtooth admin genesis',
