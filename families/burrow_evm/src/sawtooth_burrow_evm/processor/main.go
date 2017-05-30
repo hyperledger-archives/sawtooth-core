@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"os"
-	burrow_evm "sawtooth_burrow_evm/handler"
+	burrow_evm "sawtooth_burrow_evm/processor/handler"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"syscall"
