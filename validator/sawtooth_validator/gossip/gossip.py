@@ -41,7 +41,7 @@ class Gossip(object):
     def __init__(self, network,
                  endpoint=None,
                  peering_mode='static',
-                 initial_join_endpoints=None,
+                 initial_seed_endpoints=None,
                  initial_peer_endpoints=None,
                  minimum_peer_connectivity=3,
                  maximum_peer_connectivity=10,
@@ -62,9 +62,9 @@ class Gossip(object):
                 attempt to initiate peering connections with endpoints
                 specified in the peer_list and then attempt to do a
                 topology buildout starting with peer lists obtained from
-                endpoints in the join_list. In either mode, the validator
+                endpoints in the seeds_list. In either mode, the validator
                 will accept incoming peer requests up to max_peers.
-            initial_join_endpoints ([str]): A list of initial endpoints
+            initial_seed_endpoints ([str]): A list of initial endpoints
                 to attempt to connect and gather initial topology buildout
                 information from. These are specified as zmq-compatible
                 URIs (e.g. tcp://hostname:port).
@@ -85,8 +85,8 @@ class Gossip(object):
         self._condition = Condition()
         self._network = network
         self._endpoint = endpoint
-        self._initial_join_endpoints = initial_join_endpoints \
-            if initial_join_endpoints else []
+        self._initial_seed_endpoints = initial_seed_endpoints \
+            if initial_seed_endpoints else []
         self._initial_peer_endpoints = initial_peer_endpoints \
             if initial_peer_endpoints else []
         self._minimum_peer_connectivity = minimum_peer_connectivity
@@ -265,7 +265,7 @@ class Gossip(object):
             network=self._network,
             endpoint=self._endpoint,
             initial_peer_endpoints=self._initial_peer_endpoints,
-            initial_join_endpoints=self._initial_join_endpoints,
+            initial_seed_endpoints=self._initial_seed_endpoints,
             peering_mode=self._peering_mode,
             min_peers=self._minimum_peer_connectivity,
             max_peers=self._maximum_peer_connectivity,
@@ -285,7 +285,7 @@ class Gossip(object):
 
 class Topology(Thread):
     def __init__(self, gossip, network, endpoint,
-                 initial_peer_endpoints, initial_join_endpoints,
+                 initial_peer_endpoints, initial_seed_endpoints,
                  peering_mode, min_peers=3, max_peers=10,
                  check_frequency=1):
         """Constructor for the Topology class.
@@ -297,13 +297,13 @@ class Topology(Thread):
                 this validator's publically reachable endpoint.
             initial_peer_endpoints ([str]): A list of static peers
                 to attempt to connect and peer with.
-            initial_join_endpoints ([str]): A list of endpoints to
+            initial_seed_endpoints ([str]): A list of endpoints to
                 connect to and get candidate peer lists to attempt
                 to reach min_peers threshold.
             peering_mode (str): Either 'static' or 'dynamic'. 'static'
                 only connects to peers in initial_peer_endpoints.
                 'dynamic' connects to peers in initial_peer_endpoints
-                and gets candidate peer lists from initial_join_endpoints.
+                and gets candidate peer lists from initial_seed_endpoints.
             min_peers (int): The minimum number of peers required to stop
                 attempting candidate connections.
             max_peers (int): The maximum number of active peer connections
@@ -318,7 +318,7 @@ class Topology(Thread):
         self._network = network
         self._endpoint = endpoint
         self._initial_peer_endpoints = initial_peer_endpoints
-        self._initial_join_endpoints = initial_join_endpoints
+        self._initial_seed_endpoints = initial_seed_endpoints
         self._peering_mode = peering_mode
         self._min_peers = min_peers
         self._max_peers = max_peers
@@ -359,7 +359,7 @@ class Topology(Thread):
 
                 self._get_peers_of_peers(peers)
                 self._get_peers_of_endpoints(peers,
-                                             self._initial_join_endpoints)
+                                             self._initial_seed_endpoints)
 
                 # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
                 time.sleep(self._response_duration)

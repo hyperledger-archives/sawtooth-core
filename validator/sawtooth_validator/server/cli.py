@@ -65,12 +65,12 @@ def parse_args(args):
     parser.add_argument('-E', '--endpoint',
                         help='Advertised network endpoint URL',
                         type=str)
-    parser.add_argument('--join',
+    parser.add_argument('-s', '--seeds',
                         help='uri(s) to connect to in order to initially '
                              'connect to the validator network, in the '
-                             'format tcp://hostname:port. Multiple --join '
+                             'format tcp://hostname:port. Multiple --seeds '
                              'arguments can be provided, and a single '
-                             '--join argument will accept a comma separated '
+                             '--seeds argument will accept a comma separated '
                              'list of tcp://hostname:port,tcp://hostname:port '
                              'parameters',
                         action='append',
@@ -154,7 +154,7 @@ def create_validator_config(opts):
         bind_component=opts.component_endpoint,
         endpoint=opts.endpoint,
         peering=opts.peering,
-        seeds=opts.join,
+        seeds=opts.seeds,
         peers=opts.peers)
 
 
@@ -167,8 +167,8 @@ def main(args=sys.argv[1:]):
     if opts.peers:
         opts.peers = _split_comma_append_args(opts.peers)
 
-    if opts.join:
-        opts.join = _split_comma_append_args(opts.join)
+    if opts.seeds:
+        opts.seeds = _split_comma_append_args(opts.seeds)
 
     init_console_logging(verbose_level=verbose_level)
 
