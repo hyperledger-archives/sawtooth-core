@@ -30,20 +30,20 @@ LOGGER = logging.getLogger(__name__)
 def peer_with_genesis_only(num):
     if num > 0:
         return '--peers {}'.format(
-            public_uri(0))
+            endpoint(0))
     else:
         return ''
 
 def peer_to_preceding_only(num):
     if num > 0:
         return '--peers {}'.format(
-            public_uri(num - 1))
+            endpoint(num - 1))
     else:
         return ''
 
 def everyone_peers_with_everyone(num):
     if num > 0:
-        peers = ','.join(public_uri(i) for i in range(num))
+        peers = ','.join(endpoint(i) for i in range(num))
         return '--peers {}'.format(peers)
     else:
         return ''
@@ -119,7 +119,7 @@ def validator_cmds(num,
 
     validator = ' '.join([
         'validator -v',
-        '--public-uri {}'.format(public_uri(num)),
+        '--endpoint {}'.format(endpoint(num)),
         '--component-endpoint {}'.format(component_endpoint(num)),
         '--network-endpoint {}'.format(network_endpoint(num)),
         peering_func(num)])
@@ -253,7 +253,7 @@ def start_rest_api(num):
 
 
 # addresses
-def public_uri(num):
+def endpoint(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
 def connenction_address(num):

@@ -135,10 +135,10 @@ class DockerNodeController(NodeController):
         if node_config.genesis:
             command = 'bash -c "sawtooth admin keygen && \
             sawtooth admin genesis && \
-            validator {} -v --public-uri tcp://{}:8800"'
+            validator {} -v --endpoint tcp://{}:8800"'
         else:
             command = 'bash -c "sawtooth admin keygen && \
-            validator {} -v --public-uri tcp://{}:8800"'
+            validator {} -v --endpoint tcp://{}:8800"'
         if len(peers) > 0:
             command = command.format('--peers ' + ",".join(peers), node_name)
         else:

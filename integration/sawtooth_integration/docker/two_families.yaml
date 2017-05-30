@@ -61,7 +61,7 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen && \
         sawtooth admin genesis && \
-        validator --public-uri tcp://validator:8800 -vv \
+        validator --endpoint tcp://validator:8800 -vv \
             --component-endpoint tcp://eth0:40000 \
             --network-endpoint tcp://eth0:8800 \
     \""

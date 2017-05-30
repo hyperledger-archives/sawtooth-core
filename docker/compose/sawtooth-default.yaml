@@ -54,7 +54,7 @@ services:
         sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && \
         sawtooth admin genesis config-genesis.batch && \
         validator -vv \
-          --public-uri tcp://validator:8800 \
+          --endpoint tcp://validator:8800 \
           --component-endpoint tcp://eth0:40000 \
           --network-endpoint tcp://eth0:8800 \
         \""

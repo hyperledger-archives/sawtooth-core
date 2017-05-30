@@ -80,7 +80,7 @@ following commands:
 .. code-block:: console
 
    $ sawtooth keygen --key-dir /home/ubuntu/sawtooth/keys/ validator
-   $ validator -vv --public-uri tcp://localhost:8800
+   $ validator -vv --endpoint tcp://localhost:8800
 
 .. note::
 

@@ -40,7 +40,7 @@ services:
         sawtooth admin genesis \
           config-genesis.batch config.batch poet.batch && \
         validator -v \
-            --public-uri tcp://validator-0:8800 \
+            --endpoint tcp://validator-0:8800 \
             --component-endpoint tcp://eth0:40000 \
             --network-endpoint tcp://eth0:8800 \
     \""
@@ -62,7 +62,7 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen --force && \
         validator -v \
-          --public-uri tcp://validator-1:8800 \
+          --endpoint tcp://validator-1:8800 \
           --peers tcp://validator-0:8800 \
           --component-endpoint tcp://eth0:40000 \
           --network-endpoint tcp://eth0:8800 \
@@ -86,7 +86,7 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen --force && \
         validator -v \
-          --public-uri tcp://validator-2:8800 \
+          --endpoint tcp://validator-2:8800 \
           --peers tcp://validator-0:8800,tcp://validator-1:8800
           --component-endpoint tcp://eth0:40000 \
           --network-endpoint tcp://eth0:8800 \
