@@ -13,6 +13,7 @@ $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey/handler
 $top_dir/families/burrow_evm/src/sawtooth_burrow_evm/processor
 $top_dir/families/burrow_evm/src/sawtooth_burrow_evm/processor/handler
 $top_dir/families/burrow_evm/src/sawtooth_burrow_evm/client
+$top_dir/families/burrow_evm/src/sawtooth_burrow_evm/cli
 "
 
 exitcode=0

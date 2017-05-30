@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"github.com/jessevdk/go-flags"
-	"net/http"
+	client "sawtooth_burrow_evm/client"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
-	"sawtooth_sdk/client"
+	sdk "sawtooth_sdk/client"
 )
 
 type Show struct {
@@ -22,50 +20,38 @@ func (s *Show) Name() string {
 }
 
 func (s *Show) Register(p *flags.Parser) error {
-	_, err := p.AddCommand("show", "Show all data associated with the given address", "", s)
+	_, err := p.AddCommand("show", "Show all data associated with a given account", "", s)
 	return err
 }
 
-func (s *Show) Do() (err error) {
-	n := 0
-	if s.Private != "" {
-		n += 1
-	}
-	if s.Public != "" {
-		n += 1
-	}
-	if s.Address != "" {
-		n += 1
-	}
+func (s *Show) Run() (err error) {
+	client := client.New(s.Url)
 
+	// Make sure only one was passed
+	n := 0
+	args := []string{s.Private, s.Public, s.Address}
+	for _, a := range args {
+		if a != "" {
+			n += 1
+		}
+	}
 	if n != 1 {
 		return fmt.Errorf("Must pass exactly one of {-k PRIVATE, -p PUBLIC, -a ADDRESS}")
 	}
 
-	var address string
+	var entry *EvmEntry
 	if s.Private != "" {
-		priv := client.MustDecode(s.Private)
-		address, err = PrivToAddr(priv)
-		if err != nil {
-			return
-		}
+		priv := sdk.MustDecode(s.Private)
+		entry, err = client.GetEntry(priv, "private")
 	}
 	if s.Public != "" {
-		pub := client.MustDecode(s.Public)
-		address, err = PubToAddr(pub)
-		if err != nil {
-			return
-		}
+		pub := sdk.MustDecode(s.Public)
+		entry, err = client.GetEntry(pub, "public")
 	}
 	if s.Address != "" {
-		vm := client.MustDecode(s.Address)
-		address, err = VmAddrToAddr(vm)
-		if err != nil {
-			return
-		}
+		vm := sdk.MustDecode(s.Address)
+		entry, err = client.GetEntry(vm, "address")
 	}
-
-	entry, err := GetEntry(s.Url, address)
 	if err != nil {
 		return
 	}
@@ -73,37 +59,6 @@ func (s *Show) Do() (err error) {
 	DisplayEntry(entry)
 
 	return nil
-}
-
-type respBody struct {
-	Data string
-	Link string
-	Head string
-}
-
-func GetEntry(url, address string) (*EvmEntry, error) {
-	resp, err := http.Get(url + "/state/" + address)
-	if err != nil {
-		return nil, err
-	}
-
-	body, err := ParseRespBody(resp)
-	if err != nil {
-		return nil, err
-	}
-
-	buf, err := base64.StdEncoding.DecodeString(body.Data)
-	if err != nil {
-		return nil, err
-	}
-
-	entry := &EvmEntry{}
-	err = proto.Unmarshal(buf, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	return entry, nil
 }
 
 func DisplayEntry(entry *EvmEntry) {
@@ -125,7 +80,7 @@ Address: %v
 Balance: %v
 Code   : %v
 Nonce  : %v
-`, client.MustEncode(act.GetAddress()[:20]), act.GetBalance(), client.MustEncode(act.GetCode()), act.GetNonce())
+`, sdk.MustEncode(act.GetAddress()[:20]), act.GetBalance(), sdk.MustEncode(act.GetCode()), act.GetNonce())
 
 	if len(stg) == 0 {
 		fmt.Println("(No Storage Set)\n")
@@ -134,9 +89,9 @@ Nonce  : %v
 
 	fmt.Println("Storage:")
 	for _, pair := range stg {
-		key := client.MustEncode(pair.GetKey())
-		val := client.MustEncode(pair.GetValue())
-		fmt.Printf("%v -> %v", key, val)
+		key := sdk.MustEncode(pair.GetKey())
+		val := sdk.MustEncode(pair.GetValue())
+		fmt.Printf("%v -> %v\n", key, val)
 	}
 	fmt.Println("")
 }
