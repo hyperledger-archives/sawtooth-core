@@ -8,9 +8,10 @@ import (
 )
 
 type RespBody struct {
-	Data string
-	Link string
-	Head string
+	Data  string
+	Link  string
+	Head  string
+	Error ErrorBody
 }
 
 func (r *RespBody) String() string {
@@ -19,6 +20,20 @@ Data: %v
 Link: %v
 Head: %v
 `, r.Data, r.Link, r.Head)
+}
+
+type ErrorBody struct {
+	Code    int
+	Title   string
+	Message string
+}
+
+func (e *ErrorBody) String() string {
+	return fmt.Sprintf(`
+Code    : %v
+Title   : %v
+Message : %v
+`, e.Code, e.Title, e.Message)
 }
 
 func ParseRespBody(resp *http.Response) (*RespBody, error) {
@@ -32,8 +47,12 @@ func ParseRespBody(resp *http.Response) (*RespBody, error) {
 		return nil, fmt.Errorf("Nothing at that address")
 	}
 
-	body := &RespBody{}
-	err = json.Unmarshal(buf, body)
+	return ParseBodyData(buf)
 
+}
+
+func ParseBodyData(buf []byte) (*RespBody, error) {
+	body := &RespBody{}
+	err := json.Unmarshal(buf, body)
 	return body, err
 }
