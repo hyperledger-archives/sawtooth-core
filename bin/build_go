@@ -36,7 +36,7 @@ go build -o $top_dir/sdk/examples/noop_go/bin/tp_noop_go
 
 mkdir -p $top_dir/families/burrow_evm/bin
 echo -e "\033[0;32m--- Building tp_burrow_evm ---\n\033[0m"
-cd $top_dir/families/burrow_evm/src/sawtooth_burrow_evm
+cd $top_dir/families/burrow_evm/src/sawtooth_burrow_evm/processor
 go build -o $top_dir/families/burrow_evm/bin/tp_burrow_evm
 
 echo -e "\033[0;32m--- Building seth ---\n\033[0m"
