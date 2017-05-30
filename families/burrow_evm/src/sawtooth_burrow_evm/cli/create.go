@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
-	"sawtooth_sdk/client"
+	client "sawtooth_burrow_evm/client"
+	sdk "sawtooth_sdk/client"
 )
 
 type Create struct {
@@ -20,7 +21,7 @@ func (c *Create) Register(p *flags.Parser) error {
 	return err
 }
 
-func (c *Create) Do() error {
+func (c *Create) Run() error {
 	priv, pub, addr, err := gen()
 	if err != nil {
 		return err
@@ -50,10 +51,10 @@ func (c *Create) Do() error {
 }
 
 func gen() (string, string, string, error) {
-	priv := client.GenPrivKey()
-	pub := client.GenPubKey(priv)
-	addr, err := PubToAddr(pub)
-	return client.MustEncode(priv), client.MustEncode(pub), addr[6 : 6+40], err
+	priv := sdk.GenPrivKey()
+	pub := sdk.GenPubKey(priv)
+	addr, err := client.PubToAddr(pub)
+	return sdk.MustEncode(priv), sdk.MustEncode(pub), addr[6 : 6+40], err
 }
 
 func write(name, s string) error {

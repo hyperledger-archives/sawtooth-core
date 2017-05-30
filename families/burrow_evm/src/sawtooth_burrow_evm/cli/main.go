@@ -4,23 +4,18 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"os"
+	sdk "sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
+	"strings"
 )
 
 var logger *logging.Logger = logging.Get()
-
-const (
-	FAMILY_NAME    = "burrow-evm"
-	FAMILY_VERSION = "1.0"
-	ENCODING       = "application/protobuf"
-	PREFIX         = "a84eda"
-)
 
 // All subcommands implement this interface
 type Command interface {
 	Register(*flags.Parser) error
 	Name() string
-	Do() error
+	Run() error
 }
 
 // Opts to the main command
@@ -83,7 +78,7 @@ func main() {
 	name := parser.Command.Active.Name
 	for _, cmd := range commands {
 		if cmd.Name() == name {
-			err := cmd.Do()
+			err := cmd.Run()
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
