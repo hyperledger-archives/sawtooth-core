@@ -84,7 +84,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Validator(object):
-    def __init__(self, network_endpoint, component_endpoint, public_uri,
+    def __init__(self, network_endpoint, component_endpoint, endpoint,
                  peering, join_list, peer_list, data_dir, config_dir,
                  identity_signing_key):
         """Constructs a validator instance.
@@ -92,7 +92,7 @@ class Validator(object):
         Args:
             network_endpoint (str): the network endpoint
             component_endpoint (str): the component endpoint
-            public_uri (str): the zmq-style URI of this validator's
+            endpoint (str): the zmq-style URI of this validator's
                 publically reachable endpoint
             peering (str): The type of peering approach. Either 'static'
                 or 'dynamic'. In 'static' mode, no attempted topology
@@ -187,12 +187,12 @@ class Validator(object):
             server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
             server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
             heartbeat=True,
-            public_uri=public_uri,
+            public_endpoint=endpoint,
             connection_timeout=30,
             max_incoming_connections=100)
 
         self._gossip = Gossip(self._network,
-                              public_uri=public_uri,
+                              endpoint=endpoint,
                               peering_mode=peering,
                               initial_join_endpoints=join_list,
                               initial_peer_endpoints=peer_list,

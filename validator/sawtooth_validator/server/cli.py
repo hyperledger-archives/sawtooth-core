@@ -62,7 +62,7 @@ def parse_args(args):
                              'buildout starting',
                         choices=['static', 'dynamic'],
                         type=str)
-    parser.add_argument('--public-uri',
+    parser.add_argument('-E', '--endpoint',
                         help='Advertised network endpoint URL',
                         type=str)
     parser.add_argument('--join',
@@ -152,7 +152,7 @@ def create_validator_config(opts):
     return ValidatorConfig(
         bind_network=opts.network_endpoint,
         bind_component=opts.component_endpoint,
-        endpoint=opts.public_uri,
+        endpoint=opts.endpoint,
         peering=opts.peering,
         seeds=opts.join,
         peers=opts.peers)

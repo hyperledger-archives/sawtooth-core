@@ -107,7 +107,7 @@ class SubprocessNodeController(NodeController):
             if cmd == 'validator':
                 component = '--component-endpoint', url
                 network = '--network-endpoint', gossip_port
-                public_uri = '--public-uri', 'tcp://localhost:{}'.\
+                endpoint = '--endpoint', 'tcp://localhost:{}'.\
                     format(gossip_port_num)
                 peer_list = ['tcp://localhost:' + str(base_gossip_port + i)
                              for i in range(node_num)]
@@ -116,7 +116,7 @@ class SubprocessNodeController(NodeController):
                 peers.extend(peer_list_comma_sep)
                 if peers:
                     peers_flag = tuple(peers)
-                flags = component + network + public_uri
+                flags = component + network + endpoint
                 if len(peer_list) > 0:
                     flags += peers_flag
                 flags += tuple(['-vv'])
