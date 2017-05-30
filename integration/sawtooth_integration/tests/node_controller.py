@@ -165,12 +165,15 @@ def validator_cmds(num,
     return validator_cmds
 
 def start_validator(num, peering_func, poet_kwargs):
-    for cmd in validator_cmds(num, peering_func, **poet_kwargs):
-        time.sleep(1)
+    cmds = validator_cmds(num, peering_func, **poet_kwargs)
+    for cmd in cmds[:-1]:
         process = start_process(cmd)
+        process.wait(timeout=10)
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, cmd)
 
     # only return the validator process (the rest are completed)
-    return process
+    return start_process(cmds[-1])
 
 
 # transaction processors
@@ -255,4 +258,3 @@ def start_process(cmd):
     LOGGER.debug('Running command {}'.format(cmd))
     return subprocess.Popen(
         shlex.split(cmd))
-    time.sleep(1)
