@@ -85,7 +85,7 @@ LOGGER = logging.getLogger(__name__)
 
 class Validator(object):
     def __init__(self, network_endpoint, component_endpoint, endpoint,
-                 peering, join_list, peer_list, data_dir, config_dir,
+                 peering, seeds_list, peer_list, data_dir, config_dir,
                  identity_signing_key):
         """Constructs a validator instance.
 
@@ -102,9 +102,9 @@ class Validator(object):
                 attempt to initiate peering connections with endpoints
                 specified in the peer_list and then attempt to do a
                 topology buildout starting with peer lists obtained from
-                endpoints in the join_list. In either mode, the validator
+                endpoints in the seeds_list. In either mode, the validator
                 will accept incoming peer requests up to max_peers.
-            join_list (list of str): a list of addresses to connect
+            seeds_list (list of str): a list of addresses to connect
                 to in order to perform the initial topology buildout
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
@@ -194,7 +194,7 @@ class Validator(object):
         self._gossip = Gossip(self._network,
                               endpoint=endpoint,
                               peering_mode=peering,
-                              initial_join_endpoints=join_list,
+                              initial_seed_endpoints=seeds_list,
                               initial_peer_endpoints=peer_list,
                               minimum_peer_connectivity=3,
                               maximum_peer_connectivity=10,
