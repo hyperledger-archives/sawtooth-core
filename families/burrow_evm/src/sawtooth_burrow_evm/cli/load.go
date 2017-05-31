@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	client "sawtooth_burrow_evm/client"
-	sdk "sawtooth_sdk/client"
 )
 
 type Load struct {
@@ -26,8 +25,15 @@ func (c *Load) Register(p *flags.Parser) error {
 func (c *Load) Run() error {
 	client := client.New(c.Url)
 
-	priv := sdk.Decode(c.Private, "hex")
-	init := sdk.Decode(c.Init, "hex")
+	priv, err := decodeFileOrArg(c.Private)
+	if err != nil {
+		return err
+	}
+
+	init, err := decodeFileOrArg(c.Init)
+	if err != nil {
+		return err
+	}
 
 	response, err := client.Load(priv, init, c.Gas)
 	if err != nil {
