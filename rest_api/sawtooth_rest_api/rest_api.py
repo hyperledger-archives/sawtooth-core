@@ -46,7 +46,7 @@ def parse_args(args):
                         action='append')
     parser.add_argument('-C', '--connect',
                         help='The url to connect to a running Validator')
-    parser.add_argument('--timeout',
+    parser.add_argument('-t', '--timeout',
                         help='Seconds to wait for a validator response')
     parser.add_argument('-v', '--verbose',
                         action='count',
