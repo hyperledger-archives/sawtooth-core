@@ -124,7 +124,7 @@ class SubprocessNodeController(NodeController):
             elif cmd == 'sawtooth':
                 flags = 'admin', 'genesis'
             elif cmd == 'rest_api':
-                flags = '--stream-url', url
+                flags = '--connect', url
             else:
                 flags = (url,)
             subprocess.Popen((executable,) + flags)

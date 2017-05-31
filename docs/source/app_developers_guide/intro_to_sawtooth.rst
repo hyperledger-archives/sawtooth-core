@@ -288,7 +288,7 @@ already been started.
 
 .. code-block:: console
 
-  rest_api --stream-url tcp://127.0.0.1:40000
+  rest_api --connect tcp://127.0.0.1:40000
 
 
 Step Three: Create And Submit Batch
@@ -367,7 +367,7 @@ application. Run the following command to start the rest api:
 
 .. code-block:: console
 
-  rest_api --stream-url tcp://127.0.0.1:40000
+  rest_api --connect tcp://127.0.0.1:40000
 
 
 Viewing List Of Blocks

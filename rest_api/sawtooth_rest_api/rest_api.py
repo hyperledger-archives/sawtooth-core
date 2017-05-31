@@ -45,7 +45,7 @@ def parse_args(args):
                         help='The port for the api to run on')
     parser.add_argument('--host',
                         help='The host for the api to run on')
-    parser.add_argument('--stream-url',
+    parser.add_argument('-C', '--connect',
                         help='The url to connect to a running Validator')
     parser.add_argument('--timeout',
                         help='Seconds to wait for a validator response')
@@ -167,10 +167,13 @@ def main():
                 bind = [opts.host + ":" + "8080"]
         opts_config = RestApiConfig(
             bind=bind,
-            connect=opts.stream_url,
+            connect=opts.connect,
             timeout=opts.timeout)
         rest_api_config = load_rest_api_config(opts_config)
-        stream = Stream(rest_api_config.connect)
+        if "tcp://" not in rest_api_config.connect:
+            stream = Stream("tcp://" + rest_api_config.connect)
+        else:
+            stream = Stream(rest_api_config.connect)
         log_config = get_log_config(filename="rest_api_log_config.toml")
         if log_config is not None:
             log_configuration(log_config=log_config)

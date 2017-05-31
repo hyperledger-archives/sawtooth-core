@@ -73,7 +73,7 @@ services:
       - "8080:8080"
     depends_on:
       - validator
-    entrypoint: rest_api --stream-url tcp://validator:40000 --host rest_api
+    entrypoint: rest_api --connect tcp://validator:40000 --host rest_api
 
   client:
     image: hyperledger/sawtooth-all:latest
