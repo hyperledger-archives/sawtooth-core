@@ -184,7 +184,7 @@ class DockerNodeController(NodeController):
                 'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
                 'container_name': '-'.join([self._prefix, 'rest_api',
                                             node_num]),
-                'command': 'rest_api --stream-url tcp://{}:40000'.
+                'command': 'rest_api --connect tcp://{}:40000'.
                 format(node_name),
                 'ports': ['8080:8080']
             }
