@@ -41,12 +41,12 @@ A full implementation of the tic-tac-toe transaction family can be found in
 Prerequisites
 =============
 
-This tutorial assumes that you have gone through :doc:`/app_developers_guide/intro_to_sawtooth` and are
+This tutorial assumes that you have gone through :doc:`/app_developers_guide/getting_started` and are
 familiar with the concepts introduced there.
 
-Prior to going through this tutorial, you should have a working Sawtooth
-environment.  Specific setup instructions are available
-in :doc:`/app_developers_guide/environment_setup`.
+You should be familiar with the concepts introduced in the
+:doc:`/app_developers_guide/getting_started` guide and have a working Sawtooth
+environment prior to completing this tutorial.
 
 The Transaction Processor
 =========================

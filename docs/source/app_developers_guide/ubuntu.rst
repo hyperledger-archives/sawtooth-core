@@ -1,42 +1,81 @@
-
-.. _intro_to_sawtooth:
-
-*****************************************
-Getting Started with Hyperledger Sawtooth
-*****************************************
+******************************
+Using Sawtooth on Ubuntu 16.04
+******************************
 
 
-Overview
-========
+This document guides you through the process of setting up Hyperledger Sawtooth
+for application development on Ubuntu, and then introduces basic Sawtooth
+concepts necessary for application development.
 
-This tutorial shows you how to start a validator and transaction processor,
-then perform some basic operations, such as:
+After following the steps in this document, you will be able to perform the
+following tasks:
 
-* Submitting transactions
-* Setting configuration settings using the config transaction family
-* Viewing blocks, transactions and state
+* run Sawtooth
+* submit transactions
+* view blocks, transactions and state with the CLI
+* start and stop validators and transaction processors
 
-If you have not yet set your environment up, see :doc:`environment_setup` in
-the App Developer's Guide.
+You will then be prepared for the more advanced tutorials that guide you in
+performing app development tasks, such as implementing business logic with
+transaction families and writing clients which use Sawtooth's REST API.
 
-Prerequisites
--------------
 
-A supported app development environment is required. 
+Overview Sawtooth Components
+============================
 
-See :doc:`environment_setup` for a guide to installing the app development
-environment.
+A running Sawtooth network consists of the following applications or processes:
+
+.. image:: ../images/hyperledger_sawtooth_components.*
+   :width: 80%
+   :align: center
+   :alt: Sawtooth components
+
+This diagram represents a simple network with just two validators and two
+transaction processors. The second validator's transaction processors are not
+depicted.
+
+
+Installation
+============
+
+Run the following commands from a terminal window, as root or with `sudo`:
+
+.. code-block:: console
+
+  $ echo 'deb http://repo.sawtooth.me/ubuntu/nightly xenial universe' | sudo tee --append /etc/apt/sources.list
+  $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63
+  $ apt-get update && apt-get install -y sawtooth
+
+
+Running As A Service (Optional)
+===============================
+
+When you install Sawtooth using apt-get, apt-get adds *systemd* units for
+the following components, which can then be started, stopped, and restarted
+using the *systemctl* command:
+
+* validator
+* transaction processors
+* rest_api
+
+
+Viewing Console Output
+----------------------
+
+To view the console output that you would see if you ran the components
+manually,  run the following command:
+
+.. code-block:: console
+
+  $ sudo journalctl -f \
+  -u sawtooth-validator \
+  -u sawtooth-tp_config \
+  -u sawtooth-tp_validator_registry \
+  -u sawtooth-rest_api
 
 
 Validator Start-up Process
 ==========================
-
-.. caution::
-
-  Genesis block, validator and rest_api startup are handled for you if you're
-  using the Docker workflow. You can skip to `Multi-language support for
-  transaction processors`_ if you'd like, or keep reading to better understand
-  the startup process.
 
 Create Genesis Block
 --------------------
@@ -54,14 +93,33 @@ key that is authorized to set and change configuration settings, as
 shown below using the **sawtooth config genesis** command. 
 
 To create the genesis block, log in to the development environment CLI and run
-the following command:
+the following commands as root:
 
 .. code-block:: console
 
-  $ sawtooth keygen my_key
-  $ sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv
+  $ sawtooth keygen --key-dir /tmp sawtooth
+  $ sawtooth config genesis --key /tmp/sawtooth.priv
   $ sawtooth admin genesis config-genesis.batch
   Generating /var/lib/sawtooth/genesis.batch
+
+.. note:: 
+
+  If you are running sawtooth as a service, use the following sequence
+  of commands:
+
+  .. code-block:: console
+  
+    $ sudo -u sawtooth -s
+    $ cd /tmp
+    $ sawtooth keygen --key-dir /tmp
+    $ sawtooth config genesis --key /tmp/sawtooth.priv
+    $ sawtooth admin genesis config-genesis.batch
+
+The following output appears:
+
+.. code-block:: console
+
+    Generating /var/lib/sawtooth/genesis.batch
 
 
 .. note::
@@ -74,17 +132,25 @@ the following command:
 Start Validator
 ---------------
 
-To start a validator, log in to the development environment and run the
-following commands:
+To start a validator, run the following commands from a Linux terminal:
 
 .. code-block:: console
 
-   $ sawtooth keygen --key-dir /home/ubuntu/sawtooth/keys/ validator
+   $ sawtooth keygen --key-dir /etc/sawtooth/keys/ validator
    $ validator -vv --endpoint tcp://localhost:8800
 
 .. note::
 
   To run the validator with less verbose logging, use the command `validator -v`.
+
+.. note::
+
+  To start the validator using *systemd*, run this command:
+
+  .. code-block:: console
+
+    $ sudo systemctl start sawtooth-validator
+
 
 This will start the validator. Logging output will be printed to the
 terminal window. The validator outputs something similar to this to
@@ -95,28 +161,55 @@ the terminal window:
   [16:18:30.145 INFO    chain] Chain controller initialized with chain head: None
   [16:18:30.145 INFO    publisher] Now building on top of block: None
 
-To stop the validator, press CTRL-c.
+.. note::
+
+    When you want to stop the validator, or any other running sawtooth
+    component, press CTRL-c. If you used systemctl to start the component, use
+    systemctl to stop it.
+
+
+Starting the REST API
+=====================
+
+In order to configure a running validator, submit batches, and query the state
+of the ledger, you must start the REST API application. Run the following
+command to start the rest api:
+
+.. code-block:: console
+
+  rest_api --stream-url tcp://127.0.0.1:40000
+
+.. note::
+
+  To start the REST API using *systemd*, run this command:
+
+  .. code-block:: console
+
+    $ sudo systemctl start sawtooth-rest_api
 
 
 Running a transaction processor
 ===============================
 
-.. caution::
-
-  The necessary transaction processors are started automatically if you're
-  using Docker with this tutorial. Keep reading if for more information about
-  transaction processors or skip ahead to
-  `Multi-language support for transaction processors`_.
-
 Transaction processors can be started either before or after the validator is
 started.
 
-To start an intkey transaction processor, log in to the development
-environment and run the following commands:
+The intkey transaction processor is provided as a simple example of a
+transaction family, which can also be used for testing purposes.
+
+To start an intkey transaction processor, run the following commands:
 
 .. code-block:: console
 
   $ tp_intkey_python -v tcp://127.0.0.1:40000
+
+.. note::
+
+  To start the transaction processor using *systemd*, run this command:
+
+  .. code-block:: console
+
+    $ sudo systemctl start sawtooth-tp_intkey_python
 
 This will start a transaction processor that includes an **intkey** handler,
 which can understand and process transactions that use the built-in intkey
@@ -139,20 +232,6 @@ The transaction processor produces the following output:
   In a production environment, you should always run a transaction processor
   that supports the config transaction family. See `Config Transaction
   Family Usage`_ for more information.
-
-To stop the transaction processor, press CTRL-c.
-
-
-Starting the Rest API
-=====================
-
-In order to configure a running validator, submit batches, and query the state
-of the ledger, you must start the REST API application. Run the following
-command to start the rest api:
-
-.. code-block:: console
-
-  rest_api --stream-url tcp://127.0.0.1:40000
 
 
 Multi-language support for transaction processors
@@ -220,13 +299,6 @@ Run the following commands from the Linux CLI:
   $ intkey create_batch
   $ intkey load -f batches.intkey
 
-Or from the Docker CLI:
-
-.. code-block:: console
-
-  $ intkey create_batch
-  $ intkey load -f batches.intkey -U http://rest_api:8080
-
 You can observe the processing of the intkey transactions by observing the
 logging output of the intkey transaction processor. A truncated example of
 the intkey transaction processor's output is shown below:
@@ -246,16 +318,9 @@ Config Transaction Family Usage
 ===============================
 
 Sawtooth provides a :doc:`config transaction family
-<../transaction_family_specifications/config_transaction_family>` that stores on-
-chain configuration settings, along with a config family transaction
+<../transaction_family_specifications/config_transaction_family>` that stores
+on-chain configuration settings, along with a config family transaction
 processor written in Python.
-
-.. caution::
-
-  A config transaction processor container and rest api container are started
-  for you if you're using the Docker workflow. You can skip to
-  `Step Three: Create And Submit Batch`_ or read on to learn how to start
-  the config transaction processor and rest api.
 
 One of the on-chain settings is the list of supported transaction families.
 To configure this setting, follow these steps:
@@ -263,15 +328,25 @@ To configure this setting, follow these steps:
 Step One: Start Config Family Processor
 ---------------------------------------
 
-To start the config family transaction processor, run the following commands from the
-development environment CLI:
+To start the config family transaction processor, run the following commands
+from the Linux CLI:
 
 .. code-block:: console
 
   $ tp_config tcp://localhost:40000
 
-Confirm that the transaction processor registers with the validator by viewing the Vagrant shell
-in which the validator is running. A successful registration event produces the following output:
+.. note::
+
+  To start the transaction processor using *systemd*, run this command:
+
+  .. code-block:: console
+
+    $ sudo systemctl start sawtooth-tp_config
+
+
+Confirm that the transaction processor registers with the validator by viewing
+the terminal window in which the validator is running. A successful
+registration event produces the following output:
 
 .. code-block:: console
 
@@ -298,7 +373,8 @@ In the example below, a JSON array is submitted to the `sawtooth config`
 command, which creates and submits a batch of transactions containing the
 configuration change.
 
-The JSON array used tells the validator or validator network to accept transactions of the following types:
+The JSON array used tells the validator or validator network to accept
+transactions of the following types:
 
 * intkey
 * sawtooth_config
@@ -308,27 +384,8 @@ following commands from the Linux CLI:
 
 .. code-block:: console
 
-  $ sawtooth config proposal create --key /home/ubuntu/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
+  $ sawtooth config proposal create --key /tmp/sawtooth.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
 
-Or using Docker:
-
-.. note::
-
-  The config command needs to use a key generated in the validator container.
-  Thus, you must open a terminal window running in the validator container,
-  rather than the client container (for the following command only).
-  Run the following command from your host machine's CLI:
-
-.. code-block:: console
-
-  % docker exec -it compose_validator_1 bash
-
-Then run the following commands from the validator container:
-
-.. code-block:: console
-
-  $ sawtooth config proposal create --key /root/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]' --url http://rest_api:8080
-  $ sawtooth config settings list --url http://rest_api:8080
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
 and output similar to the following appears in the validator terminal:
@@ -339,10 +396,10 @@ and output similar to the following appears in the validator terminal:
   sawtooth.validator.transaction_families: [{"family": "in...
 
 
-Viewing Blocks and State
+Viewing Blocks And State
 ========================
 
-You can view the blocks stored in the block-chain, and the nodes of the Markle
+You can view the blocks stored in the blockchain, and the nodes of the Markle
 tree, using the sawtooth CLI.
 
 .. note::
@@ -350,20 +407,15 @@ tree, using the sawtooth CLI.
   The sawtooth CLI provides help for all subcommands. For example, to get help
   for the `block` subcommand, enter the command `sawtooth block -h`.
 
-Log in to the development environment to run the commands below.
+Run the following commands from the Linux CLI.
 
 
-Starting the Rest API
+Starting The Rest API
 ---------------------
 
-.. caution::
-
-  As with the transaction processors above, a rest api container is
-  started for you with the Docker workflow.
-
-
 In order to submit queries to the validator, you must start the REST API
-application. Run the following command to start the rest api:
+application. Run the following command to start the REST API, if it hasn't
+already been started.
 
 .. code-block:: console
 
@@ -375,17 +427,11 @@ Viewing List Of Blocks
 
 Enter the command `sawtooth block list` to view the blocks stored by the state:
 
-On Linux:
-
 .. code-block:: console
 
   $ sawtooth block list
 
-In Docker:
-
-.. code-block:: console
-
-  $ sawtooth block list --url http://rest_api:8080
+The output of the command will be similar to this:
 
 .. code-block:: console
 
@@ -407,17 +453,12 @@ Viewing A Particular Block
 Using the `sawtooth block list` command as shown above, copy the block id you want to
 view, then use the `sawtooth block show` command (truncated output shown):
 
-On Linux:
-
 .. code-block:: console
 
     $ sawtooth block show 22e79778855768ea380537fb13ad210b84ca5dd1cdd555db7792a9d029113b0a183d5d71cc5558e04d10a9a9d49031de6e86d6a7ddb25325392d15bb7ccfd5b7
 
-In Docker:
 
-.. code-block:: console
-
-    $ sawtooth block show --url http://rest_api:8080 22e79778855768ea380537fb13ad210b84ca5dd1cdd555db7792a9d029113b0a183d5d71cc5558e04d10a9a9d49031de6e86d6a7ddb25325392d15bb7ccfd5b7
+The output of the command will be similar to this:
 
 .. code-block:: console
 
@@ -449,22 +490,17 @@ In Docker:
 
 
 
-Viewing The State
------------------
+Viewing Global State
+--------------------
 
-Use the command `sawtooth state list` to list the nodes in the Merkle tree (truncated list):
-
-On Linux:
+Use the command `sawtooth state list` to list the nodes in the Merkle tree
+(truncated list):
 
 .. code-block:: console
 
   $ sawtooth state list
 
-In Docker:
-
-.. code-block:: console
-
-  $ sawtooth state list --url http://rest_api:8080
+The output of the command will be similar to this:
 
 .. code-block:: console
 
@@ -477,32 +513,26 @@ In Docker:
   1cf126e924a506fb2c4bb8d167d20f07d653de2447df2754de9eb61826176c7896205a17e363e457c36ccd2b7c124516a9b573d9a6142f031499b18c127df47798131a 13   b'\xa1foWZXEz\x...
   1cf126c295a476acf935cd65909ed5ead2ec0168f3ee761dc6f37ea9558fc4e32b71504bf0ad56342a6671db82cb8682d64689838731da34c157fa045c236c97f1dd80 13   b'\xa1fadKGve\x...
 
+.. note::
+
+    An address is equivalent to a node id.
 
 
 Viewing Data In A Node
 ----------------------
 
-Using the `sawtooth state list` command show above, copy the node id you want to view, then use the `sawtooth state show` command to view the node:
-
-On Linux:
+Using the `sawtooth state list` command show above, copy the node id you want to
+view, then use the `sawtooth state show` command to view the node:
 
 .. code-block:: console
 
   $ sawtooth state show 1cf126ddb507c936e4ee2ed07aa253c2f4e7487af3a0425f0dc7321f94be02950a081ab7058bf046c788dbaf0f10a980763e023cde0ee282585b9855e6e5f3715bf1fe
 
-In Docker:
 
-.. code-block:: console
-
-  $ sawtooth state show --url http://rest_api:8080 1cf126ddb507c936e4ee2ed07aa253c2f4e7487af3a0425f0dc7321f94be02950a081ab7058bf046c788dbaf0f10a980763e023cde0ee282585b9855e6e5f3715bf1fe
+The output of the command will be similar to this:
 
 .. code-block:: console
 
   DATA: "b'\xa1fcCTdcH\x192B'"
   HEAD: "0c4364c6d5181282a1c7653038ec9515cb0530c6bfcb46f16e79b77cb524491676638339e8ff8e3cc57155c6d920e6a4d1f53947a31dc02908bcf68a91315ad5"
 
-
-Next Steps
-==========
-
-Explore the :doc:`/cli` to learn about the commands that are available from the CLI.
