@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
+	"io/ioutil"
 	"os"
 	sdk "sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
@@ -86,4 +87,22 @@ func main() {
 			return
 		}
 	}
+}
+
+// Try to interpret the argument as a file path. If that fails, assume the
+// argument passed on the command line is the actual hex-encoded string
+func decodeFileOrArg(arg string) (b []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Failed to load arg: %v", r)
+		}
+	}()
+
+	// Assume the argument is a path to a file and try to read it
+	buf, err := ioutil.ReadFile(arg)
+	if err == nil {
+		arg = strings.TrimSpace(string(buf))
+	}
+
+	return sdk.MustDecode(arg), nil
 }

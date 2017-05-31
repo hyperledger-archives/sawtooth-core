@@ -39,19 +39,29 @@ func (s *Show) Run() (err error) {
 		return fmt.Errorf("Must pass exactly one of {-k PRIVATE, -p PUBLIC, -a ADDRESS}")
 	}
 
-	var entry *EvmEntry
+	var (
+		arg     string
+		argtype string
+	)
 	if s.Private != "" {
-		priv := sdk.MustDecode(s.Private)
-		entry, err = client.GetEntry(priv, "private")
+		arg = s.Private
+		argtype = "private"
 	}
 	if s.Public != "" {
-		pub := sdk.MustDecode(s.Public)
-		entry, err = client.GetEntry(pub, "public")
+		arg = s.Public
+		argtype = "public"
 	}
 	if s.Address != "" {
-		vm := sdk.MustDecode(s.Address)
-		entry, err = client.GetEntry(vm, "address")
+		arg = s.Address
+		argtype = "address"
 	}
+
+	argbytes, err := decodeFileOrArg(arg)
+	if err != nil {
+		return
+	}
+
+	entry, err := client.GetEntry(argbytes, argtype)
 	if err != nil {
 		return
 	}
