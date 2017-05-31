@@ -31,36 +31,45 @@ const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)
 
 const _decodeRequest = (payload) =>
   new Promise((resolve, reject) => {
-    payload = payload.toString().split(",")
+    payload = payload.toString().split(',')
     if (payload.length == 3){
-      resolve({name: payload[0],
-              action: payload[1],
-              space: payload[2]});
+      resolve({
+        action: payload[0],
+        name: payload[1],
+        space: payload[2]});
     }
     else {
-      let reason = new InvalidTransaction("Invalid payload serialization")
+      let reason = new InvalidTransaction('Invalid payload serialization')
       reject(reason)
     }
   })
 
-const _decodeState = (data) => {
-  // Set "" to any missing data
-  data = data.toString().split(",")
-  if (data.length < 5){
-    while (data.length < 5){
-      data.push("")
+const _decodeStateData = (data, name) => {
+  let stringData = data.toString()
+
+  if (!stringData) {
+    return {
+      board: '',
+      gameState: '',
+      player1: '',
+      player2: '',
+      addressData: [],
     }
   }
-  return {board: data[0],
-          gameState: data[1],
-          player1: data[2],
-          player2: data[3],
-          storedName: data[4]}
-}
 
-const _toInternalError = (err) => {
-  let message = (err.message) ? err.message : err
-  throw new InternalError(message)
+  let addressData = stringData.split('|').map((x) => x.split(','))
+
+  let gameInfo = addressData.filter((x) => (x[0] === name))[0]
+
+  addressData = addressData.filter((x) => (x[0] !== name))
+
+  return {
+    board: gameInfo[1],
+    gameState: gameInfo[2],
+    player1: gameInfo[3],
+    player2: gameInfo[4],
+    addressData: addressData,
+  }
 }
 
 const _setEntry = (state, address, data) => {
@@ -70,76 +79,63 @@ const _setEntry = (state, address, data) => {
   return state.set(entries)
 }
 
-const _gameToStr = (board, state, player1, player2, name) => {
-    board = board.replace(/-/g, " ")
-    board = board.split("")
-    let out = ""
-    out += `GAME: ${name}\n`
-    out += `PLAYER 1: ${player1.substring(0,6)}\n`
-    out += `PLAYER 2: ${player2.substring(0,6)}\n`
-    out += `STATE: ${state}\n`
-    out += `\n`
-    out += `${board[0]} | ${board[1]} | ${board[2]} \n`
-    out += `---|---|--- \n`
-    out += `${board[3]} | ${board[4]} | ${board[5]} \n`
-    out += `---|---|--- \n`
-    out += `${board[6]} | ${board[7]} | ${board[8]} \n`
-    return out
-}
+class XOHandler extends TransactionHandler {
+  constructor () {
+    super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
+  }
 
-const _display = (msg) => {
-    let n = msg.search(`\n`)
-    let length = 0
-    let line_lengths = []
-    if (n != -1) {
-        msg = msg.split("\n")
-        for (let i=0; i < msg.length; i++){
-          if (msg[i].length > length) {
-            length = msg[i].length
-          }
+  apply (transactionProcessRequest, state) {
+    return _decodeRequest(transactionProcessRequest.payload)
+      .catch(_toInternalError)
+      .then((update) => {
+        let header = TransactionHeader.decode(transactionProcessRequest.header)
+        let player = header.signerPubkey
+
+        let name = update.name
+        if (!name) {
+          throw new InvalidTransaction('Name is required')
         }
-      }
-    else {
-        length = msg.length
-        msg = [msg]
-      }
 
-    console.log("+" + "-".repeat(length + 2) + "+")
-    for (let i=0; i < msg.length; i++){
-        let len = length - msg[i].length
+        console.log(`${name.indexOf('|')}`)
 
-        if ((len%2) == 1){
-          console.log("+ " + " ".repeat(Math.floor(len/2)) + msg[i] +
-                      " ".repeat(Math.floor(len/2+1))+ " +")
+        if (name.indexOf(',') !== -1 || name.indexOf('|') !== -1) {
+          throw new InvalidTransaction(
+            'Name cannot contain "," or "|"')
         }
-        else{
-          console.log("+ " + " ".repeat(Math.floor(len/2)) + msg[i] +
-                      " ".repeat(Math.floor(len/2))+ " +")
-          }
-      }
-    console.log("+" + "-".repeat(length + 2) + "+")
-}
 
-const _isWin = (board, letter) => {
-    let wins = [[1, 2, 3], [4, 5, 6], [7, 8, 9],
-            [1, 4, 7], [2, 5, 8], [3, 6, 9],
-            [1, 5, 9], [3, 5, 7]]
-    let win
-    for (let i=0; i < wins.length; i++) {
-        win = wins[i]
-        if (board[win[0] - 1] === letter
-            && board[win[1] - 1] === letter
-            && board[win[2] - 1] === letter) {
-              return true
+        if (!update.action) {
+          throw new InvalidTransaction('Action is required')
+        }
+
+        // Perform the action
+        let handlerFn
+        if (update.action === 'create') {
+          handlerFn = _handleCreate
+        } else if (update.action === 'take') {
+          handlerFn = _handleTake
+        } else {
+          throw new InvalidTransaction(`Action must be create or take not ${update.action}`)
+        }
+
+        let address = XO_NAMESPACE + _hash(update.name).slice(-64)
+
+        return state.get([address]).then(handlerFn(state, address, update, player))
+          .then((addresses) => {
+            if (addresses.length === 0) {
+              throw new InternalError('State Error!')
             }
-        }
-    return false
+          })
+      })
+  }
+
 }
 
 const _handleCreate = (state, address, update, player) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
 
-  let stateValue = _decodeState(stateValueRep)
+  let name = update.name
+
+  let stateValue = _decodeStateData(stateValueRep, name)
   if (stateValue.board != "") {
     throw new InvalidTransaction("Invalid Action: Game already exists.")
   }
@@ -148,19 +144,28 @@ const _handleCreate = (state, address, update, player) => (possibleAddressValues
   let gameState = "P1-NEXT"
   let player1 = ""
   let player2 = ""
-  let setValue = Buffer.from([board, gameState, player1, player2, update.name].join())
+
+  let gameString = [name, board, gameState, player1, player2].join(',')
+
+  let addressData = stateValue.addressData.concat([gameString])
+
+  addressData.sort()
+
+  let setValue = Buffer.from(
+    addressData.join('|'))
+
   _display(`Player ${player.toString().substring(0, 6)} created a game.`)
+
   return _setEntry(state, address, setValue)
 }
 
 const _handleTake = (state, address, update, player) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
-  let stateValue
-  stateValue = _decodeState(stateValueRep)
 
-  if (stateValue.storedName != update.name) {
-    throw new InternalError("Hash collision")
-  }
+  let name = update.name
+
+  let stateValue = _decodeStateData(stateValueRep, name)
+
   try{
     let space = parseInt(update.space)
   }
@@ -211,17 +216,29 @@ const _handleTake = (state, address, update, player) => (possibleAddressValues) 
   stateValue.board = boardList.join("")
 
   if (_isWin(stateValue.board, "X")) {
-    stateValue.GameState = "P1-WIN"
+    stateValue.gameState = "P1-WIN"
   }
   else if (_isWin(stateValue.board, "O")) {
-    stateValue.GameState = "P2-WIN"
+    stateValue.gameState = "P2-WIN"
   }
   else if (stateValue.board.search('-') == -1) {
-    stateValue.GameState = "TIE"
+    stateValue.gameState = "TIE"
   }
 
-  let setValue = Buffer.from([stateValue.board, stateValue.gameState, stateValue.player1,
-      stateValue.player2, update.name].join())
+  let board = stateValue.board
+  let gameState = stateValue.gameState
+  let player1 = stateValue.player1
+  let player2 = stateValue.player2
+
+  let gameString = [name, board, gameState, player1, player2].join(',')
+
+  let addressData = stateValue.addressData.concat([gameString])
+
+  addressData.sort()
+
+  let setValue = Buffer.from(
+    addressData.join('|'))
+
   _display(`Player ${player.toString().substring(0, 6)} takes space: ${update.space}\n\n` +
            _gameToStr(stateValue.board, stateValue.gameState, stateValue.player1
              , stateValue.player2, update.name))
@@ -229,46 +246,75 @@ const _handleTake = (state, address, update, player) => (possibleAddressValues) 
   return _setEntry(state, address, setValue)
 }
 
-class XOHandler extends TransactionHandler {
-  constructor () {
-    super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
-  }
+const _toInternalError = (err) => {
+  let message = (err.message) ? err.message : err
+  throw new InternalError(message)
+}
 
-  apply (transactionProcessRequest, state) {
-    return _decodeRequest(transactionProcessRequest.payload)
-      .catch(_toInternalError)
-      .then((update) => {
-        let header = TransactionHeader.decode(transactionProcessRequest.header)
-        let player = header.signerPubkey
-        if (!update.name) {
-          throw new InvalidTransaction('Name is required')
-        }
-
-        if (!update.action) {
-          throw new InvalidTransaction('Action is required')
-        }
-
-        // Perform the action
-        let handlerFn
-        if (update.action === 'create') {
-          handlerFn = _handleCreate
-        } else if (update.action === 'take') {
-          handlerFn = _handleTake
-        } else {
-          throw new InvalidTransaction(`Action must be create or take not ${verb}`)
-        }
-
-        let address = XO_NAMESPACE + _hash(update.name)
-
-        return state.get([address]).then(handlerFn(state, address, update, player))
-          .then((addresses) => {
-            if (addresses.length === 0) {
-              throw new InternalError('State Error!')
+const _isWin = (board, letter) => {
+    let wins = [[1, 2, 3], [4, 5, 6], [7, 8, 9],
+            [1, 4, 7], [2, 5, 8], [3, 6, 9],
+            [1, 5, 9], [3, 5, 7]]
+    let win
+    for (let i=0; i < wins.length; i++) {
+        win = wins[i]
+        if (board[win[0] - 1] === letter
+            && board[win[1] - 1] === letter
+            && board[win[2] - 1] === letter) {
+              return true
             }
-          })
-      })
-  }
+        }
+    return false
+}
 
+const _gameToStr = (board, state, player1, player2, name) => {
+    board = board.replace(/-/g, " ")
+    board = board.split("")
+    let out = ""
+    out += `GAME: ${name}\n`
+    out += `PLAYER 1: ${player1.substring(0,6)}\n`
+    out += `PLAYER 2: ${player2.substring(0,6)}\n`
+    out += `STATE: ${state}\n`
+    out += `\n`
+    out += `${board[0]} | ${board[1]} | ${board[2]} \n`
+    out += `---|---|--- \n`
+    out += `${board[3]} | ${board[4]} | ${board[5]} \n`
+    out += `---|---|--- \n`
+    out += `${board[6]} | ${board[7]} | ${board[8]} \n`
+    return out
+}
+
+const _display = (msg) => {
+    let n = msg.search(`\n`)
+    let length = 0
+    let line_lengths = []
+    if (n != -1) {
+        msg = msg.split("\n")
+        for (let i=0; i < msg.length; i++){
+          if (msg[i].length > length) {
+            length = msg[i].length
+          }
+        }
+      }
+    else {
+        length = msg.length
+        msg = [msg]
+      }
+
+    console.log("+" + "-".repeat(length + 2) + "+")
+    for (let i=0; i < msg.length; i++){
+        let len = length - msg[i].length
+
+        if ((len%2) == 1){
+          console.log("+ " + " ".repeat(Math.floor(len/2)) + msg[i] +
+                      " ".repeat(Math.floor(len/2+1))+ " +")
+        }
+        else{
+          console.log("+ " + " ".repeat(Math.floor(len/2)) + msg[i] +
+                      " ".repeat(Math.floor(len/2))+ " +")
+          }
+      }
+    console.log("+" + "-".repeat(length + 2) + "+")
 }
 
 module.exports = XOHandler

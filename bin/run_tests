@@ -174,6 +174,9 @@ main() {
                 deployment)
                     test_deployment
                     ;;
+                xo)
+                    test_xo
+                    ;;
                 *)
                     echo "Module '$MODULE' not found."
                     ;;
@@ -271,10 +274,10 @@ test_python_sdk() {
     copy_coverage .coverage.intkey-python-smoke
     run_docker_test workload -s integration_test
     copy_coverage .coverage.workload
-    run_docker_test xo-smoke -s integration_test
-    copy_coverage .coverage.xo-smoke
-    run_docker_test two_families -s integration_test
-    copy_coverage .coverage.two_families
+    run_docker_test xo-python-smoke -s integration_test
+    copy_coverage .coverage.xo-python-smoke
+    run_docker_test two-families -s integration_test
+    copy_coverage .coverage.two-families
 }
 
 test_integration() {
@@ -286,6 +289,22 @@ test_integration() {
 
 test_deployment() {
     run_docker_test systemd_services -s integration_test
+}
+
+test_xo() {
+    # xo python
+    run_docker_test ./sdk/examples/xo_python/tests/tp-xo-python.yaml -s validator
+    copy_coverage .coverage.tp-xo-python
+    run_docker_test xo-python-smoke -s integration_test
+    copy_coverage .coverage.xo-smoke
+    # xo js
+    run_docker_test ./sdk/examples/xo_python/tests/tp-xo-javascript.yaml -s validator
+    copy_coverage .coverage.tp-xo-javascript
+    run_docker_test xo-javascript-smoke -s integration_test
+    copy_coverage .coverage.xo-javascript-smoke
+    # all languages
+    run_docker_test xo-all-lang-smoke
+    copy_coverage .coverage.xo-all-lang-smoke
 }
 
 copy_coverage() {

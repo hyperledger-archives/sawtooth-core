@@ -26,12 +26,12 @@ from base64 import b64decode
 
 import cbor
 
+from sawtooth_cli.rest_client import RestClient
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
 
 
 INTKEY_PREFIX = '1cf126'
@@ -41,7 +41,8 @@ class TestTwoFamilies(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest_api:8080'])
+        cls.xo_client = XoClient('http://rest_api:8080')
+        wait_for_rest_apis([cls.xo_client.url[len('http://'):]])
 
     def test_two_families(self):
         '''
@@ -71,7 +72,9 @@ class TestTwoFamilies(unittest.TestCase):
         self.intkey_verifier = IntkeyTestVerifier()
         self.xo_verifier = XoTestVerifier()
 
-        _send_xo_cmd('xo init --url rest_api:8080')
+        _send_xo_cmd(
+            'xo init --url {}'.format(
+                self.xo_client.url[len('http://'):]))
 
         self.verify_empty_state()
 
@@ -104,7 +107,7 @@ class TestTwoFamilies(unittest.TestCase):
 
         intkey_state = _get_intkey_data()
         LOGGER.info('Current intkey state: {}'.format(intkey_state))
-        xo_data = _get_xo_data()
+        xo_data = self.xo_client.get_board_and_turn('game')
         LOGGER.info('Current xo state: {}'.format(xo_data))
 
         self.assertEqual(
@@ -119,7 +122,7 @@ class TestTwoFamilies(unittest.TestCase):
 
     def verify_all_state_xo_or_intkey(self):
         state = _get_state()
-        xo_state = _get_xo_state()
+        xo_state = self.xo_client.list_state(XO_PREFIX)['data']
         intkey_state = _get_intkey_state()
 
         for entry in state:
@@ -147,6 +150,33 @@ def _send_intkey_cmd(txns):
 
 # rest_api calls
 
+class XoClient(RestClient):
+    def list_games(self):
+        address_list = [
+            entry.decode().split('|')
+            for entry in self.get_data(subtree=XO_PREFIX)
+        ]
+
+        game_list = [
+            game.split(',')
+            for address in address_list
+            for game in address
+        ]
+
+        return {
+            name: data
+            for name, *data in game_list
+        }
+
+    def get_game(self, game_name):
+        return self.list_games()[game_name]
+
+    def get_board_and_turn(self, game_name):
+        info = self.get_game(game_name)
+        board, state, _, _ = info
+        return board, state
+
+
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
     response = _query_rest_api('/batches', data=batch, headers=headers)
@@ -160,18 +190,8 @@ def _get_intkey_data():
     data = {k:v for d in dicts for k, v in d.items()} # merge dicts
     return data
 
-def _get_xo_data():
-    state = _get_xo_state()
-    data = b64decode(state[0]['data']).decode().split(',')
-    board, turn, _, _, game_name = data
-    return board, turn, game_name
-
 def _get_intkey_state():
     state = _get_state_prefix(INTKEY_PREFIX)
-    return state
-
-def _get_xo_state():
-    state = _get_state_prefix(XO_PREFIX)
     return state
 
 def _get_state_prefix(prefix):
@@ -203,10 +223,10 @@ class XoTestVerifier:
 
     def state_after_n_updates(self, num):
         state = {
-            0: ('---------', 'P1-NEXT', 'game'),
-            1: ('----X----', 'P2-NEXT', 'game'),
-            2: ('----X---O', 'P1-NEXT', 'game'),
-            3: ('---XX---O', 'P2-NEXT', 'game')
+            0: ('---------', 'P1-NEXT'),
+            1: ('----X----', 'P2-NEXT'),
+            2: ('----X---O', 'P1-NEXT'),
+            3: ('---XX---O', 'P2-NEXT')
         }
 
         try:

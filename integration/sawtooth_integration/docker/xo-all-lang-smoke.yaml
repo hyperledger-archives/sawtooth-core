@@ -36,7 +36,18 @@ services:
       - 40000
     depends_on:
       - validator
-    command: tp_xo_python -vv tcp://validator:40000
+    command: tp_xo_python -v tcp://validator:40000
+    stop_signal: SIGKILL
+
+  tp_xo_javascript:
+    image: sawtooth-tp_xo_javascript:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 40000
+    depends_on:
+      - validator
+    command: tp_xo_javascript tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:
@@ -86,4 +97,5 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/integration:\
-        /project/sawtooth-core/signing"
+        /project/sawtooth-core/signing:\
+        /project/sawtooth-core/cli"
