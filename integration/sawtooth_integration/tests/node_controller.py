@@ -174,7 +174,7 @@ def start_validator(num, peering_func, poet_kwargs):
     cmds = validator_cmds(num, peering_func, **poet_kwargs)
     for cmd in cmds[:-1]:
         process = start_process(cmd)
-        process.wait(timeout=10)
+        process.wait(timeout=60)
         if process.returncode != 0:
             raise subprocess.CalledProcessError(process.returncode, cmd)
 
