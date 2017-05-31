@@ -188,7 +188,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 block_wrapper.identifier[:8])
             return False
 
-        # Reject the block if the validator has already claimed the key bock
+        # Reject the block if the validator has already claimed the key block
         # limit for its current PoET key pair.
         if consensus_state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
