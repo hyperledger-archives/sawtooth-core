@@ -51,7 +51,7 @@ def parse_args(args):
     parser.add_argument('--component-endpoint',
                         help='Validator component service endpoint',
                         type=str)
-    parser.add_argument('--peering',
+    parser.add_argument('-P', '--peering',
                         help='The type of peering approach the validator '
                              'should take. Choices are \'static\' which '
                              'only attempts to peer with candidates '
@@ -75,7 +75,7 @@ def parse_args(args):
                              'parameters',
                         action='append',
                         type=str)
-    parser.add_argument('--peers',
+    parser.add_argument('-p', '--peers',
                         help='A list of peers to attempt to connect to '
                              'in the format tcp://hostname:port. Multiple '
                              '--peers arguments can be provided, and a single '
