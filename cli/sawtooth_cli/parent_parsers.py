@@ -30,6 +30,11 @@ def base_http_parser():
         type=str,
         default='http://localhost:8080',
         help="the URL of the validator's REST API")
+    base_parser.add_argument(
+        '-u', '--user',
+        type=str,
+        metavar='USERNAME[:PASSWORD]',
+        help='user login info to authorize request')
 
     return base_parser
 

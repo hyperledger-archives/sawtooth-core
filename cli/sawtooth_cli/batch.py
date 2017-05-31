@@ -64,7 +64,7 @@ def do_batch(args):
         Args:
             args: The parsed arguments sent to the command at runtime
     """
-    rest_client = RestClient(args.url)
+    rest_client = RestClient(args.url, args.user)
 
     if args.subcommand == 'list':
         batches = rest_client.list_batches()

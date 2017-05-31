@@ -78,7 +78,7 @@ def do_state(args):
         Args:
             args: The parsed arguments sent to the command at runtime
     """
-    rest_client = RestClient(args.url)
+    rest_client = RestClient(args.url, args.user)
 
     if args.subcommand == 'list':
         response = rest_client.list_state(args.subtree, args.head)

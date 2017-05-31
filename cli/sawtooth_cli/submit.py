@@ -45,7 +45,7 @@ def do_submit(args):
     except IOError as e:
         raise CliException(e)
 
-    rest_client = RestClient(args.url)
+    rest_client = RestClient(args.url, args.user)
 
     start = time.time()
 
