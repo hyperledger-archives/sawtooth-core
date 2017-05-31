@@ -195,13 +195,18 @@ class TestDynamicNetwork(unittest.TestCase):
 
     # if the validators aren't in consensus, wait and try again
     def assert_consensus(self):
-        try:
-            self._assert_consensus()
-        except AssertionError:
-            time.sleep(60)
-            self._assert_consensus()
+        sleep_time = 3
+        growth_rate = 2
+        for _ in range(5):
+            if self.in_consensus():
+                return
 
-    def _assert_consensus(self):
+            time.sleep(sleep_time)
+            sleep_time *= growth_rate
+
+        self.assertTrue(self.in_consensus())
+
+    def in_consensus(self):
         tolerance = self.earliest_client().calculate_tolerance()
 
         LOGGER.info('Verifying consensus @ tolerance {}'.format(tolerance))
@@ -221,9 +226,9 @@ class TestDynamicNetwork(unittest.TestCase):
         sig_list_0 = list_of_sig_lists[0]
 
         for sig_list in list_of_sig_lists[1:]:
-            self.assertTrue(
-                any(sig in sig_list for sig in sig_list_0),
-                'Validators are not in consensus')
+            if not any(sig in sig_list for sig in sig_list_0):
+                return False
+        return True
 
     def earliest_client(self):
         earliest = min(self.clients.keys())
