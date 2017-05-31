@@ -113,6 +113,20 @@ class TestDynamicNetwork(unittest.TestCase):
             self.assert_consensus()
             self.stop_nodes(stop_nodes_per_round)
 
+        # Attempt to cleanly shutdown all processes
+        for node_num in self.nodes:
+            for proc in self.nodes[node_num]:
+                proc.terminate()
+
+        for node_num in self.nodes:
+            for proc in self.nodes[node_num]:
+                try:
+                    proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    # If the process doesn't shut down cleanly, kill it
+                    proc.kill()
+
+
 # utilities
 
     def send_txns_all_at_once(self, batches, time_between_batches):
@@ -154,6 +168,12 @@ class TestDynamicNetwork(unittest.TestCase):
         LOGGER.info('Starting node {}'.format(num))
         processes = NodeController.start_node(
             num, processors, peering, poet_kwargs)
+
+        # Check that none of the processes have returned
+        for proc in processes:
+            if proc.returncode != None:
+                raise subprocess.CalledProcessError(proc.pid, proc.returncode)
+
         self.nodes[num] = processes
         self.clients[num] = IntkeyClient(
             NodeController.http_address(num))
