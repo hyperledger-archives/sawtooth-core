@@ -41,10 +41,9 @@ def parse_args(args):
     """Parse command line flags added to `rest_api` command.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--port',
-                        help='The port for the api to run on')
-    parser.add_argument('--host',
-                        help='The host for the api to run on')
+    parser.add_argument('-B', '--bind',
+                        help='The host and port for the api to run on.',
+                        action='append')
     parser.add_argument('-C', '--connect',
                         help='The url to connect to a running Validator')
     parser.add_argument('--timeout',
@@ -159,14 +158,8 @@ def main():
     stream = None
     try:
         opts = parse_args(sys.argv[1:])
-        bind = None
-        if opts.host is not None:
-            if opts.port is not None:
-                bind = [opts.host + ":" + opts.port]
-            else:
-                bind = [opts.host + ":" + "8080"]
         opts_config = RestApiConfig(
-            bind=bind,
+            bind=opts.bind,
             connect=opts.connect,
             timeout=opts.timeout)
         rest_api_config = load_rest_api_config(opts_config)
@@ -182,10 +175,17 @@ def main():
             log_configuration(log_dir=log_dir, name="sawtooth_rest_api")
         init_console_logging(verbose_level=opts.verbose)
 
-        host, port = rest_api_config.bind[0].split(":")
+        try:
+            host, port = rest_api_config.bind[0].split(":")
+            port = int(port)
+        except ValueError as e:
+            print("Unable to parse binding {}: Must be in the format"
+                  " host:port".format(rest_api_config.bind[0]))
+            sys.exit(1)
+
         start_rest_api(
             host,
-            int(port),
+            port,
             stream,
             int(rest_api_config.timeout))
         # pylint: disable=broad-except

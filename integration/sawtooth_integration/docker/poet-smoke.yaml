@@ -105,7 +105,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api -v --connect tcp://validator-0:40000 --host rest-api-0
+    command: rest_api -v --connect tcp://validator-0:40000 --bind rest-api-0:8080
     stop_signal: SIGKILL
 
   rest-api-1:
@@ -115,7 +115,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api -v --connect tcp://validator-1:40000 --host rest-api-1
+    command: rest_api -v --connect tcp://validator-1:40000 --bind rest-api-1:8080
     stop_signal: SIGKILL
 
   rest-api-2:
@@ -125,7 +125,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api -v --connect tcp://validator-2:40000 --host rest-api-2
+    command: rest_api -v --connect tcp://validator-2:40000 --bind rest-api-2:8080
     stop_signal: SIGKILL
 
   tp-intkey-0:
@@ -236,4 +236,3 @@ services:
         /project/sawtooth-core/sdk/examples/intkey_python:\
         /project/sawtooth-core/signing:\
         /project/sawtooth-core/cli"
-
