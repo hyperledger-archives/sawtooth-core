@@ -120,8 +120,8 @@ def validator_cmds(num,
     validator = ' '.join([
         'validator -v',
         '--endpoint {}'.format(endpoint(num)),
-        '--component-endpoint {}'.format(component_endpoint(num)),
-        '--network-endpoint {}'.format(network_endpoint(num)),
+        '--bind component:{}'.format(bind_component(num)),
+        '--bind network:{}'.format(bind_network(num)),
         peering_func(num)])
 
     # genesis stuff
@@ -262,10 +262,10 @@ def connenction_address(num):
 def http_address(num):
     return 'http://127.0.0.1:{}'.format(8080 + num)
 
-def component_endpoint(num):
+def bind_component(num):
     return 'tcp://127.0.0.1:{}'.format(40000 + num)
 
-def network_endpoint(num):
+def bind_network(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
 

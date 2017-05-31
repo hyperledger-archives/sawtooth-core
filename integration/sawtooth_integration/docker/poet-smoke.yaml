@@ -41,8 +41,8 @@ services:
           config-genesis.batch config.batch poet.batch && \
         validator -v \
             --endpoint tcp://validator-0:8800 \
-            --component-endpoint tcp://eth0:40000 \
-            --network-endpoint tcp://eth0:8800 \
+            --bind component:tcp://eth0:40000 \
+            --bind network:tcp://eth0:8800 \
     \""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
@@ -64,8 +64,8 @@ services:
         validator -v \
           --endpoint tcp://validator-1:8800 \
           --peers tcp://validator-0:8800 \
-          --component-endpoint tcp://eth0:40000 \
-          --network-endpoint tcp://eth0:8800 \
+          --bind component:tcp://eth0:40000 \
+          --bind network:tcp://eth0:8800 \
     \""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
@@ -88,8 +88,8 @@ services:
         validator -v \
           --endpoint tcp://validator-2:8800 \
           --peers tcp://validator-0:8800,tcp://validator-1:8800
-          --component-endpoint tcp://eth0:40000 \
-          --network-endpoint tcp://eth0:8800 \
+          --bind component:tcp://eth0:40000 \
+          --bind network:tcp://eth0:8800 \
     \""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\

@@ -105,8 +105,8 @@ class SubprocessNodeController(NodeController):
 
             # validator takes ports as separate args, but this might change
             if cmd == 'validator':
-                component = '--component-endpoint', url
-                network = '--network-endpoint', gossip_port
+                component = '--bind', "component:" + url
+                network = '--bind', "network:" + gossip_port
                 endpoint = '--endpoint', 'tcp://localhost:{}'.\
                     format(gossip_port_num)
                 peer_list = ['tcp://localhost:' + str(base_gossip_port + i)
