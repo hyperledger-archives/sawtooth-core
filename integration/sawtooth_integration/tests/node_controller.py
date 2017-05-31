@@ -75,7 +75,7 @@ def start_node(num,
     processors = start_processors(num, processor_func)
     validator = start_validator(num, peering_func, poet_kwargs)
 
-    wait_for_rest_apis(['0.0.0.0:{}'.format(8080 + num)])
+    wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)])
 
     return [rest_api] + processors + [validator]
 
@@ -249,13 +249,13 @@ def connenction_address(num):
     return 'tcp://127.0.0.1:{}'.format(40000 + num)
 
 def http_address(num):
-    return 'http://0.0.0.0:{}'.format(8080 + num)
+    return 'http://127.0.0.1:{}'.format(8080 + num)
 
 def component_endpoint(num):
-    return 'tcp://0.0.0.0:{}'.format(40000 + num)
+    return 'tcp://127.0.0.1:{}'.format(40000 + num)
 
 def network_endpoint(num):
-    return 'tcp://0.0.0.0:{}'.format(8800 + num)
+    return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
 
 # execution
