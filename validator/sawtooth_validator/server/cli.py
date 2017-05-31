@@ -45,11 +45,12 @@ def parse_args(args):
     parser.add_argument('--config-dir',
                         help='Configuration directory',
                         type=str)
-    parser.add_argument('--network-endpoint',
-                        help='Network endpoint URL',
-                        type=str)
-    parser.add_argument('--component-endpoint',
-                        help='Validator component service endpoint',
+    parser.add_argument('-B', '--bind',
+                        help='Set the endpoint url for the network and the '
+                             'validator component service endpoints. Multiple '
+                             '--bind arguments should be provided in the '
+                             'format network:endpoint and component:endpoint.',
+                        action='append',
                         type=str)
     parser.add_argument('-P', '--peering',
                         help='The type of peering approach the validator '
@@ -149,9 +150,16 @@ def load_validator_config(first_config, config_dir):
 
 
 def create_validator_config(opts):
+    bind_network = None
+    bind_component = None
+    for bind in opts.bind:
+        if "network" in bind:
+            bind_network = bind[bind.find(":")+1:]
+        if "component" in bind:
+            bind_component = bind[bind.find(":")+1:]
     return ValidatorConfig(
-        bind_network=opts.network_endpoint,
-        bind_component=opts.component_endpoint,
+        bind_network=bind_network,
+        bind_component=bind_component,
         endpoint=opts.endpoint,
         peering=opts.peering,
         seeds=opts.seeds,
@@ -230,9 +238,9 @@ def main(args=sys.argv[1:]):
         # Medium security risk.
         interfaces = ["*", ".".join(["0", "0", "0", "0"])]
         interfaces += netifaces.interfaces()
-        endpoint = validator_config.network_endpoint
+        endpoint = validator_config.bind_network
         for interface in interfaces:
-            if interface in validator_config.network_endpoint:
+            if interface in validator_config.bind_network:
                 LOGGER.error("Endpoint must be set when using %s", interface)
                 init_errors = True
                 break
@@ -242,8 +250,17 @@ def main(args=sys.argv[1:]):
                      "ERROR messages), shutting down.")
         sys.exit(1)
 
-    validator = Validator(validator_config.bind_network,
-                          validator_config.bind_component,
+    bind_network = validator_config.bind_network
+    bind_component = validator_config.bind_component
+
+    if "tcp://" not in bind_network:
+        bind_network = "tcp://" + bind_network
+
+    if "tcp://" not in bind_component:
+        bind_component = "tcp://" + bind_component
+
+    validator = Validator(bind_network,
+                          bind_component,
                           endpoint,
                           validator_config.peering,
                           validator_config.seeds,

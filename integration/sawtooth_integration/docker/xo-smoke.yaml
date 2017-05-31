@@ -50,8 +50,8 @@ services:
         sawtooth admin keygen && \
         sawtooth admin genesis && \
         validator --endpoint tcp://validator:8800 -v \
-            --component-endpoint tcp://eth0:40000 \
-            --network-endpoint tcp://eth0:8800 \
+            --bind component:tcp://eth0:40000 \
+            --bind network:tcp://eth0:8800 \
     \""
     stop_signal: SIGKILL
 

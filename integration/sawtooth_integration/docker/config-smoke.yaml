@@ -42,8 +42,8 @@ services:
         sawtooth config genesis -k test.priv -o config-genesis.batch && \
         sawtooth admin genesis config-genesis.batch  && \
         validator -v --endpoint tcp://validator:8800 \
-            --component-endpoint tcp://eth0:40000 \
-            --network-endpoint tcp://eth0:8800 \
+            --bind component:tcp://eth0:40000 \
+            --bind network:tcp://eth0:8800 \
     \""
     stop_signal: SIGKILL
 

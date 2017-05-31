@@ -84,14 +84,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Validator(object):
-    def __init__(self, network_endpoint, component_endpoint, endpoint,
+    def __init__(self, bind_network, bind_component, endpoint,
                  peering, seeds_list, peer_list, data_dir, config_dir,
                  identity_signing_key):
         """Constructs a validator instance.
 
         Args:
-            network_endpoint (str): the network endpoint
-            component_endpoint (str): the component endpoint
+            bind_network (str): the network endpoint
+            bind_component (str): the component endpoint
             endpoint (str): the zmq-style URI of this validator's
                 publically reachable endpoint
             peering (str): The type of peering approach. Either 'static'
@@ -113,14 +113,14 @@ class Validator(object):
         """
         db_filename = os.path.join(data_dir,
                                    'merkle-{}.lmdb'.format(
-                                       network_endpoint[-2:]))
+                                       bind_network[-2:]))
         LOGGER.debug('database file is %s', db_filename)
 
         merkle_db = LMDBNoLockDatabase(db_filename, 'c')
 
         delta_db_filename = os.path.join(data_dir,
                                          'state-deltas-{}.lmdb'.format(
-                                             network_endpoint[-2:]))
+                                             bind_network[-2:]))
         LOGGER.debug('state delta store file is %s', delta_db_filename)
         state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
 
@@ -132,7 +132,7 @@ class Validator(object):
         state_view_factory = StateViewFactory(merkle_db)
 
         block_db_filename = os.path.join(data_dir, 'block-{}.lmdb'.format(
-                                         network_endpoint[-2:]))
+                                         bind_network[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
 
         block_db = LMDBNoLockDatabase(block_db_filename, 'c')
@@ -147,7 +147,7 @@ class Validator(object):
         self._thread_pool = thread_pool
         self._sig_pool = sig_pool
 
-        self._service = Interconnect(component_endpoint,
+        self._service = Interconnect(bind_component,
                                      self._dispatcher,
                                      secured=False,
                                      heartbeat=False,
@@ -180,7 +180,7 @@ class Validator(object):
         # endpoint, public_key pairs and a local configuration option
         # for 'server' side private keys.
         self._network = Interconnect(
-            network_endpoint,
+            bind_network,
             dispatcher=self._network_dispatcher,
             zmq_identity=zmq_identity,
             secured=True,
