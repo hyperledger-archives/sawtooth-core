@@ -38,7 +38,11 @@ class TestMessageValidation(unittest.TestCase):
     def broadcast(self, msg):
         pass
 
-    def _create_transactions(self, count, valid=True, valid_batcher=True):
+    def _create_transactions(self,
+                             count,
+                             matched_payload=True,
+                             valid_signature=True,
+                             valid_batcher=True):
         txn_list = []
 
         for i in range(count):
@@ -70,12 +74,15 @@ class TestMessageValidation(unittest.TestCase):
 
             header_bytes = header.SerializeToString()
 
-            if valid:
+            if valid_signature:
                 signature = signing.sign(
                     header_bytes,
                     self.private_key)
             else:
                 signature = "bad_signature"
+
+            if not matched_payload:
+                payload['Name'] = 'unmatched_payload'
 
             transaction = Transaction(
                 header=header_bytes,
@@ -159,7 +166,14 @@ class TestMessageValidation(unittest.TestCase):
 
     def test_invalid_transaction(self):
         # add invalid flag to _create transaction
-        txn_list = self._create_transactions(1, valid=False)
+        txn_list = self._create_transactions(1, valid_signature=False)
+        txn = txn_list[0]
+        valid = verifier.validate_transaction(txn)
+        self.assertFalse(valid)
+
+    def test_unmatched_payload_transaction(self):
+        # add invalid flag to _create transaction
+        txn_list = self._create_transactions(1, matched_payload=False)
         txn = txn_list[0]
         valid = verifier.validate_transaction(txn)
         self.assertFalse(valid)
