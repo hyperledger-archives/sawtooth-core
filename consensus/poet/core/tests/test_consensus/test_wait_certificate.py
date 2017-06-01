@@ -77,7 +77,6 @@ class TestWaitCertificate(TestCase):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
-            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 
@@ -93,7 +92,6 @@ class TestWaitCertificate(TestCase):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
-            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 
@@ -131,7 +129,6 @@ class TestWaitCertificate(TestCase):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
-            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 
@@ -171,7 +168,6 @@ class TestWaitCertificate(TestCase):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
-            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 
@@ -209,7 +205,6 @@ class TestWaitCertificate(TestCase):
         # Need to create signup information
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
-            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 
@@ -266,7 +261,6 @@ class TestWaitCertificate(TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=self.poet_enclave_module,
-                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 nonce=NULL_BLOCK_IDENTIFIER)
 
@@ -351,7 +345,6 @@ class TestWaitCertificate(TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=self.poet_enclave_module,
-                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 nonce=NULL_BLOCK_IDENTIFIER)
 

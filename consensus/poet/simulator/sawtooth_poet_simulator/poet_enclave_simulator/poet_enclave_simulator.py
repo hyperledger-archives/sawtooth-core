@@ -500,8 +500,7 @@ def get_enclave_basename():
     return _PoetEnclaveSimulator.get_enclave_basename()
 
 
-def create_signup_info(validator_address,
-                       originator_public_key_hash,
+def create_signup_info(originator_public_key_hash,
                        nonce):
     return \
         _PoetEnclaveSimulator.create_signup_info(
@@ -514,7 +513,7 @@ def deserialize_signup_info(serialized_signup_info):
         serialized_signup_info=serialized_signup_info)
 
 
-def unseal_signup_data(validator_address, sealed_signup_data):
+def unseal_signup_data(sealed_signup_data):
     return _PoetEnclaveSimulator.unseal_signup_data(sealed_signup_data)
 
 

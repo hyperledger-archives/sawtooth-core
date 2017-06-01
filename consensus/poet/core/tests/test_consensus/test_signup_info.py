@@ -44,7 +44,6 @@ class TestSignupInfo(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave,
-                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 nonce=NULL_BLOCK_IDENTIFIER)
 
@@ -57,7 +56,6 @@ class TestSignupInfo(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave,
-                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 nonce=NULL_BLOCK_IDENTIFIER)
         serialized = signup_info.serialize()
@@ -79,13 +77,11 @@ class TestSignupInfo(unittest.TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave,
-                validator_address='1660 Pennsylvania Avenue NW',
                 originator_public_key_hash=self._originator_public_key_hash,
                 nonce=NULL_BLOCK_IDENTIFIER)
         poet_public_key = \
             SignupInfo.unseal_signup_data(
                 poet_enclave_module=poet_enclave,
-                validator_address='1660 Pennsylvania Avenue NW',
                 sealed_signup_data=signup_info.sealed_signup_data)
 
         self.assertEqual(
