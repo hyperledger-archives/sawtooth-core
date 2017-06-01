@@ -113,6 +113,20 @@ class TestDynamicNetwork(unittest.TestCase):
             self.assert_consensus()
             self.stop_nodes(stop_nodes_per_round)
 
+        # Attempt to cleanly shutdown all processes
+        for node_num in self.nodes:
+            for proc in self.nodes[node_num]:
+                proc.terminate()
+
+        for node_num in self.nodes:
+            for proc in self.nodes[node_num]:
+                try:
+                    proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    # If the process doesn't shut down cleanly, kill it
+                    proc.kill()
+
+
 # utilities
 
     def send_txns_all_at_once(self, batches, time_between_batches):
@@ -154,6 +168,12 @@ class TestDynamicNetwork(unittest.TestCase):
         LOGGER.info('Starting node {}'.format(num))
         processes = NodeController.start_node(
             num, processors, peering, poet_kwargs)
+
+        # Check that none of the processes have returned
+        for proc in processes:
+            if proc.returncode != None:
+                raise subprocess.CalledProcessError(proc.pid, proc.returncode)
+
         self.nodes[num] = processes
         self.clients[num] = IntkeyClient(
             NodeController.http_address(num))
@@ -175,13 +195,18 @@ class TestDynamicNetwork(unittest.TestCase):
 
     # if the validators aren't in consensus, wait and try again
     def assert_consensus(self):
-        try:
-            self._assert_consensus()
-        except AssertionError:
-            time.sleep(60)
-            self._assert_consensus()
+        sleep_time = 3
+        growth_rate = 2
+        for _ in range(5):
+            if self.in_consensus():
+                return
 
-    def _assert_consensus(self):
+            time.sleep(sleep_time)
+            sleep_time *= growth_rate
+
+        self.assertTrue(self.in_consensus())
+
+    def in_consensus(self):
         tolerance = self.earliest_client().calculate_tolerance()
 
         LOGGER.info('Verifying consensus @ tolerance {}'.format(tolerance))
@@ -201,9 +226,9 @@ class TestDynamicNetwork(unittest.TestCase):
         sig_list_0 = list_of_sig_lists[0]
 
         for sig_list in list_of_sig_lists[1:]:
-            self.assertTrue(
-                any(sig in sig_list for sig in sig_list_0),
-                'Validators are not in consensus')
+            if not any(sig in sig_list for sig in sig_list_0):
+                return False
+        return True
 
     def earliest_client(self):
         earliest = min(self.clients.keys())

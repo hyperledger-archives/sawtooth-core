@@ -22,6 +22,7 @@ from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.protobuf.client_pb2 import Leaf
 from sawtooth_rest_api.protobuf.client_pb2 import PagingControls
 from sawtooth_rest_api.protobuf.client_pb2 import PagingResponse
+from sawtooth_rest_api.protobuf.client_pb2 import SortControls
 from sawtooth_rest_api.protobuf.block_pb2 import Block
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
@@ -384,6 +385,16 @@ class Mocks(object):
             total_resources=total,
             next_id=next_id,
             previous_id=previous_id)
+
+    @staticmethod
+    def make_sort_controls(*keys, reverse=False, compare_length=False):
+        """Returns a SortControls Protobuf in a list. Use concatenation to
+        combine multiple sort controls.
+        """
+        return [SortControls(
+            keys=keys,
+            reverse=reverse,
+            compare_length=compare_length)]
 
     @staticmethod
     def make_leaves(**leaf_data):

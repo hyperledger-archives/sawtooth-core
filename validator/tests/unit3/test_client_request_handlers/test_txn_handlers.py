@@ -526,6 +526,276 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual('t-0', response.transactions[0].header_signature)
 
+    def test_txn_list_sorted_by_key(self):
+        """Verifies txn list requests work sorted by header_signature.
+
+        Queries the default mock block store:
+            {
+                header_signature: 'B-2',
+                batches: [{
+                    header_signature: 'b-2',
+                    transactions: [{
+                        header_signature: 't-2',
+                        ...
+                    }],
+                    ...
+                }],
+                ...
+            },
+            {header_signature: 'B-1', ...},
+            {header_signature: 'B-0', ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of transactions with 3 items
+            - the items are instances of Transaction
+            - the first item has a header_signature of 't-0'
+            - the last item has a header_signature of 't-2'
+        """
+        controls = self.make_sort_controls('header_signature')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.transactions))
+        self.assert_all_instances(response.transactions, Transaction)
+        self.assertEqual('t-0', response.transactions[0].header_signature)
+        self.assertEqual('t-2', response.transactions[2].header_signature)
+
+    def test_txn_list_sorted_by_bad_key(self):
+        """Verifies txn list requests break properly sorted by a bad key.
+
+        Queries the default mock block store:
+            {
+                header_signature: 'B-2',
+                batches: [{
+                    header_signature: 'b-2',
+                    transactions: [{
+                        header_signature: 't-2',
+                        ...
+                    }],
+                    ...
+                }],
+                ...
+            },
+            {header_signature: 'B-1', ...},
+            {header_signature: 'B-0', ...}
+
+        Expects to find:
+            - a status of INVALID_SORT
+            - that head_id, paging, and transactions are missing
+        """
+        controls = self.make_sort_controls('bad')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.INVALID_SORT, response.status)
+        self.assertFalse(response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.transactions)
+
+    def test_txn_list_sorted_by_nested_key(self):
+        """Verifies txn list requests work sorted by header.signer_pubkey.
+
+        Queries the default mock block store:
+            {
+                header_signature: 'B-2',
+                batches: [{
+                    header_signature: 'b-2',
+                    transactions: [{
+                        header_signature: 't-2',
+                        ...
+                    }],
+                    ...
+                }],
+                ...
+            },
+            {header_signature: 'B-1', ...},
+            {header_signature: 'B-0', ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of transactions with 3 items
+            - the items are instances of Transaction
+            - the first item has a header_signature of 't-0'
+            - the last item has a header_signature of 't-2'
+        """
+        controls = self.make_sort_controls('header', 'signer_pubkey')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.transactions))
+        self.assert_all_instances(response.transactions, Transaction)
+        self.assertEqual('t-0', response.transactions[0].header_signature)
+        self.assertEqual('t-2', response.transactions[2].header_signature)
+
+    def test_txn_list_sorted_by_implied_header(self):
+        """Verifies txn list requests work sorted by an implicit header key.
+
+        Queries the default mock block store:
+            {
+                header_signature: 'B-2',
+                batches: [{
+                    header_signature: 'b-2',
+                    transactions: [{
+                        header_signature: 't-2',
+                        ...
+                    }],
+                    ...
+                }],
+                ...
+            },
+            {header_signature: 'B-1', ...},
+            {header_signature: 'B-0', ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of transactions with 3 items
+            - the items are instances of Transaction
+            - the first item has a header_signature of 't-0'
+            - the last item has a header_signature of 't-2'
+        """
+        controls = self.make_sort_controls('signer_pubkey')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.transactions))
+        self.assert_all_instances(response.transactions, Transaction)
+        self.assertEqual('t-0', response.transactions[0].header_signature)
+        self.assertEqual('t-2', response.transactions[2].header_signature)
+
+    def test_txn_list_sorted_by_many_keys(self):
+        """Verifies txn list requests work sorted by two keys.
+
+        Queries the default mock block store:
+            {
+                header_signature: 'B-2',
+                batches: [{
+                    header_signature: 'b-2',
+                    transactions: [{
+                        header_signature: 't-2',
+                        ...
+                    }],
+                    ...
+                }],
+                ...
+            },
+            {header_signature: 'B-1', ...},
+            {header_signature: 'B-0', ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of transactions with 3 items
+            - the items are instances of Transaction
+            - the first item has a header_signature of 't-0'
+            - the last item has a header_signature of 't-2'
+        """
+        controls = (self.make_sort_controls('family_name') +
+                    self.make_sort_controls('signer_pubkey'))
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.transactions))
+        self.assert_all_instances(response.transactions, Transaction)
+        self.assertEqual('t-0', response.transactions[0].header_signature)
+        self.assertEqual('t-2', response.transactions[2].header_signature)
+
+    def test_txn_list_sorted_in_reverse(self):
+        """Verifies txn list requests work sorted by a key in reverse.
+
+        Queries the default mock block store:
+            {
+                header_signature: 'B-2',
+                batches: [{
+                    header_signature: 'b-2',
+                    transactions: [{
+                        header_signature: 't-2',
+                        ...
+                    }],
+                    ...
+                }],
+                ...
+            },
+            {header_signature: 'B-1', ...},
+            {header_signature: 'B-0', ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of transactions with 3 items
+            - the items are instances of Transaction
+            - the first item has a header_signature of 't-0'
+            - the last item has a header_signature of 't-2'
+        """
+        controls = self.make_sort_controls('header_signature', reverse=True)
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.transactions))
+        self.assert_all_instances(response.transactions, Transaction)
+        self.assertEqual('t-2', response.transactions[0].header_signature)
+        self.assertEqual('t-0', response.transactions[2].header_signature)
+
+    def test_txn_list_sorted_by_length(self):
+        """Verifies txn list requests work sorted by a property's length.
+
+        Queries the default mock block store with two added blocks:
+            {
+                header_signature: 'B-long',
+                batches: [{
+                    header_signature: 'b-long',
+                    transactions: [{
+                        header_signature: 't-long',
+                        ...
+                    }],
+                    ...
+                }],
+                ...
+            },
+            {header_signature: 'B-longest', ...},
+            {header_signature: 'B-2', ...},
+            {header_signature: 'B-1', ...},
+            {header_signature: 'B-0', ...}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-long', the latest
+            - a paging response showing all 5 resources returned
+            - a list of transactions with 5 items
+            - the items are instances of Transaction
+            - the second to last item has a header_signature of 't-long'
+            - the last item has a header_signature of 't-longest'
+        """
+        self.add_blocks('longest', 'long')
+        controls = self.make_sort_controls(
+            'header_signature', compare_length=True)
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-long', response.head_id)
+        self.assert_valid_paging(response, total=5)
+        self.assertEqual(5, len(response.transactions))
+        self.assert_all_instances(response.transactions, Transaction)
+        self.assertEqual('t-long', response.transactions[3].header_signature)
+        self.assertEqual('t-longest', response.transactions[4].header_signature)
+
 
 class TestTransactionGetRequests(ClientHandlerTestCase):
     def setUp(self):

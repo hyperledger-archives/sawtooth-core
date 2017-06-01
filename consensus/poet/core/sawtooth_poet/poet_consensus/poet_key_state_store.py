@@ -37,7 +37,7 @@ the PoET key state.  The PoET key state represents the state for a
 validator's key that is stored in the PoET key state store.  A PoET key state
 object contains:
 
-sealed_signup_data (bytes): The sealed signup data associated with the
+sealed_signup_data (str): The sealed signup data associated with the
     PoET key.  This must be a byte string containing the base-64 encoded
     sealed signup data.
 has_been_refreshed (bool): If this PoET has been used to create the key
@@ -116,14 +116,14 @@ class PoetKeyStateStore(MutableMapping):
     @staticmethod
     def _check_poet_key_state(poet_key_state):
         try:
-            if not isinstance(poet_key_state.sealed_signup_data, bytes):
-                raise ValueError('sealed_signup_data must be a byte string')
+            if not isinstance(poet_key_state.sealed_signup_data, str):
+                raise ValueError('sealed_signup_data must be a string')
             elif len(poet_key_state.sealed_signup_data) == 0:
                 raise ValueError('sealed_signup_data must not be empty')
 
             # Although this won't catch everything, verify that the sealed
             # signup data at least decodes successfully
-            base64.b64decode(poet_key_state.sealed_signup_data)
+            base64.b64decode(poet_key_state.sealed_signup_data.encode())
 
             if not isinstance(poet_key_state.has_been_refreshed, bool):
                 raise ValueError('has_been_refreshed must be a bool')

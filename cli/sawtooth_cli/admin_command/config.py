@@ -24,12 +24,13 @@ def _get_config_dir():
     """
     if 'SAWTOOTH_HOME' in os.environ:
         return os.path.join(os.environ['SAWTOOTH_HOME'], 'etc')
-    elif os.name == 'nt':
+
+    if os.name == 'nt':
         base_dir = \
             os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
         return os.path.join(base_dir, 'conf')
-    else:
-        return '/etc/sawtooth'
+
+    return '/etc/sawtooth'
 
 
 def _get_dir(toml_config_setting,
@@ -61,12 +62,13 @@ def _get_dir(toml_config_setting,
 
     if 'SAWTOOTH_HOME' in os.environ:
         return os.path.join(os.environ['SAWTOOTH_HOME'], sawtooth_home_dir)
-    elif os.name == 'nt':
+
+    if os.name == 'nt':
         base_dir = \
             os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
         return os.path.join(base_dir, windows_dir)
-    else:
-        return default_dir
+
+    return default_dir
 
 
 def get_data_dir():

@@ -127,6 +127,7 @@ class RouteHandler(object):
             link = link.replace('batch_status', 'batches')
 
         return self._wrap_response(
+            request,
             data=data,
             metadata={'link': link},
             status=status)
@@ -185,6 +186,7 @@ class RouteHandler(object):
             metadata = None
 
         return self._wrap_response(
+            request,
             data=response.get('batch_statuses'),
             metadata=metadata)
 
@@ -206,6 +208,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientStateListRequest(
             head_id=request.url.query.get('head', None),
             address=request.url.query.get('address', None),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -246,6 +249,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=response['value'],
             metadata=self._get_metadata(request, response))
 
@@ -267,6 +271,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientBlockListRequest(
             head_id=request.url.query.get('head', None),
             block_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -301,6 +306,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_block(response['block']),
             metadata=self._get_metadata(request, response))
 
@@ -322,6 +328,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientBatchListRequest(
             head_id=request.url.query.get('head', None),
             batch_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -357,6 +364,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_batch(response['batch']),
             metadata=self._get_metadata(request, response))
 
@@ -378,6 +386,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientTransactionListRequest(
             head_id=request.url.query.get('head', None),
             transaction_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -415,6 +424,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_transaction(response['transaction']),
             metadata=self._get_metadata(request, response))
 
@@ -499,13 +509,27 @@ class RouteHandler(object):
         except AttributeError:
             pass
 
+        try:
+            if content.status == proto.INVALID_SORT:
+                raise errors.SortInvalid()
+        except AttributeError:
+            pass
+
         # Check custom error traps from the particular route message
         if error_traps is not None:
             for trap in error_traps:
                 trap.check(content.status)
 
     @staticmethod
-    def _wrap_response(data=None, metadata=None, status=200):
+    def add_cors_headers(request, headers):
+        if 'Origin' in request.headers:
+            headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+            headers["Access-Control-Allow-Methods"] = "GET,POST"
+            headers["Access-Control-Allow-Headers"] =\
+                "Origin, X-Requested-With, Content-Type, Accept"
+
+    @staticmethod
+    def _wrap_response(request, data=None, metadata=None, status=200):
         """Creates the JSON response envelope to be sent back to the client.
         """
         envelope = metadata or {}
@@ -513,9 +537,13 @@ class RouteHandler(object):
         if data is not None:
             envelope['data'] = data
 
+        headers = {}
+        RouteHandler.add_cors_headers(request, headers)
+
         return web.Response(
             status=status,
             content_type='application/json',
+            headers=headers,
             text=json.dumps(
                 envelope,
                 indent=2,
@@ -537,6 +565,7 @@ class RouteHandler(object):
         # If there are no resources, there should be nothing else in paging
         if total == 0:
             return cls._wrap_response(
+                request,
                 data=data,
                 metadata={'head': head, 'link': link, 'paging': paging})
 
@@ -567,6 +596,7 @@ class RouteHandler(object):
                 paging['previous'] = build_pg_url(start - count)
 
         return cls._wrap_response(
+            request,
             data=data,
             metadata={'head': head, 'link': link, 'paging': paging})
 
@@ -718,6 +748,37 @@ class RouteHandler(object):
             end_id=controls.get('end_id', None),
             start_index=start_index,
             count=count)
+
+    @staticmethod
+    def _get_sorting_message(request):
+        """Parses the sort query into a list of SortControls protobuf messages.
+        """
+        control_list = []
+        sort_query = request.url.query.get('sort', None)
+        if sort_query is None:
+            return control_list
+
+        for key_string in sort_query.split(','):
+            if key_string[0] == '-':
+                reverse = True
+                key_string = key_string[1:]
+            else:
+                reverse = False
+
+            keys = key_string.split('.')
+
+            if keys[-1] == 'length':
+                compare_length = True
+                keys.pop()
+            else:
+                compare_length = False
+
+            control_list.append(client_pb2.SortControls(
+                keys=keys,
+                reverse=reverse,
+                compare_length=compare_length))
+
+        return control_list
 
     def _set_wait(self, request, validator_query):
         """Parses the `wait` query parameter, and sets the corresponding

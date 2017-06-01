@@ -119,20 +119,20 @@ class MockValidator(object):
         message, ident = self.receive()
         if message.message_type != Message.TP_REGISTER_REQUEST:
             return False
-        else:
-            self._tp_ident = ident
 
-            request = TpRegisterRequest()
-            request.ParseFromString(message.content)
-            LOGGER.debug(
-                "Processor registered: %s, %s, %s, %s",
-                str(request.family), str(request.version),
-                str(request.encoding), str(request.namespaces)
-            )
-            response = TpRegisterResponse(
-                status=TpRegisterResponse.OK)
-            self.send(response, message.correlation_id)
-            return True
+        self._tp_ident = ident
+
+        request = TpRegisterRequest()
+        request.ParseFromString(message.content)
+        LOGGER.debug(
+            "Processor registered: %s, %s, %s, %s",
+            str(request.family), str(request.version),
+            str(request.encoding), str(request.namespaces)
+        )
+        response = TpRegisterResponse(
+            status=TpRegisterResponse.OK)
+        self.send(response, message.correlation_id)
+        return True
 
     def send(self, message_content, correlation_id=None):
         """
@@ -267,8 +267,7 @@ class MockValidator(object):
         if msg_type in self._comparators:
             return self._comparators[msg_type](obj1, obj2)
 
-        else:
-            return obj1 == obj2
+        return obj1 == obj2
 
 
 def compare_set_request(req1, req2):

@@ -48,8 +48,8 @@ class XoClient:
 
         self._public_key = signing.generate_pubkey(self._private_key)
 
-    def create(self, name):
-        return self._send_xo_txn(name, "create")
+    def create(self, name, wait=None):
+        return self._send_xo_txn(name, "create", wait=wait)
 
     def take(self, name, space):
         return self._send_xo_txn(name, "take", space)
@@ -79,6 +79,15 @@ class XoClient:
 
         except BaseException:
             return None
+
+    def _get_status(self, batch_id, wait):
+        try:
+            result = self._send_request(
+                'batch_status?id={}&wait={}'.format(batch_id, wait)
+            )
+            return yaml.safe_load(result)["data"]
+        except BaseException as err:
+            raise XoException(err)
 
     def _get_prefix(self):
         return _sha512('xo'.encode('utf-8'))[0:6]
@@ -110,8 +119,7 @@ class XoClient:
 
         return result.text
 
-    def _send_xo_txn(self, name, action, space=""):
-
+    def _send_xo_txn(self, name, action, space="", wait=None):
         # Serialization is just a delimited utf-8 encoded string
         payload = ",".join([name, action, str(space)]).encode()
 
@@ -140,13 +148,40 @@ class XoClient:
         )
 
         batch_list = self._create_batch_list([transaction])
+        batch_id = batch_list.batches[0].header_signature
 
-        result = self._send_request(
+        if wait and wait > 0:
+            wait_time = 0
+            start_time = time.time()
+            self._send_request(
+                "batches", batch_list.SerializeToString(),
+                'application/octet-stream'
+            )
+            while wait_time < wait:
+                status = self._get_status(
+                    batch_id,
+                    wait - int(wait_time)
+                )
+                wait_time = time.time() - start_time
+
+                if status[batch_id] == 'COMMITTED':
+                    return 'Game created in {:.6} sec'.format(wait_time)
+                elif status[batch_id] == 'INVALID':
+                    return ('Error: You chose an invalid game name. '
+                            'Try again with a different name')
+                elif status[batch_id] == 'UNKNOWN':
+                    return ('Error: Something went wrong with your game. '
+                            'Try again with a different name.')
+                # Wait a moment so as not to hammer the Rest Api
+                time.sleep(0.2)
+
+            return ('Timed out while waiting for game to be created. '
+                    'It may need to be resubmitted.')
+
+        return self._send_request(
             "batches", batch_list.SerializeToString(),
             'application/octet-stream'
         )
-
-        return result
 
     def _create_batch_list(self, transactions):
         transaction_signatures = [t.header_signature for t in transactions]

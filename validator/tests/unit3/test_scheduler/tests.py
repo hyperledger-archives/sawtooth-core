@@ -591,6 +591,104 @@ class TestSerialScheduler(unittest.TestCase):
         self.assertTrue(batch3_result.is_valid)
         self.assertEqual(batch3_result.state_hash, state_root_end)
 
+    def test_sequential_add_batch_after_all_results_set(self):
+        """Tests that adding a new batch only after setting all of the
+        txn results will produce only expected state roots. Here no state
+        roots were specified, so similar to block publishing use of scheduler.
+
+        Basically:
+            1) Create 3 batches, the last being marked as having an invalid
+               transaction. Add one batch and then while the scheduler keeps
+               on returning transactions, set the txn result, and then
+               call next_transaction.
+            2) Call finalize, and then assert that the scheduler is complete
+            3) Assert that the first batch is valid and has no state hash,
+               the second batch is valid and since it is the last valid batch
+               in the scheduler has a state hash, and that the third batch
+               is invalid and consequently has no state hash.
+        """
+
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+
+        # 1)
+        batch_signatures = []
+        batches = []
+        for names in [['a', 'b'], ['d', 'e'], ['invalid', 'c']]:
+            batch_txns = []
+            for name in names:
+                txn, _ = create_transaction(
+                    payload=name.encode(),
+                    private_key=private_key,
+                    public_key=public_key)
+
+                batch_txns.append(txn)
+
+            batch = create_batch(
+                transactions=batch_txns,
+                private_key=private_key,
+                public_key=public_key)
+            batches.append(batch)
+            batch_signatures.append(batch.header_signature)
+        invalid_payload_sha = hashlib.sha512('invalid'.encode()).hexdigest()
+        for batch in batches:
+            self.scheduler.add_batch(batch=batch)
+            txn_info = self.scheduler.next_transaction()
+            while txn_info is not None:
+                txn_header = transaction_pb2.TransactionHeader()
+                txn_header.ParseFromString(txn_info.txn.header)
+                inputs_outputs = list(txn_header.inputs)
+                c_id = self.context_manager.create_context(
+                    state_hash=self.context_manager.get_first_root(),
+                    base_contexts=txn_info.base_context_ids,
+                    inputs=list(txn_header.inputs),
+                    outputs=list(txn_header.outputs))
+                self.context_manager.set(
+                    context_id=c_id,
+                    address_value_list=[{inputs_outputs[0]: b'5'}])
+                if txn_header.payload_sha512 == invalid_payload_sha:
+                    self.scheduler.set_transaction_execution_result(
+                        txn_info.txn.header_signature,
+                        is_valid=False,
+                        context_id=None)
+                else:
+                    self.scheduler.set_transaction_execution_result(
+                        txn_info.txn.header_signature,
+                        is_valid=True,
+                        context_id=c_id)
+                txn_info = self.scheduler.next_transaction()
+
+        # 2)
+        self.scheduler.finalize()
+        self.assertTrue(self.scheduler.complete(block=False),
+                        "The scheduler has had all txn results set so after "
+                        " calling finalize the scheduler is complete")
+        # 3)
+        first_batch_id = batch_signatures.pop(0)
+        result1 = self.scheduler.get_batch_execution_result(first_batch_id)
+        self.assertEquals(
+            result1.is_valid,
+            True,
+            "The first batch is valid")
+        self.assertIsNone(result1.state_hash, "The first batch doesn't produce"
+                                              " a state hash")
+        second_batch_id = batch_signatures.pop(0)
+        result2 = self.scheduler.get_batch_execution_result(second_batch_id)
+        self.assertEquals(
+            result2.is_valid,
+            True,
+            "The second batch is valid")
+        self.assertIsNotNone(result2.state_hash, "The second batch is the "
+                                                 "last valid batch in the "
+                                                 "scheduler")
+
+        third_batch_id = batch_signatures.pop(0)
+        result3 = self.scheduler.get_batch_execution_result(third_batch_id)
+        self.assertEquals(
+            result3.is_valid,
+            False)
+        self.assertIsNone(result3.state_hash, "The last batch is invalid so "
+                                              "doesn't have a state hash")
 
 class TestPredecessorTree(unittest.TestCase):
     '''

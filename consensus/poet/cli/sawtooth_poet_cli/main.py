@@ -23,6 +23,8 @@ from colorlog import ColoredFormatter
 from sawtooth_poet_cli.exceptions import CliException
 from sawtooth_poet_cli.genesis import add_genesis_parser
 from sawtooth_poet_cli.genesis import do_genesis
+from sawtooth_poet_cli.enclave import add_enclave_parser
+from sawtooth_poet_cli.enclave import do_enclave
 
 
 def create_console_handler(verbose_level):
@@ -79,6 +81,7 @@ def create_parser(prog_name):
     subparsers.required = True
 
     add_genesis_parser(subparsers, parent_parser)
+    add_enclave_parser(subparsers, parent_parser)
 
     return parser
 
@@ -98,6 +101,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
 
     if args.command == 'genesis':
         do_genesis(args)
+    elif args.command == 'enclave':
+        do_enclave(args)
     else:
         raise AssertionError('invalid command: {}'.format(args.command))
 

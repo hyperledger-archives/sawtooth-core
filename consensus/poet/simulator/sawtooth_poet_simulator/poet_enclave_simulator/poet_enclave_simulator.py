@@ -162,6 +162,18 @@ class _PoetEnclaveSimulator(object):
         cls._anti_sybil_id = hashlib.sha256(validator_id.encode()).hexdigest()
 
     @classmethod
+    def shutdown(cls):
+        pass
+
+    @classmethod
+    def get_enclave_measurement(cls):
+        return cls.__VALID_ENCLAVE_MEASUREMENT__.hex()
+
+    @classmethod
+    def get_enclave_basename(cls):
+        return cls.__VALID_BASENAME__.hex()
+
+    @classmethod
     def create_signup_info(cls,
                            originator_public_key_hash,
                            nonce):
@@ -179,7 +191,8 @@ class _PoetEnclaveSimulator(object):
                 'poet_private_key': cls._poet_private_key
             }
             sealed_signup_data = \
-                base64.b64encode(bytes(dict2json(signup_data).encode()))
+                base64.b64encode(
+                    dict2json(signup_data).encode()).decode('utf-8')
 
             # Build up a fake SGX quote containing:
             # 1. The basename
@@ -226,9 +239,7 @@ class _PoetEnclaveSimulator(object):
                     base64.b64encode(sgx_quote.serialize_to_bytes()).decode(),
                 'pseManifestStatus': 'OK',
                 'pseManifestHash':
-                    base64.b64encode(
-                        hashlib.sha256(
-                            pse_manifest).hexdigest().encode()).decode(),
+                    hashlib.sha256(base64.b64decode(pse_manifest)).hexdigest(),
                 'nonce': nonce,
                 'timestamp': timestamp
             }
@@ -283,7 +294,7 @@ class _PoetEnclaveSimulator(object):
         # we can convert back to a dictionary we can use to get the
         # data we need
         signup_data = \
-            json2dict(base64.b64decode(sealed_signup_data).decode())
+            json2dict(base64.b64decode(sealed_signup_data.encode()).decode())
 
         with cls._lock:
             cls._poet_public_key = str(signup_data.get('poet_public_key'))
@@ -475,6 +486,18 @@ class _PoetEnclaveSimulator(object):
 
 def initialize(config_dir):
     _PoetEnclaveSimulator.initialize(config_dir=config_dir)
+
+
+def shutdown():
+    _PoetEnclaveSimulator.shutdown()
+
+
+def get_enclave_measurement():
+    return _PoetEnclaveSimulator.get_enclave_measurement()
+
+
+def get_enclave_basename():
+    return _PoetEnclaveSimulator.get_enclave_basename()
 
 
 def create_signup_info(validator_address,

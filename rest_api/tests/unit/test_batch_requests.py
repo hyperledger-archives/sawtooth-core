@@ -495,6 +495,223 @@ class BatchListTests(BaseApiTest):
         self.assert_has_valid_data_list(response, 3)
         self.assert_batches_well_formed(response['data'], 'd', 'c', 'b')
 
+    @unittest_run_loop
+    async def test_batch_list_sorted(self):
+        """Verifies GET /batches can send proper sort controls.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three batches with ids '0', '1', and '2'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - sort controls with a key of 'header_signature'
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - a link property ending in '/batches?head=2&sort=header_signature'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - and those dicts are full batches with ids '0', '1', and '2'
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        batches = Mocks.make_batches('0', '1', '2')
+        self.stream.preset_response(head_id='2', paging=paging, batches=batches)
+
+        response = await self.get_assert_200('/batches?sort=header_signature')
+        page_controls = Mocks.make_paging_controls()
+        sorting = Mocks.make_sort_controls('header_signature')
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response,
+            '/batches?head=2&sort=header_signature')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_batches_well_formed(response['data'], '0', '1', '2')
+
+    @unittest_run_loop
+    async def test_batch_list_with_bad_sort(self):
+        """Verifies a GET /batches with a bad sort breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of INVALID_PAGING
+
+        It should send back a JSON response with:
+            - a response status of 400
+            - an error property with a code of 57
+        """
+        self.stream.preset_response(self.status.INVALID_SORT)
+        response = await self.get_assert_status('/batches?sort=bad', 400)
+
+        self.assert_has_valid_error(response, 57)
+
+    @unittest_run_loop
+    async def test_batch_list_sorted_with_nested_keys(self):
+        """Verifies GET /batches can send proper sort controls with nested keys.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three batches with ids '0', '1', and '2'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - sort controls with keys of 'header' and 'signer_pubkey'
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - a link ending in '/batches?head=2&sort=header.signer_pubkey'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - and those dicts are full batches with ids '0', '1', and '2'
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        batches = Mocks.make_batches('0', '1', '2')
+        self.stream.preset_response(head_id='2', paging=paging, batches=batches)
+
+        response = await self.get_assert_200(
+            '/batches?sort=header.signer_pubkey')
+        page_controls = Mocks.make_paging_controls()
+        sorting = Mocks.make_sort_controls('header', 'signer_pubkey')
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response,
+            '/batches?head=2&sort=header.signer_pubkey')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_batches_well_formed(response['data'], '0', '1', '2')
+
+    @unittest_run_loop
+    async def test_batch_list_sorted_in_reverse(self):
+        """Verifies a GET /batches can send proper sort parameters.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three batches with ids '2', '1', and '0'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - sort controls with a key of 'header_signature' that is reversed
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - a link property ending in '/batches?head=2&sort=-header_signature'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - and those dicts are full batches with ids '2', '1', and '0'
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        batches = Mocks.make_batches('2', '1', '0')
+        self.stream.preset_response(head_id='2', paging=paging, batches=batches)
+
+        response = await self.get_assert_200('/batches?sort=-header_signature')
+        page_controls = Mocks.make_paging_controls()
+        sorting = Mocks.make_sort_controls(
+            'header_signature', reverse=True)
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response,
+            '/batches?head=2&sort=-header_signature')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_batches_well_formed(response['data'], '2', '1', '0')
+
+    @unittest_run_loop
+    async def test_batch_list_sorted_by_length(self):
+        """Verifies a GET /batches can send proper sort parameters.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three batches with ids '0', '1', and '2'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - sort controls with a key of 'transactions' sorted by length
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - a link property ending in '/batches?head=2&sort=transactions.length'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - and those dicts are full batches with ids '0', '1', and '2'
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        batches = Mocks.make_batches('0', '1', '2')
+        self.stream.preset_response(head_id='2', paging=paging, batches=batches)
+
+        response = await self.get_assert_200('/batches?sort=transactions.length')
+        page_controls = Mocks.make_paging_controls()
+        sorting = Mocks.make_sort_controls('transactions', compare_length=True)
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response,
+            '/batches?head=2&sort=transactions.length')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_batches_well_formed(response['data'], '0', '1', '2')
+
+    @unittest_run_loop
+    async def test_batch_list_sorted_by_many_keys(self):
+        """Verifies a GET /batches can send proper sort parameters.
+
+        It will receive a Protobuf response with:
+            - a head id of '2'
+            - a paging response with a start of 0, and 3 total resources
+            - three batches with ids '2', '1', and '0'
+
+        It should send a Protobuf request with:
+            - empty paging controls
+            - multiple sort controls with:
+                * a key of 'header_signature' that is reversed
+                * a key of 'transactions' that is sorted by length
+
+        It should send back a JSON response with:
+            - a status of 200
+            - a head property of '2'
+            - link with '/batches?head=2&sort=-header_signature,transactions.length'
+            - a paging property that matches the paging response
+            - a data property that is a list of 3 dicts
+            - and those dicts are full batches with ids '2', '1', and '0'
+        """
+        paging = Mocks.make_paging_response(0, 3)
+        batches = Mocks.make_batches('2', '1', '0')
+        self.stream.preset_response(head_id='2', paging=paging, batches=batches)
+
+        response = await self.get_assert_200(
+            '/batches?sort=-header_signature,transactions.length')
+        page_controls = Mocks.make_paging_controls()
+        sorting = (Mocks.make_sort_controls('header_signature', reverse=True) +
+                   Mocks.make_sort_controls('transactions', compare_length=True))
+        self.stream.assert_valid_request_sent(
+            paging=page_controls,
+            sorting=sorting)
+
+        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_link(response,
+            '/batches?head=2&sort=-header_signature,transactions.length')
+        self.assert_has_valid_paging(response, paging)
+        self.assert_has_valid_data_list(response, 3)
+        self.assert_batches_well_formed(response['data'], '2', '1', '0')
+
 
 class BatchGetTests(BaseApiTest):
 

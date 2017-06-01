@@ -20,7 +20,7 @@ from sawtooth_cli.exceptions import CliException
 
 
 def add_block_parser(subparsers, parent_parser):
-    """Adds arguments parsers for the batch list and batch show commands
+    """Adds arguments parsers for the block list and block show commands
 
         Args:
             subparsers: Add parsers to this subparser object

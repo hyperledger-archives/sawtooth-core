@@ -75,7 +75,7 @@ def start_node(num,
     processors = start_processors(num, processor_func)
     validator = start_validator(num, peering_func, poet_kwargs)
 
-    wait_for_rest_apis(['0.0.0.0:{}'.format(8080 + num)])
+    wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)])
 
     return [rest_api] + processors + [validator]
 
@@ -133,17 +133,34 @@ def validator_cmds(num,
         '-o config-genesis.batch'
     ])
 
+    with open(
+        '/project/sawtooth-core/consensus/poet/simulator/packaging/'
+        'simulator_rk_pub.pem') as fd:
+        public_key_pem = fd.read()
+
+    # Use the poet CLI to get the enclave measurement so that we can put the
+    # value in the settings config for the validator registry transaction
+    # processor
+    result = \
+        subprocess.run(
+            ['poet', 'enclave', 'measurement'],
+            stdout=subprocess.PIPE)
+    enclave_measurement = result.stdout.decode('utf-8')
+
     config_proposal = ' '.join([
         'sawtooth config proposal create',
         '-k {}'.format(priv),
         'sawtooth.consensus.algorithm=poet',
+        'sawtooth.poet.report_public_key_pem="{}"'.format(public_key_pem),
+        'sawtooth.poet.valid_enclave_measurements={}'.format(
+            enclave_measurement),
         'sawtooth.poet.target_wait_time={}'.format(target_wait_time),
         'sawtooth.poet.initial_wait_time={}'.format(initial_wait_time),
         'sawtooth.poet.minimum_wait_time={}'.format(minimum_wait_time),
         '-o config.batch'
     ])
 
-    poet = 'poet genesis -o poet.batch'
+    poet = 'poet genesis -k {} -o poet.batch'.format(priv)
 
     genesis = ' '.join([
         'sawtooth admin genesis',
@@ -165,12 +182,15 @@ def validator_cmds(num,
     return validator_cmds
 
 def start_validator(num, peering_func, poet_kwargs):
-    for cmd in validator_cmds(num, peering_func, **poet_kwargs):
-        time.sleep(1)
+    cmds = validator_cmds(num, peering_func, **poet_kwargs)
+    for cmd in cmds[:-1]:
         process = start_process(cmd)
+        process.wait(timeout=60)
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, cmd)
 
     # only return the validator process (the rest are completed)
-    return process
+    return start_process(cmds[-1])
 
 
 # transaction processors
@@ -240,13 +260,13 @@ def connenction_address(num):
     return 'tcp://127.0.0.1:{}'.format(40000 + num)
 
 def http_address(num):
-    return 'http://0.0.0.0:{}'.format(8080 + num)
+    return 'http://127.0.0.1:{}'.format(8080 + num)
 
 def component_endpoint(num):
-    return 'tcp://0.0.0.0:{}'.format(40000 + num)
+    return 'tcp://127.0.0.1:{}'.format(40000 + num)
 
 def network_endpoint(num):
-    return 'tcp://0.0.0.0:{}'.format(8800 + num)
+    return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
 
 # execution
@@ -255,4 +275,3 @@ def start_process(cmd):
     LOGGER.debug('Running command {}'.format(cmd))
     return subprocess.Popen(
         shlex.split(cmd))
-    time.sleep(1)

@@ -402,7 +402,7 @@ class TestStateListRequests(ClientHandlerTestCase):
                 * a total resource count of 2
             - a list of leaves with 1 item
             - that item is an instance of Leaf
-            - that has a header_signature of 'b-0'
+            - that Leaf has an address of 'b' and data of b'4'
         """
         response = self.make_paged_request(count=1, start_index=1, head_id='B-1')
 
@@ -426,7 +426,7 @@ class TestStateListRequests(ClientHandlerTestCase):
             - a paging response with a total resource count of 1
             - a list of leaves with 1 item
             - that item is an instance of Leaf
-            - that has a header_signature of 'b-0'
+            - that Leaf has an address of 'b' and data of b'5'
         """
         response = self.make_paged_request(count=1, start_index=0, address='b')
 
@@ -437,6 +437,81 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.leaves, client_pb2.Leaf)
         self.assertEqual('b', response.leaves[0].address)
         self.assertEqual(b'5', response.leaves[0].data)
+
+    def test_state_list_sorted_by_key(self):
+        """Verifies data list requests work sorted by header_signature.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of leaves with 3 items
+            - the items are instances of Leaf
+            - the first Leaf has an address of 'a' and data of b'3'
+            - the last Leaf has an address of 'c' and data of b'7'
+        """
+        controls = self.make_sort_controls('address')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.leaves))
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
+
+        self.assertEqual('a', response.leaves[0].address)
+        self.assertEqual(b'3', response.leaves[0].data)
+        self.assertEqual('c', response.leaves[2].address)
+        self.assertEqual(b'7', response.leaves[2].data)
+
+    def test_state_list_sorted_by_bad_key(self):
+        """Verifies data list requests break properly sorted by a bad key.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of INVALID_SORT
+            - that head_id, paging, and leaves are missing
+        """
+        controls = self.make_sort_controls('bad')
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.INVALID_SORT, response.status)
+        self.assertFalse(response.head_id)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.leaves)
+
+    def test_state_list_sorted_in_reverse(self):
+        """Verifies data list requests work sorted by a key in reverse.
+
+        Queries the latest state in the default mock db:
+            {'a': b'3', 'b': b'5', 'c': b'7'}
+
+        Expects to find:
+            - a status of OK
+            - a head_id of 'B-2', the latest
+            - a paging response showing all 3 resources returned
+            - a list of leaves with 3 items
+            - the items are instances of Leaf
+            - the first Leaf has an address of 'c' and data of b'7'
+            - the last Leaf has an address of 'a' and data of b'3'
+        """
+        controls = self.make_sort_controls('data', reverse=True)
+        response = self.make_request(sorting=controls)
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual('B-2', response.head_id)
+        self.assert_valid_paging(response)
+        self.assertEqual(3, len(response.leaves))
+        self.assert_all_instances(response.leaves, client_pb2.Leaf)
+        self.assertEqual('c', response.leaves[0].address)
+        self.assertEqual(b'7', response.leaves[0].data)
+        self.assertEqual('a', response.leaves[2].address)
+        self.assertEqual(b'3', response.leaves[2].data)
 
 
 class TestStateGetRequests(ClientHandlerTestCase):

@@ -182,10 +182,10 @@ def _get_config_candidates(state):
     value = _get_config_value(state, 'sawtooth.config.vote.proposals')
     if not value:
         return ConfigCandidates(candidates={})
-    else:
-        config_candidates = ConfigCandidates()
-        config_candidates.ParseFromString(base64.b64decode(value))
-        return config_candidates
+
+    config_candidates = ConfigCandidates()
+    config_candidates.ParseFromString(base64.b64decode(value))
+    return config_candidates
 
 
 def _save_config_candidates(state, config_candidates):

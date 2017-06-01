@@ -278,9 +278,7 @@ test_python_sdk() {
 }
 
 test_integration() {
-    run_docker_test poet-smoke -s integration_test
-    copy_coverage .coverage.poet-smoke
-    run_docker_test dynamic-network -s integration_test
+    run_docker_test dynamic-network -s integration_test --timeout 600
     copy_coverage .coverage.dynamic-network
 }
 
@@ -289,7 +287,7 @@ test_deployment() {
 }
 
 copy_coverage() {
-    mv .coverage $PROJECT_DIR/coverage/$1
+    mv -f .coverage $PROJECT_DIR/coverage/$1
 }
 
 main

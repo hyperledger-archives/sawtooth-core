@@ -32,6 +32,9 @@ services:
         sawtooth config proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=poet \
+          sawtooth.poet.report_public_key_pem=\
+          \\\"$$(cat /project/sawtooth-core/consensus/poet/simulator/packaging/simulator_rk_pub.pem)\\\" \
+          sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
           -o config.batch && \
         poet genesis -o poet.batch && \
         sawtooth admin genesis \

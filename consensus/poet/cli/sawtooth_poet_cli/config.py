@@ -24,12 +24,13 @@ def _select_dir(sawtooth_home_dir, windows_dir, default_dir):
     """
     if 'SAWTOOTH_HOME' in os.environ:
         return os.path.join(os.environ['SAWTOOTH_HOME'], sawtooth_home_dir)
-    elif os.name == 'nt':
+
+    if os.name == 'nt':
         base_dir = \
             os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
         return os.path.join(base_dir, windows_dir)
-    else:
-        return default_dir
+
+    return default_dir
 
 
 def get_config_dir():
