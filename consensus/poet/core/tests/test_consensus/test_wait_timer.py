@@ -78,7 +78,6 @@ class TestWaitTimer(TestCase):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=self.poet_enclave_module,
-                validator_address='1060 W Addison Street',
                 originator_public_key_hash=self._originator_public_key_hash,
                 nonce=NULL_BLOCK_IDENTIFIER)
 
@@ -121,7 +120,6 @@ class TestWaitTimer(TestCase):
         # Initialize the enclave with sealed signup data
         SignupInfo.unseal_signup_data(
             poet_enclave_module=self.poet_enclave_module,
-            validator_address='1660 Pennsylvania Avenue NW',
             sealed_signup_data=signup_info.sealed_signup_data)
 
         stake_in_the_sand = time.time()
@@ -152,7 +150,6 @@ class TestWaitTimer(TestCase):
         # Need to create signup information first
         SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
-            validator_address='1660 Pennsylvania Avenue NW',
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 

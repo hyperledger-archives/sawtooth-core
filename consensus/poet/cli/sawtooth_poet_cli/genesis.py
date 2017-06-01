@@ -81,7 +81,6 @@ def do_genesis(args):
             data_dir=config.get_data_dir()) as poet_enclave_module:
         signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=poet_enclave_module,
-            validator_address=pubkey,
             originator_public_key_hash=public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 

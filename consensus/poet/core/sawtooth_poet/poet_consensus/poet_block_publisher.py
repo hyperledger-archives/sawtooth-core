@@ -127,7 +127,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave_module,
-                validator_address=block_header.signer_pubkey,
                 originator_public_key_hash=public_key_hash,
                 nonce=block_header.previous_block_id)
 
@@ -291,7 +290,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
             active_poet_public_key = \
                 SignupInfo.unseal_signup_data(
                     poet_enclave_module=poet_enclave_module,
-                    validator_address=block_header.signer_pubkey,
                     sealed_signup_data=poet_key_state.sealed_signup_data)
             self._poet_key_state_store.active_key = active_poet_public_key
 
