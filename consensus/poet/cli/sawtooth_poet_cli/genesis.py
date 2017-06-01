@@ -77,7 +77,8 @@ def do_genesis(args):
 
     with PoetEnclaveModuleWrapper(
             enclave_module=args.enclave_module,
-            config_dir=config.get_config_dir()) as poet_enclave_module:
+            config_dir=config.get_config_dir(),
+            data_dir=config.get_data_dir()) as poet_enclave_module:
         signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=poet_enclave_module,
             validator_address=pubkey,

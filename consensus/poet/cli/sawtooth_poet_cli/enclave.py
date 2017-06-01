@@ -48,7 +48,8 @@ def do_enclave(args):
     """
     with PoetEnclaveModuleWrapper(
             enclave_module=args.enclave_module,
-            config_dir=config.get_config_dir()) as poet_enclave_module:
+            config_dir=config.get_config_dir(),
+            data_dir=config.get_data_dir()) as poet_enclave_module:
         if args.characteristic == 'measurement':
             print(poet_enclave_module.get_enclave_measurement())
         elif args.characteristic == 'basename':

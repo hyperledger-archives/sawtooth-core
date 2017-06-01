@@ -31,7 +31,7 @@ class PoetEnclaveFactory(object):
     _poet_enclave_module = None
 
     @classmethod
-    def get_poet_enclave_module(cls, state_view, config_dir):
+    def get_poet_enclave_module(cls, state_view, config_dir, data_dir):
         """Returns the PoET enclave module based upon the corresponding value
         set by the sawtooth_config transaction family.  If no PoET enclave
         module has been set in the configuration, it defaults to the PoET
@@ -40,6 +40,8 @@ class PoetEnclaveFactory(object):
         Args:
             state_view (StateView): The current state view.
             config_dir (str): path to location where configuration for the
+                poet enclave module can be found.
+            data_dir (str): path to location where data for the
                 poet enclave module can be found.
         Returns:
             module: The configured PoET enclave module, or the PoET enclave
@@ -75,7 +77,7 @@ class PoetEnclaveFactory(object):
 
                 # Load and initialize the module
                 module = importlib.import_module(module_name)
-                module.initialize(config_dir)
+                module.initialize(config_dir, data_dir)
 
                 cls._poet_enclave_module = module
 

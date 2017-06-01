@@ -97,7 +97,8 @@ class PoetForkResolver(ForkResolverInterface):
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(
                 state_view=state_view,
-                config_dir=self._config_dir)
+                config_dir=self._config_dir,
+                data_dir=self._data_dir)
 
         current_fork_wait_certificate = \
             utils.deserialize_wait_certificate(
