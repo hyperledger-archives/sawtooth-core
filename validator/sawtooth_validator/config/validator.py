@@ -55,7 +55,8 @@ def load_toml_validator_config(filename):
     toml_config = toml.loads(raw_config)
 
     invalid_keys = set(toml_config.keys()).difference(
-        ['bind', 'endpoint', 'peering', 'seeds', 'peers'])
+        ['bind', 'endpoint', 'peering', 'seeds', 'peers', 'network_public_key',
+         'network_private_key'])
     if len(invalid_keys) > 0:
         raise LocalConfigurationError(
             "Invalid keys in validator config: "
@@ -68,6 +69,15 @@ def load_toml_validator_config(filename):
         if "component" in bind:
             bind_component = bind[bind.find(":")+1:]
 
+    network_public_key = None
+    network_private_key = None
+
+    if toml_config.get("network_public_key") is not None:
+        network_public_key = toml_config.get("network_public_key").encode()
+
+    if toml_config.get("network_private_key") is not None:
+        network_private_key = toml_config.get("network_private_key").encode()
+
     config = ValidatorConfig(
          bind_network=bind_network,
          bind_component=bind_component,
@@ -75,6 +85,8 @@ def load_toml_validator_config(filename):
          peering=toml_config.get("peering", None),
          seeds=toml_config.get("seeds", None),
          peers=toml_config.get("peers", None),
+         network_public_key=network_public_key,
+         network_private_key=network_private_key
     )
 
     return config
@@ -92,6 +104,8 @@ def merge_validator_config(configs):
     peering = None
     seeds = None
     peers = None
+    network_public_key = None
+    network_private_key = None
 
     for config in reversed(configs):
         if config.bind_network is not None:
@@ -106,6 +120,10 @@ def merge_validator_config(configs):
             seeds = config.seeds
         if config.peers is not None:
             peers = config.peers
+        if config.network_public_key is not None:
+            network_public_key = config.network_public_key
+        if config.network_private_key is not None:
+            network_private_key = config.network_private_key
 
     return ValidatorConfig(
          bind_network=bind_network,
@@ -113,14 +131,17 @@ def merge_validator_config(configs):
          endpoint=endpoint,
          peering=peering,
          seeds=seeds,
-         peers=peers
+         peers=peers,
+         network_public_key=network_public_key,
+         network_private_key=network_private_key
     )
 
 
 class ValidatorConfig:
     def __init__(self, bind_network=None, bind_component=None,
                  endpoint=None, peering=None, seeds=None,
-                 peers=None):
+                 peers=None, network_public_key=None,
+                 network_private_key=None):
 
         self._bind_network = bind_network
         self._bind_component = bind_component
@@ -128,6 +149,8 @@ class ValidatorConfig:
         self._peering = peering
         self._seeds = seeds
         self._peers = peers
+        self._network_public_key = network_public_key
+        self._network_private_key = network_private_key
 
     @property
     def bind_network(self):
@@ -153,17 +176,28 @@ class ValidatorConfig:
     def peers(self):
         return self._peers
 
+    @property
+    def network_public_key(self):
+        return self._network_public_key
+
+    @property
+    def network_private_key(self):
+        return self._network_private_key
+
     def __repr__(self):
         return \
             "{}(bind_network={}, bind_component={}, " \
-            "endpoint={}, peering={}, seeds={}, peers={})".format(
+            "endpoint={}, peering={}, seeds={}, peers={}, "\
+            "network_public_key={}, network_private_key={})".format(
                 self.__class__.__name__,
                 repr(self._bind_network),
                 repr(self._bind_component),
                 repr(self._endpoint),
                 repr(self._peering),
                 repr(self._seeds),
-                repr(self._peers))
+                repr(self._peers),
+                repr(self._network_public_key),
+                repr(self._network_private_key))
 
     def to_dict(self):
         return collections.OrderedDict([
@@ -172,7 +206,9 @@ class ValidatorConfig:
             ('endpoint', self._endpoint),
             ('peering', self._peering),
             ('seeds', self._seeds),
-            ('peers', self._peers)
+            ('peers', self._peers),
+            ('network_public_key', self._network_public_key),
+            ('network_private_key', self._network_private_key)
         ])
 
     def to_toml_string(self):
