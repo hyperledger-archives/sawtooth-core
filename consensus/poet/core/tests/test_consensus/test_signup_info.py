@@ -14,7 +14,8 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-import os
+import tempfile
+import shutil
 
 from sawtooth_poet_simulator.poet_enclave_simulator \
     import poet_enclave_simulator as poet_enclave
@@ -30,10 +31,14 @@ class TestSignupInfo(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        poet_enclave.initialize(os.path.dirname(os.path.abspath(__file__)))
-
+        cls._temp_dir = tempfile.mkdtemp()
         cls._originator_public_key_hash = create_random_public_key_hash()
         cls._another_public_key_hash = create_random_public_key_hash()
+        poet_enclave.initialize(cls._temp_dir, cls._temp_dir)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls._temp_dir)
 
     def test_create(self):
         signup_info = \

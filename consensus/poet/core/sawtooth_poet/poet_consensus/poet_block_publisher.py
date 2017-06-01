@@ -242,7 +242,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(
                 state_view=state_view,
-                config_dir=self._config_dir)
+                config_dir=self._config_dir,
+                data_dir=self._data_dir)
 
         # Get our validator registry entry to see what PoET public key
         # other validators think we are using.
@@ -474,7 +475,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(
                 state_view=state_view,
-                config_dir=self._config_dir)
+                config_dir=self._config_dir,
+                data_dir=self._data_dir)
 
         # We need to create a wait certificate for the block and then serialize
         # that into the block header consensus field.
