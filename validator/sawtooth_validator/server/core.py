@@ -86,7 +86,8 @@ LOGGER = logging.getLogger(__name__)
 class Validator(object):
     def __init__(self, bind_network, bind_component, endpoint,
                  peering, seeds_list, peer_list, data_dir, config_dir,
-                 identity_signing_key):
+                 identity_signing_key, network_public_key=None,
+                 network_private_key=None):
         """Constructs a validator instance.
 
         Args:
@@ -171,21 +172,17 @@ class Validator(object):
 
         self._network_dispatcher = Dispatcher()
 
-        # Server public and private keys are hardcoded here due to
-        # the decision to avoid having separate identities for each
-        # validator's server socket. This is appropriate for a public
-        # network. For a permissioned network with requirements for
-        # server endpoint authentication at the network level, this can
-        # be augmented with a local lookup service for side-band provided
-        # endpoint, public_key pairs and a local configuration option
-        # for 'server' side private keys.
+        secure = False
+        if network_public_key is not None and network_private_key is not None:
+            secure = True
+
         self._network = Interconnect(
             bind_network,
             dispatcher=self._network_dispatcher,
             zmq_identity=zmq_identity,
-            secured=True,
-            server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
-            server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
+            secured=secure,
+            server_public_key=network_public_key,
+            server_private_key=network_private_key,
             heartbeat=True,
             public_endpoint=endpoint,
             connection_timeout=30,

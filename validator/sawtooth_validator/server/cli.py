@@ -259,6 +259,12 @@ def main(args=sys.argv[1:]):
     if "tcp://" not in bind_component:
         bind_component = "tcp://" + bind_component
 
+    if validator_config.network_public_key is None or \
+            validator_config.network_private_key is None:
+        LOGGER.warning("Network key pair is not configured, Network "
+                       "communications between validators will not be "
+                       "authenticated or encrypted.")
+
     validator = Validator(bind_network,
                           bind_component,
                           endpoint,
@@ -267,7 +273,9 @@ def main(args=sys.argv[1:]):
                           validator_config.peers,
                           path_config.data_dir,
                           path_config.config_dir,
-                          identity_signing_key)
+                          identity_signing_key,
+                          validator_config.network_public_key,
+                          validator_config.network_private_key)
 
     # pylint: disable=broad-except
     try:
