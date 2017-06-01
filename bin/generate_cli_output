@@ -28,7 +28,7 @@ save_usage sawtooth block show
 save_usage sawtooth cluster
 save_usage sawtooth cluster extend
 save_usage sawtooth cluster logs
-save_usage sawtooth cluster start	
+save_usage sawtooth cluster start
 save_usage sawtooth cluster status
 save_usage sawtooth cluster stop
 save_usage sawtooth config
@@ -46,6 +46,12 @@ save_usage sawtooth submit
 save_usage sawtooth transaction
 save_usage sawtooth transaction list
 save_usage sawtooth transaction show
+
+save_usage seth
+save_usage seth create
+save_usage seth load
+save_usage seth exec
+save_usage seth show
 
 save_usage poet
 save_usage poet genesis
