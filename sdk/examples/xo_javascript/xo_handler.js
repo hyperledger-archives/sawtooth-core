@@ -211,13 +211,13 @@ const _handleTake = (state, address, update, player) => (possibleAddressValues) 
   stateValue.board = boardList.join("")
 
   if (_isWin(stateValue.board, "X")) {
-    stateValue.GameState = "P1-WIN"
+    stateValue.gameState = "P1-WIN"
   }
   else if (_isWin(stateValue.board, "O")) {
-    stateValue.GameState = "P2-WIN"
+    stateValue.gameState = "P2-WIN"
   }
   else if (stateValue.board.search('-') == -1) {
-    stateValue.GameState = "TIE"
+    stateValue.gameState = "TIE"
   }
 
   let setValue = Buffer.from([stateValue.board, stateValue.gameState, stateValue.player1,
@@ -255,7 +255,7 @@ class XOHandler extends TransactionHandler {
         } else if (update.action === 'take') {
           handlerFn = _handleTake
         } else {
-          throw new InvalidTransaction(`Action must be create or take not ${verb}`)
+          throw new InvalidTransaction(`Action must be create or take not ${update.action}`)
         }
 
         let address = XO_NAMESPACE + _hash(update.name)
