@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"burrow/word256"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
@@ -10,6 +11,7 @@ import (
 
 // -- AppState --
 
+// StateManager simplifies accessing EVM related data stored in state
 type StateManager struct {
 	state  *processor.State
 	prefix string
@@ -152,5 +154,8 @@ func (mgr *StateManager) MustSetEntry(vmAddress []byte, entry *EvmEntry) {
 // Convert the byte representation of an address used by the EVM to the string
 // representation used by global state.
 func toStateAddress(prefix string, b []byte) string {
-	return prefix + client.Encode(b, "hex")
+	// Make sure the address is padded correctly
+	b = word256.RightPadBytes(b, 32)
+
+	return prefix + client.MustEncode(b)
 }

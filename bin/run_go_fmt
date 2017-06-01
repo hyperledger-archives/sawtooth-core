@@ -12,6 +12,7 @@ $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey/handler
 $top_dir/families/burrow_evm/src/sawtooth_burrow_evm
 $top_dir/families/burrow_evm/src/sawtooth_burrow_evm/handler
+$top_dir/families/burrow_evm/src/sawtooth_burrow_evm/client
 "
 
 exitcode=0

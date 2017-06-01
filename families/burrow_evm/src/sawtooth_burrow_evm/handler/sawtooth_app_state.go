@@ -10,6 +10,8 @@ import (
 
 // -- AppState --
 
+// SawtoothAppState implements the interface used by the Burrow EVM to
+// access global state
 type SawtoothAppState struct {
 	mgr *StateManager
 }
@@ -23,7 +25,7 @@ func NewSawtoothAppState(mgr *StateManager) *SawtoothAppState {
 // GetAccount retrieves an existing account with the given address. Panics if
 // the account doesn't exist.
 func (s *SawtoothAppState) GetAccount(vmAddress Word256) *Account {
-	logger.Debugf("GetAccount(%v)", vmAddress)
+	logger.Debugf("GetAccount(%v)", vmAddress.Bytes())
 
 	entry := s.mgr.MustGetEntry(vmAddress.Bytes())
 
@@ -33,7 +35,7 @@ func (s *SawtoothAppState) GetAccount(vmAddress Word256) *Account {
 // UpdateAccount updates the account in state. Panics if the account doesn't
 // exist.
 func (s *SawtoothAppState) UpdateAccount(vmAccount *Account) {
-	logger.Debugf("UpdateAccount(%v)", vmAccount)
+	logger.Debugf("UpdateAccount(%v)", vmAccount.Address.Bytes())
 	address := vmAccount.Address.Bytes()
 
 	entry := s.mgr.MustGetEntry(vmAccount.Address.Bytes())
@@ -46,7 +48,7 @@ func (s *SawtoothAppState) UpdateAccount(vmAccount *Account) {
 // RemoveAccount removes the account and associated storage from global state
 // and panics if it doesn't exist.
 func (s *SawtoothAppState) RemoveAccount(vmAccount *Account) {
-	logger.Debugf("RemoveAccount(%v)")
+	logger.Debugf("RemoveAccount(%v)", vmAccount.Address.Bytes())
 	address := vmAccount.Address.Bytes()
 	err := s.mgr.DelEntry(address)
 	if err != nil {
@@ -61,7 +63,7 @@ func (s *SawtoothAppState) RemoveAccount(vmAccount *Account) {
 // or the address of the newly created account conflicts with an existing
 // account.
 func (s *SawtoothAppState) CreateAccount(creator *Account) *Account {
-	logger.Debugf("CreateAccount(%v)", creator)
+	logger.Debugf("CreateAccount(%v)", creator.Address.Bytes())
 
 	// Get address of new account
 	address := deriveNewVmAddress(creator).Bytes()
@@ -80,7 +82,7 @@ func (s *SawtoothAppState) CreateAccount(creator *Account) *Account {
 // GetStorage gets the 256 bit value stored with the given key in the given
 // account. panics if the account and key do not both exist.
 func (s *SawtoothAppState) GetStorage(address, key Word256) Word256 {
-	logger.Debugf("GetStorage(%v, %v)", address, key)
+	logger.Debugf("GetStorage(%v, %v)", address.Bytes(), key.Bytes())
 
 	// Load the entry from global state
 	entry := s.mgr.MustGetEntry(address.Bytes())
@@ -100,16 +102,22 @@ func (s *SawtoothAppState) GetStorage(address, key Word256) Word256 {
 }
 
 func (s *SawtoothAppState) SetStorage(address, key, value Word256) {
-	logger.Debugf("SetStorage(%v, %v, %v)", address, key, value)
+	logger.Debugf("SetStorage(%v, %v, %v)", address.Bytes(), key.Bytes(), value.Bytes())
 
 	entry := s.mgr.MustGetEntry(address.Bytes())
 
+	storage := entry.GetStorage()
+
 	// Make sure we update the entry after changing it
 	defer func() {
+		entry.Storage = storage
+		logger.Debugf("Storage")
+		for _, pair := range entry.GetStorage() {
+			logger.Debugf("%v -> %v", pair.GetKey(), pair.GetValue())
+		}
 		s.mgr.MustSetEntry(address.Bytes(), entry)
 	}()
 
-	storage := entry.GetStorage()
 	for _, pair := range storage {
 		k := LeftPadWord256(pair.GetKey())
 
@@ -134,6 +142,7 @@ func deriveNewVmAddress(sender *Account) Word256 {
 	buf := make([]byte, Word256Length+8)
 	copy(buf, sender.Address.Bytes())
 	PutInt64BE(buf[Word256Length:], sender.Nonce)
+	sender.Nonce += 1
 	return createVmAddress(buf)
 }
 
@@ -142,6 +151,9 @@ func createVmAddress(b []byte) Word256 {
 }
 
 func toStateAccount(a *Account) *EvmStateAccount {
+	if a == nil {
+		return nil
+	}
 	return &EvmStateAccount{
 		Address: a.Address.Bytes(),
 		Balance: a.Balance,
@@ -151,6 +163,9 @@ func toStateAccount(a *Account) *EvmStateAccount {
 }
 
 func toVmAccount(sa *EvmStateAccount) *Account {
+	if sa == nil {
+		return nil
+	}
 	return &Account{
 		Address: RightPadWord256(sa.Address),
 		Balance: sa.Balance,
