@@ -174,15 +174,16 @@ Query Parameters
 
 Many routes support query parameters to help specify how a request to the
 validator should be formed. Not every endpoint supports every query, and some
-endpoints have their own parameters specific to just to them. Those
-endpoint-specific queries are not listed here.
+endpoints have their own parameters specific to just to them. Any queries
+specific to a single endpoint are not listed here.
 
 .. list-table::
    :widths: 8, 72
 
    * - **head**
-     - The id of the block to use as the chain head. This is particularly useful
-       to request older versions of state *(defaults to the latest chain head)*.
+     - The id of the block to use as the chain head. This is particularly
+       useful to request older versions of state *(defaults to the latest chain
+       head)*.
    * - **count**
      - For paging, specificies the number of resources to fetch *(defaults to
        1000)*.
@@ -192,11 +193,19 @@ endpoint-specific queries are not listed here.
    * - **max**
      - For paging, specifies the id or index of the last resource to fetch. It
        would be used instead of *min*, not in the same query.
+   * - **sort**
+     - For endpoints that fetch lists of resources, specifies a key or keys to
+       sort the list by. These key sorts can be modified with a few simple
+       rules: nested keys can be dot-notated; `header.` may be omitted in the
+       case of nested header keys; appending `.length` sorts by the length of
+       the property; a minus-sign specifies descending order; multiple keys can
+       be used if comma-separated. For example:
+       `?sort=header.signer_pubkey,-transaction_ids.length`
    * - **wait**
      - For submission endpoints, instructs the REST API to wait until batches
-       have been committed to the blockchain before responding. Can be set to a
-       positive integer to specify a time out in seconds, or without any value
-       to use the REST API's internal time out.
+       have been committed to the blockchain before responding to the client.
+       Can be set to a positive integer to specify a timeout in seconds, or
+       without any value to use the REST API's internal time out.
 
 
 Endpoints
