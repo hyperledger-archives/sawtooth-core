@@ -46,7 +46,7 @@ def add_genesis_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('genesis')
 
     parser.add_argument(
-        '--enclave_module',
+        '--enclave-module',
         default='simulator',
         choices=['simulator', 'sgx'],
         type=str,
