@@ -215,7 +215,7 @@ class PostBatchTests(BaseApiTest):
         self.assertEqual(202, request.status)
 
         response = await request.json()
-        self.assert_has_valid_link(response, '/batch_status?id=pending')
+        self.assert_has_valid_link(response, '/batch_status?id=pending&wait')
         self.assert_statuses_match(statuses, response['data'])
 
 

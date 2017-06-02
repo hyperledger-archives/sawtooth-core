@@ -114,17 +114,15 @@ class RouteHandler(object):
 
         # Build response envelope
         data = response['batch_statuses'] or None
-        link = '{}://{}/batch_status?id={}'.format(
-            request.scheme,
-            request.host,
-            ','.join(b.header_signature for b in batch_list.batches))
+        id_string = ','.join(b.header_signature for b in batch_list.batches)
 
         if data is None or any(s != 'COMMITTED' for _, s in data.items()):
             status = 202
+            link = self._build_url(request, path='/batch_status', id=id_string)
         else:
             status = 201
             data = None
-            link = link.replace('batch_status', 'batches')
+            link = self._build_url(request, wait=False, id=id_string)
 
         return self._wrap_response(
             request,
@@ -556,7 +554,7 @@ class RouteHandler(object):
         a JSON encoded web.Response
         """
         head = response['head_id']
-        link = cls._build_url(request, head)
+        link = cls._build_url(request, head=head)
 
         paging_response = response['paging']
         total = paging_response['total_resources']
@@ -575,7 +573,8 @@ class RouteHandler(object):
 
         # Builds paging urls specific to this response
         def build_pg_url(min_pos=None, max_pos=None):
-            return cls._build_url(request, head, count, min_pos, max_pos)
+            return cls._build_url(request, head=head, count=count,
+                                  min=min_pos, max=max_pos)
 
         # Build paging urls based on ids
         if 'start_id' in controls or 'end_id' in controls:
@@ -606,44 +605,60 @@ class RouteHandler(object):
         from the client, and the Protobuf response from the validator.
         """
         head = response.get('head_id', None)
-        metadata = {'link': cls._build_url(request, head)}
+        metadata = {'link': cls._build_url(request, head=head)}
 
         if head is not None:
             metadata['head'] = head
         return metadata
 
     @classmethod
-    def _build_url(cls, request, head=None, count=None,
-                   min_pos=None, max_pos=None):
-        """Builds a response URL to send back in response envelope.
+    def _build_url(cls, request, path=None, **changes):
+        """Builds a response URL by overriding the original queries with
+        specified change queries. Change queries set to None will not be used.
+        Setting a change query to False will remove it even if there is an
+        original query with a value.
         """
-        query = request.url.query.copy()
+        changes = {k: v for k, v in changes.items() if v is not None}
+        queries = {**request.url.query, **changes}
+        queries = {k: v for k, v in queries.items() if v is not False}
+        query_strings = []
 
-        if head is not None:
-            url = '{}://{}{}?head={}'.format(
-                request.scheme,
-                request.host,
-                request.path,
-                head)
-            query.pop('head', None)
-        else:
-            return str(request.url)
+        def add_query(key):
+            query_strings.append('{}={}'.format(key, queries[key])
+                                 if queries[key] != '' else key)
 
-        if min_pos is not None:
-            url += '&{}={}'.format('min', min_pos)
-        elif max_pos is not None:
-            url += '&{}={}'.format('max', max_pos)
-        else:
-            queries = ['{}={}'.format(k, v) for k, v in query.items()]
-            return url + '&' + '&'.join(queries) if queries else url
+        def del_query(key):
+            queries.pop(key, None)
 
-        url += '&{}={}'.format('count', count)
-        query.pop('min', None)
-        query.pop('max', None)
-        query.pop('count', None)
+        if 'head' in queries:
+            add_query('head')
+            del_query('head')
 
-        queries = ['{}={}'.format(k, v) for k, v in query.items()]
-        return url + '&' + '&'.join(queries) if queries else url
+        if 'min' in changes:
+            add_query('min')
+        elif 'max' in changes:
+            add_query('max')
+        elif 'min' in queries:
+            add_query('min')
+        elif 'max' in queries:
+            add_query('max')
+
+        del_query('min')
+        del_query('max')
+
+        if 'count' in queries:
+            add_query('count')
+            del_query('count')
+
+        for key in sorted(queries):
+            add_query(key)
+
+        host = request.headers.get('X-Forwarded-Host', None) or request.host
+        new_path = request.headers.get('X-Forwarded-Path', None) or ''
+        new_path += path if path is not None else request.path
+        query = '?' + '&'.join(query_strings) if query_strings else ''
+
+        return '{}://{}{}{}'.format(request.url.scheme, host, new_path, query)
 
     @classmethod
     def _expand_block(cls, block):
