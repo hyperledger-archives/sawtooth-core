@@ -152,11 +152,12 @@ def load_validator_config(first_config, config_dir):
 def create_validator_config(opts):
     bind_network = None
     bind_component = None
-    for bind in opts.bind:
-        if "network" in bind:
-            bind_network = bind[bind.find(":")+1:]
-        if "component" in bind:
-            bind_component = bind[bind.find(":")+1:]
+    if opts.bind:
+        for bind in opts.bind:
+            if "network" in bind:
+                bind_network = bind[bind.find(":")+1:]
+            if "component" in bind:
+                bind_component = bind[bind.find(":")+1:]
     return ValidatorConfig(
         bind_network=bind_network,
         bind_component=bind_component,
