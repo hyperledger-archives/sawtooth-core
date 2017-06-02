@@ -82,10 +82,12 @@ class MessageFactory(object):
     def namespace(self):
         return self.namespaces[0]
 
-    def sha512(self, content):
+    @staticmethod
+    def sha512(content):
         return hashlib.sha512(content).hexdigest()
 
-    def sha256(self, content):
+    @staticmethod
+    def sha256(content):
         return hashlib.sha256(content).hexdigest()
 
     def get_public_key(self):
