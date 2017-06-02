@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import re
 import logging
 import json
 import base64
@@ -653,12 +654,36 @@ class RouteHandler(object):
         for key in sorted(queries):
             add_query(key)
 
-        host = request.headers.get('X-Forwarded-Host', None) or request.host
-        new_path = request.headers.get('X-Forwarded-Path', None) or ''
-        new_path += path if path is not None else request.path
+        scheme = cls._get_forwarded(request, 'proto') or request.url.scheme
+        host = cls._get_forwarded(request, 'host') or request.host
+        forwarded_path = cls._get_forwarded(request, 'path')
+        path = path if path is not None else request.path
         query = '?' + '&'.join(query_strings) if query_strings else ''
 
-        return '{}://{}{}{}'.format(request.url.scheme, host, new_path, query)
+        url = '{}://{}{}{}{}'.format(scheme, host, forwarded_path, path, query)
+        return url
+
+    @staticmethod
+    def _get_forwarded(request, key):
+        """Gets a forwarded value from the `Forwarded` header if present, or
+        the equivalent `X-Forwarded-` header if not. If neither is present,
+        returns an empty string.
+        """
+        forwarded = request.headers.get('Forwarded', '')
+        match = re.search(
+            r'(?<={}=).+?(?=[\s,;]|$)'.format(key),
+            forwarded,
+            re.IGNORECASE)
+
+        if match is not None:
+            header = match.group(0)
+
+            if header[0] == '"' and header[-1] == '"':
+                return header[1:-1]
+
+            return header
+
+        return request.headers.get('X-Forwarded-{}'.format(key.title()), '')
 
     @classmethod
     def _expand_block(cls, block):
