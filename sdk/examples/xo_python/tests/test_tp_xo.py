@@ -52,6 +52,11 @@ class TestXo(TransactionProcessorTestCase):
 
         self.expect_invalid()
 
+    def test_bar_name(self):
+        self.create_game('bar|name')
+
+        self.expect_invalid()
+
     # create
 
     def test_create_game_valid(self):

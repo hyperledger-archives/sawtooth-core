@@ -62,6 +62,9 @@ class XoTransactionHandler:
         if name == "":
             raise InvalidTransaction("Name is required")
 
+        if '|' in name:
+            raise InvalidTransaction('Name cannot contain "|"')
+
         if action == "":
             raise InvalidTransaction("Action is required")
 

@@ -280,6 +280,11 @@ class XOHandler extends TransactionHandler {
           throw new InvalidTransaction('Name is required')
         }
 
+        if (update.name.indexOf('|') !== -1) {
+          throw new InvalidTransaction(
+            'Name cannot contain "|"')
+        }
+
         if (!update.action) {
           throw new InvalidTransaction('Action is required')
         }
