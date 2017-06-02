@@ -76,7 +76,7 @@ class TestXoSmoke(unittest.TestCase):
     def verify_game(self, game_name, expected_board, expected_turn):
         LOGGER.info('Verifying game: %s', game_name)
 
-        board, turn, _, _, _ = self.client.get_game(game_name)
+        board, turn, _, _ = self.client.get_game(game_name)
 
         self.assertEqual(
             board,

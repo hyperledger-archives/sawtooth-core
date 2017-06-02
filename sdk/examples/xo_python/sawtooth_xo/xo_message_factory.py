@@ -67,7 +67,7 @@ class XoMessageFactory:
 
         data = None
         if board is not None:
-            data = ",".join([board, state, player1, player2, game]).encode()
+            data = ",".join([game, board, state, player1, player2]).encode()
         else:
             data = None
 
@@ -80,7 +80,7 @@ class XoMessageFactory:
 
         data = None
         if state is not None:
-            data = ",".join([board, state, player1, player2, game]).encode()
+            data = ",".join([game, board, state, player1, player2]).encode()
         else:
             data = None
 

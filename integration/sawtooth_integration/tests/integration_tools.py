@@ -156,7 +156,15 @@ class XoClient(RestClient):
             namespace='5b7349')
 
     def decode_data(self, data):
-        return data.decode().split(',')
+        return {
+            name: (board, state, player_1, player_2)
+            for name, board, state, player_1, player_2 in [
+                game.split(',')
+                for game in data.decode().split('|')
+            ]
+        }
+
+        return data.decode().split('|')
 
     def make_xo_address(self, name):
         return self.namespace + hashlib.sha512(name.encode()).hexdigest()
@@ -164,7 +172,7 @@ class XoClient(RestClient):
     def get_game(self, name):
         return self.decode_data(
             self.get_leaf(
-                self.make_xo_address(name)))
+                self.make_xo_address(name)))[name]
 
 
 def wait_until_status(url, status_code=200, tries=5):
