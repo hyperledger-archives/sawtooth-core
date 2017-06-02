@@ -31,36 +31,45 @@
 
 FROM ubuntu:xenial
 
-RUN apt-get update && apt-get install -y \
-    apache2 \
- && a2enmod proxy_http \
- && a2enmod headers
+RUN apt-get update \
+    && apt-get install -y apache2 \
+    && a2enmod proxy_http \
+    && a2enmod headers \
+    && a2enmod ssl
 
-RUN echo "\nServerName basic_auth_proxy\n" >> /etc/apache2/apache2.conf
+RUN openssl req -x509 -nodes -days 7300 -newkey rsa:2048 \
+    -keyout /tmp/.ssl.key -out /tmp/.ssl.crt \
+    -subj /C=US/ST=MN/L=Mpls/O=Sawtooth/CN=basic_auth_proxy
+
+RUN echo "sawtooth:\$apr1\$cyAIkitu\$Cv6M2hHJlNgnVvKbUdlFr." >/tmp/.password
 
 RUN echo "\
-sawtooth:\$apr1\$cyAIkitu\$Cv6M2hHJlNgnVvKbUdlFr.\n\
 \n\
-" >/tmp/.password
+ServerName basic_auth_proxy\n\
+ServerAdmin sawtooth@sawtooth\n\
+DocumentRoot /var/www/html\n\
+\n\
+" >>/etc/apache2/apache2.conf
 
 RUN echo "\
 <VirtualHost *:80>\n\
-        ServerAdmin sawtooth@sawtooth\n\
-        DocumentRoot /var/www/html\n\
-\n\
-        ErrorLog ${APACHE_LOG_DIR}/error.log\n\
-        CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
-\n\
-        <Location />\n\
-                Options Indexes FollowSymLinks\n\
-                AllowOverride None\n\
-                AuthType Basic\n\
-                AuthName \"Enter password\"\n\
-                AuthUserFile \"/tmp/.password\"\n\
-                Require user sawtooth\n\
-                Require all denied\n\
-        </Location>\n\
 </VirtualHost>\n\
+\n\
+<VirtualHost *:443>\n\
+        SSLEngine on\n\
+        SSLCertificateFile /tmp/.ssl.crt\n\
+        SSLCertificateKeyFile /tmp/.ssl.key\n\
+        RequestHeader set X-Forwarded-Proto \"https\"\n\
+</VirtualHost>\n\
+\n\
+<Location />\n\
+        Options Indexes FollowSymLinks\n\
+        AuthType Basic\n\
+        AuthName \"Enter password\"\n\
+        AuthUserFile \"/tmp/.password\"\n\
+        Require user sawtooth\n\
+        Require all denied\n\
+</Location>\n\
 \n\
 ProxyPass /sawtooth http://rest_api:8080\n\
 ProxyPassReverse /sawtooth http://rest_api:8080\n\
@@ -69,6 +78,7 @@ RequestHeader set X-Forwarded-Path \"/sawtooth\"\n\
 " >/etc/apache2/sites-enabled/000-default.conf
 
 EXPOSE 80
+EXPOSE 443
 EXPOSE 8080
 
 CMD ["apachectl start"]
