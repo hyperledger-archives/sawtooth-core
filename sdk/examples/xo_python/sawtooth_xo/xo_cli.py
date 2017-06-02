@@ -218,15 +218,19 @@ def do_list(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url, keyfile=key_file)
-    game_list = client.list()
+
+    game_list = [
+        game.split(',')
+        for games in client.list()
+        for game in games.decode().split('|')
+    ]
 
     if game_list is not None:
         fmt = "%-15s %-15.15s %-15.15s %-9s %s"
         print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE'))
         for game_data in game_list:
 
-            board, game_state, player1, player2, name = \
-                game_data.decode().split(",")
+            name, board, game_state, player1, player2 = game_data
 
             print(fmt % (name, player1[:6], player2[:6], board, game_state))
     else:
@@ -240,12 +244,17 @@ def do_show(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = XoClient(base_url=url, keyfile=key_file)
-    game = client.show(name).decode()
+    data = client.show(name)
 
-    if game is not None:
+    if data is not None:
 
-        board_str, game_state, player1, player2, name = \
-            game.split(",")
+        board_str, game_state, player1, player2 = {
+            name: (board, state, player_1, player_2)
+            for name, board, state, player_1, player_2 in [
+                game.split(',')
+                for game in data.decode().split('|')
+            ]
+        }[name]
 
         board = list(board_str.replace("-", " "))
 
