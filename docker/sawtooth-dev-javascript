@@ -54,7 +54,7 @@ RUN mkdir -p /project/sawtooth-core/ \
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
-WORKDIR /
+WORKDIR /project
 
 CMD /project/sawtooth-core/bin/build_javascript_sdk \
  && /project/sawtooth-core/bin/build_intkey_javascript \

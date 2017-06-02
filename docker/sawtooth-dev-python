@@ -108,5 +108,5 @@ RUN mkdir -p /project/sawtooth-core/ \
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
-WORKDIR /project/sawtooth-core
+WORKDIR /project
 CMD build_python
