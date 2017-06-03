@@ -19,6 +19,7 @@ services:
 
   tp_config:
     image: hyperledger/sawtooth-tp_config:latest
+    container_name: sawtooth-tp_config-default
     expose:
       - 40000
     depends_on:
@@ -27,6 +28,7 @@ services:
 
   tp_intkey_python:
     image: hyperledger/sawtooth-tp_intkey_python:latest
+    container_name: sawtooth-tp_intkey_python-default
     expose:
       - 40000
     depends_on:
@@ -35,6 +37,7 @@ services:
 
   tp_xo_python:
     image: hyperledger/sawtooth-tp_xo_python:latest
+    container_name: sawtooth-tp_xo_python-default
     expose:
       - 40000
     depends_on:
@@ -43,6 +46,7 @@ services:
 
   validator:
     image: hyperledger/sawtooth-validator:latest
+    container_name: sawtooth-validator-default
     expose:
       - 40000
     ports:
@@ -61,6 +65,7 @@ services:
 
   rest_api:
     image: hyperledger/sawtooth-rest_api:latest
+    container_name: sawtooth-rest_api-default
     expose:
       - 40000
       - 8080
@@ -72,6 +77,7 @@ services:
 
   client:
     image: hyperledger/sawtooth-all:latest
+    container_name: sawtooth-client-default
     expose:
       - 8080
       - 40000
