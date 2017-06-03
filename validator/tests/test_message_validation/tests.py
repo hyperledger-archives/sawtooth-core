@@ -16,18 +16,15 @@ import unittest
 import cbor
 import hashlib
 import random
-import queue
 import string
 
-from threading import Condition
 import sawtooth_signing as signing
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader, \
     Transaction
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader, Block
-from sawtooth_validator.protobuf.network_pb2 import GossipMessage
-from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.gossip import signature_verifier as verifier
+from sawtooth_validator.gossip import structure_verifier
 
 
 class TestMessageValidation(unittest.TestCase):
@@ -100,7 +97,7 @@ class TestMessageValidation(unittest.TestCase):
 
     def _create_batches(self, batch_count, txn_count,
                         valid_batch=True, valid_txn=True,
-                        valid_batcher=True):
+                        valid_structure=True, valid_batcher=True):
 
         batch_list = []
 
@@ -108,6 +105,8 @@ class TestMessageValidation(unittest.TestCase):
             txn_list = self._create_transactions(txn_count, valid_txn,
                                                  valid_batcher)
             txn_sig_list = [txn.header_signature for txn in txn_list]
+            if not valid_structure:
+                txn_sig_list.pop()
 
             batch_header = BatchHeader(signer_pubkey=self.public_key)
             batch_header.transaction_ids.extend(txn_sig_list)
@@ -201,6 +200,12 @@ class TestMessageValidation(unittest.TestCase):
         batch_list = self._create_batches(1, 1, valid_batcher=False)
         batch = batch_list[0]
         valid = verifier.validate_batch(batch)
+        self.assertFalse(valid)
+
+    def test_invalid_batch_structure(self):
+        batch_list = self._create_batches(1, 2, valid_structure=False)
+        batch = batch_list[0]
+        valid = structure_verifier.is_valid_batch(batch)
         self.assertFalse(valid)
 
     def test_valid_block(self):

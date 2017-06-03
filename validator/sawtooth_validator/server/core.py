@@ -38,6 +38,7 @@ from sawtooth_validator.journal.completer import \
 from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
 from sawtooth_validator.journal.completer import Completer
+from sawtooth_validator.gossip import structure_verifier
 from sawtooth_validator.journal.responder import Responder
 from sawtooth_validator.journal.responder import BlockResponderHandler
 from sawtooth_validator.journal.responder import ResponderBlockResponseHandler
@@ -307,7 +308,13 @@ class Validator(object):
             signature_verifier.GossipMessageSignatureVerifier(),
             sig_pool)
 
-        # GOSSIP_MESSAGE 3) Determines if we should broadcast the
+        # GOSSIP_MESSAGE 3) Verifies batch structure
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            structure_verifier.GossipHandlerStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_MESSAGE 4) Determines if we should broadcast the
         # message to our peers. It is important that this occur prior
         # to the sending of the message to the completer, as this step
         # relies on whether the  gossip message has previously been
@@ -320,7 +327,7 @@ class Validator(object):
                 completer=completer),
             network_thread_pool)
 
-        # GOSSIP_MESSAGE 4) Send message to completer
+        # GOSSIP_MESSAGE 5) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             CompleterGossipHandler(
@@ -344,7 +351,13 @@ class Validator(object):
             signature_verifier.GossipBlockResponseSignatureVerifier(),
             sig_pool)
 
-        # GOSSIP_BLOCK_RESPONSE 3) Send message to completer
+        # GOSSIP_BLOCK_RESPONSE 3) Check batch structure
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+            structure_verifier.GossipBlockResponseStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_BLOCK_RESPONSE 4) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             CompleterGossipBlockResponseHandler(
@@ -378,7 +391,13 @@ class Validator(object):
             signature_verifier.GossipBatchResponseSignatureVerifier(),
             sig_pool)
 
-        # GOSSIP_BATCH_RESPONSE 3) Send message to completer
+        # GOSSIP_BATCH_RESPONSE 3) Check batch structure
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+            structure_verifier.GossipBatchResponseStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_BATCH_RESPONSE 4) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
             CompleterGossipBatchResponseHandler(
@@ -394,6 +413,11 @@ class Validator(object):
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             signature_verifier.BatchListSignatureVerifier(),
             sig_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            structure_verifier.BatchListStructureVerifier(),
+            network_thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
