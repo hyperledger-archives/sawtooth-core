@@ -299,3 +299,9 @@ form, these can be validated programmatically without any need for persistent
 state stored on a database or elsewhere. However, more sophisticated
 functionality, like blacklisting particular keys that are compromised, would
 require some strategy for persistent storage.
+
+.. note::
+
+   While the REST API does not support any sort of authorization internally, it
+   is entirely possible to put it behind a proxy that does. See:
+   :doc:`/sysadmin_guide/rest_auth_proxy`

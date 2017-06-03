@@ -8,3 +8,4 @@ System Administrator's Guide
 
    sysadmin_guide/installation
    sysadmin_guide/log_configuration
+   sysadmin_guide/rest_auth_proxy
