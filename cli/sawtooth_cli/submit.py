@@ -102,7 +102,7 @@ def add_submit_parser(subparsers, parent_parser):
     parser.add_argument(
         '-U', '--url',
         type=str,
-        help='connection URL for validator',
+        help="the URL of the validator's REST API",
         default='http://localhost:8080')
 
     parser.add_argument(
