@@ -15,6 +15,7 @@
 
 import unittest
 import logging
+import ssl
 import json
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
@@ -32,31 +33,51 @@ class TestBasicAuth(unittest.TestCase):
     def setUp(self):
         wait_until_status('http://basic_auth_proxy/sawtooth', status_code=401)
 
-    def test_fetch_blocks(self):
-        """Checks that an authenticated request can be made through a proxy
-        to the REST API, and that the returned "link" parameter properly
+    def test_http_basic_auth(self):
+        """Checks that a Basic Auth request can be made with unencrypted HTTP.
+        """
+        url = 'http://basic_auth_proxy/sawtooth/blocks'
+        self._assert_valid_authed_request(url)
+
+    def test_ssl_basic_auth(self):
+        """Checks that a Basic Auth request can be made with encrypted HTTPS.
+        """
+        url = 'https://basic_auth_proxy/sawtooth/blocks'
+        self._assert_valid_authed_request(url)
+
+    def _assert_valid_authed_request(self, url):
+        """Asserts that a Basic Auth request was made successfully through a
+        proxy to the REST API, and that the returned "link" parameter properly
         reflects the url of the proxy.
 
-        The proxy should redirect from `http://basic_auth_proxy/sawtooth` to
+        The proxy should redirect from the passed url's domain to
         `http://rest_api:8080`, and be configured with a Basic Auth
         username:password combination of 'sawtooth:sawtooth'.
 
         In order to get back the correct link, the proxy must both forward the
         host and add a custom RequestHeader of 'X-Forwarded-Path: /sawtooth'.
         """
-        url = 'http://basic_auth_proxy/sawtooth/blocks'
         auth = 'Basic {}'.format(b64encode(b'sawtooth:sawtooth').decode())
         LOGGER.info(('\n'
                      'Sending request to "{}",\n'
                      'with "Authorition: {}"').format(url, auth))
 
+        request = Request(url, headers={'Authorization': auth})
+        context = ssl._create_unverified_context()
+
         try:
-            response = urlopen(Request(url, headers={'Authorization': auth}))
+            response = urlopen(request, context=context)
         except HTTPError as e:
-            response = e.file
-            error = json.loads(response.read().decode())['error']
-            LOGGER.error('{} - {}:'.format(error['code'], error['title']))
+            try:
+                error = json.loads(e.file.read().decode())['error']
+            except json.decoder.JSONDecodeError:
+                raise e
+
+            LOGGER.error('REST API Error: {} - {}:'.format(
+                error['code'], error['title']))
             LOGGER.error(error['message'])
+
+            raise e
 
         self.assertEqual(200, response.getcode())
         LOGGER.info('Authorization succeeded, 200 response received.')

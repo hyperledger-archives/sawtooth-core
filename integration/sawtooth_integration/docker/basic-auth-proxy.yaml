@@ -53,6 +53,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 80
+      - 443
       - 8080
     depends_on:
       - validator
@@ -69,6 +70,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 80
+      - 443
     depends_on:
       - validator
       - rest_api
