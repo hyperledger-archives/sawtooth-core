@@ -79,7 +79,7 @@ These checks are:
 * The PR must be approved by at least two reviewers and there cannot be 
   outstanding changes requested
 
-+**Integrating Github Commits with JIRA**
+**Integrating Github Commits with JIRA**
 
 You can link JIRA issues to your Hyperledger Sawtooth github commits to integrate
 the developer's activity with the associated issue. JIRA uses the issue key to
