@@ -139,6 +139,16 @@ def create_parent_parser(prog_name):
         action='count',
         help='enable more verbose output')
 
+    parent_parser.add_argument(
+        '--auth-user',
+        type=str,
+        help='username for authentication if REST API is using Basic Auth')
+
+    parent_parser.add_argument(
+        '--auth-password',
+        type=str,
+        help='password for authentication if REST API is using Basic Auth')
+
     return parent_parser
 
 
@@ -216,12 +226,14 @@ def do_reset(args, config):
 def do_list(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    auth_user, auth_password = _get_auth_info(args)
 
     client = XoClient(base_url=url, keyfile=key_file)
 
     game_list = [
         game.split(',')
-        for games in client.list()
+        for games in client.list(auth_user=auth_user,
+                                 auth_password=auth_password)
         for game in games.decode().split('|')
     ]
 
@@ -242,9 +254,11 @@ def do_show(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    auth_user, auth_password = _get_auth_info(args)
 
     client = XoClient(base_url=url, keyfile=key_file)
-    data = client.show(name)
+
+    data = client.show(name, auth_user=auth_user, auth_password=auth_password)
 
     if data is not None:
 
@@ -279,14 +293,19 @@ def do_create(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url,
-                      keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=key_file)
 
     if args.wait and args.wait > 0:
-        response = client.create(name, wait=args.wait)
+        response = client.create(
+            name, wait=args.wait,
+            auth_user=auth_user,
+            auth_password=auth_password)
     else:
-        response = client.create(name)
+        response = client.create(
+            name, auth_user=auth_user,
+            auth_password=auth_password)
 
     print("Response: {}".format(response))
 
@@ -297,10 +316,15 @@ def do_take(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url,
-                      keyfile=key_file)
-    response = client.take(name, space)
+    client = XoClient(base_url=url, keyfile=key_file)
+
+    response = client.take(
+        name, space,
+        auth_user=auth_user,
+        auth_password=auth_password)
+
     print("Response: {}".format(response))
 
 
@@ -335,6 +359,15 @@ def save_config(config):
         if os.path.exists(config_file):
             os.remove(config_file)
     os.rename("{}.new".format(config_file), config_file)
+
+
+def _get_auth_info(args):
+    auth_user = args.auth_user
+    auth_password = args.auth_password
+    if auth_user is not None and auth_password is None:
+        auth_password = getpass.getpass(prompt="Auth Password: ")
+
+    return auth_user, auth_password
 
 
 def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
