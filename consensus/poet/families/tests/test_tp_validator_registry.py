@@ -26,8 +26,8 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorRegistryPayload
 
 
-PRIVATE = '5HsjpyQzpeoGAAvNeG5PzQsn1Ght18GgSmDaEUCd1c1HpA2avzc'
-PUBLIC = '02f3d385777ab35888fc47af6d123bba6f8b04817a4746e97446ce1562fc4307d7'
+PRIVATE = '254783e0db1fafa2253743889d913ddd9a7cfa95f96d767efbaa77ac018915ca'
+PUBLIC = '02f86601a7113fa831ce6504595e32a8390ee6ab7755a5a7931487b8b0c1eedfae'
 
 
 class TestValidatorRegistry(TransactionProcessorTestCase):

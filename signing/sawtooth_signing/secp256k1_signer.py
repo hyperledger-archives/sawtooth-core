@@ -40,7 +40,7 @@ def generate_privkey():
     return _encode_privkey(secp256k1.PrivateKey(ctx=__CTX__))
 
 
-def _encode_privkey(privkey, encoding_format='wif'):
+def _encode_privkey(privkey, encoding_format='hex'):
     try:  # check python3
         priv = int.from_bytes(privkey.private_key, byteorder='big')
     except AttributeError:
@@ -51,7 +51,7 @@ def _encode_privkey(privkey, encoding_format='wif'):
     return encoded
 
 
-def _decode_privkey(encoded_privkey, encoding_format='wif'):
+def _decode_privkey(encoded_privkey, encoding_format='hex'):
     """
     Args:
         encoded_privkey: an encoded private key string

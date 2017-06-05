@@ -25,7 +25,7 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchList
 from sawtooth_cli import config
 
 
-TEST_WIF = '5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv'
+TEST_KEY = 'a87cb5eafdcca6a81913619f4b42affd749cc505090a5b51db953202b4a1acc8'
 
 
 class TestConfigBatchlist(unittest.TestCase):
@@ -37,10 +37,10 @@ class TestConfigBatchlist(unittest.TestCase):
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
 
-        # create a wif key for signing
-        self._wif_file = os.path.join(self._temp_dir, 'test.priv')
-        with open(self._wif_file, 'wb') as wif:
-            wif.write(TEST_WIF.encode())
+        # create a signing key
+        self._priv_file = os.path.join(self._temp_dir, 'test.priv')
+        with open(self._priv_file, 'wb') as priv_file:
+            priv_file.write(TEST_KEY.encode())
 
         self._parser = argparse.ArgumentParser()
         subparsers = self._parser.add_subparsers(title='subcommands',
@@ -53,7 +53,7 @@ class TestConfigBatchlist(unittest.TestCase):
 
     def _parse_set_command(self, *settings):
         cmd_args = ['config', 'proposal', 'create',
-                    '-k', self._wif_file,
+                    '-k', self._priv_file,
                     '-o', os.path.join(self._temp_dir, 'myconfig.batch')]
         cmd_args += settings
 
