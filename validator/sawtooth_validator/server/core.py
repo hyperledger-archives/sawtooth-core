@@ -153,13 +153,15 @@ class Validator(object):
                                      self._dispatcher,
                                      secured=False,
                                      heartbeat=False,
-                                     max_incoming_connections=20)
+                                     max_incoming_connections=20,
+                                     monitor=True)
 
         executor = TransactionExecutor(service=self._service,
                                        context_manager=context_manager,
                                        config_view_factory=ConfigViewFactory(
                                            StateViewFactory(merkle_db)))
         self._executor = executor
+        self._service.set_check_connections(executor.check_connections)
 
         state_delta_processor = StateDeltaProcessor(self._service,
                                                     state_delta_store,
