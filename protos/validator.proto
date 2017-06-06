@@ -58,6 +58,11 @@ message Message {
         TP_STATE_DEL_REQUEST = 11;
         // State delete response from the validator/context_manager to the transaction processor
         TP_STATE_DEL_RESPONSE = 12;
+        // Message to check if a transaction processor is still connected.
+        TP_PING = 13;
+        // Response from transaction processor to tell the validator it received the ping
+        TP_PING_RESPONSE = 14;
+
         // Submission of a batchlist from the web api or another client to the validator
         CLIENT_BATCH_SUBMIT_REQUEST = 100;
         // Response from the validator to the web api/client that the submission was accepted
