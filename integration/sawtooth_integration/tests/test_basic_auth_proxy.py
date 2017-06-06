@@ -60,7 +60,7 @@ class TestBasicAuth(unittest.TestCase):
         auth = 'Basic {}'.format(b64encode(b'sawtooth:sawtooth').decode())
         LOGGER.info(('\n'
                      'Sending request to "{}",\n'
-                     'with "Authorition: {}"').format(url, auth))
+                     'with "Authorization: {}"').format(url, auth))
 
         request = Request(url, headers={'Authorization': auth})
         context = ssl._create_unverified_context()
