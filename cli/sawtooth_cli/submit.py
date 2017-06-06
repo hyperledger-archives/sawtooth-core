@@ -78,7 +78,7 @@ def do_submit(args):
 
         print('Wait timed out! Some batches have not yet been committed...')
         for batch_id, status in statuses.items():
-            print('{:128.128}  {:8.8}'.format(batch_id, status))
+            print('{:128.128}  {:10.10}'.format(batch_id, status))
         exit(1)
 
 
