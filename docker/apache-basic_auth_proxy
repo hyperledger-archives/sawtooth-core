@@ -14,8 +14,9 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image to be used in testing using authentication proxies with the
-#   REST API. Redirects from 'basic_auth_proxy/sawtooth' to 'rest_api:8080'.
+#   Builds an image to be used in testing REST API behavior behind a proxy with
+#   Basic Authentication. Redirects from 'basic_auth_proxy/sawtooth' to
+#   'rest_api:8080' with both HTTP and HTTPS.
 #
 # Build:
 #   $ cd sawtooth-core/docker
