@@ -1,26 +1,39 @@
+/**
+ * Copyright 2017 Intel Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
+
 package main
 
 import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
+	"io/ioutil"
 	"os"
+	sdk "sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
+	"strings"
 )
 
 var logger *logging.Logger = logging.Get()
-
-const (
-	FAMILY_NAME    = "burrow-evm"
-	FAMILY_VERSION = "1.0"
-	ENCODING       = "application/protobuf"
-	PREFIX         = "a84eda"
-)
 
 // All subcommands implement this interface
 type Command interface {
 	Register(*flags.Parser) error
 	Name() string
-	Do() error
+	Run() error
 }
 
 // Opts to the main command
@@ -83,7 +96,7 @@ func main() {
 	name := parser.Command.Active.Name
 	for _, cmd := range commands {
 		if cmd.Name() == name {
-			err := cmd.Do()
+			err := cmd.Run()
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
@@ -91,4 +104,22 @@ func main() {
 			return
 		}
 	}
+}
+
+// Try to interpret the argument as a file path. If that fails, assume the
+// argument passed on the command line is the actual hex-encoded string
+func decodeFileOrArg(arg string) (b []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Failed to load arg: %v", r)
+		}
+	}()
+
+	// Assume the argument is a path to a file and try to read it
+	buf, err := ioutil.ReadFile(arg)
+	if err == nil {
+		arg = strings.TrimSpace(string(buf))
+	}
+
+	return sdk.MustDecode(arg), nil
 }
