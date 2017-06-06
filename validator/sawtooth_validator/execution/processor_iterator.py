@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,6 +65,12 @@ class ProcessorIteratorCollection(object):
             if processor_type in self:
                 return self[processor_type].next_processor()
             return None
+
+    def get_all_processors(self):
+        processors = []
+        for processor in self._processors.values():
+            processors += processor.processor_identities()
+        return processors
 
     def __setitem__(self, key, value):
         """Either create a new ProcessorIterator, if none exists for a
@@ -238,7 +244,7 @@ class RoundRobinProcessorIterator(ProcessorIterator):
         with self._lock:
             return repr(self._processors)
 
-    def _processor_identities(self):
+    def processor_identities(self):
         with self._lock:
             return [p.connection_id for p in self._processors]
 
@@ -249,7 +255,7 @@ class RoundRobinProcessorIterator(ProcessorIterator):
 
     def remove_processor(self, processor_identity):
         with self._lock:
-            idx = self._processor_identities().index(processor_identity)
+            idx = self.processor_identities().index(processor_identity)
             self._processors.pop(idx)
             self._inf_iterator = itertools.cycle(self._processors)
 
