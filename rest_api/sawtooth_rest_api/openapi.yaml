@@ -522,7 +522,7 @@ definitions:
       data:
         type: string
         format: byte
-        example: oWZrbldVcmQZSRk=
+        example: Zm9vOmJhcg==
 
   TransactionHeader:
     properties:
