@@ -25,6 +25,7 @@ import cbor
 
 from sawtooth_poet.poet_consensus import utils
 from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
+from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 
 from sawtooth_poet_common.validator_registry_view.validator_registry_view \
     import ValidatorRegistryView
@@ -600,7 +601,8 @@ class ConsensusState(object):
         # success (i.e., the validator signup info passed the freshness
         # test) while the other two cases are failure.
         for _ in range(poet_config_view.signup_commit_maximum_delay + 1):
-            if block.previous_block_id == validator_info.signup_info.nonce:
+            if SignupInfo.block_id_to_nonce(block.previous_block_id) == \
+                    validator_info.signup_info.nonce:
                 LOGGER.debug(
                     'Validator %s (ID=%s...%s): Signup committed block %s, '
                     'chain head was block %s',
@@ -626,12 +628,12 @@ class ConsensusState(object):
 
         LOGGER.error(
             'Validator %s (ID=%s...%s): Signup committed block %s, failed to '
-            'find block %s in %d previous block(s)',
+            'find block with ID ending in %s in %d previous block(s)',
             validator_info.name,
             validator_info.id[:8],
             validator_info.id[-8:],
             commit_block_id[:8],
-            validator_info.signup_info.nonce[:8],
+            validator_info.signup_info.nonce,
             poet_config_view.signup_commit_maximum_delay + 1)
         return True
 

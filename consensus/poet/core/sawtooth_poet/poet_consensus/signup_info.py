@@ -33,6 +33,21 @@ class SignupInfo(object):
             enclave.
     """
 
+    __MAXIMUM_NONCE_LENGTH__ = 32
+
+    @staticmethod
+    def block_id_to_nonce(block_id):
+        """
+        A convenience method to convert a block ID to an acceptable nonce.
+
+        Args:
+            block_id (str): The block ID to convert to a nonce
+
+        Returns:
+            An acceptable nonce for calling create_signup_info with
+        """
+        return block_id[-SignupInfo.__MAXIMUM_NONCE_LENGTH__:]
+
     @classmethod
     def create_signup_info(cls,
                            poet_enclave_module,
@@ -51,14 +66,23 @@ class SignupInfo(object):
             nonce (str): A value that is to be stored in the nonce field of
                 the attestation verification report.
 
+                NOTE - the nonce field is limited to __MAXIMUM_NONCE_LENGTH__
+                bytes.  If the nonce field is longer than
+                __MAXIMUM_NONCE_LENGTH__ bytes then the LAST
+                __MAXIMUM_NONCE_LENGTH__ bytes are used.
+
         Returns:
             SignupInfo: A signup info object.
         """
 
+        # NOTE - because of underlying restrictions on what can be put in the
+        # attestation verification report request nonce field, we are limiting
+        # to at most the last __MAXIMUM_NONCE_LENGTH__ bytes of the nonce.
+
         enclave_signup_info = \
             poet_enclave_module.create_signup_info(
                 originator_public_key_hash,
-                nonce)
+                nonce[-cls.__MAXIMUM_NONCE_LENGTH__:])
         signup_info = cls(enclave_signup_info)
 
         return signup_info

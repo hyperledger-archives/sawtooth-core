@@ -82,7 +82,7 @@ def do_genesis(args):
         signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=poet_enclave_module,
             originator_public_key_hash=public_key_hash,
-            nonce=NULL_BLOCK_IDENTIFIER)
+            nonce=SignupInfo.block_id_to_nonce(NULL_BLOCK_IDENTIFIER))
 
     print(
         'Writing key state for PoET public key: {}...{}'.format(
