@@ -20,9 +20,14 @@ import time
 
 
 class FutureResult(object):
-    def __init__(self, message_type, content):
+    def __init__(self, message_type, content, connection_id=None):
         self.message_type = message_type
         self.content = content
+        self.connection_id = connection_id
+
+
+class FutureTimeoutError(Exception):
+    pass
 
 
 class Future(object):
@@ -39,10 +44,15 @@ class Future(object):
     def done(self):
         return self._result is not None
 
-    def result(self):
+    @property
+    def request(self):
+        return self._request
+
+    def result(self, timeout=None):
         with self._condition:
             if self._result is None:
-                self._condition.wait()
+                if not self._condition.wait(timeout):
+                    raise FutureTimeoutError('Future timed out')
         return self._result
 
     def set_result(self, result):
