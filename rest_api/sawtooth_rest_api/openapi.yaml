@@ -561,7 +561,7 @@ definitions:
         example: fb6135ef73f4fe77367f9384b3bbbb158f4b8603c9d612157108e5c271868fce2242ee4abd7a29397ba63780c3ccab13783dfd4d9f0167beda03cdb0e37b87f4
       signer_pubkey:
         type: string
-        example: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2
+        example: 038bba5708acc262464c9fe30d3de9e905a9a5fa30cedd151dd9cd09ea26d46d00
   Transaction:
     properties:
       header:
@@ -577,7 +577,7 @@ definitions:
     properties:
       signer_pubkey:
         type: string
-        example: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2
+        example: 038bba5708acc262464c9fe30d3de9e905a9a5fa30cedd151dd9cd09ea26d46d00
       transaction_ids:
         type: array
         items:
