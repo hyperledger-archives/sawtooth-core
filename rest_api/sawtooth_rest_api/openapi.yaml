@@ -251,9 +251,9 @@ paths:
           schema:
             properties:
               data:
-                type: array
-                items:
-                  $ref: "#/definitions/Leaf"
+                type: string
+                format: byte
+                example: Zm9vOmJhcg==
               head:
                 $ref: "#/definitions/Head"
               link:
