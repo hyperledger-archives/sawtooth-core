@@ -392,7 +392,7 @@ class ValidatorRegistryTransactionHandler(object):
         hash_input = \
             '{0}{1}'.format(
                 originator_public_key_hash.upper(),
-                signup_info.poet_public_key.upper().upper()).encode()
+                signup_info.poet_public_key.upper()).encode()
         hash_value = hashlib.sha256(hash_input).digest()
         expected_report_data = \
             hash_value + \
