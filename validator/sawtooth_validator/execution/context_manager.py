@@ -706,11 +706,10 @@ class _ContextFuture(object):
             if self._read_only:
                 return
             if from_tree:
-                if self._result_set_in_context:
-                    # since the result has been set in the context, don't
-                    # overwrite the value with the value from the merkle tree.
-                    pass
-                else:
+                # If the result has not been set in the context, overwrite the
+                # value with the value from the merkle tree. Otherwise, do
+                # nothing.
+                if not self._result_set_in_context:
                     self._result = result
                     self._tree_has_set = True
             else:
