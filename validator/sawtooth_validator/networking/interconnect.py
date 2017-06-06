@@ -69,7 +69,7 @@ class _SendReceive(object):
                  zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
                  heartbeat=False, heartbeat_interval=10,
-                 connection_timeout=60):
+                 connection_timeout=60, monitor=False):
         """
         Constructor for _SendReceive.
 
@@ -128,6 +128,11 @@ class _SendReceive(object):
 
         self._connections = connections
         self._identities_to_connection_ids = ThreadsafeDict()
+        self._monitor = monitor
+
+        self._check_connections = None
+        self._monitor_fd = None
+        self._monitor_sock = None
 
     @property
     def connection(self):
@@ -224,19 +229,20 @@ class _SendReceive(object):
                              get_enum_name(message.message_type),
                              sys.getsizeof(msg_bytes))
 
+                if zmq_identity is not None:
+                    connection_id = \
+                        self._identity_to_connection_id(zmq_identity)
+                else:
+                    connection_id = \
+                        self._identity_to_connection_id(
+                            self._connection.encode())
                 try:
                     self._futures.set_result(
                         message.correlation_id,
                         future.FutureResult(message_type=message.message_type,
-                                            content=message.content))
+                                            content=message.content,
+                                            connection_id=connection_id))
                 except future.FutureCollectionKeyError:
-                    if zmq_identity is not None:
-                        connection_id = \
-                            self._identity_to_connection_id(zmq_identity)
-                    else:
-                        connection_id = \
-                            self._identity_to_connection_id(
-                                self._connection.encode())
                     self._dispatcher.dispatch(self._connection,
                                               message,
                                               connection_id)
@@ -363,6 +369,14 @@ class _SendReceive(object):
                                               self.send_message)
             asyncio.ensure_future(self._receive_message(),
                                   loop=self._event_loop)
+            if self._monitor:
+                self._monitor_fd = "inproc://monitor.s-{}".format(
+                    _generate_id()[0:5])
+                self._monitor_sock = self._socket.get_monitor_socket(
+                    zmq.EVENT_DISCONNECTED,
+                    addr=self._monitor_fd)
+                asyncio.ensure_future(self._monitor_disconnects(),
+                                      loop=self._event_loop)
 
         except Exception as e:
             # Put the exception on the queue where in start we are waiting
@@ -383,7 +397,18 @@ class _SendReceive(object):
         # of run_forever then it can be closed and the context destroyed.
         self._event_loop.close()
         self._socket.close(linger=0)
+        if self._monitor:
+            self._monitor_sock.close(linger=0)
         self._context.destroy(linger=0)
+
+    @asyncio.coroutine
+    def _monitor_disconnects(self):
+        while True:
+            yield from self._monitor_sock.recv_multipart()
+            self._check_connections()
+
+    def set_check_connections(self, function):
+        self._check_connections = function
 
     @asyncio.coroutine
     def _stop_auth(self):
@@ -447,7 +472,8 @@ class Interconnect(object):
                  heartbeat=False,
                  public_endpoint=None,
                  connection_timeout=60,
-                 max_incoming_connections=100):
+                 max_incoming_connections=100,
+                 monitor=False):
         """
         Constructor for Interconnect.
 
@@ -486,9 +512,13 @@ class Interconnect(object):
             server_public_key=server_public_key,
             server_private_key=server_private_key,
             heartbeat=heartbeat,
-            connection_timeout=connection_timeout)
+            connection_timeout=connection_timeout,
+            monitor=monitor)
 
         self._thread = None
+
+    def set_check_connections(self, function):
+        self._send_receive_thread.set_check_connections(function)
 
     def allow_inbound_connection(self):
         """Determines if an additional incoming network connection
