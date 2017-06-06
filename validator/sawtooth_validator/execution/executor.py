@@ -97,7 +97,7 @@ class TransactionExecutorThread(object):
             self._execute_or_wait_for_processor_type(processor_type, request)
 
         else:
-            self._context_manager.delete_context(
+            self._context_manager.delete_contexts(
                 context_id_list=[req.context_id])
             self._scheduler.set_transaction_execution_result(
                 req.signature, False, req.context_id)

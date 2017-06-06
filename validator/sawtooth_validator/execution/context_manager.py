@@ -104,13 +104,13 @@ class StateContext(object):
             value = self._state[address].result()
         return value
 
-    def _get_and_set(self, address):
+    def _get_if_set(self, address):
         value = None
         if self._contains_and_set(address):
             value = self._state[address].result()
         return value
 
-    def _get_not_set(self, address):
+    def _get_if_not_set(self, address):
         value = None
         if self._contains_and_not_set(address):
             value = self._state[address].result()
@@ -126,7 +126,7 @@ class StateContext(object):
                     fut.make_read_only()
                 self._read_only = True
 
-    def get_all(self, addresses):
+    def get(self, addresses):
         """Returns the value in this context, or None, for each address in
         addresses. Useful for gets on the context manager.
 
@@ -145,7 +145,7 @@ class StateContext(object):
                 results.append(self._get(add))
             return results
 
-    def get_all_set(self, addresses):
+    def get_if_set(self, addresses):
         """Returns the value set in this context, or None, for each address in
         addresses.
 
@@ -160,10 +160,10 @@ class StateContext(object):
         with self._lock:
             results = []
             for add in addresses:
-                results.append(self._get_and_set(add))
+                results.append(self._get_if_set(add))
             return results
 
-    def get_all_not_set(self, addresses):
+    def get_if_not_set(self, addresses):
         """Returns the value at an address if it was an input to the txn but
         never set. It returns None if that address was never set in the
         merkle database, or if the address is not within the context.
@@ -178,10 +178,10 @@ class StateContext(object):
         with self._lock:
             results = []
             for add in addresses:
-                results.append(self._get_not_set(add))
+                results.append(self._get_if_not_set(add))
             return results
 
-    def return_all_set(self):
+    def get_all_if_set(self):
         """Return all the addresses and opaque values set in the context.
         Useful in the squash method.
 
@@ -389,7 +389,7 @@ class ContextManager(object):
             # and remove those addresses from being asked about again. Here
             # any value of None means the address hasn't been set.
 
-            values = current_context.get_all_set(reads)
+            values = current_context.get_if_set(reads)
             addresses_not_found = []
             for address, value in zip(reads, values):
                 if value is not None:
@@ -404,7 +404,7 @@ class ContextManager(object):
             addresses_in_inputs = [address for address in reads
                                    if address in current_context]
 
-            values = current_context.get_all_not_set(addresses_in_inputs)
+            values = current_context.get_if_not_set(addresses_in_inputs)
 
             address_values.extend(list(zip(addresses_in_inputs, values)))
 
@@ -425,7 +425,7 @@ class ContextManager(object):
                 (context.session_id, state_hash, reads))
         return context.session_id
 
-    def delete_context(self, context_id_list):
+    def delete_contexts(self, context_id_list):
         """Delete contexts from the ContextManager.
 
         Args:
@@ -456,7 +456,7 @@ class ContextManager(object):
             return []
 
         context = self._contexts[context_id]
-        values = context.get_all(list(address_list))
+        values = context.get(list(address_list))
         values_list = list(zip(address_list, values))
         return values_list
 
@@ -506,7 +506,7 @@ class ContextManager(object):
                 if not current_context.is_read_only():
                     current_context.make_read_only()
 
-                addresses_w_values = current_context.return_all_set()
+                addresses_w_values = current_context.get_all_if_set()
                 for add, val in addresses_w_values.items():
                     # Since we are moving backwards through the graph of
                     # contexts, only update if the address hasn't been set
@@ -532,7 +532,7 @@ class ContextManager(object):
                            for addr, value in updates.items()]
                 self._state_delta_store.save_state_deltas(state_hash, changes)
             if clean_up:
-                self.delete_context(context_ids_already_searched)
+                self.delete_contexts(context_ids_already_searched)
             return state_hash
         return _squash
 
