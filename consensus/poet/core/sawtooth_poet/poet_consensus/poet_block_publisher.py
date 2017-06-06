@@ -124,11 +124,12 @@ class PoetBlockPublisher(BlockPublisherInterface):
         public_key_hash = \
             hashlib.sha256(
                 block_header.signer_pubkey.encode()).hexdigest()
+        nonce = SignupInfo.block_id_to_nonce(block_header.previous_block_id)
         signup_info = \
             SignupInfo.create_signup_info(
                 poet_enclave_module=poet_enclave_module,
                 originator_public_key_hash=public_key_hash,
-                nonce=block_header.previous_block_id)
+                nonce=nonce)
 
         # Create the validator registry payload
         payload = \
@@ -140,7 +141,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     poet_public_key=signup_info.poet_public_key,
                     proof_data=signup_info.proof_data,
                     anti_sybil_id=signup_info.anti_sybil_id,
-                    nonce=block_header.previous_block_id),
+                    nonce=nonce),
             )
         serialized = payload.SerializeToString()
 
@@ -193,7 +194,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
             payload.id[-8:],
             payload.signup_info.poet_public_key[:8],
             payload.signup_info.poet_public_key[-8:],
-            block_header.previous_block_id[:8])
+            nonce)
 
         self._batch_publisher.send([transaction])
 
