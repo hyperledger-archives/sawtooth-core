@@ -31,7 +31,7 @@ class XoMessageFactory:
 
     def _game_to_address(self, game):
         return self._factory.namespace + \
-            self._factory.sha512(game.encode())
+            self._factory.sha512(game.encode())[0:64]
 
     def create_tp_register(self):
         return self._factory.create_tp_register()

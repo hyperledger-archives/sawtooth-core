@@ -24,7 +24,8 @@ const {InvalidTransaction, InternalError} = require('sawtooth-sdk/processor/exce
 const crypto = require('crypto')
 
 const _hash = (x) =>
-  crypto.createHash('sha512').update(x).digest('hex').toLowerCase()
+  crypto.createHash('sha512').update(x).digest('hex').toLowerCase().substring(0, 64)
+
 
 const XO_FAMILY = 'xo'
 const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)

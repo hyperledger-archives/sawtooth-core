@@ -94,7 +94,7 @@ class XoClient:
 
     def _get_address(self, name):
         xo_prefix = self._get_prefix()
-        game_address = _sha512(name.encode('utf-8'))
+        game_address = _sha512(name.encode('utf-8'))[0:64]
         return xo_prefix + game_address
 
     def _send_request(self, suffix, data=None, content_type=None):
