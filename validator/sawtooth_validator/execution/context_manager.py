@@ -47,8 +47,8 @@ _SHUTDOWN_SENTINEL = -1
 
 
 class StateContext(object):
-    """A data structure holding address-_ContextFuture pairs and the addresses
-    that can be written to and read from.
+    """A thread-safe data structure holding address-_ContextFuture pairs and
+    the addresses that can be written to and read from.
     """
     def __init__(self, state_hash, read_list, write_list, base_context_ids):
         """
@@ -65,6 +65,7 @@ class StateContext(object):
 
         self._state_hash = state_hash
 
+        # Create copies of the read and write lists
         self._read_list = list(read_list)
         self._write_list = list(write_list)
 
@@ -225,8 +226,8 @@ class StateContext(object):
                 self._state[add] = _ContextFuture(address=add, result=val)
 
     def set_from_tree(self, address_value_dict):
-        """Called in _ContextWriter to set the future with the value from
-        the merkle database.
+        """Set the result for each future at the given addresses with the value
+        stored in the merkle database.
 
         Args:
             address_value_dict (dict of str: bytes): The unique
