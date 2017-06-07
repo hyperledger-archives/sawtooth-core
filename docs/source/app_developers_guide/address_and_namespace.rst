@@ -70,48 +70,32 @@ with collisions in a deterministic way.
 The addressing schema can be as simple or as complex as necessary, based on
 the requirements of the transaction family.
 
-Simple Example
---------------
+Simple Example - IntegerKey
+---------------------------
 
-This is a simple transaction family that stores key value pairs, e.g. “x=1”,
-or “y=2”, similar to the included intkey transaction family.
+For a description of the IntegerKey Transaction family, 
+see :doc:`/transaction_family_specifications/integerkey_transaction_family`.
 
 The transaction family prefix is:
 
 .. code-block:: python
 
-	hashlib.sha256("simple-example".encode('utf-8')).hexdigest()[:6]
+	hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
 
-This resolves to ‘0ca395’.
+This resolves to '1cf126'.
 
-To store the value “x=1” using this transaction family, the address would be
+To store a value in the entry *Name*, the address would be
 calculated like this:
 
 .. code-block:: python
 
-	address = "0ca395" + hashlib.sha256("x".encode('utf-8')).hexdigest()
+	address = "1cf126" + hashlib.sha512('name'.encode('utf-8')).hexdigest()[-64:]
 
-The value “1” would then be set, by constructing and sending a transaction to
-a validator where the the transaction will be processed and included in a
-block.
+A value could then be stored at this address, by constructing and sending a
+transaction to a validator, where the the transaction will be processed and
+included in a block.
 
 This address would also be used to retrieve the data.
-
-
-Config Transaction Family Example
----------------------------------
-
-See the `Config Transaction Family Specification for a simple addressing scheme <http://intelledger.github.io/transaction_family_specifications/config_transaction_family.html#addressing>`_.
-
-Addresses for the config transaction family are set by adding a sha256 hash of
-the setting name to the config namespace of ‘000000’.
-
-Code Example:
-
-.. code-block:: python
-
-	>>> '000000' + hashlib.sha256("sawtooth.config.vote.proposals".encode('utf-8')).hexdigest()
-	'000000041706776ff37b8d2a75450422d8bdbe894f6988b012ae0a5ec751434eadc014'
 
 
 More Complex Addressing Schemes
@@ -145,3 +129,9 @@ Since the addressing scheme is not mandated beyond the basic requirements,
 there is a lot of flexibility. The example above is just an example. Your own
 addressing schema should be designed with your transaction family’s
 requirements in mind.
+
+Config Transaction Family Example
+---------------------------------
+
+See the `Config Transaction Family Specification <http://intelledger.github.io/transaction_family_specifications/config_transaction_family.html#addressing>`_
+for another more complex addressing scheme.
