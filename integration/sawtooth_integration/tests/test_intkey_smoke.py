@@ -90,8 +90,7 @@ class TestIntkeySmoke(unittest.TestCase):
         LOGGER.info('Posting batch')
         _post_batch(batch)
 
-        while (how_many_updates + 1) > _get_block_num():
-            time.sleep(1)
+        time.sleep(10)
 
         self.verify_state_after_n_updates(how_many_updates)
 
@@ -136,12 +135,6 @@ def _get_data():
 def _get_state():
     response = _query_rest_api('/state')
     return response['data']
-
-
-def _get_block_num():
-    response = _query_rest_api('/blocks?count=1')
-    return response['data'][0]['header']['block_num']
-
 
 def _query_rest_api(suffix='', data=None, headers={}):
     url = 'http://rest_api:8080' + suffix
