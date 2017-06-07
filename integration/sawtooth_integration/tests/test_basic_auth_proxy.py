@@ -68,16 +68,16 @@ class TestBasicAuth(unittest.TestCase):
         try:
             response = urlopen(request, context=context)
         except HTTPError as e:
+            LOGGER.error('An error occured while requesting "%s"', url)
+
             try:
                 error = json.loads(e.file.read().decode())['error']
+                fail_msg = 'REST API Error: {} - {}:'.format(
+                    error['code'], error['title'])
             except json.decoder.JSONDecodeError:
-                raise e
+                fail_msg = 'HTTP Error: {} - {}'.format(e.code, e.msg)
 
-            LOGGER.error('REST API Error: {} - {}:'.format(
-                error['code'], error['title']))
-            LOGGER.error(error['message'])
-
-            raise e
+            self.fail(fail_msg)
 
         self.assertEqual(200, response.getcode())
         LOGGER.info('Authorization succeeded, 200 response received.')
