@@ -205,11 +205,13 @@ class GetStateDeltaEventsHandlerTest(unittest.TestCase):
         self.assertEqual(GetStateDeltaEventsResponse.OK,
                          response.message_out.status)
 
+        chain_head = block_tree_manager.chain_head
         self.assertEqual(
             [StateDeltaEvent(
-                 block_id=block_tree_manager.chain_head.identifier,
-                 block_num=block_tree_manager.chain_head.block_num,
-                 state_root_hash=block_tree_manager.chain_head.state_root_hash,
+                 block_id=chain_head.identifier,
+                 block_num=chain_head.block_num,
+                 state_root_hash=chain_head.state_root_hash,
+                 previous_block_id=chain_head.previous_block_id,
                  state_changes=[StateChange(address='deadbeef0000000',
                                 value='my_genesis_value'.encode(),
                                 type=StateChange.SET)])],
@@ -245,11 +247,13 @@ class GetStateDeltaEventsHandlerTest(unittest.TestCase):
         self.assertEqual(GetStateDeltaEventsResponse.OK,
                          response.message_out.status)
 
+        chain_head = block_tree_manager.chain_head
         self.assertEqual(
             [StateDeltaEvent(
-                 block_id=block_tree_manager.chain_head.identifier,
-                 block_num=block_tree_manager.chain_head.block_num,
-                 state_root_hash=block_tree_manager.chain_head.state_root_hash,
+                 block_id=chain_head.identifier,
+                 block_num=chain_head.block_num,
+                 state_root_hash=chain_head.state_root_hash,
+                 previous_block_id=chain_head.previous_block_id,
                  state_changes=[StateChange(address='deadbeef0000000',
                                 value='my_genesis_value'.encode(),
                                 type=StateChange.SET)])],
@@ -318,12 +322,14 @@ class StateDeltaProcessorTest(unittest.TestCase):
         # test that it catches up, and receives the events from the chain head.
         # In this case, it should just be once, as the chain head is the
         # genesis block
+        chain_head = block_tree_manager.chain_head
         mock_service.send.assert_called_with(
             validator_pb2.Message.STATE_DELTA_EVENT,
             StateDeltaEvent(
-                block_id=block_tree_manager.chain_head.identifier,
-                block_num=block_tree_manager.chain_head.block_num,
-                state_root_hash=block_tree_manager.chain_head.state_root_hash,
+                block_id=chain_head.identifier,
+                block_num=chain_head.block_num,
+                state_root_hash=chain_head.state_root_hash,
+                previous_block_id=chain_head.previous_block_id,
                 state_changes=[StateChange(address='deadbeef0000000',
                                value='my_genesis_value'.encode(),
                                type=StateChange.SET)]
@@ -432,6 +438,7 @@ class StateDeltaProcessorTest(unittest.TestCase):
                 block_id=next_block.identifier,
                 block_num=next_block.header.block_num,
                 state_root_hash=next_block.header.state_root_hash,
+                previous_block_id=next_block.header.previous_block_id,
                 state_changes=[StateChange(address='deadbeef01',
                                value='my_state_Value'.encode(),
                                type=StateChange.SET)]
@@ -479,6 +486,7 @@ class StateDeltaProcessorTest(unittest.TestCase):
                 block_id=next_block.identifier,
                 block_num=next_block.header.block_num,
                 state_root_hash=next_block.header.state_root_hash,
+                previous_block_id=next_block.header.previous_block_id,
                 state_changes=[]
             ).SerializeToString(),
             connection_id='settings_conn_id')
@@ -514,6 +522,7 @@ class StateDeltaProcessorTest(unittest.TestCase):
                 block_id=next_block.identifier,
                 block_num=next_block.header.block_num,
                 state_root_hash=next_block.header.state_root_hash,
+                previous_block_id=next_block.header.previous_block_id,
                 state_changes=[]
             ).SerializeToString(),
             connection_id='subscriber_conn_id')
