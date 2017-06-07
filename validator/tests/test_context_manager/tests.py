@@ -235,7 +235,7 @@ class TestContextManager(unittest.TestCase):
         # 2)
         squash = self.context_manager.get_squash_handler()
         resulting_state_hash = squash(self.first_state_hash, [context_id],
-                                      persist=True)
+                                      persist=True, clean_up=True)
 
         # 3)
         final_state_to_update = {self._create_address(a): v for a, v in
@@ -294,7 +294,7 @@ class TestContextManager(unittest.TestCase):
         # 1)
         squash = self.context_manager.get_squash_handler()
         resulting_state_hash = squash(self.first_state_hash, [context_id],
-                                      persist=True)
+                                      persist=True, clean_up=True)
         # 2
         self.assertIsNotNone(resulting_state_hash)
         self.assertEquals(resulting_state_hash, self.first_state_hash)
@@ -306,7 +306,6 @@ class TestContextManager(unittest.TestCase):
             [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)],
             [c for c in changes])
 
-    @unittest.skip("Support for context manager parallelization")
     def test_reads_from_context_w_several_writes(self):
         """Tests that those context values that have been written to the
         Merkle tree, or that have been set to a base_context, will have the
@@ -360,7 +359,8 @@ class TestContextManager(unittest.TestCase):
         sh1 = squash(
             state_root=self.first_state_hash,
             context_ids=[context_id1],
-            persist=True)
+            persist=True,
+            clean_up=True)
         # 2)
         context_a = self.context_manager.create_context(
             state_hash=sh1,
@@ -371,7 +371,7 @@ class TestContextManager(unittest.TestCase):
 
         address_values = self.context_manager.get(
                 context_a,
-                test_addresses.writes
+                list(test_addresses.writes)
             )
         self.assertEquals(
             address_values,
@@ -395,7 +395,7 @@ class TestContextManager(unittest.TestCase):
         # 5)
         c_ida1_address_values = self.context_manager.get(
             context_id=context_id_a1,
-            address_list=test_addresses.outputs
+            address_list=list(test_addresses.outputs)
         )
         self.assertEquals(
             c_ida1_address_values,
@@ -428,14 +428,13 @@ class TestContextManager(unittest.TestCase):
         self.assertEquals(
             self.context_manager.get(
                 context_id_b,
-                test_addresses2.writes + test_addresses.outputs
+                list(test_addresses2.writes + test_addresses.outputs)
             ),
             [(a, v) for a, v in zip(
                 test_addresses2.writes + test_addresses.outputs,
                 values3 + values2)]
         )
 
-    @unittest.skip("Support for context manager parallelization")
     def test_state_root_after_parallel_ctx(self):
         """Tests that the correct state root is calculated after basing one
         context off of multiple contexts.
@@ -486,8 +485,8 @@ class TestContextManager(unittest.TestCase):
         sh1 = squash(
             state_root=sh0,
             context_ids=[ctx_1],
-            persist=True
-        )
+            persist=True,
+            clean_up=True)
 
         # 2)
         context_1 = self.context_manager.create_context(
@@ -543,15 +542,16 @@ class TestContextManager(unittest.TestCase):
         cm_state_root = squash(
             state_root=sh1,
             context_ids=[context_n],
-            persist=False)
+            persist=False,
+            clean_up=True)
 
         tree = MerkleDatabase(self.database_results)
         calc_state_root = tree.update({self._create_address('aaaa'): b'1',
                                        self._create_address('bbbb'): b'2',
-                                       self._create_address('cccc'): b'4'})
+                                       self._create_address('cccc'): b'4',
+                                       self._create_address('llll'): b'8'})
         self.assertEquals(calc_state_root, cm_state_root)
 
-    @unittest.skip("Support for context manager parallelization")
     def test_complex_basecontext_squash(self):
         """Tests complex context basing and squashing.
                                             i=qq,dd dd=0
@@ -603,7 +603,8 @@ class TestContextManager(unittest.TestCase):
         sh1 = squash(
             state_root=self.first_state_hash,
             context_ids=[context_1],
-            persist=True)
+            persist=True,
+            clean_up=True)
 
         # 2)
         inputs_2a = [self._create_address('cc'),
@@ -706,7 +707,8 @@ class TestContextManager(unittest.TestCase):
             state_root=sh1,
             context_ids=[context_3_2a_1, context_3_2a_2,
                          context_3_2b_1, context_3_2b_2],
-            persist=False)
+            persist=False,
+            clean_up=True)
 
         tree = MerkleDatabase(self.database_results)
         state_hash_from_1 = tree.update(
@@ -719,21 +721,22 @@ class TestContextManager(unittest.TestCase):
                           "context and the one calculated by squashing that "
                           "state hash should be the same")
         tree.set_merkle_root(state_hash_from_1)
-        test_sh2 = tree.update(set_items={self._create_address('aa'): b'0',
-                                          self._create_address('ab'): b'0',
-                                          self._create_address('ba'): b'1',
-                                          self._create_address('dd'): b'0',
-                                          self._create_address('ll'): b'1',
-                                          self._create_address('mm'): b'0',
-                                          self._create_address('oo'): b'1',
-                                          self._create_address('pp'): b'1',
-                                          self._create_address('nn'): b'0',
-                                          self._create_address('cc'): b'0'})
+        test_sh2 = tree.update(set_items={self._create_address('aa'): bytes(0),
+                                          self._create_address('ab'): bytes(0),
+                                          self._create_address('ba'): bytes(1),
+                                          self._create_address('dd'): bytes(0),
+                                          self._create_address('ll'): bytes(1),
+                                          self._create_address('mm'): bytes(0),
+                                          self._create_address('oo'): bytes(1),
+                                          self._create_address('pp'): bytes(1),
+                                          self._create_address('nn'): bytes(0),
+                                          self._create_address('cc'): bytes(0)})
 
         self.assertEquals(sh2, test_sh2, "Manually calculated and context "
                                          "manager calculated merkle hashes "
                                          "are the same")
 
+    @unittest.skip("Necessary to catch scheduler bugs--Depth-first search")
     def test_check_for_bad_combination(self):
         """Tests that the context manager will raise
         an exception if asked to combine contexts, either via base contexts 
@@ -829,7 +832,8 @@ class TestContextManager(unittest.TestCase):
             sh1 = squash(
                 state_root=sh0,
                 context_ids=[ctx_1, ctx_2],
-                persist=True)
+                persist=True,
+                clean_up=True)
             self.fail("squash of two contexts with a duplicate address")
         except Exception:
             pass

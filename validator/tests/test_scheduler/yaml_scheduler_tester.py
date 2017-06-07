@@ -204,7 +204,7 @@ class SchedulerTester(object):
                 context_id=c_id,
                 address_value_list=address_values)
             if validity_of_transaction is False:
-                context_manager.delete_context(
+                context_manager.delete_contexts(
                     context_id_list=[c_id])
             scheduler.set_transaction_execution_result(
                 txn_signature=t_info.txn.header_signature,

@@ -171,16 +171,18 @@ class SerialScheduler(Scheduler):
 
         state_hash = None
         if self._previous_valid_batch_c_id is not None:
+            publishing_or_genesis = self._always_persist or \
+                                    required_state_root is None
             state_hash = self._squash(
                 state_root=self._previous_state_hash,
                 context_ids=[self._previous_valid_batch_c_id],
-                persist=self._always_persist)
+                persist=self._always_persist, clean_up=publishing_or_genesis)
             if self._always_persist is True:
                 return state_hash
             if state_hash == required_state_root:
                 self._squash(state_root=self._previous_state_hash,
                              context_ids=[self._previous_valid_batch_c_id],
-                             persist=True)
+                             persist=True, clean_up=True)
         return state_hash
 
     def _calculate_state_root_if_not_already_done(self):

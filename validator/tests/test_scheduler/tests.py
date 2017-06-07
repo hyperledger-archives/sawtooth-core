@@ -51,7 +51,8 @@ class TestSchedulersWithYaml(unittest.TestCase):
 
         """
 
-        files_with_one_block = ['simple_scheduler_test.yaml']
+        files_with_one_block = ['simple_scheduler_test.yaml',
+                                'intkey_small_batch.yaml']
         for name in files_with_one_block:
             file_name = self._path_to_yaml_file(name)
             serial_scheduler = SerialScheduler(
