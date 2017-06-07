@@ -87,7 +87,7 @@ class XoTransactionHandler:
         # Use the namespace prefix + the has of the game name to create the
         # storage address
         game_address = self._namespace_prefix \
-            + hashlib.sha512(name.encode("utf-8")).hexdigest()
+            + hashlib.sha512(name.encode("utf-8")).hexdigest()[0:64]
 
         # Get data from address
         state_entries = state_store.get([game_address])

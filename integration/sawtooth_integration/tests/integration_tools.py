@@ -167,7 +167,7 @@ class XoClient(RestClient):
         return data.decode().split('|')
 
     def make_xo_address(self, name):
-        return self.namespace + hashlib.sha512(name.encode()).hexdigest()
+        return self.namespace + hashlib.sha512(name.encode()).hexdigest()[0:64]
 
     def get_game(self, name):
         return self.decode_data(
