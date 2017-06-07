@@ -84,6 +84,15 @@ def validate_batch(batch):
     index = 0
     while valid and index < total:
         txn = batch.transactions[index]
+        # Check whether transactions in the batch are listed
+        # by the transaction_ids field in batch header
+        if txn.header_signature not in header.transaction_ids[index]:
+            LOGGER.debug("txn isn't listed by transaction_ids field for "
+                         "batch: %s txn: %s",
+                         batch.header_signature,
+                         txn.header_signature)
+            return False
+
         valid = validate_transaction(txn)
         if valid:
             txn_header = TransactionHeader()
