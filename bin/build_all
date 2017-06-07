@@ -85,6 +85,7 @@ fi
 if [[ $LANGUAGES = "" ]]
 then
     LANGUAGES="
+        cxx
         go
         java
         javascript
@@ -129,6 +130,9 @@ main() {
         else
             info "Building $language"
             case $language in
+                cxx)
+                    build_cxx
+                    ;;
                 go)
                     build_go
                     ;;
@@ -216,6 +220,11 @@ build_debs() {
 
 if [[ $BUILD_MODE == $MOUNTED ]]
 then
+    build_cxx() {
+        docker_build docker/sawtooth-dev-cxx docker/ sawtooth-dev-cxx
+        docker_run sawtooth-dev-cxx
+    }
+
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_intkey_go
@@ -252,6 +261,11 @@ fi
 
 if [[ $BUILD_MODE == $INSTALLED ]]
 then
+    build_cxx() {
+        docker_build docker/sawtooth-dev-cxx docker/ sawtooth-dev-cxx
+        docker_run sawtooth-dev-cxx
+    }
+
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_run sawtooth-dev-go
