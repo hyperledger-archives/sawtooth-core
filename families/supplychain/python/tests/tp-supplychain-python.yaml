@@ -33,11 +33,12 @@ services:
     expose:
       - 40000
     command: nose2-3 -v
-        -c /project/sawtooth-core/families/supplychain_python/nose2.cfg
-        -s /project/sawtooth-core/families/supplychain_python/tests
+        --log-level debug
+        -c /project/sawtooth-core/families/supplychain/python/nose2.cfg
+        -s /project/sawtooth-core/families/supplychain/python/tests
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
-        /project/sawtooth-core/families/supplychain_python:\
+        /project/sawtooth-core/families/supplychain/python:\
         /project/sawtooth-core/integration:\
         /project/sawtooth-core/signing"

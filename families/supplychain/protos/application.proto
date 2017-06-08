@@ -1,0 +1,53 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.config.protobuf";
+
+// Application State Representation
+// application for change in ownership of the record
+message Application {
+
+    string record_identifier = 1; // the natural key of the record
+    string applicant = 2; // public key of the applicant
+    int64 creation_time = 3;
+
+    // The Type indicates the type of this Application
+    enum Type {
+        OWNER = 0;
+        CUSTODIAN = 1;
+    }
+    Type type = 4;
+
+    // The Status indicates the type of this Application
+    enum Status {
+        OPEN = 0;
+        CANCELED = 1;
+        REJECTED = 2;
+        ACCEPTED = 3;
+    }
+    Status status = 5;
+    string terms = 6; // the terms of the application. Human readable.
+}
+
+// Setting Container for on-chain configuration key/value pairs
+message ApplicationContainer {
+    // List of Application entries - more than one implies a state key collision
+    repeated Application entries = 1;
+}
+
+

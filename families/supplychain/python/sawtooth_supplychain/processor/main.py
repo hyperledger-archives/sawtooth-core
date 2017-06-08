@@ -22,7 +22,7 @@ from sawtooth_sdk.client.config import get_log_config
 from sawtooth_sdk.client.config import get_log_dir
 
 from sawtooth_sdk.processor.core import TransactionProcessor
-from sawtooth_supplychain.processor.handler import SupplychainHandler
+from sawtooth_supplychain.processor.handler import SupplyChainHandler
 
 
 def parse_args(args):
@@ -60,7 +60,7 @@ def main(args=sys.argv[1:]):  # pylint: disable=dangerous-default-value
 
         init_console_logging(verbose_level=opts.verbose)
 
-        processor.add_handler(SupplychainHandler())
+        processor.add_handler(SupplyChainHandler())
 
         processor.start()
     except KeyboardInterrupt:

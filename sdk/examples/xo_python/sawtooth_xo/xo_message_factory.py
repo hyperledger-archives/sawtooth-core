@@ -22,12 +22,10 @@ class XoMessageFactory:
             encoding="csv-utf8",
             family_name="xo",
             family_version="1.0",
-            namespace="",
+            namespace=MessageFactory.sha512("xo".encode("utf-8"))[0:6],
             private=private,
             public=public
         )
-        self._factory.namespace = self._factory.sha512(
-            "xo".encode("utf-8"))[0:6]
 
     def _game_to_address(self, game):
         return self._factory.namespace + \

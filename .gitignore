@@ -22,6 +22,7 @@
 
 /core/sawtooth_core.egg-info/
 /families/config/sawtooth_config/protobuf/
+/families/supplychain/python/sawtooth_supplychain/protobuf
 /families/**/__pycache__/
 
 /coverage
@@ -50,7 +51,7 @@
 /sdk/examples/xo_python/**/__pycache__/
 /sdk/examples/xo_javascript/node_modules/
 /sdk/examples/intkey_python/**/__pycache__/
-/sdk/examples/supplychain_python/**/__pycache__/
+/sdk/examples/supplychain/python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
 /sdk/examples/intkey_java/target/
