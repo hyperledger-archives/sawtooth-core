@@ -30,7 +30,9 @@ LOGGER.setLevel(logging.INFO)
 
 class TestBasicAuth(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        wait_until_status('http://rest_api:8080/blocks', status_code=200)
         wait_until_status('http://basic_auth_proxy/sawtooth', status_code=401)
 
     def test_http_basic_auth(self):
