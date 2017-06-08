@@ -195,7 +195,7 @@ class _SendReceiveThread(Thread):
         self._event_loop.call_soon_threadsafe(self._event_loop.stop)
         self._sock.close(linger=0)
         self._monitor_sock.close(linger=0)
-        self._context.destroy()
+        self._context.destroy(linger=0)
 
     def run(self):
         first_time = True
@@ -240,6 +240,9 @@ class _SendReceiveThread(Thread):
             self._ready_event.set()
             self._event_loop.run_forever()
             if self._shutdown:
+                self._sock.close(linger=0)
+                self._monitor_sock.close(linger=0)
+                self._context.destroy(linger=0)
                 break
             if first_time is True:
                 first_time = False

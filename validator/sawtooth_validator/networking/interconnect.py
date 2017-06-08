@@ -376,7 +376,7 @@ class _SendReceive(object):
         # of run_forever then it can be closed and the context destroyed.
         self._event_loop.close()
         self._socket.close(linger=0)
-        self._context.destroy()
+        self._context.destroy(linger=0)
 
     @asyncio.coroutine
     def _stop_auth(self):
