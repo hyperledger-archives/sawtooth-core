@@ -51,8 +51,7 @@ class Journal(object):
                     self._block_cache_purge_frequency
                 while True:
                     try:
-                        block = self._block_queue.get(
-                            timeout=self._block_cache_purge_frequency)
+                        block = self._block_queue.get(timeout=1)
                         self._chain_controller.on_block_received(block)
                     except queue.Empty:
                         pass  # this exception only happens if the
