@@ -176,6 +176,7 @@ class Journal(object):
         self._batch_queue = queue.Queue()
         self._publisher_thread = None
 
+        self._executor_threadpool = ThreadPoolExecutor(1)
         self._chain_controller = None
         self._block_queue = queue.Queue()
         self._chain_thread = None
@@ -206,7 +207,7 @@ class Journal(object):
             block_sender=self._block_sender,
             block_cache=self._block_cache,
             state_view_factory=self._state_view_factory,
-            executor=ThreadPoolExecutor(1),
+            executor=self._executor_threadpool,
             transaction_executor=self._transaction_executor,
             chain_head_lock=self._block_publisher.chain_head_lock,
             on_chain_updated=self._block_publisher.on_chain_updated,
@@ -241,6 +242,8 @@ class Journal(object):
     def stop(self):
         # time to murder the child threads. First ask politely for
         # suicide
+        self._executor_threadpool.shutdown(wait=True)
+
         if self._publisher_thread is not None:
             self._publisher_thread.stop()
             self._publisher_thread = None
