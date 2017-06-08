@@ -30,7 +30,9 @@ LOGGER.setLevel(logging.INFO)
 
 class TestBasicAuth(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        wait_until_status('http://rest_api:8080/blocks', status_code=200)
         wait_until_status('http://basic_auth_proxy/sawtooth', status_code=401)
 
     def test_http_basic_auth(self):
@@ -59,8 +61,8 @@ class TestBasicAuth(unittest.TestCase):
         """
         auth = 'Basic {}'.format(b64encode(b'sawtooth:sawtooth').decode())
         LOGGER.info(('\n'
-                     'Sending request to "{}",\n'
-                     'with "Authorization: {}"').format(url, auth))
+                     'Sending request to "%s",\n'
+                     'with "Authorization: %s"'), url, auth)
 
         request = Request(url, headers={'Authorization': auth})
         context = ssl._create_unverified_context()
@@ -68,22 +70,22 @@ class TestBasicAuth(unittest.TestCase):
         try:
             response = urlopen(request, context=context)
         except HTTPError as e:
+            LOGGER.error('An error occured while requesting "%s"', url)
+
             try:
                 error = json.loads(e.file.read().decode())['error']
+                fail_msg = 'REST API Error: {} - {}:'.format(
+                    error['code'], error['title'])
             except json.decoder.JSONDecodeError:
-                raise e
+                fail_msg = 'HTTP Error: {} - {}'.format(e.code, e.msg)
 
-            LOGGER.error('REST API Error: {} - {}:'.format(
-                error['code'], error['title']))
-            LOGGER.error(error['message'])
-
-            raise e
+            self.fail(fail_msg)
 
         self.assertEqual(200, response.getcode())
         LOGGER.info('Authorization succeeded, 200 response received.')
 
         link = json.loads(response.read().decode())['link']
 
-        LOGGER.info('Verifying link: "{:.50}..."'.format(link))
+        LOGGER.info('Verifying link: "%s"', link)
         self.assertTrue(link.startswith(url))
         LOGGER.info('Link verified.')
