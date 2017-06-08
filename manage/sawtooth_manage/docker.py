@@ -114,6 +114,8 @@ class DockerNodeController(NodeController):
         return ['tcp://' + str(p) + ':8800' for p in peers if len(p) > 4]
 
     def start(self, node_config):
+        base_network_port = 8800
+        base_component_port = 4004
         node_name = node_config.node_name
         http_port = node_config.http_port
 
@@ -149,7 +151,7 @@ class DockerNodeController(NodeController):
             'services': {
                 'validator': {
                     'image': 'sawtooth-validator',
-                    'expose': ['40000', '8800'],
+                    'expose': ['4004', '8800'],
                     'networks': {self._prefix: {},
                                  'default': {'aliases': [node_name]}},
                     'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
@@ -168,31 +170,31 @@ class DockerNodeController(NodeController):
         for proc in processors:
             compose_dict['services'][proc] = {
                 'image': 'sawtooth-{}'.format(proc),
-                'expose': ['40000'],
+                'expose': ['4004'],
                 'links': ['validator'],
                 'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
                 'container_name': '-'.join([self._prefix, proc, node_num]),
-                'command': '{} tcp://{}:40000'.format(proc, node_name)
+                'command': '{} tcp://{}:4004'.format(proc, node_name)
             }
 
         # start the rest_api for the first node only
         if node_num == '000':
             compose_dict['services']['rest_api'] = {
                 'image': 'sawtooth-rest_api',
-                'expose': ['40000', '8080'],
+                'expose': ['4004', '8080'],
                 'links': ['validator'],
                 'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
                 'container_name': '-'.join([self._prefix, 'rest_api',
                                             node_num]),
-                'command': 'rest_api --connect tcp://{}:40000'.
+                'command': 'rest_api --connect tcp://{}:4004'.
                 format(node_name),
                 'ports': ['8080:8080']
             }
 
         # add the host:container port mapping for validator
-        http_port = http_port + 31200
+        port_adder = http_port - base_network_port
         compose_dict['services']['validator']['ports'] = \
-            [str(http_port) + ":" + str(40000)]
+            [str(base_component_port + port_adder) + ":" + str(4004)]
 
         yaml.dump(compose_dict,
                   open(compose_file, mode='w'))

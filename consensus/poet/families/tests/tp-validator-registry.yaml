@@ -22,8 +22,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_validator_registry -vv tcp://validator:40000
+      - 4004
+    command: tp_validator_registry -vv tcp://validator:4004
     stop_signal: SIGKILL
     environment:
         PYTHONPATH: "/project/sawtooth-core/consensus/poet/families/:\
@@ -35,7 +35,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
     command: nose2-3
         -c /project/sawtooth-core/consensus/poet/families/nose2.cfg
         -v

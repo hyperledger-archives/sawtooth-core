@@ -28,7 +28,7 @@ import (
 func main() {
 	v := flag.Bool("v", false, "Info level logging")
 	vv := flag.Bool("vv", false, "Debug level logging")
-	endpoint := "tcp://localhost:40000"
+	endpoint := "tcp://localhost:4004"
 
 	flag.Parse()
 	args := flag.Args()

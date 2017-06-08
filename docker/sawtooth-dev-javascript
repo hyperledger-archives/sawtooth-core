@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y -q --no-install-recommends \
  && rm -rf /var/lib/apt/lists/* \
  && npm install -g prebuild-install
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
 RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /var/log/sawtooth \

@@ -22,8 +22,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_intkey_javascript tcp://validator:40000
+      - 4004
+    command: tp_intkey_javascript tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
@@ -31,7 +31,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose: 
-      - 40000
+      - 4004
     command: nose2-3
         -c /project/sawtooth-core/sdk/examples/intkey_python/nose2.cfg
         -v

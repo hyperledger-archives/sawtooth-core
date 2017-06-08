@@ -31,7 +31,7 @@ def parse_args(args):
 
     parser.add_argument('endpoint',
                         nargs='?',
-                        default='tcp://localhost:40000',
+                        default='tcp://localhost:4004',
                         help='Endpoint for the validator connection')
     parser.add_argument('-v', '--verbose',
                         action='count',

@@ -177,7 +177,7 @@ command to start the rest api:
 
 .. code-block:: console
 
-  rest_api --stream-url tcp://127.0.0.1:40000
+  rest_api --stream-url tcp://127.0.0.1:4004
 
 .. note::
 
@@ -201,7 +201,7 @@ To start an intkey transaction processor, run the following commands:
 
 .. code-block:: console
 
-  $ tp_intkey_python -v tcp://127.0.0.1:40000
+  $ tp_intkey_python -v tcp://127.0.0.1:4004
 
 .. note::
 
@@ -214,9 +214,9 @@ To start an intkey transaction processor, run the following commands:
 This will start a transaction processor that includes an **intkey** handler,
 which can understand and process transactions that use the built-in intkey
 transaction family. The processor communicates with the validator on
-TCP port 40000.
+TCP port 4004.
 
-The endpoint (`tcp://127.0.0.1:40000` in this example) to connect to must be
+The endpoint (`tcp://127.0.0.1:4004` in this example) to connect to must be
 specified when starting the transaction processor. This tells the transaction
 processor which validator to connect to. This is useful, because it is
 possible to run transaction processors on separate machines.
@@ -232,7 +232,6 @@ The transaction processor produces the following output:
   In a production environment, you should always run a transaction processor
   that supports the config transaction family. See `Config Transaction
   Family Usage`_ for more information.
-
 
 Multi-language support for transaction processors
 =================================================
@@ -333,7 +332,7 @@ from the Linux CLI:
 
 .. code-block:: console
 
-  $ tp_config tcp://localhost:40000
+  $ tp_config tcp://localhost:4004
 
 .. note::
 
@@ -363,7 +362,7 @@ already been started.
 
 .. code-block:: console
 
-  rest_api --connect tcp://127.0.0.1:40000
+  rest_api --connect tcp://127.0.0.1:4004
 
 
 Step Three: Create And Submit Batch
@@ -419,7 +418,7 @@ already been started.
 
 .. code-block:: console
 
-  rest_api --connect tcp://127.0.0.1:40000
+  rest_api --connect tcp://127.0.0.1:4004
 
 
 Viewing List Of Blocks

@@ -17,13 +17,13 @@ class TestRestApiConfig(unittest.TestCase):
         """Tests the default REST API configuration.
 
             - bind = ["127.0.0.1:8080"]
-            - connect = "tcp://localhost:40000"
+            - connect = "tcp://localhost:4004"
             - timeout = 300
 
         """
         config = load_default_rest_api_config()
         self.assertEqual(config.bind , ["127.0.0.1:8080"])
-        self.assertEqual(config.connect, "tcp://localhost:40000")
+        self.assertEqual(config.connect, "tcp://localhost:4004")
         self.assertEqual(config.timeout, 300)
 
     def test_rest_api_config_load_from_file(self):
@@ -48,13 +48,13 @@ class TestRestApiConfig(unittest.TestCase):
             with open(filename, 'w') as fd:
                 fd.write('bind = ["test:1234"]')
                 fd.write(os.linesep)
-                fd.write('connect = "tcp://test:40000"')
+                fd.write('connect = "tcp://test:4004"')
                 fd.write(os.linesep)
                 fd.write('timeout = 10')
 
             config = load_toml_rest_api_config(filename)
             self.assertEqual(config.bind, ["test:1234"])
-            self.assertEqual(config.connect, "tcp://test:40000")
+            self.assertEqual(config.connect, "tcp://test:4004")
             self.assertEqual(config.timeout, 10)
 
         finally:

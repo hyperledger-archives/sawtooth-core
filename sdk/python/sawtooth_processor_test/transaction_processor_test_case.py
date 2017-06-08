@@ -21,7 +21,7 @@ from sawtooth_processor_test.mock_validator import MockValidator
 class TransactionProcessorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        url = 'eth0:40000'
+        url = 'eth0:4004'
 
         cls.validator = MockValidator()
 

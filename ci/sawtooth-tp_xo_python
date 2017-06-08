@@ -37,6 +37,6 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
 CMD ["tp_xo_python", "-vv"]
