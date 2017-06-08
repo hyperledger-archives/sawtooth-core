@@ -274,11 +274,14 @@ class Gossip(object):
         self._topology.start()
 
     def stop(self):
-        for peer in self._peers:
+        for peer in self.get_peers():
             request = PeerUnregisterRequest()
-            self._network.send(validator_pb2.Message.GOSSIP_UNREGISTER,
-                               request.SerializeToString(),
-                               peer)
+            try:
+                self._network.send(validator_pb2.Message.GOSSIP_UNREGISTER,
+                                   request.SerializeToString(),
+                                   peer)
+            except ValueError:
+                pass
         if self._topology:
             self._topology.stop()
 
