@@ -289,9 +289,14 @@ class _SendReceive(object):
 
         self._ready.wait()
 
-        asyncio.run_coroutine_threadsafe(
-            self._send_message(zmq_identity, msg),
-            self._event_loop)
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self._send_message(zmq_identity, msg),
+                self._event_loop)
+        except RuntimeError:
+            # run_coroutine_threadsafe will throw a RuntimeError if
+            # the eventloop is closed. This occurs on shutdown.
+            pass
 
     def setup(self, socket_type, complete_or_error_queue):
         """Setup the asyncio event loop.
@@ -414,7 +419,14 @@ class _SendReceive(object):
                     tasks.remove(task)
             time.sleep(.2)
         if self._event_loop is not None:
-            self._event_loop.call_soon_threadsafe(self._event_loop.stop)
+            try:
+                self._event_loop.call_soon_threadsafe(self._event_loop.stop)
+            except RuntimeError:
+                # Depending on the timing of shutdown, the event loop may
+                # already be shutdown from _stop(). If it is,
+                # call_soon_threadsafe will raise a RuntimeError,
+                # which can safely be ignored.
+                pass
 
 
 class Interconnect(object):
