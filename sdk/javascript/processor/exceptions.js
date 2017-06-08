@@ -17,21 +17,67 @@
 
 'use strict'
 
-class InvalidTransaction extends Error {
-  constructor (message = '') {
+class _TransactionProcessorError extends Error {
+  constructor (message = '', extendedData = null) {
     super(message)
+    this.name = this.constructor.name
+
+    if (extendedData) {
+      if (Buffer.isBuffer(extendedData) || extendedData instanceof Uint8Array) {
+        this.extendedData = extendedData
+      } else {
+        throw new TypeError('extendedData must be a Buffer or a Uint8Array')
+      }
+    }
+  }
+}
+
+/**
+ * Thrown for an Invalid Transaction.
+ */
+class InvalidTransaction extends _TransactionProcessorError {
+  /**
+   * Constructs a new InvalidTransaction.
+   *
+   * @param {string} [message] - an optional message, defaults to the empty
+   * string
+   * @param {Buffer|Uint8Array} [extendedData] - optional, application-specific
+   * serialized data to returned to the transaction submitter.
+   */
+  constructor (message, extendedData) {
+    super(message, extendedData)
     this.name = this.constructor.name
   }
 }
 
-class InternalError extends Error {
-  constructor (message = '') {
-    super(message)
+/**
+ * Thrown when an internal error occurs during transaction processing.
+ */
+class InternalError extends _TransactionProcessorError {
+  /**
+   * Constructs a new InternalError
+   * @param {string} [message] - an optional message, defaults to the empty
+   * string
+   * @param {Buffer|Uint8Array} [extendedData] - optional, application-specific
+   * serialized data to returned to the transaction submitter.
+   */
+  constructor (message, extendedData) {
+    super(message, extendedData)
     this.name = this.constructor.name
   }
 }
 
+/**
+ * Thrown when a connection error occurs between the validator and the
+ * transaction processor
+ */
 class ValidatorConnectionError extends Error {
+  /**
+   * Construcs a new ValidatorConnectionError
+   *
+   * @param {string} [message] - an optional message, defaults to the empty
+   * string
+   */
   constructor (message = '') {
     super(message)
     this.name = this.constructor.name
