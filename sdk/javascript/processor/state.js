@@ -19,6 +19,17 @@
 
 const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, Message} = require('../protobuf')
 const {InvalidTransaction} = require('../processor/exceptions')
+
+const _timeoutPromise = (p, millis) => {
+  if (millis !== null && millis !== undefined) {
+    return Promise.race([
+      new Promise((resolve, reject) => setTimeout(() => reject('Timeout occurred'), millis)),
+      p])
+  } else {
+    return p
+  }
+}
+
 class State {
   constructor (stream, contextId) {
     this._stream = stream
@@ -26,34 +37,38 @@ class State {
   }
 
   /**
-   * @param addresses an array of address
+   * @param {string[]} addresses an array of address
+   * @param {number} [timeout] - an optional timeout
    * @return a promise for a map of (address, buffer) pairs, where the buffer is
    * the encoded value at the specified address
    */
-  get (addresses) {
+  get (addresses, timeout = null) {
     let getRequest = TpStateGetRequest.create({addresses, contextId: this._contextId})
     let future = this._stream.send(Message.MessageType.TP_STATE_GET_REQUEST,
                                    TpStateGetRequest.encode(getRequest).finish())
-    return future.then((buffer) => {
-      let getResponse = TpStateGetResponse.decode(buffer)
+    return _timeoutPromise(
+      future.then((buffer) => {
+        let getResponse = TpStateGetResponse.decode(buffer)
 
-      let results = {}
-      getResponse.entries.forEach((entry) => {
-        results[entry.address] = entry.data
-      })
-      if (getResponse.status === TpStateGetResponse.Status.AUTHORIZATION_ERROR) {
-        throw new InvalidTransaction(`Tried to get unauthorized address ${addresses}`)
-      }
-      return results
-    })
+        let results = {}
+        getResponse.entries.forEach((entry) => {
+          results[entry.address] = entry.data
+        })
+        if (getResponse.status === TpStateGetResponse.Status.AUTHORIZATION_ERROR) {
+          throw new InvalidTransaction(`Tried to get unauthorized address ${addresses}`)
+        }
+        return results
+      }),
+      timeout)
   }
 
   /**
-   * @param addressValuePairs - a map of (address, buffer) entries, where the
+   * @param {Object} addressValuePairs - a map of (address, buffer) entries, where the
+   * @param {number} [timeout] - an optional timeout
    * buffer is the encoded value to be set at the the given address.
    * @return a promise for the adddress successfully set.
    */
-  set (addressValuePairs) {
+  set (addressValuePairs, timeout = null) {
     let entries = Object.keys(addressValuePairs).map((address) =>
       Entry.create({address, data: addressValuePairs[address]}))
 
@@ -61,14 +76,16 @@ class State {
     let future = this._stream.send(Message.MessageType.TP_STATE_SET_REQUEST,
                                    TpStateSetRequest.encode(setRequest).finish())
 
-    return future.then((buffer) => {
-      let setResponse = TpStateSetResponse.decode(buffer)
-      if (setResponse.status === TpStateSetResponse.Status.AUTHORIZATION_ERROR) {
-        let addresses = Object.keys(addressValuePairs)
-        throw new InvalidTransaction(`Tried to set unauthorized address ${addresses}`)
-      }
-      return setResponse.addresses
-    })
+    return _timeoutPromise(
+      future.then((buffer) => {
+        let setResponse = TpStateSetResponse.decode(buffer)
+        if (setResponse.status === TpStateSetResponse.Status.AUTHORIZATION_ERROR) {
+          let addresses = Object.keys(addressValuePairs)
+          throw new InvalidTransaction(`Tried to set unauthorized address ${addresses}`)
+        }
+        return setResponse.addresses
+      }),
+      timeout)
   }
 }
 
