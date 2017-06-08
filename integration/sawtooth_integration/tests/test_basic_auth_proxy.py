@@ -59,8 +59,8 @@ class TestBasicAuth(unittest.TestCase):
         """
         auth = 'Basic {}'.format(b64encode(b'sawtooth:sawtooth').decode())
         LOGGER.info(('\n'
-                     'Sending request to "{}",\n'
-                     'with "Authorization: {}"').format(url, auth))
+                     'Sending request to "%s",\n'
+                     'with "Authorization: %s"'), url, auth)
 
         request = Request(url, headers={'Authorization': auth})
         context = ssl._create_unverified_context()
@@ -84,6 +84,6 @@ class TestBasicAuth(unittest.TestCase):
 
         link = json.loads(response.read().decode())['link']
 
-        LOGGER.info('Verifying link: "{:.50}..."'.format(link))
+        LOGGER.info('Verifying link: "%s"', link)
         self.assertTrue(link.startswith(url))
         LOGGER.info('Link verified.')
