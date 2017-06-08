@@ -76,7 +76,7 @@ class Journal(object):
     class _PublisherThread(Thread):
         def __init__(self, block_publisher, batch_queue,
                      check_publish_block_frequency):
-            Thread.__init__(self)
+            Thread.__init__(self, name='_PublisherThread')
             self._block_publisher = block_publisher
             self._batch_queue = batch_queue
             self._check_publish_block_frequency = \
