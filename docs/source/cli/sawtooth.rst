@@ -112,6 +112,13 @@ sawtooth batch show
    :language: console
    :linenos:
 
+sawtooth batch status
+=====================
+
+.. literalinclude:: output/sawtooth_batch_status_usage.out
+   :language: console
+   :linenos:
+
 sawtooth block
 ==============
 

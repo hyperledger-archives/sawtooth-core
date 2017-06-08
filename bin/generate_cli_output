@@ -22,6 +22,7 @@ save_usage sawtooth admin keygen
 save_usage sawtooth batch
 save_usage sawtooth batch list
 save_usage sawtooth batch show
+save_usage sawtooth batch status
 save_usage sawtooth block
 save_usage sawtooth block list
 save_usage sawtooth block show

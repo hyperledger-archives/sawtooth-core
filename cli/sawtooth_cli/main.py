@@ -35,8 +35,6 @@ from sawtooth_cli.block import add_block_parser
 from sawtooth_cli.block import do_block
 from sawtooth_cli.batch import add_batch_parser
 from sawtooth_cli.batch import do_batch
-from sawtooth_cli.batch_status import add_batch_status_parser
-from sawtooth_cli.batch_status import do_batch_status
 from sawtooth_cli.transaction import add_transaction_parser
 from sawtooth_cli.transaction import do_transaction
 from sawtooth_cli.state import add_state_parser
@@ -104,7 +102,6 @@ def create_parser(prog_name):
     add_config_parser(subparsers, parent_parser)
     add_block_parser(subparsers, parent_parser)
     add_batch_parser(subparsers, parent_parser)
-    add_batch_status_parser(subparsers, parent_parser)
     add_transaction_parser(subparsers, parent_parser)
     add_state_parser(subparsers, parent_parser)
     add_cluster_parser(subparsers, parent_parser)
@@ -135,8 +132,6 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
         do_block(args)
     elif args.command == 'batch':
         do_batch(args)
-    elif args.command == 'batch-status':
-        do_batch_status(args)
     elif args.command == 'transaction':
         do_transaction(args)
     elif args.command == 'state':

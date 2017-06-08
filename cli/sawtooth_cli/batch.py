@@ -14,6 +14,9 @@
 # ------------------------------------------------------------------------------
 
 import argparse
+
+from sys import maxsize
+
 from sawtooth_cli import format_utils as fmt
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
@@ -23,7 +26,8 @@ from sawtooth_cli.parent_parsers import base_show_parser
 
 
 def add_batch_parser(subparsers, parent_parser):
-    """Adds arguments parsers for the batch list and batch show commands
+    """Adds arguments parsers for the batch list, batch show and batch status
+    commands
 
         Args:
             subparsers: Add parsers to this subparser object
@@ -34,21 +38,28 @@ def add_batch_parser(subparsers, parent_parser):
     grand_parsers = parser.add_subparsers(title='grandchildcommands',
                                           dest='subcommand')
     grand_parsers.required = True
+    add_batch_list_parser(grand_parsers, parent_parser)
+    add_batch_show_parser(grand_parsers, parent_parser)
+    add_batch_status_parser(grand_parsers, parent_parser)
 
+
+def add_batch_list_parser(subparsers, parent_parser):
     epilog = '''details:
         Lists committed batches from newest to oldest, including their id (i.e.
     header signature), transaction count, and their signer's public key.
     '''
-    grand_parsers.add_parser(
+    subparsers.add_parser(
         'list', epilog=epilog,
         parents=[base_http_parser(), base_list_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
+
+def add_batch_show_parser(subparsers, parent_parser):
     epilog = '''details:
         Shows the data for a single batch, or for a particular property within
     that batch or its header. Displays data in YAML (default), or JSON formats.
     '''
-    show_parser = grand_parsers.add_parser(
+    show_parser = subparsers.add_parser(
         'show', epilog=epilog,
         parents=[base_http_parser(), base_show_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -58,60 +69,122 @@ def add_batch_parser(subparsers, parent_parser):
         help='the id (i.e. header_signature) of the batch')
 
 
+def add_batch_status_parser(subparsers, parent_parser):
+    epilog = '''details:
+        Fetches the statuses for a set of batches.
+    '''
+    status_parser = subparsers.add_parser(
+        'status', epilog=epilog,
+        parents=[base_http_parser()])
+
+    status_parser.add_argument(
+        '--wait',
+        nargs='?',
+        const=maxsize,
+        type=int,
+        help='a time in seconds to wait for commit')
+
+    status_parser.add_argument(
+        'batch_ids',
+        type=str,
+        help='a comma-separated list of batch ids')
+
+    status_parser.add_argument(
+        '-F', '--format',
+        action='store',
+        default='yaml',
+        choices=['yaml', 'json'],
+        help='the format to use for printing the output (defaults to yaml)')
+
+
 def do_batch(args):
-    """Runs the batch list or batch show command, printing output to the console
+    """Runs the batch list, batch show or batch status command, printing output
+    to the console
+
+        Args:
+            args: The parsed arguments sent to the command at runtime
+    """
+    if args.subcommand == 'list':
+        do_batch_list(args)
+
+    if args.subcommand == 'show':
+        do_batch_show(args)
+
+    if args.subcommand == 'status':
+        do_batch_status(args)
+
+
+def do_batch_list(args):
+    rest_client = RestClient(args.url, args.user)
+    batches = rest_client.list_batches()
+    keys = ('batch_id', 'txns', 'signer')
+    headers = tuple(k.upper() for k in keys)
+
+    def parse_batch_row(batch):
+        return (
+            batch['header_signature'],
+            len(batch.get('transactions', [])),
+            batch['header']['signer_pubkey'])
+
+    if args.format == 'default':
+        fmt.print_terminal_table(headers, batches, parse_batch_row)
+
+    elif args.format == 'csv':
+        fmt.print_csv(headers, batches, parse_batch_row)
+
+    elif args.format == 'json' or args.format == 'yaml':
+        data = [{k: d for k, d in zip(keys, parse_batch_row(b))}
+                for b in batches]
+
+        if args.format == 'yaml':
+            fmt.print_yaml(data)
+        elif args.format == 'json':
+            fmt.print_json(data)
+        else:
+            raise AssertionError('Missing handler: {}'.format(args.format))
+
+    else:
+        raise AssertionError('Missing handler: {}'.format(args.format))
+
+
+def do_batch_show(args):
+    rest_client = RestClient(args.url, args.user)
+    output = rest_client.get_batch(args.batch_id)
+
+    if args.key:
+        if args.key in output:
+            output = output[args.key]
+        elif args.key in output['header']:
+            output = output['header'][args.key]
+        else:
+            raise CliException(
+                'key "{}" not found in batch or header'.format(args.key))
+
+    if args.format == 'yaml':
+        fmt.print_yaml(output)
+    elif args.format == 'json':
+        fmt.print_json(output)
+    else:
+        raise AssertionError('Missing handler: {}'.format(args.format))
+
+
+def do_batch_status(args):
+    """Runs the batch-status command, printing output to the console
 
         Args:
             args: The parsed arguments sent to the command at runtime
     """
     rest_client = RestClient(args.url, args.user)
+    batch_ids = args.batch_ids.split(',')
 
-    if args.subcommand == 'list':
-        batches = rest_client.list_batches()
-        keys = ('batch_id', 'txns', 'signer')
-        headers = tuple(k.upper() for k in keys)
+    if args.wait and args.wait > 0:
+        statuses = rest_client.get_statuses(batch_ids, args.wait)
+    else:
+        statuses = rest_client.get_statuses(batch_ids)
 
-        def parse_batch_row(batch):
-            return (
-                batch['header_signature'],
-                len(batch.get('transactions', [])),
-                batch['header']['signer_pubkey'])
-
-        if args.format == 'default':
-            fmt.print_terminal_table(headers, batches, parse_batch_row)
-
-        elif args.format == 'csv':
-            fmt.print_csv(headers, batches, parse_batch_row)
-
-        elif args.format == 'json' or args.format == 'yaml':
-            data = [{k: d for k, d in zip(keys, parse_batch_row(b))}
-                    for b in batches]
-
-            if args.format == 'yaml':
-                fmt.print_yaml(data)
-            elif args.format == 'json':
-                fmt.print_json(data)
-            else:
-                raise AssertionError('Missing handler: {}'.format(args.format))
-
-        else:
-            raise AssertionError('Missing handler: {}'.format(args.format))
-
-    if args.subcommand == 'show':
-        output = rest_client.get_batch(args.batch_id)
-
-        if args.key:
-            if args.key in output:
-                output = output[args.key]
-            elif args.key in output['header']:
-                output = output['header'][args.key]
-            else:
-                raise CliException(
-                    'key "{}" not found in batch or header'.format(args.key))
-
-        if args.format == 'yaml':
-            fmt.print_yaml(output)
-        elif args.format == 'json':
-            fmt.print_json(output)
-        else:
-            raise AssertionError('Missing handler: {}'.format(args.format))
+    if args.format == 'yaml':
+        fmt.print_yaml(statuses)
+    elif args.format == 'json':
+        fmt.print_json(statuses)
+    else:
+        raise AssertionError('Missing handler: {}'.format(args.format))
