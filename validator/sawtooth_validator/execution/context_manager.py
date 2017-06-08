@@ -589,8 +589,7 @@ class _ContextWriter(Thread):
             contexts (_ThreadsafeContexts): The datastructures to write the
                 address-value pairs to.
         """
-
-        super(_ContextWriter, self).__init__()
+        super(_ContextWriter, self).__init__(name='_ContextWriter')
         self._inflated_addresses = inflated_addresses
         self._contexts = contexts
 
