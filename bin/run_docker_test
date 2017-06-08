@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
 
 
-DEFAULT_TIMEOUT = 300
+DEFAULT_TIMEOUT = 600
 COMPOSE_DOWN_RETRY_TIMEOUT = 60
 DOCKER_PS_TIMEOUT=30
 
