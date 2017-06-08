@@ -70,7 +70,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install \
-    pylint==1.6.5 \
+    pylint \
     bandit
 
 RUN apt-get update && apt-get install -y -q \
