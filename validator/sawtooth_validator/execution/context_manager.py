@@ -552,7 +552,7 @@ class _ContextReader(Thread):
                                           (context_id, [(address, value), ...
     """
     def __init__(self, database, address_queue, inflated_addresses):
-        super(_ContextReader, self).__init__()
+        super(_ContextReader, self).__init__(name='_ContextReader')
         self._database = database
         self._addresses = address_queue
         self._inflated_addresses = inflated_addresses
