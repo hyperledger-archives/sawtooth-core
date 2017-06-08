@@ -350,7 +350,14 @@ class _SendReceive(object):
                     self._socket.curve_publickey = self._server_public_key
                     self._socket.curve_server = True
 
-                self._socket.bind(self._address)
+                try:
+                    self._socket.bind(self._address)
+                except zmq.error.ZMQError as e:
+                    raise LocalConfigurationError(
+                        "Can't bind to {}: {}".format(self._address,
+                                                      str(e)))
+                else:
+                    LOGGER.info("Listening on %s", self._address)
 
             self._dispatcher.add_send_message(self._connection,
                                               self.send_message)
