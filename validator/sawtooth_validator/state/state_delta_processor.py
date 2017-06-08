@@ -195,7 +195,8 @@ class StateDeltaProcessor(object):
         state_change_evt = StateDeltaEvent(
             block_id=block.header_signature,
             block_num=block.header.block_num,
-            state_root_hash=block.header.state_root_hash)
+            state_root_hash=block.header.state_root_hash,
+            previous_block_id=block.header.previous_block_id)
 
         for subscriber in self._subscribers.values():
             acceptable_changes = subscriber.deltas_of_interest(deltas)
@@ -214,6 +215,7 @@ class StateDeltaProcessor(object):
             block_id=block.header_signature,
             block_num=block.header.block_num,
             state_root_hash=block.header.state_root_hash,
+            previous_block_id=block.header.previous_block_id,
             state_changes=subscriber.deltas_of_interest(deltas))
 
         LOGGER.debug('sending change event to %s', subscriber.connection_id)
@@ -336,6 +338,7 @@ class GetStateDeltaEventsHandler(Handler):
                 block_id=block_id,
                 block_num=block.header.block_num,
                 state_root_hash=block.header.state_root_hash,
+                previous_block_id=block.header.previous_block_id,
                 state_changes=temp_subscriber.deltas_of_interest(deltas))
 
             events.append(event)

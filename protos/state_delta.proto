@@ -49,8 +49,12 @@ message StateDeltaEvent {
     int32 block_num = 2;
     // The state root hash which resulted from the changes.
     string state_root_hash = 3;
+
+    // The previous block id
+    string previous_block_id = 4;
+
     // The collection of StateChange objects
-    repeated StateChange state_changes = 4;
+    repeated StateChange state_changes = 5;
 }
 
 // Registers a subscriber for StateDeltaEvent objects.  The
