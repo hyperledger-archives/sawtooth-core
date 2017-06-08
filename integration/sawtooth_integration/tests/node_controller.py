@@ -222,7 +222,7 @@ def processor_cmds(num, processor_func):
         '{p} {v} {a}'.format(
             p=processor,
             v=(processor_verbosity(processor)),
-            a=connenction_address(num))
+            a=connection_address(num))
         for processor in processors
     ]
 
@@ -253,7 +253,7 @@ def start_processors(num, processor_func):
 
 def rest_api_cmd(num):
     return 'rest_api --connect {s} --bind 127.0.0.1:{p}'.format(
-        s=connenction_address(num),
+        s=connection_address(num),
         p=(8080 + num)
     )
 
@@ -266,7 +266,7 @@ def start_rest_api(num):
 def endpoint(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
-def connenction_address(num):
+def connection_address(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)
 
 def http_address(num):
