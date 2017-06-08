@@ -313,7 +313,7 @@ class Topology(Thread):
                 to allow.
             check_frequency (int): How often to attempt dynamic connectivity.
         """
-        super().__init__()
+        super().__init__(name="Topology")
         self._condition = Condition()
         self._stopped = False
         self._peers = []
