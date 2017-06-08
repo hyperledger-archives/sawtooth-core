@@ -35,7 +35,7 @@ def _gen_message_id():
 
 class Dispatcher(Thread):
     def __init__(self):
-        super().__init__()
+        super().__init__(name='Dispatcher')
         self._msg_type_handlers = ThreadsafeDict()
         self._in_queue = queue.Queue()
         self._send_message = ThreadsafeDict()
