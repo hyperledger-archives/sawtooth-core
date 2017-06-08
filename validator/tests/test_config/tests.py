@@ -145,13 +145,13 @@ class TestValidatorConfig(unittest.TestCase):
         """Tests the default validator configuration when no other configs.
         The defaults should be as follows:
             - bind_network = "tcp://127.0.0.1:8800"
-            - bind_component = "tcp://127.0.0.1:40000"
+            - bind_component = "tcp://127.0.0.1:4004"
             - peering = "static"
             - endpoint = None
         """
         config = load_default_validator_config()
         self.assertEquals(config.bind_network, "tcp://127.0.0.1:8800")
-        self.assertEquals(config.bind_component, "tcp://127.0.0.1:40000")
+        self.assertEquals(config.bind_component, "tcp://127.0.0.1:4004")
         self.assertEquals(config.endpoint, None)
         self.assertEquals(config.peering, "static")
 
@@ -176,7 +176,7 @@ class TestValidatorConfig(unittest.TestCase):
             filename = os.path.join(config_dir, 'validator.toml')
             with open(filename, 'w') as fd:
                 fd.write('bind = ["network:tcp://test:8800",'
-                         '"component:tcp://test:40000"]')
+                         '"component:tcp://test:4004"]')
                 fd.write(os.linesep)
                 fd.write('peering = "dynamic"')
                 fd.write(os.linesep)
@@ -188,7 +188,7 @@ class TestValidatorConfig(unittest.TestCase):
 
             config = load_toml_validator_config(filename)
             self.assertEqual(config.bind_network, "tcp://test:8800")
-            self.assertEqual(config.bind_component, "tcp://test:40000")
+            self.assertEqual(config.bind_component, "tcp://test:4004")
             self.assertEqual(config.peering, "dynamic")
             self.assertEqual(config.endpoint, "tcp://test:8800")
             self.assertEqual(config.peers, ["tcp://peer:8801"])

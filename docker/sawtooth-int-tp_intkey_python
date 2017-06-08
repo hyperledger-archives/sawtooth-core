@@ -46,6 +46,6 @@ RUN cd /debs \
 RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-intkey
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
-CMD ["tp_intkey_python", "tcp://validator:40000"]
+CMD ["tp_intkey_python", "tcp://validator:4004"]

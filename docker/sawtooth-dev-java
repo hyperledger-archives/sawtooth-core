@@ -29,7 +29,7 @@ FROM maven:3-jdk-8
 
 LABEL "install-type"="mounted"
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
 RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /var/log/sawtooth \

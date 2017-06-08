@@ -51,7 +51,7 @@ RUN mkdir /go \
     github.com/satori/go.uuid \
     github.com/btcsuite/btcd/btcec
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
 RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /var/log/sawtooth \

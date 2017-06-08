@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 def load_default_validator_config():
     return ValidatorConfig(
         bind_network='tcp://127.0.0.1:8800',
-        bind_component='tcp://127.0.0.1:40000',
+        bind_component='tcp://127.0.0.1:4004',
         endpoint=None,
         peering='static')
 

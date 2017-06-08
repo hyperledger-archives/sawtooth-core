@@ -82,7 +82,7 @@ class SubprocessNodeController(NodeController):
         node_name = node_args.node_name
         node_num = int(node_name[len('validator-'):])
 
-        base_component_port = 40000
+        base_component_port = 4004
         port = str(base_component_port + node_num)
         url = 'tcp://0.0.0.0:' + port
 

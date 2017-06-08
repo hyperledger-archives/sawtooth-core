@@ -22,7 +22,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
       - 8800
     command: "bash -c \"\
         sawtooth admin keygen --force && \
@@ -42,7 +42,7 @@ services:
           config-genesis.batch config.batch poet.batch && \
         validator -v \
             --endpoint tcp://validator-0:8800 \
-            --bind component:tcp://eth0:40000 \
+            --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
     \""
     environment:
@@ -56,7 +56,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
       - 8800
     depends_on:
       - validator-0
@@ -65,7 +65,7 @@ services:
         validator -v \
           --endpoint tcp://validator-1:8800 \
           --peers tcp://validator-0:8800 \
-          --bind component:tcp://eth0:40000 \
+          --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
     \""
     environment:
@@ -79,7 +79,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
       - 8800
     depends_on:
       - validator-0
@@ -89,7 +89,7 @@ services:
         validator -v \
           --endpoint tcp://validator-2:8800 \
           --peers tcp://validator-0:8800,tcp://validator-1:8800
-          --bind component:tcp://eth0:40000 \
+          --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
     \""
     environment:
@@ -103,9 +103,9 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
       - 8080
-    command: rest_api -v --connect tcp://validator-0:40000 --bind rest-api-0:8080
+    command: rest_api -v --connect tcp://validator-0:4004 --bind rest-api-0:8080
     stop_signal: SIGKILL
 
   rest-api-1:
@@ -113,9 +113,9 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
       - 8080
-    command: rest_api -v --connect tcp://validator-1:40000 --bind rest-api-1:8080
+    command: rest_api -v --connect tcp://validator-1:4004 --bind rest-api-1:8080
     stop_signal: SIGKILL
 
   rest-api-2:
@@ -123,9 +123,9 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
       - 8080
-    command: rest_api -v --connect tcp://validator-2:40000 --bind rest-api-2:8080
+    command: rest_api -v --connect tcp://validator-2:4004 --bind rest-api-2:8080
     stop_signal: SIGKILL
 
   tp-intkey-0:
@@ -133,8 +133,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_intkey_python tcp://validator-0:40000
+      - 4004
+    command: tp_intkey_python tcp://validator-0:4004
     stop_signal: SIGKILL
 
   tp-intkey-1:
@@ -142,8 +142,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_intkey_python tcp://validator-1:40000
+      - 4004
+    command: tp_intkey_python tcp://validator-1:4004
     stop_signal: SIGKILL
 
   tp-intkey-2:
@@ -151,8 +151,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_intkey_python tcp://validator-2:40000
+      - 4004
+    command: tp_intkey_python tcp://validator-2:4004
     stop_signal: SIGKILL
 
   tp-config-0:
@@ -160,8 +160,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_config -v tcp://validator-0:40000
+      - 4004
+    command: tp_config -v tcp://validator-0:4004
     stop_signal: SIGKILL
 
   tp-config-1:
@@ -169,8 +169,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_config -v tcp://validator-1:40000
+      - 4004
+    command: tp_config -v tcp://validator-1:4004
     stop_signal: SIGKILL
 
   tp-config-2:
@@ -178,8 +178,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_config -v tcp://validator-2:40000
+      - 4004
+    command: tp_config -v tcp://validator-2:4004
     stop_signal: SIGKILL
 
   tp-validator-registry-0:
@@ -187,8 +187,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_validator_registry -v tcp://validator-0:40000
+      - 4004
+    command: tp_validator_registry -v tcp://validator-0:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
@@ -198,8 +198,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_validator_registry -v tcp://validator-1:40000
+      - 4004
+    command: tp_validator_registry -v tcp://validator-1:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
@@ -209,8 +209,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 40000
-    command: tp_validator_registry -v tcp://validator-2:40000
+      - 4004
+    command: tp_validator_registry -v tcp://validator-2:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL

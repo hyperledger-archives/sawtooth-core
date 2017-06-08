@@ -79,7 +79,7 @@ to a certain address. It creates a mock validator that binds to that address
 	class TransactionProcessorTestCase(unittest.TestCase):
 	    @classmethod
 	    def setUpClass(cls):
-	        url = 'eth0:40000'
+	        url = 'eth0:4004'
 
 	        cls.validator = MockValidator()
 

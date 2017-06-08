@@ -48,6 +48,6 @@ RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-poet-cli \
     python3-sawtooth-cli
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
 CMD ["bash", "-c", "\"sawtooth admin keygen && validator\""]

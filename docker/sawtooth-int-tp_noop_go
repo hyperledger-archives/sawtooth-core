@@ -34,6 +34,6 @@ RUN apt-get update \
 
 COPY tp_noop_go /usr/bin/tp_noop_go
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
-CMD ["tp_noop_go", "tcp://validator:40000"]
+CMD ["tp_noop_go", "tcp://validator:4004"]

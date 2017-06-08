@@ -219,7 +219,7 @@ class TestShutdownSmoke(unittest.TestCase):
                 genesis,
                 ['--name', genesis_name],
                 ['--endpoint', 'tcp://{}:8800'.format(genesis_name),
-                 '--bind', 'component:tcp://eth0:40000',
+                 '--bind', 'component:tcp://eth0:4004',
                  '--bind', 'network:tcp://eth0:8800'])
             containers.append(validator_genesis)
             self._remove_docker_containers([genesis])
@@ -231,7 +231,7 @@ class TestShutdownSmoke(unittest.TestCase):
                          '--name', validator_1_name],
                 ['--peers', 'tcp://{}:8800'.format(genesis_name),
                  '--endpoint', 'tcp://{}:8800'.format(validator_1_name),
-                 '--bind', 'component:tcp://eth0:40000',
+                 '--bind', 'component:tcp://eth0:4004',
                  '--bind', 'network:tcp://eth0:8800'])
             containers.append(validator_non_genesis)
             self._remove_docker_containers([keygen])

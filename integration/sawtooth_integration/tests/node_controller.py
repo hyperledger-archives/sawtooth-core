@@ -267,13 +267,13 @@ def endpoint(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
 def connenction_address(num):
-    return 'tcp://127.0.0.1:{}'.format(40000 + num)
+    return 'tcp://127.0.0.1:{}'.format(4004 + num)
 
 def http_address(num):
     return 'http://127.0.0.1:{}'.format(8080 + num)
 
 def bind_component(num):
-    return 'tcp://127.0.0.1:{}'.format(40000 + num)
+    return 'tcp://127.0.0.1:{}'.format(4004 + num)
 
 def bind_network(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)

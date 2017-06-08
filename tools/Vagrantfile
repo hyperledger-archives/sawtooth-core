@@ -102,7 +102,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   if conf['VAGRANT_FORWARD_PORTS']
       config.vm.network "forwarded_port", guest: 8800, host: 8800, host_ip: "127.0.0.1"
-      config.vm.network "forwarded_port", guest: 40000, host: 40000, host_ip: "127.0.0.1"
+      config.vm.network "forwarded_port", guest: 4004, host: 4004, host_ip: "127.0.0.1"
 
       # rest api
       config.vm.network "forwarded_port", guest: 8080, host: 18080, host_ip: "127.0.0.1"

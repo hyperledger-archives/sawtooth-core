@@ -46,7 +46,7 @@ RUN cd /debs \
 RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-rest-api
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 EXPOSE 8080
 
 CMD ["rest_api"]
