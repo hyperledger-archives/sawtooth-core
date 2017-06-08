@@ -38,7 +38,7 @@ class Journal(object):
     class _ChainThread(Thread):
         def __init__(self, chain_controller, block_queue, block_cache,
                      block_cache_purge_frequency):
-            Thread.__init__(self)
+            Thread.__init__(self, name='_ChainThread')
             self._chain_controller = chain_controller
             self._block_queue = block_queue
             self._block_cache = block_cache
