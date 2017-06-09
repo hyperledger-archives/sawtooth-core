@@ -14,9 +14,25 @@
 # ------------------------------------------------------------------------------
 
 
-class InvalidTransaction(Exception):
+class _TpResponseError(Exception):
+    """Parent class for errors that will be parsed and sent to a validator.
+
+    Args:
+        message (str): Standard error message to be logged or sent back
+        extended_data (bytes, optional): Byte-encoded data to be parsed later
+            by the app developer. Opaque to the validator and Sawtooth.
+    """
+    def __init__(self, message, extended_data=None):
+        super().__init__(message)
+
+        if extended_data is not None and not isinstance(extended_data, bytes):
+            raise TypeError("extended_data must be byte-encoded")
+        self.extended_data = extended_data
+
+
+class InvalidTransaction(_TpResponseError):
     pass
 
 
-class InternalError(Exception):
+class InternalError(_TpResponseError):
     pass

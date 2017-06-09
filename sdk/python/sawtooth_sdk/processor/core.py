@@ -134,7 +134,9 @@ class TransactionProcessor(object):
                     message_type=Message.TP_PROCESS_RESPONSE,
                     correlation_id=msg.correlation_id,
                     content=TpProcessResponse(
-                        status=TpProcessResponse.INVALID_TRANSACTION
+                        status=TpProcessResponse.INVALID_TRANSACTION,
+                        message=str(it),
+                        extended_data=it.extended_data
                     ).SerializeToString())
             except ValidatorConnectionError as vce:
                 # TP_PROCESS_REQUEST has made it through the
@@ -149,7 +151,9 @@ class TransactionProcessor(object):
                     message_type=Message.TP_PROCESS_RESPONSE,
                     correlation_id=msg.correlation_id,
                     content=TpProcessResponse(
-                        status=TpProcessResponse.INTERNAL_ERROR
+                        status=TpProcessResponse.INTERNAL_ERROR,
+                        message=str(ie),
+                        extended_data=ie.extended_data
                     ).SerializeToString())
             except ValidatorConnectionError as vce:
                 # Same as the prior except block, but an internal error has
