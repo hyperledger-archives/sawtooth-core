@@ -313,7 +313,7 @@ class _Pager(object):
             list: The paginated list of resources
             object: The PagingResponse to be sent back to the client
         """
-        if len(resources) == 0:
+        if not resources:
             return resources, client_pb2.PagingResponse(total_resources=0)
 
         paging = request.paging

@@ -155,7 +155,7 @@ class BlockValidator(object):
         return True
 
     def _verify_block_batches(self, blkw, committed_txn):
-        if len(blkw.block.batches) > 0:
+        if blkw.block.batches:
 
             prev_state = self._get_previous_block_root_state_hash(blkw)
             scheduler = self._executor.create_scheduler(

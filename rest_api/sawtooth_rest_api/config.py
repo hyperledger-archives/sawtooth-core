@@ -54,7 +54,7 @@ def load_toml_rest_api_config(filename):
 
     invalid_keys = set(toml_config.keys()).difference(
         ['bind', 'connect', 'timeout'])
-    if len(invalid_keys) > 0:
+    if invalid_keys:
         raise RestApiConfigurationError(
             "Invalid keys in rest api config: {}".format(
                 ", ".join(sorted(list(invalid_keys)))))

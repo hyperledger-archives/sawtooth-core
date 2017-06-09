@@ -157,7 +157,7 @@ class Dispatcher(Thread):
                             get_enum_name(message.message_type), connection_id,
                             connection)
         with self._condition:
-            if len(self._message_information) == 0:
+            if not self._message_information:
                 self._condition.notify()
 
     def run(self):
@@ -175,7 +175,7 @@ class Dispatcher(Thread):
         useful for unit tests.
         """
         with self._condition:
-            if len(self._message_information) > 0:
+            if self._message_information:
                 self._condition.wait()
 
 

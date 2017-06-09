@@ -301,7 +301,7 @@ def do_cluster_stop(args):
         node_controller=node_controller,
         node_command_generator=node_command_generator)
 
-    if len(args.node_names) > 0:
+    if args.node_names:
         node_names = args.node_names
     else:
         node_names = vnm.get_node_names()
@@ -325,7 +325,7 @@ def do_cluster_stop(args):
 
     timeout = 16
     mark = time.time()
-    while len(find_still_up(node_names)) > 0:
+    while find_still_up(node_names):
         if time.time() - mark > timeout:
             break
         time.sleep(1)
@@ -345,7 +345,7 @@ def do_cluster_status(args):
         node_controller=node_controller,
         node_command_generator=node_command_generator)
 
-    if len(args.node_names) > 0:
+    if args.node_names:
         node_names = args.node_names
         node_superset = vnm.get_node_names()
         for node_name in args.node_names:

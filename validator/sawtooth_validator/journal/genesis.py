@@ -153,7 +153,7 @@ class GenesisController(object):
         initial_state_root = self._context_manager.get_first_root()
 
         genesis_batches = [batch for batch in genesis_data.batches]
-        if len(genesis_batches) > 0:
+        if genesis_batches:
             scheduler = SerialScheduler(
                 self._context_manager.get_squash_handler(),
                 initial_state_root,

@@ -153,7 +153,7 @@ class MerkleDatabase(object):
             parent_address = path[:-TOKEN_SIZE]
             path_branch = path[-TOKEN_SIZE:]
 
-            if len(path_map[path]['c']) > 0 or path == '':
+            if path_map[path]['c'] or path == '':
                 leaf_branch = False
 
             if not leaf_branch:

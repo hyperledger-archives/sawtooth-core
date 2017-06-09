@@ -117,7 +117,7 @@ class SubprocessNodeController(NodeController):
                 if peers:
                     peers_flag = tuple(peers)
                 flags = component + network + endpoint
-                if len(peer_list) > 0:
+                if peer_list:
                     flags += peers_flag
                 flags += tuple(['-vv'])
 

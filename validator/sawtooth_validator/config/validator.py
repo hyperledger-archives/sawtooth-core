@@ -57,7 +57,7 @@ def load_toml_validator_config(filename):
     invalid_keys = set(toml_config.keys()).difference(
         ['bind', 'endpoint', 'peering', 'seeds', 'peers', 'network_public_key',
          'network_private_key'])
-    if len(invalid_keys) > 0:
+    if invalid_keys:
         raise LocalConfigurationError(
             "Invalid keys in validator config: "
             "{}".format(", ".join(sorted(list(invalid_keys)))))

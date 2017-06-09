@@ -1728,7 +1728,7 @@ def node_to_string(node, indent=2):
         string += ' Writer: {}'.format(writer)
 
     readers = node.readers
-    if len(readers) > 0:
+    if readers:
         string += ' Readers: {}'.format(readers)
 
     for child_address in node.children:

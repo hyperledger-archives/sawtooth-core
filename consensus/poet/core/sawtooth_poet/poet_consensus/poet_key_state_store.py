@@ -118,7 +118,7 @@ class PoetKeyStateStore(MutableMapping):
         try:
             if not isinstance(poet_key_state.sealed_signup_data, str):
                 raise ValueError('sealed_signup_data must be a string')
-            elif len(poet_key_state.sealed_signup_data) == 0:
+            elif not poet_key_state.sealed_signup_data:
                 raise ValueError('sealed_signup_data must not be empty')
 
             # Although this won't catch everything, verify that the sealed

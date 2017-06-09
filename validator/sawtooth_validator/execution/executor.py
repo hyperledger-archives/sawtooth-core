@@ -143,8 +143,8 @@ class TransactionExecutorThread(object):
 
             # First check if the transaction should be failed
             # based on configuration
-            if processor_type not in required_transaction_processors \
-                    and len(required_transaction_processors) > 0:
+            if required_transaction_processors and \
+                    processor_type not in required_transaction_processors:
                 # The txn processor type is not in the required
                 # transaction processors so
                 # failing transaction right away
