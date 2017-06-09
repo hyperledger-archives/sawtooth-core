@@ -148,10 +148,11 @@ class ConsensusState(object):
         # Starting at the chain head, walk the block store backwards until we
         # either get to the root or we get a block for which we have already
         # created consensus state
+        current_id = block_id
         while True:
             block = \
                 ConsensusState._block_for_id(
-                    block_id=block_id,
+                    block_id=current_id,
                     block_cache=block_cache)
             if block is None:
                 break
@@ -159,7 +160,7 @@ class ConsensusState(object):
             # Try to fetch the consensus state.  If that succeeds, we can
             # stop walking back as we can now build on that consensus
             # state.
-            consensus_state = consensus_state_store.get(block_id=block_id)
+            consensus_state = consensus_state_store.get(block_id=current_id)
             if consensus_state is not None:
                 break
 
@@ -184,10 +185,10 @@ class ConsensusState(object):
 
                 LOGGER.debug(
                     'We need to build consensus state for block: %s...%s',
-                    block_id[:8],
-                    block_id[-8:])
+                    current_id[:8],
+                    current_id[-8:])
 
-                blocks[block_id] = \
+                blocks[current_id] = \
                     ConsensusState._BlockInfo(
                         wait_certificate=wait_certificate,
                         validator_info=validator_info,
@@ -198,7 +199,7 @@ class ConsensusState(object):
             # placeholder in the list so that when we get to it we know that we
             # need to reset the statistics.
             elif len(blocks) == 0 or previous_wait_certificate is not None:
-                blocks[block_id] = \
+                blocks[current_id] = \
                     ConsensusState._BlockInfo(
                         wait_certificate=None,
                         validator_info=None,
@@ -207,7 +208,7 @@ class ConsensusState(object):
             previous_wait_certificate = wait_certificate
 
             # Move to the previous block
-            block_id = block.previous_block_id
+            current_id = block.previous_block_id
 
         # At this point, if we have not found any consensus state, we need to
         # create default state from which we can build upon
@@ -218,7 +219,7 @@ class ConsensusState(object):
         # consensus state, from oldest to newest (i.e., in the reverse order in
         # which they were added), and store state for PoET blocks so that the
         # next time we don't have to walk so far back through the block chain.
-        for block_id, block_info in reversed(blocks.items()):
+        for current_id, block_info in reversed(blocks.items()):
             # If the block was not a PoET block (i.e., didn't have a wait
             # certificate), reset the consensus state statistics.  We are not
             # going to store this in the consensus state store, but we will use
@@ -240,11 +241,11 @@ class ConsensusState(object):
                     validator_info=block_info.validator_info,
                     wait_certificate=block_info.wait_certificate,
                     poet_config_view=block_info.poet_config_view)
-                consensus_state_store[block_id] = consensus_state
+                consensus_state_store[current_id] = consensus_state
 
                 LOGGER.debug(
                     'Create consensus state: BID=%s, ALM=%f, TBCC=%d',
-                    block_id[:8],
+                    current_id[:8],
                     consensus_state.aggregate_local_mean,
                     consensus_state.total_block_claim_count)
 
