@@ -75,19 +75,24 @@ class TransactionProcessor {
                 if (e instanceof InvalidTransaction) {
                   console.log(e)
                   return TpProcessResponse.create({
-                    status: TpProcessResponse.Status.INVALID_TRANSACTION
+                    status: TpProcessResponse.Status.INVALID_TRANSACTION,
+                    message: e.message,
+                    extendedData: e.extendedData
                   })
                 } else if (e instanceof InternalError) {
                   console.log('Internal Error Occurred', e)
                   return TpProcessResponse.create({
-                    status: TpProcessResponse.Status.INTERNAL_ERROR
+                    status: TpProcessResponse.Status.INTERNAL_ERROR,
+                    message: e.message,
+                    extendedData: e.extendedData
                   })
                 } else if (e instanceof ValidatorConnectionError) {
                   console.log('Validator disconnected.  Ignoring.')
                 } else {
                   console.log('Unhandled exception, returning INTERNAL_ERROR', e)
                   return TpProcessResponse.create({
-                    status: TpProcessResponse.Status.INTERNAL_ERROR
+                    status: TpProcessResponse.Status.INTERNAL_ERROR,
+                    message: `Unhandled exception in ${txnHeader.familyName} ${txnHeader.familyVersion}`
                   })
                 }
               })

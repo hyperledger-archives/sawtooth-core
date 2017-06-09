@@ -62,6 +62,8 @@ class MockValidator(object):
         # The set request comparison is a little more complex by default
         self.register_comparator(Message.TP_STATE_SET_REQUEST,
                                  compare_set_request)
+        self.register_comparator(Message.TP_PROCESS_RESPONSE,
+                                 compare_tp_process_response_status_only)
 
     def listen(self, url):
         """
@@ -263,6 +265,10 @@ class MockValidator(object):
 
     def _compare(self, obj1, obj2):
         msg_type = to_message_type(obj1)
+        msg_type2 = to_message_type(obj1)
+
+        if msg_type != msg_type2:
+            raise UnexpectedMessageException(msg_type, obj1, obj2)
 
         if msg_type in self._comparators:
             return self._comparators[msg_type](obj1, obj2)
@@ -280,3 +286,7 @@ def compare_set_request(req1, req2):
         return False
 
     return True
+
+
+def compare_tp_process_response_status_only(res1, res2):
+    return res1.status == res2.status
