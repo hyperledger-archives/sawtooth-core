@@ -21,7 +21,7 @@
 #   This image should be built using `build_all installed`.
 #
 # Run:
-#   $ docker run sawtooth-tp_config
+#   $ docker run sawtooth-tp_settings
 
 FROM ubuntu:xenial
 
@@ -44,8 +44,8 @@ RUN cd /debs \
  && apt-get update
 
 RUN apt-get install -y -q --allow-unauthenticated \
-    python3-sawtooth-config
+    python3-sawtooth-settings
 
 EXPOSE 4004/tcp
 
-CMD ["tp_config", "tcp://validator:4004"]
+CMD ["tp_settings", "tcp://validator:4004"]

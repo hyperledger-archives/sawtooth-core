@@ -26,7 +26,7 @@ manually, run the following command:
 
   $ sudo journalctl -f \
       -u sawtooth-validator \
-      -u sawtooth-tp_config \
+      -u sawtooth-tp_settings \
       -u sawtooth-tp_validator_registry \
       -u sawtooth-rest_api
 
@@ -56,7 +56,7 @@ To start a component using *systemd*, run the following command where
   * validator
   * rest_api
   * tp_intkey_python
-  * tp_config
+  * tp_settings
   * tp_xo_python
 
 .. code-block:: console

@@ -61,7 +61,7 @@ class TransactionExecutorThread(object):
             config_view_factory (ConfigViewFactory): Read the configuration
                 state
         Attributes:
-            _tp_config_key (str): the key used to reference the part of state
+            _tp_settings_key (str): the key used to reference the part of state
                 where the list of required transaction processors are.
         """
         super(TransactionExecutorThread, self).__init__()
@@ -70,7 +70,7 @@ class TransactionExecutorThread(object):
         self._scheduler = scheduler
         self._processors = processors
         self._config_view_factory = config_view_factory
-        self._tp_config_key = "sawtooth.validator.transaction_families"
+        self._tp_settings_key = "sawtooth.validator.transaction_families"
         self._waiters_by_type = _WaitersByType()
         self._waiting_threadpool = waiting_threadpool
         self._done = False
@@ -121,7 +121,7 @@ class TransactionExecutorThread(object):
             config = self._config_view_factory.create_config_view(
                 txn_info.state_hash)
             transaction_families = config.get_setting(
-                key=self._tp_config_key,
+                key=self._tp_settings_key,
                 default_value="[]")
 
             # After reading the transaction families required in configuration
