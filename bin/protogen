@@ -42,7 +42,7 @@ def main(args=sys.argv[1:]):
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
     protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
     protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")
-    protoc(proto_dir, "families/config", "sawtooth_config/protobuf")
+    protoc(proto_dir, "families/settings", "sawtooth_settings/protobuf")
 
     if "javascript" in args:
         protoc(proto_dir, "sdk/javascript", "protobuf", "javascript")
@@ -51,8 +51,8 @@ def main(args=sys.argv[1:]):
         protoc(proto_dir, "sdk/go/src", "sawtooth_sdk/protobuf", "go")
 
     # 2. Generate config protos
-    proto_dir = JOIN(TOP_DIR, "families/config/protos")
-    protoc(proto_dir, "families/config", "sawtooth_config/protobuf")
+    proto_dir = JOIN(TOP_DIR, "families/settings/protos")
+    protoc(proto_dir, "families/settings", "sawtooth_settings/protobuf")
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
 
     # 3. Generate PoET protos

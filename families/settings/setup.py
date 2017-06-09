@@ -45,6 +45,6 @@ setup(name='sawtooth-config',
       data_files=data_files,
       entry_points={
           'console_scripts': [
-              'tp_config = sawtooth_config.processor.main:main'
+              'tp_config = sawtooth_settings.processor.main:main'
           ]
       })

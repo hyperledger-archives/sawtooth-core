@@ -21,7 +21,7 @@
 /consensus/**/protobuf/
 
 /core/sawtooth_core.egg-info/
-/families/config/sawtooth_config/protobuf/
+/families/settings/sawtooth_settings/protobuf/
 /families/supplychain/python/sawtooth_supplychain/protobuf
 /families/**/__pycache__/
 

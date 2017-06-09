@@ -16,12 +16,12 @@
 import hashlib
 import base64
 
-from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
-from sawtooth_config.protobuf.config_pb2 import ConfigCandidate
-from sawtooth_config.protobuf.config_pb2 import ConfigVote
-from sawtooth_config.protobuf.config_pb2 import ConfigProposal
+from sawtooth_settings.protobuf.config_pb2 import ConfigCandidates
+from sawtooth_settings.protobuf.config_pb2 import ConfigCandidate
+from sawtooth_settings.protobuf.config_pb2 import ConfigVote
+from sawtooth_settings.protobuf.config_pb2 import ConfigProposal
 
-from sawtooth_config_test.config_message_factory import ConfigMessageFactory
+from sawtooth_settings_test.config_message_factory import ConfigMessageFactory
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
@@ -34,7 +34,7 @@ def _to_hash(value):
 EMPTY_CANDIDATES = ConfigCandidates(candidates=[]).SerializeToString()
 
 
-class TestConfig(TransactionProcessorTestCase):
+class TestSettings(TransactionProcessorTestCase):
 
     @classmethod
     def setUpClass(cls):

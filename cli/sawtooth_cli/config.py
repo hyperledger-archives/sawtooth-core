@@ -230,7 +230,7 @@ def do_config(args):
 
 def _do_config_proposal_create(args):
     """Executes the 'proposal create' subcommand.  Given a key file, and a
-    series of key/value pairs, it generates batches of sawtooth_config
+    series of key/value pairs, it generates batches of sawtooth_settings
     transactions in a BatchList instance.  The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
@@ -308,7 +308,7 @@ def _do_config_proposal_list(args):
 
 def _do_config_proposal_vote(args):
     """Executes the 'proposal vote' subcommand.  Given a key file, a proposal
-    id and a vote value, it generates a batch of sawtooth_config transactions
+    id and a vote value, it generates a batch of sawtooth_settings transactions
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
@@ -517,7 +517,7 @@ def _create_batch(pubkey, signing_key, transactions):
 
 
 def _create_propose_txn(pubkey, signing_key, setting_key_value):
-    """Creates an individual sawtooth_config transaction for the given key and
+    """Creates an individual sawtooth_settings transaction for the given key and
     value.
     """
     setting_key, setting_value = setting_key_value
@@ -534,7 +534,7 @@ def _create_propose_txn(pubkey, signing_key, setting_key_value):
 
 def _create_vote_txn(pubkey, signing_key,
                      proposal_id, setting_key, vote_value):
-    """Creates an individual sawtooth_config transaction for voting on a
+    """Creates an individual sawtooth_settings transaction for voting on a
     proposal for a particular setting key.
     """
     if vote_value == 'accept':
@@ -550,12 +550,12 @@ def _create_vote_txn(pubkey, signing_key,
 
 
 def _make_txn(pubkey, signing_key, setting_key, payload):
-    """Creates and signs a sawtooth_config transaction with with a payload.
+    """Creates and signs a sawtooth_settings transaction with with a payload.
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
         signer_pubkey=pubkey,
-        family_name='sawtooth_config',
+        family_name='sawtooth_settings',
         family_version='1.0',
         inputs=_config_inputs(setting_key),
         outputs=_config_outputs(setting_key),
@@ -574,8 +574,8 @@ def _make_txn(pubkey, signing_key, setting_key, payload):
 
 
 def _config_inputs(key):
-    """Creates the list of inputs for a sawtooth_config transaction, for a given
-    setting key.
+    """Creates the list of inputs for a sawtooth_settings transaction, for a
+    given setting key.
     """
     return [
         _key_to_address('sawtooth.config.vote.proposals'),
@@ -586,7 +586,7 @@ def _config_inputs(key):
 
 
 def _config_outputs(key):
-    """Creates the list of outputs for a sawtooth_config transaction, for a
+    """Creates the list of outputs for a sawtooth_settings transaction, for a
     given setting key.
     """
     return [

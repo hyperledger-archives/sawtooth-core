@@ -33,9 +33,9 @@ services:
     expose: 
       - 4004
     command: nose2-3
-        -c /project/sawtooth-core/families/config/nose2.cfg
+        -c /project/sawtooth-core/families/settings/nose2.cfg
         -v
-        -s /project/sawtooth-core/families/config/tests
+        -s /project/sawtooth-core/families/settings/tests
         test_tp_config
     stop_signal: SIGKILL
     environment:

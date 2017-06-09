@@ -24,12 +24,12 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
-from sawtooth_config.protobuf.config_pb2 import ConfigPayload
-from sawtooth_config.protobuf.config_pb2 import ConfigProposal
-from sawtooth_config.protobuf.config_pb2 import ConfigVote
-from sawtooth_config.protobuf.config_pb2 import ConfigCandidate
-from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
-from sawtooth_config.protobuf.setting_pb2 import Setting
+from sawtooth_settings.protobuf.config_pb2 import ConfigPayload
+from sawtooth_settings.protobuf.config_pb2 import ConfigProposal
+from sawtooth_settings.protobuf.config_pb2 import ConfigVote
+from sawtooth_settings.protobuf.config_pb2 import ConfigCandidate
+from sawtooth_settings.protobuf.config_pb2 import ConfigCandidates
+from sawtooth_settings.protobuf.setting_pb2 import Setting
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class ConfigurationTransactionHandler(object):
 
     @property
     def family_name(self):
-        return 'sawtooth_config'
+        return 'sawtooth_settings'
 
     @property
     def family_versions(self):

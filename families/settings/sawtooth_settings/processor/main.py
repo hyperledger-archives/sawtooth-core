@@ -21,7 +21,7 @@ import sys
 from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
-from sawtooth_config.processor.handler import ConfigurationTransactionHandler
+from sawtooth_settings.processor.handler import ConfigurationTransactionHandler
 
 
 def create_console_handler(verbose_level):

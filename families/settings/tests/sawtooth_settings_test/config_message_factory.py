@@ -14,10 +14,10 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from sawtooth_config.protobuf.config_pb2 import ConfigPayload
-from sawtooth_config.protobuf.config_pb2 import ConfigProposal
-from sawtooth_config.protobuf.config_pb2 import ConfigVote
-from sawtooth_config.protobuf.setting_pb2 import Setting
+from sawtooth_settings.protobuf.config_pb2 import ConfigPayload
+from sawtooth_settings.protobuf.config_pb2 import ConfigProposal
+from sawtooth_settings.protobuf.config_pb2 import ConfigVote
+from sawtooth_settings.protobuf.setting_pb2 import Setting
 
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
@@ -28,7 +28,7 @@ class ConfigMessageFactory(object):
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
             encoding="application/protobuf",
-            family_name="sawtooth_config",
+            family_name="sawtooth_settings",
             family_version="1.0",
             namespace="000000",
             private=private,
