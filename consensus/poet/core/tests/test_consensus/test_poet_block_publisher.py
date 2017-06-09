@@ -107,6 +107,7 @@ class TestPoetBlockPublisher(TestCase):
                 proof_data='proof data',
                 anti_sybil_id='anti-sybil ID',
                 sealed_signup_data='sealed signup data')
+        mock_signup_info.block_id_to_nonce.return_value = 'nonce'
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
@@ -178,7 +179,8 @@ class TestPoetBlockPublisher(TestCase):
                 name='validator_001',
                 id='validator_deadbeef',
                 signup_info=SignUpInfo(
-                    poet_public_key='00112233445566778899aabbccddeeff'))
+                    poet_public_key='00112233445566778899aabbccddeeff',
+                    nonce='nonce'))
 
         # create a mock_wait_certificate that does nothing in check_valid
         mock_wait_certificate = mock.Mock()
@@ -209,7 +211,7 @@ class TestPoetBlockPublisher(TestCase):
                 proof_data='proof data',
                 anti_sybil_id='anti-sybil ID',
                 sealed_signup_data='sealed signup data')
-
+        mock_signup_info.block_id_to_nonce.return_value = 'nonce'
         mock_signup_info.unseal_signup_data.return_value = \
             '00112233445566778899aabbccddeeff'
 

@@ -153,6 +153,9 @@ main() {
                 config)
                     test_config
                     ;;
+                supplychain)
+                    test_supplychain
+                    ;;
                 validator)
                     test_validator
                     ;;
@@ -232,6 +235,11 @@ test_config() {
     copy_coverage .coverage.config-smoke
 }
 
+test_supplychain() {
+    run_docker_test ./families/supplychain/python/tests/tp-supplychain-python.yaml -s validator
+    copy_coverage .coverage.config
+}
+
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml -s validator
     copy_coverage .coverage.validator
@@ -284,8 +292,14 @@ test_burrow_evm() {
   run_docker_test burrow-evm-smoke
 }
 test_integration() {
+    run_docker_test xo-all-lang-smoke -s integration_test
+    copy_coverage .coverage.xo-all-lang-smoke
+    run_docker_test poet-smoke -s integration_test
+    copy_coverage .coverage.poet-smoke
     run_docker_test dynamic-network -s integration_test --timeout 600
     copy_coverage .coverage.dynamic-network
+    run_docker_test basic-auth-proxy -s integration_test
+    copy_coverage .coverage.basic-auth-proxy
 }
 
 test_deployment() {

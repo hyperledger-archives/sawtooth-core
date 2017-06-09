@@ -31,7 +31,7 @@ class PoetEnclaveModuleWrapper(object):
         'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
     __SGX_MODULE = 'poet_enclave_sgx.poet_enclave'
 
-    def __init__(self, enclave_module, config_dir):
+    def __init__(self, enclave_module, config_dir, data_dir):
         """Create the PoET enclave wrapper
 
         Args:
@@ -39,6 +39,7 @@ class PoetEnclaveModuleWrapper(object):
                 "sgx")
             config_dir (str): The directory where configuration files can be
                 found
+            data_dir (str): The directory where data files can be found
         """
         if enclave_module == 'simulator':
             module_name = self.__SIMULATOR_MODULE
@@ -54,7 +55,7 @@ class PoetEnclaveModuleWrapper(object):
         except ImportError as e:
             raise AssertionError(str(e))
 
-        self._poet_enclave_module.initialize(config_dir=config_dir)
+        self._poet_enclave_module.initialize(config_dir, data_dir)
 
     def __enter__(self):
         return self._poet_enclave_module

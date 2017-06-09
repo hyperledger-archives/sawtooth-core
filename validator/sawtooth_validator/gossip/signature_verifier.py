@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import hashlib
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
@@ -109,6 +110,15 @@ def validate_transaction(txn):
     if not valid:
         LOGGER.debug("transaction signature invalid for txn: %s",
                      txn.header_signature)
+        return valid
+
+    # verify the payload field matches the header
+    txn_payload_sha512 = hashlib.sha512(txn.payload).hexdigest()
+    if txn_payload_sha512 != header.payload_sha512:
+        LOGGER.debug("payload doesn't match payload_sha512 of the header"
+                     "for txn: %s", txn.header_signature)
+        valid = False
+
     return valid
 
 

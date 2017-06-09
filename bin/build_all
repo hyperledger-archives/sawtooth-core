@@ -102,6 +102,8 @@ main() {
     # Start in project directory
     cd $top_dir
 
+    build_external
+
     if [[ $BUILD_MODE == $DEBS ]]
     then
         build_debs
@@ -194,6 +196,10 @@ docker_build() {
         --build-arg http_proxy=$http_proxy \
         --build-arg HTTPS_PROXY=$HTTPS_PROXY \
         --build-arg HTTP_PROXY=$HTTP_PROXY
+}
+
+build_external() {
+    docker_build docker/apache-basic_auth_proxy docker/ apache-basic_auth_proxy
 }
 
 build_debs() {

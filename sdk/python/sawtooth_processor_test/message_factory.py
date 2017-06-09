@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
+import string
 import time
 
 import sawtooth_signing as signing
@@ -36,6 +37,15 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import Entry
 
 
+class InvalidMerkleAddressException(Exception):
+    pass
+
+
+def is_valid_merkle_address(address):
+    return all(c in string.hexdigits.lower() for c in address) and \
+        len(address) == 70
+
+
 def _private():
     return signing.generate_privkey()
 
@@ -54,7 +64,10 @@ class MessageFactory(object):
         self.encoding = encoding
         self.family_name = family_name
         self.family_version = family_version
-        self.namespace = namespace
+        if isinstance(namespace, (list)):
+            self.namespaces = namespace
+        else:
+            self.namespaces = [namespace]
 
         if private is None:
             private = _private()
@@ -65,10 +78,16 @@ class MessageFactory(object):
         self._private = private
         self._public = public
 
-    def sha512(self, content):
+    @property
+    def namespace(self):
+        return self.namespaces[0]
+
+    @staticmethod
+    def sha512(content):
         return hashlib.sha512(content).hexdigest()
 
-    def sha256(self, content):
+    @staticmethod
+    def sha256(content):
         return hashlib.sha256(content).hexdigest()
 
     def get_public_key(self):
@@ -79,7 +98,7 @@ class MessageFactory(object):
             family=self.family_name,
             version=self.family_version,
             encoding=self.encoding,
-            namespaces=[self.namespace]
+            namespaces=self.namespaces
         )
 
     def create_tp_response(self, status):
@@ -134,6 +153,13 @@ class MessageFactory(object):
             payload=payload,
             header_signature=signature)
 
+    @staticmethod
+    def _validate_addresses(addresses):
+        for a in addresses:
+            if not is_valid_merkle_address(a):
+                raise InvalidMerkleAddressException(
+                    "{} is not a valid merkle trie address".format(a))
+
     def create_tp_process_request(self, payload, inputs, outputs, deps,
                                   set_nonce=True):
         header, signature = self._create_header_and_sig(
@@ -169,6 +195,7 @@ class MessageFactory(object):
         return batch_list.SerializeToString()
 
     def create_get_request(self, addresses):
+        self._validate_addresses(addresses)
         return TpStateGetRequest(
             addresses=addresses
         )
@@ -182,6 +209,10 @@ class MessageFactory(object):
         # used to deal with hash collisions.
 
         # GetResponse object has a list of Entry objects
+
+        self._validate_addresses(
+            [address for address, _ in address_data_map.items()])
+
         entries = [
             Entry(address=address, data=data)
             for address, data in address_data_map.items()
@@ -193,6 +224,9 @@ class MessageFactory(object):
         )
 
     def create_set_request(self, address_data_map):
+        self._validate_addresses(
+            [address for address, _ in address_data_map.items()])
+
         entries = [
             Entry(address=address, data=data)
             for address, data in address_data_map.items()
@@ -203,6 +237,7 @@ class MessageFactory(object):
         )
 
     def create_set_response(self, addresses):
+        self._validate_addresses(addresses)
         return TpStateSetResponse(
             addresses=addresses
         )

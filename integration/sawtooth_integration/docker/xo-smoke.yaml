@@ -49,9 +49,9 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen && \
         sawtooth admin genesis && \
-        validator --public-uri tcp://validator:8800 -v \
-            --component-endpoint tcp://eth0:40000 \
-            --network-endpoint tcp://eth0:8800 \
+        validator --endpoint tcp://validator:8800 -v \
+            --bind component:tcp://eth0:40000 \
+            --bind network:tcp://eth0:8800 \
     \""
     stop_signal: SIGKILL
 
@@ -64,7 +64,7 @@ services:
       - 8080
     depends_on:
      - validator
-    command: rest_api -v --stream-url tcp://validator:40000 --host rest_api
+    command: rest_api -v --connect tcp://validator:40000 --bind rest_api:8080
     stop_signal: SIGKILL
 
   integration_test:

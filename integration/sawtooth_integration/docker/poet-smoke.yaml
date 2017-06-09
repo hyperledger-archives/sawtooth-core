@@ -35,14 +35,15 @@ services:
           sawtooth.poet.report_public_key_pem=\
           \\\"$$(cat /project/sawtooth-core/consensus/poet/simulator/packaging/simulator_rk_pub.pem)\\\" \
           sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
+          sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
           -o config.batch && \
         poet genesis -o poet.batch && \
         sawtooth admin genesis \
           config-genesis.batch config.batch poet.batch && \
         validator -v \
-            --public-uri tcp://validator-0:8800 \
-            --component-endpoint tcp://eth0:40000 \
-            --network-endpoint tcp://eth0:8800 \
+            --endpoint tcp://validator-0:8800 \
+            --bind component:tcp://eth0:40000 \
+            --bind network:tcp://eth0:8800 \
     \""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
@@ -62,10 +63,10 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen --force && \
         validator -v \
-          --public-uri tcp://validator-1:8800 \
+          --endpoint tcp://validator-1:8800 \
           --peers tcp://validator-0:8800 \
-          --component-endpoint tcp://eth0:40000 \
-          --network-endpoint tcp://eth0:8800 \
+          --bind component:tcp://eth0:40000 \
+          --bind network:tcp://eth0:8800 \
     \""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
@@ -86,10 +87,10 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen --force && \
         validator -v \
-          --public-uri tcp://validator-2:8800 \
+          --endpoint tcp://validator-2:8800 \
           --peers tcp://validator-0:8800,tcp://validator-1:8800
-          --component-endpoint tcp://eth0:40000 \
-          --network-endpoint tcp://eth0:8800 \
+          --bind component:tcp://eth0:40000 \
+          --bind network:tcp://eth0:8800 \
     \""
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
@@ -104,7 +105,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api -v --stream-url tcp://validator-0:40000 --host rest-api-0
+    command: rest_api -v --connect tcp://validator-0:40000 --bind rest-api-0:8080
     stop_signal: SIGKILL
 
   rest-api-1:
@@ -114,7 +115,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api -v --stream-url tcp://validator-1:40000 --host rest-api-1
+    command: rest_api -v --connect tcp://validator-1:40000 --bind rest-api-1:8080
     stop_signal: SIGKILL
 
   rest-api-2:
@@ -124,7 +125,7 @@ services:
     expose:
       - 40000
       - 8080
-    command: rest_api -v --stream-url tcp://validator-2:40000 --host rest-api-2
+    command: rest_api -v --connect tcp://validator-2:40000 --bind rest-api-2:8080
     stop_signal: SIGKILL
 
   tp-intkey-0:
@@ -235,4 +236,3 @@ services:
         /project/sawtooth-core/sdk/examples/intkey_python:\
         /project/sawtooth-core/signing:\
         /project/sawtooth-core/cli"
-

@@ -13,52 +13,87 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import shlex
 import logging
 import unittest
-import traceback
-import time
 import subprocess
 
+from sawtooth_integration.tests.integration_tools import XoClient
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
+
 LOGGER = logging.getLogger(__name__)
-LOGGER.addHandler(logging.StreamHandler())
 LOGGER.setLevel(logging.DEBUG)
 
+
+REST_API = 'rest_api:8080'
 
 class TestXoSmoke(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest_api:8080'])
+        cls.client = XoClient('http://' + REST_API)
+        wait_for_rest_apis([REST_API])
 
     def test_xo_smoke(self):
+        game_cmds = (
+            'xo init --url {}'.format(REST_API),
+            'xo create nunzio',
+            'xo take nunzio 1',
+            'xo take nunzio 4',
+            'xo take nunzio 2',
+            'xo take nunzio 2',
+            'xo take nunzio 5',
+            'xo create tony',
+            'xo take tony 9',
+            'xo take tony 8',
+            'xo take nunzio 3',
+            'xo take nunzio 7',
+            'xo take tony 6',
+            'xo create wait --wait 1'
+        )
 
-        cmds = [
-            ['xo', 'init', '--url', 'rest_api:8080'],
-            ['xo', 'create', 'game0'],
-        ]
+        for cmd in game_cmds:
+            _send_xo_cmd(cmd)
 
-        for i in (0, 1, 2, 3, 4, 5, 6, 8, 7, 9, 10):
-            cmds += [['xo', 'take', 'game0', str(i)]]
+        self.verify_game('nunzio', 'XXXOO----', 'P1-WIN')
+        self.verify_game('tony', '-----X-OX', 'P2-NEXT')
+        self.verify_game('wait', '---------', 'P1-NEXT')
 
-        cmds += [
-            ['xo', 'show', 'game0'],
-            ['xo', 'list'],
-            ['xo', 'reset'],
-        ]
+        LOGGER.info(
+            "Verifying that XO CLI commands don't blow up (but nothing else)")
 
-        for cmd in cmds:
-            self._run(cmd)
+        cli_cmds = (
+            'xo list',
+            'xo show nunzio',
+            'xo show tony',
+            'xo reset',
+        )
 
-    def _run(self, args):
-        try:
-            LOGGER.debug("Running %s", " ".join(args))
-            proc = subprocess.run(
-                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-            LOGGER.debug(proc.stdout.decode())
-        except subprocess.CalledProcessError as err:
-            LOGGER.debug(err)
-            LOGGER.debug(err.stderr.decode())
-            traceback.print_exc()
-            self.fail(self.__class__.__name__)
+        for cmd in cli_cmds:
+            _send_xo_cmd(cmd)
+
+    def verify_game(self, game_name, expected_board, expected_turn):
+        LOGGER.info('Verifying game: %s', game_name)
+
+        board, turn, _, _ = self.client.get_game(game_name)
+
+        self.assertEqual(
+            board,
+            expected_board,
+            'Wrong board -- expected: {} -- actual: {}'.format(
+                expected_board, board))
+
+        self.assertEqual(
+            turn,
+            expected_turn,
+            'Wrong turn -- expected: {} -- actual: {}'.format(
+                expected_turn, turn))
+
+
+def _send_xo_cmd(cmd_str):
+    LOGGER.info('Sending %s', cmd_str)
+
+    subprocess.run(
+        shlex.split(cmd_str),
+        check=True)

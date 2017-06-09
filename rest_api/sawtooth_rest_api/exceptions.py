@@ -17,6 +17,10 @@ import json
 from aiohttp.web import HTTPError
 
 
+class RestApiConfigurationError(Exception):
+    pass
+
+
 class _ApiError(HTTPError):
     """A parent class for all REST API errors. Extends aiohttp's HTTPError,
     so instances will be caught automatically be the API, and turned into a

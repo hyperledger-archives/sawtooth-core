@@ -24,7 +24,8 @@ const {InvalidTransaction, InternalError} = require('sawtooth-sdk/processor/exce
 const crypto = require('crypto')
 
 const _hash = (x) =>
-  crypto.createHash('sha512').update(x).digest('hex').toLowerCase()
+  crypto.createHash('sha512').update(x).digest('hex').toLowerCase().substring(0, 64)
+
 
 const XO_FAMILY = 'xo'
 const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)
@@ -43,19 +44,32 @@ const _decodeRequest = (payload) =>
     }
   })
 
-const _decodeState = (data) => {
-  // Set "" to any missing data
-  data = data.toString().split(",")
-  if (data.length < 5){
-    while (data.length < 5){
-      data.push("")
+const _decodeStateData = (data, name) => {
+  let stringData = data.toString()
+
+  if (!stringData) {
+    return {
+      board: '',
+      gameState: '',
+      player1: '',
+      player2: '',
+      addressData: [],
     }
   }
-  return {board: data[0],
-          gameState: data[1],
-          player1: data[2],
-          player2: data[3],
-          storedName: data[4]}
+
+  let addressData = stringData.split('|').map((x) => x.split(','))
+
+  let gameInfo = addressData.filter((x) => (x[0] === name))[0]
+
+  addressData = addressData.filter((x) => (x[0] !== name))
+
+  return {
+    board: gameInfo[1],
+    gameState: gameInfo[2],
+    player1: gameInfo[3],
+    player2: gameInfo[4],
+    addressData: addressData,
+  }
 }
 
 const _toInternalError = (err) => {
@@ -139,7 +153,9 @@ const _isWin = (board, letter) => {
 const _handleCreate = (state, address, update, player) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
 
-  let stateValue = _decodeState(stateValueRep)
+  let name = update.name
+
+  let stateValue = _decodeStateData(stateValueRep, name)
   if (stateValue.board != "") {
     throw new InvalidTransaction("Invalid Action: Game already exists.")
   }
@@ -148,19 +164,28 @@ const _handleCreate = (state, address, update, player) => (possibleAddressValues
   let gameState = "P1-NEXT"
   let player1 = ""
   let player2 = ""
-  let setValue = Buffer.from([board, gameState, player1, player2, update.name].join())
+
+  let gameString = [name, board, gameState, player1, player2].join(',')
+
+  let addressData = stateValue.addressData.concat([gameString])
+
+  addressData.sort()
+
+  let setValue = Buffer.from(
+    addressData.join('|'))
+
   _display(`Player ${player.toString().substring(0, 6)} created a game.`)
+
   return _setEntry(state, address, setValue)
 }
 
 const _handleTake = (state, address, update, player) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
-  let stateValue
-  stateValue = _decodeState(stateValueRep)
 
-  if (stateValue.storedName != update.name) {
-    throw new InternalError("Hash collision")
-  }
+  let name = update.name
+
+  let stateValue = _decodeStateData(stateValueRep, name)
+
   try{
     let space = parseInt(update.space)
   }
@@ -211,17 +236,29 @@ const _handleTake = (state, address, update, player) => (possibleAddressValues) 
   stateValue.board = boardList.join("")
 
   if (_isWin(stateValue.board, "X")) {
-    stateValue.GameState = "P1-WIN"
+    stateValue.gameState = "P1-WIN"
   }
   else if (_isWin(stateValue.board, "O")) {
-    stateValue.GameState = "P2-WIN"
+    stateValue.gameState = "P2-WIN"
   }
   else if (stateValue.board.search('-') == -1) {
-    stateValue.GameState = "TIE"
+    stateValue.gameState = "TIE"
   }
 
-  let setValue = Buffer.from([stateValue.board, stateValue.gameState, stateValue.player1,
-      stateValue.player2, update.name].join())
+  let board = stateValue.board
+  let gameState = stateValue.gameState
+  let player1 = stateValue.player1
+  let player2 = stateValue.player2
+
+  let gameString = [name, board, gameState, player1, player2].join(',')
+
+  let addressData = stateValue.addressData.concat([gameString])
+
+  addressData.sort()
+
+  let setValue = Buffer.from(
+    addressData.join('|'))
+
   _display(`Player ${player.toString().substring(0, 6)} takes space: ${update.space}\n\n` +
            _gameToStr(stateValue.board, stateValue.gameState, stateValue.player1
              , stateValue.player2, update.name))
@@ -244,6 +281,11 @@ class XOHandler extends TransactionHandler {
           throw new InvalidTransaction('Name is required')
         }
 
+        if (update.name.indexOf('|') !== -1) {
+          throw new InvalidTransaction(
+            'Name cannot contain "|"')
+        }
+
         if (!update.action) {
           throw new InvalidTransaction('Action is required')
         }
@@ -255,7 +297,7 @@ class XOHandler extends TransactionHandler {
         } else if (update.action === 'take') {
           handlerFn = _handleTake
         } else {
-          throw new InvalidTransaction(`Action must be create or take not ${verb}`)
+          throw new InvalidTransaction(`Action must be create or take not ${update.action}`)
         }
 
         let address = XO_NAMESPACE + _hash(update.name)

@@ -84,15 +84,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Validator(object):
-    def __init__(self, network_endpoint, component_endpoint, public_uri,
-                 peering, join_list, peer_list, data_dir, config_dir,
-                 identity_signing_key):
+    def __init__(self, bind_network, bind_component, endpoint,
+                 peering, seeds_list, peer_list, data_dir, config_dir,
+                 identity_signing_key, network_public_key=None,
+                 network_private_key=None):
         """Constructs a validator instance.
 
         Args:
-            network_endpoint (str): the network endpoint
-            component_endpoint (str): the component endpoint
-            public_uri (str): the zmq-style URI of this validator's
+            bind_network (str): the network endpoint
+            bind_component (str): the component endpoint
+            endpoint (str): the zmq-style URI of this validator's
                 publically reachable endpoint
             peering (str): The type of peering approach. Either 'static'
                 or 'dynamic'. In 'static' mode, no attempted topology
@@ -102,9 +103,9 @@ class Validator(object):
                 attempt to initiate peering connections with endpoints
                 specified in the peer_list and then attempt to do a
                 topology buildout starting with peer lists obtained from
-                endpoints in the join_list. In either mode, the validator
+                endpoints in the seeds_list. In either mode, the validator
                 will accept incoming peer requests up to max_peers.
-            join_list (list of str): a list of addresses to connect
+            seeds_list (list of str): a list of addresses to connect
                 to in order to perform the initial topology buildout
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
@@ -113,14 +114,14 @@ class Validator(object):
         """
         db_filename = os.path.join(data_dir,
                                    'merkle-{}.lmdb'.format(
-                                       network_endpoint[-2:]))
+                                       bind_network[-2:]))
         LOGGER.debug('database file is %s', db_filename)
 
         merkle_db = LMDBNoLockDatabase(db_filename, 'c')
 
         delta_db_filename = os.path.join(data_dir,
                                          'state-deltas-{}.lmdb'.format(
-                                             network_endpoint[-2:]))
+                                             bind_network[-2:]))
         LOGGER.debug('state delta store file is %s', delta_db_filename)
         state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
 
@@ -132,7 +133,7 @@ class Validator(object):
         state_view_factory = StateViewFactory(merkle_db)
 
         block_db_filename = os.path.join(data_dir, 'block-{}.lmdb'.format(
-                                         network_endpoint[-2:]))
+                                         bind_network[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
 
         block_db = LMDBNoLockDatabase(block_db_filename, 'c')
@@ -147,7 +148,7 @@ class Validator(object):
         self._thread_pool = thread_pool
         self._sig_pool = sig_pool
 
-        self._service = Interconnect(component_endpoint,
+        self._service = Interconnect(bind_component,
                                      self._dispatcher,
                                      secured=False,
                                      heartbeat=False,
@@ -171,30 +172,26 @@ class Validator(object):
 
         self._network_dispatcher = Dispatcher()
 
-        # Server public and private keys are hardcoded here due to
-        # the decision to avoid having separate identities for each
-        # validator's server socket. This is appropriate for a public
-        # network. For a permissioned network with requirements for
-        # server endpoint authentication at the network level, this can
-        # be augmented with a local lookup service for side-band provided
-        # endpoint, public_key pairs and a local configuration option
-        # for 'server' side private keys.
+        secure = False
+        if network_public_key is not None and network_private_key is not None:
+            secure = True
+
         self._network = Interconnect(
-            network_endpoint,
+            bind_network,
             dispatcher=self._network_dispatcher,
             zmq_identity=zmq_identity,
-            secured=True,
-            server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
-            server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
+            secured=secure,
+            server_public_key=network_public_key,
+            server_private_key=network_private_key,
             heartbeat=True,
-            public_uri=public_uri,
+            public_endpoint=endpoint,
             connection_timeout=30,
             max_incoming_connections=100)
 
         self._gossip = Gossip(self._network,
-                              public_uri=public_uri,
+                              endpoint=endpoint,
                               peering_mode=peering,
-                              initial_join_endpoints=join_list,
+                              initial_seed_endpoints=seeds_list,
                               initial_peer_endpoints=peer_list,
                               minimum_peer_connectivity=3,
                               maximum_peer_connectivity=10,

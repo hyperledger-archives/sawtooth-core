@@ -135,10 +135,10 @@ class DockerNodeController(NodeController):
         if node_config.genesis:
             command = 'bash -c "sawtooth admin keygen && \
             sawtooth admin genesis && \
-            validator {} -v --public-uri tcp://{}:8800"'
+            validator {} -v --endpoint tcp://{}:8800"'
         else:
             command = 'bash -c "sawtooth admin keygen && \
-            validator {} -v --public-uri tcp://{}:8800"'
+            validator {} -v --endpoint tcp://{}:8800"'
         if len(peers) > 0:
             command = command.format('--peers ' + ",".join(peers), node_name)
         else:
@@ -184,7 +184,7 @@ class DockerNodeController(NodeController):
                 'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
                 'container_name': '-'.join([self._prefix, 'rest_api',
                                             node_num]),
-                'command': 'rest_api --stream-url tcp://{}:40000'.
+                'command': 'rest_api --connect tcp://{}:40000'.
                 format(node_name),
                 'ports': ['8080:8080']
             }

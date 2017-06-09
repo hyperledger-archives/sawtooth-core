@@ -19,6 +19,7 @@ services:
 
   tp_config:
     image: hyperledger/sawtooth-tp_config:latest
+    container_name: sawtooth-tp_config-default
     expose:
       - 40000
     depends_on:
@@ -27,6 +28,7 @@ services:
 
   tp_intkey_python:
     image: hyperledger/sawtooth-tp_intkey_python:latest
+    container_name: sawtooth-tp_intkey_python-default
     expose:
       - 40000
     depends_on:
@@ -35,6 +37,7 @@ services:
 
   tp_xo_python:
     image: hyperledger/sawtooth-tp_xo_python:latest
+    container_name: sawtooth-tp_xo_python-default
     expose:
       - 40000
     depends_on:
@@ -43,6 +46,7 @@ services:
 
   validator:
     image: hyperledger/sawtooth-validator:latest
+    container_name: sawtooth-validator-default
     expose:
       - 40000
     ports:
@@ -50,15 +54,18 @@ services:
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
         sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawtooth keygen my_key && \
+        sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && \
+        sawtooth admin genesis config-genesis.batch && \
         validator -vv \
-          --public-uri tcp://validator:8800 \
-          --component-endpoint tcp://eth0:40000 \
-          --network-endpoint tcp://eth0:8800 \
+          --endpoint tcp://validator:8800 \
+          --bind component:tcp://eth0:40000 \
+          --bind network:tcp://eth0:8800 \
         \""
 
   rest_api:
     image: hyperledger/sawtooth-rest_api:latest
+    container_name: sawtooth-rest_api-default
     expose:
       - 40000
       - 8080
@@ -66,10 +73,11 @@ services:
       - "8080:8080"
     depends_on:
       - validator
-    entrypoint: rest_api --stream-url tcp://validator:40000 --host rest_api
+    entrypoint: rest_api --connect tcp://validator:40000 -bind rest_api:8080
 
   client:
     image: hyperledger/sawtooth-all:latest
+    container_name: sawtooth-client-default
     expose:
       - 8080
       - 40000

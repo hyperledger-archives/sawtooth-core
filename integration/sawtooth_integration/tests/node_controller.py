@@ -30,20 +30,20 @@ LOGGER = logging.getLogger(__name__)
 def peer_with_genesis_only(num):
     if num > 0:
         return '--peers {}'.format(
-            public_uri(0))
+            endpoint(0))
     else:
         return ''
 
 def peer_to_preceding_only(num):
     if num > 0:
         return '--peers {}'.format(
-            public_uri(num - 1))
+            endpoint(num - 1))
     else:
         return ''
 
 def everyone_peers_with_everyone(num):
     if num > 0:
-        peers = ','.join(public_uri(i) for i in range(num))
+        peers = ','.join(endpoint(i) for i in range(num))
         return '--peers {}'.format(peers)
     else:
         return ''
@@ -119,9 +119,9 @@ def validator_cmds(num,
 
     validator = ' '.join([
         'validator -v',
-        '--public-uri {}'.format(public_uri(num)),
-        '--component-endpoint {}'.format(component_endpoint(num)),
-        '--network-endpoint {}'.format(network_endpoint(num)),
+        '--endpoint {}'.format(endpoint(num)),
+        '--bind component:{}'.format(bind_component(num)),
+        '--bind network:{}'.format(bind_network(num)),
         peering_func(num)])
 
     # genesis stuff
@@ -147,6 +147,15 @@ def validator_cmds(num,
             stdout=subprocess.PIPE)
     enclave_measurement = result.stdout.decode('utf-8')
 
+    # Use the poet CLI to get the enclave basename so that we can put the
+    # value in the settings config for the validator registry transaction
+    # processor
+    result = \
+        subprocess.run(
+            ['poet', 'enclave', 'basename'],
+            stdout=subprocess.PIPE)
+    enclave_basename = result.stdout.decode('utf-8')
+
     config_proposal = ' '.join([
         'sawtooth config proposal create',
         '-k {}'.format(priv),
@@ -154,6 +163,7 @@ def validator_cmds(num,
         'sawtooth.poet.report_public_key_pem="{}"'.format(public_key_pem),
         'sawtooth.poet.valid_enclave_measurements={}'.format(
             enclave_measurement),
+        'sawtooth.poet.valid_enclave_basenames={}'.format(enclave_basename),
         'sawtooth.poet.target_wait_time={}'.format(target_wait_time),
         'sawtooth.poet.initial_wait_time={}'.format(initial_wait_time),
         'sawtooth.poet.minimum_wait_time={}'.format(minimum_wait_time),
@@ -242,7 +252,7 @@ def start_processors(num, processor_func):
 # rest_api
 
 def rest_api_cmd(num):
-    return 'rest_api --stream-url {s} --port {p}'.format(
+    return 'rest_api --connect {s} --bind 127.0.0.1:{p}'.format(
         s=connenction_address(num),
         p=(8080 + num)
     )
@@ -253,7 +263,7 @@ def start_rest_api(num):
 
 
 # addresses
-def public_uri(num):
+def endpoint(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
 def connenction_address(num):
@@ -262,10 +272,10 @@ def connenction_address(num):
 def http_address(num):
     return 'http://127.0.0.1:{}'.format(8080 + num)
 
-def component_endpoint(num):
+def bind_component(num):
     return 'tcp://127.0.0.1:{}'.format(40000 + num)
 
-def network_endpoint(num):
+def bind_network(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
 

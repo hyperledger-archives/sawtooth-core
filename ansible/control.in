@@ -1,5 +1,0 @@
-Package: sawtooth-ansible
-Version: VERSION_STRING
-Maintainer: http://intelledger.github.io/
-Description: Ansible Roles for configuring Sawtooth Lake
-Architecture: all

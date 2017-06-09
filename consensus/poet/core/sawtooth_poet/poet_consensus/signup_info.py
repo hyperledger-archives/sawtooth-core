@@ -33,10 +33,24 @@ class SignupInfo(object):
             enclave.
     """
 
+    __MAXIMUM_NONCE_LENGTH__ = 32
+
+    @staticmethod
+    def block_id_to_nonce(block_id):
+        """
+        A convenience method to convert a block ID to an acceptable nonce.
+
+        Args:
+            block_id (str): The block ID to convert to a nonce
+
+        Returns:
+            An acceptable nonce for calling create_signup_info with
+        """
+        return block_id[-SignupInfo.__MAXIMUM_NONCE_LENGTH__:]
+
     @classmethod
     def create_signup_info(cls,
                            poet_enclave_module,
-                           validator_address,
                            originator_public_key_hash,
                            nonce):
         """
@@ -46,23 +60,29 @@ class SignupInfo(object):
         Args:
             poet_enclave_module (module): The module that implements the
                 underlying PoET enclave.
-            validator_address (str): A string representing the address of the
-                validator requesting signup info.
             originator_public_key_hash (str): A string representing SHA256
                 hash (i.e., hashlib.sha256(OPK).hexdigest()) of the
                 originator's public key
             nonce (str): A value that is to be stored in the nonce field of
                 the attestation verification report.
 
+                NOTE - the nonce field is limited to __MAXIMUM_NONCE_LENGTH__
+                bytes.  If the nonce field is longer than
+                __MAXIMUM_NONCE_LENGTH__ bytes then the LAST
+                __MAXIMUM_NONCE_LENGTH__ bytes are used.
+
         Returns:
             SignupInfo: A signup info object.
         """
 
+        # NOTE - because of underlying restrictions on what can be put in the
+        # attestation verification report request nonce field, we are limiting
+        # to at most the last __MAXIMUM_NONCE_LENGTH__ bytes of the nonce.
+
         enclave_signup_info = \
             poet_enclave_module.create_signup_info(
-                validator_address,
                 originator_public_key_hash,
-                nonce)
+                nonce[-cls.__MAXIMUM_NONCE_LENGTH__:])
         signup_info = cls(enclave_signup_info)
 
         return signup_info
@@ -88,7 +108,6 @@ class SignupInfo(object):
     @classmethod
     def unseal_signup_data(cls,
                            poet_enclave_module,
-                           validator_address,
                            sealed_signup_data):
         """
         Takes sealed data from a previous call to create_signup_info and
@@ -97,8 +116,6 @@ class SignupInfo(object):
         Args:
             poet_enclave_module (module): The module that implements the
                 underlying PoET enclave.
-            validator_address (str): A string representing the address of the
-                validator that is requesting signup data be unsealed.
             sealed_signup_data: The sealed signup data that was previously
                 returned as part of the signup info returned from
                 create_signup_info.
@@ -107,10 +124,7 @@ class SignupInfo(object):
             The encoded PoET public key corresponding to private key used by
             PoET to sign wait certificates.
         """
-        return \
-            poet_enclave_module.unseal_signup_data(
-                validator_address,
-                sealed_signup_data)
+        return poet_enclave_module.unseal_signup_data(sealed_signup_data)
 
     def __init__(self, enclave_signup_info):
         self.poet_public_key = enclave_signup_info.poet_public_key

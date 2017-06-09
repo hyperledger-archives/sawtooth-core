@@ -1,0 +1,50 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.config.protobuf";
+
+// Record State Representation
+// represents an item being tracked
+message Record {
+    string identifier = 1; // the natural key of the record, serial number or
+    // attached sensor identifier
+
+    int64 creation_time = 2; // the time the record was created
+
+    message AgentRecord {
+        string agent_identifier = 1; // the public key of the agent
+        int64 start_time = 2; // the time the agent started in the role
+    }
+    repeated AgentRecord owners = 3; // ordered list of the owners, current
+    // owner is first in the list. List is ordered in chronological order oldest
+    // to most recent. The first by defition is the creator of the record. The
+    // last is the current owner of the record.
+    repeated AgentRecord custodians = 4; // ordered list of custodians.
+    // current owner is first in the list. Same ordering as the owners list.
+
+    bool final = 5; // is the record finalized, finalized records cannot be
+    // changed.
+
+}
+
+// Setting Container for on-chain configuration key/value pairs
+message RecordContainer {
+    // List of Record entries - more than one implies a state key collision
+    repeated Record entries = 1;
+}
+

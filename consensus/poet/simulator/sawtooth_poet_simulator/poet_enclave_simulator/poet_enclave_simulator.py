@@ -122,7 +122,7 @@ class _PoetEnclaveSimulator(object):
     _active_wait_timer = None
 
     @classmethod
-    def initialize(cls, config_dir):
+    def initialize(cls, config_dir, data_dir):
         # See if our configuration file exists.  If so, then we are going to
         # see if there is a configuration value for the validator ID.  If so,
         # then we'll use that when constructing the simulated anti-Sybil ID.
@@ -484,8 +484,8 @@ class _PoetEnclaveSimulator(object):
             raise ValueError('Wait certificate signature does not match')
 
 
-def initialize(config_dir):
-    _PoetEnclaveSimulator.initialize(config_dir=config_dir)
+def initialize(config_dir, data_dir):
+    _PoetEnclaveSimulator.initialize(config_dir=config_dir, data_dir=data_dir)
 
 
 def shutdown():
@@ -500,8 +500,7 @@ def get_enclave_basename():
     return _PoetEnclaveSimulator.get_enclave_basename()
 
 
-def create_signup_info(validator_address,
-                       originator_public_key_hash,
+def create_signup_info(originator_public_key_hash,
                        nonce):
     return \
         _PoetEnclaveSimulator.create_signup_info(
@@ -514,7 +513,7 @@ def deserialize_signup_info(serialized_signup_info):
         serialized_signup_info=serialized_signup_info)
 
 
-def unseal_signup_data(validator_address, sealed_signup_data):
+def unseal_signup_data(sealed_signup_data):
     return _PoetEnclaveSimulator.unseal_signup_data(sealed_signup_data)
 
 

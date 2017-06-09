@@ -19,6 +19,7 @@ from sys import maxsize
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
+from sawtooth_cli.parent_parsers import base_http_parser
 import sawtooth_cli.protobuf.batch_pb2 as batch_pb2
 
 LOGGER = logging.getLogger(__file__)
@@ -44,7 +45,7 @@ def do_submit(args):
     except IOError as e:
         raise CliException(e)
 
-    rest_client = RestClient(args.url)
+    rest_client = RestClient(args.url, args.user)
 
     start = time.time()
 
@@ -77,14 +78,14 @@ def do_submit(args):
 
         print('Wait timed out! Some batches have not yet been committed...')
         for batch_id, status in statuses.items():
-            print('{:128.128}  {:8.8}'.format(batch_id, status))
+            print('{:128.128}  {:10.10}'.format(batch_id, status))
         exit(1)
 
 
 def add_submit_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'submit',
-        parents=[parent_parser])
+        parents=[base_http_parser(), parent_parser])
 
     parser.add_argument(
         '--wait',
@@ -98,12 +99,6 @@ def add_submit_parser(subparsers, parent_parser):
         type=str,
         help='location of input file',
         default='batches.intkey')
-
-    parser.add_argument(
-        '-U', '--url',
-        type=str,
-        help='connection URL for validator',
-        default='http://localhost:8080')
 
     parser.add_argument(
         '--batch-size-limit',

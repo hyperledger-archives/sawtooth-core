@@ -46,7 +46,7 @@ def add_genesis_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('genesis')
 
     parser.add_argument(
-        '--enclave_module',
+        '--enclave-module',
         default='simulator',
         choices=['simulator', 'sgx'],
         type=str,
@@ -77,12 +77,12 @@ def do_genesis(args):
 
     with PoetEnclaveModuleWrapper(
             enclave_module=args.enclave_module,
-            config_dir=config.get_config_dir()) as poet_enclave_module:
+            config_dir=config.get_config_dir(),
+            data_dir=config.get_data_dir()) as poet_enclave_module:
         signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=poet_enclave_module,
-            validator_address=pubkey,
             originator_public_key_hash=public_key_hash,
-            nonce=NULL_BLOCK_IDENTIFIER)
+            nonce=SignupInfo.block_id_to_nonce(NULL_BLOCK_IDENTIFIER))
 
     print(
         'Writing key state for PoET public key: {}...{}'.format(
@@ -127,7 +127,7 @@ def do_genesis(args):
         [ConfigView.setting_address('sawtooth.poet.report_public_key_pem'),
          ConfigView.setting_address('sawtooth.poet.'
                                     'valid_enclave_measurements'),
-         ConfigView.setting_address('sawtooth.poet.valid_basename')]
+         ConfigView.setting_address('sawtooth.poet.valid_enclave_basenames')]
 
     header = \
         txn_pb.TransactionHeader(

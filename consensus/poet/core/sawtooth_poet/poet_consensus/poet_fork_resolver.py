@@ -97,7 +97,8 @@ class PoetForkResolver(ForkResolverInterface):
         poet_enclave_module = \
             factory.PoetEnclaveFactory.get_poet_enclave_module(
                 state_view=state_view,
-                config_dir=self._config_dir)
+                config_dir=self._config_dir,
+                data_dir=self._data_dir)
 
         current_fork_wait_certificate = \
             utils.deserialize_wait_certificate(
@@ -273,9 +274,7 @@ class PoetForkResolver(ForkResolverInterface):
                         poet_enclave_module=poet_enclave_module)
                 consensus_state.validator_did_claim_block(
                     validator_info=validator_info,
-                    wait_certificate=utils.deserialize_wait_certificate(
-                        block=new_fork_head,
-                        poet_enclave_module=poet_enclave_module),
+                    wait_certificate=new_fork_wait_certificate,
                     poet_config_view=PoetConfigView(state_view))
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
