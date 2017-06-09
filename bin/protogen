@@ -34,7 +34,9 @@ JOIN = os.path.join
 TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 
-def main(args=sys.argv[1:]):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
     # 1. Generate and distribute top-level protos
     proto_dir = JOIN(TOP_DIR, "protos")
 

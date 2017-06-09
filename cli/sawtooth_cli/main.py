@@ -107,9 +107,11 @@ def create_parser(prog_name):
     return parser
 
 
-def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
+def main(prog_name=os.path.basename(sys.argv[0]), args=None,
          with_loggers=True):
     parser = create_parser(prog_name)
+    if args is None:
+        args = sys.argv[1:]
     args = parser.parse_args(args)
 
     if with_loggers is True:
