@@ -23,6 +23,7 @@ MODULE_LIST="
     rest_api
     poet
     settings
+    permission
     validator
     go_sdk
     java_sdk
@@ -156,6 +157,9 @@ main() {
                 supplychain)
                     test_supplychain
                     ;;
+                permission)
+                  test_permission
+                  ;;
                 validator)
                     test_validator
                     ;;
@@ -233,6 +237,11 @@ test_settings() {
     copy_coverage .coverage.config
     run_docker_test config-smoke -s integration_test
     copy_coverage .coverage.config-smoke
+}
+
+test_permission() {
+  run_docker_test permission -s integration_test
+  copy_coverage .coverage.permission
 }
 
 test_supplychain() {
