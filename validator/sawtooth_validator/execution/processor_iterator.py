@@ -118,7 +118,7 @@ class ProcessorIteratorCollection(object):
                     continue
                 self._processors[processor_type].remove_processor(
                     processor_identity=processor_identity)
-                if len(self._processors[processor_type]) == 0:
+                if not self._processors[processor_type]:
                     del self._processors[processor_type]
 
     def __repr__(self):

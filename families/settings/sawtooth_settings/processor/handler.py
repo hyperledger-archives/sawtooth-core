@@ -66,7 +66,7 @@ class SettingsTransactionHandler(object):
         pubkey = txn_header.signer_pubkey
 
         auth_keys = _get_auth_keys(state)
-        if len(auth_keys) > 0 and pubkey not in auth_keys:
+        if auth_keys and pubkey not in auth_keys:
             raise InvalidTransaction(
                 '{} is not authorized to change settings'.format(pubkey))
 
@@ -207,17 +207,17 @@ def _get_auth_keys(state):
 
 
 def _split_ignore_empties(value):
-    return [v.strip() for v in value.split(',') if len(v) > 0]
+    return [v.strip() for v in value.split(',') if v]
 
 
 def _validate_setting(auth_keys, setting, value):
-    if len(auth_keys) == 0 and \
+    if not auth_keys and \
             setting != 'sawtooth.settings.vote.authorized_keys':
         raise InvalidTransaction(
             'Cannot set {} until authorized_keys is set.'.format(setting))
 
     if setting == 'sawtooth.settings.vote.authorized_keys':
-        if len(_split_ignore_empties(value)) == 0:
+        if not _split_ignore_empties(value):
             raise InvalidTransaction('authorized_keys must not be empty.')
 
     if setting == 'sawtooth.settings.vote.approval_threshold':
@@ -292,7 +292,7 @@ def _get_setting_entry(state, address):
         LOGGER.warning('Timeout occured on state.get([%s])', address)
         raise InternalError('Unable to get {}'.format(address))
 
-    if len(entries_list) != 0:
+    if entries_list:
         setting.ParseFromString(entries_list[0].data)
 
     return setting

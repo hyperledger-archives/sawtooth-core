@@ -198,7 +198,7 @@ class ConsensusState(object):
             # yet or the last block we processed was a PoET block, put a
             # placeholder in the list so that when we get to it we know that we
             # need to reset the statistics.
-            elif len(blocks) == 0 or previous_wait_certificate is not None:
+            elif not blocks or previous_wait_certificate is not None:
                 blocks[current_id] = \
                     ConsensusState._BlockInfo(
                         wait_certificate=None,

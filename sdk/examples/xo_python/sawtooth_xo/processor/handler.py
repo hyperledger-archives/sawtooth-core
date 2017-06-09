@@ -94,7 +94,7 @@ class XoTransactionHandler:
 
         # state_store.get() returns a list. If no data has been stored yet
         # at the given address, it will be empty.
-        if len(state_entries) != 0:
+        if state_entries:
             try:
                 state_data = state_entries[0].data
 

@@ -561,7 +561,7 @@ class Validator(object):
         # a sys.exit() or exit of main().
         threads.remove(threading.current_thread())
 
-        while len(threads) > 0:
+        while threads:
             if len(threads) < 4:
                 LOGGER.info(
                     "remaining threads: %s",
@@ -572,7 +572,7 @@ class Validator(object):
                 if not t.is_alive():
                     t.join()
                     threads.remove(t)
-                if len(threads) > 0:
+                if threads:
                     time.sleep(1)
 
         LOGGER.info("All threads have been stopped and joined")

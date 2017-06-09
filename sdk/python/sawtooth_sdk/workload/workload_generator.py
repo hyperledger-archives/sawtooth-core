@@ -120,7 +120,7 @@ class WorkloadGenerator(object):
                 # one.
                 batch = \
                     self._pending_batches.popleft() \
-                    if len(self._pending_batches) > 0 else None
+                    if self._pending_batches else None
                 self.loop.run_in_executor(
                     self.thread_pool, self._check_on_batch, batch)
 

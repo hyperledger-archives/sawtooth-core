@@ -139,7 +139,8 @@ class PoetSettingsView(object):
                     name='sawtooth.poet.enclave_module_name',
                     value_type=str,
                     default_value=PoetSettingsView._ENCLAVE_MODULE_NAME_,
-                    validate_function=lambda value: len(value) > 0)
+                    # function should return true if value is nonempty
+                    validate_function=lambda value: value)
 
         return self._enclave_module_name
 

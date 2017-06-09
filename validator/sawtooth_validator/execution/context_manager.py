@@ -366,7 +366,7 @@ class ContextManager(object):
 
         contexts_asked_not_found = [cid for cid in base_contexts
                                     if cid not in self._contexts]
-        if len(contexts_asked_not_found) > 0:
+        if contexts_asked_not_found:
             raise KeyError(
                 "Basing a new context off of context ids {} "
                 "that are not in context manager".format(
@@ -383,7 +383,7 @@ class ContextManager(object):
         # are being searched for have been found, or we run out of contexts
         # in the chain of contexts.
 
-        while len(reads) > 0:
+        while reads:
             try:
                 current_c_id = contexts_in_chain.popleft()
             except IndexError:
@@ -427,7 +427,7 @@ class ContextManager(object):
 
         self._contexts[context.session_id] = context
 
-        if len(reads) > 0:
+        if reads:
             context.create_prefetch(reads)
             self._address_queue.put_nowait(
                 (context.session_id, state_hash, reads))
@@ -522,7 +522,7 @@ class ContextManager(object):
             # There is only one exit condition and that is when all the
             # contexts have been accessed once.
             updates = dict()
-            while len(contexts_in_chain) > 0:
+            while contexts_in_chain:
                 current_c_id = contexts_in_chain.popleft()
                 current_context = self._contexts[current_c_id]
                 if not current_context.is_read_only():
@@ -540,7 +540,7 @@ class ContextManager(object):
                         contexts_in_chain.append(c_id)
                         context_ids_already_searched.append(c_id)
 
-            if len(updates) == 0:
+            if not updates:
                 return state_root
 
             tree = MerkleDatabase(self._database, state_root)

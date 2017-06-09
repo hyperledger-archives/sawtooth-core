@@ -467,7 +467,7 @@ class SchedulerTester(object):
                 # If any process attempt doesn't produce a new batch,
                 # there is probably a cyclic dependency
                 break
-            if len(b) > 0:
+            if b:
                 for batch, key in b:
                     ind = batches.index(key)
                     batches[ind] = batch
@@ -475,7 +475,7 @@ class SchedulerTester(object):
             batches_waiting = b_w
         # Here process the batches with transaction dependencies that can't
         # be computed for some reason, so just strip them out.
-        if len(batches_waiting) > 0:
+        if batches_waiting:
             b, b_r, b_w = self._process_prev_batches(
                 batches_waiting,
                 priv_key=priv_key,

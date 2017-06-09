@@ -182,7 +182,7 @@ class StateDeltaProcessor(object):
 
         deltas = self._get_delta(state_root_hash)
 
-        if len(self._subscribers) > 0:
+        if self._subscribers:
             self._broadcast_changes(block, deltas)
 
     def _get_delta(self, state_root_hash):
@@ -202,7 +202,7 @@ class StateDeltaProcessor(object):
             acceptable_changes = subscriber.deltas_of_interest(deltas)
             state_change_evt.ClearField('state_changes')
 
-            if len(acceptable_changes) > 0:
+            if acceptable_changes:
                 state_change_evt.state_changes.extend(acceptable_changes)
 
             LOGGER.debug('sending change event to %s',
@@ -343,7 +343,7 @@ class GetStateDeltaEventsHandler(Handler):
 
             events.append(event)
 
-        status = GetStateDeltaEventsResponse.OK if len(events) > 0 else \
+        status = GetStateDeltaEventsResponse.OK if events else \
             GetStateDeltaEventsResponse.NO_VALID_BLOCKS_SPECIFIED
 
         ack = GetStateDeltaEventsResponse(status=status, events=events)

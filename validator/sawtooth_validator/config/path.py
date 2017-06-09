@@ -79,7 +79,7 @@ def load_toml_path_config(filename):
 
     invalid_keys = set(toml_config.keys()).difference(
         ['data_dir', 'key_dir', 'log_dir'])
-    if len(invalid_keys) > 0:
+    if invalid_keys:
         raise LocalConfigurationError("Invalid keys in path config: {}".format(
             ", ".join(sorted(list(invalid_keys)))))
 

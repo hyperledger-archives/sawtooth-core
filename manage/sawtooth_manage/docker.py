@@ -141,7 +141,7 @@ class DockerNodeController(NodeController):
         else:
             command = 'bash -c "sawtooth admin keygen && \
             validator {} -v --endpoint tcp://{}:8800"'
-        if len(peers) > 0:
+        if peers:
             command = command.format('--peers ' + ",".join(peers), node_name)
         else:
             command = command.format('', node_name)

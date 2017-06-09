@@ -26,11 +26,11 @@ class PredecessorTreeNode:
     def __repr__(self):
         retval = {}
 
-        if len(self.readers) > 0:
+        if self.readers:
             retval['readers'] = self.readers
         if self.writer is not None:
             retval['writer'] = self.writer
-        if len(self.children) > 0:
+        if self.children:
             retval['children'] = \
                 {k: literal_eval(repr(v)) for k, v in self.children.items()}
 
@@ -155,7 +155,7 @@ class PredecessorTree:
 
         to_process = deque()
         to_process.extendleft(node.children.values())
-        while len(to_process) > 0:
+        while to_process:
             node = to_process.pop()
             predecessors.update(node.readers)
             if node.writer is not None:
@@ -229,7 +229,7 @@ class PredecessorTree:
 
         to_process = deque()
         to_process.extendleft(node.children.values())
-        while len(to_process) > 0:
+        while to_process:
             node = to_process.pop()
             if node.writer is not None:
                 predecessors.add(node.writer)

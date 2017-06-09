@@ -445,7 +445,7 @@ class _SendReceive(object):
         tasks = asyncio.Task.all_tasks(self._event_loop)
         for task in tasks:
             self._event_loop.call_soon_threadsafe(task.cancel)
-        while len(tasks) > 0:
+        while tasks:
             for task in tasks.copy():
                 if task.done() is True:
                     tasks.remove(task)
