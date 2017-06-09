@@ -86,9 +86,11 @@ def create_parser(prog_name):
     return parser
 
 
-def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
+def main(prog_name=os.path.basename(sys.argv[0]), args=None,
          with_loggers=True):
 
+    if args is None:
+        args = sys.argv[1:]
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
 

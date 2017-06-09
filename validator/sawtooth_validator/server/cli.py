@@ -167,7 +167,9 @@ def create_validator_config(opts):
         peers=opts.peers)
 
 
-def main(args=sys.argv[1:]):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
     opts = parse_args(args)
     verbose_level = opts.verbose
 

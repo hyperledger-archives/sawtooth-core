@@ -370,7 +370,9 @@ def _get_auth_info(args):
     return auth_user, auth_password
 
 
-def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
+def main(prog_name=os.path.basename(sys.argv[0]), args=None):
+    if args is None:
+        args = sys.argv[1:]
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
 

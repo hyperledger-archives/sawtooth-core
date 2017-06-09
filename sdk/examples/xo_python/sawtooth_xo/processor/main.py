@@ -41,7 +41,9 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def main(args=sys.argv[1:]):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
     opts = parse_args(args)
     processor = None
     try:
