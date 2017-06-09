@@ -183,6 +183,34 @@ class TestContextManager(unittest.TestCase):
         )
         return addresses
 
+    def test_address_enforcement(self):
+        """Tests that the ContextManager enforces address characteristics.
+
+        Notes:
+            1. Call get and set on the ContextManager with an address that is
+               under a namespace, but is an invalid address, and test that
+               the methods raise an AuthorizationException.
+        """
+
+        # 1)
+        invalid_address1 = 'a' * 69 + 'n'
+        invalid_address2 = 'b' * 69 + 'y'
+
+        context_id1 = self.context_manager.create_context(
+            state_hash=self.context_manager.get_first_root(),
+            base_contexts=[],
+            inputs=['aaaaaaaa', 'bbbbbbbb'],
+            outputs=['aaaaaaaa', 'bbbbbbbb'])
+        with self.assertRaises(context_manager.AuthorizationException):
+            self.context_manager.get(
+                context_id=context_id1,
+                address_list=[invalid_address1, invalid_address2])
+        with self.assertRaises(context_manager.AuthorizationException):
+            self.context_manager.set(
+                context_id=context_id1,
+                address_value_list=[{invalid_address1: b'1'},
+                                    {invalid_address2: b'2'}])
+
     def test_create_context_with_prior_state(self):
         """Tests context creation with prior state from base contexts.
 

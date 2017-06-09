@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import re
 import uuid
 
 from collections import deque
@@ -317,6 +318,8 @@ class ContextManager(object):
         self._first_merkle_root = None
         self._contexts = _ThreadsafeContexts()
 
+        self._address_regex = re.compile('^[0-9a-f]{70}$')
+
         self._address_queue = Queue()
 
         self._inflated_addresses = Queue()
@@ -335,6 +338,10 @@ class ContextManager(object):
         self._first_merkle_root = MerkleDatabase(
             self._database).get_merkle_root()
         return self._first_merkle_root
+
+    def address_is_valid(self, address):
+
+        return self._address_regex.match(address) is not None
 
     def create_context(self, state_hash, base_contexts, inputs, outputs):
         """Create a StateContext to run a transaction against.
@@ -451,10 +458,20 @@ class ContextManager(object):
 
         Returns:
             values_list (list): a list of (address, value) tuples
+
+        Raises:
+            AuthorizationException: Raised when an address in address_list is
+                not authorized either by not being in the inputs for the
+                txn associated with this context, or it is under a namespace
+                but the characters that are under the namespace are not valid
+                address characters.
         """
 
         if context_id not in self._contexts:
             return []
+        for add in address_list:
+            if not self.address_is_valid(address=add):
+                raise AuthorizationException(address=add)
 
         context = self._contexts[context_id]
         values = context.get(list(address_list))
@@ -474,8 +491,10 @@ class ContextManager(object):
 
         Raises:
             AuthorizationException if an address is given in the
-            address_value_list that was not in the original
-            transaction's outputs.
+                address_value_list that was not in the original
+                transaction's outputs, or was under a namespace but the
+                characters after the namespace are not valid address
+                characters.
         """
 
         if context_id not in self._contexts:
@@ -487,6 +506,8 @@ class ContextManager(object):
         add_value_dict = {}
         for d in address_value_list:
             for add, val in d.items():
+                if not self.address_is_valid(address=add):
+                    raise AuthorizationException(address=add)
                 add_value_dict[add] = val
         context.set_direct(add_value_dict)
         return True
