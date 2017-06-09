@@ -64,6 +64,8 @@ from sawtooth_validator.state.state_delta_processor import \
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
+from sawtooth_validator.gossip.permission_verifier import \
+    BatchListPermissionVerifier
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
@@ -411,6 +413,15 @@ class Validator(object):
             validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
             ResponderBatchResponseHandler(responder, self._gossip),
             network_thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            BatchListPermissionVerifier(
+                settings_view_factory=SettingsViewFactory(
+                    StateViewFactory(merkle_db)),
+                current_root_func=self._journal.get_current_root,
+            ),
+            sig_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
