@@ -18,8 +18,8 @@ tutorials that guide you in performing app development tasks, such as
 implementing business logic with transaction families and writing clients
 which use Sawtooth's REST API.
 
-Overview Sawtooth Components
-============================
+Overview Of Sawtooth Components
+===============================
 
 A running Sawtooth network consists of the following applications or processes:
 
