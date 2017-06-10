@@ -15,5 +15,4 @@
 
 
 class CliException(Exception):
-    def __init__(self, msg):
-        super(CliException, self).__init__(msg)
+    pass
