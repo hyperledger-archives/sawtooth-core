@@ -113,11 +113,11 @@ class DockerNodeController(NodeController):
             raise ManagementError(str(e))
         return ['tcp://' + str(p) + ':8800' for p in peers if len(p) > 4]
 
-    def start(self, node_config):
+    def start(self, node_args):
         base_network_port = 8800
         base_component_port = 4004
-        node_name = node_config.node_name
-        http_port = node_config.http_port
+        node_name = node_args.node_name
+        http_port = node_args.http_port
 
         # The first time a node is started, it should start a bridge
         # network. Subsequent nodes should wait until the network
@@ -134,7 +134,7 @@ class DockerNodeController(NodeController):
         LOGGER.debug('starting %s: %s', node_name, self._join_args(start_args))
         peers = self._find_peers()
 
-        if node_config.genesis:
+        if node_args.genesis:
             command = 'bash -c "sawtooth admin keygen && \
             sawtooth admin genesis && \
             validator {} -v --endpoint tcp://{}:8800"'

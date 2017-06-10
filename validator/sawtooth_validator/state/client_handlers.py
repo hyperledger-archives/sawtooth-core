@@ -82,11 +82,11 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         self._block_store = block_store
         self._batch_cache = batch_cache
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         """Handles parsing incoming requests, and wrapping the final response.
 
         Args:
-            identity (str): ZMQ identity sent over ZMQ socket
+            connection_id (str): ZMQ identity sent over ZMQ socket
             message_content (bytes): Byte encoded request protobuf to be parsed
 
         Returns:
