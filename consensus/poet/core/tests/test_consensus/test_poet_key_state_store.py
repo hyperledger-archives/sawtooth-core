@@ -520,11 +520,9 @@ class TestPoetKeyStateStore(unittest.TestCase):
         mock_lmdb.return_value.__getitem__.side_effect = ValueError()
         with self.assertRaises(ValueError):
             _ = store['ppk']
-        # pylint: disable=redefined-variable-type
         mock_lmdb.return_value.__getitem__.side_effect = TypeError()
         with self.assertRaises(ValueError):
             _ = store['ppk']
-        # pylint: disable=redefined-variable-type
         mock_lmdb.return_value.__getitem__.side_effect = AttributeError()
         with self.assertRaises(ValueError):
             _ = store['ppk']
