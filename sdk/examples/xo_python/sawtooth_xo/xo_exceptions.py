@@ -15,5 +15,4 @@
 
 
 class XoException(Exception):
-    def __init__(self, msg):
-        super(XoException, self).__init__(msg)
+    pass
