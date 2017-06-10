@@ -419,7 +419,7 @@ def do_cluster_extend(args):
 def do_cluster_logs(args):
     state = load_state()
 
-    supported_types = 'docker',
+    supported_types = ('docker',)
     if state['Manage'] in supported_types:
         prefix = 'sawtooth-cluster-0'
 
