@@ -246,10 +246,7 @@ def _get_config_value(state, key, default_value=None):
     return default_value
 
 
-def _set_config_value(state, key, value):
-    address = _make_config_key(key)
-    setting = _get_setting_entry(state, address)
-
+def _get_old_entry(setting, key):
     old_value = None
     old_entry_index = None
     for i, entry in enumerate(setting.entries):
@@ -257,7 +254,46 @@ def _set_config_value(state, key, value):
             old_value = entry.value
             old_entry_index = i
 
+    return (old_value, old_entry_index)
+
+
+def _set_config_value(state, key, value):
+    address = _make_config_key(key)
+    setting = _get_setting_entry(state, address)
+
+    old_value, old_entry_index = _get_old_entry(setting, key)
     if old_entry_index is not None:
+        setting.entries[old_entry_index].value = value
+    else:
+        setting.entries.add(key=key, value=value)
+
+    try:
+        addresses = list(state.set(
+            [StateEntry(address=address,
+                        data=setting.SerializeToString())],
+            timeout=STATE_TIMEOUT_SEC))
+    except FutureTimeoutError:
+        LOGGER.warning(
+            'Timeout occured on state.set([%s, <value>])', address)
+        raise InternalError('Unable to set {}'.format(key))
+
+    if len(addresses) != 1:
+        LOGGER.warning(
+            'Failed to save value on address %s', address)
+        raise InternalError(
+            'Unable to save config value {}'.format(key))
+    if setting != 'sawtooth.config.vote.proposals':
+        LOGGER.info('Config setting %s changed from %s to %s',
+                    key, old_value, value)
+
+
+def _append_setting_entry(state, key, value):
+    address = _make_config_key(key)
+    setting = _get_setting_entry(state, address)
+
+    old_value, old_entry_index = _get_old_entry(setting, key)
+    if old_entry_index is not None:
+        value = value + "," + old_value
         setting.entries[old_entry_index].value = value
     else:
         setting.entries.add(key=key, value=value)
