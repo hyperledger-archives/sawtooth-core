@@ -39,6 +39,7 @@ services:
         test_tp_config
     stop_signal: SIGKILL
     environment:
+        TEST_BIND: "tcp://eth0:4004"
         PYTHONPATH: "/project/sawtooth-core/families/config:\
             /project/sawtooth-core/families/config/tests:\
             /project/sawtooth-core/sdk/python:\

@@ -82,7 +82,7 @@ class MockValidator(object):
         LOGGER.debug("Binding to " + self._url)
         self._socket.set(zmq.LINGER, 0)
         try:
-            self._socket.bind("tcp://" + self._url)
+            self._socket.bind(self._url)
 
         # Catch errors with binding and print out more debug info
         except zmq.error.ZMQError:

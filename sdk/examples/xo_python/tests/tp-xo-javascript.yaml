@@ -39,6 +39,7 @@ services:
         test_tp_xo
     stop_signal: SIGKILL
     environment:
+      TEST_BIND: "tcp://eth0:4004"
       PYTHONPATH: "\
         /project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/xo_python:\

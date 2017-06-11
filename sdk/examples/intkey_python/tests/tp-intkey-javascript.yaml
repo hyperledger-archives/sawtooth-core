@@ -39,6 +39,7 @@ services:
         test_tp_intkey
     stop_signal: SIGKILL
     environment:
+      TEST_BIND: "tcp://eth0:4004"
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/intkey_python:\
         /project/sawtooth-core/integration:\
