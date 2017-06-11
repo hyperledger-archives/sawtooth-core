@@ -375,6 +375,10 @@ class ContextManager(object):
 
         addresses_to_find = list(inputs)
 
+        address_values, reads = self._find_address_values_in_chain(
+            base_contexts=base_contexts,
+            addresses_to_find=addresses_to_find)
+
         context = StateContext(
             state_hash=state_hash,
             read_list=inputs,
@@ -388,6 +392,29 @@ class ContextManager(object):
                 "Basing a new context off of context ids {} "
                 "that are not in context manager".format(
                     contexts_asked_not_found))
+
+        context.create_initial(address_values)
+
+        self._contexts[context.session_id] = context
+
+        if reads:
+            context.create_prefetch(reads)
+            self._address_queue.put_nowait(
+                (context.session_id, state_hash, reads))
+        return context.session_id
+
+    def _find_address_values_in_chain(self, base_contexts, addresses_to_find):
+        """Breadth first search through the chain of contexts searching for
+        the bytes values at the addresses in addresses_to_find.
+
+        Args:
+            base_contexts (list of str): The context ids to start with.
+            addresses_to_find (list of str): Addresses to find values in the
+                chain of contexts.
+
+        Returns:
+            tuple of found address_values and still not found addresses
+        """
 
         contexts_in_chain = deque()
         contexts_in_chain.extend(base_contexts)
@@ -440,15 +467,8 @@ class ContextManager(object):
                 if c_id not in context_ids_already_searched:
                     contexts_in_chain.append(c_id)
                     context_ids_already_searched.append(c_id)
-        context.create_initial(address_values)
 
-        self._contexts[context.session_id] = context
-
-        if reads:
-            context.create_prefetch(reads)
-            self._address_queue.put_nowait(
-                (context.session_id, state_hash, reads))
-        return context.session_id
+        return address_values, reads
 
     def delete_contexts(self, context_id_list):
         """Delete contexts from the ContextManager.
