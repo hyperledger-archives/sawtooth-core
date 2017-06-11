@@ -33,6 +33,12 @@ class RestClient:
         self.url = url
         self.namespace = namespace
 
+    def list_blocks(self):
+        return self._get('/blocks')['data']
+
+    def count_blocks(self):
+        return len(self.list_blocks())
+
     def get_leaf(self, address, head=None):
         query = self._get('/state/' + address, head=head)
         return b64decode(query['data'])
