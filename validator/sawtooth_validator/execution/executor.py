@@ -23,6 +23,8 @@ from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
+from sawtooth_validator.execution.context_manager import \
+    CreateContextException
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.execution import processor_iterator
 from sawtooth_validator.networking.future import FutureResult
@@ -172,6 +174,13 @@ class TransactionExecutorThread(object):
                     "Error creating context for transaction %s, "
                     "scheduler provided a base context that was not "
                     "in the context manager.", txn.header_signature)
+                self._scheduler.set_transaction_execution_result(
+                    txn_signature=txn.header_signature,
+                    is_valid=False,
+                    context_id=None)
+                continue
+            except CreateContextException as cce:
+                LOGGER.info("Exception creating context: %s", cce)
                 self._scheduler.set_transaction_execution_result(
                     txn_signature=txn.header_signature,
                     is_valid=False,
