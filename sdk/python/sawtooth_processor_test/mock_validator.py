@@ -34,9 +34,14 @@ LOGGER.setLevel(logging.INFO)
 
 class UnexpectedMessageException(Exception):
     def __init__(self, message_type, expected, received):
-        super().__init__("{}: Expected {}, Got {}".format(
+        super().__init__("{}: Expected {}({}):'{}', Got {}({}):'{}'".format(
             to_protobuf_class(message_type).__name__,
-            expected, received
+            to_protobuf_class(to_message_type(expected)),
+            to_message_type(expected),
+            expected,
+            to_protobuf_class(to_message_type(received)),
+            to_message_type(received),
+            received
         ))
         self.message_type_name = to_protobuf_class(message_type).__name__
         self.expected = expected
