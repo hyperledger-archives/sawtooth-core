@@ -177,6 +177,9 @@ main() {
                 deployment)
                     test_deployment
                     ;;
+                burrow_evm)
+                    test_burrow_evm
+                    ;;
                 *)
                     echo "Module '$MODULE' not found."
                     ;;
@@ -285,6 +288,9 @@ test_python_sdk() {
     copy_coverage .coverage.two_families
 }
 
+test_burrow_evm() {
+  run_docker_test burrow-evm-smoke
+}
 test_integration() {
     run_docker_test xo-all-lang-smoke -s integration_test
     copy_coverage .coverage.xo-all-lang-smoke
