@@ -318,6 +318,41 @@ def _append_setting_entry(state, key, value):
                     key, old_value, value)
 
 
+def _remove_setting_entry(state, key, value):
+    address = _make_config_key(key)
+    setting = _get_setting_entry(state, address)
+
+    old_value, old_entry_index = _get_old_entry(setting, key)
+    if old_entry_index is None:
+        LOGGER.warning(
+            'Unable to remove value %s from a non-existent key %s', value, key)
+        raise InternalError(
+            'Unable to remove value from non-existent key {}'.format(key))
+    old_value = old_value.split(',')
+    old_value.remove(value)
+    updated_value = ','.join(old_value)
+    setting.entries[old_entry_index].value = updated_value
+
+    try:
+        addresses = list(state.set(
+            [StateEntry(address=address,
+                        data=setting.SerializeToString())],
+            timeout=STATE_TIMEOUT_SEC))
+    except FutureTimeoutError:
+        LOGGER.warning(
+            'Timeout occured on state.set([%s, <value>])', address)
+        raise InternalError('Unable to set {}'.format(key))
+
+    if len(addresses) != 1:
+        LOGGER.warning(
+            'Failed to save value on address %s', address)
+        raise InternalError(
+            'Unable to save config value {}'.format(key))
+    if setting != 'sawtooth.config.vote.proposals':
+        LOGGER.info('Value %s removed from key %s',
+                    value, key)
+
+
 def _get_setting_entry(state, address):
     setting = Setting()
 
