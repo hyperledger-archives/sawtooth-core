@@ -340,6 +340,94 @@ class TestContextManager(unittest.TestCase):
                 inputs=[valid_input_output1, valid_input_output2],
                 outputs=[valid_input_output2, invalid_input_output3])
 
+    def test_namespace_gets(self):
+        """Tests that gets for an address under a namespace will return the
+        correct value.
+
+        Notes:
+            1) Create ctx_1 and set 'b' to b'8'.
+            2) squash the previous context creating state_hash_1.
+            3) Create 2 contexts off of this state hash and assert
+               that gets on these contexts retrieve the correct
+               value for an address that is not fully specified in the inputs.
+            4) Set values to addresses in these contexts.
+            5) Create 1 context off of these prior 2 contexts and assert that
+               gets from this context retrieve the correct values for
+               addresses that are not fully specified in the inputs. 2 of the
+               values are found in the chain of contexts, and 1 is not found
+               and so must be retrieved from the merkle tree.
+        """
+
+        # 1
+        ctx_1 = self.context_manager.create_context(
+            state_hash=self.context_manager.get_first_root(),
+            base_contexts=[],
+            inputs=[self._create_address('a')],
+            outputs=[self._create_address('b')])
+
+        self.context_manager.set(
+            context_id=ctx_1,
+            address_value_list=[{self._create_address('b'): b'8'}])
+
+        # 2
+        squash = self.context_manager.get_squash_handler()
+        state_hash_1 = squash(
+            state_root=self.context_manager.get_first_root(),
+            context_ids=[ctx_1],
+            persist=True,
+            clean_up=True)
+
+        # 3
+        ctx_1a = self.context_manager.create_context(
+            state_hash=state_hash_1,
+            base_contexts=[],
+            inputs=[self._create_address('a')[:10]],
+            outputs=[self._create_address('c')])
+        self.assertEquals(
+            self.context_manager.get(
+                context_id=ctx_1a,
+                address_list=[self._create_address('a')]),
+            [(self._create_address('a'), None)])
+
+        ctx_1b = self.context_manager.create_context(
+            state_hash=state_hash_1,
+            base_contexts=[],
+            inputs=[self._create_address('b')[:6]],
+            outputs=[self._create_address('z')])
+        self.assertEquals(
+            self.context_manager.get(
+                context_id=ctx_1b,
+                address_list=[self._create_address('b')]),
+            [(self._create_address('b'), b'8')])
+
+        # 4
+        self.context_manager.set(
+            context_id=ctx_1b,
+            address_value_list=[{self._create_address('z'): b'2'}])
+
+        self.context_manager.set(
+            context_id=ctx_1a,
+            address_value_list=[{self._create_address('c'): b'1'}]
+        )
+
+        ctx_2 = self.context_manager.create_context(
+            state_hash=state_hash_1,
+            base_contexts=[ctx_1a, ctx_1b],
+            inputs=[self._create_address('z')[:10],
+                    self._create_address('c')[:10],
+                    self._create_address('b')[:10]],
+            outputs=[self._create_address('w')])
+
+        self.assertEquals(
+            self.context_manager.get(
+                context_id=ctx_2,
+                address_list=[self._create_address('z'),
+                              self._create_address('c'),
+                              self._create_address('b')]),
+            [(self._create_address('z'), b'2'),
+             (self._create_address('c'), b'1'),
+             (self._create_address('b'), b'8')])
+
     def test_create_context_with_prior_state(self):
         """Tests context creation with prior state from base contexts.
 
