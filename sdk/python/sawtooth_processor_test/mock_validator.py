@@ -38,10 +38,10 @@ class UnexpectedMessageException(Exception):
             to_protobuf_class(message_type).__name__,
             to_protobuf_class(to_message_type(expected)),
             to_message_type(expected),
-            expected,
+            str(expected).strip(),
             to_protobuf_class(to_message_type(received)),
             to_message_type(received),
-            received
+            str(received).strip()
         ))
         self.message_type_name = to_protobuf_class(message_type).__name__
         self.expected = expected
