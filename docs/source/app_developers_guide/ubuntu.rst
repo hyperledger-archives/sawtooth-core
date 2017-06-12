@@ -4,21 +4,19 @@ Using Sawtooth on Ubuntu 16.04
 
 
 This document guides you through the process of setting up Hyperledger Sawtooth
-for application development on Ubuntu, and then introduces basic Sawtooth
-concepts necessary for application development.
+for application development on Ubuntu, introduces some of the basic Sawtooth
+concepts necessary for application development, and walks through performing
+the following tasks:
 
-After following the steps in this document, you will be able to perform the
-following tasks:
+* Submit transactions to the REST API
+* View blocks, transactions, and state with the sawtooth CLI tool
+* Start and stop validators and transaction processors
 
-* run Sawtooth
-* submit transactions
-* view blocks, transactions and state with the CLI
-* start and stop validators and transaction processors
 
-You will then be prepared for the more advanced tutorials that guide you in
-performing app development tasks, such as implementing business logic with
-transaction families and writing clients which use Sawtooth's REST API.
-
+Upon completing this section, you will be prepared for the more advanced
+tutorials that guide you in performing app development tasks, such as
+implementing business logic with transaction families and writing clients
+which use Sawtooth's REST API.
 
 Overview Sawtooth Components
 ============================
@@ -38,16 +36,13 @@ depicted.
 Installation
 ============
 
-Run the following commands from a terminal window, as root or with `sudo`:
+Run the following commands from a terminal window, as root:
 
 .. code-block:: console
 
-  $ echo 'deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe' | sudo tee --append /etc/apt/sources.list
-  $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-  $ apt-get update && apt-get install -y sawtooth
-
-.. code-block:: console
-
+  # echo 'deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe' | tee --append /etc/apt/sources.list
+  # apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
+  # apt-get update && apt-get install -y sawtooth
 
 
 Validator Start-up Process
@@ -63,27 +58,24 @@ test networks. In this case, you need to create a genesis block when
 instantiating a new network.
 
 The genesis block contains some initial values that are necessary when a
-Sawtooth distributed ledger is created and used for the first time. 
-One of the settings in the genesis block that should be set is the 
-key that is authorized to set and change configuration settings, as 
-shown below using the **sawtooth config genesis** command. 
+Sawtooth distributed ledger is created and used for the first time.
+One of the settings in the genesis block that should be set is the
+key that is authorized to set and change configuration settings, as
+shown below using the **sawtooth config genesis** command.
 
-To create the genesis block, log in to the development environment CLI and run
-the following commands as root:
+To create the genesis block, run the following commands as root:
 
 .. code-block:: console
 
   $ sawtooth keygen --key-dir /tmp sawtooth
   $ sawtooth config genesis --key /tmp/sawtooth.priv
   $ sawtooth admin genesis config-genesis.batch
-  Generating /var/lib/sawtooth/genesis.batch
 
 The following output appears:
 
 .. code-block:: console
 
     Generating /var/lib/sawtooth/genesis.batch
-
 
 .. note::
 
@@ -95,20 +87,18 @@ The following output appears:
 Start Validator
 ---------------
 
-To start a validator, run the following commands from a Linux terminal:
+To start a validator that listens locally on the default ports, run the
+following commands from a Linux terminal:
 
 .. code-block:: console
 
-   $ sawtooth keygen --key-dir /etc/sawtooth/keys/ validator
-   $ validator -vv --endpoint tcp://localhost:8800
-
-.. note::
-
-  To run the validator with less verbose logging, use the command `validator -v`.
+   $ sawtooth admin keygen
+   $ validator -vv
 
 This will start the validator. Logging output will be printed to the
 terminal window. The validator outputs something similar to this to
 the terminal window:
+
 
 .. code-block:: console
 
@@ -120,19 +110,34 @@ the terminal window:
     When you want to stop the validator, or any other running sawtooth
     component, press CTRL+C.
 
+.. note::
+
+  The `-vv` flag sets the log level. To run the validator with less logging
+  output, use `-v` or omit the flag.
+
+.. note::
+
+  By default, the validator listens on the loopback interface for both network
+  and component communications. To change the interface and port used, the
+  `--bind` flag can be used. The following command is equivalent to the default
+  behavior::
+
+    validator --bind network:tcp://127.0.0.1:8800 --bind component:tcp://127.0.0.1:4004
+
+  See :doc:`/cli/validator` for more information on the validator flags.
+
 Starting the REST API
 =====================
 
 In order to configure a running validator, submit batches, and query the state
 of the ledger, you must start the REST API application. Run the following
-command to start the rest api:
+command to start the REST API and connect to a local validator:
 
 .. code-block:: console
 
-  rest_api --stream-url tcp://127.0.0.1:4004
+  $ rest_api -v
 
-
-Running a transaction processor
+Running a Transaction Processor
 ===============================
 
 Transaction processors can be started either before or after the validator is
@@ -141,21 +146,22 @@ started.
 The intkey transaction processor is provided as a simple example of a
 transaction family, which can also be used for testing purposes.
 
-To start an intkey transaction processor, run the following commands:
+To start an intkey transaction processor, run the following command:
 
 .. code-block:: console
 
-  $ tp_intkey_python -v tcp://127.0.0.1:4004
+  $ tp_intkey_python -v
 
-This will start a transaction processor that includes an **intkey** handler,
-which can understand and process transactions that use the built-in intkey
-transaction family. The processor communicates with the validator on
-TCP port 4004.
+.. note::
 
-The endpoint (`tcp://127.0.0.1:4004` in this example) to connect to must be
-specified when starting the transaction processor. This tells the transaction
-processor which validator to connect to. This is useful, because it is
-possible to run transaction processors on separate machines.
+  By default, the transaction processor tries to connect to a local validator
+  on port 4004. This can be modified by passing a different endpoint as an
+  argument. The following is equivalent to the default::
+
+    tp_intkey_python -v tcp://127.0.0.1:4004
+
+This will start a transaction processor with an **intkey** handler that can
+understand and process transactions from the intkey transaction family.
 
 The transaction processor produces the following output:
 
@@ -169,10 +175,12 @@ The transaction processor produces the following output:
   that supports the config transaction family. See `Config Transaction
   Family Usage`_ for more information.
 
-Multi-language support for transaction processors
+Multi-language Support for Transaction Processors
 =================================================
 
-Sawtooth includes additional transaction processors:
+Sawtooth supports multiple languages for transaction processor development and
+includes additional transaction processors written in several languages.
+The following lists the processors that are included:
 
 * tp_config
 
@@ -232,7 +240,7 @@ Run the following commands from the Linux CLI:
 .. code-block:: console
 
   $ intkey create_batch
-  $ intkey load -f batches.intkey
+  $ intkey load
 
 You can observe the processing of the intkey transactions by observing the
 logging output of the intkey transaction processor. A truncated example of
@@ -268,7 +276,7 @@ from the Linux CLI:
 
 .. code-block:: console
 
-  $ tp_config tcp://localhost:4004
+  $ tp_config
 
 Confirm that the transaction processor registers with the validator by viewing
 the terminal window in which the validator is running. A successful
@@ -289,7 +297,7 @@ already been started.
 
 .. code-block:: console
 
-  rest_api --connect tcp://127.0.0.1:4004
+  $ rest_api
 
 
 Step Three: Create And Submit Batch
@@ -312,7 +320,6 @@ following commands from the Linux CLI:
 
   $ sawtooth config proposal create --key /tmp/sawtooth.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
 
-
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
 and output similar to the following appears in the validator terminal:
 
@@ -333,9 +340,6 @@ tree, using the sawtooth CLI.
   The sawtooth CLI provides help for all subcommands. For example, to get help
   for the `block` subcommand, enter the command `sawtooth block -h`.
 
-Run the following commands from the Linux CLI.
-
-
 Starting The Rest API
 ---------------------
 
@@ -345,7 +349,7 @@ already been started.
 
 .. code-block:: console
 
-  rest_api --connect tcp://127.0.0.1:4004
+  $ rest_api
 
 
 Viewing List Of Blocks
@@ -461,4 +465,3 @@ The output of the command will be similar to this:
 
   DATA: "b'\xa1fcCTdcH\x192B'"
   HEAD: "0c4364c6d5181282a1c7653038ec9515cb0530c6bfcb46f16e79b77cb524491676638339e8ff8e3cc57155c6d920e6a4d1f53947a31dc02908bcf68a91315ad5"
-
