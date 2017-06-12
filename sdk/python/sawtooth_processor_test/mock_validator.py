@@ -270,7 +270,7 @@ class MockValidator(object):
 
     def _compare(self, obj1, obj2):
         msg_type = to_message_type(obj1)
-        msg_type2 = to_message_type(obj1)
+        msg_type2 = to_message_type(obj2)
 
         if msg_type != msg_type2:
             raise UnexpectedMessageException(msg_type, obj1, obj2)
