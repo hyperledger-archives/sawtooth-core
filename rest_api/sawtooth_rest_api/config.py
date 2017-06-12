@@ -124,4 +124,4 @@ class RestApiConfig:
         ])
 
     def to_toml_string(self):
-        return toml.dumps(self.to_dict()).strip().split('\n')
+        return str(toml.dumps(self.to_dict())).strip().split('\n')
