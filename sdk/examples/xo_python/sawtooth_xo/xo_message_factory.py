@@ -82,7 +82,7 @@ class XoMessageFactory:
         else:
             data = None
 
-        return self._factory.create_get_response({address: data})
+        return self._factory.create_set_request({address: data})
 
     def create_set_response(self, game):
         addresses = [self._game_to_address(game)]
