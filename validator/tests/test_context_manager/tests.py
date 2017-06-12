@@ -216,10 +216,10 @@ class TestContextManager(unittest.TestCase):
         raise a AuthorizationException.
 
         Notes:
-            1. Asserts that sets on a context with addresses that aren't
+            1. Assert that sets on a context with addresses that aren't
                under an output namespace raise an AuthorizationException.
 
-            2. Asserts that gets on a context with addresses that aren't under
+            2. Assert that gets on a context with addresses that aren't under
                an input namespace raise an AuthorizationException.
         """
 
@@ -251,6 +251,94 @@ class TestContextManager(unittest.TestCase):
             self.context_manager.get(
                 context_id=ctx_1,
                 address_list=[self._create_address('c')])
+
+    def test_exception_on_invalid_input(self):
+        """Tests that invalid inputs raise an exception. Tested with invalid
+        characters, odd number of characters, and too long namespace;
+
+        Notes:
+            1) Assert that inputs with a namespace with an odd number of
+               characters raise a CreateContextException.
+            2) Assert that inputs with a 71 character namespace raise a
+               CreateContextException.
+            3) Assert that inputs with a namespace with several invalid
+               characters raise a CreateContextException.
+        """
+
+        invalid_input_output1 = '0db7e8zc'  # invalid character
+        invalid_input_output2 = '7ef84ed' * 10 + '5'  # too long, 71 chars
+        invalid_input_output3 = 'yy76ftoph7465873ddde389f'  # invalid chars
+
+        valid_input_output1 = 'd8f533bbb74443222daad4'
+        valid_input_output2 = '77465847465784757848ddddddf'
+
+        state_hash = self.context_manager.get_first_root()
+
+        # 1
+        with self.assertRaises(context_manager.CreateContextException):
+            self.context_manager.create_context(
+                state_hash=state_hash,
+                base_contexts=[],
+                inputs=[invalid_input_output1, valid_input_output1],
+                outputs=[valid_input_output2])
+        # 2
+        with self.assertRaises(context_manager.CreateContextException):
+            self.context_manager.create_context(
+                state_hash=state_hash,
+                base_contexts=[],
+                inputs=[valid_input_output1, invalid_input_output2],
+                outputs=[valid_input_output2])
+        # 3
+        with self.assertRaises(context_manager.CreateContextException):
+            self.context_manager.create_context(
+                state_hash=state_hash,
+                base_contexts=[],
+                inputs=[invalid_input_output3, valid_input_output2],
+                outputs=[valid_input_output2, valid_input_output1])
+
+    def test_exception_on_invalid_output(self):
+        """Tests that invalid outputs raise an exception. Tested with invalid
+        characters, odd number of characters, and too long namespace;
+
+        Notes:
+            1) Assert that outputs with a namespace with an odd number of
+               characters raise a CreateContextException.
+            2) Assert that outputs with a 71 character namespace raise a
+               CreateContextException.
+            3) Assert that outputs with a namespace with several invalid
+               characters raise a CreateContextException.
+        """
+
+        invalid_input_output1 = '0db7e87'  # Odd number of characters
+        invalid_input_output2 = '7ef84ed' * 10 + '5'  # too long, 71 chars
+        invalid_input_output3 = 'yy76ftoph7465873ddde389f'  # invalid chars
+
+        valid_input_output1 = 'd8f533bbb74443222daad4'
+        valid_input_output2 = '77465847465784757848ddddddff'
+
+        state_hash = self.context_manager.get_first_root()
+
+        # 1
+        with self.assertRaises(context_manager.CreateContextException):
+            self.context_manager.create_context(
+                state_hash=state_hash,
+                base_contexts=[],
+                inputs=[valid_input_output2, valid_input_output1],
+                outputs=[invalid_input_output1])
+        # 2
+        with self.assertRaises(context_manager.CreateContextException):
+            self.context_manager.create_context(
+                state_hash=state_hash,
+                base_contexts=[],
+                inputs=[valid_input_output1, valid_input_output2],
+                outputs=[invalid_input_output2])
+        # 3
+        with self.assertRaises(context_manager.CreateContextException):
+            self.context_manager.create_context(
+                state_hash=state_hash,
+                base_contexts=[],
+                inputs=[valid_input_output1, valid_input_output2],
+                outputs=[valid_input_output2, invalid_input_output3])
 
     def test_create_context_with_prior_state(self):
         """Tests context creation with prior state from base contexts.

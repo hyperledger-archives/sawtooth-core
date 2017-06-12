@@ -36,7 +36,7 @@ class AuthorizationException(Exception):
             "Not authorized to read/write to {}".format(address))
 
 
-class CommitException(Exception):
+class CreateContextException(Exception):
     pass
 
 
@@ -320,6 +320,8 @@ class ContextManager(object):
 
         self._address_regex = re.compile('^[0-9a-f]{70}$')
 
+        self._namespace_regex = re.compile('^([0-9a-f]{2}){0,35}$')
+
         self._address_queue = Queue()
 
         self._inflated_addresses = Queue()
@@ -343,6 +345,10 @@ class ContextManager(object):
 
         return self._address_regex.match(address) is not None
 
+    def namespace_is_valid(self, namespace):
+
+        return self._namespace_regex.match(namespace) is not None
+
     def create_context(self, state_hash, base_contexts, inputs, outputs):
         """Create a StateContext to run a transaction against.
 
@@ -355,6 +361,17 @@ class ContextManager(object):
         Returns:
             context_id (str): the unique context_id of the session
         """
+
+        for address in inputs:
+            if not self.namespace_is_valid(address):
+                raise CreateContextException(
+                    "Address or namespace {} listed in inputs is not "
+                    "valid".format(address))
+        for address in outputs:
+            if not self.namespace_is_valid(address):
+                raise CreateContextException(
+                    "Address or namespace {} listed in outputs is not "
+                    "valid".format(address))
 
         addresses_to_find = list(inputs)
 
