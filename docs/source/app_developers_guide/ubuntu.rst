@@ -46,32 +46,8 @@ Run the following commands from a terminal window, as root or with `sudo`:
   $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
   $ apt-get update && apt-get install -y sawtooth
 
-
-Running As A Service (Optional)
-===============================
-
-When you install Sawtooth using apt-get, apt-get adds *systemd* units for
-the following components, which can then be started, stopped, and restarted
-using the *systemctl* command:
-
-* validator
-* transaction processors
-* rest_api
-
-
-Viewing Console Output
-----------------------
-
-To view the console output that you would see if you ran the components
-manually,  run the following command:
-
 .. code-block:: console
 
-  $ sudo journalctl -f \
-  -u sawtooth-validator \
-  -u sawtooth-tp_config \
-  -u sawtooth-tp_validator_registry \
-  -u sawtooth-rest_api
 
 
 Validator Start-up Process
@@ -102,19 +78,6 @@ the following commands as root:
   $ sawtooth admin genesis config-genesis.batch
   Generating /var/lib/sawtooth/genesis.batch
 
-.. note:: 
-
-  If you are running sawtooth as a service, use the following sequence
-  of commands:
-
-  .. code-block:: console
-  
-    $ sudo -u sawtooth -s
-    $ cd /tmp
-    $ sawtooth keygen --key-dir /tmp
-    $ sawtooth config genesis --key /tmp/sawtooth.priv
-    $ sawtooth admin genesis config-genesis.batch
-
 The following output appears:
 
 .. code-block:: console
@@ -143,15 +106,6 @@ To start a validator, run the following commands from a Linux terminal:
 
   To run the validator with less verbose logging, use the command `validator -v`.
 
-.. note::
-
-  To start the validator using *systemd*, run this command:
-
-  .. code-block:: console
-
-    $ sudo systemctl start sawtooth-validator
-
-
 This will start the validator. Logging output will be printed to the
 terminal window. The validator outputs something similar to this to
 the terminal window:
@@ -164,9 +118,7 @@ the terminal window:
 .. note::
 
     When you want to stop the validator, or any other running sawtooth
-    component, press CTRL-c. If you used systemctl to start the component, use
-    systemctl to stop it.
-
+    component, press CTRL+C.
 
 Starting the REST API
 =====================
@@ -178,14 +130,6 @@ command to start the rest api:
 .. code-block:: console
 
   rest_api --stream-url tcp://127.0.0.1:4004
-
-.. note::
-
-  To start the REST API using *systemd*, run this command:
-
-  .. code-block:: console
-
-    $ sudo systemctl start sawtooth-rest_api
 
 
 Running a transaction processor
@@ -202,14 +146,6 @@ To start an intkey transaction processor, run the following commands:
 .. code-block:: console
 
   $ tp_intkey_python -v tcp://127.0.0.1:4004
-
-.. note::
-
-  To start the transaction processor using *systemd*, run this command:
-
-  .. code-block:: console
-
-    $ sudo systemctl start sawtooth-tp_intkey_python
 
 This will start a transaction processor that includes an **intkey** handler,
 which can understand and process transactions that use the built-in intkey
@@ -333,15 +269,6 @@ from the Linux CLI:
 .. code-block:: console
 
   $ tp_config tcp://localhost:4004
-
-.. note::
-
-  To start the transaction processor using *systemd*, run this command:
-
-  .. code-block:: console
-
-    $ sudo systemctl start sawtooth-tp_config
-
 
 Confirm that the transaction processor registers with the validator by viewing
 the terminal window in which the validator is running. A successful
