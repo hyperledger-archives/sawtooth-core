@@ -154,7 +154,7 @@ class PoetForkResolver(ForkResolverInterface):
                     current_fork_wait_certificate.duration:
                 LOGGER.info(
                     'Choose new fork %s: New fork wait duration (%f) '
-                    'less than new fork wait duration (%f)',
+                    'less than current fork wait duration (%f)',
                     new_fork_head.header_signature[:8],
                     new_fork_wait_certificate.duration,
                     current_fork_wait_certificate.duration)
