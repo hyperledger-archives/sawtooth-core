@@ -52,7 +52,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	endpoint := "tcp://localhost:40000"
+	endpoint := "tcp://localhost:4004"
 	if len(remaining) == 1 {
 		endpoint = remaining[0]
 	}
