@@ -143,7 +143,7 @@ class StateContext(object):
         with self._lock:
             results = []
             for add in addresses:
-                self._validate_read(add)
+                self.validate_read(add)
                 results.append(self._get(add))
             return results
 
@@ -285,7 +285,7 @@ class StateContext(object):
         if not any(address.startswith(ns) for ns in self._write_list):
             raise AuthorizationException(address=address)
 
-    def _validate_read(self, address):
+    def validate_read(self, address):
         """Raises an exception if the address is not allowed to be read in
         this context, based on txn inputs.
 
@@ -373,7 +373,7 @@ class ContextManager(object):
                     "Address or namespace {} listed in outputs is not "
                     "valid".format(address))
 
-        addresses_to_find = list(inputs)
+        addresses_to_find = [add for add in inputs if len(add) == 70]
 
         address_values, reads = self._find_address_values_in_chain(
             base_contexts=base_contexts,
@@ -511,8 +511,38 @@ class ContextManager(object):
                 raise AuthorizationException(address=add)
 
         context = self._contexts[context_id]
-        values = context.get(list(address_list))
-        values_list = list(zip(address_list, values))
+
+        addresses_in_ctx = [add for add in address_list if add in context]
+        addresses_not_in_ctx = list(set(address_list) - set(addresses_in_ctx))
+
+        values = context.get(addresses_in_ctx)
+        values_list = list(zip(addresses_in_ctx, values))
+        if addresses_not_in_ctx:
+            # Validate the addresses that won't be validated by a direct get on
+            # the context.
+            for address in addresses_not_in_ctx:
+                context.validate_read(address)
+            address_values, reads = self._find_address_values_in_chain(
+                base_contexts=[context_id],
+                addresses_to_find=addresses_not_in_ctx)
+
+            values_list.extend(address_values)
+
+            if reads:
+                tree = MerkleDatabase(self._database, context.merkle_root)
+                add_values = []
+                for add in reads:
+                    value = None
+                    try:
+                        value = tree.get(add)
+                    except KeyError:
+                        # The address is not in the radix tree/merkle tree
+                        pass
+                    add_values.append((add, value))
+                values_list.extend(add_values)
+
+            values_list.sort(key=lambda x: address_list.index(x[0]))
+
         return values_list
 
     def set(self, context_id, address_value_list):
