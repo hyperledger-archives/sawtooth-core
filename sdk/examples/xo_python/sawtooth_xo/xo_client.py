@@ -72,7 +72,7 @@ class XoClient:
     def show(self, name):
         address = self._get_address(name)
 
-        result = self._send_request("state/{}".format(address))
+        result = self._send_request("state/{}".format(address), name=name)
 
         try:
             return base64.b64decode(yaml.safe_load(result)["data"])
@@ -97,7 +97,7 @@ class XoClient:
         game_address = _sha512(name.encode('utf-8'))[0:64]
         return xo_prefix + game_address
 
-    def _send_request(self, suffix, data=None, content_type=None):
+    def _send_request(self, suffix, data=None, content_type=None, name=None):
         if self._base_url.startswith("http://"):
             url = "{}/{}".format(self._base_url, suffix)
         else:
@@ -113,7 +113,10 @@ class XoClient:
             else:
                 result = requests.get(url)
 
-            if not result.ok:
+            if result.status_code == 404:
+                raise XoException("No such game: {}".format(name))
+
+            elif not result.ok:
                 raise XoException("Error {}: {}".format(
                     result.status_code, result.reason))
 
