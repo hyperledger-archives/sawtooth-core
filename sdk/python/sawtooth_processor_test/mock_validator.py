@@ -273,7 +273,7 @@ class MockValidator(object):
         msg_type2 = to_message_type(obj2)
 
         if msg_type != msg_type2:
-            raise UnexpectedMessageException(msg_type, obj1, obj2)
+            return False
 
         if msg_type in self._comparators:
             return self._comparators[msg_type](obj1, obj2)
