@@ -27,6 +27,7 @@ from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.execution import processor_iterator
 from sawtooth_validator.networking.future import FutureResult
 from sawtooth_validator.networking.future import FutureTimeoutError
+from sawtooth_validator.networking.interconnect import ThreadsafeDict
 
 
 LOGGER = logging.getLogger(__name__)
@@ -43,9 +44,9 @@ class TransactionExecutorThread(object):
                  scheduler,
                  processors,
                  waiting_threadpool,
-                 config_view_factory):
+                 config_view_factory,
+                 open_futures):
         """
-
         Args:
             service (Interconnect): The zmq internal interface
             context_manager (ContextManager): The cached state for tps
@@ -73,7 +74,7 @@ class TransactionExecutorThread(object):
         self._waiters_by_type = _WaitersByType()
         self._waiting_threadpool = waiting_threadpool
         self._done = False
-        self._open_futures = {}
+        self._open_futures = open_futures
 
     def _future_done_callback(self, request, result):
         """
@@ -227,25 +228,7 @@ class TransactionExecutorThread(object):
             self._open_futures[connection_id] = \
                 {signature: fut}
 
-    def check_connections(self):
-        # This is not ideal, because it locks up the current thread while
-        # waiting for the results.
-        futures = {}
-        for connection_id in self._processors.get_all_processors():
-            fut = self._service.send(
-                validator_pb2.Message.TP_PING,
-                processor_pb2.TpPing().SerializeToString(),
-                connection_id=connection_id)
-            futures[fut] = connection_id
-        for fut in futures:
-            try:
-                fut.result(timeout=10)
-            except FutureTimeoutError:
-                LOGGER.info("%s did not respond to the TpPing, removing "
-                            "transaction processor.", futures[fut])
-                self._remove_broken_connection(futures[fut])
-
-    def _remove_broken_connection(self, connection_id):
+    def remove_broken_connection(self, connection_id):
         if connection_id not in self._open_futures:
             # Connection has already been removed.
             return
@@ -275,7 +258,6 @@ class TransactionExecutorThread(object):
 class TransactionExecutor(object):
     def __init__(self, service, context_manager, config_view_factory):
         """
-
         Args:
             service (Interconnect): The zmq internal interface
             context_manager (ContextManager): Cache of state for tps
@@ -299,6 +281,7 @@ class TransactionExecutor(object):
         self._executing_threadpool = ThreadPoolExecutor(max_workers=5)
         self._alive_threads = []
         self._lock = threading.Lock()
+        self._open_futures = ThreadsafeDict()
 
     def create_scheduler(self,
                          squash_handler,
@@ -309,9 +292,7 @@ class TransactionExecutor(object):
                                always_persist=always_persist)
 
     def check_connections(self):
-        for t in self._alive_threads:
-            if not t.is_done():
-                t.check_connections()
+        self._executing_threadpool.submit(self._check_connections)
 
     def _remove_done_threads(self):
         for t in self._alive_threads.copy():
@@ -324,6 +305,30 @@ class TransactionExecutor(object):
             if not t.is_done():
                 t.cancel()
 
+    def _check_connections(self):
+        # This is not ideal, because it locks up the current thread while
+        # waiting for the results.
+        with self._lock:
+            futures = {}
+            for connection_id in self.processors.get_all_processors():
+                fut = self._service.send(
+                    validator_pb2.Message.TP_PING,
+                    processor_pb2.TpPing().SerializeToString(),
+                    connection_id=connection_id)
+                futures[fut] = connection_id
+            for fut in futures:
+                try:
+                    fut.result(timeout=10)
+                except FutureTimeoutError:
+                    LOGGER.info("%s did not respond to the TpPing, removing "
+                                "transaction processor.", futures[fut])
+                    self._remove_broken_connection(futures[fut])
+
+    def _remove_broken_connection(self, connection_id):
+        for t in self._alive_threads:
+            if not t.is_done():
+                t.remove_broken_connection(connection_id)
+
     def execute(self, scheduler):
         self._remove_done_threads()
         t = TransactionExecutorThread(
@@ -332,7 +337,8 @@ class TransactionExecutor(object):
             scheduler=scheduler,
             processors=self.processors,
             waiting_threadpool=self._waiting_threadpool,
-            config_view_factory=self._config_view_factory)
+            config_view_factory=self._config_view_factory,
+            open_futures=self._open_futures)
         self._executing_threadpool.submit(t.execute_thread)
         with self._lock:
             self._alive_threads.append(t)
