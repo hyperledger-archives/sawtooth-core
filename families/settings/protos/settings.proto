@@ -16,17 +16,17 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "sawtooth.config.protobuf";
+option java_package = "sawtooth.settings.protobuf";
 
-// Configuration Setting Payload
+// Setting Payload
 // - Contains either a proposal or a vote.
-message ConfigPayload {
+message SettingsPayload {
     // The action indicates data is contained within this payload
     enum Action {
-        // A proposal action - data will be a ConfigProposal
+        // A proposal action - data will be a SettingProposal
         PROPOSE = 0;
 
-        // A vote action - data will be a ConfigVote
+        // A vote action - data will be a SettingVote
         VOTE = 1;
     }
     // The action of this payload
@@ -36,10 +36,10 @@ message ConfigPayload {
     bytes data = 2;
 }
 
-// Configuration Setting Proposal
+// Setting Proposal
 //
 // This message proposes a change in a setting value.
-message ConfigProposal {
+message SettingProposal {
     // The setting key.  E.g. sawtooth.config.authorization_type
     string setting = 1;
 
@@ -51,12 +51,12 @@ message ConfigProposal {
     string nonce = 3;
 }
 
-// Configuration Setting Vote
+// Setting Vote
 //
 // In ballot mode, a proposal must be voted on.  This message indicates an
 // acceptance or rejection of a proposal, where the proposal is identified
 // by its id.
-message ConfigVote {
+message SettingVote {
     enum Vote {
         ACCEPT = 0;
         REJECT = 1;
@@ -70,14 +70,14 @@ message ConfigVote {
 }
 
 // Contains the vote counts for a given proposal.
-message ConfigCandidate {
+message SettingCandidate {
     // An individual vote record
     message VoteRecord {
         // The public key of the voter
         string public_key = 1;
 
         // The voter's actual vote
-        ConfigVote.Vote vote = 2;
+        SettingVote.Vote vote = 2;
 
     }
 
@@ -85,13 +85,13 @@ message ConfigCandidate {
     string proposal_id = 1;
 
     // The active proposal
-    ConfigProposal proposal = 2;
+    SettingProposal proposal = 2;
 
     // list of votes
     repeated VoteRecord votes = 3;
 }
 
-// Contains all the configuration candiates up for vote.
-message ConfigCandidates {
-    repeated ConfigCandidate candidates = 1;
+// Contains all the setting candiates up for vote.
+message SettingCandidates {
+    repeated SettingCandidate candidates = 1;
 }

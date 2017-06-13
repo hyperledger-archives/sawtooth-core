@@ -16,12 +16,13 @@
 import hashlib
 import base64
 
-from sawtooth_settings.protobuf.config_pb2 import ConfigCandidates
-from sawtooth_settings.protobuf.config_pb2 import ConfigCandidate
-from sawtooth_settings.protobuf.config_pb2 import ConfigVote
-from sawtooth_settings.protobuf.config_pb2 import ConfigProposal
+from sawtooth_settings.protobuf.settings_pb2 import SettingCandidates
+from sawtooth_settings.protobuf.settings_pb2 import SettingCandidate
+from sawtooth_settings.protobuf.settings_pb2 import SettingVote
+from sawtooth_settings.protobuf.settings_pb2 import SettingProposal
 
-from sawtooth_settings_test.config_message_factory import ConfigMessageFactory
+from sawtooth_settings_test.settings_message_factory \
+    import SettingsMessageFactory
 
 from sawtooth_processor_test.transaction_processor_test_case \
     import TransactionProcessorTestCase
@@ -31,7 +32,7 @@ def _to_hash(value):
     return hashlib.sha256(value).hexdigest()
 
 
-EMPTY_CANDIDATES = ConfigCandidates(candidates=[]).SerializeToString()
+EMPTY_CANDIDATES = SettingCandidates(candidates=[]).SerializeToString()
 
 
 class TestSettings(TransactionProcessorTestCase):
@@ -39,7 +40,7 @@ class TestSettings(TransactionProcessorTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.factory = ConfigMessageFactory()
+        cls.factory = SettingsMessageFactory()
 
     def _expect_get(self, key, value=None):
         received = self.validator.expect(
@@ -166,21 +167,21 @@ class TestSettings(TransactionProcessorTestCase):
         self._expect_get('sawtooth.config.vote.approval_threshold', '2')
         self._expect_get('sawtooth.config.vote.proposals')
 
-        proposal = ConfigProposal(
+        proposal = SettingProposal(
             setting='my.config.setting',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        record = ConfigCandidate.VoteRecord(
+        record = SettingCandidate.VoteRecord(
             public_key=self._public_key,
-            vote=ConfigVote.ACCEPT)
-        candidate = ConfigCandidate(
+            vote=SettingVote.ACCEPT)
+        candidate = SettingCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[record])
 
-        candidates = ConfigCandidates(candidates=[candidate])
+        candidates = SettingCandidates(candidates=[candidate])
 
         # Get's again to update the entry
         self._expect_get('sawtooth.config.vote.proposals')
@@ -193,23 +194,23 @@ class TestSettings(TransactionProcessorTestCase):
         """
         Tests voting on a given setting, where the setting is approved
         """
-        proposal = ConfigProposal(
+        proposal = SettingProposal(
             setting='my.config.setting',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        record = ConfigCandidate.VoteRecord(
+        record = SettingCandidate.VoteRecord(
             public_key="some_other_pubkey",
-            vote=ConfigVote.ACCEPT)
-        candidate = ConfigCandidate(
+            vote=SettingVote.ACCEPT)
+        candidate = SettingCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[record])
 
-        candidates = ConfigCandidates(candidates=[candidate])
+        candidates = SettingCandidates(candidates=[candidate])
 
-        self._vote(proposal_id, 'my.config.setting', ConfigVote.ACCEPT)
+        self._vote(proposal_id, 'my.config.setting', SettingVote.ACCEPT)
 
         self._expect_get('sawtooth.config.vote.authorized_keys',
                          self._public_key + ',some_other_pubkey')
@@ -233,23 +234,23 @@ class TestSettings(TransactionProcessorTestCase):
         """
         Tests voting on a given setting, where the vote is counted only.
         """
-        proposal = ConfigProposal(
+        proposal = SettingProposal(
             setting='my.config.setting',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        record = ConfigCandidate.VoteRecord(
+        record = SettingCandidate.VoteRecord(
             public_key="some_other_pubkey",
-            vote=ConfigVote.ACCEPT)
-        candidate = ConfigCandidate(
+            vote=SettingVote.ACCEPT)
+        candidate = SettingCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[record])
 
-        candidates = ConfigCandidates(candidates=[candidate])
+        candidates = SettingCandidates(candidates=[candidate])
 
-        self._vote(proposal_id, 'my.config.setting', ConfigVote.ACCEPT)
+        self._vote(proposal_id, 'my.config.setting', SettingVote.ACCEPT)
 
         self._expect_get('sawtooth.config.vote.authorized_keys',
                          self._public_key + ',some_other_pubkey,third_pubkey')
@@ -261,18 +262,18 @@ class TestSettings(TransactionProcessorTestCase):
         self._expect_get('sawtooth.config.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
 
-        record = ConfigCandidate.VoteRecord(
+        record = SettingCandidate.VoteRecord(
             public_key="some_other_pubkey",
-            vote=ConfigVote.ACCEPT)
-        new_record = ConfigCandidate.VoteRecord(
+            vote=SettingVote.ACCEPT)
+        new_record = SettingCandidate.VoteRecord(
             public_key=self._public_key,
-            vote=ConfigVote.ACCEPT)
-        candidate = ConfigCandidate(
+            vote=SettingVote.ACCEPT)
+        candidate = SettingCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[record, new_record])
 
-        updated_candidates = ConfigCandidates(candidates=[candidate])
+        updated_candidates = SettingCandidates(candidates=[candidate])
         self._expect_set(
             'sawtooth.config.vote.proposals',
             base64.b64encode(updated_candidates.SerializeToString()))
@@ -283,27 +284,27 @@ class TestSettings(TransactionProcessorTestCase):
         """
         Tests voting on a given setting, where the setting is rejected.
         """
-        proposal = ConfigProposal(
+        proposal = SettingProposal(
             setting='my.config.setting',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        candidate = ConfigCandidate(
+        candidate = SettingCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[
-                ConfigCandidate.VoteRecord(
+                SettingCandidate.VoteRecord(
                     public_key='some_other_pubkey',
-                    vote=ConfigVote.ACCEPT),
-                ConfigCandidate.VoteRecord(
+                    vote=SettingVote.ACCEPT),
+                SettingCandidate.VoteRecord(
                     public_key='a_rejectors_pubkey',
-                    vote=ConfigVote.REJECT)
+                    vote=SettingVote.REJECT)
             ])
 
-        candidates = ConfigCandidates(candidates=[candidate])
+        candidates = SettingCandidates(candidates=[candidate])
 
-        self._vote(proposal_id, 'my.config.setting', ConfigVote.REJECT)
+        self._vote(proposal_id, 'my.config.setting', SettingVote.REJECT)
 
         self._expect_get(
             'sawtooth.config.vote.authorized_keys',
@@ -325,24 +326,24 @@ class TestSettings(TransactionProcessorTestCase):
         Tests voting on a given setting, where there is a tie for accept and
         for reject, with no remaining auth keys.
         """
-        proposal = ConfigProposal(
+        proposal = SettingProposal(
             setting='my.config.setting',
             value='myvalue',
             nonce='somenonce'
         )
         proposal_id = _to_hash(proposal.SerializeToString())
-        candidate = ConfigCandidate(
+        candidate = SettingCandidate(
             proposal_id=proposal_id,
             proposal=proposal,
             votes=[
-                ConfigCandidate.VoteRecord(
+                SettingCandidate.VoteRecord(
                     public_key='some_other_pubkey',
-                    vote=ConfigVote.ACCEPT),
+                    vote=SettingVote.ACCEPT),
             ])
 
-        candidates = ConfigCandidates(candidates=[candidate])
+        candidates = SettingCandidates(candidates=[candidate])
 
-        self._vote(proposal_id, 'my.config.setting', ConfigVote.REJECT)
+        self._vote(proposal_id, 'my.config.setting', SettingVote.REJECT)
 
         self._expect_get('sawtooth.config.vote.authorized_keys',
                          self._public_key + ',some_other_pubkey')

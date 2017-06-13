@@ -25,10 +25,10 @@ import yaml
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 
-from sawtooth_cli.protobuf.config_pb2 import ConfigPayload
-from sawtooth_cli.protobuf.config_pb2 import ConfigProposal
-from sawtooth_cli.protobuf.config_pb2 import ConfigVote
-from sawtooth_cli.protobuf.config_pb2 import ConfigCandidates
+from sawtooth_cli.protobuf.settings_pb2 import SettingsPayload
+from sawtooth_cli.protobuf.settings_pb2 import SettingProposal
+from sawtooth_cli.protobuf.settings_pb2 import SettingVote
+from sawtooth_cli.protobuf.settings_pb2 import SettingCandidates
 from sawtooth_cli.protobuf.setting_pb2 import Setting
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
@@ -39,7 +39,7 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchList
 import sawtooth_signing as signing
 
 
-CONFIG_NAMESPACE = '000000'
+SETTINGS_NAMESPACE = '000000'
 DEFAULT_COL_WIDTH = 15
 
 _MAX_KEY_PARTS = 4
@@ -348,7 +348,7 @@ def _do_config_list(args):
     """Lists the current on-chain configuration values.
     """
     rest_client = RestClient(args.url)
-    state = rest_client.list_state(subtree=CONFIG_NAMESPACE)
+    state = rest_client.list_state(subtree=SETTINGS_NAMESPACE)
 
     prefix = args.filter
 
@@ -443,7 +443,7 @@ def _get_proposals(rest_client):
     state_leaf = rest_client.get_leaf(
         _key_to_address('sawtooth.config.vote.proposals'))
 
-    config_candidates = ConfigCandidates()
+    config_candidates = SettingCandidates()
 
     if state_leaf is not None:
         setting_bytes = b64decode(state_leaf['data'])
@@ -522,12 +522,12 @@ def _create_propose_txn(pubkey, signing_key, setting_key_value):
     """
     setting_key, setting_value = setting_key_value
     nonce = str(datetime.datetime.utcnow().timestamp())
-    proposal = ConfigProposal(
+    proposal = SettingProposal(
         setting=setting_key,
         value=setting_value,
         nonce=nonce)
-    payload = ConfigPayload(data=proposal.SerializeToString(),
-                            action=ConfigPayload.PROPOSE)
+    payload = SettingsPayload(data=proposal.SerializeToString(),
+                              action=SettingsPayload.PROPOSE)
 
     return _make_txn(pubkey, signing_key, setting_key, payload)
 
@@ -538,13 +538,13 @@ def _create_vote_txn(pubkey, signing_key,
     proposal for a particular setting key.
     """
     if vote_value == 'accept':
-        vote_id = ConfigVote.ACCEPT
+        vote_id = SettingVote.ACCEPT
     else:
-        vote_id = ConfigVote.REJECT
+        vote_id = SettingVote.REJECT
 
-    vote = ConfigVote(proposal_id=proposal_id, vote=vote_id)
-    payload = ConfigPayload(data=vote.SerializeToString(),
-                            action=ConfigPayload.VOTE)
+    vote = SettingVote(proposal_id=proposal_id, vote=vote_id)
+    payload = SettingsPayload(data=vote.SerializeToString(),
+                              action=SettingsPayload.VOTE)
 
     return _make_txn(pubkey, signing_key, setting_key, payload)
 
@@ -605,4 +605,4 @@ def _key_to_address(key):
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
 
-    return CONFIG_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)
+    return SETTINGS_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)
