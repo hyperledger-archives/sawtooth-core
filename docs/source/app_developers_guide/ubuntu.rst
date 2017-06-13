@@ -172,7 +172,7 @@ The transaction processor produces the following output:
 .. note::
 
   In a production environment, you should always run a transaction processor
-  that supports the config transaction family. See `Config Transaction
+  that supports the config transaction family. See `Settings Transaction
   Family Usage`_ for more information.
 
 Multi-language Support for Transaction Processors
@@ -260,7 +260,7 @@ the intkey transaction processor's output is shown below:
 Settings Transaction Family Usage
 =================================
 
-Sawtooth provides a :doc:`config transaction family
+Sawtooth provides a :doc:`settings transaction family
 <../transaction_family_specifications/settings_transaction_family>` that stores
 on-chain settings, along with a settings family transaction processor written
 in Python.

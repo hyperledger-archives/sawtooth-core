@@ -130,7 +130,7 @@ The Consensus Interface
 =======================
 
 In the spirit of configurability, the Journal supports pluggable consensus
-algorithms that may be changed via the Configuration transaction family.  The
+algorithms that may be changed via the settings transaction family.  The
 initial selection of a  Consensus algorithm is set for the chain in the Genesis
 Block during Genesis (described below). This may be changed during the course of
 a Chain's lifetime. The Journal and its Consensus Interface support pluggable
@@ -473,4 +473,4 @@ possible, as long as they know how to read the consensus field of the previous
 block.
 
 To complete the process, all necessary transaction processors must be running.
-Minimally this includes the Sawtooth Config transaction processor.
+Minimally this includes the Sawtooth settings transaction processor.

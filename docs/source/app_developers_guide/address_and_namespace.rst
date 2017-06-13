@@ -130,8 +130,8 @@ there is a lot of flexibility. The example above is just an example. Your own
 addressing schema should be designed with your transaction family’s
 requirements in mind.
 
-Config Transaction Family Example
----------------------------------
+Settings Transaction Family Example
+-----------------------------------
 
-See the `Config Transaction Family Specification <http://intelledger.github.io/transaction_family_specifications/config_transaction_family.html#addressing>`_
+See the :doc:`/transaction_family_specifications/settings_transaction_family`
 for another more complex addressing scheme.

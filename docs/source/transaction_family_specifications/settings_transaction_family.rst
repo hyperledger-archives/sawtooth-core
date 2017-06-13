@@ -1,11 +1,11 @@
-***************************************
-Config Transaction Family Specification
-***************************************
+*****************************************
+Settings Transaction Family Specification
+*****************************************
 
 Overview
 =========
 
-The config transaction family provides a methodology for storing on-chain
+The settings transaction family provides a methodology for storing on-chain
 configuration settings.
 
 The settings stored in state as a result of this transaction family play a
@@ -39,11 +39,11 @@ change.
 State
 =====
 
-This section describes in detail how config settings are stored and addressed using
-the config transaction family.
+This section describes in detail how settings are stored and addressed using
+the settings transaction family.
 
-The configuration data consists of setting/value pairs. A setting is the name
-for the item of configuration data. The value is the data in the form of a string.
+The setting data consists of setting/value pairs. A setting is the name for the
+item of configuration data. The value is the data in the form of a string.
 
 Settings
 --------
@@ -58,21 +58,21 @@ sawtooth.validator.max_transactions_per_block 1000
 ============================================= ============
 
 
-The config transaction family uses the following settings for its own configuration:
+The settings transaction family uses the following settings for its own configuration:
 
-+------------------------------------------+-------------------------------------------------------------+
-| Setting (Config)                         | Value Description                                           |
-+==========================================+=============================================================+
-| sawtooth.config.vote.authorized_keys     | List of public keys allowed to vote.                        |
-+------------------------------------------+-------------------------------------------------------------+
-| sawtooth.config.vote.approval_threshold  | Percentage of keys required for a proposal to be accepted.  |
-+------------------------------------------+-------------------------------------------------------------+
-| sawtooth.config.vote.proposals           | A list of proposals to make configuration changes (see note)|
-+------------------------------------------+-------------------------------------------------------------+
++------------------------------------------+------------------------------------------------------------+
+| Setting (Settings)                       | Value Description                                          |
++==========================================+============================================================+
+| sawtooth.config.vote.authorized_keys     | List of public keys allowed to vote.                       |
++------------------------------------------+------------------------------------------------------------+
+| sawtooth.config.vote.approval_threshold  | Percentage of keys required for a proposal to be accepted. |
++------------------------------------------+------------------------------------------------------------+
+| sawtooth.config.vote.proposals           | A list of proposals to make settings changes (see note)    |
++------------------------------------------+------------------------------------------------------------+
 
 .. note::
 	*sawtooth.config.vote.proposals* is a base64 encoded string of the
-	protobuf message *ConfigCandidates*. This setting cannot be modified
+	protobuf message *SettingCandidates*. This setting cannot be modified
 	by a proposal or a vote.
 
 
@@ -101,20 +101,20 @@ sawtooth.config.vote.proposals
 
 The setting 'sawtooth.config.vote.proposals' is stored as defined by the
 following protocol buffers definition. The value returned by this  setting is
-a base64 encoded *ConfigCandidates* message:
+a base64 encoded *SettingCandidates* message:
 
 .. code-block:: protobuf
-	:caption: File: sawtooth-core/families/config/protos/config.proto
+	:caption: File: sawtooth-core/families/settings/protos/settings.proto
 
 	// Contains the vote counts for a given proposal.
-	message ConfigCandidate {
+	message SettingCandidate {
 	    // An individual vote record
 	    message VoteRecord {
 	        // The public key of the voter
 	        string public_key = 1;
 
 	        // The voter's actual vote
-	        ConfigVote.Vote vote = 2;
+	        SettingVote.Vote vote = 2;
 
 	    }
 
@@ -122,15 +122,15 @@ a base64 encoded *ConfigCandidates* message:
 	    string proposal_id = 1;
 
 	    // The active propsal
-	    ConfigProposal proposal = 2;
+	    SettingProposal proposal = 2;
 
 	    // list of votes
 	    repeated VoteRecord votes = 3;
 	}
 
-	// Contains all the configuration candiates up for vote.
-	message ConfigCandidates {
-	    repeated ConfigCandidate candidates = 1;
+	// Contains all the setting candidates up for vote.
+	message SettingCandidates {
+	    repeated SettingCandidate candidates = 1;
 	}
 
 
@@ -146,7 +146,7 @@ the empty string.  A longer key, for example `a.b.c.d.e`, is still broken into
 four parts, but the remain pieces are in the last part: `a`, `b`, `c` and `d.e`.
 
 Each of these pieces has a short hash computed (the first 16 characters of its
-SHA256 hash in hex) and is joined into a single address, with the config
+SHA256 hash in hex) and is joined into a single address, with the settings
 namespace (`000000`) added at the beginning.
 
 For example, the setting *sawtooth.config.vote.proposals* could be set like
@@ -164,21 +164,21 @@ this:
 Transaction Payload
 ===================
 
-Config transaction family payloads are defined by the following protocol
+Setting transaction family payloads are defined by the following protocol
 buffers code:
 
 .. code-block:: protobuf
-	:caption: File: sawtooth-core/families/config/protos/config.proto
+	:caption: File: sawtooth-core/families/settings/protos/settings.proto
 
-	// Configuration Setting Payload
+	// Setting Payload
 	// - Contains either a proposal or a vote.
-	message ConfigPayload {
+	message SettingPayload {
 	    // The action indicates data is contained within this payload
 	    enum Action {
-	        // A proposal action - data will be a ConfigProposal
+	        // A proposal action - data will be a SettingProposal
 	        PROPOSE = 0;
 
-	        // A vote action - data will be a ConfigVote
+	        // A vote action - data will be a SettingVote
 	        VOTE = 1;
 	    }
 	    // The action of this payload
@@ -188,10 +188,10 @@ buffers code:
 	    bytes data = 2;
 	}
 
-	// Configuration Setting Proposal
+	// Setting Proposal
 	//
 	// This message proposes a change in a setting value.
-	message ConfigProposal {
+	message SettingProposal {
 	    // The setting key.  E.g. sawtooth.consensus.module
 	    string setting = 1;
 
@@ -203,12 +203,12 @@ buffers code:
 	    string nonce = 3;
 	}
 
-	// Configuration Setting Vote
+	// Setting Vote
 	//
 	// In ballot mode, a propsal must be voted on.  This message indicates an
 	// acceptance or rejection of a proposal, where the proposal is identified
 	// by its id.
-	message ConfigVote {
+	message SettingVote {
 	    enum Vote {
 	        ACCEPT = 0;
 	        REJECT = 1;
@@ -270,9 +270,9 @@ the list of authorized keys.  If it is empty, all public keys are allowed.
 
 A Propose action is validated.  If it fails, it is considered an invalid
 transaction.  A *proposal_id* is calculated by taking the sha256 hash of
-the raw *ConfigProposal* bytes as they exist in the payload.  Duplicate
+the raw *SettingProposal* bytes as they exist in the payload.  Duplicate
 *proposal_ids* causes an invalid transaction. The proposal will be
-recorded in the *ConfigProposals* stored in *sawtooth.config.vote.proposals*,
+recorded in the *SettingProposals* stored in *sawtooth.config.vote.proposals*,
 with one "accept" vote counted.  The transaction processor outputs a
 *DEBUG*-level logging message similar to
 
@@ -285,7 +285,7 @@ the public key of the transaction has not already voted.  The value of
 *sawtooth.config.vote.approval_threshold* is read from the state.  If the
 "accept" vote count is equal to or above the approval threshold, the proposal
 is applied to the state. This results in the above INFO message being
-logged. The proposal is deleted from the *ConfigProposals* record.
+logged. The proposal is deleted from the *SettingProposals* record.
 
 If the "reject" vote count is equal to or above the approval threshold, then it
 is deleted from *sawtooth.config.vote.proposals* and an appropriate debug

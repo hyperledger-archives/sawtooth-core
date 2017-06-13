@@ -256,11 +256,11 @@ transactions just submitted:
   tp_intkey_python_1  | [21:02:53.202 DEBUG    handler] Incrementing "ZeuYwh" by 1
 
 
-Config Transaction Family Usage
-===============================
+Settings Transaction Family Usage
+=================================
 
-Sawtooth provides a :doc:`config transaction family
-<../transaction_family_specifications/config_transaction_family>` that stores
+Sawtooth provides a :doc:`settings transaction family
+<../transaction_family_specifications/settings_transaction_family>` that stores
 on-chain configuration settings, along with a config family transaction
 processor written in Python.
 
@@ -269,7 +269,8 @@ In the example below, a JSON array is submitted to the `sawtooth config`
 command, which creates and submits a batch of transactions containing the
 configuration change.
 
-The JSON array used tells the validator or validator network to accept transactions of the following types:
+The JSON array used tells the validator or validator network to accept
+transactions of the following types:
 
 * intkey
 * sawtooth_config
