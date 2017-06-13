@@ -33,7 +33,7 @@ class PoetEnclaveFactory(object):
     @classmethod
     def get_poet_enclave_module(cls, state_view, config_dir, data_dir):
         """Returns the PoET enclave module based upon the corresponding value
-        set by the sawtooth_config transaction family.  If no PoET enclave
+        set by the sawtooth_settings transaction family.  If no PoET enclave
         module has been set in the configuration, it defaults to the PoET
         enclave simulator.
 

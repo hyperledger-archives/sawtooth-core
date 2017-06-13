@@ -217,7 +217,7 @@ class GenesisController(object):
 
     def _get_block_publisher(self, state_hash):
         """Returns the block publisher based on the consensus module set by the
-        "sawtooth_config" transaction family.
+        "sawtooth_settings" transaction family.
 
         Args:
             state_hash (str): The current state root hash for reading settings.
