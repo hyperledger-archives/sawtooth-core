@@ -231,7 +231,9 @@ class ForkResolver(ForkResolverInterface):
                 new_fork_head.header.signer_pubkey,
                 new_fork_head.header.previous_block_id)
 
-            return new_fork_hash < cur_fork_hash
+            result = new_fork_hash < cur_fork_hash
 
         else:
-            return new_fork_head.block_num > cur_fork_head.block_num
+            result = new_fork_head.block_num > cur_fork_head.block_num
+
+        return result

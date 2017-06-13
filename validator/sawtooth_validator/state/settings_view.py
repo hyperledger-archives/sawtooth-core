@@ -100,9 +100,11 @@ class SettingsView(object):
         """
         value = self.get_setting(key)
         if value is not None:
-            return [value_type(v) for v in value.split(delimiter)]
+            setting_list = [value_type(v) for v in value.split(delimiter)]
         else:
-            return default_value
+            setting_list = default_value
+
+        return setting_list
 
     @staticmethod
     @lru_cache(maxsize=128)

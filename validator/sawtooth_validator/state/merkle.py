@@ -237,10 +237,7 @@ class MerkleDatabase(object):
 
     def _get_kv(self, key):
         packed = self._database.get(key)
-        if packed is not None:
-            return self._decode(packed)
-        else:
-            return None
+        return self._decode(packed) if packed is not None else None
 
     def _set_kv(self, value):
         packed = self._encode(value)
