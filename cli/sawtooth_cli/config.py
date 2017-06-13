@@ -355,7 +355,7 @@ def _do_config_list(args):
     head = state['head']
     state_values = state['data']
     printable_settings = []
-    proposals_address = _key_to_address('sawtooth.config.vote.proposals')
+    proposals_address = _key_to_address('sawtooth.settings.vote.proposals')
     for state_value in state_values:
         if state_value['address'] == proposals_address:
             # This is completely internal setting and we won't list it here
@@ -410,7 +410,7 @@ def _do_config_genesis(args):
 
     txns.append(_create_propose_txn(
         pubkey, signing_key,
-        ('sawtooth.config.vote.authorized_keys',
+        ('sawtooth.settings.vote.authorized_keys',
          ','.join(authorized_keys))))
 
     if args.approval_threshold is not None:
@@ -424,7 +424,7 @@ def _do_config_genesis(args):
 
         txns.append(_create_propose_txn(
             pubkey, signing_key,
-            ('sawtooth.config.vote.approval_threshold',
+            ('sawtooth.settings.vote.approval_threshold',
              str(args.approval_threshold))))
 
     batch = _create_batch(pubkey, signing_key, txns)
@@ -441,7 +441,7 @@ def _do_config_genesis(args):
 
 def _get_proposals(rest_client):
     state_leaf = rest_client.get_leaf(
-        _key_to_address('sawtooth.config.vote.proposals'))
+        _key_to_address('sawtooth.settings.vote.proposals'))
 
     config_candidates = SettingCandidates()
 
@@ -452,7 +452,7 @@ def _get_proposals(rest_client):
 
         candidates_bytes = None
         for entry in setting.entries:
-            if entry.key == 'sawtooth.config.vote.proposals':
+            if entry.key == 'sawtooth.settings.vote.proposals':
                 candidates_bytes = entry.value
 
         if candidates_bytes is not None:
@@ -578,9 +578,9 @@ def _config_inputs(key):
     given setting key.
     """
     return [
-        _key_to_address('sawtooth.config.vote.proposals'),
-        _key_to_address('sawtooth.config.vote.authorized_keys'),
-        _key_to_address('sawtooth.config.vote.approval_threshold'),
+        _key_to_address('sawtooth.settings.vote.proposals'),
+        _key_to_address('sawtooth.settings.vote.authorized_keys'),
+        _key_to_address('sawtooth.settings.vote.approval_threshold'),
         _key_to_address(key)
     ]
 
@@ -590,7 +590,7 @@ def _config_outputs(key):
     given setting key.
     """
     return [
-        _key_to_address('sawtooth.config.vote.proposals'),
+        _key_to_address('sawtooth.settings.vote.proposals'),
         _key_to_address(key)
     ]
 

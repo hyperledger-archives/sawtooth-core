@@ -179,7 +179,7 @@ class SettingsTransactionHandler(object):
 
 
 def _get_setting_candidates(state):
-    value = _get_setting_value(state, 'sawtooth.config.vote.proposals')
+    value = _get_setting_value(state, 'sawtooth.settings.vote.proposals')
     if not value:
         return SettingCandidates(candidates={})
 
@@ -190,19 +190,19 @@ def _get_setting_candidates(state):
 
 def _save_setting_candidates(state, setting_candidates):
     _set_setting_value(state,
-                       'sawtooth.config.vote.proposals',
+                       'sawtooth.settings.vote.proposals',
                        base64.b64encode(
                            setting_candidates.SerializeToString()))
 
 
 def _get_approval_threshold(state):
     return int(_get_setting_value(
-        state, 'sawtooth.config.vote.approval_threshold', 1))
+        state, 'sawtooth.settings.vote.approval_threshold', 1))
 
 
 def _get_auth_keys(state):
     value = _get_setting_value(
-        state, 'sawtooth.config.vote.authorized_keys', '')
+        state, 'sawtooth.settings.vote.authorized_keys', '')
     return _split_ignore_empties(value)
 
 
@@ -212,15 +212,15 @@ def _split_ignore_empties(value):
 
 def _validate_setting(auth_keys, setting, value):
     if len(auth_keys) == 0 and \
-            setting != 'sawtooth.config.vote.authorized_keys':
+            setting != 'sawtooth.settings.vote.authorized_keys':
         raise InvalidTransaction(
             'Cannot set {} until authorized_keys is set.'.format(setting))
 
-    if setting == 'sawtooth.config.vote.authorized_keys':
+    if setting == 'sawtooth.settings.vote.authorized_keys':
         if len(_split_ignore_empties(value)) == 0:
             raise InvalidTransaction('authorized_keys must not be empty.')
 
-    if setting == 'sawtooth.config.vote.approval_threshold':
+    if setting == 'sawtooth.settings.vote.approval_threshold':
         threshold = None
         try:
             threshold = int(value)
@@ -232,9 +232,9 @@ def _validate_setting(auth_keys, setting, value):
                 'approval_threshold must be less than or equal to number of '
                 'authorized_keys')
 
-    if setting == 'sawtooth.config.vote.proposals':
+    if setting == 'sawtooth.settings.vote.proposals':
         raise InvalidTransaction(
-            'Setting sawtooth.config.vote.proposals is read-only')
+            'Setting sawtooth.settings.vote.proposals is read-only')
 
 
 def _get_setting_value(state, key, default_value=None):
@@ -278,7 +278,7 @@ def _set_setting_value(state, key, value):
             'Failed to save value on address %s', address)
         raise InternalError(
             'Unable to save config value {}'.format(key))
-    if setting != 'sawtooth.config.vote.proposals':
+    if setting != 'sawtooth.settings.vote.proposals':
         LOGGER.info('Setting setting %s changed from %s to %s',
                     key, old_value, value)
 

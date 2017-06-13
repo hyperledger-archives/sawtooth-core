@@ -57,14 +57,14 @@ class SettingsMessageFactory(object):
 
     def _create_tp_process_request(self, setting, payload):
         inputs = [
-            self._key_to_address('sawtooth.config.vote.proposals'),
-            self._key_to_address('sawtooth.config.vote.authorized_keys'),
-            self._key_to_address('sawtooth.config.vote.approval_threshold'),
+            self._key_to_address('sawtooth.settings.vote.proposals'),
+            self._key_to_address('sawtooth.settings.vote.authorized_keys'),
+            self._key_to_address('sawtooth.settings.vote.approval_threshold'),
             self._key_to_address(setting)
         ]
 
         outputs = [
-            self._key_to_address('sawtooth.config.vote.proposals'),
+            self._key_to_address('sawtooth.settings.vote.proposals'),
             self._key_to_address(setting)
         ]
 

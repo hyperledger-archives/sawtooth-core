@@ -99,7 +99,7 @@ class TestConfigSmoke(unittest.TestCase):
         settings = self._read_from_stdout(command, args)
 
         _expected_setting_results = \
-            'sawtooth.config.vote.authorized_keys: {}...\nx: 1\ny: 1\n'.format(
+            'sawtooth.settings.vote.authorized_keys: {}...\nx: 1\ny: 1\n'.format(
                 TEST_PUBKEY[:15])
         self.assertEqual(settings, _expected_setting_results,
                          'Setting results did not match.')

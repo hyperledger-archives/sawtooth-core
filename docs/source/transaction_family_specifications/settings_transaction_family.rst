@@ -60,18 +60,18 @@ sawtooth.validator.max_transactions_per_block 1000
 
 The settings transaction family uses the following settings for its own configuration:
 
-+------------------------------------------+------------------------------------------------------------+
-| Setting (Settings)                       | Value Description                                          |
-+==========================================+============================================================+
-| sawtooth.config.vote.authorized_keys     | List of public keys allowed to vote.                       |
-+------------------------------------------+------------------------------------------------------------+
-| sawtooth.config.vote.approval_threshold  | Percentage of keys required for a proposal to be accepted. |
-+------------------------------------------+------------------------------------------------------------+
-| sawtooth.config.vote.proposals           | A list of proposals to make settings changes (see note)    |
-+------------------------------------------+------------------------------------------------------------+
++-------------------------------------------+------------------------------------------------------------+
+| Setting (Settings)                        | Value Description                                          |
++===========================================+============================================================+
+| sawtooth.settings.vote.authorized_keys    | List of public keys allowed to vote.                       |
++-------------------------------------------+------------------------------------------------------------+
+| sawtooth.settings.vote.approval_threshold | Percentage of keys required for a proposal to be accepted. |
++-------------------------------------------+------------------------------------------------------------+
+| sawtooth.settings.vote.proposals          | A list of proposals to make settings changes (see note)    |
++-------------------------------------------+------------------------------------------------------------+
 
 .. note::
-	*sawtooth.config.vote.proposals* is a base64 encoded string of the
+	*sawtooth.settings.vote.proposals* is a base64 encoded string of the
 	protobuf message *SettingCandidates*. This setting cannot be modified
 	by a proposal or a vote.
 
@@ -96,10 +96,10 @@ The following protocol buffers definition defines setting entries:
 	    repeated Entry entries = 1;
 	}
 
-sawtooth.config.vote.proposals
-------------------------------
+sawtooth.settings.vote.proposals
+--------------------------------
 
-The setting 'sawtooth.config.vote.proposals' is stored as defined by the
+The setting 'sawtooth.settings.vote.proposals' is stored as defined by the
 following protocol buffers definition. The value returned by this  setting is
 a base64 encoded *SettingCandidates* message:
 
@@ -149,7 +149,7 @@ Each of these pieces has a short hash computed (the first 16 characters of its
 SHA256 hash in hex) and is joined into a single address, with the settings
 namespace (`000000`) added at the beginning.
 
-For example, the setting *sawtooth.config.vote.proposals* could be set like
+For example, the setting *sawtooth.settings.vote.proposals* could be set like
 this:
 
 .. code-block:: pycon
@@ -215,7 +215,7 @@ buffers code:
 	    }
 
 	    // The id of the proposal, as found in the
-	    // sawtooth.config.vote.proposals setting field
+	    // sawtooth.settings.vote.proposals setting field
 	    string proposal_id = 1;
 
 	    Vote vote = 2;
@@ -230,14 +230,14 @@ Inputs and Outputs
 
 The inputs for config family transactions must include:
 
-* the address of *sawtooth.config.vote.proposals*
-* the address of *sawtooth.config.vote.authorized_keys*
-* the address of *sawtooth.config.vote.approval_threshold*
+* the address of *sawtooth.settings.vote.proposals*
+* the address of *sawtooth.settings.vote.authorized_keys*
+* the address of *sawtooth.settings.vote.approval_threshold*
 * the address of the setting being changed
 
 The outputs for config family transactions must include:
 
-* the address of *sawtooth.config.vote.proposals*
+* the address of *sawtooth.settings.vote.proposals*
 * the address of the setting being changed
 
 
@@ -263,7 +263,7 @@ Execution
 =========
 
 Initially, the transaction processor gets the current values of
-*sawtooth.config.vote.authorized_keys* from the state.
+*sawtooth.settings.vote.authorized_keys* from the state.
 
 The public key of the transaction signer is checked against the values in
 the list of authorized keys.  If it is empty, all public keys are allowed.
@@ -272,7 +272,7 @@ A Propose action is validated.  If it fails, it is considered an invalid
 transaction.  A *proposal_id* is calculated by taking the sha256 hash of
 the raw *SettingProposal* bytes as they exist in the payload.  Duplicate
 *proposal_ids* causes an invalid transaction. The proposal will be
-recorded in the *SettingProposals* stored in *sawtooth.config.vote.proposals*,
+recorded in the *SettingProposals* stored in *sawtooth.settings.vote.proposals*,
 with one "accept" vote counted.  The transaction processor outputs a
 *DEBUG*-level logging message similar to
 
@@ -282,20 +282,20 @@ with one "accept" vote counted.  The transaction processor outputs a
 
 A Vote action is validated, checking to see if *proposal_id* exists, and
 the public key of the transaction has not already voted.  The value of
-*sawtooth.config.vote.approval_threshold* is read from the state.  If the
+*sawtooth.settings.vote.approval_threshold* is read from the state.  If the
 "accept" vote count is equal to or above the approval threshold, the proposal
 is applied to the state. This results in the above INFO message being
 logged. The proposal is deleted from the *SettingProposals* record.
 
 If the "reject" vote count is equal to or above the approval threshold, then it
-is deleted from *sawtooth.config.vote.proposals* and an appropriate debug
+is deleted from *sawtooth.settings.vote.proposals* and an appropriate debug
 logging message logged.
 
-Otherwise, the vote is recorded in the list of *sawtooth.config.vote.proposals*
+Otherwise, the vote is recorded in the list of *sawtooth.settings.vote.proposals*
 by the public key and vote pair.
 
 Validation of configuration settings is as follows:
 
-- *sawtooth.config.vote.approval_threshold* must be a positive integer and must
+- *sawtooth.settings.vote.approval_threshold* must be a positive integer and must
   be between 1 and the number of authorized keys, inclusive
-- *sawtooth.config.vote.proposals* may not be set by a proposal
+- *sawtooth.settings.vote.proposals* may not be set by a proposal
