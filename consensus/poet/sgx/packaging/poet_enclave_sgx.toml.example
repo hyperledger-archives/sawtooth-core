@@ -1,0 +1,13 @@
+# spid is a 32-digit hex string tied to the enclave implementation
+
+spid = 'DEADBEEF00000000DEADBEEF00000000'
+
+# ias_url is the URL of the Intel Attestation Service (IAS) server.  The 
+# example server is for debug enclaves only
+
+ias_url = 'https://test-as.sgx.trustedservices.intel.com:443'
+
+# spid_cert_file is the full path to the PEM-encoded certificate file that was
+# submitted to Intel in order to obtain a SPID
+
+spid_cert_file = '/full/path/to/certificate.pem'
