@@ -122,7 +122,7 @@ class ProcessorIteratorCollection(object):
                     del self._processors[processor_type]
 
     def __repr__(self):
-        return ",".join([repr(k) for k in self._processors.keys()])
+        return ",".join([repr(k) for k in self._processors])
 
     def cancellable_wait(self, processor_type, cancelled_event):
         """Waits for a particular processor type to register or until
