@@ -43,7 +43,7 @@ Run the following commands from a terminal window, as root or with `sudo`:
 .. code-block:: console
 
   $ echo 'deb http://repo.sawtooth.me/ubuntu/nightly xenial universe' | sudo tee --append /etc/apt/sources.list
-  $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63
+  $ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
   $ apt-get update && apt-get install -y sawtooth
 
 

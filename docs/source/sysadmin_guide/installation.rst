@@ -16,7 +16,7 @@ Add the signing key:
 
 .. code-block:: console
 
-  $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 6B58B1AC10FB5F63
+  $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
 
 Stable Builds:
 
@@ -31,7 +31,7 @@ provide a repository of nightly builds. These builds may incorporate
 undocumented features and should be used for testing purposes only.
 
 .. code-block:: console
-
+  $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
   $ sudo echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/apt/sources.list
 
 Update your package lists and install Sawtooth:
