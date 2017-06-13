@@ -182,9 +182,9 @@ Sawtooth supports multiple languages for transaction processor development and
 includes additional transaction processors written in several languages.
 The following lists the processors that are included:
 
-* tp_config
+* tp_settings
 
-  - A config family transaction processor written in Python
+  - A settings family transaction processor written in Python
 
 * tp_intkey_go
 
@@ -257,26 +257,26 @@ the intkey transaction processor's output is shown below:
   [19:31:06 INFO    handler] processing: Verb=set Name=GTgrvP Value=31921 address=1cf12606ac7db03c756133c07d7d02b59f3ef9eae6774fe59c75c88ab66a9fabbbaef9975dbf9aa197d1090ed126d7b18e2
 
 
-Config Transaction Family Usage
-===============================
+Settings Transaction Family Usage
+=================================
 
 Sawtooth provides a :doc:`config transaction family
-<../transaction_family_specifications/config_transaction_family>` that stores
-on-chain configuration settings, along with a config family transaction
-processor written in Python.
+<../transaction_family_specifications/settings_transaction_family>` that stores
+on-chain settings, along with a settings family transaction processor written
+in Python.
 
 One of the on-chain settings is the list of supported transaction families.
 To configure this setting, follow these steps:
 
-Step One: Start Config Family Processor
----------------------------------------
+Step One: Start Settings Family Processor
+-----------------------------------------
 
-To start the config family transaction processor, run the following commands
+To start the settings family transaction processor, run the following commands
 from the Linux CLI:
 
 .. code-block:: console
 
-  $ tp_config
+  $ tp_settings
 
 Confirm that the transaction processor registers with the validator by viewing
 the terminal window in which the validator is running. A successful
@@ -284,7 +284,7 @@ registration event produces the following output:
 
 .. code-block:: console
 
-  [21:03:55.955 INFO    processor_handlers] registered transaction processor: identity=b'6d2d80275ae280ea', family=sawtooth_config, version=1.0, encoding=application/protobuf, namespaces=<google.protobuf.pyext._message.RepeatedScalarContainer object at 0x7e1ff042f6c0>
+  [21:03:55.955 INFO    processor_handlers] registered transaction processor: identity=b'6d2d80275ae280ea', family=sawtooth_settings, version=1.0, encoding=application/protobuf, namespaces=<google.protobuf.pyext._message.RepeatedScalarContainer object at 0x7e1ff042f6c0>
   [21:03:55.956 DEBUG   interconnect] ServerThread sending TP_REGISTER_RESPONSE to b'6d2d80275ae280ea'
 
 
@@ -305,15 +305,15 @@ Step Three: Create And Submit Batch
 
 In the example below, a JSON array is submitted to the `sawtooth config`
 command, which creates and submits a batch of transactions containing the
-configuration change.
+settings change.
 
 The JSON array used tells the validator or validator network to accept
 transactions of the following types:
 
 * intkey
-* sawtooth_config
+* sawtooth_settings
 
-To create and submit the batch containing the new configuration, enter the
+To create and submit the batch containing the new settings, enter the
 following commands from the Linux CLI:
 
 .. code-block:: console
