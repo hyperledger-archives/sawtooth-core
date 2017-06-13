@@ -33,7 +33,8 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 \
 
 
 @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.BlockWrapper')
-@mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.PoetConfigView')
+@mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
+            'PoetSettingsView')
 class TestPoetBlockPublisher(TestCase):
 
     def setUp(self):
@@ -69,7 +70,7 @@ class TestPoetBlockPublisher(TestCase):
             mock_consensus_state_store,
             mock_poet_key_state_store,
             mock_signup_info,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper):
         """ Test verifies that PoET Block Publisher fails
         if a validator doesn't have any signup info
@@ -161,7 +162,7 @@ class TestPoetBlockPublisher(TestCase):
             mock_consensus_state_store,
             mock_poet_key_state_store,
             mock_signup_info,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper):
 
         """ Test verifies that PoET Block Publisher fails if
@@ -275,7 +276,7 @@ class TestPoetBlockPublisher(TestCase):
             mock_consensus_state_store,
             mock_poet_key_state_store,
             mock_signup_info,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper):
 
         """ K Policy: Test verifies that PoET Block Publisher fails if
@@ -382,7 +383,7 @@ class TestPoetBlockPublisher(TestCase):
             mock_consensus_state_store,
             mock_poet_key_state_store,
             mock_signup_info,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper):
 
         """ C Policy: Test verifies that PoET Block Publisher fails
@@ -486,7 +487,7 @@ class TestPoetBlockPublisher(TestCase):
             mock_consensus_state_store,
             mock_poet_key_state_store,
             mock_signup_info,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper):
 
         """ Z Policy: Test verifies that PoET Block Publisher fails
@@ -588,7 +589,7 @@ class TestPoetBlockPublisher(TestCase):
             mock_consensus_state_store,
             mock_poet_key_state_store,
             mock_signup_info,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper):
 
         """ Test verifies that PoET Block Publisher succeeds
@@ -679,7 +680,7 @@ class TestPoetBlockPublisher(TestCase):
             mock_poet_key_state_store,
             mock_signup_info,
             mock_wait_time,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper):
 
         """ Test verifies that PoET Block Publisher only claims
@@ -780,7 +781,7 @@ class TestPoetBlockPublisher(TestCase):
             mock_poet_key_state_store,
             mock_signup_info,
             mock_wait_time,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper):
 
         """ Test verifies that PoET Block Publisher doesn't

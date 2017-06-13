@@ -29,7 +29,8 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 \
 
 
 # @mock.patch('sawtooth_poet.poet_consensus.poet_fork_resolver.BlockWrapper')
-# @mock.patch('sawtooth_poet.poet_consensus.poet_fork_resolver.PoetConfigView')
+# @mock.patch('sawtooth_poet.poet_consensus.poet_fork_resolver.'
+#             'PoetSettingsView')
 class TestPoetForkResolver(TestCase):
 
     def setUp(self):

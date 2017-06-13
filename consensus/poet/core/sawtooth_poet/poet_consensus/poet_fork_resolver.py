@@ -20,7 +20,7 @@ from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus import utils
-from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
+from sawtooth_poet.poet_consensus.poet_settings_view import PoetSettingsView
 
 from sawtooth_poet_common.validator_registry_view.validator_registry_view \
     import ValidatorRegistryView
@@ -275,7 +275,7 @@ class PoetForkResolver(ForkResolverInterface):
                 consensus_state.validator_did_claim_block(
                     validator_info=validator_info,
                     wait_certificate=new_fork_wait_certificate,
-                    poet_config_view=PoetConfigView(state_view))
+                    poet_settings_view=PoetSettingsView(state_view))
                 self._consensus_state_store[new_fork_head.identifier] = \
                     consensus_state
 

@@ -31,16 +31,16 @@ def _short_hash(byte_str):
 _EMPTY_PART = _short_hash(b'')
 
 
-class ConfigView(object):
+class SettingsView(object):
     """
-    A ConfigView provides access to on-chain configuration settings.
+    A SettingsView provides access to on-chain configuration settings.
 
     The Config view provides access to configuration settings stored at a
     particular merkle tree root. This access is read-only.
     """
 
     def __init__(self, state_view):
-        """Creates a ConfigView, given a StateView for merkle tree access.
+        """Creates a SettingsView, given a StateView for merkle tree access.
 
         Args:
             state_view (:obj:`StateView`): a state view
@@ -63,7 +63,7 @@ class ConfigView(object):
         """
         try:
             state_entry = self._state_view.get(
-                ConfigView.setting_address(key))
+                SettingsView.setting_address(key))
         except KeyError:
             return default_value
 
@@ -134,8 +134,8 @@ class ConfigView(object):
         return CONFIG_STATE_NAMESPACE + ''.join(addr_parts)
 
 
-class ConfigViewFactory(object):
-    """Creates ConfigView instances.
+class SettingsViewFactory(object):
+    """Creates SettingsView instances.
     """
 
     def __init__(self, state_view_factory):
@@ -147,10 +147,10 @@ class ConfigViewFactory(object):
         """
         self._state_view_factory = state_view_factory
 
-    def create_config_view(self, state_root_hash):
+    def create_settings_view(self, state_root_hash):
         """
         Returns:
-            ConfigView: the configuration view at the given state root.
+            SettingsView: the configuration view at the given state root.
         """
-        return ConfigView(
+        return SettingsView(
             self._state_view_factory.create_view(state_root_hash))

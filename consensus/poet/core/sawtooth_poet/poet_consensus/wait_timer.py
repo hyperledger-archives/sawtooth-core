@@ -38,7 +38,7 @@ class WaitTimer(object):
                           validator_address,
                           previous_certificate_id,
                           consensus_state,
-                          poet_config_view):
+                          poet_settings_view):
         """Creates a wait timer in the enclave and then constructs
         a WaitTimer object.
 
@@ -50,7 +50,7 @@ class WaitTimer(object):
             previous_certificate_id (str): The ID of the wait certificate for
                 the block attempting to build upon
             consensus_state (ConsensusState): The current PoET consensus state
-            poet_config_view (PoetConfigView): The current PoET config view
+            poet_settings_view (PoetSettingsView): The current PoET config view
 
         Returns:
             journal.consensus.poet.wait_timer.WaitTimer: A new wait timer.
@@ -63,8 +63,8 @@ class WaitTimer(object):
                 validator_address,
                 previous_certificate_id,
                 consensus_state.compute_local_mean(
-                    poet_config_view=poet_config_view),
-                poet_config_view.minimum_wait_time)
+                    poet_settings_view=poet_settings_view),
+                poet_settings_view.minimum_wait_time)
 
         return cls(enclave_timer)
 
@@ -97,17 +97,17 @@ class WaitTimer(object):
                 self.duration,
                 self.previous_certificate_id)
 
-    def population_estimate(self, poet_config_view):
+    def population_estimate(self, poet_settings_view):
         """Return the population estimate for the block associated with this
         wait timer
 
         Args:
-            poet_config_view (PoetConfigView): The current PoET config view
+            poet_settings_view (PoetSettingsView): The current PoET config view
 
         Returns:
             float: The population estimate for this wait timer
         """
-        return self.local_mean / poet_config_view.target_wait_time
+        return self.local_mean / poet_settings_view.target_wait_time
 
     def serialize(self):
         """Serializes the underlying enclave wait timer

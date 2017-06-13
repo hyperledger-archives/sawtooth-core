@@ -23,7 +23,7 @@ from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.consensus.dev_mode.dev_mode_consensus\
     import BlockPublisher
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 from sawtooth_validator.protobuf.setting_pb2 import Setting
 
 LOGGER = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class TestCheckPublishBlock(unittest.TestCase):
         state_db = {}
         if values is not None:
             for key, value in values.items():
-                state_db[ConfigView.setting_address(key)] = \
+                state_db[SettingsView.setting_address(key)] = \
                     TestCheckPublishBlock._setting_entry(key, repr(value))
 
         return MockStateViewFactory(state_db)
