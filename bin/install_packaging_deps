@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,14 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-#!/bin/bash
 apt-get install -y -q \
     autoconf \
     automake \
     build-essential \
     connect-proxy \
+    dh-make \
     equivs \
     g++ \
     git \
@@ -33,7 +34,8 @@ apt-get install -y -q \
     rsync \
     sudo \
     wget \
-    zip unzip
+    unzip \
+    zip
 
 apt-get install -y -q \
     python-setuptools \
