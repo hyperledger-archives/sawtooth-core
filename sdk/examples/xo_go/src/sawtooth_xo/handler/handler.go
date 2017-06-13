@@ -212,7 +212,7 @@ func unpackPayload(payloadData []byte) (*XoPayload, error) {
 		payload.Space = space
 	}
 
-	if strings.Index(payload.Name, "|") != -1 {
+	if strings.Contains(payload.Name, "|") {
 		return nil, &processor.InvalidTransactionError{
 			fmt.Sprintf("Invalid Name (char '|' not allowed): '%v'", parts[2])}
 	}
