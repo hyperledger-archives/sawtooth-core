@@ -45,7 +45,7 @@ RUN apt-get update \
 
 # Add sawtooth repo
 RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc/apt/sources.list \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6B58B1AC10FB5F63 \
+ && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
  && apt-get install -y -q --allow-downgrades \
     python3-aiodns=1.1.1-1 \
