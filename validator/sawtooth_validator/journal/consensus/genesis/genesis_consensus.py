@@ -69,6 +69,7 @@ class BlockVerifier(BlockVerifierInterface):
     other case, verification will fail.  This requires that any block beyond
     the genesis block must use a proper consensus module.
     """
+    # pylint: disable=useless-super-delegation
     def __init__(self,
                  block_cache,
                  state_view_factory,
@@ -91,6 +92,7 @@ class BlockVerifier(BlockVerifierInterface):
 class ForkResolver(ForkResolverInterface):
     """The genesis ForkResolver should not ever be used.
     """
+    # pylint: disable=useless-super-delegation
     def __init__(self,
                  block_cache,
                  state_view_factory,

@@ -140,6 +140,7 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """DevMode BlockVerifier implementation
     """
+    # pylint: disable=useless-super-delegation
     def __init__(self,
                  block_cache,
                  state_view_factory,
@@ -161,6 +162,7 @@ class ForkResolver(ForkResolverInterface):
     """Provides the fork resolution interface for the BlockValidator to use
     when deciding between 2 forks.
     """
+    # pylint: disable=useless-super-delegation
     def __init__(self,
                  block_cache,
                  state_view_factory,
