@@ -200,7 +200,8 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 	corrId := msg.GetCorrelationId()
 
 	// If this is a new request, put in on the work queue
-	if t == validator_pb2.Message_TP_PROCESS_REQUEST {
+	switch t {
+	case validator_pb2.Message_TP_PROCESS_REQUEST:
 		select {
 		case queue <- msg:
 
@@ -223,6 +224,19 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 				)
 			}
 		}
+		return
+	case validator_pb2.Message_TP_PING:
+		data, err := proto.Marshal(&processor_pb2.TpPingResponse{
+			Status: processor_pb2.TpPingResponse_OK,
+		})
+		if err != nil {
+			logger.Errorf(
+				"Failed to respond to TpPing %v", err,
+			)
+		}
+		err = validator.SendMsg(
+			validator_pb2.Message_TP_PING_RESPONSE, data, corrId,
+		)
 		return
 	}
 
