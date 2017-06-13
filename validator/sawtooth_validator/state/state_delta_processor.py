@@ -245,16 +245,18 @@ class StateDeltaSubscriberValidationHandler(Handler):
         if self._delta_processor.is_valid_subscription(
                 request.last_known_block_ids):
             ack.status = ack.OK
-            return HandlerResult(
+            result = HandlerResult(
                 HandlerStatus.RETURN_AND_PASS,
                 message_out=ack,
                 message_type=self._msg_type)
         else:
             ack.status = ack.UNKNOWN_BLOCK
-            return HandlerResult(
+            result = HandlerResult(
                 HandlerStatus.RETURN,
                 message_out=ack,
                 message_type=self._msg_type)
+
+        return result
 
 
 class StateDeltaAddSubscriberHandler(Handler):

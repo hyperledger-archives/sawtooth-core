@@ -106,9 +106,8 @@ class BlockValidator(object):
     def _get_previous_block_root_state_hash(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
             return INIT_ROOT_KEY
-        else:
-            prev_blkw = self._block_cache[blkw.previous_block_id]
-            return prev_blkw.state_root_hash
+
+        return self._block_cache[blkw.previous_block_id].state_root_hash
 
     def _is_block_complete(self, blkw):
         """

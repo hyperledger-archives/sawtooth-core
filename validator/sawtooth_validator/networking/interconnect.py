@@ -531,10 +531,7 @@ class Interconnect(object):
                      "be allowed. num connections: %s max %s",
                      len(self._connections),
                      self._max_incoming_connections)
-        if len(self._connections) > self._max_incoming_connections:
-            return False
-        else:
-            return True
+        return self._max_incoming_connections >= len(self._connections)
 
     def add_outbound_connection(self, uri,
                                 success_callback=None,
