@@ -16,6 +16,8 @@
 import argparse
 import logging
 import time
+import getpass
+from base64 import b64encode
 
 from http.client import RemoteDisconnected
 import concurrent.futures
@@ -26,10 +28,12 @@ import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 LOGGER = logging.getLogger(__file__)
 
 
-def post_batches(url, batches):
+def post_batches(url, auth_info, batches):
     data = batches.SerializeToString()
     headers = {'Content-Type': 'application/octet-stream'}
     headers['Content-Length'] = str(len(data))
+    if auth_info is not None:
+        headers['Authorization'] = 'Basic {}'.format(auth_info)
 
     try:
         result = requests.post(url + "/batches", data, headers=headers)
@@ -61,6 +65,7 @@ def _split_batch_list(batch_list):
 
 
 def do_load(args):
+    auth_info = _get_auth_info(args.auth_user, args.auth_password)
     with open(args.filename, mode='rb') as fd:
         batches = batch_pb2.BatchList()
         batches.ParseFromString(fd.read())
@@ -69,7 +74,7 @@ def do_load(args):
     futures = []
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     for batch_list in _split_batch_list(batches):
-        fut = executor.submit(post_batches, args.url, batch_list)
+        fut = executor.submit(post_batches, args.url, auth_info, batch_list)
         futures.append(fut)
 
     # Wait until all futures are complete
@@ -80,6 +85,17 @@ def do_load(args):
     print("batches: {} batch/sec: {}".format(
         str(len(batches.batches)),
         len(batches.batches) / (stop - start)))
+
+
+def _get_auth_info(auth_user, auth_password):
+    if auth_user is not None:
+        if auth_password is None:
+            auth_password = getpass.getpass(prompt="Auth Password: ")
+        auth_string = "{}:{}".format(auth_user, auth_password)
+        b64_string = b64encode(auth_string.encode()).decode()
+        return b64_string
+    else:
+        return None
 
 
 def add_load_parser(subparsers, parent_parser):
@@ -99,3 +115,13 @@ def add_load_parser(subparsers, parent_parser):
         type=str,
         help='url for the REST API',
         default='http://localhost:8080')
+
+    parser.add_argument(
+        '--auth-user',
+        type=str,
+        help='username for authentication if REST API is using Basic Auth')
+
+    parser.add_argument(
+        '--auth-password',
+        type=str,
+        help='password for authentication if REST API is using Basic Auth')
