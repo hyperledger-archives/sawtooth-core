@@ -30,7 +30,7 @@ FROM ubuntu:xenial
 LABEL "install-type"="mounted"
 
 RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6B58B1AC10FB5F63 \
+ && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
  && apt-get install -y -q --allow-downgrades \
     golang \
