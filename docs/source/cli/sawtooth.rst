@@ -119,6 +119,13 @@ sawtooth batch status
    :language: console
    :linenos:
 
+sawtooth batch submit
+=====================
+
+.. literalinclude:: output/sawtooth_batch_submit_usage.out
+   :language: console
+   :linenos:
+
 sawtooth block
 ==============
 
@@ -214,13 +221,6 @@ sawtooth state show
 ===================
 
 .. literalinclude:: output/sawtooth_state_show_usage.out
-   :language: console
-   :linenos:
-
-sawtooth submit
-===============
-
-.. literalinclude:: output/sawtooth_submit_usage.out
    :language: console
    :linenos:
 

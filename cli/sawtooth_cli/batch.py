@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import argparse
+import time
 
 from sys import maxsize
 
@@ -23,6 +24,7 @@ from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.parent_parsers import base_http_parser
 from sawtooth_cli.parent_parsers import base_list_parser
 from sawtooth_cli.parent_parsers import base_show_parser
+import sawtooth_cli.protobuf.batch_pb2 as batch_pb2
 
 
 def add_batch_parser(subparsers, parent_parser):
@@ -41,6 +43,7 @@ def add_batch_parser(subparsers, parent_parser):
     add_batch_list_parser(grand_parsers, parent_parser)
     add_batch_show_parser(grand_parsers, parent_parser)
     add_batch_status_parser(grand_parsers, parent_parser)
+    add_batch_submit_parser(grand_parsers, parent_parser)
 
 
 def add_batch_list_parser(subparsers, parent_parser):
@@ -97,6 +100,32 @@ def add_batch_status_parser(subparsers, parent_parser):
         help='the format to use for printing the output (defaults to yaml)')
 
 
+def add_batch_submit_parser(subparsers, parent_parser):
+    submit_parser = subparsers.add_parser(
+        'submit',
+        parents=[base_http_parser(), parent_parser])
+
+    submit_parser.add_argument(
+        '--wait',
+        nargs='?',
+        const=maxsize,
+        type=int,
+        help='wait for batches to commit, set an integer to specify a timeout')
+
+    submit_parser.add_argument(
+        '-f', '--filename',
+        type=str,
+        help='location of input file',
+        default='batches.intkey')
+
+    submit_parser.add_argument(
+        '--batch-size-limit',
+        type=int,
+        help='batches are split for processing if they exceed this size',
+        default=100
+    )
+
+
 def do_batch(args):
     """Runs the batch list, batch show or batch status command, printing output
     to the console
@@ -112,6 +141,9 @@ def do_batch(args):
 
     if args.subcommand == 'status':
         do_batch_status(args)
+
+    if args.subcommand == 'submit':
+        do_batch_submit(args)
 
 
 def do_batch_list(args):
@@ -188,3 +220,60 @@ def do_batch_status(args):
         fmt.print_json(statuses)
     else:
         raise AssertionError('Missing handler: {}'.format(args.format))
+
+
+def _split_batch_list(args, batch_list):
+    new_list = []
+    for batch in batch_list.batches:
+        new_list.append(batch)
+        if len(new_list) == args.batch_size_limit:
+            yield batch_pb2.BatchList(batches=new_list)
+            new_list = []
+    if len(new_list) > 0:
+        yield batch_pb2.BatchList(batches=new_list)
+
+
+def do_batch_submit(args):
+
+    try:
+        with open(args.filename, mode='rb') as fd:
+            batches = batch_pb2.BatchList()
+            batches.ParseFromString(fd.read())
+    except IOError as e:
+        raise CliException(e)
+
+    rest_client = RestClient(args.url, args.user)
+
+    start = time.time()
+
+    for batch_list in _split_batch_list(args, batches):
+        rest_client.send_batches(batch_list)
+
+    stop = time.time()
+
+    print('batches: {},  batch/sec: {}'.format(
+        str(len(batches.batches)),
+        len(batches.batches) / (stop - start)))
+
+    if args.wait and args.wait > 0:
+        batch_ids = [b.header_signature for b in batches.batches]
+        wait_time = 0
+        start_time = time.time()
+
+        while wait_time < args.wait:
+            statuses = rest_client.get_statuses(
+                batch_ids,
+                args.wait - int(wait_time))
+            wait_time = time.time() - start_time
+
+            if all(s == 'COMMITTED' for s in statuses.values()):
+                print('All batches committed in {:.6} sec'.format(wait_time))
+                return
+
+            # Wait a moment so as not to hammer the Rest Api
+            time.sleep(0.2)
+
+        print('Wait timed out! Some batches have not yet been committed...')
+        for batch_id, status in statuses.items():
+            print('{:128.128}  {:10.10}'.format(batch_id, status))
+        exit(1)
