@@ -23,6 +23,7 @@ save_usage sawtooth batch
 save_usage sawtooth batch list
 save_usage sawtooth batch show
 save_usage sawtooth batch status
+save_usage sawtooth batch submit
 save_usage sawtooth block
 save_usage sawtooth block list
 save_usage sawtooth block show
@@ -43,7 +44,6 @@ save_usage sawtooth config settings list
 save_usage sawtooth state
 save_usage sawtooth state list
 save_usage sawtooth state show
-save_usage sawtooth submit
 save_usage sawtooth transaction
 save_usage sawtooth transaction list
 save_usage sawtooth transaction show
