@@ -54,6 +54,7 @@ class LMDBNoLockDatabase(database.Database):
                                       create=create,
                                       lock=True)
 
+    # pylint: disable=no-value-for-parameter
     def __len__(self):
         with self._lmdb.begin() as txn:
             return txn.stat()['entries']
