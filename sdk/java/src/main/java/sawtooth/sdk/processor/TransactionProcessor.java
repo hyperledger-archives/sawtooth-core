@@ -23,6 +23,7 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.TpPingResponse;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TpProcessResponse;
 import sawtooth.sdk.protobuf.TpRegisterRequest;
@@ -205,13 +206,29 @@ public class TransactionProcessor implements Runnable {
       if (!this.handlers.isEmpty()) {
         this.currentMessage = this.stream.receive();
         if (this.currentMessage != null) {
-          TransactionHandler handler = this.findHandler(this.currentMessage);
-          if (handler == null) {
-            break;
+          if (this.currentMessage.getMessageType() == Message.MessageType.TP_PING) {
+            logger.info("Recieved TpPing Message.");
+            TpPingResponse pingResponse = TpPingResponse
+                .newBuilder()
+                .setStatus(TpPingResponse.Status.OK)
+                .build();
+            this.stream.sendBack(
+                Message.MessageType.TP_PING_RESPONSE,
+                this.currentMessage.getCorrelationId(),
+                pingResponse.toByteString());
+            this.currentMessage = null;
+          } else if (this.currentMessage.getMessageType()
+                == Message.MessageType.TP_PROCESS_REQUEST) {
+            TransactionHandler handler = this.findHandler(this.currentMessage);
+            if (handler == null) {
+              break;
+            }
+            TransactionProcessor.process(this.currentMessage, this.stream, handler);
+            this.currentMessage = null;
+          } else {
+            logger.info("Unknown Message Type: " + this.currentMessage.getMessageType());
+            this.currentMessage = null;
           }
-          TransactionProcessor.process(this.currentMessage, this.stream, handler);
-          this.currentMessage = null;
-
         } else {
           // Disconnect
           logger.info("The Validator disconnected, trying to register.");
