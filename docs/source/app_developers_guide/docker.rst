@@ -233,7 +233,7 @@ Run the following commands from the client container:
 
 .. code-block:: console
 
-  $ intkey create_batch
+  $ intkey create_batch --count 10 --key-count 5
   $ intkey load -f batches.intkey -U http://rest_api:8080
 
 The terminal window in which you ran the docker-compose command will begin
