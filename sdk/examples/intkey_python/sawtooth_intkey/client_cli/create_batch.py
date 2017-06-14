@@ -256,19 +256,19 @@ def add_create_batch_parser(subparsers, parent_parser):
         '-c', '--count',
         type=int,
         help='number of batches modifying random keys',
-        default=1000,
+        default=1,
         metavar='')
 
     parser.add_argument(
         '-B', '--max-batch-size',
         type=int,
         help='max transactions per batch',
-        default=20,
+        default=10,
         metavar='')
 
     parser.add_argument(
         '-K', '--key-count',
         type=int,
         help='number of keys to set initially',
-        default=100,
+        default=1,
         metavar='')
