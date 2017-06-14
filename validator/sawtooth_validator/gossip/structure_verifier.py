@@ -19,9 +19,10 @@ import logging
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.protobuf import client_pb2
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
@@ -35,6 +36,15 @@ LOGGER = logging.getLogger(__name__)
 
 
 def is_valid_block(block):
+    # block structure verification
+    header = BlockHeader()
+    header.ParseFromString(block.header)
+
+    if len(header.batch_ids) != len(set(header.batch_ids)):
+        LOGGER.debug("Block has duplicate batches. Dropping block: %s",
+                     block.header_signature)
+        return False
+
     if not all(map(is_valid_batch, block.batches)):
         return False
 
@@ -45,6 +55,12 @@ def is_valid_batch(batch):
     # batch structure verification
     header = BatchHeader()
     header.ParseFromString(batch.header)
+
+    # check whether a batch has duplicate transactions
+    if len(header.transaction_ids) != len(set(header.transaction_ids)):
+        LOGGER.debug("Batch has duplicate transactions. Dropping batch: %s",
+                     batch.header_signature)
+        return False
 
     # validate the transaction_ids field in batch header contains a list of
     # transaction header_signatures and must be the same order as the
