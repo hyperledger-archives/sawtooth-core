@@ -41,7 +41,6 @@
     from sawtooth_poet_sgx.poet_enclave_sgx import ias_client
 
     from sawtooth_poet_common import sgx_structs
-    import sawtooth_signing as signing
 %}
 
 %include <std_string.i>
