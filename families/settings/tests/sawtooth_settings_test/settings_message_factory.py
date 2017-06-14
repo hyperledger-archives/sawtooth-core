@@ -14,21 +14,21 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_processor_test.message_factory import MessageFactory
-from sawtooth_config.protobuf.config_pb2 import ConfigPayload
-from sawtooth_config.protobuf.config_pb2 import ConfigProposal
-from sawtooth_config.protobuf.config_pb2 import ConfigVote
-from sawtooth_config.protobuf.setting_pb2 import Setting
+from sawtooth_settings.protobuf.settings_pb2 import SettingsPayload
+from sawtooth_settings.protobuf.settings_pb2 import SettingProposal
+from sawtooth_settings.protobuf.settings_pb2 import SettingVote
+from sawtooth_settings.protobuf.setting_pb2 import Setting
 
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 
-class ConfigMessageFactory(object):
+class SettingsMessageFactory(object):
 
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
             encoding="application/protobuf",
-            family_name="sawtooth_config",
+            family_name="sawtooth_settings",
             family_version="1.0",
             namespace="000000",
             private=private,
@@ -57,14 +57,14 @@ class ConfigMessageFactory(object):
 
     def _create_tp_process_request(self, setting, payload):
         inputs = [
-            self._key_to_address('sawtooth.config.vote.proposals'),
-            self._key_to_address('sawtooth.config.vote.authorized_keys'),
-            self._key_to_address('sawtooth.config.vote.approval_threshold'),
+            self._key_to_address('sawtooth.settings.vote.proposals'),
+            self._key_to_address('sawtooth.settings.vote.authorized_keys'),
+            self._key_to_address('sawtooth.settings.vote.approval_threshold'),
             self._key_to_address(setting)
         ]
 
         outputs = [
-            self._key_to_address('sawtooth.config.vote.proposals'),
+            self._key_to_address('sawtooth.settings.vote.proposals'),
             self._key_to_address(setting)
         ]
 
@@ -72,16 +72,16 @@ class ConfigMessageFactory(object):
             payload.SerializeToString(), inputs, outputs, [])
 
     def create_proposal_transaction(self, setting, value, nonce):
-        proposal = ConfigProposal(setting=setting, value=value, nonce=nonce)
-        payload = ConfigPayload(action=ConfigPayload.PROPOSE,
-                                data=proposal.SerializeToString())
+        proposal = SettingProposal(setting=setting, value=value, nonce=nonce)
+        payload = SettingsPayload(action=SettingsPayload.PROPOSE,
+                                  data=proposal.SerializeToString())
 
         return self._create_tp_process_request(setting, payload)
 
     def create_vote_proposal(self, proposal_id, setting, vote):
-        vote = ConfigVote(proposal_id=proposal_id, vote=vote)
-        payload = ConfigPayload(action=ConfigPayload.VOTE,
-                                data=vote.SerializeToString())
+        vote = SettingVote(proposal_id=proposal_id, vote=vote)
+        payload = SettingsPayload(action=SettingsPayload.VOTE,
+                                  data=vote.SerializeToString())
 
         return self._create_tp_process_request(setting, payload)
 

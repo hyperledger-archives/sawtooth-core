@@ -16,7 +16,7 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "sawtooth.config.protobuf";
+option java_package = "sawtooth.supplychain.protobuf";
 
 // Record State Representation
 // represents an item being tracked

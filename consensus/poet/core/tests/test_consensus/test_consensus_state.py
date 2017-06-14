@@ -60,8 +60,8 @@ class TestConsensusState(TestCase):
         wait_certificate.duration = 3.1415
         wait_certificate.local_mean = 5.0
 
-        poet_config_view = mock.Mock()
-        poet_config_view.population_estimate_sample_size = 50
+        poet_settings_view = mock.Mock()
+        poet_settings_view.population_estimate_sample_size = 50
 
         validator_info = \
             ValidatorInfo(
@@ -74,7 +74,7 @@ class TestConsensusState(TestCase):
         state.validator_did_claim_block(
             validator_info=validator_info,
             wait_certificate=wait_certificate,
-            poet_config_view=poet_config_view)
+            poet_settings_view=poet_settings_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -93,7 +93,7 @@ class TestConsensusState(TestCase):
         state.validator_did_claim_block(
             validator_info=validator_info,
             wait_certificate=wait_certificate,
-            poet_config_view=poet_config_view)
+            poet_settings_view=poet_settings_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -115,7 +115,7 @@ class TestConsensusState(TestCase):
         state.validator_did_claim_block(
             validator_info=validator_info,
             wait_certificate=wait_certificate,
-            poet_config_view=poet_config_view)
+            poet_settings_view=poet_settings_view)
 
         self.assertEqual(
             state.aggregate_local_mean,
@@ -134,8 +134,8 @@ class TestConsensusState(TestCase):
         error.  Verify that serializing state and then deserializing results
         in the same state values.
         """
-        poet_config_view = mock.Mock()
-        poet_config_view.population_estimate_sample_size = 50
+        poet_settings_view = mock.Mock()
+        poet_settings_view.population_estimate_sample_size = 50
 
         # Simple deserialization check of buffer
         for invalid_state in [None, '', 1, 1.1, (), [], {}]:
@@ -272,7 +272,7 @@ class TestConsensusState(TestCase):
         state.validator_did_claim_block(
             validator_info=validator_info,
             wait_certificate=wait_certificate,
-            poet_config_view=poet_config_view)
+            poet_settings_view=poet_settings_view)
         doppelganger_state = consensus_state.ConsensusState()
 
         # Truncate the serialized value on purpose
@@ -373,11 +373,11 @@ class TestConsensusState(TestCase):
         wait_certificate_2.duration = 1.618
         wait_certificate_2.local_mean = 2.718
 
-        mock_poet_config_view = mock.Mock()
-        mock_poet_config_view.target_wait_time = 30.0
-        mock_poet_config_view.initial_wait_time = 3000.0
-        mock_poet_config_view.minimum_wait_time = 1.0
-        mock_poet_config_view.population_estimate_sample_size = 50
+        mock_poet_settings_view = mock.Mock()
+        mock_poet_settings_view.target_wait_time = 30.0
+        mock_poet_settings_view.initial_wait_time = 3000.0
+        mock_poet_settings_view.minimum_wait_time = 1.0
+        mock_poet_settings_view.population_estimate_sample_size = 50
 
         validator_info_1 = \
             ValidatorInfo(
@@ -393,11 +393,11 @@ class TestConsensusState(TestCase):
         state.validator_did_claim_block(
             validator_info=validator_info_1,
             wait_certificate=wait_certificate_1,
-            poet_config_view=poet_config_view)
+            poet_settings_view=poet_settings_view)
         state.validator_did_claim_block(
             validator_info=validator_info_2,
             wait_certificate=wait_certificate_2,
-            poet_config_view=poet_config_view)
+            poet_settings_view=poet_settings_view)
 
         doppelganger_state.parse_from_bytes(state.serialize_to_bytes())
 
@@ -406,9 +406,9 @@ class TestConsensusState(TestCase):
             doppelganger_state.aggregate_local_mean)
         self.assertAlmostEqual(
             first=state.compute_local_mean(
-                poet_config_view=mock_poet_config_view),
+                poet_settings_view=mock_poet_settings_view),
             second=doppelganger_state.compute_local_mean(
-                poet_config_view=mock_poet_config_view),
+                poet_settings_view=mock_poet_settings_view),
             places=4)
         self.assertEqual(
             state.total_block_claim_count,
@@ -455,11 +455,11 @@ class TestConsensusState(TestCase):
         and once there are enough blocks in the chain.
         """
 
-        mock_poet_config_view = mock.Mock()
-        mock_poet_config_view.target_wait_time = 30.0
-        mock_poet_config_view.initial_wait_time = 3000.0
-        mock_poet_config_view.minimum_wait_time = 1.0
-        mock_poet_config_view.population_estimate_sample_size = 50
+        mock_poet_settings_view = mock.Mock()
+        mock_poet_settings_view.target_wait_time = 30.0
+        mock_poet_settings_view.initial_wait_time = 3000.0
+        mock_poet_settings_view.minimum_wait_time = 1.0
+        mock_poet_settings_view.population_estimate_sample_size = 50
 
         # Test that during bootstrapping, the local means adhere to the
         # following:
@@ -470,10 +470,10 @@ class TestConsensusState(TestCase):
         def _compute_fixed_local_mean(count):
             ratio = \
                 1.0 * count / \
-                mock_poet_config_view.population_estimate_sample_size
+                mock_poet_settings_view.population_estimate_sample_size
             return \
-                (mock_poet_config_view.target_wait_time * (1 - ratio**2)) + \
-                (mock_poet_config_view.initial_wait_time * ratio**2)
+                (mock_poet_settings_view.target_wait_time * (1 - ratio**2)) + \
+                (mock_poet_settings_view.initial_wait_time * ratio**2)
 
         validator_info = \
             ValidatorInfo(
@@ -486,7 +486,8 @@ class TestConsensusState(TestCase):
         # corresponding expected fixed local mean.
         wait_certificates = []
         state = consensus_state.ConsensusState()
-        for _ in range(mock_poet_config_view.population_estimate_sample_size):
+        sample_size = mock_poet_settings_view.population_estimate_sample_size
+        for _ in range(sample_size):
             # Compute a wait certificate with a fixed local mean, add it to
             # our samples, verify that its local mean equals the one computed
             # by the consensus state, and then update the consensus state as if
@@ -494,21 +495,21 @@ class TestConsensusState(TestCase):
             mock_wait_certificate = mock.Mock()
             mock_wait_certificate.duration = \
                 random.uniform(
-                    mock_poet_config_view.minimum_wait_time,
-                    mock_poet_config_view.minimum_wait_time + 10)
+                    mock_poet_settings_view.minimum_wait_time,
+                    mock_poet_settings_view.minimum_wait_time + 10)
             mock_wait_certificate.local_mean = \
                 _compute_fixed_local_mean(len(wait_certificates))
             wait_certificates.append(mock_wait_certificate)
 
             self.assertAlmostEqual(
                 first=mock_wait_certificate.local_mean,
-                second=state.compute_local_mean(mock_poet_config_view),
+                second=state.compute_local_mean(mock_poet_settings_view),
                 places=4)
 
             state.validator_did_claim_block(
                 validator_info=validator_info,
                 wait_certificate=mock_wait_certificate,
-                poet_config_view=mock_poet_config_view)
+                poet_settings_view=mock_poet_settings_view)
 
         # Test that after bootstrapping, the local means adhere to the
         # following:
@@ -524,14 +525,15 @@ class TestConsensusState(TestCase):
             sm = 0.0
 
             for wc in wcs:
-                sw += wc.duration - mock_poet_config_view.minimum_wait_time
+                sw += wc.duration - mock_poet_settings_view.minimum_wait_time
                 sm += wc.local_mean
 
-            return mock_poet_config_view.target_wait_time * (sm / sw)
+            return mock_poet_settings_view.target_wait_time * (sm / sw)
 
         # Let's run through another population estimate sample size blocks
         # and verify that we get the local means expected
-        for _ in range(mock_poet_config_view.population_estimate_sample_size):
+        sample_size = mock_poet_settings_view.population_estimate_sample_size
+        for _ in range(sample_size):
             # Compute a wait certificate with a historical local mean, add it
             # to our samples, evict the oldest sample, verify that its local
             # mean equals the one computed by the consensus state, and then
@@ -540,8 +542,8 @@ class TestConsensusState(TestCase):
             mock_wait_certificate = mock.Mock()
             mock_wait_certificate.duration = \
                 random.uniform(
-                    mock_poet_config_view.minimum_wait_time,
-                    mock_poet_config_view.minimum_wait_time + 10)
+                    mock_poet_settings_view.minimum_wait_time,
+                    mock_poet_settings_view.minimum_wait_time + 10)
             mock_wait_certificate.local_mean = \
                 _compute_historical_local_mean(wait_certificates)
             wait_certificates.append(mock_wait_certificate)
@@ -549,13 +551,13 @@ class TestConsensusState(TestCase):
 
             self.assertAlmostEqual(
                 first=mock_wait_certificate.local_mean,
-                second=state.compute_local_mean(mock_poet_config_view),
+                second=state.compute_local_mean(mock_poet_settings_view),
                 places=4)
 
             state.validator_did_claim_block(
                 validator_info=validator_info,
                 wait_certificate=mock_wait_certificate,
-                poet_config_view=mock_poet_config_view)
+                poet_settings_view=mock_poet_settings_view)
 
     def test_block_claim_limit(self):
         """Verify that consensus state properly indicates whether or not a
@@ -565,9 +567,9 @@ class TestConsensusState(TestCase):
         mock_wait_certificate.duration = 3.14
         mock_wait_certificate.local_mean = 5.0
 
-        mock_poet_config_view = mock.Mock()
-        mock_poet_config_view.key_block_claim_limit = 10
-        mock_poet_config_view.population_estimate_sample_size = 50
+        mock_poet_settings_view = mock.Mock()
+        mock_poet_settings_view.key_block_claim_limit = 10
+        mock_poet_settings_view.population_estimate_sample_size = 50
 
         validator_info = \
             ValidatorInfo(
@@ -578,22 +580,22 @@ class TestConsensusState(TestCase):
 
         # Verify that validator does not trigger key block claim limit and also
         # "claim" blocks
-        for _ in range(mock_poet_config_view.key_block_claim_limit):
+        for _ in range(mock_poet_settings_view.key_block_claim_limit):
             self.assertFalse(
                 state.validator_has_claimed_block_limit(
                     validator_info=validator_info,
-                    poet_config_view=mock_poet_config_view))
+                    poet_settings_view=mock_poet_settings_view))
             state.validator_did_claim_block(
                 validator_info=validator_info,
                 wait_certificate=mock_wait_certificate,
-                poet_config_view=mock_poet_config_view)
+                poet_settings_view=mock_poet_settings_view)
 
         # Now that validator has claimed limit for key, verify that it triggers
         # the test
         self.assertTrue(
             state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
-                poet_config_view=mock_poet_config_view))
+                poet_settings_view=mock_poet_settings_view))
 
         # Switch keys and verify that validator again doesn't trigger test
         validator_info = \
@@ -604,7 +606,7 @@ class TestConsensusState(TestCase):
         self.assertFalse(
             state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
-                poet_config_view=mock_poet_config_view))
+                poet_settings_view=mock_poet_settings_view))
 
     def test_block_claim_delay(self):
         """Verify that consensus state properly indicates whether or not a
@@ -627,10 +629,10 @@ class TestConsensusState(TestCase):
         mock_wait_certificate.duration = 3.14
         mock_wait_certificate.local_mean = 5.0
 
-        mock_poet_config_view = mock.Mock()
-        mock_poet_config_view.key_block_claim_limit = 10000
-        mock_poet_config_view.block_claim_delay = 2
-        mock_poet_config_view.population_estimate_sample_size = 50
+        mock_poet_settings_view = mock.Mock()
+        mock_poet_settings_view.key_block_claim_limit = 10000
+        mock_poet_settings_view.block_claim_delay = 2
+        mock_poet_settings_view.population_estimate_sample_size = 50
 
         mock_block = mock.Mock()
         mock_block.block_num = 100
@@ -652,7 +654,7 @@ class TestConsensusState(TestCase):
             state.validator_did_claim_block(
                 validator_info=validator_info,
                 wait_certificate=mock_wait_certificate,
-                poet_config_view=mock_poet_config_view)
+                poet_settings_view=mock_poet_settings_view)
 
         # Test with blocks satisfying the claim delay
         for block_number in [103, 105, 110, 200, 1000]:
@@ -661,7 +663,7 @@ class TestConsensusState(TestCase):
                     validator_info=validator_info,
                     block_number=block_number,
                     validator_registry_view=mock_validator_registry_view,
-                    poet_config_view=mock_poet_config_view,
+                    poet_settings_view=mock_poet_settings_view,
                     block_store=mock_block_store))
 
         # Test with blocks not satisfying the claim delay
@@ -671,7 +673,7 @@ class TestConsensusState(TestCase):
                     validator_info=validator_info,
                     block_number=block_number,
                     validator_registry_view=mock_validator_registry_view,
-                    poet_config_view=mock_poet_config_view,
+                    poet_settings_view=mock_poet_settings_view,
                     block_store=mock_block_store))
 
     @mock.patch('sawtooth_poet.poet_consensus.consensus_state.utils.'
@@ -680,17 +682,17 @@ class TestConsensusState(TestCase):
         """Verify that consensus state properly indicates whether or not a
         validator is trying to claim blocks too frequently
         """
-        mock_poet_config_view = mock.Mock()
-        mock_poet_config_view.target_wait_time = 5.0
-        mock_poet_config_view.key_block_claim_limit = 10
-        mock_poet_config_view.population_estimate_sample_size = 50
-        mock_poet_config_view.ztest_minimum_win_count = 3
-        mock_poet_config_view.ztest_maximum_win_deviation = 3.075
+        mock_poet_settings_view = mock.Mock()
+        mock_poet_settings_view.target_wait_time = 5.0
+        mock_poet_settings_view.key_block_claim_limit = 10
+        mock_poet_settings_view.population_estimate_sample_size = 50
+        mock_poet_settings_view.ztest_minimum_win_count = 3
+        mock_poet_settings_view.ztest_maximum_win_deviation = 3.075
 
         mock_wait_certificate = mock.Mock()
         mock_wait_certificate.duration = 3.14
         mock_wait_certificate.local_mean = \
-            mock_poet_config_view.target_wait_time * 2
+            mock_poet_settings_view.target_wait_time * 2
         mock_wait_certificate.population_estimate.return_value = 2
 
         mock_deserialize.return_value = mock_wait_certificate
@@ -711,18 +713,19 @@ class TestConsensusState(TestCase):
         # Verify that zTest does not apply while there are fewer than
         # population estimate sample size blocks committed
         state = consensus_state.ConsensusState()
-        for _ in range(mock_poet_config_view.population_estimate_sample_size):
+        sample_size = mock_poet_settings_view.population_estimate_sample_size
+        for _ in range(sample_size):
             self.assertFalse(state.validator_is_claiming_too_frequently(
                 validator_info=validator_info,
                 previous_block_id='previous_id',
-                poet_config_view=mock_poet_config_view,
+                poet_settings_view=mock_poet_settings_view,
                 population_estimate=2,
                 block_cache=mock_block_cache,
                 poet_enclave_module=None))
             state.validator_did_claim_block(
                 validator_info=validator_info,
                 wait_certificate=mock_wait_certificate,
-                poet_config_view=mock_poet_config_view)
+                poet_settings_view=mock_poet_settings_view)
 
         # Per the spec, a z-score is calculated for each block, beyond the
         # minimum, that the validator has claimed.  The z-score is computed as:
@@ -739,7 +742,7 @@ class TestConsensusState(TestCase):
 
         # Compute how many more blocks beyond the minimum that the validator
         # can claim without triggering the frequency test
-        observed = mock_poet_config_view.ztest_minimum_win_count
+        observed = mock_poet_settings_view.ztest_minimum_win_count
         while True:
             expected = \
                 float(observed) / \
@@ -748,7 +751,7 @@ class TestConsensusState(TestCase):
             stddev = math.sqrt(observed * probability * (1 - probability))
             z_score = (observed - expected) / stddev
 
-            if z_score > mock_poet_config_view.ztest_maximum_win_deviation:
+            if z_score > mock_poet_settings_view.ztest_maximum_win_deviation:
                 break
 
             observed += 1
@@ -761,20 +764,20 @@ class TestConsensusState(TestCase):
             self.assertFalse(state.validator_is_claiming_too_frequently(
                 validator_info=validator_info,
                 previous_block_id='previous_id',
-                poet_config_view=mock_poet_config_view,
+                poet_settings_view=mock_poet_settings_view,
                 population_estimate=2,
                 block_cache=mock_block_cache,
                 poet_enclave_module=None))
             state.validator_did_claim_block(
                 validator_info=validator_info,
                 wait_certificate=mock_wait_certificate,
-                poet_config_view=mock_poet_config_view)
+                poet_settings_view=mock_poet_settings_view)
 
         # Verify that now the validator triggers the frequency test
         self.assertTrue(state.validator_is_claiming_too_frequently(
             validator_info=validator_info,
             previous_block_id='previous_id',
-            poet_config_view=mock_poet_config_view,
+            poet_settings_view=mock_poet_settings_view,
             population_estimate=2,
             block_cache=mock_block_cache,
             poet_enclave_module=None))
@@ -795,8 +798,8 @@ class TestConsensusState(TestCase):
         mock_block_cache.block_store.get_block_by_transaction_id.\
             return_value = block_dictionary['004']
 
-        mock_poet_config_view = mock.Mock()
-        mock_poet_config_view.signup_commit_maximum_delay = 1
+        mock_poet_settings_view = mock.Mock()
+        mock_poet_settings_view.signup_commit_maximum_delay = 1
 
         validator_info = \
             ValidatorInfo(
@@ -814,7 +817,7 @@ class TestConsensusState(TestCase):
             self.assertTrue(
                 state.validator_signup_was_committed_too_late(
                     validator_info=validator_info,
-                    poet_config_view=mock_poet_config_view,
+                    poet_settings_view=mock_poet_settings_view,
                     block_cache=mock_block_cache))
 
         # Simulate reaching the maximum commit delay before finding the block
@@ -832,11 +835,11 @@ class TestConsensusState(TestCase):
             mock_block_id_is_genesis.return_value = False
             state = consensus_state.ConsensusState()
             for delay in range(len(block_dictionary) - 1):
-                mock_poet_config_view.signup_commit_maximum_delay = delay
+                mock_poet_settings_view.signup_commit_maximum_delay = delay
                 self.assertTrue(
                     state.validator_signup_was_committed_too_late(
                         validator_info=validator_info,
-                        poet_config_view=mock_poet_config_view,
+                        poet_settings_view=mock_poet_settings_view,
                         block_cache=mock_block_cache))
 
         # Simulate finding block before maximum delay
@@ -845,7 +848,7 @@ class TestConsensusState(TestCase):
             mock_block_id_is_genesis.return_value = False
             state = consensus_state.ConsensusState()
             for (nonce, delay) in zip(['001', '002', '003'], [2, 1, 0]):
-                mock_poet_config_view.signup_commit_maximum_delay = delay
+                mock_poet_settings_view.signup_commit_maximum_delay = delay
                 validator_info = \
                     ValidatorInfo(
                         id='validator_001',
@@ -856,5 +859,5 @@ class TestConsensusState(TestCase):
                 self.assertFalse(
                     state.validator_signup_was_committed_too_late(
                         validator_info=validator_info,
-                        poet_config_view=mock_poet_config_view,
+                        poet_settings_view=mock_poet_settings_view,
                         block_cache=mock_block_cache))

@@ -22,7 +22,7 @@ from sawtooth_validator.journal.consensus.consensus \
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
-from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
+from sawtooth_poet.poet_consensus.poet_settings_view import PoetSettingsView
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus import utils
 
@@ -156,7 +156,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 state_view_factory=self._state_view_factory,
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
-        poet_config_view = PoetConfigView(state_view=state_view)
+        poet_settings_view = PoetSettingsView(state_view=state_view)
 
         previous_certificate_id = \
             utils.get_previous_certificate_id(
@@ -169,7 +169,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 previous_certificate_id=previous_certificate_id,
                 poet_public_key=validator_info.signup_info.poet_public_key,
                 consensus_state=consensus_state,
-                poet_config_view=poet_config_view)
+                poet_settings_view=poet_settings_view)
         except ValueError as error:
             LOGGER.error(
                 'Block %s rejected: Wait certificate check failed - %s',
@@ -181,7 +181,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
         # freshness check.
         if consensus_state.validator_signup_was_committed_too_late(
                 validator_info=validator_info,
-                poet_config_view=poet_config_view,
+                poet_settings_view=poet_settings_view,
                 block_cache=self._block_cache):
             LOGGER.error(
                 'Block %s rejected: Validator signup information not '
@@ -193,7 +193,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
         # limit for its current PoET key pair.
         if consensus_state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
-                poet_config_view=poet_config_view):
+                poet_settings_view=poet_settings_view):
             LOGGER.error(
                 'Block %s rejected: Validator has reached maximum number of '
                 'blocks with key pair.',
@@ -208,7 +208,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 validator_info=validator_info,
                 block_number=block_wrapper.block_num,
                 validator_registry_view=validator_registry_view,
-                poet_config_view=poet_config_view,
+                poet_settings_view=poet_settings_view,
                 block_store=self._block_cache.block_store):
             LOGGER.error(
                 'Block %s rejected: Validator has not waited long enough '
@@ -221,9 +221,9 @@ class PoetBlockVerifier(BlockVerifierInterface):
         if consensus_state.validator_is_claiming_too_frequently(
                 validator_info=validator_info,
                 previous_block_id=block_wrapper.previous_block_id,
-                poet_config_view=poet_config_view,
+                poet_settings_view=poet_settings_view,
                 population_estimate=wait_certificate.population_estimate(
-                    poet_config_view=poet_config_view),
+                    poet_settings_view=poet_settings_view),
                 block_cache=self._block_cache,
                 poet_enclave_module=poet_enclave_module):
             LOGGER.error(

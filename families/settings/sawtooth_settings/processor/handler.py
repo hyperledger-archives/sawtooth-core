@@ -24,28 +24,28 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
-from sawtooth_config.protobuf.config_pb2 import ConfigPayload
-from sawtooth_config.protobuf.config_pb2 import ConfigProposal
-from sawtooth_config.protobuf.config_pb2 import ConfigVote
-from sawtooth_config.protobuf.config_pb2 import ConfigCandidate
-from sawtooth_config.protobuf.config_pb2 import ConfigCandidates
-from sawtooth_config.protobuf.setting_pb2 import Setting
+from sawtooth_settings.protobuf.settings_pb2 import SettingsPayload
+from sawtooth_settings.protobuf.settings_pb2 import SettingProposal
+from sawtooth_settings.protobuf.settings_pb2 import SettingVote
+from sawtooth_settings.protobuf.settings_pb2 import SettingCandidate
+from sawtooth_settings.protobuf.settings_pb2 import SettingCandidates
+from sawtooth_settings.protobuf.setting_pb2 import Setting
 
 LOGGER = logging.getLogger(__name__)
 
 
 # The config namespace is special: it is not derived from a hash.
-CONFIG_NAMESPACE = '000000'
+SETTINGS_NAMESPACE = '000000'
 
 # Number of seconds to wait for state operations to succeed
 STATE_TIMEOUT_SEC = 10
 
 
-class ConfigurationTransactionHandler(object):
+class SettingsTransactionHandler(object):
 
     @property
     def family_name(self):
-        return 'sawtooth_config'
+        return 'sawtooth_settings'
 
     @property
     def family_versions(self):
@@ -57,7 +57,7 @@ class ConfigurationTransactionHandler(object):
 
     @property
     def namespaces(self):
-        return [CONFIG_NAMESPACE]
+        return [SETTINGS_NAMESPACE]
 
     def apply(self, transaction, state):
 
@@ -70,76 +70,76 @@ class ConfigurationTransactionHandler(object):
             raise InvalidTransaction(
                 '{} is not authorized to change settings'.format(pubkey))
 
-        config_payload = ConfigPayload()
-        config_payload.ParseFromString(transaction.payload)
+        settings_payload = SettingsPayload()
+        settings_payload.ParseFromString(transaction.payload)
 
-        if config_payload.action == ConfigPayload.PROPOSE:
+        if settings_payload.action == SettingsPayload.PROPOSE:
             return self._apply_proposal(
-                auth_keys, pubkey, config_payload.data, state)
-        elif config_payload.action == ConfigPayload.VOTE:
-            return self._apply_vote(pubkey, config_payload.data,
+                auth_keys, pubkey, settings_payload.data, state)
+        elif settings_payload.action == SettingsPayload.VOTE:
+            return self._apply_vote(pubkey, settings_payload.data,
                                     auth_keys, state)
         else:
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
 
-    def _apply_proposal(self, auth_keys, pubkey, config_proposal_data, state):
-        config_proposal = ConfigProposal()
-        config_proposal.ParseFromString(config_proposal_data)
+    def _apply_proposal(self, auth_keys, pubkey, setting_proposal_data, state):
+        setting_proposal = SettingProposal()
+        setting_proposal.ParseFromString(setting_proposal_data)
 
-        proposal_id = hashlib.sha256(config_proposal_data).hexdigest()
+        proposal_id = hashlib.sha256(setting_proposal_data).hexdigest()
 
         approval_threshold = _get_approval_threshold(state)
 
         _validate_setting(auth_keys,
-                          config_proposal.setting,
-                          config_proposal.value)
+                          setting_proposal.setting,
+                          setting_proposal.value)
 
         if approval_threshold > 1:
-            config_candidates = _get_config_candidates(state)
+            setting_candidates = _get_setting_candidates(state)
 
             existing_candidate = _first(
-                config_candidates.candidates,
+                setting_candidates.candidates,
                 lambda candidate: candidate.proposal_id == proposal_id)
 
             if existing_candidate is not None:
                 raise InvalidTransaction(
                     'Duplicate proposal for {}'.format(
-                        config_proposal.setting))
+                        setting_proposal.setting))
 
-            record = ConfigCandidate.VoteRecord(
+            record = SettingCandidate.VoteRecord(
                 public_key=pubkey,
-                vote=ConfigVote.ACCEPT)
-            config_candidates.candidates.add(
+                vote=SettingVote.ACCEPT)
+            setting_candidates.candidates.add(
                 proposal_id=proposal_id,
-                proposal=config_proposal,
+                proposal=setting_proposal,
                 votes=[record]
             )
 
             LOGGER.debug('Proposal made to set %s to %s',
-                         config_proposal.setting,
-                         config_proposal.value)
-            _save_config_candidates(state, config_candidates)
+                         setting_proposal.setting,
+                         setting_proposal.value)
+            _save_setting_candidates(state, setting_candidates)
         else:
-            _set_config_value(state,
-                              config_proposal.setting,
-                              config_proposal.value)
+            _set_setting_value(state,
+                               setting_proposal.setting,
+                               setting_proposal.value)
 
-    def _apply_vote(self, pubkey, config_vote_data, authorized_keys, state):
-        config_vote = ConfigVote()
-        config_vote.ParseFromString(config_vote_data)
-        proposal_id = config_vote.proposal_id
+    def _apply_vote(self, pubkey, settings_vote_data, authorized_keys, state):
+        settings_vote = SettingVote()
+        settings_vote.ParseFromString(settings_vote_data)
+        proposal_id = settings_vote.proposal_id
 
-        config_candidates = _get_config_candidates(state)
+        setting_candidates = _get_setting_candidates(state)
         candidate = _first(
-            config_candidates.candidates,
+            setting_candidates.candidates,
             lambda candidate: candidate.proposal_id == proposal_id)
 
         if candidate is None:
             raise InvalidTransaction(
                 "Proposal {} does not exist.".format(proposal_id))
 
-        candidate_index = _index_of(config_candidates.candidates, candidate)
+        candidate_index = _index_of(setting_candidates.candidates, candidate)
 
         approval_threshold = _get_approval_threshold(state)
 
@@ -151,57 +151,58 @@ class ConfigurationTransactionHandler(object):
 
         candidate.votes.add(
             public_key=pubkey,
-            vote=config_vote.vote)
+            vote=settings_vote.vote)
 
         accepted_count = 0
         rejected_count = 0
         for vote_record in candidate.votes:
-            if vote_record.vote == ConfigVote.ACCEPT:
+            if vote_record.vote == SettingVote.ACCEPT:
                 accepted_count += 1
-            elif vote_record.vote == ConfigVote.REJECT:
+            elif vote_record.vote == SettingVote.REJECT:
                 rejected_count += 1
 
         if accepted_count >= approval_threshold:
-            _set_config_value(state,
-                              candidate.proposal.setting,
-                              candidate.proposal.value)
-            del config_candidates.candidates[candidate_index]
+            _set_setting_value(state,
+                               candidate.proposal.setting,
+                               candidate.proposal.value)
+            del setting_candidates.candidates[candidate_index]
         elif rejected_count >= approval_threshold or \
                 (rejected_count + accepted_count) == len(authorized_keys):
             LOGGER.debug('Proposal for %s was rejected',
                          candidate.proposal.setting)
-            del config_candidates.candidates[candidate_index]
+            del setting_candidates.candidates[candidate_index]
         else:
             LOGGER.debug('Vote recorded for %s',
                          candidate.proposal.setting)
 
-        _save_config_candidates(state, config_candidates)
+        _save_setting_candidates(state, setting_candidates)
 
 
-def _get_config_candidates(state):
-    value = _get_config_value(state, 'sawtooth.config.vote.proposals')
+def _get_setting_candidates(state):
+    value = _get_setting_value(state, 'sawtooth.settings.vote.proposals')
     if not value:
-        return ConfigCandidates(candidates={})
+        return SettingCandidates(candidates={})
 
-    config_candidates = ConfigCandidates()
-    config_candidates.ParseFromString(base64.b64decode(value))
-    return config_candidates
+    setting_candidates = SettingCandidates()
+    setting_candidates.ParseFromString(base64.b64decode(value))
+    return setting_candidates
 
 
-def _save_config_candidates(state, config_candidates):
-    _set_config_value(state,
-                      'sawtooth.config.vote.proposals',
-                      base64.b64encode(config_candidates.SerializeToString()))
+def _save_setting_candidates(state, setting_candidates):
+    _set_setting_value(state,
+                       'sawtooth.settings.vote.proposals',
+                       base64.b64encode(
+                           setting_candidates.SerializeToString()))
 
 
 def _get_approval_threshold(state):
-    return int(_get_config_value(
-        state, 'sawtooth.config.vote.approval_threshold', 1))
+    return int(_get_setting_value(
+        state, 'sawtooth.settings.vote.approval_threshold', 1))
 
 
 def _get_auth_keys(state):
-    value = _get_config_value(
-        state, 'sawtooth.config.vote.authorized_keys', '')
+    value = _get_setting_value(
+        state, 'sawtooth.settings.vote.authorized_keys', '')
     return _split_ignore_empties(value)
 
 
@@ -211,15 +212,15 @@ def _split_ignore_empties(value):
 
 def _validate_setting(auth_keys, setting, value):
     if len(auth_keys) == 0 and \
-            setting != 'sawtooth.config.vote.authorized_keys':
+            setting != 'sawtooth.settings.vote.authorized_keys':
         raise InvalidTransaction(
             'Cannot set {} until authorized_keys is set.'.format(setting))
 
-    if setting == 'sawtooth.config.vote.authorized_keys':
+    if setting == 'sawtooth.settings.vote.authorized_keys':
         if len(_split_ignore_empties(value)) == 0:
             raise InvalidTransaction('authorized_keys must not be empty.')
 
-    if setting == 'sawtooth.config.vote.approval_threshold':
+    if setting == 'sawtooth.settings.vote.approval_threshold':
         threshold = None
         try:
             threshold = int(value)
@@ -231,13 +232,13 @@ def _validate_setting(auth_keys, setting, value):
                 'approval_threshold must be less than or equal to number of '
                 'authorized_keys')
 
-    if setting == 'sawtooth.config.vote.proposals':
+    if setting == 'sawtooth.settings.vote.proposals':
         raise InvalidTransaction(
-            'Setting sawtooth.config.vote.proposals is read-only')
+            'Setting sawtooth.settings.vote.proposals is read-only')
 
 
-def _get_config_value(state, key, default_value=None):
-    address = _make_config_key(key)
+def _get_setting_value(state, key, default_value=None):
+    address = _make_settings_key(key)
     setting = _get_setting_entry(state, address)
     for entry in setting.entries:
         if key == entry.key:
@@ -246,8 +247,8 @@ def _get_config_value(state, key, default_value=None):
     return default_value
 
 
-def _set_config_value(state, key, value):
-    address = _make_config_key(key)
+def _set_setting_value(state, key, value):
+    address = _make_settings_key(key)
     setting = _get_setting_entry(state, address)
 
     old_value = None
@@ -277,8 +278,8 @@ def _set_config_value(state, key, value):
             'Failed to save value on address %s', address)
         raise InternalError(
             'Unable to save config value {}'.format(key))
-    if setting != 'sawtooth.config.vote.proposals':
-        LOGGER.info('Config setting %s changed from %s to %s',
+    if setting != 'sawtooth.settings.vote.proposals':
+        LOGGER.info('Setting setting %s changed from %s to %s',
                     key, old_value, value)
 
 
@@ -315,7 +316,7 @@ _EMPTY_PART = _to_hash('')[:_ADDRESS_PART_SIZE]
 
 
 @lru_cache(maxsize=128)
-def _make_config_key(key):
+def _make_settings_key(key):
     # split the key into 4 parts, maximum
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     # compute the short hash of each part
@@ -323,4 +324,4 @@ def _make_config_key(key):
     # pad the parts with the empty hash, if needed
     addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
 
-    return CONFIG_NAMESPACE + ''.join(addr_parts)
+    return SETTINGS_NAMESPACE + ''.join(addr_parts)

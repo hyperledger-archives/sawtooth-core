@@ -25,10 +25,10 @@ import yaml
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
 
-from sawtooth_cli.protobuf.config_pb2 import ConfigPayload
-from sawtooth_cli.protobuf.config_pb2 import ConfigProposal
-from sawtooth_cli.protobuf.config_pb2 import ConfigVote
-from sawtooth_cli.protobuf.config_pb2 import ConfigCandidates
+from sawtooth_cli.protobuf.settings_pb2 import SettingsPayload
+from sawtooth_cli.protobuf.settings_pb2 import SettingProposal
+from sawtooth_cli.protobuf.settings_pb2 import SettingVote
+from sawtooth_cli.protobuf.settings_pb2 import SettingCandidates
 from sawtooth_cli.protobuf.setting_pb2 import Setting
 from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_cli.protobuf.transaction_pb2 import Transaction
@@ -39,7 +39,7 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchList
 import sawtooth_signing as signing
 
 
-CONFIG_NAMESPACE = '000000'
+SETTINGS_NAMESPACE = '000000'
 DEFAULT_COL_WIDTH = 15
 
 _MAX_KEY_PARTS = 4
@@ -230,7 +230,7 @@ def do_config(args):
 
 def _do_config_proposal_create(args):
     """Executes the 'proposal create' subcommand.  Given a key file, and a
-    series of key/value pairs, it generates batches of sawtooth_config
+    series of key/value pairs, it generates batches of sawtooth_settings
     transactions in a BatchList instance.  The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
@@ -308,7 +308,7 @@ def _do_config_proposal_list(args):
 
 def _do_config_proposal_vote(args):
     """Executes the 'proposal vote' subcommand.  Given a key file, a proposal
-    id and a vote value, it generates a batch of sawtooth_config transactions
+    id and a vote value, it generates a batch of sawtooth_settings transactions
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
@@ -348,14 +348,14 @@ def _do_config_list(args):
     """Lists the current on-chain configuration values.
     """
     rest_client = RestClient(args.url)
-    state = rest_client.list_state(subtree=CONFIG_NAMESPACE)
+    state = rest_client.list_state(subtree=SETTINGS_NAMESPACE)
 
     prefix = args.filter
 
     head = state['head']
     state_values = state['data']
     printable_settings = []
-    proposals_address = _key_to_address('sawtooth.config.vote.proposals')
+    proposals_address = _key_to_address('sawtooth.settings.vote.proposals')
     for state_value in state_values:
         if state_value['address'] == proposals_address:
             # This is completely internal setting and we won't list it here
@@ -410,7 +410,7 @@ def _do_config_genesis(args):
 
     txns.append(_create_propose_txn(
         pubkey, signing_key,
-        ('sawtooth.config.vote.authorized_keys',
+        ('sawtooth.settings.vote.authorized_keys',
          ','.join(authorized_keys))))
 
     if args.approval_threshold is not None:
@@ -424,7 +424,7 @@ def _do_config_genesis(args):
 
         txns.append(_create_propose_txn(
             pubkey, signing_key,
-            ('sawtooth.config.vote.approval_threshold',
+            ('sawtooth.settings.vote.approval_threshold',
              str(args.approval_threshold))))
 
     batch = _create_batch(pubkey, signing_key, txns)
@@ -441,9 +441,9 @@ def _do_config_genesis(args):
 
 def _get_proposals(rest_client):
     state_leaf = rest_client.get_leaf(
-        _key_to_address('sawtooth.config.vote.proposals'))
+        _key_to_address('sawtooth.settings.vote.proposals'))
 
-    config_candidates = ConfigCandidates()
+    config_candidates = SettingCandidates()
 
     if state_leaf is not None:
         setting_bytes = b64decode(state_leaf['data'])
@@ -452,7 +452,7 @@ def _get_proposals(rest_client):
 
         candidates_bytes = None
         for entry in setting.entries:
-            if entry.key == 'sawtooth.config.vote.proposals':
+            if entry.key == 'sawtooth.settings.vote.proposals':
                 candidates_bytes = entry.value
 
         if candidates_bytes is not None:
@@ -517,45 +517,45 @@ def _create_batch(pubkey, signing_key, transactions):
 
 
 def _create_propose_txn(pubkey, signing_key, setting_key_value):
-    """Creates an individual sawtooth_config transaction for the given key and
+    """Creates an individual sawtooth_settings transaction for the given key and
     value.
     """
     setting_key, setting_value = setting_key_value
     nonce = str(datetime.datetime.utcnow().timestamp())
-    proposal = ConfigProposal(
+    proposal = SettingProposal(
         setting=setting_key,
         value=setting_value,
         nonce=nonce)
-    payload = ConfigPayload(data=proposal.SerializeToString(),
-                            action=ConfigPayload.PROPOSE)
+    payload = SettingsPayload(data=proposal.SerializeToString(),
+                              action=SettingsPayload.PROPOSE)
 
     return _make_txn(pubkey, signing_key, setting_key, payload)
 
 
 def _create_vote_txn(pubkey, signing_key,
                      proposal_id, setting_key, vote_value):
-    """Creates an individual sawtooth_config transaction for voting on a
+    """Creates an individual sawtooth_settings transaction for voting on a
     proposal for a particular setting key.
     """
     if vote_value == 'accept':
-        vote_id = ConfigVote.ACCEPT
+        vote_id = SettingVote.ACCEPT
     else:
-        vote_id = ConfigVote.REJECT
+        vote_id = SettingVote.REJECT
 
-    vote = ConfigVote(proposal_id=proposal_id, vote=vote_id)
-    payload = ConfigPayload(data=vote.SerializeToString(),
-                            action=ConfigPayload.VOTE)
+    vote = SettingVote(proposal_id=proposal_id, vote=vote_id)
+    payload = SettingsPayload(data=vote.SerializeToString(),
+                              action=SettingsPayload.VOTE)
 
     return _make_txn(pubkey, signing_key, setting_key, payload)
 
 
 def _make_txn(pubkey, signing_key, setting_key, payload):
-    """Creates and signs a sawtooth_config transaction with with a payload.
+    """Creates and signs a sawtooth_settings transaction with with a payload.
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
         signer_pubkey=pubkey,
-        family_name='sawtooth_config',
+        family_name='sawtooth_settings',
         family_version='1.0',
         inputs=_config_inputs(setting_key),
         outputs=_config_outputs(setting_key),
@@ -574,23 +574,23 @@ def _make_txn(pubkey, signing_key, setting_key, payload):
 
 
 def _config_inputs(key):
-    """Creates the list of inputs for a sawtooth_config transaction, for a given
-    setting key.
+    """Creates the list of inputs for a sawtooth_settings transaction, for a
+    given setting key.
     """
     return [
-        _key_to_address('sawtooth.config.vote.proposals'),
-        _key_to_address('sawtooth.config.vote.authorized_keys'),
-        _key_to_address('sawtooth.config.vote.approval_threshold'),
+        _key_to_address('sawtooth.settings.vote.proposals'),
+        _key_to_address('sawtooth.settings.vote.authorized_keys'),
+        _key_to_address('sawtooth.settings.vote.approval_threshold'),
         _key_to_address(key)
     ]
 
 
 def _config_outputs(key):
-    """Creates the list of outputs for a sawtooth_config transaction, for a
+    """Creates the list of outputs for a sawtooth_settings transaction, for a
     given setting key.
     """
     return [
-        _key_to_address('sawtooth.config.vote.proposals'),
+        _key_to_address('sawtooth.settings.vote.proposals'),
         _key_to_address(key)
     ]
 
@@ -605,4 +605,4 @@ def _key_to_address(key):
     key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
 
-    return CONFIG_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)
+    return SETTINGS_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)

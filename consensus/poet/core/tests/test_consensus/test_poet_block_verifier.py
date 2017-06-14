@@ -32,7 +32,8 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 \
 @mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.'
             'ConsensusStateStore')
 @mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.BlockWrapper')
-@mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.PoetConfigView')
+@mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.'
+            'PoetSettingsView')
 @mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.factory')
 class TestPoetBlockVerifier(TestCase):
 
@@ -52,7 +53,7 @@ class TestPoetBlockVerifier(TestCase):
                             mock_validator_registry_view,
                             mock_consensus_state,
                             mock_poet_enclave_factory,
-                            mock_poet_config_view,
+                            mock_poet_settings_view,
                             mock_block_wrapper,
                             mock_consensus_state_store):
         """Verify that the PoET block verifier indicates failure if the block
@@ -115,7 +116,7 @@ class TestPoetBlockVerifier(TestCase):
                                       mock_validator_registry_view,
                                       mock_consensus_state,
                                       mock_poet_enclave_factory,
-                                      mock_poet_config_view,
+                                      mock_poet_settings_view,
                                       mock_block_wrapper,
                                       mock_consensus_state_store):
 
@@ -178,7 +179,7 @@ class TestPoetBlockVerifier(TestCase):
                                                 mock_validator_registry_view,
                                                 mock_consensus_state,
                                                 mock_poet_enclave_factory,
-                                                mock_poet_config_view,
+                                                mock_poet_settings_view,
                                                 mock_block_wrapper,
                                                 mock_consensus_state_store):
 
@@ -246,7 +247,7 @@ class TestPoetBlockVerifier(TestCase):
             mock_validator_registry_view,
             mock_consensus_state,
             mock_poet_enclave_factory,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper,
             mock_consensus_state_store):
 
@@ -319,7 +320,7 @@ class TestPoetBlockVerifier(TestCase):
                       mock_validator_registry_view,
                       mock_consensus_state,
                       mock_poet_enclave_factory,
-                      mock_poet_config_view,
+                      mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
 
@@ -392,7 +393,7 @@ class TestPoetBlockVerifier(TestCase):
                       mock_validator_registry_view,
                       mock_consensus_state,
                       mock_poet_enclave_factory,
-                      mock_poet_config_view,
+                      mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
 
@@ -466,7 +467,7 @@ class TestPoetBlockVerifier(TestCase):
                       mock_validator_registry_view,
                       mock_consensus_state,
                       mock_poet_enclave_factory,
-                      mock_poet_config_view,
+                      mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
 
@@ -539,7 +540,7 @@ class TestPoetBlockVerifier(TestCase):
             mock_validator_registry_view,
             mock_consensus_state,
             mock_poet_enclave_factory,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper,
             mock_consensus_state_store):
 

@@ -32,7 +32,7 @@ from sawtooth_validator.journal.transaction_cache import TransactionCache
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
 
@@ -358,8 +358,8 @@ class BlockPublisher(object):
             chain_head.header_signature,
             state_view)
 
-        config_view = ConfigView(state_view)
-        max_batches = config_view.get_setting(
+        settings_view = SettingsView(state_view)
+        max_batches = settings_view.get_setting(
             'sawtooth.publisher.max_batches_per_block',
             default_value=0, value_type=int)
 

@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_config:
-    image: sawtooth-tp_config:$ISOLATION_ID
+  tp_settings:
+    image: sawtooth-tp_settings:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_config -vv tcp://validator:4004
+    command: tp_settings -vv tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
@@ -33,15 +33,15 @@ services:
     expose: 
       - 4004
     command: nose2-3
-        -c /project/sawtooth-core/families/config/nose2.cfg
+        -c /project/sawtooth-core/families/settings/nose2.cfg
         -v
-        -s /project/sawtooth-core/families/config/tests
-        test_tp_config
+        -s /project/sawtooth-core/families/settings/tests
+        test_tp_settings
     stop_signal: SIGKILL
     environment:
         TEST_BIND: "tcp://eth0:4004"
-        PYTHONPATH: "/project/sawtooth-core/families/config:\
-            /project/sawtooth-core/families/config/tests:\
+        PYTHONPATH: "/project/sawtooth-core/families/settings:\
+            /project/sawtooth-core/families/settings/tests:\
             /project/sawtooth-core/sdk/python:\
             /project/sawtooth-core/integration:\
             /project/sawtooth-core/signing"

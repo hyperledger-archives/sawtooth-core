@@ -16,12 +16,12 @@
 import math
 import logging
 
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
 
 
-class PoetConfigView(object):
+class PoetSettingsView(object):
     """A class to wrap the retrieval of PoET configuration settings from the
     configuration view.  For values that are not in the current state view
     or that are invalid, default values are returned.
@@ -41,7 +41,7 @@ class PoetConfigView(object):
     _ZTEST_MINIMUM_WIN_COUNT_ = 3
 
     def __init__(self, state_view):
-        """Initialize a PoetConfigView object.
+        """Initialize a PoetSettingsView object.
 
         Args:
             state_view (StateView): The current state view.
@@ -50,7 +50,7 @@ class PoetConfigView(object):
             None
         """
 
-        self._config_view = ConfigView(state_view)
+        self._settings_view = SettingsView(state_view)
 
         self._block_claim_delay = None
         self._enclave_module_name = None
@@ -89,7 +89,7 @@ class PoetConfigView(object):
 
         try:
             value = \
-                self._config_view.get_setting(
+                self._settings_view.get_setting(
                     key=name,
                     default_value=default_value,
                     value_type=value_type)
@@ -120,7 +120,7 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.block_claim_delay',
                     value_type=int,
-                    default_value=PoetConfigView._BLOCK_CLAIM_DELAY_,
+                    default_value=PoetSettingsView._BLOCK_CLAIM_DELAY_,
                     validate_function=lambda value: value >= 0)
 
         return self._block_claim_delay
@@ -138,7 +138,7 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.enclave_module_name',
                     value_type=str,
-                    default_value=PoetConfigView._ENCLAVE_MODULE_NAME_,
+                    default_value=PoetSettingsView._ENCLAVE_MODULE_NAME_,
                     validate_function=lambda value: len(value) > 0)
 
         return self._enclave_module_name
@@ -157,7 +157,7 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.initial_wait_time',
                     value_type=float,
-                    default_value=PoetConfigView._INITIAL_WAIT_TIME_,
+                    default_value=PoetSettingsView._INITIAL_WAIT_TIME_,
                     validate_function=lambda value:
                         math.isfinite(value) and value >= 0)
 
@@ -177,7 +177,7 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.key_block_claim_limit',
                     value_type=int,
-                    default_value=PoetConfigView._KEY_BLOCK_CLAIM_LIMIT_,
+                    default_value=PoetSettingsView._KEY_BLOCK_CLAIM_LIMIT_,
                     validate_function=lambda value: value > 0)
 
         return self._key_block_claim_limit
@@ -195,7 +195,7 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.minimum_wait_time',
                     value_type=float,
-                    default_value=PoetConfigView._MINIMUM_WAIT_TIME_,
+                    default_value=PoetSettingsView._MINIMUM_WAIT_TIME_,
                     validate_function=lambda value:
                         math.isfinite(value) and value > 0)
 
@@ -222,7 +222,7 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.population_estimate_sample_size',
                     value_type=int,
-                    default_value=PoetConfigView.
+                    default_value=PoetSettingsView.
                     _POPULATION_ESTIMATE_SAMPLE_SIZE_,
                     validate_function=lambda value: value > 0)
 
@@ -249,7 +249,8 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.signup_commit_maximum_delay',
                     value_type=int,
-                    default_value=PoetConfigView._SIGNUP_COMMIT_MAXIMUM_DELAY_,
+                    default_value=PoetSettingsView.
+                    _SIGNUP_COMMIT_MAXIMUM_DELAY_,
                     validate_function=lambda value: value >= 0)
 
         return self._signup_commit_maximum_delay
@@ -268,7 +269,7 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.target_wait_time',
                     value_type=float,
-                    default_value=PoetConfigView._TARGET_WAIT_TIME_,
+                    default_value=PoetSettingsView._TARGET_WAIT_TIME_,
                     validate_function=lambda value:
                         math.isfinite(value) and value > 0)
 
@@ -296,7 +297,8 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.ztest_maximum_win_deviation',
                     value_type=float,
-                    default_value=PoetConfigView._ZTEST_MAXIMUM_WIN_DEVIATION_,
+                    default_value=PoetSettingsView.
+                    _ZTEST_MAXIMUM_WIN_DEVIATION_,
                     validate_function=lambda value:
                         math.isfinite(value) and value > 0)
 
@@ -318,7 +320,7 @@ class PoetConfigView(object):
                 self._get_config_setting(
                     name='sawtooth.poet.ztest_minimum_win_count',
                     value_type=int,
-                    default_value=PoetConfigView._ZTEST_MINIMUM_WIN_COUNT_,
+                    default_value=PoetSettingsView._ZTEST_MINIMUM_WIN_COUNT_,
                     validate_function=lambda value: value >= 0)
 
         return self._ztest_minimum_win_count

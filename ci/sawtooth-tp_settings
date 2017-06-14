@@ -33,10 +33,10 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
  && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
  && apt-get install -y -q \
-    python3-sawtooth-config \
+    python3-sawtooth-settings \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 4004/tcp
 
-CMD ["tp_config", "-vv"]
+CMD ["tp_settings", "-vv"]

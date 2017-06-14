@@ -44,7 +44,7 @@ class TransactionExecutorThread(object):
                  scheduler,
                  processors,
                  waiting_threadpool,
-                 config_view_factory,
+                 settings_view_factory,
                  open_futures):
         """
         Args:
@@ -58,10 +58,10 @@ class TransactionExecutorThread(object):
                 processor type.
             waiting_threadpool (ThreadPoolExecutor): A thread pool to run
                 indefinite waiting functions in.
-            config_view_factory (ConfigViewFactory): Read the configuration
+            settings_view_factory (SettingsViewFactory): Read the configuration
                 state
         Attributes:
-            _tp_config_key (str): the key used to reference the part of state
+            _tp_settings_key (str): the key used to reference the part of state
                 where the list of required transaction processors are.
         """
         super(TransactionExecutorThread, self).__init__()
@@ -69,8 +69,8 @@ class TransactionExecutorThread(object):
         self._context_manager = context_manager
         self._scheduler = scheduler
         self._processors = processors
-        self._config_view_factory = config_view_factory
-        self._tp_config_key = "sawtooth.validator.transaction_families"
+        self._settings_view_factory = settings_view_factory
+        self._tp_settings_key = "sawtooth.validator.transaction_families"
         self._waiters_by_type = _WaitersByType()
         self._waiting_threadpool = waiting_threadpool
         self._done = False
@@ -118,10 +118,10 @@ class TransactionExecutorThread(object):
                 header.family_version,
                 header.payload_encoding)
 
-            config = self._config_view_factory.create_config_view(
+            config = self._settings_view_factory.create_settings_view(
                 txn_info.state_hash)
             transaction_families = config.get_setting(
-                key=self._tp_config_key,
+                key=self._tp_settings_key,
                 default_value="[]")
 
             # After reading the transaction families required in configuration
@@ -256,13 +256,13 @@ class TransactionExecutorThread(object):
 
 
 class TransactionExecutor(object):
-    def __init__(self, service, context_manager, config_view_factory):
+    def __init__(self, service, context_manager, settings_view_factory):
         """
         Args:
             service (Interconnect): The zmq internal interface
             context_manager (ContextManager): Cache of state for tps
-            config_view_factory (ConfigViewFactory): Read-only view of config
-                state.
+            settings_view_factory (SettingsViewFactory): Read-only view of
+                setting state.
         Attributes:
             processors (ProcessorIteratorCollection): All of the registered
                 transaction processors and a way to find the next one to send
@@ -276,7 +276,7 @@ class TransactionExecutor(object):
         self._context_manager = context_manager
         self.processors = processor_iterator.ProcessorIteratorCollection(
             processor_iterator.RoundRobinProcessorIterator)
-        self._config_view_factory = config_view_factory
+        self._settings_view_factory = settings_view_factory
         self._waiting_threadpool = ThreadPoolExecutor(max_workers=3)
         self._executing_threadpool = ThreadPoolExecutor(max_workers=5)
         self._alive_threads = []
@@ -337,7 +337,7 @@ class TransactionExecutor(object):
             scheduler=scheduler,
             processors=self.processors,
             waiting_threadpool=self._waiting_threadpool,
-            config_view_factory=self._config_view_factory,
+            settings_view_factory=self._settings_view_factory,
             open_futures=self._open_futures)
         self._executing_threadpool.submit(t.execute_thread)
         with self._lock:

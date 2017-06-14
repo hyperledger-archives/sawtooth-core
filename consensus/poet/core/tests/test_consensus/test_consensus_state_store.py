@@ -102,11 +102,11 @@ class TestConsensusStateStore(unittest.TestCase):
         my_dict = {}
         mock_lmdb.return_value = my_dict
 
-        mock_poet_config_view = mock.Mock()
-        mock_poet_config_view.target_wait_time = 30.0
-        mock_poet_config_view.initial_wait_time = 3000.0
-        mock_poet_config_view.minimum_wait_time = 1.0
-        mock_poet_config_view.population_estimate_sample_size = 50
+        mock_poet_settings_view = mock.Mock()
+        mock_poet_settings_view.target_wait_time = 30.0
+        mock_poet_settings_view.initial_wait_time = 3000.0
+        mock_poet_settings_view.minimum_wait_time = 1.0
+        mock_poet_settings_view.population_estimate_sample_size = 50
 
         store = \
             consensus_state_store.ConsensusStateStore(
@@ -149,7 +149,7 @@ class TestConsensusStateStore(unittest.TestCase):
         state.validator_did_claim_block(
             validator_info=validator_info,
             wait_certificate=wait_certificate,
-            poet_config_view=mock_poet_config_view)
+            poet_settings_view=mock_poet_settings_view)
         store['key'] = state
 
         # Verify the length and contains key

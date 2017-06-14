@@ -24,7 +24,7 @@ from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf.setting_pb2 import Setting
 
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 class SynchronousExecutor(Executor):
     def __init__(self):
@@ -237,7 +237,7 @@ def CreateSetting(key, value):
     """
     Create a setting object to include in a MockStateFactory.
     """
-    addr = ConfigView.setting_address(key)
+    addr = SettingsView.setting_address(key)
 
     setting = Setting()
     setting.entries.add(key=key, value=repr(value))

@@ -24,16 +24,17 @@ from setuptools import setup, find_packages
 data_files = []
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-tp_config']))
+    data_files.append(('/etc/default',
+                       ['packaging/systemd/sawtooth-tp_settings']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
-                       ['packaging/systemd/sawtooth-tp_config.service']))
+                       ['packaging/systemd/sawtooth-tp_settings.service']))
 
-setup(name='sawtooth-config',
+setup(name='sawtooth-settings',
       version=subprocess.check_output(
           ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake Config Transaction Processor',
+      description='Sawtooth Lake Settings Transaction Processor',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
@@ -45,6 +46,6 @@ setup(name='sawtooth-config',
       data_files=data_files,
       entry_points={
           'console_scripts': [
-              'tp_config = sawtooth_config.processor.main:main'
+              'tp_settings= sawtooth_settings.processor.main:main'
           ]
       })

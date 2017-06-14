@@ -51,7 +51,7 @@ from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
-from sawtooth_validator.state.config_view import ConfigViewFactory
+from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaAddSubscriberHandler
@@ -156,10 +156,11 @@ class Validator(object):
                                      max_incoming_connections=20,
                                      monitor=True)
 
-        executor = TransactionExecutor(service=self._service,
-                                       context_manager=context_manager,
-                                       config_view_factory=ConfigViewFactory(
-                                           StateViewFactory(merkle_db)))
+        executor = TransactionExecutor(
+            service=self._service,
+            context_manager=context_manager,
+            settings_view_factory=SettingsViewFactory(
+                StateViewFactory(merkle_db)))
         self._executor = executor
         self._service.set_check_connections(executor.check_connections)
 

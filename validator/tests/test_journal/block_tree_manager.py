@@ -37,7 +37,7 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.setting_pb2 import Setting
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 from test_journal.mock import MockBatchSender
 from test_journal.mock import MockBlockSender
@@ -74,7 +74,7 @@ class BlockTreeManager(object):
         self.state_db = {}
 
         # add the mock reference to the consensus
-        consensus_setting_addr = ConfigView.setting_address(
+        consensus_setting_addr = SettingsView.setting_address(
             'sawtooth.consensus.algorithm')
         self.state_db[consensus_setting_addr] = _setting_entry(
             'sawtooth.consensus.algorithm', 'test_journal.mock_consensus')

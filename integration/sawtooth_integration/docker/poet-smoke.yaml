@@ -155,31 +155,31 @@ services:
     command: tp_intkey_python tcp://validator-2:4004
     stop_signal: SIGKILL
 
-  tp-config-0:
-    image: sawtooth-tp_config:$ISOLATION_ID
+  tp-settings-0:
+    image: sawtooth-tp_settings:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_config -v tcp://validator-0:4004
+    command: tp_settings -v tcp://validator-0:4004
     stop_signal: SIGKILL
 
-  tp-config-1:
-    image: sawtooth-tp_config:$ISOLATION_ID
+  tp-settings-1:
+    image: sawtooth-tp_settings:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_config -v tcp://validator-1:4004
+    command: tp_settings -v tcp://validator-1:4004
     stop_signal: SIGKILL
 
-  tp-config-2:
-    image: sawtooth-tp_config:$ISOLATION_ID
+  tp-settings-2:
+    image: sawtooth-tp_settings:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_config -v tcp://validator-2:4004
+    command: tp_settings -v tcp://validator-2:4004
     stop_signal: SIGKILL
 
   tp-validator-registry-0:

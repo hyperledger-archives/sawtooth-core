@@ -21,7 +21,7 @@ import sys
 from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
-from sawtooth_config.processor.handler import ConfigurationTransactionHandler
+from sawtooth_settings.processor.handler import SettingsTransactionHandler
 
 
 def create_console_handler(verbose_level):
@@ -88,7 +88,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
 
     processor = TransactionProcessor(url=args.validator_url)
 
-    handler = ConfigurationTransactionHandler()
+    handler = SettingsTransactionHandler()
 
     processor.add_handler(handler)
 

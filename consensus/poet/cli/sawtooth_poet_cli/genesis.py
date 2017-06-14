@@ -33,7 +33,7 @@ import sawtooth_signing as signing
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 VR_NAMESPACE = sha256('validator_registry'.encode()).hexdigest()[0:6]
 VALIDATOR_MAP_ADDRESS = \
@@ -124,10 +124,10 @@ def do_genesis(args):
     output_addresses = [validator_entry_address, VALIDATOR_MAP_ADDRESS]
     input_addresses = \
         output_addresses + \
-        [ConfigView.setting_address('sawtooth.poet.report_public_key_pem'),
-         ConfigView.setting_address('sawtooth.poet.'
-                                    'valid_enclave_measurements'),
-         ConfigView.setting_address('sawtooth.poet.valid_enclave_basenames')]
+        [SettingsView.setting_address('sawtooth.poet.report_public_key_pem'),
+         SettingsView.setting_address('sawtooth.poet.'
+                                      'valid_enclave_measurements'),
+         SettingsView.setting_address('sawtooth.poet.valid_enclave_basenames')]
 
     header = \
         txn_pb.TransactionHeader(

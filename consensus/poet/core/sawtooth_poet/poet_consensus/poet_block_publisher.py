@@ -24,13 +24,13 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 from sawtooth_poet.poet_consensus import poet_enclave_factory as factory
 from sawtooth_poet.poet_consensus.consensus_state import ConsensusState
 from sawtooth_poet.poet_consensus.consensus_state_store \
     import ConsensusStateStore
-from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
+from sawtooth_poet.poet_consensus.poet_settings_view import PoetSettingsView
 from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 from sawtooth_poet.poet_consensus.poet_key_state_store \
     import PoetKeyState
@@ -159,10 +159,11 @@ class PoetBlockPublisher(BlockPublisherInterface):
              PoetBlockPublisher._validator_map_address]
         input_addresses = \
             output_addresses + \
-            [ConfigView.setting_address('sawtooth.poet.report_public_key_pem'),
-             ConfigView.setting_address(
+            [SettingsView.setting_address(
+                'sawtooth.poet.report_public_key_pem'),
+             SettingsView.setting_address(
                  'sawtooth.poet.valid_enclave_measurements'),
-             ConfigView.setting_address(
+             SettingsView.setting_address(
                  'sawtooth.poet.valid_enclave_basenames')]
 
         header = \
@@ -313,14 +314,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 state_view_factory=self._state_view_factory,
                 consensus_state_store=self._consensus_state_store,
                 poet_enclave_module=poet_enclave_module)
-        poet_config_view = PoetConfigView(state_view)
+        poet_settings_view = PoetSettingsView(state_view)
 
         # If our signup information does not pass the freshness test, then we
         # know that other validators will reject any blocks we try to claim so
         # we need to try to sign up again.
         if consensus_state.validator_signup_was_committed_too_late(
                 validator_info=validator_info,
-                poet_config_view=poet_config_view,
+                poet_settings_view=poet_settings_view,
                 block_cache=self._block_cache):
             LOGGER.error(
                 'Reject building on block %s: Validator signup information '
@@ -337,7 +338,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # we need to check if the key has been refreshed.
         if consensus_state.validator_has_claimed_block_limit(
                 validator_info=validator_info,
-                poet_config_view=poet_config_view):
+                poet_settings_view=poet_settings_view):
             # Because we have hit the limit, check to see if we have already
             # submitted a validator registry transaction with new signup
             # information, and therefore a new PoET public key.  If not, then
@@ -376,7 +377,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 validator_info=validator_info,
                 block_number=block_header.block_num,
                 validator_registry_view=validator_registry_view,
-                poet_config_view=poet_config_view,
+                poet_settings_view=poet_settings_view,
                 block_store=self._block_cache.block_store):
             LOGGER.error(
                 'Reject building on block %s: Validator has not waited long '
@@ -397,7 +398,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 validator_address=block_header.signer_pubkey,
                 previous_certificate_id=previous_certificate_id,
                 consensus_state=consensus_state,
-                poet_config_view=poet_config_view)
+                poet_settings_view=poet_settings_view)
 
         # NOTE - we do the zTest after we create the wait timer because we
         # need its population estimate to see if this block would be accepted
@@ -410,9 +411,9 @@ class PoetBlockPublisher(BlockPublisherInterface):
         if consensus_state.validator_is_claiming_too_frequently(
                 validator_info=validator_info,
                 previous_block_id=block_header.previous_block_id,
-                poet_config_view=poet_config_view,
+                poet_settings_view=poet_settings_view,
                 population_estimate=wait_timer.population_estimate(
-                    poet_config_view=poet_config_view),
+                    poet_settings_view=poet_settings_view),
                 block_cache=self._block_cache,
                 poet_enclave_module=poet_enclave_module):
             LOGGER.error(

@@ -61,7 +61,7 @@ containers:
 
 * A single validator using dev-mode consensus
 * A REST-API connected to the validator
-* Config, IntegerKey, and XO transaction processors
+* Settings, IntegerKey, and XO transaction processors
 * A client container for running the CLI tools
 
 The compose file also specifies the container images to download from Docker
@@ -95,12 +95,12 @@ To start up the environment, perform the following tasks:
 
 
 Downloading the docker images that comprise the Sawtooth demo
-environment can take serveral minutes. Once you see the containers
-registering and creating intial blocks you can move on to the next step.
+environment can take several minutes. Once you see the containers
+registering and creating initial blocks you can move on to the next step.
 
 .. code-block:: console
 
-  Attaching to sawtooth-validator-default, sawtooth-tp_xo_python-default, sawtooth-tp_intkey_python-default, sawtooth-rest_api-default, sawtooth-tp_config-default, sawtooth-client-default
+  Attaching to sawtooth-validator-default, sawtooth-tp_xo_python-default, sawtooth-tp_intkey_python-default, sawtooth-rest_api-default, sawtooth-tp_settings-default, sawtooth-client-default
   sawtooth-validator-default | writing file: /etc/sawtooth/keys/validator.priv
   sawtooth-validator-default | writing file: /etc/sawtooth/keys/validator.pub
   sawtooth-validator-default | creating key directory: /root/.sawtooth/keys
@@ -145,7 +145,7 @@ containers have all shut down run 'docker-compose -f sawtooth-default.yaml down'
   sawtooth-validator-default         | [00:27:56.763 INFO     chain] Finished block validation of: 44ccc3e6(1, S:910b9c23, P:05b2a651)
   Gracefully stopping... (press Ctrl+C again to force)
   Stopping sawtooth-tp_xo_python-default ... done
-  Stopping sawtooth-tp_config-default ... done
+  Stopping sawtooth-tp_settings-default ... done
   Stopping sawtooth-client-default... done
   Stopping sawtooth-rest_api-default ... done
   Stopping sawtooth-tp_intkey_python-default ... done
@@ -207,7 +207,7 @@ Transaction Processors
 The Docker Compose file (*sawtooth-default.yaml*) starts the following
 transaction processors automatically:
 
-* tp_config
+* tp_settings
 * tp_intkey_python
 * tp_xo_python
 
@@ -256,11 +256,11 @@ transactions just submitted:
   tp_intkey_python_1  | [21:02:53.202 DEBUG    handler] Incrementing "ZeuYwh" by 1
 
 
-Config Transaction Family Usage
-===============================
+Settings Transaction Family Usage
+=================================
 
-Sawtooth provides a :doc:`config transaction family
-<../transaction_family_specifications/config_transaction_family>` that stores
+Sawtooth provides a :doc:`settings transaction family
+<../transaction_family_specifications/settings_transaction_family>` that stores
 on-chain configuration settings, along with a config family transaction
 processor written in Python.
 
@@ -269,7 +269,8 @@ In the example below, a JSON array is submitted to the `sawtooth config`
 command, which creates and submits a batch of transactions containing the
 configuration change.
 
-The JSON array used tells the validator or validator network to accept transactions of the following types:
+The JSON array used tells the validator or validator network to accept
+transactions of the following types:
 
 * intkey
 * sawtooth_config
@@ -301,7 +302,7 @@ and output similar to the following appears in the validator terminal:
 
 .. code-block:: console
 
-  sawtooth.config.vote.authorized_keys: 035bd41bf6ea872...
+  sawtooth.settings.vote.authorized_keys: 035bd41bf6ea872...
   sawtooth.validator.transaction_families: [{"family": "in...
 
 

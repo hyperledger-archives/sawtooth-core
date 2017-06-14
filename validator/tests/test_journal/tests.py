@@ -33,7 +33,7 @@ from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 
 from sawtooth_validator.state.state_view import StateViewFactory
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 from test_journal.block_tree_manager import BlockTreeManager
 

@@ -22,7 +22,7 @@ MODULE_LIST="
     cli
     rest_api
     poet
-    config
+    settings
     validator
     go_sdk
     java_sdk
@@ -150,8 +150,8 @@ main() {
                 poet_families)
                     test_poet_families
                     ;;
-                config)
-                    test_config
+                settings)
+                    test_settings
                     ;;
                 supplychain)
                     test_supplychain
@@ -228,8 +228,8 @@ test_poet_families() {
     copy_coverage .coverage.poet_families
 }
 
-test_config() {
-    run_docker_test ./families/config/tests/tp-config.yaml -s validator
+test_settings() {
+    run_docker_test ./families/settings/tests/tp-settings.yaml -s validator
     copy_coverage .coverage.config
     run_docker_test config-smoke -s integration_test
     copy_coverage .coverage.config-smoke

@@ -28,9 +28,9 @@ sys.path.insert(0, os.path.join(
     'sdk', 'python'))
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'families', 'config'))
+    'families', 'settings'))
 
-from sawtooth_config.processor.main import main
+from sawtooth_settings.processor.main import main
 
 if __name__ == '__main__':
     main()
