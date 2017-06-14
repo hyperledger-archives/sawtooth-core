@@ -17,6 +17,7 @@ import os
 import shutil
 import subprocess
 import sys
+import sysconfig
 
 from setuptools import setup, Extension, find_packages
 from distutils.command import build as build_module
@@ -185,7 +186,8 @@ if "clean" in sys.argv and "--all" in sys.argv:
             if fn.endswith(".pyc"):
                 os.remove(os.path.join(root, fn))
     for filename in [".coverage",
-                     "_poet_enclave.so",
+                     "_poet_enclave{}".format(
+                         sysconfig.get_config_var('EXT_SUFFIX')),
                      os.path.join("poet_enclave_sgx", "poet_enclave.py"),
                      os.path.join("poet_enclave_sgx", "_poet_enclave.cpp"),
                      "nose2-junit.xml"]:
