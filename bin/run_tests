@@ -235,8 +235,8 @@ test_poet_families() {
 test_settings() {
     run_docker_test ./families/settings/tests/tp-settings.yaml -s validator
     copy_coverage .coverage.config
-    run_docker_test config-smoke -s integration_test
-    copy_coverage .coverage.config-smoke
+    run_docker_test test_config_smoke -s integration_test
+    copy_coverage .coverage.test_config_smoke
 }
 
 test_permission() {
@@ -252,8 +252,8 @@ test_supplychain() {
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml -s validator
     copy_coverage .coverage.validator
-    run_docker_test shutdown-smoke.yaml -s integration_test
-    copy_coverage .coverage.shutdown-smoke
+    run_docker_test test_shutdown_smoke.yaml -s integration_test
+    copy_coverage .coverage.test_shutdown_smoke
 }
 
 test_go_sdk() {
@@ -261,32 +261,32 @@ test_go_sdk() {
     run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-go.yaml -s validator
     run_docker_test ./sdk/examples/xo_python/tests/tp-xo-go.yaml -s validator
     copy_coverage .coverage.go_sdk
-    run_docker_test intkey-go-smoke -s integration_test
-    copy_coverage .coverage.intkey-go-smoke
-    run_docker_test xo-go-smoke -s integration_test
-    copy_coverage .coverage.xo-go-smoke
+    run_docker_test test_xo_smoke_go -s integration_test
+    copy_coverage .coverage.test_xo_smoke_go
+    run_docker_test test_intkey_smoke_go -s integration_test
+    copy_coverage .coverage.test_intkey_smoke_go
 }
 
 test_java_sdk() {
     run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-java.yaml -s validator
     copy_coverage .coverage.java_sdk
-    run_docker_test intkey-java-smoke -s integration_test
-    copy_coverage .coverage.intkey-java-smoke
+    run_docker_test test_intkey_smoke_java -s integration_test
+    copy_coverage .coverage.test_intkey_smoke_java
     run_docker_test ./sdk/examples/xo_python/tests/tp-xo-java.yaml -s validator
     copy_coverage .coverage.tp-xo-javas
-    run_docker_test xo-java-smoke -s integration_test
-    copy_coverage .coverage.xo-java-smoke
+    run_docker_test test_xo_java_smoke -s integration_test
+    copy_coverage .coverage.test_xo_java_smoke
 }
 
 test_javascript_sdk() {
     run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-javascript.yaml -s validator
     copy_coverage .coverage.tp-intkey-javascript
-    run_docker_test intkey-javascript-smoke -s integration_test
-    copy_coverage .coverage.intkey-javascript-smoke
+    run_docker_test test_intkey_smoke_javascript -s integration_test
+    copy_coverage .coverage.test_intkey_smoke_javascript
     run_docker_test ./sdk/examples/xo_python/tests/tp-xo-javascript.yaml -s validator
     copy_coverage .coverage.tp-xo-javascript
-    run_docker_test xo-javascript-smoke -s integration_test
-    copy_coverage .coverage.xo-javascript-smoke
+    run_docker_test test_xo_smoke_javascript -s integration_test
+    copy_coverage .coverage.test_xo_smoke_javascript
 }
 
 test_python_sdk() {
@@ -294,12 +294,12 @@ test_python_sdk() {
     copy_coverage .coverage.tp-intkey-python
     run_docker_test ./sdk/examples/xo_python/tests/tp-xo-python.yaml -s validator
     copy_coverage .coverage.tp-xo-python
-    run_docker_test intkey-python-smoke -s integration_test
-    copy_coverage .coverage.intkey-python-smoke
+    run_docker_test test_intkey_smoke_python -s integration_test
+    copy_coverage .coverage.test_intkey_smoke_python
     run_docker_test workload -s integration_test
     copy_coverage .coverage.workload
-    run_docker_test xo-smoke -s integration_test
-    copy_coverage .coverage.xo-smoke
+    run_docker_test test_xo_smoke_python -s integration_test
+    copy_coverage .coverage.test_xo_smoke_python
     run_docker_test two_families -s integration_test
     copy_coverage .coverage.two_families
 }
@@ -308,14 +308,14 @@ test_burrow_evm() {
   run_docker_test burrow-evm-smoke
 }
 test_integration() {
-    run_docker_test xo-all-lang-smoke -s integration_test
-    copy_coverage .coverage.xo-all-lang-smoke
-    run_docker_test poet-smoke -s integration_test
-    copy_coverage .coverage.poet-smoke
-    run_docker_test dynamic-network -s integration_test --timeout 600
-    copy_coverage .coverage.dynamic-network
-    run_docker_test basic-auth-proxy -s integration_test
-    copy_coverage .coverage.basic-auth-proxy
+    run_docker_test test_xo_smoke_all -s integration_test
+    copy_coverage .coverage.test_xo_smoke_all
+    run_docker_test test_poet_smoke -s integration_test
+    copy_coverage .coverage.test_poet_smoke
+    run_docker_test test_dynamic_network -s integration_test --timeout 600
+    copy_coverage .coverage.test_dynamic_network
+    run_docker_test test_basic_auth_proxy -s integration_test
+    copy_coverage .coverage.test_basic_auth_proxy
 }
 
 test_deployment() {
