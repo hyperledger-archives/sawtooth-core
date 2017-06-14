@@ -186,11 +186,14 @@ class SerialScheduler(Scheduler):
         return state_hash
 
     def _calculate_state_root_if_not_already_done(self):
-        last_txn_signature = self._last_in_batch[-1]
-        batch_id = self._txn_to_batch[last_txn_signature]
-        required_state_hash = self._required_state_hashes.get(
-            batch_id)
         if not self._already_calculated:
+            if not self._last_in_batch:
+                return
+            last_txn_signature = self._last_in_batch[-1]
+            batch_id = self._txn_to_batch[last_txn_signature]
+            required_state_hash = self._required_state_hashes.get(
+                batch_id)
+
             state_hash = self._compute_merkle_root(required_state_hash)
             self._already_calculated = True
             for t_id in self._last_in_batch[::-1]:
