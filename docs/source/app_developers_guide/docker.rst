@@ -36,15 +36,33 @@ depicted.
 Installing Docker Engine and Docker Compose
 ===========================================
 
-On Windows and macOS, install the latest version of
-`Docker Engine <https://docs.docker.com/engine/installation/>`_.
+Windows
+-------
 
-  - On Windows and macOS, Docker Compose is installed automatically
-    when you install Docker Engine.
+Install the latest version of 
+`Docker Engine for Windows <https://docs.docker.com/docker-for-windows/install/>`_.
 
-On Linux, install both
-`Docker Engine <https://docs.docker.com/engine/installation/>`_ and
-`Docker Compose <https://docs.docker.com/compose/install/>`_.
+On Windows, Docker Compose is installed automatically when you
+install Docker Engine.
+
+
+macOS
+-----
+
+Install the latest version of 
+`Docker Engine for macOS <https://docs.docker.com/docker-for-mac/install/>`_.
+
+On macOS, Docker Compose is installed automatically when you
+install Docker Engine.
+
+
+Linux
+-----
+
+On Linux, follow these steps:
+
+#. Install `Docker Engine <https://docs.docker.com/engine/installation/linux/ubuntu>`_. 
+#. Install `Docker Compose <https://github.com/docker/compose/releases>`_.
 
 .. warning::
 
