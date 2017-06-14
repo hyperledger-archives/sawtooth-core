@@ -166,8 +166,7 @@ setup(name='sawtooth-poet-sgx',
       install_requires=[
           'toml',
           'ecdsa',
-          'sawtooth-poet-common',
-          'sawtoot-signing'
+          'sawtooth-poet-common'
           ],
       ext_modules=[enclavemod],
       py_modules=['sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave'],
