@@ -208,22 +208,22 @@ test_rest_api() {
 }
 
 test_poet_cli() {
-    run_docker_test ./consensus/poet/cli/tests/unit_cli.yaml -s poet
+    run_docker_test ./consensus/poet/cli/tests/unit_poet_cli.yaml -s poet
     copy_coverage .coverage.poet_cli
 }
 
 test_poet_common() {
-    run_docker_test ./consensus/poet/common/tests/unit_common.yaml -s poet
+    run_docker_test ./consensus/poet/common/tests/unit_poet_common.yaml -s poet
     copy_coverage .coverage.poet_common
 }
 
 test_poet_core() {
-    run_docker_test ./consensus/poet/core/tests/unit_core.yaml -s poet
+    run_docker_test ./consensus/poet/core/tests/unit_poet_core.yaml -s poet
     copy_coverage .coverage.poet_core
 }
 
 test_poet_simulator() {
-    run_docker_test ./consensus/poet/simulator/tests/unit_simulator.yaml -s poet
+    run_docker_test ./consensus/poet/simulator/tests/unit_poet_simulator.yaml -s poet
     copy_coverage .coverage.poet_simulator
 }
 
