@@ -29,7 +29,7 @@ class PoetEnclaveModuleWrapper(object):
     """
     __SIMULATOR_MODULE = \
         'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
-    __SGX_MODULE = 'poet_enclave_sgx.poet_enclave'
+    __SGX_MODULE = 'sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave'
 
     def __init__(self, enclave_module, config_dir, data_dir):
         """Create the PoET enclave wrapper

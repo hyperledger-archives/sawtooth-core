@@ -1,1 +1,1 @@
-recursive-include poet_enclave_sgx *.py
+recursive-include sawtooth_poet_sgx *.py

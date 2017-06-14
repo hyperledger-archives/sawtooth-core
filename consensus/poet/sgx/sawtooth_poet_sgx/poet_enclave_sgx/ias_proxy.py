@@ -25,8 +25,8 @@ import os
 
 from http.server import HTTPServer
 from http.server import BaseHTTPRequestHandler
-from poet_enclave_sgx.ias_client import IasClient
-from util.utils import LruCache
+from sawtooth_poet_sgx.poet_enclave_sgx.ias_client import IasClient
+from sawtooth_poet_sgx.poet_enclave_sgx.utils import LruCache
 
 
 LOGGER = logging.getLogger(__name__)

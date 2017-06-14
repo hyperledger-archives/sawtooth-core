@@ -24,7 +24,7 @@ from unittest import mock
 from test_sgx.utils import random_name
 from test_sgx.utils import create_random_public_key_hash
 from test_sgx.utils import get_configuration_directory
-from poet_enclave_sgx import poet_enclave as poet
+from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
 
 
 class TestPoetEnclaveWaitCertificate(unittest.TestCase):
@@ -40,8 +40,11 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
 
         cls._temp_dir = tempfile.mkdtemp()
 
-        with mock.patch('poet_enclave_sgx.poet_enclave.open') as _:
-            with mock.patch('poet_enclave_sgx.poet_enclave.toml') as mock_toml:
+        with mock.patch(
+                'sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave.open') as _:
+            with mock.patch(
+                    'sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave.toml') \
+                    as mock_toml:
                 mock_toml.loads.return_value = cls._mock_toml_config
                 poet.initialize(config_dir='', data_dir=cls._temp_dir)
 

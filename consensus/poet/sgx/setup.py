@@ -75,42 +75,42 @@ if os.name == 'nt':
     platform_dir = 'windows'
     package_data = []
 
-    ext_deps = ['deps/bin/libpoet.dll',
+    ext_deps = ['deps/bin/libpoet-bridge.dll',
                 'deps/bin/libpoet-enclave.signed.dll',
                 'deps/bin/msvcp110.dll',
                 'deps/bin/msvcr110.dll']
     for f in ext_deps:
         package_data.append(os.path.basename(f))
     extra_compile_args = ['/EHsc']
-    libraries = ['json-c', 'cryptopp-static', 'libpoet']
+    libraries = ['json-c', 'cryptopp-static', 'libpoet-bridge']
     include_dirs = ['deps/include']
 
 else:
     platform_dir = 'linux'
     extra_compile_args = ['-std=c++11']
-    libraries = ['json-c', 'crypto++', 'poet']
-    ext_deps = ['deps/bin/libpoet.so',
+    libraries = ['json-c', 'crypto++', 'poet-bridge']
+    ext_deps = ['deps/bin/libpoet-bridge.so',
                 'deps/bin/libpoet-enclave.signed.so']
     package_data = []
     include_dirs = []
 
-include_dirs += ['poet_enclave_sgx',
-                 'poet_enclave_sgx/{}'.format(platform_dir),
-                 'libpoet_shared',
-                 'libpoet_shared/{}'.format(platform_dir)]
+include_dirs += ['sawtooth_poet_sgx/poet_enclave_sgx',
+                 'sawtooth_poet_sgx/poet_enclave_sgx/{}'.format(platform_dir),
+                 'sawtooth_poet_sgx/libpoet_shared',
+                 'sawtooth_poet_sgx/libpoet_shared/{}'.format(platform_dir)]
 library_dirs = ['deps/lib']
 
 enclavemod = Extension('_poet_enclave',
-                       ['poet_enclave_sgx/poet_enclave.i',
-                        'poet_enclave_sgx/common.cpp',
-                        'poet_enclave_sgx/poet.cpp',
-                        'poet_enclave_sgx/wait_certificate.cpp',
-                        'poet_enclave_sgx/wait_timer.cpp',
-                        'poet_enclave_sgx/signup_data.cpp',
-                        'poet_enclave_sgx/signup_info.cpp',
-                        'libpoet_shared/{}/c11_support.cpp'.format(
+                       ['sawtooth_poet_sgx/poet_enclave_sgx/poet_enclave.i',
+                        'sawtooth_poet_sgx/poet_enclave_sgx/common.cpp',
+                        'sawtooth_poet_sgx/poet_enclave_sgx/poet.cpp',
+                        'sawtooth_poet_sgx/poet_enclave_sgx/wait_certificate.cpp',
+                        'sawtooth_poet_sgx/poet_enclave_sgx/wait_timer.cpp',
+                        'sawtooth_poet_sgx/poet_enclave_sgx/signup_data.cpp',
+                        'sawtooth_poet_sgx/poet_enclave_sgx/signup_info.cpp',
+                        'sawtooth_poet_sgx/poet_enclave_sgx/{}/platform_support.cpp'.format(
                             platform_dir),
-                        'poet_enclave_sgx/{}/platform_support.cpp'.format(
+                        'sawtooth_poet_sgx/libpoet_shared/{}/c11_support.cpp'.format(
                             platform_dir)
                         ],
                        swig_opts=['-c++'],
@@ -157,7 +157,7 @@ if os.name == 'nt':
 else:
     conf_dir = "/etc/sawtooth"
 
-setup(name='sawtooth-poet',
+setup(name='sawtooth-poet-sgx',
       version=version('0.8.4'),
       description='Sawtooth Lake PoET SGX Enclave',
       author='Intel Corporation',
@@ -167,10 +167,10 @@ setup(name='sawtooth-poet',
           'toml',
           'ecdsa',
           'sawtooth-poet-common',
-          'satooth-signing'
+          'sawtoot-signing'
           ],
       ext_modules=[enclavemod],
-      py_modules=['poet_enclave_sgx.poet_enclave'],
+      py_modules=['sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave'],
       data_files=[
           ('lib', package_data),
           (conf_dir, ['packaging/ias_rk_pub.pem',
@@ -188,16 +188,19 @@ if "clean" in sys.argv and "--all" in sys.argv:
     for filename in [".coverage",
                      "_poet_enclave{}".format(
                          sysconfig.get_config_var('EXT_SUFFIX')),
-                     os.path.join("poet_enclave_sgx", "poet_enclave.py"),
-                     os.path.join("poet_enclave_sgx", "_poet_enclave.cpp"),
+                     "libpoet-bridge.so",
+                     "libpoet-enclave.signed.so",
+                     os.path.join(
+                         "sawtooth_poet_sgx",
+                         "poet_enclave_sgx",
+                         "poet_enclave.py"),
+                     os.path.join(
+                         "sawtooth_poet_sgx",
+                         "poet_enclave_sgx",
+                         "poet_enclave_wrap.cpp"),
                      "nose2-junit.xml"]:
         if os.path.exists(os.path.join(directory, filename)):
             os.remove(os.path.join(directory, filename))
     shutil.rmtree(os.path.join(directory, "build"), ignore_errors=True)
     shutil.rmtree(os.path.join(directory, "htmlcov"), ignore_errors=True)
     shutil.rmtree(os.path.join(directory, "deb_dist"), ignore_errors=True)
-    shutil.rmtree(os.path.join(directory, "doc", "code"), ignore_errors=True)
-    shutil.rmtree(os.path.join(directory, "doc", "_build"), ignore_errors=True)
-    shutil.rmtree(
-        os.path.join(directory, "SawtoothLakeLedger.egg-info"),
-        ignore_errors=True)

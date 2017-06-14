@@ -38,7 +38,7 @@
     from requests.exceptions import Timeout
     from requests.exceptions import HTTPError
 
-    from poet_enclave_sgx import ias_client
+    from sawtooth_poet_sgx.poet_enclave_sgx import ias_client
 
     from sawtooth_poet_common import sgx_structs
     import sawtooth_signing as signing
@@ -181,7 +181,7 @@ def initialize(config_dir, data_dir):
         sdir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
         signed_enclave = os.path.join(sdir, enclave_file_name)
         if not os.path.exists(signed_enclave):
-            signed_enclave = os.path.abspath(os.path.join(sdir, '..', enclave_file_name))
+            signed_enclave = os.path.abspath(os.path.join(sdir, '..', '..', enclave_file_name))
         if not os.path.exists(signed_enclave):
             signed_enclave = os.path.join('/usr', 'lib', enclave_file_name)
         if not os.path.exists(signed_enclave):
