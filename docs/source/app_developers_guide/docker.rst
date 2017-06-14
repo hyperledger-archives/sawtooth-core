@@ -154,7 +154,7 @@ containers have all shut down run 'docker-compose -f sawtooth-default.yaml down'
   % docker-compose -f sawtooth-default.yaml down
 
 
-Confirming Connectivity 
+Confirming Connectivity
 =======================
 
 To confirm that a validator is up and running, and reachable from the client
@@ -276,7 +276,7 @@ transactions of the following types:
 * sawtooth_config
 
 To create and submit the batch containing the new configuration, enter the
-following commands: 
+following commands:
 
 .. note::
 
@@ -302,8 +302,8 @@ and output similar to the following appears in the validator terminal:
 
 .. code-block:: console
 
-  sawtooth.settings.vote.authorized_keys: 035bd41bf6ea872...
-  sawtooth.validator.transaction_families: [{"family": "in...
+  sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
+  sawtooth.validator.transaction_families: [{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_settings", "versi...
 
 
 Viewing Blocks And State

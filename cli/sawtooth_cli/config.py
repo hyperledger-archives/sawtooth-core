@@ -24,6 +24,7 @@ import yaml
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
+from sawtooth_cli import tty
 
 from sawtooth_cli.protobuf.settings_pb2 import SettingsPayload
 from sawtooth_cli.protobuf.settings_pb2 import SettingProposal
@@ -40,8 +41,8 @@ import sawtooth_signing as signing
 
 
 SETTINGS_NAMESPACE = '000000'
-DEFAULT_COL_WIDTH = 15
 
+_MIN_PRINT_WIDTH = 15
 _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
@@ -372,9 +373,13 @@ def _do_config_list(args):
     printable_settings.sort(key=lambda s: s.key)
 
     if args.format == 'default':
+        tty_width = tty.width()
         for setting in printable_settings:
-            value = (setting.value[:DEFAULT_COL_WIDTH] + '...'
-                     if len(setting.value) > DEFAULT_COL_WIDTH
+            # Set value width to the available terminal space, or the min width
+            width = tty_width - len(setting.key) - 3
+            width = width if width > _MIN_PRINT_WIDTH else _MIN_PRINT_WIDTH
+            value = (setting.value[:width] + '...'
+                     if len(setting.value) > width
                      else setting.value)
             print('{}: {}'.format(setting.key, value))
     elif args.format == 'csv':
