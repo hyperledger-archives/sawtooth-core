@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.2 FATAL_ERROR)
-PROJECT(libpoet C CXX)
+PROJECT(libpoet-bridge C CXX)
 
 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 # Source Code
@@ -58,8 +58,8 @@ SET_RUNTIME(DYNAMIC)
 # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # CMake likes to prepend "lib" to project name when creating library...since we
-# already have lib in the project name, liblibpoet is stupid.  Stop CMake from
-# doing it.
+# already have lib in the project name, liblibpoet-bridge is stupid.  Stop CMake
+# from doing it.
 IF(NOT MSVC)
     SET(CMAKE_SHARED_LIBRARY_PREFIX "")
 ENDIF()

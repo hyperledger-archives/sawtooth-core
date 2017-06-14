@@ -20,8 +20,8 @@ import sys
 
 import os
 from colorlog import ColoredFormatter
-from util.utils import parse_configuration_file
-import ias_proxy
+from sawtooth_poet_sgx.poet_enclave_sgx import ias_proxy
+from sawtooth_poet_sgx.poet_enclave_sgx import utils
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
@@ -77,7 +77,7 @@ def configure(args):
         raise IOError("Config file does not exist: {}".format(
             opts["config"]))
 
-    config = parse_configuration_file(opts["config"])
+    config = utils.parse_configuration_file(opts["config"])
     opts = {key: value for key, value in opts.items()
             if value is not None}
     config.update(opts)
