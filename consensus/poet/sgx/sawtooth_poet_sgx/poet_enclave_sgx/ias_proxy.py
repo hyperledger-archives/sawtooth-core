@@ -18,21 +18,22 @@ IAS Proxy Server.
 """
 
 import sys
+import os
 import json
 import logging
-import requests
-import os
-import toml
 import traceback
 
 from http.server import HTTPServer
 from http.server import BaseHTTPRequestHandler
 
+import requests
+import toml
+
 from sawtooth_poet_sgx.poet_enclave_sgx.ias_client import IasClient
 from sawtooth_poet_sgx.poet_enclave_sgx.utils import LruCache
 
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -71,9 +72,12 @@ class Handler(BaseHTTPRequestHandler):
         try:
             cache = self.sig_rl_cache[self.path]
             if cache is None:
-                response = self.client.get_signature_revocation_lists('',
-                                                                  self.path)
-                self.sig_rl_cache[self.path] = {'code': 200, 'response': response}
+                response = \
+                    self.client.get_signature_revocation_lists(
+                        '',
+                        self.path)
+                self.sig_rl_cache[self.path] = \
+                    {'code': 200, 'response': response}
             else:
                 response = cache['response']
         except requests.HTTPError as e:
@@ -119,7 +123,7 @@ class Handler(BaseHTTPRequestHandler):
             headers = None
             signature = response.get('signature')
             if signature is not None:
-                headers = {'x-iasreport-signature': signature }
+                headers = {'x-iasreport-signature': signature}
             self._respond(
                 code=requests.codes.ok,
                 data=response.get('verification_report'),
@@ -189,7 +193,7 @@ def get_server():
         config_dir = '/etc/sawtooth'
 
     config_file = os.path.join(config_dir, 'ias_proxy.toml')
-    logger.info('Loading IAS Proxy config from: %s', config_file)
+    LOGGER.info('Loading IAS Proxy config from: %s', config_file)
 
     # Lack of a config file is a fatal error, so let the exception percolate
     # up to caller
@@ -218,11 +222,15 @@ def get_server():
 
     return IasProxyServer(proxy_config)
 
+
+def main():
+    relay = get_server()
+    relay.run()
+
 if __name__ == '__main__':
     # pylint: disable=bare-except
     try:
-        relay = get_server()
-        relay.run()
+        main()
     except KeyboardInterrupt:
         pass
     except SystemExit as e:

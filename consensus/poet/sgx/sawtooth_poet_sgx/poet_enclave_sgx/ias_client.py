@@ -70,7 +70,7 @@ class IasClient(object):
         url = urljoin(self._ias_url, path)
         LOGGER.debug("Posting attestation verification request to: %s",
                      url)
-        json = { "isvEnclaveQuote": quote }
+        json = {"isvEnclaveQuote": quote}
 
         if manifest is not None:
             json['pseManifest'] = manifest

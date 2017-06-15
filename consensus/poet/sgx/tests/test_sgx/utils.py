@@ -16,7 +16,6 @@
 import random
 import string
 import hashlib
-import os
 
 import sawtooth_signing as signing
 

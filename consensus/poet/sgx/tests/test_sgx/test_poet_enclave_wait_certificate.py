@@ -13,22 +13,23 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
 import time
 import os
 import tempfile
 import shutil
 
+from unittest import TestCase
 from unittest import mock
 
 from test_sgx.utils import random_name
 from test_sgx.utils import create_random_public_key_hash
+# pylint: disable=no-name-in-module
 from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
 
 from sawtooth_validator.config.path import get_default_path_config
 
 
-class TestPoetEnclaveWaitCertificate(unittest.TestCase):
+class TestPoetEnclaveWaitCertificate(TestCase):
     @classmethod
     def setUpClass(cls):
         cls._mock_toml_config = {
@@ -77,10 +78,9 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
 
     def test_create(self):
         addr = random_name(34)
-        signup_info = \
-            poet.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=poet.NULL_IDENTIFIER)
+        poet.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=poet.NULL_IDENTIFIER)
 
         block_hash = random_name(32)
 
@@ -92,21 +92,21 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
         self.assertNotEqual(wait_cert.nonce, '')
         self.assertEqual(wait_timer.previous_certificate_id,
                          wait_cert.previous_certificate_id)
-        self.assertEquals(len(wait_cert.identifier()),
-                          poet.IDENTIFIER_LENGTH)
+        self.assertEqual(len(wait_cert.identifier()),
+                         poet.IDENTIFIER_LENGTH)
 
         # We should not be able to create another wait certificate with the
         # same wait timer.
         with self.assertRaises(ValueError):
-            wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
+            poet.create_wait_certificate(wait_timer, block_hash)
 
         # When we create a new wait timer, it should not be possible to use
         # another, otherwise valid, wait timer to create a wait certificate.
         wait_timer = self.get_wait_timer(addr=addr)
-        new_wait_timer = poet.create_wait_timer(addr, poet.NULL_IDENTIFIER, 1)
+        poet.create_wait_timer(addr, poet.NULL_IDENTIFIER, 1)
 
         with self.assertRaises(ValueError):
-            wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
+            poet.create_wait_certificate(wait_timer, block_hash)
 
         # the initial block does not need to wait, to accelerate
         # validator launch
@@ -124,7 +124,7 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
                 random_name(poet.IDENTIFIER_LENGTH),
                 10)
         with self.assertRaises(ValueError):
-            wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
+            poet.create_wait_certificate(wait_timer, block_hash)
 
         # With timed out timer
         wait_timer = self.get_wait_timer(addr=addr)
@@ -135,33 +135,31 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
         # verify that new wait certificate gets a different nonce.  In reality
         # we should test a statistically significant number of wait
         # certificates to verify that each gets a unique nonce, but we have to
-        # wait for wait timers to expire and we want the test to finish sometime
-        # this century.
+        # wait for wait timers to expire and we want the test to finish
+        # sometime this century.
         wait_timer = self.get_wait_timer(addr=addr)
         wait_cert2 = poet.create_wait_certificate(wait_timer, block_hash)
         self.assertNotEqual(wait_cert.nonce, wait_cert2.nonce)
 
     def test_create_out_of_seq(self):
         addr = random_name(34)
-        signup_info = \
-            poet.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=poet.NULL_IDENTIFIER)
+        poet.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=poet.NULL_IDENTIFIER)
 
         block_hash = random_name(32)
 
         # use expired wait timers out of order
         wait_timer = self.get_wait_timer(addr)
-        wait_timer2 = self.get_wait_timer(addr)
-        with self.assertRaises(ValueError) as context:
-            wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
+        _ = self.get_wait_timer(addr)
+        with self.assertRaises(ValueError):
+            _ = poet.create_wait_certificate(wait_timer, block_hash)
 
     def test_serialize(self):
         addr = random_name(34)
-        signup_info = \
-            poet.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=poet.NULL_IDENTIFIER)
+        poet.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=poet.NULL_IDENTIFIER)
 
         wait_cert = self.get_wait_cert(addr=addr)
         serialized_wait_cert = wait_cert.serialize()
@@ -181,58 +179,32 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
 
         # Bad Serial strings
         with self.assertRaises(ValueError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    None,
-                    wait_cert.signature)
+            poet.deserialize_wait_certificate(None, wait_cert.signature)
         with self.assertRaises(TypeError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    [],
-                    wait_cert.signature)
+            poet.deserialize_wait_certificate([], wait_cert.signature)
         with self.assertRaises(TypeError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    8,
-                    wait_cert.signature)
+            poet.deserialize_wait_certificate(8, wait_cert.signature)
         with self.assertRaises(ValueError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    random_name(len(serialized_wait_cert)),
-                    wait_cert.signature)
+            poet.deserialize_wait_certificate(
+                random_name(len(serialized_wait_cert)),
+                wait_cert.signature)
         with self.assertRaises(ValueError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    "{}",
-                    wait_cert.signature)
+            poet.deserialize_wait_certificate("{}", wait_cert.signature)
 
         with self.assertRaises(ValueError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    serialized_wait_cert[:int(len(serialized_wait_cert) / 2)],
-                    wait_cert.signature)
+            poet.deserialize_wait_certificate(
+                serialized_wait_cert[:int(len(serialized_wait_cert) / 2)],
+                wait_cert.signature)
 
         # Bad signature strings
         with self.assertRaises(ValueError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    serialized_wait_cert,
-                    None)
+            poet.deserialize_wait_certificate(serialized_wait_cert, None)
         with self.assertRaises(TypeError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    serialized_wait_cert,
-                    [])
+            poet.deserialize_wait_certificate(serialized_wait_cert, [])
         with self.assertRaises(TypeError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    serialized_wait_cert,
-                    7)
+            poet.deserialize_wait_certificate(serialized_wait_cert, 7)
         with self.assertRaises(TypeError):
-            wait_cert2 = \
-                poet.deserialize_wait_certificate(
-                    8,
-                    wait_cert.signature)
+            poet.deserialize_wait_certificate(8, wait_cert.signature)
 
     def test_verify(self):
         addr = random_name(34)
@@ -285,6 +257,3 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
             poet.verify_wait_certificate(
                 wait_cert,
                 other_signup_info.poet_public_key)
-
-if __name__ == '__main__':
-    unittest.main()
