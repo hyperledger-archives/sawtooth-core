@@ -38,5 +38,5 @@ peers = ["tcp://127.0.0.1:8801"]
 # sharing of a single network key pair to all participating nodes.
 # Note if the config file does not exist or these are not set, the network
 # will default to being insecure.
-network_public_key = b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
-network_private_key = b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*'
+network_public_key = 'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)'
+network_private_key = 'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*'
