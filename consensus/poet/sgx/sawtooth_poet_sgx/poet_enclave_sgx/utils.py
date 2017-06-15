@@ -13,9 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import json
-import os
-import re
 from collections import deque
 from threading import Lock
 
@@ -49,41 +46,3 @@ class LruCache(object):
                 self.order.remove(key)
                 self.order.appendleft(key)
         return result
-
-
-def parse_configuration_file(filename):
-    cpattern = re.compile('##.*$')
-
-    with open(filename) as fp:
-        lines = fp.readlines()
-
-    text = ""
-    for line in lines:
-        text += re.sub(cpattern, '', line) + ' '
-
-    config = ascii_encode_dict(json.loads(text))
-
-    params = os.environ.copy()
-    params["CONFIGPATH"] = os.path.dirname(os.path.realpath(filename))
-    for k, v in config.iteritems():
-        if isinstance(v, str):
-            config[k] = v.format(**params)
-
-    return config
-
-
-def ascii_encode_dict(item):
-    """
-    Support method to ensure that JSON is converted to ascii since unicode
-    identifiers, in particular, can cause problems
-    """
-    if isinstance(item, dict):
-        return dict(
-            (ascii_encode_dict(key), ascii_encode_dict(item[key]))
-            for key in item.keys())
-    elif isinstance(item, list):
-        return [ascii_encode_dict(element) for element in item]
-    elif isinstance(item, unicode):
-        return item.encode('ascii')
-    else:
-        return item
