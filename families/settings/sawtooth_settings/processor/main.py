@@ -62,14 +62,16 @@ def create_parser(prog_name):
         prog=prog_name,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
+    parser.add_argument('endpoint',
+                        nargs='?',
+                        default='tcp://localhost:4004',
+                        help='Endpoint for the validator connection')
+
     parser.add_argument(
         '-v', '--verbose',
         action='count',
-        help='enable more verbose output')
-
-    parser.add_argument(
-        'validator_url',
-        help='a host and port of the validator')
+        default=0,
+        help='Increase output sent to stderr')
 
     return parser
 
@@ -86,7 +88,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    processor = TransactionProcessor(url=args.validator_url)
+    processor = TransactionProcessor(url=args.endpoint)
 
     handler = SettingsTransactionHandler()
 
