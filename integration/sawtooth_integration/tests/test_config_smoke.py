@@ -96,10 +96,14 @@ class TestConfigSmoke(unittest.TestCase):
 
         command = 'sawtooth'
         args = ['config', 'settings', 'list', '--url', 'http://rest_api:8080']
-        settings = self._read_from_stdout(command, args)
+        settings = self._read_from_stdout(command, args).split('\n')
 
-        _expected_setting_results = \
-            'sawtooth.settings.vote.authorized_keys: {}...\nx: 1\ny: 1\n'.format(
-                TEST_PUBKEY[:15])
-        self.assertEqual(settings, _expected_setting_results,
-                         'Setting results did not match.')
+        _expected_output = [
+            'sawtooth.settings.vote.authorized_keys: {:15}'.format(TEST_PUBKEY),
+            'x: 1',
+            'y: 1']
+        _fail_msg = 'Setting results did not match.'
+
+        self.assertTrue(settings[0].startswith(_expected_output[0]), _fail_msg)
+        self.assertEqual(settings[1], _expected_output[1], _fail_msg)
+        self.assertEqual(settings[2], _expected_output[2], _fail_msg)

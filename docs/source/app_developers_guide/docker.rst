@@ -36,12 +36,15 @@ depicted.
 Installing Docker Engine and Docker Compose
 ===========================================
 
-On Windows and macOS, install the latest version of `Docker Engine <https://docs.docker.com/engine/installation/>`_.
+On Windows and macOS, install the latest version of
+`Docker Engine <https://docs.docker.com/engine/installation/>`_.
 
   - On Windows and macOS, Docker Compose is installed automatically
     when you install Docker Engine.
 
-On Linux, install both `Docker Engine <https://docs.docker.com/engine/installation/>`_ and `Docker Compose <https://docs.docker.com/compose/install/>`_.
+On Linux, install both
+`Docker Engine <https://docs.docker.com/engine/installation/>`_ and
+`Docker Compose <https://docs.docker.com/compose/install/>`_.
 
 .. warning::
 
@@ -131,10 +134,10 @@ directory into the container. See `Docker's documentation
 Resetting The Environment
 -------------------------
 
-If the environment needs to be reset for any reason, it can be returned to
-the default state by logging out of the client container, then pressing
-CTRL-c from the window where you originally ran docker-compose. Once the
-containers have all shut down run 'docker-compose -f sawtooth-default.yaml down'.
+If the environment needs to be reset for any reason, it can be returned to the
+default state by logging out of the client container, then pressing CTRL-c from
+the window where you originally ran docker-compose. Once the containers have
+all shut down run 'docker-compose -f sawtooth-default.yaml down'.
 
 .. code-block:: console
 
@@ -154,7 +157,7 @@ containers have all shut down run 'docker-compose -f sawtooth-default.yaml down'
   % docker-compose -f sawtooth-default.yaml down
 
 
-Confirming Connectivity 
+Confirming Connectivity
 =======================
 
 To confirm that a validator is up and running, and reachable from the client
@@ -163,8 +166,8 @@ container, you can use this curl command:
 .. note::
 
   If you have reset your environment as described above in
-  `Resetting The Environment`_, then be sure to restart_ your environment
-  again before trying this command.
+  `Resetting The Environment`_, then be sure to restart your environment again
+  before trying this command.
 
 .. code-block:: console
 
@@ -211,29 +214,24 @@ transaction processors automatically:
 * tp_intkey_python
 * tp_xo_python
 
-These transaction processors handle transactions for the config, intkey, and XO transaction families, and are written in Python.
+These transaction processors handle transactions for the Settings, IntKey, and
+Xo transaction families, and are written in Python.
 
 
 Creating And Submitting Transactions
 ====================================
 
-The **intkey** command is provided to create sample transactions of the intkey
-transaction type for testing purposes.
+The **intkey** CLI command is provided to create sample transactions of the
+intkey transaction type for testing purposes. Using it you will be able prepare
+batches of intkey transactions that *set* a few keys to random values, then
+randomly *inc* and *dec* those values. These batches will be saved locally, and
+then can then be submitted to the validator.
 
-This section will show you how to:
-
-1. Prepare a batch of intkey transactions that set some keys to random values.
-
-2. Generate *inc* (increment) and *dec* (decrement) transactions to modify the
-   the existing state stored in the blockchain.
-
-3. Submit these transactions to the validator.
-
-Run the following commands from the client container:
+To use, run the following commands from the client container:
 
 .. code-block:: console
 
-  $ intkey create_batch
+  $ intkey create_batch --count 10 --key-count 5
   $ intkey load -f batches.intkey -U http://rest_api:8080
 
 The terminal window in which you ran the docker-compose command will begin
@@ -261,22 +259,22 @@ Settings Transaction Family Usage
 
 Sawtooth provides a :doc:`settings transaction family
 <../transaction_family_specifications/settings_transaction_family>` that stores
-on-chain configuration settings, along with a config family transaction
+on-chain configuration settings, along with a Settings family transaction
 processor written in Python.
 
 One of the on-chain settings is the list of supported transaction families.
-In the example below, a JSON array is submitted to the `sawtooth config`
+In the example below, a JSON array is submitted to the ``sawtooth config``
 command, which creates and submits a batch of transactions containing the
 configuration change.
 
-The JSON array used tells the validator or validator network to accept
+The submitted JSON array tells the validator or validator network to accept
 transactions of the following types:
 
 * intkey
-* sawtooth_config
+* sawtooth_settings
 
-To create and submit the batch containing the new configuration, enter the
-following commands: 
+To create and submit the batch containing the new setting, enter the following
+commands:
 
 .. note::
 
@@ -293,7 +291,10 @@ Then run the following commands from the validator container:
 
 .. code-block:: console
 
-  $ sawtooth config proposal create --key /root/.sawtooth/keys/my_key.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]' --url http://rest_api:8080
+  $ sawtooth config proposal create \
+    --url http://rest_api:8080 \
+    --key /root/.sawtooth/keys/my_key.priv \
+    sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_settings", "version":"1.0", "encoding":"application/protobuf"}]'
   $ sawtooth config settings list --url http://rest_api:8080
 
 
@@ -302,8 +303,8 @@ and output similar to the following appears in the validator terminal:
 
 .. code-block:: console
 
-  sawtooth.settings.vote.authorized_keys: 035bd41bf6ea872...
-  sawtooth.validator.transaction_families: [{"family": "in...
+  sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
+  sawtooth.validator.transaction_families: [{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_settings", "versi...
 
 
 Viewing Blocks And State
@@ -315,12 +316,12 @@ tree, using the sawtooth CLI.
 .. note::
 
   The sawtooth CLI provides help for all subcommands. For example, to get help
-  for the `block` subcommand, enter the command `sawtooth block -h`.
+  for the ``block`` subcommand, enter the command ``sawtooth block -h``.
 
 Viewing List Of Blocks
 ----------------------
 
-Enter the command `sawtooth block list` to view the blocks stored by the state:
+Enter the command ``sawtooth block list`` to view the blocks stored by the state:
 
 .. code-block:: console
 
@@ -345,49 +346,62 @@ The output of the command will be similar to this:
 Viewing A Particular Block
 --------------------------
 
-Using the `sawtooth block list` command as shown above, copy the block id you want to
-view, then use the `sawtooth block show` command (truncated output shown):
+From the output generated by the ``sawtooth block list`` command, copy the id
+of a block you want to get more info about, then paste it where specified below
+in the ``sawtooth block show`` command:
 
 .. code-block:: console
 
-    $ sawtooth block show --url http://rest_api:8080 22e79778855768ea380537fb13ad210b84ca5dd1cdd555db7792a9d029113b0a183d5d71cc5558e04d10a9a9d49031de6e86d6a7ddb25325392d15bb7ccfd5b7
+  $ sawtooth block show --url http://rest_api:8080 {BLOCK ID}
 
-The output of the command will be similar to this:
+The output of this command includes all data stored under that block, and can be
+quite lengthy. Is should look something like this:
 
 .. code-block:: console
 
-    batches:
+  batches:
   - header:
-      signer_pubkey: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
+      signer_pubkey: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
       transaction_ids:
-      - c498c916da09450597053ada1938858a11d94e2ed5c18f92cd7d34b865af646144d180bdc121a48eb753b4abd326baa3ea26ee8a29b07119052320370d24ab84
-      - c68de164421bbcfcc9ea60b725bae289aecd02ddde6f520e6e85b3227337e2971e89bbff468bdebe408e0facc343c612a32db98e5ac4da2296a7acf4033073cd
-      - faf9121f9744716363253cb0ff4b6011093ada6e19dae63ae04a58a1fca25424779a13628a047c009d2e73d0e7baddc95b428b4a22cf1c60961d6dcae8ee60fa
-    header_signature: 2ff874edfa80a8e6b718e7d10e91970150fcc3fcfd46d38eb18f356e7a733baa40d9e816247985d7ea7ef2492c09cd9c1830267471c6e35dca0d19f5c6d2b61e
+      - 24b168aaf5ea4a76a6c316924a1c26df0878908682ea5740dd70814e7c400d56354dee788191be8e28393c70398906fb467fac8db6279e90e4e61619589d42bf
+    header_signature: a93731646a8fd2bce03b3a17bc2cb3192d8597da93ce735950dccbf0e3cf0b005468fadb94732e013be0bc2afb320be159b452cf835b35870db5fa953220fb35
     transactions:
     - header:
-        batcher_pubkey: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
-        dependencies:
-        - 19ad647bd292c980e00f05eed6078b471ca2d603b842bc4eaecf301d61f15c0d3705a4ec8d915ceb646f35d443da43569f58c906faf3713853fe638c7a0ea410
-        family_name: intkey
+        batcher_pubkey: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
+        dependencies: []
+        family_name: sawtooth_settings
         family_version: '1.0'
         inputs:
-        - 1cf126c15b04cb20206d45c4d0e432d036420401dbd90f064683399fae55b99af1a543f7de79cfafa4f220a22fa248f8346fb1ad0343fcf8d7708565ebb8a3deaac09d
-        nonce: 0x1.63021cad39ceep+30
+        - 000000a87cb5eafdcca6a8b79606fb3afea5bdab274474a6aa82c1c0cbf0fbcaf64c0b
+        - 000000a87cb5eafdcca6a8b79606fb3afea5bdab274474a6aa82c12840f169a04216b7
+        - 000000a87cb5eafdcca6a8b79606fb3afea5bdab274474a6aa82c1918142591ba4e8a7
+        - 000000a87cb5eafdcca6a8f82af32160bc531176b5001cb05e10bce3b0c44298fc1c14
+        nonce: ''
         outputs:
-        - 1cf126c15b04cb20206d45c4d0e432d036420401dbd90f064683399fae55b99af1a543f7de79cfafa4f220a22fa248f8346fb1ad0343fcf8d7708565ebb8a3deaac09d
-        payload_encoding: application/cbor
-        payload_sha512: 942a09c0254c4a5712ffd152dc6218fc5453451726d935ac1ba67de93147b5e7be605da7ab91245f48029b41f493a1cc8dfc45bb090ac97420580eb1bdded01f
-        signer_pubkey: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
-      header_signature: c498c916da09450597053ada1938858a11d94e2ed5c18f92cd7d34b865af646144d180bdc121a48eb753b4abd326baa3ea26ee8a29b07119052320370d24ab84
-      payload: o2ROYW1lZnFrbGR1emVWYWx1ZQFkVmVyYmNpbmM=
+        - 000000a87cb5eafdcca6a8b79606fb3afea5bdab274474a6aa82c1c0cbf0fbcaf64c0b
+        - 000000a87cb5eafdcca6a8f82af32160bc531176b5001cb05e10bce3b0c44298fc1c14
+        payload_encoding: application/protobuf
+        payload_sha512: 944b6b55e831a2ba37261d904b14b4e729399e4a7c41bd22fcb09c46f0b3821cd41750e38640e33f79b6b5745a20225a1f5427bd5085f3800c166bbb7fb899e8
+        signer_pubkey: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
+      header_signature: 24b168aaf5ea4a76a6c316924a1c26df0878908682ea5740dd70814e7c400d56354dee788191be8e28393c70398906fb467fac8db6279e90e4e61619589d42bf
+      payload: EtwBCidzYXd0b290aC52YWxpZGF0b3IudHJhbnNhY3Rpb25fZmFtaWxpZXMSngFbeyJmYW1pbHkiOiAiaW50a2V5IiwgInZlcnNpb24iOiAiMS4wIiwgImVuY29kaW5nIjogImFwcGxpY2F0aW9uL3Byb3RvYnVmIn0sIHsiZmFtaWx5Ijoic2F3dG9vdGhfY29uZmlnIiwgInZlcnNpb24iOiIxLjAiLCAiZW5jb2RpbmciOiJhcHBsaWNhdGlvbi9wcm90b2J1ZiJ9XRoQMTQ5NzQ0ODgzMy4zODI5Mw==
+  header:
+    batch_ids:
+    - a93731646a8fd2bce03b3a17bc2cb3192d8597da93ce735950dccbf0e3cf0b005468fadb94732e013be0bc2afb320be159b452cf835b35870db5fa953220fb35
+    block_num: 3
+    consensus: RGV2bW9kZQ==
+    previous_block_id: 042f08e1ff49bbf16914a53dc9056fb6e522ca0e2cff872547eac9555c1de2a6200e67fb9daae6dfb90f02bef6a9088e94e5bdece04f622bce67ccecd678d56e
+    signer_pubkey: 033fbed13b51eafaca8d1a27abc0d4daf14aab8c0cbc1bb4735c01ff80d6581c52
+    state_root_hash: 5d5ea37cbbf8fe793b6ea4c1ba6738f5eee8fc4c73cdca797736f5afeb41fbef
+  header_signature: ff4f6705bf57e2a1498dc1b649cc9b6a4da2cc8367f1b70c02bc6e7f648a28b53b5f6ad7c2aa639673d873959f5d3fcc11129858ecfcb4d22c79b6845f96c5e3
+
 
 
 
 Viewing Global State
 --------------------
 
-Use the command `sawtooth state list` to list the nodes in the Merkle tree
+Use the command ``sawtooth state list`` to list the nodes in the Merkle tree
 (truncated list):
 
 .. code-block:: console
@@ -412,15 +426,18 @@ The output of the command will be similar to this:
 Viewing Data At An Address
 --------------------------
 
-Using the `sawtooth state list` command show above, copy the address want to
-view, then use the `sawtooth state show` command to view the address:
+From the output generated by the ``sawtooth state list`` command, copy the
+address you want to view, then paste it where where specified below in the
+``sawtooth state show`` command:
 
 .. code-block:: console
 
-  $ sawtooth state show --url http://rest_api:8080 1cf126ddb507c936e4ee2ed07aa253c2f4e7487af3a0425f0dc7321f94be02950a081ab7058bf046c788dbaf0f10a980763e023cde0ee282585b9855e6e5f3715bf1fe
+  $ sawtooth state show --url http://rest_api:8080 {STATE ADDRESS}
 
 
-The output of the command will be similar to this:
+The output of the command will include both the bytes stored at that address,
+and the block id of the *chain head* the current state is tied to. It should
+look similar to this:
 
 .. code-block:: console
 

@@ -143,14 +143,14 @@ def generate_word_list(count):
         return {generate_word(): None for _ in range(0, count)}
 
 
-def do_populate(args, batches, words):
+def do_populate(args, batches, keys):
     private_key = signing.generate_privkey()
     public_key = signing.generate_pubkey(private_key)
 
     total_txn_count = 0
     txns = []
-    for i in range(0, len(words)):
-        name = list(words)[i]
+    for i in range(0, len(keys)):
+        name = list(keys)[i]
         txn = create_intkey_transaction(
             verb='set',
             name=name,
@@ -162,7 +162,7 @@ def do_populate(args, batches, words):
         txns.append(txn)
         # Establish the signature of the txn associated with the word
         # so we can create good dependencies later
-        words[name] = txn.header_signature
+        keys[name] = txn.header_signature
 
     batch = create_batch(
         transactions=txns,
@@ -172,7 +172,7 @@ def do_populate(args, batches, words):
     batches.append(batch)
 
 
-def do_generate(args, batches, words):
+def do_generate(args, batches, keys):
     private_key = signing.generate_privkey()
     public_key = signing.generate_pubkey(private_key)
 
@@ -180,13 +180,13 @@ def do_generate(args, batches, words):
     total_txn_count = 0
     for i in range(0, args.count):
         txns = []
-        for _ in range(0, random.randint(1, args.batch_max_size)):
-            name = random.choice(list(words))
+        for _ in range(0, random.randint(1, args.max_batch_size)):
+            name = random.choice(list(keys))
             txn = create_intkey_transaction(
                 verb=random.choice(['inc', 'dec']),
                 name=name,
-                value=1,
-                deps=[words[name]],
+                value=random.randint(1, 10),
+                deps=[keys[name]],
                 private_key=private_key,
                 public_key=public_key)
             total_txn_count += 1
@@ -224,9 +224,9 @@ def write_batch_file(args, batches):
 
 def do_create_batch(args):
     batches = []
-    words = generate_word_list(args.pool_size)
-    do_populate(args, batches, words)
-    do_generate(args, batches, words)
+    keys = generate_word_list(args.key_count)
+    do_populate(args, batches, keys)
+    do_generate(args, batches, keys)
     write_batch_file(args, batches)
 
 
@@ -234,9 +234,9 @@ def add_create_batch_parser(subparsers, parent_parser):
 
     epilog = '''
     details:
-     create sample batch of intkey transactions.
-     populates state with intkey word/value pairs
-     then generates inc and dec transactions.
+     create sample batch(es) of intkey transactions.
+     populates state with intkey key/value pairs
+     then generates batches with inc and dec transactions.
     '''
 
     parser = subparsers.add_parser(
@@ -255,20 +255,20 @@ def add_create_batch_parser(subparsers, parent_parser):
     parser.add_argument(
         '-c', '--count',
         type=int,
-        help='number of batches',
-        default=1000,
+        help='number of batches modifying random keys',
+        default=1,
         metavar='')
 
     parser.add_argument(
-        '-B', '--batch-max-size',
+        '-B', '--max-batch-size',
         type=int,
-        help='max size of the batch',
-        default=20,
+        help='max transactions per batch',
+        default=10,
         metavar='')
 
     parser.add_argument(
-        '-P', '--pool-size',
+        '-K', '--key-count',
         type=int,
-        help='size of the word pool',
-        default=100,
+        help='number of keys to set initially',
+        default=1,
         metavar='')
