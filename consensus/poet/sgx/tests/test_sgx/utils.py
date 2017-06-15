@@ -48,14 +48,3 @@ def create_random_public_key():
 def create_random_public_key_hash():
     return \
         hashlib.sha256(create_random_public_key().encode()).hexdigest()
-
-
-def get_configuration_directory():
-    if 'SAWTOOTH_HOME' in os.environ:
-        return os.path.join(os.environ['SAWTOOTH_HOME'], 'etc')
-    elif os.name == 'nt':
-        return r'C:\sawtooth'
-    elif 'HOME' in os.environ:
-        return os.path.join(os.environ['HOME'], 'sawtooth', 'etc')
-
-    return '/etc/sawtooth'
