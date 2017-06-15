@@ -32,7 +32,7 @@ class TestPoetEnclaveWaitCertificate(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._mock_toml_config = {
-            'spid': 'DEADBEEFCABB1E00DEADBEEFDEBB1E00',
+            'spid': os.environ['POET_ENCLAVE_SPID'],
             'ias_url': 'https://test-as.sgx.trustedservices.intel.com:443',
             'spid_cert_file': os.path.join(
                 get_default_path_config().config_dir,
