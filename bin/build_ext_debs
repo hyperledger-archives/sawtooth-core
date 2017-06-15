@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,28 @@
 # ------------------------------------------------------------------------------
 
 # This script was developed for usage inside a docker container and makes
-# assumptions about packages that are already installed on the host. The
-# most up-to-date list can be found in the Dockerfile:
+# assumptions that the 'bin/install_packaging_deps' has already been run
+# to install the dependencies. This script can be run in a clean docker
+# environment with the following commands:
 #
-#    sawtooth-core/docker/sawtooth-build-debs
+#  cd sawtooth-core
+#  docker run \
+#    -v $(pwd):/project/sawtooth-core \
+#    --workdir /project/sawtooth-core \
+#    --env https_proxy=$https_proxy \
+#    --env http_proxy=$http_proxy \
+#    --env HTTPS_PROXY=$HTTPS_PROXY \
+#    --env HTTP_PROXY=$HTTP_PROXY \
+#    -t ubuntu:xenial \
+#    bash -c " \
+#      apt-get update \
+#      && ./bin/install_packaging_deps \
+#      && ./bin/build_ext_debs \
+#    "
+# Between builds you may want to clean the intermediate and output directories"
+#  cd sawtooth-core
+#  rm -rf projects packages
+#
 
 set -e
 
@@ -51,11 +69,67 @@ do
     esac
 done
 
-main() {
 
+main() {
     info "Building debs in $build_dir and storing in $pkg_dir"
 
     mkdir -p ${build_dir} && mkdir -p ${pkg_dir}
+
+    build_python_debs
+    build_cxx_debs
+}
+
+build_cxx_debs() {
+    info "Building debs needed by the C++ SDK"
+    build_dir_cxx=${build_dir}/cxx
+    mkdir -p ${build_dir_cxx}
+
+    build_cxx_protobuf_deb
+}
+
+build_cxx_protobuf_deb() {
+    version=3.3.0
+    deb_file=protobuf_$version-1_amd64.deb
+
+    if [[ -e $pkg_dir/$deb_file ]]
+    then
+        warn "Skipping $deb, already exists at $pkg_dir/$deb"
+    else
+
+        cd ${build_dir_cxx}
+
+        export DEBEMAIL="distributedledger@intel.com"
+        export DEBFULLNAME="Hyperledger Sawtooth"
+
+        # skip the fetch if we have the file
+        if [[ ! -e v$version.tar.gz ]]; then
+            wget https://github.com/google/protobuf/archive/v$version.tar.gz
+        fi
+        tar zxvf v$version.tar.gz
+
+        cd protobuf-$version
+
+        ./autogen.sh
+        ./configure  --enable-deb
+        make dist
+
+        # skip the debian dir creation (dh_make gets cranky if it already exists)
+        if [[ ! -e debian ]]; then
+            dh_make -s -y -f protobuf-$version.tar.gz
+        fi
+        dpkg-buildpackage -B
+
+        cp ../$deb_file $pkg_dir
+    fi
+}
+
+build_python_debs() {
+
+    info "Building debs needed by the Sawtooth Validator and Python SDK"
+
+    build_dir_python=${build_dir}/python
+    mkdir -p $build_dir_python
+    cd ${build_dir_python}
 
     # WARNING: Order is important
     pip_pkgs='
@@ -105,7 +179,7 @@ main() {
     pip3 install $pip_pkgs
 
     for pkg in $pip_pkgs; do
-        build_deb $pkg
+        package_python_deb $pkg
     done
 
     info "Uninstalling packages installed by pip"
@@ -123,8 +197,8 @@ warn() {
     echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
 }
 
-build_deb() {
-    cd $build_dir
+package_python_deb() {
+    cd ${build_dir_python}
 
     pip_pkg_name=$1
     tar_pkg_name=$(echo "$pip_pkg_name" | \
@@ -146,12 +220,12 @@ build_deb() {
         tarball=$tar_pkg_name*.tar.gz
         info "Extracting $tarball"
         tar xfz $tarball;
-        rm -f $tarball 
+        rm -f $tarball
 
         info "Building $deb_pkg_name deb"
         # Remove version fixing and fix async-timeout inconsistency
 
-        cd $build_dir/$tar_pkg_name*
+        cd ${build_dir_python}/$tar_pkg_name*
 
         # Arcane wizadry to get protobuf to build right
         if [ $tar_pkg_name = 'protobuf' ]; then
