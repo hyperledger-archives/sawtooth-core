@@ -282,7 +282,7 @@ class StateContext(object):
             AuthorizationException
         """
 
-        if not any([o in address for o in self._write_list]):
+        if not any(address.startswith(ns) for ns in self._write_list):
             raise AuthorizationException(address=address)
 
     def _validate_read(self, address):
@@ -299,7 +299,7 @@ class StateContext(object):
             AuthorizationException
         """
 
-        if not any([o in address for o in self._read_list]):
+        if not any(address.startswith(ns) for ns in self._read_list):
             raise AuthorizationException(address=address)
 
 
