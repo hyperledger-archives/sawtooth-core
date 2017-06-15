@@ -23,8 +23,8 @@ import toml
 from colorlog import ColoredFormatter
 from sawtooth_poet_sgx.poet_enclave_sgx import ias_proxy
 
-logger = logging.getLogger(__name__)
-pp = pprint.PrettyPrinter(indent=4)
+LOGGER = logging.getLogger(__name__)
+PP = pprint.PrettyPrinter(indent=4)
 
 
 def parse_args(args):
@@ -62,20 +62,18 @@ def configure(args):
     config.update(opts)
 
     if config["Verbose"]:
-        print "Configuration:"
-        pp.pprint(config)
+        print("Configuration:")
+        PP.pprint(config)
 
     return config
 
 
 def setup_loggers(config):
-    global logger
     if 'log_level' in config:
         log_level = getattr(logging, config["log_level"])
     else:
         log_level = logging.WARN
-    logger = logging.getLogger()
-    logger.setLevel(log_level)
+    LOGGER.setLevel(log_level)
 
     clog = logging.StreamHandler()
     formatter = ColoredFormatter(
@@ -94,18 +92,18 @@ def setup_loggers(config):
 
     clog.setFormatter(formatter)
     clog.setLevel(log_level)
-    logger.addHandler(clog)
+    LOGGER.addHandler(clog)
 
     if 'log_file' in config:
         flog = logging.FileHandler(config['log_file'])
-        logger.addHandler(flog)
+        LOGGER.addHandler(flog)
     else:
         flog = logging.FileHandler('ias_proxy.log')
-        logger.addHandler(flog)
-        logger.warn('Log file not specified. Guess you found it though.')
+        LOGGER.addHandler(flog)
+        LOGGER.warning('Log file not specified. Guess you found it though.')
 
-    logger.info("Logger Initialized!")
-    logger.info("Config: %s" % config)
+    LOGGER.info("Logger Initialized!")
+    LOGGER.info("Config: %s", config)
 
 
 def main(args=None):

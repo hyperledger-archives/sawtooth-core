@@ -13,22 +13,23 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
 import time
 import os
 import tempfile
 import shutil
 
+from unittest import TestCase
 from unittest import mock
 
 from test_sgx.utils import random_name
 from test_sgx.utils import create_random_public_key_hash
+# pylint: disable=no-name-in-module
 from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
 
 from sawtooth_validator.config.path import get_default_path_config
 
 
-class TestPoetEnclaveWaitTimer(unittest.TestCase):
+class TestPoetEnclaveWaitTimer(TestCase):
     @classmethod
     def setUpClass(cls):
         cls._mock_toml_config = {
@@ -62,74 +63,72 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
         with self.assertRaises(ValueError):
             addr = random_name(34)
             previous_cert_id = poet.NULL_IDENTIFIER
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
+            poet.create_wait_timer(addr, previous_cert_id, 100)
 
     def test_create(self):
         addr = random_name(34)
 
-        signup_info = \
-            poet.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=poet.NULL_IDENTIFIER)
+        poet.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=poet.NULL_IDENTIFIER)
 
         previous_cert_id = poet.NULL_IDENTIFIER
         wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
-        self.assertEquals(wait_timer.previous_certificate_id, previous_cert_id)
-        self.assertEquals(wait_timer.local_mean, 100)
+        self.assertEqual(wait_timer.previous_certificate_id, previous_cert_id)
+        self.assertEqual(wait_timer.local_mean, 100)
 
         # Random previous cert id
         previous_cert_id = random_name(poet.IDENTIFIER_LENGTH)
 
         # Invalid types for validator address
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer([], previous_cert_id, 100)
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer({}, previous_cert_id, 100)
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(None, previous_cert_id, 100)
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(8888, previous_cert_id, 100)
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer([], previous_cert_id, 100)
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer({}, previous_cert_id, 100)
+        with self.assertRaises(ValueError):
+            poet.create_wait_timer(None, previous_cert_id, 100)
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer(8888, previous_cert_id, 100)
 
         # Bad local means
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, -1)
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 0)
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, [])
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, None)
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, "3")
+        with self.assertRaises(ValueError):
+            poet.create_wait_timer(addr, previous_cert_id, -1)
+        with self.assertRaises(ValueError):
+            poet.create_wait_timer(addr, previous_cert_id, 0)
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer(addr, previous_cert_id, [])
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer(addr, previous_cert_id, None)
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer(addr, previous_cert_id, "3")
 
         # Invalid types for previous certificate
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(addr, [], 0)
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(addr, {}, 0)
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(addr, None, 0)
-        with self.assertRaises(TypeError) as context:
-            wait_timer = poet.create_wait_timer(addr, 8888, 0)
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer(addr, [], 0)
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer(addr, {}, 0)
+        with self.assertRaises(ValueError):
+            poet.create_wait_timer(addr, None, 0)
+        with self.assertRaises(TypeError):
+            poet.create_wait_timer(addr, 8888, 0)
 
         previous_cert_id = ""  # to short
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
+        with self.assertRaises(ValueError):
+            poet.create_wait_timer(addr, previous_cert_id, 100)
 
         previous_cert_id = random_name(8)  # to short
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
+        with self.assertRaises(ValueError):
+            poet.create_wait_timer(addr, previous_cert_id, 100)
 
         previous_cert_id = random_name(17)  # to long
-        with self.assertRaises(ValueError) as context:
-            wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
+        with self.assertRaises(ValueError):
+            poet.create_wait_timer(addr, previous_cert_id, 100)
 
     def test_is_expired(self):
         addr = random_name(34)
-        signup_info = \
-            poet.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=poet.NULL_IDENTIFIER)
+        poet.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=poet.NULL_IDENTIFIER)
 
         previous_cert_id = poet.NULL_IDENTIFIER
         start = time.time()
@@ -145,10 +144,9 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
 
     def test_serialize(self):
         addr = random_name(34)
-        signup_info = \
-            poet.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=poet.NULL_IDENTIFIER)
+        poet.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=poet.NULL_IDENTIFIER)
 
         previous_cert_id = poet.NULL_IDENTIFIER
         wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
@@ -165,40 +163,29 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
         self.assertEqual(wait_timer.signature, wait_timer2.signature)
 
         # Bad serialized strings
-        with self.assertRaises(TypeError) as context:
-            wait_timer2 = \
-                poet.deserialize_wait_timer([], wait_timer.signature)
-        with self.assertRaises(TypeError) as context:
-            wait_timer2 = \
-                poet.deserialize_wait_timer({}, wait_timer.signature)
-        with self.assertRaises(ValueError) as context:
-            wait_timer2 = \
-                poet.deserialize_wait_timer(None, wait_timer.signature)
-        with self.assertRaises(TypeError) as context:
-            wait_timer2 = poet.deserialize_wait_timer(8, wait_timer.signature)
-        with self.assertRaises(ValueError) as context:
-            wait_timer2 = poet.deserialize_wait_timer(
+        with self.assertRaises(TypeError):
+            poet.deserialize_wait_timer([], wait_timer.signature)
+        with self.assertRaises(TypeError):
+            poet.deserialize_wait_timer({}, wait_timer.signature)
+        with self.assertRaises(ValueError):
+            poet.deserialize_wait_timer(None, wait_timer.signature)
+        with self.assertRaises(TypeError):
+            poet.deserialize_wait_timer(8, wait_timer.signature)
+        with self.assertRaises(ValueError):
+            poet.deserialize_wait_timer(
                 random_name(len(serialized_wait_timer)),
                 wait_timer.signature)
-        with self.assertRaises(ValueError) as context:
-            wait_timer2 = poet.deserialize_wait_timer(
+        with self.assertRaises(ValueError):
+            poet.deserialize_wait_timer(
                 serialized_wait_timer[:int(len(serialized_wait_timer) / 2)],
                 wait_timer.signature)
 
         # Bad signatures
-        with self.assertRaises(TypeError) as context:
-            wait_timer2 = \
-                poet.deserialize_wait_timer(serialized_wait_timer, [])
-        with self.assertRaises(TypeError) as context:
-            wait_timer2 = \
-                poet.deserialize_wait_timer(serialized_wait_timer, {})
-        with self.assertRaises(ValueError) as context:
-            wait_timer2 = \
-                poet.deserialize_wait_timer(serialized_wait_timer, None)
-        with self.assertRaises(TypeError) as context:
-            wait_timer2 = \
-                poet.deserialize_wait_timer(serialized_wait_timer, 7)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        with self.assertRaises(TypeError):
+            poet.deserialize_wait_timer(serialized_wait_timer, [])
+        with self.assertRaises(TypeError):
+            poet.deserialize_wait_timer(serialized_wait_timer, {})
+        with self.assertRaises(ValueError):
+            poet.deserialize_wait_timer(serialized_wait_timer, None)
+        with self.assertRaises(TypeError):
+            poet.deserialize_wait_timer(serialized_wait_timer, 7)

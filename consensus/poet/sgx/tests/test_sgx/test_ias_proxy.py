@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
 import time
 import subprocess
 import signal
@@ -22,17 +21,19 @@ import socket
 import tempfile
 import shutil
 
+from unittest import TestCase
 from unittest import mock
 
 from test_sgx.utils import random_name
 from test_sgx.utils import create_random_public_key_hash
 
+# pylint: disable=no-name-in-module
 from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
 
 from sawtooth_validator.config.path import get_default_path_config
 
 
-class TestIasProxyClient(unittest.TestCase):
+class TestIasProxyClient(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -159,19 +160,19 @@ class TestIasProxyClient(unittest.TestCase):
             wait_cert,
             signup_info.poet_public_key)
 
-        with self.assertRaises(TypeError) as context:
+        with self.assertRaises(TypeError):
             poet.verify_wait_certificate([], signup_info.poet_public_key)
 
-        with self.assertRaises(TypeError) as context:
+        with self.assertRaises(TypeError):
             poet.verify_wait_certificate({}, signup_info.poet_public_key)
 
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(ValueError):
             poet.verify_wait_certificate(None, signup_info.poet_public_key)
 
-        with self.assertRaises(TypeError) as context:
+        with self.assertRaises(TypeError):
             poet.verify_wait_certificate("3", signup_info.poet_public_key)
 
-        with self.assertRaises(TypeError) as context:
+        with self.assertRaises(TypeError):
             poet.verify_wait_certificate(3, signup_info.poet_public_key)
 
         # Bad public key types
@@ -197,7 +198,3 @@ class TestIasProxyClient(unittest.TestCase):
             poet.verify_wait_certificate(
                 wait_cert,
                 other_signup_info.poet_public_key)
-
-
-if __name__ == '__main__':
-    unittest.main()

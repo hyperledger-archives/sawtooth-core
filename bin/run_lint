@@ -35,7 +35,8 @@ find_packages() {
         | grep ^:: \
         | sed -e 's/^::\s//' \
         | grep -v /setup.py$ \
-        | grep -v _pb2\.py$
+        | grep -v _pb2\.py$ \
+        | grep -v poet_enclave\.py$
 }
 
 lint() {
@@ -128,7 +129,8 @@ done
 if [ "$DRY_RUN" = "1" ]; then
     for dir in core signing validator sdk/python sdk/examples/intkey_python \
         extensions/arcade consensus/poet/cli consensus/poet/common \
-        consensus/poet/core consensus/poet/families consensus/poet/simulator
+        consensus/poet/core consensus/poet/families consensus/poet/sgx \
+        consensus/poet/simulator
     do
         for package in $(find_packages "$dir" "$SINCE")
         do
@@ -189,6 +191,14 @@ PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/families
 PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/families/tests
 export PYTHONPATH
 lint consensus/poet/families "$SINCE" || retval=1
+
+PYTHONPATH=$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common
+PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/sgx
+PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/sgx/tests
+export PYTHONPATH
+lint consensus/poet/sgx "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
