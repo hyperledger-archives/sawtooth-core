@@ -94,6 +94,35 @@ sawtooth development environment or application.
 
 Download the docker compose file `here <./sawtooth-default.yaml>`_.
 
+
+Proxy Settings (Optional)
+-------------------------
+
+To configure Docker to work with an HTTP or HTTPS proxy server, follow the
+instructions for your  operating system:
+
+
+Windows
++++++++
+
+See the instructions for proxy configuration in
+`Get Started with Docker for Windows <https://docs.docker.com/docker-for-windows/#proxies>`_.
+
+
+macOS
++++++
+
+See the instructions for proxy configuration in
+`Get Started with Docker for Mac <https://docs.docker.com/docker-for-mac/>`_.
+
+
+Linux
++++++
+
+See the instructions for proxy configuration in
+`Control and configure Docker with Systemd <https://docs.docker.com/engine/admin/systemd/#httphttps-proxy>`_.
+
+
 Environment Startup
 -------------------
 
