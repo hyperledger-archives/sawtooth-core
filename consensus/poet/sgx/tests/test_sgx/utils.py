@@ -21,16 +21,6 @@ import os
 import sawtooth_signing as signing
 
 
-class AttrDict(dict):
-    """ A simple mocking class.
-     """
-    def __init__(self, **kwargs):
-        dict.__init__(self, *(), **kwargs)
-
-    def __getattr__(self, name):
-        return self[name]
-
-
 def random_name(length=16):
     return ''.join(
         random.SystemRandom().choice(string.ascii_uppercase + string.digits)

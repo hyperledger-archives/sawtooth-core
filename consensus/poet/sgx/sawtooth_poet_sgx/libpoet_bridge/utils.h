@@ -78,22 +78,6 @@ namespace sawtooth {
         } // EncodeB64
 
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        template < typename T >
-        inline void DecodeB64(
-            T* outBinaryData,
-            const char* inEncodedBuffer
-            )
-        {
-            std::string dataBuffer = base64_decode(inEncodedBuffer);
-
-            ThrowIf<ValueError>(
-                dataBuffer.length() != sizeof(T),
-                "Data size mismatch");
-
-            memcpy(outBinaryData, dataBuffer.data(), dataBuffer.length());
-        } // DecodeB64
-
-        // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         inline void DecodeB64(
             std::vector<uint8_t>& outBinaryData,
             const char* inEncodedBuffer
