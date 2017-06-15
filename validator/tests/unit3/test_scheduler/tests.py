@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -632,104 +632,6 @@ class TestSerialScheduler(unittest.TestCase):
         self.assertIsNotNone(scheduled_txn_info)
         self.assertEquals('b', scheduled_txn_info.txn.payload.decode())
 
-    def test_valid_batch_invalid_batch(self):
-        """Tests the squash function. That the correct hash is being used
-        for each txn and that the batch ending state hash is being set.
-
-         Basically:
-            1. Adds two batches, one where all the txns are valid,
-               and one where one of the txns is invalid.
-            2. Run through the scheduler executor interaction
-               as txns are processed.
-            3. Verify that the state root obtained through the squash function
-               is the same as directly updating the merkle tree.
-            4. Verify that correct batch statuses are set
-
-        This test should work for both a serial and parallel scheduler.
-        """
-        private_key = signing.generate_privkey()
-        public_key = signing.generate_pubkey(private_key)
-
-        # 1)
-        batch_signatures = []
-        for names in [['a', 'b'], ['invalid', 'c'], ['d', 'e']]:
-            batch_txns = []
-            for name in names:
-                txn, _ = create_transaction(
-                    name=name,
-                    private_key=private_key,
-                    public_key=public_key)
-
-                batch_txns.append(txn)
-
-            batch = create_batch(
-                transactions=batch_txns,
-                private_key=private_key,
-                public_key=public_key)
-
-            batch_signatures.append(batch.header_signature)
-            self.scheduler.add_batch(batch)
-        self.scheduler.finalize()
-        # 2)
-        sched1 = iter(self.scheduler)
-        invalid_payload = hashlib.sha512('invalid'.encode()).hexdigest()
-        while not self.scheduler.complete(block=False):
-            txn_info = next(sched1)
-            txn_header = transaction_pb2.TransactionHeader()
-            txn_header.ParseFromString(txn_info.txn.header)
-            inputs_or_outputs = list(txn_header.inputs)
-            c_id = self.context_manager.create_context(
-                state_hash=txn_info.state_hash,
-                inputs=inputs_or_outputs,
-                outputs=inputs_or_outputs,
-                base_contexts=txn_info.base_context_ids)
-            if txn_header.payload_sha512 == invalid_payload:
-                self.scheduler.set_transaction_execution_result(
-                    txn_info.txn.header_signature, False, c_id)
-            else:
-                self.context_manager.set(c_id, [{inputs_or_outputs[0]: b"1"}])
-                self.scheduler.set_transaction_execution_result(
-                    txn_info.txn.header_signature, True, c_id)
-
-        sched2 = iter(self.scheduler)
-        # 3)
-        txn_info_a = next(sched2)
-        txn_a_header = transaction_pb2.TransactionHeader()
-        txn_a_header.ParseFromString(txn_info_a.txn.header)
-        inputs_or_outputs = list(txn_a_header.inputs)
-        address_a = inputs_or_outputs[0]
-
-        txn_info_b = next(sched2)
-        address_b = _get_address_from_txn(txn_info_b)
-
-        txn_infoInvalid = next(sched2)
-        txn_info_c = next(sched2)
-
-        txn_info_d = next(sched2)
-        address_d = _get_address_from_txn(txn_info_d)
-
-        txn_info_e = next(sched2)
-        address_e = _get_address_from_txn(txn_info_e)
-
-        merkle_database = MerkleDatabase(dict_database.DictDatabase())
-        state_root_end = merkle_database.update(
-            {address_a: b"1", address_b: b"1",
-             address_d: b"1", address_e: b"1"},
-            virtual=False)
-
-        # 4)
-        batch1_result = self.scheduler.get_batch_execution_result(
-            batch_signatures[0])
-        self.assertTrue(batch1_result.is_valid)
-
-        batch2_result = self.scheduler.get_batch_execution_result(
-            batch_signatures[1])
-        self.assertFalse(batch2_result.is_valid)
-
-        batch3_result = self.scheduler.get_batch_execution_result(
-            batch_signatures[2])
-        self.assertTrue(batch3_result.is_valid)
-        self.assertEqual(batch3_result.state_hash, state_root_end)
 
 class TestParallelScheduler(unittest.TestCase):
     def setUp(self):
