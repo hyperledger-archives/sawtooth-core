@@ -23,10 +23,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_intkey_python -vv tcp://validator:4004
+    command: tp_intkey_python -vv tcp://test-tp-intkey-python:4004
     stop_signal: SIGKILL
 
-  validator:
+  test-tp-intkey-python:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

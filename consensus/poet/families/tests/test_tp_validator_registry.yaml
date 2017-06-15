@@ -23,14 +23,14 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_validator_registry -vv tcp://validator:4004
+    command: tp_validator_registry -vv tcp://test-tp-validator-registry:4004
     stop_signal: SIGKILL
     environment:
         PYTHONPATH: "/project/sawtooth-core/consensus/poet/families/:\
             /project/sawtooth-core/consensus/poet/common:\
             /project/sawtooth-core/sdk/python"
 
-  validator:
+  test-tp-validator-registry:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

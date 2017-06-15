@@ -17,7 +17,7 @@ version: "2.1"
 
 services:
 
-  integration_test:
+  test-dynamic-network:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
