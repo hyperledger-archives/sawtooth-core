@@ -55,6 +55,7 @@ def main():
 
     # Search for compose file passed
     compose_file = _get_compose_file(args.compose_file)
+    test_service = _get_test_service(compose_file)
 
     # Load isolation id if it is set and validate
     isolation_id = _get_isolation_id()
@@ -83,11 +84,13 @@ def main():
     inspect = [
         'docker', 'inspect',
         '-f', "{{.State.ExitCode}}",
-        "{}_{}_1".format(isolation_id, args.test_service)
+        "{}_{}_1".format(
+            isolation_id,
+            test_service)
     ]
 
     compose_dict = load_compose_file(compose_file)
-    _validate_compose_dict(args, compose_dict, compose_file)
+    _validate_compose_dict(compose_dict, test_service, compose_file)
 
     if not args.clean:
         _check_for_existing_containers(compose_file, compose_dict, isolation_id)
@@ -230,11 +233,6 @@ def parse_args():
         help="docker-compose.yaml file that contains the test")
 
     parser.add_argument(
-        "-s", "--test-service",
-        help="service in docker-compose.yaml that runs the test",
-        default="integration_test")
-
-    parser.add_argument(
         "-c", "--clean",
         help="don't run the test, just cleanup a previous run",
         action='store_true',
@@ -255,11 +253,15 @@ def parse_args():
     return parser.parse_args()
 
 
-def _validate_compose_dict(args, compose_dict, compose_file):
-    if args.test_service not in compose_dict['services']:
+def _get_test_service(compose_file):
+    return os.path.basename(compose_file).replace('.yaml', '').replace('_', '-')
+
+
+def _validate_compose_dict(compose_dict, test_service, compose_file):
+    if test_service not in compose_dict['services']:
         raise RunDockerTestError(
             "Test service '{}' does not exist in compose file: '{}'".format(
-                args.test_service, compose_file))
+                test_service, compose_file))
 
 
 def _check_for_existing_containers(compose_file, compose_dict, isolation_id):

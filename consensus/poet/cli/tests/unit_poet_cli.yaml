@@ -17,7 +17,7 @@ version: "2.1"
 
 services:
 
-  poet:
+  unit-poet-cli:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

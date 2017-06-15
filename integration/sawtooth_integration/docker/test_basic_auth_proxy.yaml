@@ -64,7 +64,7 @@ services:
         \""
     stop_signal: SIGKILL
 
-  integration_test:
+  test-basic-auth-proxy:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

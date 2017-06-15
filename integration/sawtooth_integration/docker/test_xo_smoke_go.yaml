@@ -67,7 +67,7 @@ services:
     command: rest_api -v --connect tcp://validator:4004 --bind rest_api:8080
     stop_signal: SIGKILL
 
-  integration_test:
+  test-xo-smoke-go:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core

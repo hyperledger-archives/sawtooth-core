@@ -23,10 +23,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_xo_javascript tcp://validator:4004
+    command: tp_xo_javascript tcp://test-tp-xo-javascript:4004
     stop_signal: SIGKILL
 
-  validator:
+  test-tp-xo-javascript:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
