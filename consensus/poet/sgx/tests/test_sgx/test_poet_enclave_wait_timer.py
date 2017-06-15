@@ -23,8 +23,9 @@ from unittest import mock
 
 from test_sgx.utils import random_name
 from test_sgx.utils import create_random_public_key_hash
-from test_sgx.utils import get_configuration_directory
 from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
+
+from sawtooth_validator.config.path import get_default_path_config
 
 
 class TestPoetEnclaveWaitTimer(unittest.TestCase):
@@ -34,7 +35,7 @@ class TestPoetEnclaveWaitTimer(unittest.TestCase):
             'spid': 'DEADBEEFCABB1E00DEADBEEFDEBB1E00',
             'ias_url': 'https://test-as.sgx.trustedservices.intel.com:443',
             'spid_cert_file': os.path.join(
-                get_configuration_directory(),
+                get_default_path_config().config_dir,
                 'maiden-lane-poet-linkable-quotes.pem')
         }
 
