@@ -211,6 +211,47 @@ class TestContextManager(unittest.TestCase):
                 address_value_list=[{invalid_address1: b'1'},
                                     {invalid_address2: b'2'}])
 
+    def test_get_set_wrong_namespace(self):
+        """Tests that getting and setting from outside the namespace will
+        raise a AuthorizationException.
+
+        Notes:
+            1. Asserts that sets on a context with addresses that aren't
+               under an output namespace raise an AuthorizationException.
+
+            2. Asserts that gets on a context with addresses that aren't under
+               an input namespace raise an AuthorizationException.
+        """
+
+        wrong_namespace1 = self._create_address('a')[-10:]
+        wrong_namespace2 = '00000000'
+
+        ctx_1 = self.context_manager.create_context(
+            state_hash=self.context_manager.get_first_root(),
+            base_contexts=[],
+            inputs=[wrong_namespace1, wrong_namespace2],
+            outputs=[wrong_namespace1, wrong_namespace2])
+        # 1
+        with self.assertRaises(context_manager.AuthorizationException):
+            self.context_manager.set(
+                context_id=ctx_1,
+                address_value_list=[{self._create_address('a'): b'1'}])
+
+        with self.assertRaises(context_manager.AuthorizationException):
+            self.context_manager.set(
+                context_id=ctx_1,
+                address_value_list=[{self._create_address('c'): b'5'}])
+        # 2
+        with self.assertRaises(context_manager.AuthorizationException):
+            self.context_manager.get(
+                context_id=ctx_1,
+                address_list=[self._create_address('a')])
+
+        with self.assertRaises(context_manager.AuthorizationException):
+            self.context_manager.get(
+                context_id=ctx_1,
+                address_list=[self._create_address('c')])
+
     def test_create_context_with_prior_state(self):
         """Tests context creation with prior state from base contexts.
 
