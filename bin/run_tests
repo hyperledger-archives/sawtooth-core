@@ -34,8 +34,8 @@ MODULE_LIST="
 
 usage() {
     echo "Usage:"
-    echo "  $0 [-m Module]"
-    echo "  (-m can be passed multiple times)"
+    echo "  $0 [-m Module] [-x Module] [-i Module]"
+    echo "  (-m, -x and -i can be passed multiple times)"
     echo ""
     echo "Options:"
     echo "  -h          print usage and exit"
