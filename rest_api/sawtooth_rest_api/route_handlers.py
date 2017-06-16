@@ -39,6 +39,7 @@ from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
 
 DEFAULT_TIMEOUT = 300
+SAWTOOTH_VERSION = '0.8.0'
 LOGGER = logging.getLogger(__name__)
 
 
@@ -64,6 +65,11 @@ class RouteHandler(object):
         self._loop = loop
         self._stream = stream
         self._timeout = timeout
+
+    async def fetch_version(self, request):
+        return self._wrap_response(
+            request,
+            data=(SAWTOOTH_VERSION))
 
     async def submit_batches(self, request):
         """Accepts a binary encoded BatchList and submits it to the validator.

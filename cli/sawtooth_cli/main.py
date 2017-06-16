@@ -41,6 +41,8 @@ from sawtooth_cli.state import add_state_parser
 from sawtooth_cli.state import do_state
 from sawtooth_cli.cluster import add_cluster_parser
 from sawtooth_cli.cluster import do_cluster
+from sawtooth_cli.version import add_version_parser
+from sawtooth_cli.version import do_version
 
 
 def create_console_handler(verbose_level):
@@ -103,6 +105,7 @@ def create_parser(prog_name):
     add_transaction_parser(subparsers, parent_parser)
     add_state_parser(subparsers, parent_parser)
     add_cluster_parser(subparsers, parent_parser)
+    add_version_parser(subparsers, parent_parser)
 
     return parser
 
@@ -135,6 +138,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:],
         do_state(args)
     elif args.command == 'cluster':
         do_cluster(args)
+    elif args.command == 'version':
+        do_version(args)
     else:
         raise AssertionError("invalid command: {}".format(args.command))
 

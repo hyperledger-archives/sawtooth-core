@@ -139,6 +139,8 @@ def start_rest_api(host, port, stream, timeout):
         '/transactions/{transaction_id}',
         handler.fetch_transaction)
 
+    app.router.add_get('/version', handler.fetch_version)
+
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)
     web.run_app(app, host=host, port=port, access_log=None)
