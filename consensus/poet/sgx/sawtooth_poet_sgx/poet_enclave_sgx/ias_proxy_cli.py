@@ -18,10 +18,10 @@ import logging
 import pprint
 import sys
 
-import os
+import toml
+
 from colorlog import ColoredFormatter
 from sawtooth_poet_sgx.poet_enclave_sgx import ias_proxy
-from sawtooth_poet_sgx.poet_enclave_sgx import utils
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
@@ -52,32 +52,11 @@ def parse_args(args):
 def configure(args):
     opts = parse_args(args)
 
+    config = {}
+
     if opts["config"] is None:
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-        search_files = []
-        if os.name == "nt":
-            search_files.append("c:\\program files\\sawtooth\\etc\\"
-                                "ias_proxy.js")
-            search_files.append("c:\\sawtooth\\etc\\ias_proxy.js")
-        else:
-            search_files.append("/etc/sawtooth/ias_proxy.js")
+        config.update(toml.loads(open(opts["config"]).read()))
 
-        search_files.append(os.path.realpath(os.path.join(
-            script_dir,
-            "..",
-            "etc",
-            "ias_proxy.js")))
-
-        for f in search_files:
-            if os.path.exists(f):
-                opts["config"] = f
-                break
-
-    if not os.path.exists(opts["config"]):
-        raise IOError("Config file does not exist: {}".format(
-            opts["config"]))
-
-    config = utils.parse_configuration_file(opts["config"])
     opts = {key: value for key, value in opts.items()
             if value is not None}
     config.update(opts)
