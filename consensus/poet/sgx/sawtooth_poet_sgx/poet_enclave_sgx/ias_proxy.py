@@ -22,14 +22,17 @@ import json
 import logging
 import requests
 import os
+import toml
+import traceback
 
 from http.server import HTTPServer
 from http.server import BaseHTTPRequestHandler
+
 from sawtooth_poet_sgx.poet_enclave_sgx.ias_client import IasClient
 from sawtooth_poet_sgx.poet_enclave_sgx.utils import LruCache
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -142,19 +145,18 @@ class IasProxyServer(object):
     IAS Proxy Server.
     """
 
-    def __init__(self, server_config, client_config):
+    def __init__(self, proxy_config):
         self.httpd = None
         try:
-            self._ias_proxy_name = server_config['server_name']
-            self._ias_proxy_port = server_config['server_port']
-            assert client_config
-        except(AssertionError, KeyError) as e:
-            LOGGER.critical('Missing config', e)
+            self._ias_proxy_name = proxy_config['proxy_name']
+            self._ias_proxy_port = proxy_config['proxy_port']
+        except (AssertionError, KeyError) as e:
+            LOGGER.critical('Missing config: %s', e)
             sys.exit(1)
         self.client = \
             IasClient(
-                ias_url=client_config['ias_url'],
-                spid_cert_file=client_config['spid_cert_file'])
+                ias_url=proxy_config['ias_url'],
+                spid_cert_file=proxy_config['spid_cert_file'])
 
     def stop(self):
         """
@@ -176,45 +178,55 @@ class IasProxyServer(object):
         self.httpd.serve_forever()
 
 
-def get_server(config):
+def get_server():
     if 'SAWTOOTH_HOME' in os.environ:
         config_dir = os.path.join(os.environ['SAWTOOTH_HOME'], 'etc')
     elif os.name == 'nt':
-        config_dir = r'C:\sawtooth'
-    elif 'HOME' in os.environ:
-        config_dir = os.path.join(os.environ['HOME'], 'sawtooth', 'etc')
+        base_dir = \
+            os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+        config_dir = os.path.join(base_dir, 'conf')
     else:
         config_dir = '/etc/sawtooth'
 
-    server_config = {
-        'server_name': 'localhost',
-        'server_port': 8899
-    }
-    client_config = {
-        'ias_url': 'https://test-as.sgx.trustedservices.intel.com:443',
-        'spid_cert_file': os.path.join(
-            config_dir,
-            'maiden-lane-poet-linkable-quotes.pem')
-    }
-    if config is dict:
-        try:
+    config_file = os.path.join(config_dir, 'ias_proxy.toml')
+    logger.info('Loading IAS Proxy config from: %s', config_file)
 
-            if 'server_name' in config:
-                server_config['server_name'] = config['server_name']
-            if 'server_port' in config:
-                server_config['server_port'] = config['server_port']
-            if 'ias_url' in config:
-                client_config['ias_url'] = config['ias_url']
-            if 'spid_cert_file' in config:
-                client_config['spid_cert_file'] = config['spid_cert_file']
+    # Lack of a config file is a fatal error, so let the exception percolate
+    # up to caller
+    with open(config_file) as fd:
+        proxy_config = toml.loads(fd.read())
 
-        except(TypeError, KeyError) as e:
-            LOGGER.error('Malformed config for IAS Proxy Server.')
-            sys.exit(1)
-    else:
-        LOGGER.info('IAS Proxy using default config.')
-    return IasProxyServer(server_config, client_config)
+    # Verify the integrity (as best we can) of the TOML configuration file
+    valid_keys = set(['proxy_name', 'proxy_port', 'ias_url', 'spid_cert_file'])
+    found_keys = set(proxy_config.keys())
+
+    invalid_keys = found_keys.difference(valid_keys)
+    if invalid_keys:
+        raise \
+            ValueError(
+                'IAS Proxy config file contains the following invalid '
+                'keys: {}'.format(
+                    ', '.join(sorted(list(invalid_keys)))))
+
+    missing_keys = valid_keys.difference(found_keys)
+    if missing_keys:
+        raise \
+            ValueError(
+                'IAS Proxy config file missing the following keys: '
+                '{}'.format(
+                    ', '.join(sorted(list(missing_keys)))))
+
+    return IasProxyServer(proxy_config)
 
 if __name__ == '__main__':
-    relay = get_server(None)
-    relay.run()
+    # pylint: disable=bare-except
+    try:
+        relay = get_server()
+        relay.run()
+    except KeyboardInterrupt:
+        pass
+    except SystemExit as e:
+        raise e
+    except:
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)

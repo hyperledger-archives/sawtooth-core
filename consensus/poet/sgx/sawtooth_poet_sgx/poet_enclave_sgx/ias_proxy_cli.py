@@ -134,7 +134,7 @@ def main(args=None):
         args = []
     config = configure(args)
     setup_loggers(config)
-    server = ias_proxy.get_server(config)
+    server = ias_proxy.get_server()
     server.run()
 
 if __name__ == '__main__':
