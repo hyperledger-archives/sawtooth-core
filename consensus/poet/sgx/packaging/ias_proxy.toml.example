@@ -1,0 +1,28 @@
+#
+# Sawtooth Lake -- IAS Proxy Configuration
+#
+
+# This file (minus the .example extension) should exist in the defined config
+# directory and allows the IAS proxy to be configured without the need for
+# command line options.
+
+# The following is a possible example.
+
+# proxy_name and proxy_port are used to set the hostname/address and port,
+# respectively, that the proxy will bind to for listening for incoming
+# connections from IAS clients.
+
+proxy_name = localhost
+proxy_port = 8899
+
+# ias_url is the URL of the Intel Attestation Service (IAS) server.  The
+# example server is for debug enclaves only
+
+ias_url = 'https://test-as.sgx.trustedservices.intel.com:443'
+
+# spid_cert_file is the full path to the PEM-encoded certificate file that was
+# submitted to Intel in order to obtain a SPID
+
+spid_cert_file = '/full/path/to/certificate.pem'
+
+# server_name is the
