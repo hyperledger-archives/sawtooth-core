@@ -109,7 +109,7 @@ class Handler(BaseHTTPRequestHandler):
         if not response:
             self._respond(code=520)
         else:
-            # The IAS client responds with a dictionary that contians:
+            # The IAS client responds with a dictionary that contains:
             # 'verification_report' and 'signature'.
             # 'verification_report' was pulled from the body
             # of the response from the IAS web service.
