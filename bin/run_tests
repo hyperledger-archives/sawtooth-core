@@ -298,6 +298,8 @@ test_python_sdk() {
     copy_coverage .coverage.intkey-python-smoke
     run_docker_test workload -s integration_test
     copy_coverage .coverage.workload
+    run_docker_test intkey-cli -s integration_test
+    copy_coverage .coverage.intkey-cli
     run_docker_test xo-smoke -s integration_test
     copy_coverage .coverage.xo-smoke
     run_docker_test two_families -s integration_test
