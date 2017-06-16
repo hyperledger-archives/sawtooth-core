@@ -1,6 +1,6 @@
-***************
-Getting Started
-***************
+*******************************
+Installing and Running Sawtooth
+*******************************
 
 This guide covers the installation of Hyperledger Sawtooth, and
 the basic components needed to start application development and

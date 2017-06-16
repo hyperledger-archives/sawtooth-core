@@ -41,12 +41,13 @@ A full implementation of the tic-tac-toe transaction family can be found in
 Prerequisites
 =============
 
-This tutorial assumes that you have gone through :doc:`/app_developers_guide/getting_started` and are
-familiar with the concepts introduced there.
+This tutorial assumes that you have gone through
+:doc:`/app_developers_guide/installing_sawtooth` and are familiar with the
+concepts introduced there.
 
 You should be familiar with the concepts introduced in the
-:doc:`/app_developers_guide/getting_started` guide and have a working Sawtooth
-environment prior to completing this tutorial.
+:doc:`/app_developers_guide/installing_sawtooth` guide and have a working
+Sawtooth environment prior to completing this tutorial.
 
 The Transaction Processor
 =========================
@@ -79,7 +80,7 @@ The transaction contains payload bytes that are opaque to the validator core,
 and transaction family specific. When implementing a transaction handler the
 binary serialization protocol is up to the implementer.
 
-{% else %} 
+{% else %}
 ``apply`` gets called with two arguments, ``transaction`` and
 ``state_store``. The argument ``transaction`` is an instance of the class
 Transaction that is created from the  protobuf definition. Also,
@@ -283,7 +284,7 @@ game name prepended with some constant:
        let gameHash = crypto.createHash('sha512').update(gameName).digest('hex').toLowerCase()
        return prefix + gameHash
     }
-        
+
 {% else %}
 
 .. code-block:: python
@@ -402,10 +403,10 @@ about what kinds of transactions it can handle.
       }
 
       apply (transactionProcessRequest, stateStore) {
-        // 
+        //
 
-Note that the XOHandler class extends the TransactionHandler class defined in the 
-JavaScript SDK. 
+Note that the XOHandler class extends the TransactionHandler class defined in the
+JavaScript SDK.
 
 {% else %}
 
@@ -469,7 +470,7 @@ connected:
 
 
 For more information on configuring and runing Sawtooth components, see
-:doc:`/app_developers_guide/getting_started`.
+:doc:`/app_developers_guide/installing_sawtooth`.
 
 
 Create Players
