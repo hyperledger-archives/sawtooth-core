@@ -128,55 +128,14 @@ def setup_loggers(config):
     logger.info("Logger Initialized!")
     logger.info("Config: %s" % config)
 
-# Global server instance
-server = None
 
-
-def server_main(args=[]):
-    global server
+def main(args=None):
+    if args is None:
+        args = []
     config = configure(args)
     setup_loggers(config)
     server = ias_proxy.get_server(config)
     server.run()
-
-if os.name == "nt":
-    # pylint: disable=wrong-import-order,wrong-import-position
-    import servicemanager
-    import win32serviceutil
-
-    class SawtoothIasProxyService(win32serviceutil.ServiceFramework):
-        _svc_name_ = "Sawtooth Lake IAS Proxy"
-        _svc_display_name_ = "Sawtooth Lake IAS Proxy"
-        _svc_description_ = "Relays calls to Intel Attestation Service"
-
-        def __init__(self, args):
-            win32serviceutil.ServiceFramework.__init__(self, args)
-            servicemanager.LogInfoMsg("Starting IAS Proxy Server {}"
-                                      .format(args))
-
-        def SvcStop(self):
-            # pylint: disable=invalid-name
-            global server
-            logger.warn('received shutdown signal')
-            server.stop()
-
-        def SvcDoRun(self):
-            # pylint: disable=invalid-name
-            global server
-            server_main([])
-
-
-def main(args=sys.argv[1:]):
-    service_args = ['start', 'stop', 'install', 'remove']
-    service_mode = False
-    if (os.name == "nt" and len(sys.argv)) > 1:
-        for arg in sys.argv[1:]:
-            if arg in service_args:
-                service_mode = True
-    if service_mode:
-        win32serviceutil.HandleCommandLine(SawtoothIasProxyService)
-    else:
-        server_main(args)
 
 if __name__ == '__main__':
     main(args=sys.argv[1:])
