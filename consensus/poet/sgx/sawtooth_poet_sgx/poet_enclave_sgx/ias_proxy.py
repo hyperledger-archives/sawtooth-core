@@ -153,7 +153,6 @@ class IasProxyServer(object):
             sys.exit(1)
         self.client = \
             IasClient(
-                spid=client_config['spid'],
                 ias_url=client_config['ias_url'],
                 spid_cert_file=client_config['spid_cert_file'])
 
@@ -192,7 +191,6 @@ def get_server(config):
         'server_port': 8899
     }
     client_config = {
-        'spid': 'DEADBEEFCABB1E00DEADBEEFDEBB1E00',
         'ias_url': 'https://test-as.sgx.trustedservices.intel.com:443',
         'spid_cert_file': os.path.join(
             config_dir,
@@ -205,8 +203,6 @@ def get_server(config):
                 server_config['server_name'] = config['server_name']
             if 'server_port' in config:
                 server_config['server_port'] = config['server_port']
-            if 'spid' in config:
-                client_config['spid'] = config['spid']
             if 'ias_url' in config:
                 client_config['ias_url'] = config['ias_url']
             if 'spid_cert_file' in config:
