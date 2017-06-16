@@ -15,7 +15,9 @@
 
 import abc
 import logging
+from time import time
 from functools import cmp_to_key
+from threading import Condition
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
@@ -24,6 +26,7 @@ from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
+from sawtooth_validator.state.notification import Observer
 
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -68,7 +71,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         batch_cache (TimedCache, optional): A cache of Batches being processed
 
     Attributes:
-        _status (class): Convenience ref to response_proto for accessing enums
+        status (class): Convenience ref to response_proto for accessing enums
     """
 
     def __init__(self, request_proto, response_proto, response_type,
@@ -76,7 +79,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         self._request_proto = request_proto
         self._response_proto = response_proto
         self._response_type = response_type
-        self._status = response_proto
+        self.status = response_proto
 
         self._tree = tree
         self._block_store = block_store
@@ -97,7 +100,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             request.ParseFromString(message_content)
         except DecodeError:
             LOGGER.info('Protobuf %s failed to deserialize', request)
-            return self._wrap_result(self._status.INTERNAL_ERROR)
+            return self._wrap_result(self.status.INTERNAL_ERROR)
 
         try:
             response = self._respond(request)
@@ -143,7 +146,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         Returns:
             dict: inlcudes a 'status' attribute and any key word arguments
         """
-        kwargs['status'] = status if status is not None else self._status.OK
+        kwargs['status'] = status if status is not None else self.status.OK
         return kwargs
 
     def _get_head_block(self, request):
@@ -166,14 +169,14 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
                 return self._block_store[request.head_id].block
             except KeyError as e:
                 LOGGER.debug('Unable to find block "%s" in store', e)
-                raise _ResponseFailed(self._status.NO_ROOT)
+                raise _ResponseFailed(self.status.NO_ROOT)
 
         elif self._block_store.chain_head:
             return self._block_store.chain_head.block
 
         else:
             LOGGER.debug('Unable to get chain head from block store')
-            raise _ResponseFailed(self._status.NOT_READY)
+            raise _ResponseFailed(self.status.NOT_READY)
 
     def _set_root(self, request):
         """Sets the root of the merkle tree, returning any head id used.
@@ -205,7 +208,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             self._tree.set_merkle_root(root)
         except KeyError as e:
             LOGGER.debug('Unable to find root "%s" in database', e)
-            raise _ResponseFailed(self._status.NO_ROOT)
+            raise _ResponseFailed(self.status.NO_ROOT)
 
         return head_id
 
@@ -271,7 +274,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
 
         return resources
 
-    def _get_statuses(self, batch_ids):
+    def get_statuses(self, batch_ids):
         """Fetches the committed statuses for a set of batch ids.
 
         Note:
@@ -286,11 +289,11 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         statuses = {}
         for batch_id in batch_ids:
             if self._block_store.has_batch(batch_id):
-                statuses[batch_id] = self._status.COMMITTED
+                statuses[batch_id] = self.status.COMMITTED
             elif batch_id in self._batch_cache:
-                statuses[batch_id] = self._status.PENDING
+                statuses[batch_id] = self.status.PENDING
             else:
-                statuses[batch_id] = self._status.UNKNOWN
+                statuses[batch_id] = self.status.UNKNOWN
         return statuses
 
 
@@ -497,6 +500,62 @@ class _Sorter(object):
             return header
 
 
+class _BatchWaiter(Observer):
+    """An observer which responds notifications by checking the statuses of a
+    set of batch ids. Provides a method which locks until every batch id is
+    committed.
+
+    Args:
+        handler (_ClientRequestHandler): The handler that will to wait
+        notifiers (list of Observable): All Observables that the _BatchWaiter
+            should wait for notifications from
+    """
+    def __init__(self, handler, notifiers):
+        self._handler = handler
+        self._notifiers = notifiers
+        self._wait_condition = Condition()
+
+        for notifier in self._notifiers:
+            notifier.add_observer(self)
+
+    def notify(self, observed, data=None):
+        """Called by the Observables the _BatchWaiter is observing. Should not
+        be called by handlers.
+
+        Args:
+            observed (Observable): The object being observed, not used
+            data (optional): Extra data sent with notification, not used
+        """
+        with self._wait_condition:
+            self._wait_condition.notify()
+
+    def wait_for_batches(self, batch_ids, timeout=DEFAULT_TIMEOUT):
+        """Locks until a list of batch ids is committed to the block chain
+        or a timeout is exceeded. Returns the statuses of those batches.
+
+        Args:
+            batch_ids (list of str): The ids of the batches to wait for
+            timeout(int): Maximum time in seconds to wait for
+
+        Returns:
+            dict of int: Statuses dict, with batch ids as keys, and committed
+                status enum as the values.
+        """
+        start_time = time()
+
+        with self._wait_condition:
+            while True:
+                statuses = self._handler.get_statuses(batch_ids)
+                is_done = all(status == self._handler.status.COMMITTED
+                              for status in statuses.values())
+                is_timed_out = time() - start_time > timeout
+
+                if is_done or is_timed_out:
+                    return statuses
+
+                self._wait_condition.wait(timeout - (time() - start_time))
+
+
 class BatchSubmitFinisher(_ClientRequestHandler):
     def __init__(self, block_store, batch_cache):
         super().__init__(
@@ -508,15 +567,13 @@ class BatchSubmitFinisher(_ClientRequestHandler):
 
     def _respond(self, request):
         if not request.wait_for_commit:
-            return self._status.OK
+            return self.status.OK
 
         batch_ids = [b.header_signature for b in request.batches]
 
-        self._block_store.wait_for_batch_commits(
-            batch_ids=batch_ids,
-            timeout=request.timeout or DEFAULT_TIMEOUT)
+        waiter = _BatchWaiter(self, [self._block_store.commit_notifier])
+        statuses = waiter.wait_for_batches(batch_ids, request.timeout)
 
-        statuses = self._get_statuses(batch_ids)
         return self._wrap_response(batch_statuses=statuses)
 
 
@@ -531,13 +588,15 @@ class BatchStatusRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         if request.wait_for_commit:
-            self._block_store.wait_for_batch_commits(
-                batch_ids=request.batch_ids,
-                timeout=request.timeout or DEFAULT_TIMEOUT)
+            waiter = _BatchWaiter(self, [self._block_store.commit_notifier])
+            statuses = waiter.wait_for_batches(
+                request.batch_ids,
+                request.timeout)
+        else:
+            statuses = self.get_statuses(request.batch_ids)
 
-        statuses = self._get_statuses(request.batch_ids)
         if not statuses:
-            return self._status.NO_RESOURCE
+            return self.status.NO_RESOURCE
 
         return self._wrap_response(batch_statuses=statuses)
 
@@ -577,16 +636,16 @@ class StateListRequest(_ClientRequestHandler):
         leaves = _Sorter.sort_resources(
             request,
             leaves,
-            self._status.INVALID_SORT)
+            self.status.INVALID_SORT)
 
         leaves, paging = _Pager.paginate_resources(
             request,
             leaves,
-            self._status.INVALID_PAGING)
+            self.status.INVALID_PAGING)
 
         if not leaves:
             return self._wrap_response(
-                self._status.NO_RESOURCE,
+                self.status.NO_RESOURCE,
                 head_id=head_id,
                 paging=paging)
 
@@ -613,10 +672,10 @@ class StateGetRequest(_ClientRequestHandler):
             value = self._tree.get(request.address)
         except KeyError:
             LOGGER.debug('Unable to find entry at address %s', request.address)
-            return self._status.NO_RESOURCE
+            return self.status.NO_RESOURCE
         except ValueError:
             LOGGER.debug('Address %s is a nonleaf', request.address)
-            return self._status.INVALID_ADDRESS
+            return self.status.INVALID_ADDRESS
 
         return self._wrap_response(head_id=head_id, value=value)
 
@@ -641,17 +700,17 @@ class BlockListRequest(_ClientRequestHandler):
         blocks = _Sorter.sort_resources(
             request,
             blocks,
-            self._status.INVALID_SORT,
+            self.status.INVALID_SORT,
             BlockHeader)
 
         blocks, paging = _Pager.paginate_resources(
             request,
             blocks,
-            self._status.INVALID_PAGING)
+            self.status.INVALID_PAGING)
 
         if not blocks:
             return self._wrap_response(
-                self._status.NO_RESOURCE,
+                self.status.NO_RESOURCE,
                 head_id=head_id,
                 paging=paging)
 
@@ -674,7 +733,7 @@ class BlockGetRequest(_ClientRequestHandler):
             block = self._block_store[request.block_id].block
         except KeyError as e:
             LOGGER.debug(e)
-            return self._status.NO_RESOURCE
+            return self.status.NO_RESOURCE
         return self._wrap_response(block=block)
 
 
@@ -698,17 +757,17 @@ class BatchListRequest(_ClientRequestHandler):
         batches = _Sorter.sort_resources(
             request,
             batches,
-            self._status.INVALID_SORT,
+            self.status.INVALID_SORT,
             BatchHeader)
 
         batches, paging = _Pager.paginate_resources(
             request,
             batches,
-            self._status.INVALID_PAGING)
+            self.status.INVALID_PAGING)
 
         if not batches:
             return self._wrap_response(
-                self._status.NO_RESOURCE,
+                self.status.NO_RESOURCE,
                 head_id=head_id,
                 paging=paging)
 
@@ -731,7 +790,7 @@ class BatchGetRequest(_ClientRequestHandler):
             batch = self._block_store.get_batch(request.batch_id)
         except ValueError as e:
             LOGGER.debug(e)
-            return self._status.NO_RESOURCE
+            return self.status.NO_RESOURCE
         return self._wrap_response(batch=batch)
 
 
@@ -755,17 +814,17 @@ class TransactionListRequest(_ClientRequestHandler):
         transactions = _Sorter.sort_resources(
             request,
             transactions,
-            self._status.INVALID_SORT,
+            self.status.INVALID_SORT,
             TransactionHeader)
 
         transactions, paging = _Pager.paginate_resources(
             request,
             transactions,
-            self._status.INVALID_PAGING)
+            self.status.INVALID_PAGING)
 
         if not transactions:
             return self._wrap_response(
-                self._status.NO_RESOURCE,
+                self.status.NO_RESOURCE,
                 head_id=head_id,
                 paging=paging)
 
@@ -788,5 +847,5 @@ class TransactionGetRequest(_ClientRequestHandler):
             txn = self._block_store.get_transaction(request.transaction_id)
         except ValueError as e:
             LOGGER.debug(e)
-            return self._status.NO_RESOURCE
+            return self.status.NO_RESOURCE
         return self._wrap_response(transaction=txn)
