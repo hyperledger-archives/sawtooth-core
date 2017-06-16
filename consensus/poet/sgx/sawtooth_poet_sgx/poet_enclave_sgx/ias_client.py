@@ -30,8 +30,7 @@ class IasClient(object):
     Provide rest api helper functions for communicating with IAS.
     """
 
-    def __init__(self, spid, ias_url, spid_cert_file):
-        self._spid = spid
+    def __init__(self, ias_url, spid_cert_file):
         self._ias_url = ias_url
         self._cert = spid_cert_file
 

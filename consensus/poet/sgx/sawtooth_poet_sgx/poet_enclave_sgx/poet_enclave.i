@@ -165,7 +165,6 @@ def initialize(config_dir, data_dir):
     if not _ias:
         _ias = \
             ias_client.IasClient(
-                spid=toml_config['spid'],
                 ias_url=toml_config['ias_url'],
                 spid_cert_file=toml_config['spid_cert_file'])
 
