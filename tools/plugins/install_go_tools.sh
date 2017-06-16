@@ -8,7 +8,7 @@ apt-get install -y -q \
     golang
 
 
-GOPATH=/project/sawtooth-core/sdk/go
+export GOPATH=/project/sawtooth-core/sdk/go
 
 go get -u \
     github.com/golang/protobuf/proto \
