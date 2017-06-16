@@ -2,7 +2,7 @@
 
 [[ -z "$SETUP_SAWTOOTH_ENVIRONMENT" ]] && export SETUP_SAWTOOTH_ENVIRONMENT=yes
 [[ -z "$SETUP_SAWTOOTH_PATH" ]] && export SETUP_SAWTOOTH_PATH=no
-[[ -z "$PLUGINS" ]] && export PLUGINS="setup_homedir install_go_tools install_sphinx install_grpc install_bitcoin install_aiohttp install_js_tools install_docker install_secp256k1 install_cryptography"
+[[ -z "$PLUGINS" ]] && export PLUGINS="setup_homedir install_go_tools install_sphinx install_grpc install_bitcoin install_aiohttp install_js_tools install_docker install_secp256k1 install_cryptography install_cxx_tools"
 
 function get_vagrant_user() {
     for user in vagrant ubuntu
