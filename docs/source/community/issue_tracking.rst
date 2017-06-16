@@ -8,7 +8,7 @@ Reporting Issues
 ================
 
 This is a great way to contribute. Before reporting an issue, please review current
-open issues to see if there are any matches. 
+open issues to see if there are any matches.
 
 How to Report an Issue
 ======================
@@ -35,14 +35,16 @@ for initial feedback before submitting the issue in JIRA.
 JIRA
 ====
 
-We use JIRA as our issue tracking system.  The JIRA instance is hosted by
-the Hyperledger Project, and Hyperledger Sawtooth uses the key *STL*:
+Hyperledger Sawtooth uses JIRA as our issue tracking system, found using this
+`Link <https://jira.hyperledger.org/secure/RapidBoard.
+jspa?rapidView=3&projectKey=STL&view=planning.nodetail>`_
 
-  https://jira.hyperledger.org/projects/STL/issues/
+If you want to contribute to Hyperledger Sawtooth quickly, we have a list of
+issues which will help you get involved right away. This can be found
+`here <https://jira.hyperledger.org/issues/
+?filter=10612>`_
 
-To report issues, you will need to login to JIRA, which requires a
-Linux Foundation account.  To setup a Linux Foundation account, go to:
-
-  https://identity.linuxfoundation.org/
+To report issues, you will need to log into Hyperledger Sawtooth JIRA, which requires a
+`Linux Foundation Account <https://identity.linuxfoundation.org/>`_
 
 

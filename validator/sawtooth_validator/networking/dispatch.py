@@ -35,7 +35,7 @@ def _gen_message_id():
 
 class Dispatcher(Thread):
     def __init__(self):
-        super().__init__()
+        super().__init__(name='Dispatcher')
         self._msg_type_handlers = ThreadsafeDict()
         self._in_queue = queue.Queue()
         self._send_message = ThreadsafeDict()
@@ -157,7 +157,7 @@ class Dispatcher(Thread):
                             get_enum_name(message.message_type), connection_id,
                             connection)
         with self._condition:
-            if len(self._message_information) == 0:
+            if not self._message_information:
                 self._condition.notify()
 
     def run(self):
@@ -175,7 +175,7 @@ class Dispatcher(Thread):
         useful for unit tests.
         """
         with self._condition:
-            if len(self._message_information) > 0:
+            if self._message_information:
                 self._condition.wait()
 
 

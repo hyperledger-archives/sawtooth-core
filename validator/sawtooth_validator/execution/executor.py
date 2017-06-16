@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,9 +23,14 @@ from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
+from sawtooth_validator.execution.context_manager import \
+    CreateContextException
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution import processor_iterator
+from sawtooth_validator.networking.future import FutureResult
+from sawtooth_validator.networking.future import FutureTimeoutError
+from sawtooth_validator.networking.interconnect import ThreadsafeDict
 
 
 LOGGER = logging.getLogger(__name__)
@@ -42,9 +47,9 @@ class TransactionExecutorThread(object):
                  scheduler,
                  processors,
                  waiting_threadpool,
-                 config_view_factory):
+                 settings_view_factory,
+                 open_futures):
         """
-
         Args:
             service (Interconnect): The zmq internal interface
             context_manager (ContextManager): The cached state for tps
@@ -56,10 +61,10 @@ class TransactionExecutorThread(object):
                 processor type.
             waiting_threadpool (ThreadPoolExecutor): A thread pool to run
                 indefinite waiting functions in.
-            config_view_factory (ConfigViewFactory): Read the configuration
+            settings_view_factory (SettingsViewFactory): Read the configuration
                 state
         Attributes:
-            _tp_config_key (str): the key used to reference the part of state
+            _tp_settings_key (str): the key used to reference the part of state
                 where the list of required transaction processors are.
         """
         super(TransactionExecutorThread, self).__init__()
@@ -67,11 +72,12 @@ class TransactionExecutorThread(object):
         self._context_manager = context_manager
         self._scheduler = scheduler
         self._processors = processors
-        self._config_view_factory = config_view_factory
-        self._tp_config_key = "sawtooth.validator.transaction_families"
+        self._settings_view_factory = settings_view_factory
+        self._tp_settings_key = "sawtooth.validator.transaction_families"
         self._waiters_by_type = _WaitersByType()
         self._waiting_threadpool = waiting_threadpool
         self._done = False
+        self._open_futures = open_futures
 
     def _future_done_callback(self, request, result):
         """
@@ -80,14 +86,26 @@ class TransactionExecutorThread(object):
         """
         req = processor_pb2.TpProcessRequest()
         req.ParseFromString(request)
-
         response = processor_pb2.TpProcessResponse()
         response.ParseFromString(result.content)
+        del self._open_futures[result.connection_id][req.signature]
         if response.status == processor_pb2.TpProcessResponse.OK:
             self._scheduler.set_transaction_execution_result(
                 req.signature, True, req.context_id)
+        elif response.status == processor_pb2.TpProcessResponse.INTERNAL_ERROR:
+            header = transaction_pb2.TransactionHeader()
+            header.ParseFromString(req.header)
+
+            processor_type = processor_iterator.ProcessorType(
+                header.family_name,
+                header.family_version,
+                header.payload_encoding)
+
+            self._execute_or_wait_for_processor_type(
+                processor_type, request, req.signature)
+
         else:
-            self._context_manager.delete_context(
+            self._context_manager.delete_contexts(
                 context_id_list=[req.context_id])
             self._scheduler.set_transaction_execution_result(
                 req.signature, False, req.context_id)
@@ -103,10 +121,10 @@ class TransactionExecutorThread(object):
                 header.family_version,
                 header.payload_encoding)
 
-            config = self._config_view_factory.create_config_view(
+            config = self._settings_view_factory.create_settings_view(
                 txn_info.state_hash)
             transaction_families = config.get_setting(
-                key=self._tp_config_key,
+                key=self._tp_settings_key,
                 default_value="[]")
 
             # After reading the transaction families required in configuration
@@ -128,8 +146,8 @@ class TransactionExecutorThread(object):
 
             # First check if the transaction should be failed
             # based on configuration
-            if processor_type not in required_transaction_processors \
-                    and len(required_transaction_processors) > 0:
+            if required_transaction_processors and \
+                    processor_type not in required_transaction_processors:
                 # The txn processor type is not in the required
                 # transaction processors so
                 # failing transaction right away
@@ -146,12 +164,29 @@ class TransactionExecutorThread(object):
                     is_valid=False,
                     context_id=None)
                 continue
-
-            context_id = self._context_manager.create_context(
-                state_hash=txn_info.state_hash,
-                base_contexts=txn_info.base_context_ids,
-                inputs=list(header.inputs),
-                outputs=list(header.outputs))
+            try:
+                context_id = self._context_manager.create_context(
+                    state_hash=txn_info.state_hash,
+                    base_contexts=txn_info.base_context_ids,
+                    inputs=list(header.inputs),
+                    outputs=list(header.outputs))
+            except KeyError:
+                LOGGER.warning(
+                    "Error creating context for transaction %s, "
+                    "scheduler provided a base context that was not "
+                    "in the context manager.", txn.header_signature)
+                self._scheduler.set_transaction_execution_result(
+                    txn_signature=txn.header_signature,
+                    is_valid=False,
+                    context_id=None)
+                continue
+            except CreateContextException as cce:
+                LOGGER.info("Exception creating context: %s", cce)
+                self._scheduler.set_transaction_execution_result(
+                    txn_signature=txn.header_signature,
+                    is_valid=False,
+                    context_id=None)
+                continue
             content = processor_pb2.TpProcessRequest(
                 header=txn.header,
                 payload=txn.payload,
@@ -162,11 +197,13 @@ class TransactionExecutorThread(object):
             # all other cases should either be executed or waited for.
             self._execute_or_wait_for_processor_type(
                 processor_type=processor_type,
-                content=content)
+                content=content,
+                signature=txn.header_signature)
 
         self._done = True
 
-    def _execute_or_wait_for_processor_type(self, processor_type, content):
+    def _execute_or_wait_for_processor_type(
+            self, processor_type, content, signature):
         processor = self._processors.get_next_of_type(
             processor_type=processor_type)
         if processor is None:
@@ -174,7 +211,7 @@ class TransactionExecutorThread(object):
                          "processor type %s", processor_type)
             if processor_type not in self._waiters_by_type:
                 in_queue = queue.Queue()
-                in_queue.put_nowait(content)
+                in_queue.put_nowait((content, signature))
                 waiter = _Waiter(self._send_and_process_result,
                                  processor_type=processor_type,
                                  processors=self._processors,
@@ -184,16 +221,40 @@ class TransactionExecutorThread(object):
                 self._waiting_threadpool.submit(waiter.run_in_threadpool)
             else:
                 self._waiters_by_type[processor_type].add_to_in_queue(
-                    content)
+                    (content, signature))
         else:
             connection_id = processor.connection_id
-            self._send_and_process_result(content, connection_id)
+            self._send_and_process_result(content, connection_id, signature)
 
-    def _send_and_process_result(self, content, connection_id):
-        self._service.send(validator_pb2.Message.TP_PROCESS_REQUEST,
-                           content,
-                           connection_id=connection_id,
-                           callback=self._future_done_callback)
+    def _send_and_process_result(self, content, connection_id, signature):
+        fut = self._service.send(validator_pb2.Message.TP_PROCESS_REQUEST,
+                                 content,
+                                 connection_id=connection_id,
+                                 callback=self._future_done_callback)
+        if connection_id in self._open_futures:
+            self._open_futures[connection_id].update(
+                {signature: fut})
+        else:
+            self._open_futures[connection_id] = \
+                {signature: fut}
+
+    def remove_broken_connection(self, connection_id):
+        if connection_id not in self._open_futures:
+            # Connection has already been removed.
+            return
+        self._processors.remove(connection_id)
+        futures_to_set = [self._open_futures[connection_id][key]
+                          for key in self._open_futures[connection_id]]
+
+        response = processor_pb2.TpProcessResponse(
+            status=processor_pb2.TpProcessResponse.INTERNAL_ERROR)
+        result = FutureResult(
+            message_type=validator_pb2.Message.TP_PROCESS_RESPONSE,
+            content=response.SerializeToString(),
+            connection_id=connection_id)
+        for fut in futures_to_set:
+            fut.set_result(result)
+            self._future_done_callback(fut.request, result)
 
     def is_done(self):
         return self._done and len(self._waiters_by_type) == 0
@@ -205,15 +266,15 @@ class TransactionExecutorThread(object):
 
 
 class TransactionExecutor(object):
-    def __init__(self, service, context_manager, config_view_factory,
+
+    def __init__(self, service, context_manager, settings_view_factory,
                  scheduler_type):
         """
-
         Args:
             service (Interconnect): The zmq internal interface
             context_manager (ContextManager): Cache of state for tps
-            config_view_factory (ConfigViewFactory): Read-only view of config
-                state.
+            settings_view_factory (SettingsViewFactory): Read-only view of
+                setting state.
         Attributes:
             processors (ProcessorIteratorCollection): All of the registered
                 transaction processors and a way to find the next one to send
@@ -227,12 +288,13 @@ class TransactionExecutor(object):
         self._context_manager = context_manager
         self.processors = processor_iterator.ProcessorIteratorCollection(
             processor_iterator.RoundRobinProcessorIterator)
-        self._config_view_factory = config_view_factory
+        self._settings_view_factory = settings_view_factory
         self._waiting_threadpool = ThreadPoolExecutor(max_workers=3)
         self._executing_threadpool = ThreadPoolExecutor(max_workers=5)
         self._alive_threads = []
         self._lock = threading.Lock()
         self._scheduler_type = scheduler_type
+        self._open_futures = ThreadsafeDict()
 
     def create_scheduler(self,
                          squash_handler,
@@ -251,6 +313,9 @@ class TransactionExecutor(object):
                 "Scheduler type must be either serial or parallel. Current"
                 " scheduler type is {}.".format(self._scheduler_type))
 
+    def check_connections(self):
+        self._executing_threadpool.submit(self._check_connections)
+
     def _remove_done_threads(self):
         for t in self._alive_threads.copy():
             if t.is_done():
@@ -262,6 +327,30 @@ class TransactionExecutor(object):
             if not t.is_done():
                 t.cancel()
 
+    def _check_connections(self):
+        # This is not ideal, because it locks up the current thread while
+        # waiting for the results.
+        with self._lock:
+            futures = {}
+            for connection_id in self.processors.get_all_processors():
+                fut = self._service.send(
+                    validator_pb2.Message.TP_PING,
+                    processor_pb2.TpPing().SerializeToString(),
+                    connection_id=connection_id)
+                futures[fut] = connection_id
+            for fut in futures:
+                try:
+                    fut.result(timeout=10)
+                except FutureTimeoutError:
+                    LOGGER.info("%s did not respond to the TpPing, removing "
+                                "transaction processor.", futures[fut])
+                    self._remove_broken_connection(futures[fut])
+
+    def _remove_broken_connection(self, connection_id):
+        for t in self._alive_threads:
+            if not t.is_done():
+                t.remove_broken_connection(connection_id)
+
     def execute(self, scheduler):
         self._remove_done_threads()
         t = TransactionExecutorThread(
@@ -270,7 +359,8 @@ class TransactionExecutor(object):
             scheduler=scheduler,
             processors=self.processors,
             waiting_threadpool=self._waiting_threadpool,
-            config_view_factory=self._config_view_factory)
+            settings_view_factory=self._settings_view_factory,
+            open_futures=self._open_futures)
         self._executing_threadpool.submit(t.execute_thread)
         with self._lock:
             self._alive_threads.append(t)
@@ -322,10 +412,10 @@ class _Waiter(object):
             return
 
         while not self._in_queue.empty():
-            content = self._in_queue.get_nowait()
+            content, signature = self._in_queue.get_nowait()
             connection_id = self._processors.get_next_of_type(
                 self._processor_type).connection_id
-            self._send_and_process(content, connection_id)
+            self._send_and_process(content, connection_id, signature)
 
         del self._waiters_by_type[self._processor_type]
 

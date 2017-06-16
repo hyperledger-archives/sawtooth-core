@@ -39,9 +39,9 @@ LOGGER = logging.getLogger(__name__)
 
 class Gossip(object):
     def __init__(self, network,
-                 public_uri=None,
+                 endpoint=None,
                  peering_mode='static',
-                 initial_join_endpoints=None,
+                 initial_seed_endpoints=None,
                  initial_peer_endpoints=None,
                  minimum_peer_connectivity=3,
                  maximum_peer_connectivity=10,
@@ -52,7 +52,7 @@ class Gossip(object):
         Args:
             network (networking.Interconnect): Provides inbound and
                 outbound network connections.
-            public_uri (str): The publically accessible zmq-style uri
+            endpoint (str): The publically accessible zmq-style uri
                 endpoint for this validator.
             peering_mode (str): The type of peering approach. Either 'static'
                 or 'dynamic'. In 'static' mode, no attempted topology
@@ -62,9 +62,9 @@ class Gossip(object):
                 attempt to initiate peering connections with endpoints
                 specified in the peer_list and then attempt to do a
                 topology buildout starting with peer lists obtained from
-                endpoints in the join_list. In either mode, the validator
+                endpoints in the seeds_list. In either mode, the validator
                 will accept incoming peer requests up to max_peers.
-            initial_join_endpoints ([str]): A list of initial endpoints
+            initial_seed_endpoints ([str]): A list of initial endpoints
                 to attempt to connect and gather initial topology buildout
                 information from. These are specified as zmq-compatible
                 URIs (e.g. tcp://hostname:port).
@@ -84,9 +84,9 @@ class Gossip(object):
         self._peering_mode = peering_mode
         self._condition = Condition()
         self._network = network
-        self._public_uri = public_uri
-        self._initial_join_endpoints = initial_join_endpoints \
-            if initial_join_endpoints else []
+        self._endpoint = endpoint
+        self._initial_seed_endpoints = initial_seed_endpoints \
+            if initial_seed_endpoints else []
         self._initial_peer_endpoints = initial_peer_endpoints \
             if initial_peer_endpoints else []
         self._minimum_peer_connectivity = minimum_peer_connectivity
@@ -108,8 +108,8 @@ class Gossip(object):
             # Needs to actually be the list of advertised endpoints of
             # our peers
             peer_endpoints = list(self._peers.values())
-            if self._public_uri:
-                peer_endpoints.append(self._public_uri)
+            if self._endpoint:
+                peer_endpoints.append(self._endpoint)
             peers_response = GetPeersResponse(peer_endpoints=peer_endpoints)
             self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
                                peers_response.SerializeToString(),
@@ -263,9 +263,9 @@ class Gossip(object):
         self._topology = Topology(
             gossip=self,
             network=self._network,
-            public_uri=self._public_uri,
+            endpoint=self._endpoint,
             initial_peer_endpoints=self._initial_peer_endpoints,
-            initial_join_endpoints=self._initial_join_endpoints,
+            initial_seed_endpoints=self._initial_seed_endpoints,
             peering_mode=self._peering_mode,
             min_peers=self._minimum_peer_connectivity,
             max_peers=self._maximum_peer_connectivity,
@@ -274,18 +274,21 @@ class Gossip(object):
         self._topology.start()
 
     def stop(self):
-        for peer in self._peers:
+        for peer in self.get_peers():
             request = PeerUnregisterRequest()
-            self._network.send(validator_pb2.Message.GOSSIP_UNREGISTER,
-                               request.SerializeToString(),
-                               peer)
+            try:
+                self._network.send(validator_pb2.Message.GOSSIP_UNREGISTER,
+                                   request.SerializeToString(),
+                                   peer)
+            except ValueError:
+                pass
         if self._topology:
             self._topology.stop()
 
 
 class Topology(Thread):
-    def __init__(self, gossip, network, public_uri,
-                 initial_peer_endpoints, initial_join_endpoints,
+    def __init__(self, gossip, network, endpoint,
+                 initial_peer_endpoints, initial_seed_endpoints,
                  peering_mode, min_peers=3, max_peers=10,
                  check_frequency=1):
         """Constructor for the Topology class.
@@ -293,32 +296,32 @@ class Topology(Thread):
         Args:
             gossip (gossip.Gossip): The gossip overlay network.
             network (network.Interconnect): The underlying network.
-            public_uri (str): A zmq-style endpoint uri representing
+            endpoint (str): A zmq-style endpoint uri representing
                 this validator's publically reachable endpoint.
             initial_peer_endpoints ([str]): A list of static peers
                 to attempt to connect and peer with.
-            initial_join_endpoints ([str]): A list of endpoints to
+            initial_seed_endpoints ([str]): A list of endpoints to
                 connect to and get candidate peer lists to attempt
                 to reach min_peers threshold.
             peering_mode (str): Either 'static' or 'dynamic'. 'static'
                 only connects to peers in initial_peer_endpoints.
                 'dynamic' connects to peers in initial_peer_endpoints
-                and gets candidate peer lists from initial_join_endpoints.
+                and gets candidate peer lists from initial_seed_endpoints.
             min_peers (int): The minimum number of peers required to stop
                 attempting candidate connections.
             max_peers (int): The maximum number of active peer connections
                 to allow.
             check_frequency (int): How often to attempt dynamic connectivity.
         """
-        super().__init__()
+        super().__init__(name="Topology")
         self._condition = Condition()
         self._stopped = False
         self._peers = []
         self._gossip = gossip
         self._network = network
-        self._public_uri = public_uri
+        self._endpoint = endpoint
         self._initial_peer_endpoints = initial_peer_endpoints
-        self._initial_join_endpoints = initial_join_endpoints
+        self._initial_seed_endpoints = initial_seed_endpoints
         self._peering_mode = peering_mode
         self._min_peers = min_peers
         self._max_peers = max_peers
@@ -359,7 +362,7 @@ class Topology(Thread):
 
                 self._get_peers_of_peers(peers)
                 self._get_peers_of_endpoints(peers,
-                                             self._initial_join_endpoints)
+                                             self._initial_seed_endpoints)
 
                 # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
                 time.sleep(self._response_duration)
@@ -370,7 +373,7 @@ class Topology(Thread):
                     unpeered_candidates = list(
                         set(self._candidate_peer_endpoints) -
                         set(peered_endpoints) -
-                        set([self._public_uri]))
+                        set([self._endpoint]))
 
                 LOGGER.debug("Number of peers: %s",
                              len(peers))
@@ -484,7 +487,7 @@ class Topology(Thread):
                     endpoint)
 
             register_request = PeerRegisterRequest(
-                endpoint=self._public_uri)
+                endpoint=self._endpoint)
 
             self._network.send(
                 validator_pb2.Message.GOSSIP_REGISTER,
@@ -550,7 +553,7 @@ class Topology(Thread):
         LOGGER.debug("Connection to %s succeeded", connection_id)
 
         register_request = PeerRegisterRequest(
-            endpoint=self._public_uri)
+            endpoint=self._endpoint)
         self._connection_statuses[connection_id] = "temp"
 
         self._network.send(validator_pb2.Message.GOSSIP_REGISTER,

@@ -22,7 +22,8 @@ MODULE_LIST="
     cli
     rest_api
     poet
-    config
+    settings
+    permission
     validator
     go_sdk
     java_sdk
@@ -33,8 +34,8 @@ MODULE_LIST="
 
 usage() {
     echo "Usage:"
-    echo "  $0 [-m Module] [-s Module]"
-    echo "  (-m and -s can be passed multiple times)"
+    echo "  $0 [-m Module]"
+    echo "  (-m can be passed multiple times)"
     echo ""
     echo "Options:"
     echo "  -h          print usage and exit"
@@ -150,9 +151,15 @@ main() {
                 poet_families)
                     test_poet_families
                     ;;
-                config)
-                    test_config
+                settings)
+                    test_settings
                     ;;
+                supplychain)
+                    test_supplychain
+                    ;;
+                permission)
+                  test_permission
+                  ;;
                 validator)
                     test_validator
                     ;;
@@ -174,6 +181,9 @@ main() {
                 deployment)
                     test_deployment
                     ;;
+                burrow_evm)
+                    test_burrow_evm
+                    ;;
                 *)
                     echo "Module '$MODULE' not found."
                     ;;
@@ -183,112 +193,138 @@ main() {
 }
 
 test_signing() {
-    run_docker_test ./signing/tests/unit_signing.yaml -s signing
+    run_docker_test ./signing/tests/unit_signing.yaml
     copy_coverage .coverage.signing
 }
 
 test_cli() {
-    run_docker_test ./cli/tests/unit_cli.yaml -s cli
+    run_docker_test ./cli/tests/unit_cli.yaml
     copy_coverage .coverage.cli
 }
 
 test_rest_api() {
-    run_docker_test ./rest_api/tests/unit_rest_api.yaml -s unit-tests
+    run_docker_test ./rest_api/tests/unit_rest_api.yaml
     copy_coverage .coverage.rest_api
 }
 
 test_poet_cli() {
-    run_docker_test ./consensus/poet/cli/tests/unit_cli.yaml -s poet
+    run_docker_test ./consensus/poet/cli/tests/unit_poet_cli.yaml
     copy_coverage .coverage.poet_cli
 }
 
 test_poet_common() {
-    run_docker_test ./consensus/poet/common/tests/unit_common.yaml -s poet
+    run_docker_test ./consensus/poet/common/tests/unit_poet_common.yaml
     copy_coverage .coverage.poet_common
 }
 
 test_poet_core() {
-    run_docker_test ./consensus/poet/core/tests/unit_core.yaml -s poet
+    run_docker_test ./consensus/poet/core/tests/unit_poet_core.yaml
     copy_coverage .coverage.poet_core
 }
 
 test_poet_simulator() {
-    run_docker_test ./consensus/poet/simulator/tests/unit_simulator.yaml -s poet
+    run_docker_test ./consensus/poet/simulator/tests/unit_poet_simulator.yaml
     copy_coverage .coverage.poet_simulator
 }
 
 test_poet_families() {
-    run_docker_test ./consensus/poet/families/tests/tp-validator-registry.yaml -s validator
+    run_docker_test ./consensus/poet/families/tests/test_tp_validator_registry.yaml
     copy_coverage .coverage.poet_families
 }
 
-test_config() {
-    run_docker_test ./core_transactions/config/tests/tp-config.yaml -s validator
+test_settings() {
+    run_docker_test ./families/settings/tests/test_tp_settings.yaml
     copy_coverage .coverage.config
-    run_docker_test config-smoke -s integration_test
-    copy_coverage .coverage.config-smoke
+    run_docker_test test_config_smoke
+    copy_coverage .coverage.test_config_smoke
+}
+
+test_permission() {
+  run_docker_test test_permission
+  copy_coverage .coverage.permission
+}
+
+test_supplychain() {
+    run_docker_test ./families/supplychain/python/tests/test_tp_supplychain_python.yaml
+    copy_coverage .coverage.config
 }
 
 test_validator() {
-    run_docker_test ./validator/tests/unit_validator.yaml -s validator
+    run_docker_test ./validator/tests/unit_validator.yaml
     copy_coverage .coverage.validator
-    run_docker_test shutdown-smoke.yaml -s integration_test
-    copy_coverage .coverage.shutdown-smoke
+    run_docker_test test_shutdown_smoke.yaml
+    copy_coverage .coverage.test_shutdown_smoke
 }
 
 test_go_sdk() {
-    run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-go.yaml -s validator
+    run_docker_test ./sdk/go/tests/unit_go_client.yaml
+    run_docker_test ./sdk/examples/intkey_python/tests/test_tp_intkey_go.yaml
+    run_docker_test ./sdk/examples/xo_python/tests/test_tp_xo_go.yaml
     copy_coverage .coverage.go_sdk
-    run_docker_test intkey-go-smoke -s integration_test
-    copy_coverage .coverage.intkey-go-smoke
+    run_docker_test test_xo_smoke_go
+    copy_coverage .coverage.test_xo_smoke_go
+    run_docker_test test_intkey_smoke_go
+    copy_coverage .coverage.test_intkey_smoke_go
 }
 
 test_java_sdk() {
-    run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-java.yaml -s validator
+    run_docker_test ./sdk/examples/intkey_python/tests/test_tp_intkey_java.yaml
     copy_coverage .coverage.java_sdk
-    run_docker_test intkey-java-smoke -s integration_test
-    copy_coverage .coverage.intkey-java-smoke
+    run_docker_test test_intkey_smoke_java
+    copy_coverage .coverage.test_intkey_smoke_java
+    run_docker_test ./sdk/examples/xo_python/tests/test_tp_xo_java.yaml
+    copy_coverage .coverage.test_tp_xo_java
+    run_docker_test test_xo_smoke_java
+    copy_coverage .coverage.test_xo_java_smoke
 }
 
 test_javascript_sdk() {
-    run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-javascript.yaml -s validator
-    copy_coverage .coverage.tp-intkey-javascript
-    run_docker_test intkey-javascript-smoke -s integration_test
-    copy_coverage .coverage.intkey-javascript-smoke
-    run_docker_test ./sdk/examples/xo_python/tests/tp-xo-javascript.yaml -s validator
-    copy_coverage .coverage.tp-xo-javascript
-    run_docker_test xo-javascript-smoke -s integration_test
-    copy_coverage .coverage.xo-javascript-smoke
+    run_docker_test ./sdk/examples/intkey_python/tests/test_tp_intkey_javascript.yaml
+    copy_coverage .coverage.test_tp_intkey_javascript
+    run_docker_test test_intkey_smoke_javascript
+    copy_coverage .coverage.test_intkey_smoke_javascript
+    run_docker_test ./sdk/examples/xo_python/tests/test_tp_xo_javascript.yaml
+    copy_coverage .coverage.test_tp_xo_javascript
+    run_docker_test test_xo_smoke_javascript
+    copy_coverage .coverage.test_xo_smoke_javascript
 }
 
 test_python_sdk() {
-    run_docker_test ./sdk/examples/intkey_python/tests/tp-intkey-python.yaml -s validator
-    copy_coverage .coverage.tp-intkey-python
-    run_docker_test ./sdk/examples/xo_python/tests/tp-xo-python.yaml -s validator
-    copy_coverage .coverage.tp-xo-python
-    run_docker_test intkey-python-smoke -s integration_test
-    copy_coverage .coverage.intkey-python-smoke
-    run_docker_test workload -s integration_test
+    run_docker_test ./sdk/examples/intkey_python/tests/test_tp_intkey_python.yaml
+    copy_coverage .coverage.test_tp_intkey_python
+    run_docker_test ./sdk/examples/xo_python/tests/test_tp_xo_python.yaml
+    copy_coverage .coverage.test_tp_xo_python
+    run_docker_test test_intkey_smoke_python
+    copy_coverage .coverage.test_intkey_smoke_python
+    run_docker_test test_workload
     copy_coverage .coverage.workload
-    run_docker_test xo-smoke -s integration_test
-    copy_coverage .coverage.xo-smoke
-    run_docker_test two_families -s integration_test
+    run_docker_test test_xo_smoke_python
+    copy_coverage .coverage.test_xo_smoke_python
+    run_docker_test test_two_families
     copy_coverage .coverage.two_families
 }
 
+test_burrow_evm() {
+  run_docker_test burrow_evm_intkey_test
+}
+
 test_integration() {
-    run_docker_test poet-smoke -s integration_test
-    copy_coverage .coverage.poet-smoke
-    run_docker_test dynamic-network -s integration_test
-    copy_coverage .coverage.dynamic-network
+    run_docker_test test_xo_smoke_all
+    copy_coverage .coverage.test_xo_smoke_all
+    run_docker_test test_poet_smoke
+    copy_coverage .coverage.test_poet_smoke
+    run_docker_test test_dynamic_network --timeout 600
+    copy_coverage .coverage.test_dynamic_network
+    run_docker_test test_basic_auth_proxy
+    copy_coverage .coverage.test_basic_auth_proxy
 }
 
 test_deployment() {
-    run_docker_test systemd_services -s integration_test
+    run_docker_test test_systemd_services
 }
 
 copy_coverage() {
-    mv .coverage $PROJECT_DIR/coverage/$1
+    mv -f .coverage $PROJECT_DIR/coverage/$1
 }
 
 main

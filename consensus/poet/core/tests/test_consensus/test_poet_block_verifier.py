@@ -20,6 +20,8 @@ from unittest import TestCase
 from unittest import mock
 
 from sawtooth_poet.poet_consensus.poet_block_verifier import PoetBlockVerifier
+from sawtooth_poet.poet_consensus.mock_consensus_state import\
+    MockConsensusState
 
 from sawtooth_poet_common.protobuf.validator_registry_pb2 \
     import ValidatorInfo
@@ -30,7 +32,8 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 \
 @mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.'
             'ConsensusStateStore')
 @mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.BlockWrapper')
-@mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.PoetConfigView')
+@mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.'
+            'PoetSettingsView')
 @mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.factory')
 class TestPoetBlockVerifier(TestCase):
 
@@ -50,7 +53,7 @@ class TestPoetBlockVerifier(TestCase):
                             mock_validator_registry_view,
                             mock_consensus_state,
                             mock_poet_enclave_factory,
-                            mock_poet_config_view,
+                            mock_poet_settings_view,
                             mock_block_wrapper,
                             mock_consensus_state_store):
         """Verify that the PoET block verifier indicates failure if the block
@@ -60,11 +63,7 @@ class TestPoetBlockVerifier(TestCase):
 
         # Ensure that the consensus state does not generate failures that would
         # allow this test to pass
-        mock_state = mock.Mock()
-        mock_state.validator_signup_was_committed_too_late.return_value = False
-        mock_state.validator_has_claimed_block_limit.return_value = False
-        mock_state.validator_is_claiming_too_early.return_value = False
-        mock_state.validator_is_claiming_too_frequently.return_value = False
+        mock_state = MockConsensusState.create_mock_consensus_state()
 
         mock_consensus_state.consensus_state_for_block_id.return_value = \
             mock_state
@@ -117,17 +116,13 @@ class TestPoetBlockVerifier(TestCase):
                                       mock_validator_registry_view,
                                       mock_consensus_state,
                                       mock_poet_enclave_factory,
-                                      mock_poet_config_view,
+                                      mock_poet_settings_view,
                                       mock_block_wrapper,
                                       mock_consensus_state_store):
 
         # Ensure that the consensus state does not generate failures that would
         # allow this test to pass
-        mock_state = mock.Mock()
-        mock_state.validator_signup_was_committed_too_late.return_value = False
-        mock_state.validator_has_claimed_block_limit.return_value = False
-        mock_state.validator_is_claiming_too_early.return_value = False
-        mock_state.validator_is_claiming_too_frequently.return_value = False
+        mock_state = MockConsensusState.create_mock_consensus_state()
 
         mock_consensus_state.consensus_state_for_block_id.return_value = \
             mock_state
@@ -184,7 +179,7 @@ class TestPoetBlockVerifier(TestCase):
                                                 mock_validator_registry_view,
                                                 mock_consensus_state,
                                                 mock_poet_enclave_factory,
-                                                mock_poet_config_view,
+                                                mock_poet_settings_view,
                                                 mock_block_wrapper,
                                                 mock_consensus_state_store):
 
@@ -206,11 +201,7 @@ class TestPoetBlockVerifier(TestCase):
 
         # create a mock_consensus_state that returns a mock with
         # the following settings:
-        mock_state = mock.Mock()
-        mock_state.validator_signup_was_committed_too_late.return_value = False
-        mock_state.validator_has_claimed_block_limit.return_value = False
-        mock_state.validator_is_claiming_too_early.return_value = False
-        mock_state.validator_is_claiming_too_frequently.return_value = False
+        mock_state = MockConsensusState.create_mock_consensus_state()
 
         mock_consensus_state.consensus_state_for_block_id.return_value = \
             mock_state
@@ -256,7 +247,7 @@ class TestPoetBlockVerifier(TestCase):
             mock_validator_registry_view,
             mock_consensus_state,
             mock_poet_enclave_factory,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper,
             mock_consensus_state_store):
 
@@ -284,11 +275,8 @@ class TestPoetBlockVerifier(TestCase):
 
         # create a mock_consensus_state that returns a mock with
         # the following settings:
-        mock_state = mock.Mock()
-        mock_state.validator_signup_was_committed_too_late.return_value = True
-        mock_state.validator_has_claimed_block_limit.return_value = False
-        mock_state.validator_is_claiming_too_early.return_value = False
-        mock_state.validator_is_claiming_too_frequently.return_value = False
+        mock_state = MockConsensusState.create_mock_consensus_state(
+            committed_too_late=True)
 
         mock_consensus_state.consensus_state_for_block_id.return_value = \
             mock_state
@@ -332,7 +320,7 @@ class TestPoetBlockVerifier(TestCase):
                       mock_validator_registry_view,
                       mock_consensus_state,
                       mock_poet_enclave_factory,
-                      mock_poet_config_view,
+                      mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
 
@@ -360,11 +348,8 @@ class TestPoetBlockVerifier(TestCase):
 
         # create a mock_consensus_state that returns a mock with
         # the following settings:
-        mock_state = mock.Mock()
-        mock_state.validator_signup_was_committed_too_late.return_value = False
-        mock_state.validator_has_claimed_block_limit.return_value = True
-        mock_state.validator_is_claiming_too_early.return_value = False
-        mock_state.validator_is_claiming_too_frequently.return_value = False
+        mock_state = MockConsensusState.create_mock_consensus_state(
+            claimed_block_limit=True)
 
         mock_consensus_state.consensus_state_for_block_id.return_value = \
             mock_state
@@ -408,7 +393,7 @@ class TestPoetBlockVerifier(TestCase):
                       mock_validator_registry_view,
                       mock_consensus_state,
                       mock_poet_enclave_factory,
-                      mock_poet_config_view,
+                      mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
 
@@ -436,11 +421,8 @@ class TestPoetBlockVerifier(TestCase):
 
         # create a mock_consensus_state that returns a mock with
         # the following settings:
-        mock_state = mock.Mock()
-        mock_state.validator_signup_was_committed_too_late.return_value = False
-        mock_state.validator_has_claimed_block_limit.return_value = False
-        mock_state.validator_is_claiming_too_early.return_value = True
-        mock_state.validator_is_claiming_too_frequently.return_value = False
+        mock_state = MockConsensusState.create_mock_consensus_state(
+            claiming_too_early=True)
 
         mock_consensus_state.consensus_state_for_block_id.return_value = \
             mock_state
@@ -485,7 +467,7 @@ class TestPoetBlockVerifier(TestCase):
                       mock_validator_registry_view,
                       mock_consensus_state,
                       mock_poet_enclave_factory,
-                      mock_poet_config_view,
+                      mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
 
@@ -512,11 +494,8 @@ class TestPoetBlockVerifier(TestCase):
 
         # create a mock_consensus_state that returns a mock with
         # the following settings:
-        mock_state = mock.Mock()
-        mock_state.validator_signup_was_committed_too_late.return_value = False
-        mock_state.validator_has_claimed_block_limit.return_value = False
-        mock_state.validator_is_claiming_too_early.return_value = False
-        mock_state.validator_is_claiming_too_frequently.return_value = True
+        mock_state = MockConsensusState.create_mock_consensus_state(
+            claiming_too_frequently=True)
 
         mock_consensus_state.consensus_state_for_block_id.return_value = \
             mock_state
@@ -561,7 +540,7 @@ class TestPoetBlockVerifier(TestCase):
             mock_validator_registry_view,
             mock_consensus_state,
             mock_poet_enclave_factory,
-            mock_poet_config_view,
+            mock_poet_settings_view,
             mock_block_wrapper,
             mock_consensus_state_store):
 
@@ -589,11 +568,7 @@ class TestPoetBlockVerifier(TestCase):
 
         # create a mock_consensus_state that returns a mock with
         # the following settings:
-        mock_state = mock.Mock()
-        mock_state.validator_signup_was_committed_too_late.return_value = False
-        mock_state.validator_has_claimed_block_limit.return_value = False
-        mock_state.validator_is_claiming_too_early.return_value = False
-        mock_state.validator_is_claiming_too_frequently.return_value = False
+        mock_state = MockConsensusState.create_mock_consensus_state()
 
         mock_consensus_state.consensus_state_for_block_id.return_value = \
             mock_state

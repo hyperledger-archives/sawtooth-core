@@ -34,6 +34,6 @@ RUN apt-get update \
 
 COPY tp_intkey_go /usr/bin/tp_intkey_go
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
-CMD ["tp_intkey_go", "tcp://validator:40000"]
+CMD ["tp_intkey_go", "tcp://validator:4004"]

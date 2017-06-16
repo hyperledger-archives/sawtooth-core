@@ -58,6 +58,11 @@ message Message {
         TP_STATE_DEL_REQUEST = 11;
         // State delete response from the validator/context_manager to the transaction processor
         TP_STATE_DEL_RESPONSE = 12;
+        // Message to check if a transaction processor is still connected.
+        TP_PING = 13;
+        // Response from transaction processor to tell the validator it received the ping
+        TP_PING_RESPONSE = 14;
+
         // Submission of a batchlist from the web api or another client to the validator
         CLIENT_BATCH_SUBMIT_REQUEST = 100;
         // Response from the validator to the web api/client that the submission was accepted
@@ -116,6 +121,8 @@ message Message {
         STATE_DELTA_UNSUBSCRIBE_REQUEST = 402;
         STATE_DELTA_UNSUBSCRIBE_RESPONSE = 403;
         STATE_DELTA_EVENT = 404;
+        STATE_DELTA_GET_EVENTS_REQUEST = 405;
+        STATE_DELTA_GET_EVENTS_RESPONSE = 406;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the

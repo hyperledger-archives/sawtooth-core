@@ -32,7 +32,7 @@ directories="
     consensus/poet/simulator/build
     consensus/poet/simulator/tests
     core
-    core_transactions/config/tests
+    families/settings/tests
     integration
     rest_api/build
     rest_api/tests

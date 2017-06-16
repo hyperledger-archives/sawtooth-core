@@ -34,7 +34,7 @@ class TpStateGetHandler(Handler):
         get_request.ParseFromString(message_content)
         try:
             return_values = self._context_manager.get(
-                get_request.context_id, get_request.addresses)
+                get_request.context_id, list(get_request.addresses))
         except AuthorizationException:
             response = \
                 state_context_pb2.TpStateGetResponse(

@@ -17,14 +17,14 @@ version: "2.1"
 
 services:
 
-  validator:
+  unit-validator:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     command: nose2-3
         -c /project/sawtooth-core/validator/nose2.cfg
         -v
-        -s /project/sawtooth-core/validator/tests/unit3
+        -s /project/sawtooth-core/validator/tests
     environment:
         PYTHONPATH: "/project/sawtooth-core/signing:\
             /project/sawtooth-core/core:\

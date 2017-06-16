@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import re
 import logging
 import json
 import base64
@@ -114,19 +115,18 @@ class RouteHandler(object):
 
         # Build response envelope
         data = response['batch_statuses'] or None
-        link = '{}://{}/batch_status?id={}'.format(
-            request.scheme,
-            request.host,
-            ','.join(b.header_signature for b in batch_list.batches))
+        id_string = ','.join(b.header_signature for b in batch_list.batches)
 
         if data is None or any(s != 'COMMITTED' for _, s in data.items()):
             status = 202
+            link = self._build_url(request, path='/batch_status', id=id_string)
         else:
             status = 201
             data = None
-            link = link.replace('batch_status', 'batches')
+            link = self._build_url(request, wait=False, id=id_string)
 
         return self._wrap_response(
+            request,
             data=data,
             metadata={'link': link},
             status=status)
@@ -185,6 +185,7 @@ class RouteHandler(object):
             metadata = None
 
         return self._wrap_response(
+            request,
             data=response.get('batch_statuses'),
             metadata=metadata)
 
@@ -206,6 +207,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientStateListRequest(
             head_id=request.url.query.get('head', None),
             address=request.url.query.get('address', None),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -246,6 +248,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=response['value'],
             metadata=self._get_metadata(request, response))
 
@@ -267,6 +270,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientBlockListRequest(
             head_id=request.url.query.get('head', None),
             block_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -301,6 +305,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_block(response['block']),
             metadata=self._get_metadata(request, response))
 
@@ -322,6 +327,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientBatchListRequest(
             head_id=request.url.query.get('head', None),
             batch_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -357,6 +363,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_batch(response['batch']),
             metadata=self._get_metadata(request, response))
 
@@ -378,6 +385,7 @@ class RouteHandler(object):
         validator_query = client_pb2.ClientTransactionListRequest(
             head_id=request.url.query.get('head', None),
             transaction_ids=self._get_filter_ids(request),
+            sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -415,6 +423,7 @@ class RouteHandler(object):
             error_traps)
 
         return self._wrap_response(
+            request,
             data=self._expand_transaction(response['transaction']),
             metadata=self._get_metadata(request, response))
 
@@ -499,13 +508,27 @@ class RouteHandler(object):
         except AttributeError:
             pass
 
+        try:
+            if content.status == proto.INVALID_SORT:
+                raise errors.SortInvalid()
+        except AttributeError:
+            pass
+
         # Check custom error traps from the particular route message
         if error_traps is not None:
             for trap in error_traps:
                 trap.check(content.status)
 
     @staticmethod
-    def _wrap_response(data=None, metadata=None, status=200):
+    def add_cors_headers(request, headers):
+        if 'Origin' in request.headers:
+            headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+            headers["Access-Control-Allow-Methods"] = "GET,POST"
+            headers["Access-Control-Allow-Headers"] =\
+                "Origin, X-Requested-With, Content-Type, Accept"
+
+    @staticmethod
+    def _wrap_response(request, data=None, metadata=None, status=200):
         """Creates the JSON response envelope to be sent back to the client.
         """
         envelope = metadata or {}
@@ -513,9 +536,13 @@ class RouteHandler(object):
         if data is not None:
             envelope['data'] = data
 
+        headers = {}
+        RouteHandler.add_cors_headers(request, headers)
+
         return web.Response(
             status=status,
             content_type='application/json',
+            headers=headers,
             text=json.dumps(
                 envelope,
                 indent=2,
@@ -528,7 +555,7 @@ class RouteHandler(object):
         a JSON encoded web.Response
         """
         head = response['head_id']
-        link = cls._build_url(request, head)
+        link = cls._build_url(request, head=head)
 
         paging_response = response['paging']
         total = paging_response['total_resources']
@@ -537,6 +564,7 @@ class RouteHandler(object):
         # If there are no resources, there should be nothing else in paging
         if total == 0:
             return cls._wrap_response(
+                request,
                 data=data,
                 metadata={'head': head, 'link': link, 'paging': paging})
 
@@ -546,7 +574,8 @@ class RouteHandler(object):
 
         # Builds paging urls specific to this response
         def build_pg_url(min_pos=None, max_pos=None):
-            return cls._build_url(request, head, count, min_pos, max_pos)
+            return cls._build_url(request, head=head, count=count,
+                                  min=min_pos, max=max_pos)
 
         # Build paging urls based on ids
         if 'start_id' in controls or 'end_id' in controls:
@@ -567,6 +596,7 @@ class RouteHandler(object):
                 paging['previous'] = build_pg_url(start - count)
 
         return cls._wrap_response(
+            request,
             data=data,
             metadata={'head': head, 'link': link, 'paging': paging})
 
@@ -576,44 +606,84 @@ class RouteHandler(object):
         from the client, and the Protobuf response from the validator.
         """
         head = response.get('head_id', None)
-        metadata = {'link': cls._build_url(request, head)}
+        metadata = {'link': cls._build_url(request, head=head)}
 
         if head is not None:
             metadata['head'] = head
         return metadata
 
     @classmethod
-    def _build_url(cls, request, head=None, count=None,
-                   min_pos=None, max_pos=None):
-        """Builds a response URL to send back in response envelope.
+    def _build_url(cls, request, path=None, **changes):
+        """Builds a response URL by overriding the original queries with
+        specified change queries. Change queries set to None will not be used.
+        Setting a change query to False will remove it even if there is an
+        original query with a value.
         """
-        query = request.url.query.copy()
+        changes = {k: v for k, v in changes.items() if v is not None}
+        queries = {**request.url.query, **changes}
+        queries = {k: v for k, v in queries.items() if v is not False}
+        query_strings = []
 
-        if head is not None:
-            url = '{}://{}{}?head={}'.format(
-                request.scheme,
-                request.host,
-                request.path,
-                head)
-            query.pop('head', None)
-        else:
-            return str(request.url)
+        def add_query(key):
+            query_strings.append('{}={}'.format(key, queries[key])
+                                 if queries[key] != '' else key)
 
-        if min_pos is not None:
-            url += '&{}={}'.format('min', min_pos)
-        elif max_pos is not None:
-            url += '&{}={}'.format('max', max_pos)
-        else:
-            queries = ['{}={}'.format(k, v) for k, v in query.items()]
-            return url + '&' + '&'.join(queries) if queries else url
+        def del_query(key):
+            queries.pop(key, None)
 
-        url += '&{}={}'.format('count', count)
-        query.pop('min', None)
-        query.pop('max', None)
-        query.pop('count', None)
+        if 'head' in queries:
+            add_query('head')
+            del_query('head')
 
-        queries = ['{}={}'.format(k, v) for k, v in query.items()]
-        return url + '&' + '&'.join(queries) if queries else url
+        if 'min' in changes:
+            add_query('min')
+        elif 'max' in changes:
+            add_query('max')
+        elif 'min' in queries:
+            add_query('min')
+        elif 'max' in queries:
+            add_query('max')
+
+        del_query('min')
+        del_query('max')
+
+        if 'count' in queries:
+            add_query('count')
+            del_query('count')
+
+        for key in sorted(queries):
+            add_query(key)
+
+        scheme = cls._get_forwarded(request, 'proto') or request.url.scheme
+        host = cls._get_forwarded(request, 'host') or request.host
+        forwarded_path = cls._get_forwarded(request, 'path')
+        path = path if path is not None else request.path
+        query = '?' + '&'.join(query_strings) if query_strings else ''
+
+        url = '{}://{}{}{}{}'.format(scheme, host, forwarded_path, path, query)
+        return url
+
+    @staticmethod
+    def _get_forwarded(request, key):
+        """Gets a forwarded value from the `Forwarded` header if present, or
+        the equivalent `X-Forwarded-` header if not. If neither is present,
+        returns an empty string.
+        """
+        forwarded = request.headers.get('Forwarded', '')
+        match = re.search(
+            r'(?<={}=).+?(?=[\s,;]|$)'.format(key),
+            forwarded,
+            re.IGNORECASE)
+
+        if match is not None:
+            header = match.group(0)
+
+            if header[0] == '"' and header[-1] == '"':
+                return header[1:-1]
+
+            return header
+
+        return request.headers.get('X-Forwarded-{}'.format(key.title()), '')
 
     @classmethod
     def _expand_block(cls, block):
@@ -718,6 +788,37 @@ class RouteHandler(object):
             end_id=controls.get('end_id', None),
             start_index=start_index,
             count=count)
+
+    @staticmethod
+    def _get_sorting_message(request):
+        """Parses the sort query into a list of SortControls protobuf messages.
+        """
+        control_list = []
+        sort_query = request.url.query.get('sort', None)
+        if sort_query is None:
+            return control_list
+
+        for key_string in sort_query.split(','):
+            if key_string[0] == '-':
+                reverse = True
+                key_string = key_string[1:]
+            else:
+                reverse = False
+
+            keys = key_string.split('.')
+
+            if keys[-1] == 'length':
+                compare_length = True
+                keys.pop()
+            else:
+                compare_length = False
+
+            control_list.append(client_pb2.SortControls(
+                keys=keys,
+                reverse=reverse,
+                compare_length=compare_length))
+
+        return control_list
 
     def _set_wait(self, request, validator_query):
         """Parses the `wait` query parameter, and sets the corresponding

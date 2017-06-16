@@ -2,7 +2,7 @@
 Community
 *********
 
-Welcome to the Sawtooth Lake community!
+Welcome to the Sawtooth community!
 
 For help topics, we recommend joining us on Chat (link below).
 

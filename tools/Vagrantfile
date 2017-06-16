@@ -102,13 +102,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   if conf['VAGRANT_FORWARD_PORTS']
       config.vm.network "forwarded_port", guest: 8800, host: 8800, host_ip: "127.0.0.1"
-      config.vm.network "forwarded_port", guest: 8900, host: 8900, host_ip: "127.0.0.1"
+      config.vm.network "forwarded_port", guest: 4004, host: 4004, host_ip: "127.0.0.1"
 
-      # rethinkdb
-      config.vm.network "forwarded_port", guest: 18080, host: 18080, host_ip: "127.0.0.1"
-
-      # nodejs
-      config.vm.network "forwarded_port", guest: 3000, host: 3000, host_ip: "127.0.0.1"
+      # rest api
+      config.vm.network "forwarded_port", guest: 8080, host: 18080, host_ip: "127.0.0.1"
   end
   config.vm.provision :shell, path: "bootstrap.sh"
 

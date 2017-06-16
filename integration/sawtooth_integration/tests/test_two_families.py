@@ -162,8 +162,8 @@ def _get_intkey_data():
 
 def _get_xo_data():
     state = _get_xo_state()
-    data = b64decode(state[0]['data']).decode().split(',')
-    board, turn, _, _, game_name = data
+    data = b64decode(state[0]['data']).decode().split('|')[0].split(',')
+    game_name, board, turn, _, _ = data
     return board, turn, game_name
 
 def _get_intkey_state():

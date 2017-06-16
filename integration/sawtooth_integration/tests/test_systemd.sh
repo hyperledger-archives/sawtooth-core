@@ -7,7 +7,7 @@ services="
 validator
 rest_api
 tp_intkey_python
-tp_config
+tp_settings
 tp_validator_registry
 "
 

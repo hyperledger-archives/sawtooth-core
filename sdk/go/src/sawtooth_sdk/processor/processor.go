@@ -106,7 +106,6 @@ func (self *TransactionProcessor) Start() error {
 	// Setup shutdown thread
 	go shutdown(self.context, "inproc://workers", queue, self.shutdown)
 
-	logger.Debugf("Started %v worker threads and 1 shutdown worker thread", self.nThreads)
 	workersLeft := uint(self.nThreads) + 1
 
 	// Setup ZMQ poller for routing messages between worker threads and validator
@@ -128,7 +127,6 @@ func (self *TransactionProcessor) Start() error {
 
 	// Poll for messages from worker threads or validator
 	for {
-		logger.Debugf("Polling...")
 		polled, err := poller.Poll(-1)
 		if err != nil {
 			return fmt.Errorf("Polling failed: %v", err)
@@ -136,11 +134,9 @@ func (self *TransactionProcessor) Start() error {
 		for _, ready := range polled {
 			switch socket := ready.Socket; socket {
 			case validator.Socket():
-				logger.Debugf("Validator has messages waiting")
 				receiveValidator(ids, validator, workers, queue)
 
 			case workers.Socket():
-				logger.Debugf("Workers have messages waiting")
 				receiveWorkers(ids, validator, workers, &workersLeft)
 				if workersLeft == 0 {
 					return nil
@@ -152,7 +148,6 @@ func (self *TransactionProcessor) Start() error {
 
 // Shutdown sends a message to the processor telling it to deregister.
 func (self *TransactionProcessor) Shutdown() {
-	logger.Debugf("Shutdown() called!")
 	// Initiate a clean shutdown
 	self.shutdown <- 0
 }
@@ -174,7 +169,6 @@ func (self *TransactionProcessor) ShutdownOnSignal(siglist ...os.Signal) {
 
 		self.Shutdown()
 	}()
-	logger.Debugf("Shutdown() will be called for signals: %v", siglist)
 }
 
 // Handle incoming messages from the validator
@@ -206,10 +200,10 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 	corrId := msg.GetCorrelationId()
 
 	// If this is a new request, put in on the work queue
-	if t == validator_pb2.Message_TP_PROCESS_REQUEST {
+	switch t {
+	case validator_pb2.Message_TP_PROCESS_REQUEST:
 		select {
 		case queue <- msg:
-			logger.Debugf("Put %v (%v) on queue", t, corrId)
 
 		default:
 			logger.Warnf("Work queue is full, denying request %v", corrId)
@@ -231,6 +225,19 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 			}
 		}
 		return
+	case validator_pb2.Message_TP_PING:
+		data, err := proto.Marshal(&processor_pb2.TpPingResponse{
+			Status: processor_pb2.TpPingResponse_OK,
+		})
+		if err != nil {
+			logger.Errorf(
+				"Failed to respond to TpPing %v", err,
+			)
+		}
+		err = validator.SendMsg(
+			validator_pb2.Message_TP_PING_RESPONSE, data, corrId,
+		)
+		return
 	}
 
 	// If this is a response, send it to the worker.
@@ -244,17 +251,11 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 			)
 			return
 		}
-		logger.Debugf(
-			"Routed message (%v) from validator to worker (%v)",
-			corrId, workerId,
-		)
 		delete(ids, corrId)
-		logger.Debugf("Removed (%v)->(%v) from map", corrId, workerId)
 		return
 	}
 
-	// Shouldn't get here
-	logger.Infof(
+	logger.Warnf(
 		"Received unexpected message from validator: (%v, %v)", t, corrId,
 	)
 }
@@ -279,15 +280,12 @@ func receiveWorkers(ids map[string]string, validator, workers *messaging.Connect
 
 	if t == validator_pb2.Message_DEFAULT && corrId == "shutdown" {
 		*workersLeft = *workersLeft - 1
-		logger.Infof("(%v) Worker shutdown. Remaining: %v", workerId, *workersLeft)
 		return
 	}
-	logger.Debugf("Got %v from worker (%v)", t, workerId)
 
 	// Store which thread the response should be routed to
 	if t != validator_pb2.Message_TP_PROCESS_RESPONSE {
 		ids[corrId] = workerId
-		logger.Debugf("Added (%v)->(%v) to map", corrId, workerId)
 	}
 
 	// Pass the message on to the validator
@@ -296,7 +294,6 @@ func receiveWorkers(ids map[string]string, validator, workers *messaging.Connect
 		logger.Errorf("Failed to send message (%v) to validator: %v", corrId, err)
 		return
 	}
-	logger.Debugf("Routed message (%v) from worker (%v) to validator", corrId, workerId)
 }
 
 // Register a handler with the validator
@@ -330,9 +327,7 @@ func register(validator *messaging.Connection, handler TransactionHandler, queue
 			return err
 		}
 
-		logger.Infof("Received %v", msg.MessageType)
 		if msg.GetCorrelationId() != corrId {
-			logger.Infof("Got TP_PROCESS_REQUEST before TP_REGISTRATION_RESPONSE")
 			queue <- msg
 		} else {
 			break

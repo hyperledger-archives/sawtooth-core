@@ -65,7 +65,7 @@ def parse_args(args):
 
     parser.add_argument('endpoint',
                         nargs='?',
-                        default='tcp://localhost:40000',
+                        default='tcp://localhost:4004',
                         help='Endpoint for the validator connection')
     parser.add_argument('-v', '--verbose',
                         action='count',
@@ -75,7 +75,9 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def main(args=sys.argv[1:]):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
     opts = parse_args(args)
 
     init_console_logging(verbose_level=opts.verbose)

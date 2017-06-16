@@ -156,10 +156,12 @@ lint sdk/examples/intkey_python "$SINCE" || retval=1
 lint sdk/examples/xo_python "$SINCE" || retval=1
 lint rest_api/sawtooth_rest_api "$SINCE" || retval=1
 
-PYTHONPATH=$top_dir/core_transactions/config
+PYTHONPATH=$top_dir/families/settings
+PYTHONPATH=$top_dir/families/supplychain/python
 PYTHONPATH=$top_dir/sdk/python
 export PYTHONPATH
-lint core_transactions/config "$SINCE" || retval=1
+lint families/settings "$SINCE" || retval=1
+lint families/supplychain/python "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/validator

@@ -2,12 +2,12 @@
 Global State
 ************
 
-One goal of a distributed ledger like Sawtooth Lake, indeed the
+One goal of a distributed ledger like Sawtooth, indeed the
 *defining* goal, is to distribute a ledger among participating nodes.
 The ability to ensure a consistent copy of data amongst nodes in
 Byzantine consensus is one of the core strengths of blockchain technology.
 
-Sawtooth Lake represents state for all transaction families in a single
+Sawtooth represents state for all transaction families in a single
 instance of a Radix Merkle Tree on each validator. The process of block
 validation on each validator ensures that the same transactions result
 in the same state transitions and that the resulting data is the same
@@ -23,7 +23,7 @@ Radix Merkle Tree Overview
 Merkle Hashes
 -------------
 
-Sawtooth Lake uses an addressable Radix Merkle tree to store data for
+Sawtooth uses an addressable Radix Merkle tree to store data for
 transaction families. Let's break that down: The tree is a Merkle tree because
 it is a copy-on-write data structure which stores successive node hashes
 from leaf-to-root upon any changes to the tree. For a given set of state
@@ -58,7 +58,7 @@ identifies the next node in the path to the leaf containing the data
 associated with the address. The address format contains a 3 byte
 (6 hex character) namespace prefix which provides 2\ :sup:`24`
 (16,777,216) possible different namespaces in a given instance of
-Sawtooth Lake. The remaining 32 bytes (64 hex characters) are encoded
+Sawtooth. The remaining 32 bytes (64 hex characters) are encoded
 based on the specifications of the designer of the namespace, and may
 include schemes for subdividing further, distinguising object types,
 and mapping domain-specific unique identifiers into portions of the address.

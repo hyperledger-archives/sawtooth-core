@@ -155,24 +155,24 @@ class WaitCertificate(object):
                 self.identifier,
                 self.previous_certificate_id)
 
-    def population_estimate(self, poet_config_view):
+    def population_estimate(self, poet_settings_view):
         """Return the population estimate for the block associated with this
         wait certificate.
 
         Args:
-            poet_config_view (PoetConfigView): The current PoEt config view
+            poet_settings_view (PoetSettingsView): The current PoEt config view
 
         Returns:
             float: The population estimate
         """
-        return self.local_mean / poet_config_view.target_wait_time
+        return self.local_mean / poet_settings_view.target_wait_time
 
     def check_valid(self,
                     poet_enclave_module,
                     previous_certificate_id,
                     poet_public_key,
                     consensus_state,
-                    poet_config_view):
+                    poet_settings_view):
         """Determines whether the wait certificate is valid.
 
         Args:
@@ -186,7 +186,7 @@ class WaitCertificate(object):
                 that is the originator of the block for which the wait
                 certificate is associated.
             consensus_state (ConsensusState): The current PoET consensus state
-            poet_config_view (PoetConfigView): The current PoET config view
+            poet_settings_view (PoetSettingsView): The current PoET config view
         Returns:
             True if the wait certificate is valid, False otherwise.
         """
@@ -194,14 +194,14 @@ class WaitCertificate(object):
             self._enclave_wait_certificate(poet_enclave_module)
         expected_mean = \
             consensus_state.compute_local_mean(
-                poet_config_view=poet_config_view)
+                poet_settings_view=poet_settings_view)
 
-        if enclave_certificate.duration < poet_config_view.minimum_wait_time:
+        if enclave_certificate.duration < poet_settings_view.minimum_wait_time:
             raise \
                 ValueError(
                     'Wait time less than minimum: {0} < {1}'.format(
                         enclave_certificate.duration,
-                        poet_config_view.minimum_wait_time))
+                        poet_settings_view.minimum_wait_time))
 
         if not _is_close(
                 enclave_certificate.local_mean,

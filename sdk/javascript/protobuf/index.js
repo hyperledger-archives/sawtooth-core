@@ -36,6 +36,9 @@ TpStateSetResponse.Status = TpStateSetResponse.nested.Status.values
 const TpStateGetResponse = root.lookup('TpStateGetResponse')
 TpStateGetResponse.Status = TpStateGetResponse.nested.Status.values
 
+const TpPingResponse = root.lookup('TpPingResponse')
+TpPingResponse.Status = TpPingResponse.nested.Status.values
+
 const Message = root.lookup('Message')
 Message.MessageType = Message.nested.MessageType.values
 Message.MessageType.stringValue = (id) =>
@@ -62,6 +65,9 @@ module.exports = {
     root.lookup('TpProcessRequest'),
 
   TpProcessResponse,
+
+  TpPingResponse:
+    root.lookup("TpProcessResponse"),
 
   //
   // State

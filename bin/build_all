@@ -102,6 +102,8 @@ main() {
     # Start in project directory
     cd $top_dir
 
+    build_external
+
     if [[ $BUILD_MODE == $DEBS ]]
     then
         build_debs
@@ -172,7 +174,7 @@ docker_run() {
             --env http_proxy=$http_proxy \
             --env HTTPS_PROXY=$HTTPS_PROXY \
             --env HTTP_PROXY=$HTTP_PROXY \
-            $tag 
+            $tag
     fi
 }
 
@@ -196,6 +198,10 @@ docker_build() {
         --build-arg HTTP_PROXY=$HTTP_PROXY
 }
 
+build_external() {
+    docker_build docker/apache-basic_auth_proxy docker/ apache-basic_auth_proxy
+}
+
 build_debs() {
     build_dir=/tmp/build-docker$ISOLATION_ID
     rm -rf $build_dir
@@ -213,12 +219,15 @@ then
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_intkey_go
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_burrow_evm
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_xo_go
         docker_run sawtooth-dev-go
     }
 
     build_java() {
         docker_build docker/sawtooth-dev-java docker/ sawtooth-dev-java
         docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_intkey_java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_xo_java
         docker_run sawtooth-dev-java
     }
 
@@ -232,8 +241,9 @@ then
     build_python() {
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest_api
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_config
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_settings
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_intkey_python
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_supplychain_python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_validator_registry
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_xo_python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
@@ -251,18 +261,29 @@ then
         rm -rf $build_dir
         mkdir -p $build_dir
         cp $top_dir/docker/sawtooth-int-tp_intkey_go $build_dir
+        cp $top_dir/docker/sawtooth-int-tp_xo_go $build_dir
         cp $top_dir/sdk/examples/intkey_go/bin/tp_intkey_go \
+            $build_dir
+        cp $top_dir/docker/sawtooth-int-tp_burrow_evm $build_dir
+        cp $top_dir/families/burrow_evm/bin/tp_burrow_evm \
+            $build_dir
+        cp $top_dir/sdk/examples/xo_go/bin/tp_xo_go \
             $build_dir
         ls $build_dir
 
         docker_build $build_dir/sawtooth-int-tp_intkey_go $build_dir/ \
             sawtooth-tp_intkey_go
+        docker_build $build_dir/sawtooth-int-tp_burrow_evm $build_dir/ \
+            sawtooth-tp_burrow_evm
+        docker_build $build_dir/sawtooth-int-tp_xo_go $build_dir/ \
+            sawtooth-tp_xo_go
     }
 
     build_java() {
         warn "Installed java images not implemented, building mounted instead"
         docker_build docker/sawtooth-dev-java docker/ sawtooth-dev-java
         docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_intkey_java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_xo_java
         docker_run sawtooth-dev-java
     }
 
@@ -294,8 +315,8 @@ then
         docker_build $build_dir/sawtooth-int-rest_api \
             $build_dir/ sawtooth-rest_api
 
-        docker_build $build_dir/sawtooth-int-tp_config \
-            $build_dir/ sawtooth-tp_config
+        docker_build $build_dir/sawtooth-int-tp_settings \
+            $build_dir/ sawtooth-tp_settings
 
         docker_build $build_dir/sawtooth-int-tp_intkey_python \
             $build_dir/ sawtooth-tp_intkey_python

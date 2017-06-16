@@ -89,7 +89,9 @@ class TestIntkeySmoke(unittest.TestCase):
         batch = IntkeyMessageFactory().create_batch(batch)
         LOGGER.info('Posting batch')
         _post_batch(batch)
-        time.sleep(1)
+
+        time.sleep(10)
+
         self.verify_state_after_n_updates(how_many_updates)
 
     def verify_state_after_n_updates(self, num):

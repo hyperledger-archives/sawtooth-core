@@ -43,21 +43,19 @@ func NewState(connection *messaging.Connection, contextId string) *State {
 }
 
 // Get queries the validator state for data at each of the addresses in the
-// given slice. A string->[]byte map is returned. If an address is not set, the
-// slice in the map will have 0 length. For example:
+// given slice. A string->[]byte map is returned. If an address is not set,
+// it will not exist in the map.
 //
 //     results, err := state.Get(addresses)
 //     if err != nil {
 //         fmt.Println("Error getting data!")
 //     }
 //     data, ok := results[address]
-//     if !ok || len(data) == 0 {
+//     if !ok {
 //         fmt.Prinln("No data stored at address!")
 //     }
 //
 func (self *State) Get(addresses []string) (map[string][]byte, error) {
-	logger.Debugf("Getting %v", addresses)
-
 	// Construct the message
 	request := &state_context_pb2.TpStateGetRequest{
 		ContextId: self.contextId,
@@ -112,9 +110,10 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 	// Construct and return a map
 	results := make(map[string][]byte)
 	for _, entry := range response.GetEntries() {
-		results[entry.GetAddress()] = entry.GetData()
+		if len(entry.GetData()) != 0 {
+			results[entry.GetAddress()] = entry.GetData()
+		}
 	}
-	logger.Debugf("Got %v", results)
 
 	return results, nil
 }
@@ -133,7 +132,6 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 //     }
 //
 func (self *State) Set(pairs map[string][]byte) ([]string, error) {
-	logger.Debugf("Setting %v", pairs)
 	// Construct the message
 	entries := make([]*state_context_pb2.Entry, 0, len(pairs))
 	for address, data := range pairs {
@@ -194,7 +192,5 @@ func (self *State) Set(pairs map[string][]byte) ([]string, error) {
 		return nil, fmt.Errorf("Tried to set unauthorized address: %v", addresses)
 	}
 
-	logger.Debugf("Set %v", response.Addresses)
-
-	return response.Addresses, nil
+	return response.GetAddresses(), nil
 }

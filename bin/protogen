@@ -34,7 +34,9 @@ JOIN = os.path.join
 TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 
-def main(args=sys.argv[1:]):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
     # 1. Generate and distribute top-level protos
     proto_dir = JOIN(TOP_DIR, "protos")
 
@@ -42,7 +44,7 @@ def main(args=sys.argv[1:]):
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
     protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
     protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")
-    protoc(proto_dir, "core_transactions/config", "sawtooth_config/protobuf")
+    protoc(proto_dir, "families/settings", "sawtooth_settings/protobuf")
 
     if "javascript" in args:
         protoc(proto_dir, "sdk/javascript", "protobuf", "javascript")
@@ -51,8 +53,8 @@ def main(args=sys.argv[1:]):
         protoc(proto_dir, "sdk/go/src", "sawtooth_sdk/protobuf", "go")
 
     # 2. Generate config protos
-    proto_dir = JOIN(TOP_DIR, "core_transactions/config/protos")
-    protoc(proto_dir, "core_transactions/config", "sawtooth_config/protobuf")
+    proto_dir = JOIN(TOP_DIR, "families/settings/protos")
+    protoc(proto_dir, "families/settings", "sawtooth_settings/protobuf")
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
 
     # 3. Generate PoET protos
@@ -61,6 +63,15 @@ def main(args=sys.argv[1:]):
             TOP_DIR,
             "consensus/poet/families/sawtooth_validator_registry/protos")
     protoc(proto_dir, "consensus/poet/common", "sawtooth_poet_common/protobuf")
+
+    # 4. Generate supplychain protos
+    proto_dir = JOIN(TOP_DIR, "families/supplychain/protos")
+    protoc(proto_dir, "families/supplychain/python",
+        "sawtooth_supplychain/protobuf")
+
+    if "go" in args:
+        proto_dir = JOIN(TOP_DIR, "families/burrow_evm/src/protos")
+        protoc(proto_dir, "families/burrow_evm/src", "sawtooth_burrow_evm/protobuf", "go")
 
 
 def protoc(src_dir, base_dir, pkg, language="python"):

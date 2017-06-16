@@ -15,8 +15,7 @@ SDKs are provided in several languages: C++, Go, Java, Javascript, and Python.
 .. toctree::
    :maxdepth: 2
 
-   app_developers_guide/environment_setup
-   app_developers_guide/intro_to_sawtooth
+   app_developers_guide/getting_started
    app_developers_guide/writing_clients
    app_developers_guide/address_and_namespace
    app_developers_guide/testing

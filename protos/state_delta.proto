@@ -49,8 +49,12 @@ message StateDeltaEvent {
     int32 block_num = 2;
     // The state root hash which resulted from the changes.
     string state_root_hash = 3;
+
+    // The previous block id
+    string previous_block_id = 4;
+
     // The collection of StateChange objects
-    repeated StateChange state_changes = 4;
+    repeated StateChange state_changes = 5;
 }
 
 // Registers a subscriber for StateDeltaEvent objects.  The
@@ -101,4 +105,36 @@ message UnregisterStateDeltaSubscriberResponse {
         INTERNAL_ERROR = 1;
     }
     Status status = 1;
+}
+
+// Request message for a set of StateDeltaEvent objects, based on a given list
+// of block_ids and a known filter.  The result will include a set of
+// StateDeltaEvent objects.
+message GetStateDeltaEventsRequest {
+    // The block ids to query
+    repeated string block_ids = 1;
+
+    // The list of address prefixes of interest.  Only state changes
+    // that occur on values in the given prefixes will be sent to the
+    // subscriber.
+    repeated string address_prefixes = 2;
+}
+
+// Response message for a GetStateDeltasRequest.  Returns a list of
+// StateDeltaEvent objects for the block_ids requested.  Only block_ids known
+// to the validator will result in events.
+message GetStateDeltaEventsResponse {
+    enum Status {
+        // returned on a successful request
+        OK = 0;
+        // returned on a failed request, due to an internal validator error.
+        INTERNAL_ERROR = 1;
+        // return on a bad request, where no block id was provided in the
+        // request.
+        NO_VALID_BLOCKS_SPECIFIED = 2;
+    }
+    Status status = 1;
+    // the events returned for the request.  This may contain only a subset of
+    // events matching the given block ids, as unknown blocks are ignored.
+    repeated StateDeltaEvent events = 2;
 }

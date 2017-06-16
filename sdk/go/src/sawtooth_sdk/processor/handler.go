@@ -36,7 +36,7 @@ import (
 //
 // To create a transaction processor that uses a new transaction handler:
 //
-//     validatorEndpoint := "tcp://localhost:40000"
+//     validatorEndpoint := "tcp://localhost:4004"
 //     myHandler := NewMyHandler()
 //     processor := NewTransactionProcessor(validatorEndpoint)
 //     processor.AddHandler(myHandler)

@@ -24,7 +24,8 @@ import threading
 import cbor
 
 from sawtooth_poet.poet_consensus import utils
-from sawtooth_poet.poet_consensus.poet_config_view import PoetConfigView
+from sawtooth_poet.poet_consensus.poet_settings_view import PoetSettingsView
+from sawtooth_poet.poet_consensus.signup_info import SignupInfo
 
 from sawtooth_poet_common.validator_registry_view.validator_registry_view \
     import ValidatorRegistryView
@@ -65,7 +66,7 @@ class ConsensusState(object):
     _BlockInfo = \
         collections.namedtuple(
             '_BlockInfo',
-            ['wait_certificate', 'validator_info', 'poet_config_view'])
+            ['wait_certificate', 'validator_info', 'poet_settings_view'])
 
     """ Instead of creating a full-fledged class, let's use a named tuple for
     the block info.  The block info represents the information we need to
@@ -75,7 +76,7 @@ class ConsensusState(object):
         the block
     validator_info (ValidatorInfo): The validator registry information for the
         validator that claimed the block
-    poet_config_view (PoetConfigView): The PoET configuration view associated
+    poet_settings_view (PoetSettingsView): The PoET settings view associated
         with the block
     """
 
@@ -147,10 +148,11 @@ class ConsensusState(object):
         # Starting at the chain head, walk the block store backwards until we
         # either get to the root or we get a block for which we have already
         # created consensus state
+        current_id = block_id
         while True:
             block = \
                 ConsensusState._block_for_id(
-                    block_id=block_id,
+                    block_id=current_id,
                     block_cache=block_cache)
             if block is None:
                 break
@@ -158,7 +160,7 @@ class ConsensusState(object):
             # Try to fetch the consensus state.  If that succeeds, we can
             # stop walking back as we can now build on that consensus
             # state.
-            consensus_state = consensus_state_store.get(block_id=block_id)
+            consensus_state = consensus_state_store.get(block_id=current_id)
             if consensus_state is not None:
                 break
 
@@ -183,30 +185,30 @@ class ConsensusState(object):
 
                 LOGGER.debug(
                     'We need to build consensus state for block: %s...%s',
-                    block_id[:8],
-                    block_id[-8:])
+                    current_id[:8],
+                    current_id[-8:])
 
-                blocks[block_id] = \
+                blocks[current_id] = \
                     ConsensusState._BlockInfo(
                         wait_certificate=wait_certificate,
                         validator_info=validator_info,
-                        poet_config_view=PoetConfigView(state_view))
+                        poet_settings_view=PoetSettingsView(state_view))
 
             # Otherwise, this is a non-PoET block.  If we don't have any blocks
             # yet or the last block we processed was a PoET block, put a
             # placeholder in the list so that when we get to it we know that we
             # need to reset the statistics.
-            elif len(blocks) == 0 or previous_wait_certificate is not None:
-                blocks[block_id] = \
+            elif not blocks or previous_wait_certificate is not None:
+                blocks[current_id] = \
                     ConsensusState._BlockInfo(
                         wait_certificate=None,
                         validator_info=None,
-                        poet_config_view=None)
+                        poet_settings_view=None)
 
             previous_wait_certificate = wait_certificate
 
             # Move to the previous block
-            block_id = block.previous_block_id
+            current_id = block.previous_block_id
 
         # At this point, if we have not found any consensus state, we need to
         # create default state from which we can build upon
@@ -217,7 +219,7 @@ class ConsensusState(object):
         # consensus state, from oldest to newest (i.e., in the reverse order in
         # which they were added), and store state for PoET blocks so that the
         # next time we don't have to walk so far back through the block chain.
-        for block_id, block_info in reversed(blocks.items()):
+        for current_id, block_info in reversed(blocks.items()):
             # If the block was not a PoET block (i.e., didn't have a wait
             # certificate), reset the consensus state statistics.  We are not
             # going to store this in the consensus state store, but we will use
@@ -238,12 +240,12 @@ class ConsensusState(object):
                 consensus_state.validator_did_claim_block(
                     validator_info=block_info.validator_info,
                     wait_certificate=block_info.wait_certificate,
-                    poet_config_view=block_info.poet_config_view)
-                consensus_state_store[block_id] = consensus_state
+                    poet_settings_view=block_info.poet_settings_view)
+                consensus_state_store[current_id] = consensus_state
 
                 LOGGER.debug(
                     'Create consensus state: BID=%s, ALM=%f, TBCC=%d',
-                    block_id[:8],
+                    current_id[:8],
                     consensus_state.aggregate_local_mean,
                     consensus_state.total_block_claim_count)
 
@@ -329,7 +331,7 @@ class ConsensusState(object):
 
     def _build_population_estimate_list(self,
                                         block_id,
-                                        poet_config_view,
+                                        poet_settings_view,
                                         block_cache,
                                         poet_enclave_module):
         """Starting at the block provided, walk back the blocks and collect the
@@ -337,7 +339,7 @@ class ConsensusState(object):
 
         Args:
             block_id (str): The ID of the block to start with
-            poet_config_view (PoetConfigView): The current PoET configuration
+            poet_settings_view (PoetSettingsView): The current PoET settings
                 view
             block_cache (BlockCache): The block store cache
             poet_enclave_module (module): The PoET enclave module
@@ -357,10 +359,10 @@ class ConsensusState(object):
         # Note that since we know the total block claim count from the
         # consensus state object, we don't have to worry about non-PoET blocks.
         # Using that value and the fixed duration block count from the PoET
-        # configuration view, we know now many blocks to get.
+        # settings view, we know now many blocks to get.
         number_of_blocks = \
             self.total_block_claim_count - \
-            poet_config_view.population_estimate_sample_size
+            poet_settings_view.population_estimate_sample_size
         with ConsensusState._population_estimate_cache_lock:
             for _ in range(number_of_blocks):
                 population_cache_entry = \
@@ -373,7 +375,7 @@ class ConsensusState(object):
                             poet_enclave_module=poet_enclave_module)
                     population_estimate = \
                         wait_certificate.population_estimate(
-                            poet_config_view=poet_config_view)
+                            poet_settings_view=poet_settings_view)
                     population_cache_entry = \
                         ConsensusState._EstimateInfo(
                             population_estimate=population_estimate,
@@ -387,7 +389,7 @@ class ConsensusState(object):
 
         return population_estimate_list
 
-    def _compute_population_estimate(self, poet_config_view):
+    def _compute_population_estimate(self, poet_settings_view):
         """Estimates the size of the validator population by computing the
         average wait time and the average local mean used by the winning
         validator.
@@ -408,7 +410,7 @@ class ConsensusState(object):
         http://en.wikipedia.org/wiki/Exponential_distribution
 
         Args:
-            poet_config_view (PoetConfigView): The current PoET configuration
+            poet_settings_view (PoetSettingsView): The current PoET settings
                 view
 
         Returns:
@@ -416,9 +418,9 @@ class ConsensusState(object):
         """
         assert \
             len(self._population_samples) == \
-            poet_config_view.population_estimate_sample_size
+            poet_settings_view.population_estimate_sample_size
 
-        minimum_wait_time = poet_config_view.minimum_wait_time
+        minimum_wait_time = poet_settings_view.minimum_wait_time
         sum_waits = 0
         sum_means = 0
         for population_sample in self._population_samples:
@@ -427,13 +429,13 @@ class ConsensusState(object):
 
         return sum_means / sum_waits
 
-    def compute_local_mean(self, poet_config_view):
+    def compute_local_mean(self, poet_settings_view):
         """Computes the local mean wait time based on either the ratio of
         target to initial wait times (if during the bootstrapping period) or
         the certificate history (once bootstrapping period has passed).
 
         Args:
-            poet_config_view (PoetConfigView): The current PoET configuration
+            poet_settings_view (PoetSettingsView): The current PoET settings
                 view
 
         Returns:
@@ -443,7 +445,7 @@ class ConsensusState(object):
         # one and save it for later.
         if self._local_mean is None:
             population_estimate_sample_size = \
-                poet_config_view.population_estimate_sample_size
+                poet_settings_view.population_estimate_sample_size
 
             # If there have not been enough blocks claimed to satisfy the
             # population estimate sample size, we are still in the
@@ -453,18 +455,20 @@ class ConsensusState(object):
             count = len(self._population_samples)
             if count < population_estimate_sample_size:
                 ratio = 1.0 * count / population_estimate_sample_size
+                target_wait_time = poet_settings_view.target_wait_time
+                initial_wait_time = poet_settings_view.initial_wait_time
                 self._local_mean = \
-                    (poet_config_view.target_wait_time * (1 - ratio ** 2)) + \
-                    (poet_config_view.initial_wait_time * ratio ** 2)
+                    (target_wait_time * (1 - ratio ** 2)) + \
+                    (initial_wait_time * ratio ** 2)
 
             # Otherwise, if we are out of the bootstrapping phase, then we are
             # going to compute the local mean using the target wait time and an
             # estimate of the validator network population size.
             else:
                 self._local_mean = \
-                    poet_config_view.target_wait_time * \
+                    poet_settings_view.target_wait_time * \
                     self._compute_population_estimate(
-                        poet_config_view=poet_config_view)
+                        poet_settings_view=poet_settings_view)
 
         return self._local_mean
 
@@ -497,7 +501,7 @@ class ConsensusState(object):
     def validator_did_claim_block(self,
                                   validator_info,
                                   wait_certificate,
-                                  poet_config_view):
+                                  poet_settings_view):
         """For the validator that is referenced by the validator information
         object, update its state based upon it claiming a block.
 
@@ -505,7 +509,7 @@ class ConsensusState(object):
             validator_info (ValidatorInfo): Information about the validator
             wait_certificate (WaitCertificate): The wait certificate
                 associated with the block being claimed
-            poet_config_view (PoetConfigView): The current PoET configuration
+            poet_settings_view (PoetSettingsView): The current PoET settings
                 view
 
         Returns:
@@ -527,7 +531,7 @@ class ConsensusState(object):
                 duration=wait_certificate.duration,
                 local_mean=wait_certificate.local_mean))
         while len(self._population_samples) > \
-                poet_config_view.population_estimate_sample_size:
+                poet_settings_view.population_estimate_sample_size:
             self._population_samples.popleft()
 
         # We need to fetch the current state for the validator
@@ -570,7 +574,7 @@ class ConsensusState(object):
 
     def validator_signup_was_committed_too_late(self,
                                                 validator_info,
-                                                poet_config_view,
+                                                poet_settings_view,
                                                 block_cache):
         """Determines if a validator's registry transaction committing it
         current PoET keys, etc., was committed too late - i.e., the number of
@@ -579,7 +583,7 @@ class ConsensusState(object):
 
         Args:
             validator_info (ValidatorInfo): The current validator information
-            poet_config_view (PoetConfigView): The current Poet config view
+            poet_settings_view (PoetSettingsView): The current Poet config view
             block_cache (BlockCache): The block store cache
 
         Returns:
@@ -599,8 +603,9 @@ class ConsensusState(object):
         # reached the beginning of the blockchain.  The first case is
         # success (i.e., the validator signup info passed the freshness
         # test) while the other two cases are failure.
-        for _ in range(poet_config_view.signup_commit_maximum_delay + 1):
-            if block.previous_block_id == validator_info.signup_info.nonce:
+        for _ in range(poet_settings_view.signup_commit_maximum_delay + 1):
+            if SignupInfo.block_id_to_nonce(block.previous_block_id) == \
+                    validator_info.signup_info.nonce:
                 LOGGER.debug(
                     'Validator %s (ID=%s...%s): Signup committed block %s, '
                     'chain head was block %s',
@@ -626,29 +631,29 @@ class ConsensusState(object):
 
         LOGGER.error(
             'Validator %s (ID=%s...%s): Signup committed block %s, failed to '
-            'find block %s in %d previous block(s)',
+            'find block with ID ending in %s in %d previous block(s)',
             validator_info.name,
             validator_info.id[:8],
             validator_info.id[-8:],
             commit_block_id[:8],
-            validator_info.signup_info.nonce[:8],
-            poet_config_view.signup_commit_maximum_delay + 1)
+            validator_info.signup_info.nonce,
+            poet_settings_view.signup_commit_maximum_delay + 1)
         return True
 
     def validator_has_claimed_block_limit(self,
                                           validator_info,
-                                          poet_config_view):
+                                          poet_settings_view):
         """Determines if a validator has already claimed the maximum number of
         blocks allowed with its PoET key pair.
         Args:
             validator_info (ValidatorInfo): The current validator information
-            poet_config_view (PoetConfigView): The current Poet config view
+            poet_settings_view (PoetSettingsView): The current Poet config view
         Returns:
             bool: True if the validator has already claimed the maximum
                 number of blocks with its current PoET key pair, False
                 otherwise
         """
-        key_block_claim_limit = poet_config_view.key_block_claim_limit
+        key_block_claim_limit = poet_settings_view.key_block_claim_limit
         validator_state = \
             self.get_validator_state(validator_info=validator_info)
 
@@ -686,7 +691,7 @@ class ConsensusState(object):
                                         validator_info,
                                         block_number,
                                         validator_registry_view,
-                                        poet_config_view,
+                                        poet_settings_view,
                                         block_store):
         """Determines if a validator has tried to claim a block too early
         (i.e, has not waited the required number of blocks between when the
@@ -698,7 +703,7 @@ class ConsensusState(object):
                 validator is attempting to claim
             validator_registry_view (ValidatorRegistry): The current validator
                 registry view
-            poet_config_view (PoetConfigView): The current PoET configuration
+            poet_settings_view (PoetSettingsView): The current PoET settings
                 view
             block_store (BlockStore): The block store
         Returns:
@@ -722,7 +727,7 @@ class ConsensusState(object):
         # able to claim a block.
         number_of_validators = len(validator_registry_view.get_validators())
         block_claim_delay = \
-            min(poet_config_view.block_claim_delay, number_of_validators - 1)
+            min(poet_settings_view.block_claim_delay, number_of_validators - 1)
 
         # While a validator network is starting up, we need to be careful
         # about applying the block claim delay because if we are too
@@ -774,7 +779,7 @@ class ConsensusState(object):
     def validator_is_claiming_too_frequently(self,
                                              validator_info,
                                              previous_block_id,
-                                             poet_config_view,
+                                             poet_settings_view,
                                              population_estimate,
                                              block_cache,
                                              poet_enclave_module):
@@ -787,7 +792,7 @@ class ConsensusState(object):
             previous_block_id (str): The ID of the block that is the immediate
                 predecessor of the block that the validator is attempting to
                 claim
-            poet_config_view (PoetConfigView): The current PoET configuration
+            poet_settings_view (PoetSettingsView): The current PoET settings
                 view
             population_estimate (float): The population estimate for the
                 candidate block
@@ -804,7 +809,7 @@ class ConsensusState(object):
         # mean is calculated as a fixed ratio of the target to initial wait),
         # simply short-circuit the test an allow the block to be claimed.
         if self.total_block_claim_count < \
-                poet_config_view.population_estimate_sample_size:
+                poet_settings_view.population_estimate_sample_size:
             return False
 
         # Build up the population estimate list for the block chain and then
@@ -814,7 +819,7 @@ class ConsensusState(object):
         population_estimate_list = \
             self._build_population_estimate_list(
                 block_id=previous_block_id,
-                poet_config_view=poet_config_view,
+                poet_settings_view=poet_settings_view,
                 block_cache=block_cache,
                 poet_enclave_module=poet_enclave_module)
         population_estimate_list.appendleft(
@@ -826,8 +831,8 @@ class ConsensusState(object):
         observed_wins = 0
         expected_wins = 0
         block_count = 0
-        minimum_win_count = poet_config_view.ztest_minimum_win_count
-        maximum_win_deviation = poet_config_view.ztest_maximum_win_deviation
+        minimum_win_count = poet_settings_view.ztest_minimum_win_count
+        maximum_win_deviation = poet_settings_view.ztest_maximum_win_deviation
 
         # We are now going to compute a "1 sample Z test" for each
         # progressive range of results in the history.  Test the

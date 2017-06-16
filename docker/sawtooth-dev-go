@@ -40,7 +40,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go
+ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go:/project/sawtooth-core/sdk/examples/noop_go:/project/sawtooth-core/families/burrow_evm:/project/sawtooth-core/sdk/examples/xo_go
 
 RUN mkdir /go \
  && go get -u \
@@ -48,9 +48,13 @@ RUN mkdir /go \
     github.com/golang/protobuf/protoc-gen-go \
     github.com/pebbe/zmq4 \
     github.com/brianolson/cbor_go \
-    github.com/satori/go.uuid
+    github.com/satori/go.uuid \
+    github.com/btcsuite/btcd/btcec \
+    gopkg.in/fatih/set.v0 \
+    golang.org/x/crypto/ripemd160 \
+    github.com/jessevdk/go-flags
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
 RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /var/log/sawtooth \

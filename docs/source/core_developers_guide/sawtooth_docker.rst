@@ -9,7 +9,7 @@ Docker is a tool that allows for portable, containerized instances of
 applications. It ensures repeatability and consistency across deployments
 and platforms.
 
-The included Dockerfiles are intended to make working with the Sawtooth Lake
+The included Dockerfiles are intended to make working with the Sawtooth
 platform easy, whether you're a core developer or someone who's just interested
 in trying it out.
 
@@ -22,7 +22,7 @@ The docker subdirectory is structured as follows:
 
  ci/
   sawtooth-all
-  sawtooth-tp_config
+  sawtooth-tp_settings
   sawtooth-tp_intkey_python
   ...
   sawtooth-validator
@@ -35,7 +35,7 @@ The docker subdirectory is structured as follows:
   sawtooth-dev-python
   ...
   sawtooth-int-rest_api
-  sawtooth-int-tp_config
+  sawtooth-int-tp_settings
   ...
 
 

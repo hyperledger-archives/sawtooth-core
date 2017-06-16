@@ -81,9 +81,10 @@ def add_create_parser(subparsers, parent_parser):
 
     parser.add_argument(
         '--wait',
-        action='store_true',
-        default=False,
-        help='wait for this commit before exiting')
+        nargs='?',
+        const=sys.maxsize,
+        type=int,
+        help='wait for game to commit, set an integer to specify a timeout')
 
 
 def add_init_parser(subparsers, parent_parser):
@@ -137,6 +138,16 @@ def create_parent_parser(prog_name):
         '-v', '--verbose',
         action='count',
         help='enable more verbose output')
+
+    parent_parser.add_argument(
+        '--auth-user',
+        type=str,
+        help='username for authentication if REST API is using Basic Auth')
+
+    parent_parser.add_argument(
+        '--auth-password',
+        type=str,
+        help='password for authentication if REST API is using Basic Auth')
 
     return parent_parser
 
@@ -215,17 +226,23 @@ def do_reset(args, config):
 def do_list(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    auth_user, auth_password = _get_auth_info(args)
 
     client = XoClient(base_url=url, keyfile=key_file)
-    game_list = client.list()
+
+    game_list = [
+        game.split(',')
+        for games in client.list(auth_user=auth_user,
+                                 auth_password=auth_password)
+        for game in games.decode().split('|')
+    ]
 
     if game_list is not None:
         fmt = "%-15s %-15.15s %-15.15s %-9s %s"
         print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'BOARD', 'STATE'))
         for game_data in game_list:
 
-            board, game_state, player1, player2, name = \
-                game_data.decode().split(",")
+            name, board, game_state, player1, player2 = game_data
 
             print(fmt % (name, player1[:6], player2[:6], board, game_state))
     else:
@@ -237,14 +254,21 @@ def do_show(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    auth_user, auth_password = _get_auth_info(args)
 
     client = XoClient(base_url=url, keyfile=key_file)
-    game = client.show(name).decode()
 
-    if game is not None:
+    data = client.show(name, auth_user=auth_user, auth_password=auth_password)
 
-        board_str, game_state, player1, player2, name = \
-            game.split(",")
+    if data is not None:
+
+        board_str, game_state, player1, player2 = {
+            name: (board, state, player_1, player_2)
+            for name, board, state, player_1, player_2 in [
+                game.split(',')
+                for game in data.decode().split('|')
+            ]
+        }[name]
 
         board = list(board_str.replace("-", " "))
 
@@ -269,10 +293,20 @@ def do_create(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url,
-                      keyfile=key_file)
-    response = client.create(name)
+    client = XoClient(base_url=url, keyfile=key_file)
+
+    if args.wait and args.wait > 0:
+        response = client.create(
+            name, wait=args.wait,
+            auth_user=auth_user,
+            auth_password=auth_password)
+    else:
+        response = client.create(
+            name, auth_user=auth_user,
+            auth_password=auth_password)
+
     print("Response: {}".format(response))
 
 
@@ -282,10 +316,15 @@ def do_take(args, config):
 
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
+    auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url,
-                      keyfile=key_file)
-    response = client.take(name, space)
+    client = XoClient(base_url=url, keyfile=key_file)
+
+    response = client.take(
+        name, space,
+        auth_user=auth_user,
+        auth_password=auth_password)
+
     print("Response: {}".format(response))
 
 
@@ -297,7 +336,7 @@ def load_config():
     key_dir = os.path.join(home, ".sawtooth", "keys")
 
     config = configparser.ConfigParser()
-    config.set('DEFAULT', 'url', '127.0.0.1:8080')
+    config.set('DEFAULT', 'url', 'http://127.0.0.1:8080')
     config.set('DEFAULT', 'key_dir', key_dir)
     config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.priv')
     config.set('DEFAULT', 'username', real_user)
@@ -322,7 +361,18 @@ def save_config(config):
     os.rename("{}.new".format(config_file), config_file)
 
 
-def main(prog_name=os.path.basename(sys.argv[0]), args=sys.argv[1:]):
+def _get_auth_info(args):
+    auth_user = args.auth_user
+    auth_password = args.auth_password
+    if auth_user is not None and auth_password is None:
+        auth_password = getpass.getpass(prompt="Auth Password: ")
+
+    return auth_user, auth_password
+
+
+def main(prog_name=os.path.basename(sys.argv[0]), args=None):
+    if args is None:
+        args = sys.argv[1:]
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
 

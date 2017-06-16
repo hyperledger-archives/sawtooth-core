@@ -46,6 +46,6 @@ RUN cd /debs \
 RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-poet-families
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
-CMD ["tp_validator_registry", "tcp://validator:40000"]
+CMD ["tp_validator_registry", "tcp://validator:4004"]

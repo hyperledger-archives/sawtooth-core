@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import hashlib
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
@@ -38,78 +39,75 @@ from sawtooth_validator.protobuf.validator_pb2 import Message
 LOGGER = logging.getLogger(__name__)
 
 
-def validate_block(block):
+def is_valid_block(block):
     # validate block signature
     header = BlockHeader()
     header.ParseFromString(block.header)
-    valid = signing.verify(block.header,
-                           block.header_signature,
-                           header.signer_pubkey)
+
+    if not signing.verify(block.header,
+                          block.header_signature,
+                          header.signer_pubkey):
+        LOGGER.debug("block failed signature validation: %s",
+                     block.header_signature)
+        return False
 
     # validate all batches in block. These are not all batches in the
     # batch_ids stored in the block header, only those sent with the block.
-    total = len(block.batches)
-    index = 0
-    while valid and index < total:
-        valid = validate_batch(block.batches[index])
-        index += 1
+    if not all(map(is_valid_batch, block.batches)):
+        return False
 
-    return valid
+    return True
 
 
-def validate_batches(batches):
-    valid = False
-    for batch in batches:
-        valid = validate_batch(batch)
-        if valid is False:
-            break
-    return valid
-
-
-def validate_batch(batch):
+def is_valid_batch(batch):
     # validate batch signature
     header = BatchHeader()
     header.ParseFromString(batch.header)
-    valid = signing.verify(batch.header,
-                           batch.header_signature,
-                           header.signer_pubkey)
 
-    if not valid:
+    if not signing.verify(batch.header,
+                          batch.header_signature,
+                          header.signer_pubkey):
         LOGGER.debug("batch failed signature validation: %s",
                      batch.header_signature)
+        return False
 
     # validate all transactions in batch
-    total = len(batch.transactions)
-    index = 0
-    while valid and index < total:
-        txn = batch.transactions[index]
-        valid = validate_transaction(txn)
-        if valid:
-            txn_header = TransactionHeader()
-            txn_header.ParseFromString(txn.header)
-            if txn_header.batcher_pubkey != header.signer_pubkey:
-                LOGGER.debug("txn batcher pubkey does not match signer"
-                             "pubkey for batch: %s txn: %s",
-                             batch.header_signature,
-                             txn.header_signature)
-                valid = False
-        index += 1
+    for txn in batch.transactions:
+        if not is_valid_transaction(txn):
+            return False
 
-    return valid
+        txn_header = TransactionHeader()
+        txn_header.ParseFromString(txn.header)
+        if txn_header.batcher_pubkey != header.signer_pubkey:
+            LOGGER.debug("txn batcher pubkey does not match signer"
+                         "pubkey for batch: %s txn: %s",
+                         batch.header_signature,
+                         txn.header_signature)
+            return False
+
+    return True
 
 
-def validate_transaction(txn):
+def is_valid_transaction(txn):
     # validate transactions signature
     header = TransactionHeader()
     header.ParseFromString(txn.header)
-    valid = signing.verify(txn.header,
-                           txn.header_signature,
-                           header.signer_pubkey)
 
-    if not valid:
+    if not signing.verify(txn.header,
+                          txn.header_signature,
+                          header.signer_pubkey):
         LOGGER.debug("transaction signature invalid for txn: %s",
                      txn.header_signature)
-    return valid
+        return False
+
+    # verify the payload field matches the header
+    txn_payload_sha512 = hashlib.sha512(txn.payload).hexdigest()
+    if txn_payload_sha512 != header.payload_sha512:
+        LOGGER.debug("payload doesn't match payload_sha512 of the header"
+                     "for txn: %s", txn.header_signature)
+        return False
+
+    return True
 
 
 class GossipMessageSignatureVerifier(Handler):
@@ -120,45 +118,43 @@ class GossipMessageSignatureVerifier(Handler):
         if gossip_message.content_type == "BLOCK":
             block = Block()
             block.ParseFromString(gossip_message.content)
-            status = validate_block(block)
-            if status is True:
-                LOGGER.debug("block passes signature verification %s",
+            if not is_valid_block(block):
+                LOGGER.debug("block signature is invalid: %s",
                              block.header_signature)
-                return HandlerResult(status=HandlerStatus.PASS)
+                return HandlerResult(status=HandlerStatus.DROP)
 
-            LOGGER.debug("block signature is invalid: %s",
+            LOGGER.debug("block passes signature verification %s",
                          block.header_signature)
-            return HandlerResult(status=HandlerStatus.DROP)
+            return HandlerResult(status=HandlerStatus.PASS)
         elif gossip_message.content_type == "BATCH":
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
-            status = validate_batch(batch)
-            if status is True:
-                LOGGER.debug("batch passes signature verification %s",
+            if not is_valid_batch(batch):
+                LOGGER.debug("batch signature is invalid: %s",
                              batch.header_signature)
-                return HandlerResult(status=HandlerStatus.PASS)
-            LOGGER.debug("batch signature is invalid: %s",
+                return HandlerResult(status=HandlerStatus.DROP)
+
+            LOGGER.debug("batch passes signature verification %s",
                          batch.header_signature)
-            return HandlerResult(status=HandlerStatus.DROP)
+            return HandlerResult(status=HandlerStatus.PASS)
+
+        return HandlerResult(status=HandlerStatus.PASS)
 
 
 class GossipBlockResponseSignatureVerifier(Handler):
     def handle(self, connection_id, message_content):
         block_response_message = GossipBlockResponse()
         block_response_message.ParseFromString(message_content)
-
         block = Block()
         block.ParseFromString(block_response_message.content)
-        status = validate_block(block)
-
-        if status is True:
-            LOGGER.debug("requested block passes signature verification %s",
-                         block.header_signature)
-            return HandlerResult(status=HandlerStatus.PASS)
-        else:
+        if not is_valid_block(block):
             LOGGER.debug("requested block's signature is invalid: %s",
                          block.header_signature)
             return HandlerResult(status=HandlerStatus.DROP)
+
+        LOGGER.debug("requested block passes signature verification %s",
+                     block.header_signature)
+        return HandlerResult(status=HandlerStatus.PASS)
 
 
 class GossipBatchResponseSignatureVerifier(Handler):
@@ -168,16 +164,14 @@ class GossipBatchResponseSignatureVerifier(Handler):
 
         batch = Batch()
         batch.ParseFromString(batch_response_message.content)
-        status = validate_batch(batch)
-
-        if status is True:
-            LOGGER.debug("requested batch passes signature verification %s",
-                         batch.header_signature)
-            return HandlerResult(status=HandlerStatus.PASS)
-        else:
+        if not is_valid_batch(batch):
             LOGGER.debug("requested batch's signature is invalid: %s",
                          batch.header_signature)
             return HandlerResult(status=HandlerStatus.DROP)
+
+        LOGGER.debug("requested batch passes signature verification %s",
+                     batch.header_signature)
+        return HandlerResult(status=HandlerStatus.PASS)
 
 
 class BatchListSignatureVerifier(Handler):
@@ -193,11 +187,10 @@ class BatchListSignatureVerifier(Handler):
         try:
             request = client_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)
-            status = validate_batches(request.batches)
         except DecodeError:
             return make_response(response_proto.INTERNAL_ERROR)
 
-        if status is not True:
+        if not all(map(is_valid_batch, request.batches)):
             return make_response(response_proto.INVALID_BATCH)
 
         return HandlerResult(status=HandlerStatus.PASS)

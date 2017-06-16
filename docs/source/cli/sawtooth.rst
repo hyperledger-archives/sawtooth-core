@@ -112,6 +112,20 @@ sawtooth batch show
    :language: console
    :linenos:
 
+sawtooth batch status
+=====================
+
+.. literalinclude:: output/sawtooth_batch_status_usage.out
+   :language: console
+   :linenos:
+
+sawtooth batch submit
+=====================
+
+.. literalinclude:: output/sawtooth_batch_submit_usage.out
+   :language: console
+   :linenos:
+
 sawtooth block
 ==============
 
@@ -130,48 +144,6 @@ sawtooth block show
 ===================
 
 .. literalinclude:: output/sawtooth_block_show_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster
-================
-
-.. literalinclude:: output/sawtooth_cluster_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster extend
-=======================
-
-.. literalinclude:: output/sawtooth_cluster_extend_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster logs
-=====================
-
-.. literalinclude:: output/sawtooth_cluster_logs_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster start
-======================
-
-.. literalinclude:: output/sawtooth_cluster_start_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster status
-=======================
-
-.. literalinclude:: output/sawtooth_cluster_status_usage.out
-   :language: console
-   :linenos:
-
-sawtooth cluster stop
-=====================
-
-.. literalinclude:: output/sawtooth_cluster_stop_usage.out
    :language: console
    :linenos:
 
@@ -249,13 +221,6 @@ sawtooth state show
 ===================
 
 .. literalinclude:: output/sawtooth_state_show_usage.out
-   :language: console
-   :linenos:
-
-sawtooth submit
-===============
-
-.. literalinclude:: output/sawtooth_submit_usage.out
    :language: console
    :linenos:
 

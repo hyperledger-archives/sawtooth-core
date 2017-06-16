@@ -153,7 +153,7 @@ class MerkleDatabase(object):
             parent_address = path[:-TOKEN_SIZE]
             path_branch = path[-TOKEN_SIZE:]
 
-            if len(path_map[path]['c']) > 0 or path == '':
+            if path_map[path]['c'] or path == '':
                 leaf_branch = False
 
             if not leaf_branch:
@@ -237,10 +237,7 @@ class MerkleDatabase(object):
 
     def _get_kv(self, key):
         packed = self._database.get(key)
-        if packed is not None:
-            return self._decode(packed)
-        else:
-            return None
+        return self._decode(packed) if packed is not None else None
 
     def _set_kv(self, value):
         packed = self._encode(value)

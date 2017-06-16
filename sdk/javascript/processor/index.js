@@ -23,6 +23,7 @@ const {
   TpUnregisterRequest,
   TpProcessRequest,
   TpProcessResponse,
+  TpPingResponse,
   TransactionHeader,
   Message
 } = require('../protobuf')
@@ -51,6 +52,14 @@ class TransactionProcessor {
     this._stream.connect(() => {
       this._stream.onReceive(message => {
         if (message.messageType !== Message.MessageType.TP_PROCESS_REQUEST) {
+          if (message.messageType == Message.MessageType.TP_PING){
+            console.log(`Received TpPing`)
+            let pingResponse = TpPingResponse.create({status: TpPingResponse.Status.OK})
+            this._stream.sendBack(Message.MessageType.TP_PING_RESPONSE,
+                                  message.correlationId,
+                                  TpPingResponse.encode(pingResponse).finish())
+            return
+          }
           console.log(`Ignoring ${Message.MessageType.stringValue(message.messageType)}`)
           return
         }
@@ -75,19 +84,24 @@ class TransactionProcessor {
                 if (e instanceof InvalidTransaction) {
                   console.log(e)
                   return TpProcessResponse.create({
-                    status: TpProcessResponse.Status.INVALID_TRANSACTION
+                    status: TpProcessResponse.Status.INVALID_TRANSACTION,
+                    message: e.message,
+                    extendedData: e.extendedData
                   })
                 } else if (e instanceof InternalError) {
                   console.log('Internal Error Occurred', e)
                   return TpProcessResponse.create({
-                    status: TpProcessResponse.Status.INTERNAL_ERROR
+                    status: TpProcessResponse.Status.INTERNAL_ERROR,
+                    message: e.message,
+                    extendedData: e.extendedData
                   })
                 } else if (e instanceof ValidatorConnectionError) {
                   console.log('Validator disconnected.  Ignoring.')
                 } else {
                   console.log('Unhandled exception, returning INTERNAL_ERROR', e)
                   return TpProcessResponse.create({
-                    status: TpProcessResponse.Status.INTERNAL_ERROR
+                    status: TpProcessResponse.Status.INTERNAL_ERROR,
+                    message: `Unhandled exception in ${txnHeader.familyName} ${txnHeader.familyVersion}`
                   })
                 }
               })

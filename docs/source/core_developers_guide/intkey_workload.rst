@@ -5,7 +5,7 @@ The Workload Generator
 Overview
 --------
 
-Sawtooth Lake has a workload generator that can be used to generate a
+Sawtooth has a workload generator that can be used to generate a
 synthetic transaction workload.  The workload generator attempts to generate
 transactions at a relatively steady rate across the network of validators that
 are specified. In its simplest form, the workload generator is started as
@@ -14,7 +14,7 @@ follows:
 .. code-block:: console
 
     $ cd /project/sawtooth-core
-    $ ./bin/intkey workload --urls tcp://127.0.0.1:40000 --rate 1 -d 5
+    $ ./bin/intkey workload --urls tcp://127.0.0.1:4004 --rate 1 -d 5
     [21:09:15 WARNING workload_generator] Transaction submission rate for last sample period is 0.80 tps
     [21:09:15 WARNING workload_generator] Transaction commit rate for last sample period is 0.60 tps
     [21:09:15 WARNING workload_generator] Transaction submission rate for last 1 sample(s) is 0.80 tps
@@ -58,4 +58,4 @@ The default batch rate, if it is not specified, is 10 batches per second.
 
 The default display refresh frequency is 30 seconds.
 
-The default url to connect to is `tcp://127.0.0.1:40000`.
+The default url to connect to is `tcp://127.0.0.1:4004`.

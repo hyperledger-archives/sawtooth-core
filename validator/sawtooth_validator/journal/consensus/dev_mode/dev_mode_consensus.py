@@ -26,7 +26,7 @@ from sawtooth_validator.journal.consensus.consensus\
 from sawtooth_validator.journal.consensus.consensus\
     import ForkResolverInterface
 
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
 
@@ -83,12 +83,12 @@ class BlockPublisher(BlockPublisherInterface):
                 self._block_cache.block_store.chain_head,
                 self._state_view_factory)
 
-        config_view = ConfigView(state_view)
-        self._min_wait_time = config_view.get_setting(
+        settings_view = SettingsView(state_view)
+        self._min_wait_time = settings_view.get_setting(
             "sawtooth.consensus.min_wait_time", self._min_wait_time, int)
-        self._max_wait_time = config_view.get_setting(
+        self._max_wait_time = settings_view.get_setting(
             "sawtooth.consensus.max_wait_time", self._max_wait_time, int)
-        self._valid_block_publishers = config_view.get_setting(
+        self._valid_block_publishers = settings_view.get_setting(
             "sawtooth.consensus.valid_block_publishers",
             self._valid_block_publishers,
             list)
@@ -140,6 +140,7 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """DevMode BlockVerifier implementation
     """
+    # pylint: disable=useless-super-delegation
     def __init__(self,
                  block_cache,
                  state_view_factory,
@@ -161,6 +162,7 @@ class ForkResolver(ForkResolverInterface):
     """Provides the fork resolution interface for the BlockValidator to use
     when deciding between 2 forks.
     """
+    # pylint: disable=useless-super-delegation
     def __init__(self,
                  block_cache,
                  state_view_factory,
@@ -231,7 +233,9 @@ class ForkResolver(ForkResolverInterface):
                 new_fork_head.header.signer_pubkey,
                 new_fork_head.header.previous_block_id)
 
-            return new_fork_hash < cur_fork_hash
+            result = new_fork_hash < cur_fork_hash
 
         else:
-            return new_fork_head.block_num > cur_fork_head.block_num
+            result = new_fork_head.block_num > cur_fork_head.block_num
+
+        return result

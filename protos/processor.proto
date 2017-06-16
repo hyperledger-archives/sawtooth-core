@@ -92,4 +92,25 @@ message TpProcessResponse {
     }
 
     Status status = 1;
+
+    // A message to include on responses in the cases where
+    // status is either INVALID_TRANSACTION or INTERNAL_ERROR
+    string message = 2;
+
+    // Information that may be included with the response.
+    // This information is an opaque, application-specific encoded block of
+    // data that will be propagated back to the transaction submitter.
+    bytes extended_data = 3;
+}
+
+message TpPing {
+}
+
+message TpPingResponse {
+    enum Status {
+        OK = 0;
+        ERROR = 1;
+    }
+
+    Status status = 1;
 }

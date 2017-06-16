@@ -21,17 +21,17 @@ from sawtooth_cli.admin_command.keygen import do_keygen
 
 
 def do_admin(args):
-    if args.admin_cmd == 'genesis':
+    if args.subcommand == 'genesis':
         do_genesis(args)
-    elif args.admin_cmd == 'keygen':
+    elif args.subcommand == 'keygen':
         do_keygen(args)
     else:
-        raise AssertionError("invalid command: {}".format(args.admin_cmd))
+        raise AssertionError("invalid command: {}".format(args.subcommand))
 
 
 def add_admin_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('admin', parents=[parent_parser])
-    admin_sub = parser.add_subparsers(title='admin_commands', dest='admin_cmd')
+    admin_sub = parser.add_subparsers(title='subcommands', dest='subcommand')
     admin_sub.required = True
     add_genesis_parser(admin_sub, parent_parser)
     add_keygen_parser(admin_sub, parent_parser)

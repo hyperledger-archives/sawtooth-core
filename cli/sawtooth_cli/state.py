@@ -18,10 +18,12 @@ from base64 import b64decode
 from sawtooth_cli import format_utils as fmt
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
+from sawtooth_cli.parent_parsers import base_http_parser
+from sawtooth_cli.parent_parsers import base_list_parser
 
 
 def add_state_parser(subparsers, parent_parser):
-    """Adds arguments parsers for the batch list and batch show commands
+    """Adds arguments parsers for the state list and state show commands
 
         Args:
             subparsers: Add parsers to this subparser object
@@ -32,13 +34,14 @@ def add_state_parser(subparsers, parent_parser):
     grand_parsers = parser.add_subparsers(title='grandchildcommands',
                                           dest='subcommand')
     grand_parsers.required = True
+
     epilog = '''details:
         Lists state in the form of leaves from the merkle tree. List can be
     narrowed using the address of a subtree.
     '''
-
     list_parser = grand_parsers.add_parser(
         'list', epilog=epilog,
+        parents=[base_http_parser(), base_list_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
     list_parser.add_argument(
         'subtree',
@@ -47,35 +50,21 @@ def add_state_parser(subparsers, parent_parser):
         default=None,
         help='the address of a subtree to filter list by')
     list_parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of the validator's REST API")
-    list_parser.add_argument(
         '--head',
         action='store',
         default=None,
         help='the id of the block to set as the chain head')
-    list_parser.add_argument(
-        '-F', '--format',
-        action='store',
-        default='default',
-        choices=['csv', 'json', 'yaml', 'default'],
-        help='the format of the output, options: csv, json or yaml')
 
     epilog = '''details:
         Shows the data for a single leaf on the merkle tree.
     '''
     show_parser = grand_parsers.add_parser(
-        'show', epilog=epilog,
+        'show', epilog=epilog, parents=[base_http_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
     show_parser.add_argument(
         'address',
         type=str,
         help='the address of the leaf')
-    show_parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of the validator's REST API")
     show_parser.add_argument(
         '--head',
         action='store',
@@ -89,7 +78,7 @@ def do_state(args):
         Args:
             args: The parsed arguments sent to the command at runtime
     """
-    rest_client = RestClient(args.url)
+    rest_client = RestClient(args.url, args.user)
 
     if args.subcommand == 'list':
         response = rest_client.list_state(args.subtree, args.head)

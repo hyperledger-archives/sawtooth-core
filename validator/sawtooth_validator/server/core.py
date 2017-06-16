@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import ProcessPoolExecutor
 import hashlib
 import logging
 import os
@@ -40,6 +39,7 @@ from sawtooth_validator.journal.completer import \
 from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
 from sawtooth_validator.journal.completer import Completer
+from sawtooth_validator.gossip import structure_verifier
 from sawtooth_validator.journal.responder import Responder
 from sawtooth_validator.journal.responder import BlockResponderHandler
 from sawtooth_validator.journal.responder import ResponderBlockResponseHandler
@@ -52,7 +52,7 @@ from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
-from sawtooth_validator.state.config_view import ConfigViewFactory
+from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaAddSubscriberHandler
@@ -60,9 +60,13 @@ from sawtooth_validator.state.state_delta_processor import \
     StateDeltaSubscriberValidationHandler
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaUnsubscriberHandler
+from sawtooth_validator.state.state_delta_processor import \
+    GetStateDeltaEventsHandler
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
+from sawtooth_validator.gossip.permission_verifier import \
+    BatchListPermissionVerifier
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
@@ -84,15 +88,17 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Validator(object):
-    def __init__(self, network_endpoint, component_endpoint, public_uri,
-                 peering, join_list, peer_list, data_dir, config_dir,
-                 identity_signing_key, scheduler_type):
+
+    def __init__(self, bind_network, bind_component, endpoint,
+                 peering, seeds_list, peer_list, data_dir, config_dir,
+                 identity_signing_key, scheduler_type, network_public_key=None,
+                 network_private_key=None):
         """Constructs a validator instance.
 
         Args:
-            network_endpoint (str): the network endpoint
-            component_endpoint (str): the component endpoint
-            public_uri (str): the zmq-style URI of this validator's
+            bind_network (str): the network endpoint
+            bind_component (str): the component endpoint
+            endpoint (str): the zmq-style URI of this validator's
                 publically reachable endpoint
             peering (str): The type of peering approach. Either 'static'
                 or 'dynamic'. In 'static' mode, no attempted topology
@@ -102,9 +108,9 @@ class Validator(object):
                 attempt to initiate peering connections with endpoints
                 specified in the peer_list and then attempt to do a
                 topology buildout starting with peer lists obtained from
-                endpoints in the join_list. In either mode, the validator
+                endpoints in the seeds_list. In either mode, the validator
                 will accept incoming peer requests up to max_peers.
-            join_list (list of str): a list of addresses to connect
+            seeds_list (list of str): a list of addresses to connect
                 to in order to perform the initial topology buildout
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
@@ -113,14 +119,14 @@ class Validator(object):
         """
         db_filename = os.path.join(data_dir,
                                    'merkle-{}.lmdb'.format(
-                                       network_endpoint[-2:]))
+                                       bind_network[-2:]))
         LOGGER.debug('database file is %s', db_filename)
 
         merkle_db = LMDBNoLockDatabase(db_filename, 'c')
 
         delta_db_filename = os.path.join(data_dir,
                                          'state-deltas-{}.lmdb'.format(
-                                             network_endpoint[-2:]))
+                                             bind_network[-2:]))
         LOGGER.debug('state delta store file is %s', delta_db_filename)
         state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
 
@@ -132,7 +138,7 @@ class Validator(object):
         state_view_factory = StateViewFactory(merkle_db)
 
         block_db_filename = os.path.join(data_dir, 'block-{}.lmdb'.format(
-                                         network_endpoint[-2:]))
+                                         bind_network[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
 
         block_db = LMDBNoLockDatabase(block_db_filename, 'c')
@@ -142,16 +148,17 @@ class Validator(object):
         self._dispatcher = Dispatcher()
 
         thread_pool = ThreadPoolExecutor(max_workers=10)
-        process_pool = ProcessPoolExecutor(max_workers=3)
+        sig_pool = ThreadPoolExecutor(max_workers=3)
 
         self._thread_pool = thread_pool
-        self._process_pool = process_pool
+        self._sig_pool = sig_pool
 
-        self._service = Interconnect(component_endpoint,
+        self._service = Interconnect(bind_component,
                                      self._dispatcher,
                                      secured=False,
                                      heartbeat=False,
-                                     max_incoming_connections=20)
+                                     max_incoming_connections=20,
+                                     monitor=True)
 
         config_file = os.path.join(config_dir, "validator.toml")
 
@@ -164,12 +171,15 @@ class Validator(object):
         if scheduler_type is None:
             scheduler_type = validator_config.get("scheduler", "serial")
 
-        executor = TransactionExecutor(service=self._service,
-                                       context_manager=context_manager,
-                                       config_view_factory=ConfigViewFactory(
-                                           StateViewFactory(merkle_db)),
-                                       scheduler_type=scheduler_type)
+        executor = TransactionExecutor(
+            service=self._service,
+            context_manager=context_manager,
+            settings_view_factory=SettingsViewFactory(
+                StateViewFactory(merkle_db)),
+            scheduler_type=scheduler_type)
+
         self._executor = executor
+        self._service.set_check_connections(executor.check_connections)
 
         state_delta_processor = StateDeltaProcessor(self._service,
                                                     state_delta_store,
@@ -183,30 +193,26 @@ class Validator(object):
 
         self._network_dispatcher = Dispatcher()
 
-        # Server public and private keys are hardcoded here due to
-        # the decision to avoid having separate identities for each
-        # validator's server socket. This is appropriate for a public
-        # network. For a permissioned network with requirements for
-        # server endpoint authentication at the network level, this can
-        # be augmented with a local lookup service for side-band provided
-        # endpoint, public_key pairs and a local configuration option
-        # for 'server' side private keys.
+        secure = False
+        if network_public_key is not None and network_private_key is not None:
+            secure = True
+
         self._network = Interconnect(
-            network_endpoint,
+            bind_network,
             dispatcher=self._network_dispatcher,
             zmq_identity=zmq_identity,
-            secured=True,
-            server_public_key=b'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)',
-            server_private_key=b'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*',
+            secured=secure,
+            server_public_key=network_public_key,
+            server_private_key=network_private_key,
             heartbeat=True,
-            public_uri=public_uri,
+            public_endpoint=endpoint,
             connection_timeout=30,
             max_incoming_connections=100)
 
         self._gossip = Gossip(self._network,
-                              public_uri=public_uri,
+                              endpoint=endpoint,
                               peering_mode=peering,
-                              initial_join_endpoints=join_list,
+                              initial_seed_endpoints=seeds_list,
                               initial_peer_endpoints=peer_list,
                               minimum_peer_connectivity=3,
                               maximum_peer_connectivity=10,
@@ -320,9 +326,15 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             signature_verifier.GossipMessageSignatureVerifier(),
-            process_pool)
+            sig_pool)
 
-        # GOSSIP_MESSAGE 3) Determines if we should broadcast the
+        # GOSSIP_MESSAGE 3) Verifies batch structure
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            structure_verifier.GossipHandlerStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_MESSAGE 4) Determines if we should broadcast the
         # message to our peers. It is important that this occur prior
         # to the sending of the message to the completer, as this step
         # relies on whether the  gossip message has previously been
@@ -335,7 +347,7 @@ class Validator(object):
                 completer=completer),
             network_thread_pool)
 
-        # GOSSIP_MESSAGE 4) Send message to completer
+        # GOSSIP_MESSAGE 5) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             CompleterGossipHandler(
@@ -357,9 +369,15 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             signature_verifier.GossipBlockResponseSignatureVerifier(),
-            process_pool)
+            sig_pool)
 
-        # GOSSIP_BLOCK_RESPONSE 3) Send message to completer
+        # GOSSIP_BLOCK_RESPONSE 3) Check batch structure
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+            structure_verifier.GossipBlockResponseStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_BLOCK_RESPONSE 4) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             CompleterGossipBlockResponseHandler(
@@ -391,9 +409,15 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
             signature_verifier.GossipBatchResponseSignatureVerifier(),
-            process_pool)
+            sig_pool)
 
-        # GOSSIP_BATCH_RESPONSE 3) Send message to completer
+        # GOSSIP_BATCH_RESPONSE 3) Check batch structure
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+            structure_verifier.GossipBatchResponseStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_BATCH_RESPONSE 4) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
             CompleterGossipBatchResponseHandler(
@@ -407,8 +431,22 @@ class Validator(object):
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            BatchListPermissionVerifier(
+                settings_view_factory=SettingsViewFactory(
+                    StateViewFactory(merkle_db)),
+                current_root_func=self._journal.get_current_root,
+            ),
+            sig_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             signature_verifier.BatchListSignatureVerifier(),
-            process_pool)
+            sig_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
+            structure_verifier.BatchListStructureVerifier(),
+            network_thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
@@ -497,6 +535,11 @@ class Validator(object):
             StateDeltaUnsubscriberHandler(state_delta_processor),
             thread_pool)
 
+        self._dispatcher.add_handler(
+            validator_pb2.Message.STATE_DELTA_GET_EVENTS_REQUEST,
+            GetStateDeltaEventsHandler(block_store, state_delta_store),
+            thread_pool)
+
     def start(self):
         self._dispatcher.start()
         self._service.start()
@@ -529,9 +572,9 @@ class Validator(object):
 
         self._service.stop()
 
-        self._process_pool.shutdown(wait=True)
         self._network_thread_pool.shutdown(wait=True)
         self._thread_pool.shutdown(wait=True)
+        self._sig_pool.shutdown(wait=True)
 
         self._executor.stop()
         self._context_manager.stop()
@@ -544,7 +587,7 @@ class Validator(object):
         # a sys.exit() or exit of main().
         threads.remove(threading.current_thread())
 
-        while len(threads) > 0:
+        while threads:
             if len(threads) < 4:
                 LOGGER.info(
                     "remaining threads: %s",
@@ -555,7 +598,7 @@ class Validator(object):
                 if not t.is_alive():
                     t.join()
                     threads.remove(t)
-                if len(threads) > 0:
+                if threads:
                     time.sleep(1)
 
         LOGGER.info("All threads have been stopped and joined")

@@ -37,7 +37,8 @@ def get_default_path_config():
             log_dir=os.path.join(home_dir, 'logs'),
             data_dir=os.path.join(home_dir, 'data'),
             key_dir=os.path.join(home_dir, 'keys'))
-    elif os.name == 'nt':
+
+    if os.name == 'nt':
         # Paths appropriate for Windows.
         base_dir = \
             os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -46,13 +47,13 @@ def get_default_path_config():
             log_dir=os.path.join(base_dir, 'logs'),
             data_dir=os.path.join(base_dir, 'data'),
             key_dir=os.path.join(base_dir, 'conf', 'keys'))
-    else:
-        # Paths appropriate for modern Linux distributions.
-        return PathConfig(
-            config_dir='/etc/sawtooth',
-            log_dir='/var/log/sawtooth',
-            data_dir='/var/lib/sawtooth',
-            key_dir='/etc/sawtooth/keys')
+
+    # Paths appropriate for modern Linux distributions.
+    return PathConfig(
+        config_dir='/etc/sawtooth',
+        log_dir='/var/log/sawtooth',
+        data_dir='/var/lib/sawtooth',
+        key_dir='/etc/sawtooth/keys')
 
 
 def load_toml_path_config(filename):
@@ -78,7 +79,7 @@ def load_toml_path_config(filename):
 
     invalid_keys = set(toml_config.keys()).difference(
         ['data_dir', 'key_dir', 'log_dir'])
-    if len(invalid_keys) > 0:
+    if invalid_keys:
         raise LocalConfigurationError("Invalid keys in path config: {}".format(
             ", ".join(sorted(list(invalid_keys)))))
 
@@ -179,4 +180,4 @@ class PathConfig:
         ])
 
     def to_toml_string(self):
-        return toml.dumps(self.to_dict()).strip().split('\n')
+        return str(toml.dumps(self.to_dict())).strip().split('\n')

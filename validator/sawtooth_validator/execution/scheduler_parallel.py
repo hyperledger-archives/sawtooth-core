@@ -35,11 +35,11 @@ class PredecessorTreeNode:
     def __repr__(self):
         retval = {}
 
-        if len(self.readers) > 0:
+        if self.readers:
             retval['readers'] = self.readers
         if self.writer is not None:
             retval['writer'] = self.writer
-        if len(self.children) > 0:
+        if self.children:
             retval['children'] = \
                 {k: literal_eval(repr(v)) for k, v in self.children.items()}
 
@@ -164,7 +164,7 @@ class PredecessorTree:
 
         to_process = deque()
         to_process.extendleft(node.children.values())
-        while len(to_process) > 0:
+        while to_process:
             node = to_process.pop()
             predecessors.update(node.readers)
             if node.writer is not None:
@@ -238,7 +238,7 @@ class PredecessorTree:
 
         to_process = deque()
         to_process.extendleft(node.children.values())
-        while len(to_process) > 0:
+        while to_process:
             node = to_process.pop()
             if node.writer is not None:
                 predecessors.add(node.writer)
@@ -403,7 +403,8 @@ class ParallelScheduler(Scheduler):
                     last_state_hash = \
                         self._batch_results[prev_batch].state_hash
 
-            state_hash = self._squash(last_state_hash, contexts, persist=True)
+            state_hash = self._squash(last_state_hash, contexts, persist=True,
+                                      clean_up=False)
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
 
     def set_transaction_execution_result(

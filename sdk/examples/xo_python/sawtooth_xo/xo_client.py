@@ -15,6 +15,7 @@
 
 import hashlib
 import base64
+from base64 import b64encode
 import time
 import requests
 import yaml
@@ -48,16 +49,24 @@ class XoClient:
 
         self._public_key = signing.generate_pubkey(self._private_key)
 
-    def create(self, name):
-        return self._send_xo_txn(name, "create")
+    def create(self, name, wait=None, auth_user=None, auth_password=None):
+        return self._send_xo_txn(name, "create", wait=wait,
+                                 auth_user=auth_user,
+                                 auth_password=auth_password)
 
-    def take(self, name, space):
-        return self._send_xo_txn(name, "take", space)
+    def take(self, name, space, auth_user=None, auth_password=None):
+        return self._send_xo_txn(name, "take", space,
+                                 auth_user=auth_user,
+                                 auth_password=auth_password)
 
-    def list(self):
+    def list(self, auth_user=None, auth_password=None):
         xo_prefix = self._get_prefix()
 
-        result = self._send_request("state?address={}".format(xo_prefix))
+        result = self._send_request(
+            "state?address={}".format(xo_prefix),
+            auth_user=auth_user,
+            auth_password=auth_password
+        )
 
         try:
             encoded_entries = yaml.safe_load(result)["data"]
@@ -69,39 +78,64 @@ class XoClient:
         except BaseException:
             return None
 
-    def show(self, name):
+    def show(self, name, auth_user=None, auth_password=None):
         address = self._get_address(name)
 
-        result = self._send_request("state/{}".format(address))
-
+        result = self._send_request("state/{}".format(address), name=name,
+                                    auth_user=auth_user,
+                                    auth_password=auth_password)
         try:
             return base64.b64decode(yaml.safe_load(result)["data"])
 
         except BaseException:
             return None
 
+    def _get_status(self, batch_id, wait, auth_user=None, auth_password=None):
+        try:
+            result = self._send_request(
+                'batch_status?id={}&wait={}'.format(batch_id, wait),
+                auth_user=auth_user,
+                auth_password=auth_password)
+            return yaml.safe_load(result)["data"]
+        except BaseException as err:
+            raise XoException(err)
+
     def _get_prefix(self):
         return _sha512('xo'.encode('utf-8'))[0:6]
 
     def _get_address(self, name):
         xo_prefix = self._get_prefix()
-        game_address = _sha512(name.encode('utf-8'))
+        game_address = _sha512(name.encode('utf-8'))[0:64]
         return xo_prefix + game_address
 
-    def _send_request(self, suffix, data=None, content_type=None):
-        url = "http://{}/{}".format(self._base_url, suffix)
+    def _send_request(
+            self, suffix, data=None,
+            content_type=None, name=None, auth_user=None, auth_password=None):
+        if self._base_url.startswith("http://"):
+            url = "{}/{}".format(self._base_url, suffix)
+        else:
+            url = "http://{}/{}".format(self._base_url, suffix)
 
-        headers = None
+        headers = {}
+        if auth_user is not None:
+            auth_string = "{}:{}".format(auth_user, auth_password)
+            b64_string = b64encode(auth_string.encode()).decode()
+            auth_header = 'Basic {}'.format(b64_string)
+            headers['Authorization'] = auth_header
+
         if content_type is not None:
-            headers = {'Content-Type': content_type}
+            headers['Content-Type'] = content_type
 
         try:
             if data is not None:
                 result = requests.post(url, headers=headers, data=data)
             else:
-                result = requests.get(url)
+                result = requests.get(url, headers=headers)
 
-            if not result.ok:
+            if result.status_code == 404:
+                raise XoException("No such game: {}".format(name))
+
+            elif not result.ok:
                 raise XoException("Error {}: {}".format(
                     result.status_code, result.reason))
 
@@ -110,8 +144,8 @@ class XoClient:
 
         return result.text
 
-    def _send_xo_txn(self, name, action, space=""):
-
+    def _send_xo_txn(self, name, action, space="", wait=None,
+                     auth_user=None, auth_password=None):
         # Serialization is just a delimited utf-8 encoded string
         payload = ",".join([name, action, str(space)]).encode()
 
@@ -140,13 +174,46 @@ class XoClient:
         )
 
         batch_list = self._create_batch_list([transaction])
+        batch_id = batch_list.batches[0].header_signature
 
-        result = self._send_request(
+        if wait and wait > 0:
+            wait_time = 0
+            start_time = time.time()
+            self._send_request(
+                "batches", batch_list.SerializeToString(),
+                'application/octet-stream',
+                auth_user=auth_user,
+                auth_password=auth_password
+            )
+            while wait_time < wait:
+                status = self._get_status(
+                    batch_id,
+                    wait - int(wait_time),
+                    auth_user=auth_user,
+                    auth_password=auth_password
+                )
+                wait_time = time.time() - start_time
+
+                if status[batch_id] == 'COMMITTED':
+                    return 'Game created in {:.6} sec'.format(wait_time)
+                elif status[batch_id] == 'INVALID':
+                    return ('Error: You chose an invalid game name. '
+                            'Try again with a different name')
+                elif status[batch_id] == 'UNKNOWN':
+                    return ('Error: Something went wrong with your game. '
+                            'Try again with a different name.')
+                # Wait a moment so as not to hammer the Rest Api
+                time.sleep(0.2)
+
+            return ('Timed out while waiting for game to be created. '
+                    'It may need to be resubmitted.')
+
+        return self._send_request(
             "batches", batch_list.SerializeToString(),
-            'application/octet-stream'
+            'application/octet-stream',
+            auth_user=auth_user,
+            auth_password=auth_password
         )
-
-        return result
 
     def _create_batch_list(self, transactions):
         transaction_signatures = [t.header_signature for t in transactions]

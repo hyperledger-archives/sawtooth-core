@@ -34,9 +34,14 @@ LOGGER.setLevel(logging.INFO)
 
 class UnexpectedMessageException(Exception):
     def __init__(self, message_type, expected, received):
-        super().__init__("{}: Expected {}, Got {}".format(
+        super().__init__("{}: Expected {}({}):'{}', Got {}({}):'{}'".format(
             to_protobuf_class(message_type).__name__,
-            expected, received
+            to_protobuf_class(to_message_type(expected)),
+            to_message_type(expected),
+            str(expected).strip(),
+            to_protobuf_class(to_message_type(received)),
+            to_message_type(received),
+            str(received).strip()
         ))
         self.message_type_name = to_protobuf_class(message_type).__name__
         self.expected = expected
@@ -62,6 +67,8 @@ class MockValidator(object):
         # The set request comparison is a little more complex by default
         self.register_comparator(Message.TP_STATE_SET_REQUEST,
                                  compare_set_request)
+        self.register_comparator(Message.TP_PROCESS_RESPONSE,
+                                 compare_tp_process_response_status_only)
 
     def listen(self, url):
         """
@@ -80,7 +87,7 @@ class MockValidator(object):
         LOGGER.debug("Binding to " + self._url)
         self._socket.set(zmq.LINGER, 0)
         try:
-            self._socket.bind("tcp://" + self._url)
+            self._socket.bind(self._url)
 
         # Catch errors with binding and print out more debug info
         except zmq.error.ZMQError:
@@ -119,20 +126,20 @@ class MockValidator(object):
         message, ident = self.receive()
         if message.message_type != Message.TP_REGISTER_REQUEST:
             return False
-        else:
-            self._tp_ident = ident
 
-            request = TpRegisterRequest()
-            request.ParseFromString(message.content)
-            LOGGER.debug(
-                "Processor registered: %s, %s, %s, %s",
-                str(request.family), str(request.version),
-                str(request.encoding), str(request.namespaces)
-            )
-            response = TpRegisterResponse(
-                status=TpRegisterResponse.OK)
-            self.send(response, message.correlation_id)
-            return True
+        self._tp_ident = ident
+
+        request = TpRegisterRequest()
+        request.ParseFromString(message.content)
+        LOGGER.debug(
+            "Processor registered: %s, %s, %s, %s",
+            str(request.family), str(request.version),
+            str(request.encoding), str(request.namespaces)
+        )
+        response = TpRegisterResponse(
+            status=TpRegisterResponse.OK)
+        self.send(response, message.correlation_id)
+        return True
 
     def send(self, message_content, correlation_id=None):
         """
@@ -263,12 +270,15 @@ class MockValidator(object):
 
     def _compare(self, obj1, obj2):
         msg_type = to_message_type(obj1)
+        msg_type2 = to_message_type(obj2)
+
+        if msg_type != msg_type2:
+            return False
 
         if msg_type in self._comparators:
             return self._comparators[msg_type](obj1, obj2)
 
-        else:
-            return obj1 == obj2
+        return obj1 == obj2
 
 
 def compare_set_request(req1, req2):
@@ -281,3 +291,7 @@ def compare_set_request(req1, req2):
         return False
 
     return True
+
+
+def compare_tp_process_response_status_only(res1, res2):
+    return res1.status == res2.status

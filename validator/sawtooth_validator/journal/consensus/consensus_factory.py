@@ -16,7 +16,7 @@ import importlib
 
 from sawtooth_validator.exceptions import UnknownConsensusModuleError
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-from sawtooth_validator.state.config_view import ConfigView
+from sawtooth_validator.state.settings_view import SettingsView
 
 
 class ConsensusFactory(object):
@@ -58,7 +58,7 @@ class ConsensusFactory(object):
     @staticmethod
     def get_configured_consensus_module(block_id, state_view):
         """Returns the consensus_module based on the consensus module set by the
-        "sawtooth_config" transaction family.
+        "sawtooth_settings" transaction family.
 
         Args:
             block_id (str): the block id associated with the current state_view
@@ -68,11 +68,11 @@ class ConsensusFactory(object):
             UnknownConsensusModuleError: Thrown when an invalid consensus
                 module has been configured.
         """
-        config_view = ConfigView(state_view)
+        settings_view = SettingsView(state_view)
 
         default_consensus = \
             'genesis' if block_id == NULL_BLOCK_IDENTIFIER else 'devmode'
-        consensus_module_name = config_view.get_setting(
+        consensus_module_name = settings_view.get_setting(
             'sawtooth.consensus.algorithm', default_value=default_consensus)
         return ConsensusFactory.get_consensus_module(
             consensus_module_name)

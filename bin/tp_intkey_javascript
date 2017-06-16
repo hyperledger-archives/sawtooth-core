@@ -4,7 +4,7 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 cd $top_dir/sdk/examples/intkey_javascript
 if [[ -z $* ]]
 then
-    npm start tcp://127.0.0.1:40000
+    npm start tcp://127.0.0.1:4004
 else
     npm start -- $*
 fi

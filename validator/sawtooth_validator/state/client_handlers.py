@@ -15,6 +15,7 @@
 
 import abc
 import logging
+from functools import cmp_to_key
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
@@ -26,6 +27,8 @@ from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
+from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf import validator_pb2
 
 
@@ -79,11 +82,11 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         self._block_store = block_store
         self._batch_cache = batch_cache
 
-    def handle(self, identity, message_content):
+    def handle(self, connection_id, message_content):
         """Handles parsing incoming requests, and wrapping the final response.
 
         Args:
-            identity (str): ZMQ identity sent over ZMQ socket
+            connection_id (str): ZMQ identity sent over ZMQ socket
             message_content (bytes): Byte encoded request protobuf to be parsed
 
         Returns:
@@ -310,7 +313,7 @@ class _Pager(object):
             list: The paginated list of resources
             object: The PagingResponse to be sent back to the client
         """
-        if len(resources) == 0:
+        if not resources:
             return resources, client_pb2.PagingResponse(total_resources=0)
 
         paging = request.paging
@@ -380,6 +383,118 @@ class _Pager(object):
             return resources[index].header_signature
         except AttributeError:
             return resources[index].address
+
+
+class _Sorter(object):
+    """A static class containing a method to sort lists of resources based on
+    SortControls sent with the request.
+    """
+    @classmethod
+    def sort_resources(cls, request, resources, fail_enum, header_proto=None):
+        """Sorts a list of resources based on a list of sort controls
+
+        Args:
+            request (object): The parsed protobuf request object
+            resources (list of objects): The resources to be sorted
+            fail_enum (int, enum): The enum status to raise with invalid keys
+            header_proto(class): Class to decode a resources header
+
+        Returns:
+            list: The sorted list of resources
+        """
+        if not request.sorting:
+            return resources
+
+        value_handlers = cls._get_handler_set(request, fail_enum, header_proto)
+
+        def sorter(resource_a, resource_b):
+            for handler in value_handlers:
+                val_a, val_b = handler.get_sort_values(resource_a, resource_b)
+
+                if val_a < val_b:
+                    return handler.xform_result(-1)
+                if val_a > val_b:
+                    return handler.xform_result(1)
+
+            return 0
+
+        return sorted(resources, key=cmp_to_key(sorter))
+
+    @classmethod
+    def _get_handler_set(cls, request, fail_enum, header_proto=None):
+        """Goes through the list of SortControls and returns a list of
+        unique _ValueHandlers. Maintains order, but drops SortControls that
+        have already appeared to help prevent spamming.
+        """
+        added = set()
+        handlers = []
+
+        for controls in request.sorting:
+            control_bytes = controls.SerializeToString()
+            if control_bytes not in added:
+                added.add(control_bytes)
+                handlers.append(
+                    cls._ValueHandler(controls, fail_enum, header_proto))
+
+        return handlers
+
+    class _ValueHandler(object):
+        """Handles fetching proper compare values for one SortControls.
+
+        Args:
+            controls (object): Individual SortControl object
+            fail_status (integer, enum): Status to send when controls are bad
+            header_proto (class): Class to decode the resource header
+        """
+        def __init__(self, controls, fail_status, header_proto=None):
+            self._keys = controls.keys
+            self._compare_length = controls.compare_length
+            self._fail_status = fail_status
+            self._header_proto = header_proto
+
+            if controls.reverse:
+                self.xform_result = lambda x: -x
+            else:
+                self.xform_result = lambda x: x
+
+            if header_proto and self._keys[0] == 'header':
+                self._had_explicit_header = True
+                self._keys = self._keys[1:]
+            else:
+                self._had_explicit_header = False
+
+        def get_sort_values(self, resource_a, resource_b):
+            """Applies sort control logic to fetch from two resources the
+            values that should actually be compared.
+            """
+            if (self._had_explicit_header or
+                    self._header_proto and
+                    not hasattr(resource_a, self._keys[0])):
+                resource_a = self._get_header(resource_a)
+                resource_b = self._get_header(resource_b)
+
+            for key in self._keys:
+                try:
+                    resource_a = getattr(resource_a, key)
+                    resource_b = getattr(resource_b, key)
+                except AttributeError:
+                    raise _ResponseFailed(self._fail_status)
+
+            if self._compare_length:
+                try:
+                    resource_a = len(resource_a)
+                    resource_b = len(resource_b)
+                except TypeError:
+                    raise _ResponseFailed(self._fail_status)
+
+            return resource_a, resource_b
+
+        def _get_header(self, resource):
+            """Fetches a header from a resource.
+            """
+            header = self._header_proto()
+            header.ParseFromString(resource.header)
+            return header
 
 
 class BatchSubmitFinisher(_ClientRequestHandler):
@@ -459,6 +574,11 @@ class StateListRequest(_ClientRequestHandler):
         # Order leaves, remove if tree.leaves refactored to be ordered
         leaves.sort(key=lambda l: l.address)
 
+        leaves = _Sorter.sort_resources(
+            request,
+            leaves,
+            self._status.INVALID_SORT)
+
         leaves, paging = _Pager.paginate_resources(
             request,
             leaves,
@@ -518,6 +638,12 @@ class BlockListRequest(_ClientRequestHandler):
             lambda filter_id: self._block_store[filter_id].block,
             lambda block: [block])
 
+        blocks = _Sorter.sort_resources(
+            request,
+            blocks,
+            self._status.INVALID_SORT,
+            BlockHeader)
+
         blocks, paging = _Pager.paginate_resources(
             request,
             blocks,
@@ -569,6 +695,12 @@ class BatchListRequest(_ClientRequestHandler):
             self._block_store.get_batch,
             lambda block: [a for a in block.batches])
 
+        batches = _Sorter.sort_resources(
+            request,
+            batches,
+            self._status.INVALID_SORT,
+            BatchHeader)
+
         batches, paging = _Pager.paginate_resources(
             request,
             batches,
@@ -619,6 +751,12 @@ class TransactionListRequest(_ClientRequestHandler):
             request.transaction_ids,
             self._block_store.get_transaction,
             lambda block: [t for a in block.batches for t in a.transactions])
+
+        transactions = _Sorter.sort_resources(
+            request,
+            transactions,
+            self._status.INVALID_SORT,
+            TransactionHeader)
 
         transactions, paging = _Pager.paginate_resources(
             request,

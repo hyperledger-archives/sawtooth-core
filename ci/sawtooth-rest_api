@@ -37,7 +37,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 EXPOSE 8080
 
 CMD ["rest_api"]

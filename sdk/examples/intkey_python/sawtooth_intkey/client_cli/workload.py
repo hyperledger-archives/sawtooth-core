@@ -146,8 +146,7 @@ class IntKeyWorkload(Workload):
 
     def _create_new_key(self):
         with self._lock:
-            url = random.choice(self._urls) if \
-                len(self._urls) > 0 else None
+            url = random.choice(self._urls) if self._urls else None
 
         batch_id = None
         if url is not None:

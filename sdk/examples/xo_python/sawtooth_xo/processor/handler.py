@@ -62,6 +62,9 @@ class XoTransactionHandler:
         if name == "":
             raise InvalidTransaction("Name is required")
 
+        if '|' in name:
+            raise InvalidTransaction('Name cannot contain "|"')
+
         if action == "":
             raise InvalidTransaction("Action is required")
 
@@ -84,29 +87,32 @@ class XoTransactionHandler:
         # Use the namespace prefix + the has of the game name to create the
         # storage address
         game_address = self._namespace_prefix \
-            + hashlib.sha512(name.encode("utf-8")).hexdigest()
+            + hashlib.sha512(name.encode("utf-8")).hexdigest()[0:64]
 
         # Get data from address
         state_entries = state_store.get([game_address])
 
         # state_store.get() returns a list. If no data has been stored yet
         # at the given address, it will be empty.
-        if len(state_entries) != 0:
+        if state_entries:
             try:
-                board, state, player1, player2, stored_name = \
-                    state_entries[0].data.decode().split(",")
+                state_data = state_entries[0].data
+
+                game_list = {
+                    name: (board, state, player1, player2)
+                    for name, board, state, player1, player2 in [
+                        game.split(',')
+                        for game in state_data.decode().split('|')
+                    ]
+                }
+
+                board, state, player1, player2 = game_list[name]
+
             except ValueError:
                 raise InternalError("Failed to deserialize game data.")
 
-            # NOTE: Since the game data is stored in a Merkle tree, there is a
-            # small chance of collision. A more correct usage would be to store
-            # a dictionary of games so that multiple games could be store at
-            # the same location. See the python intkey handler for an example
-            # of this.
-            if stored_name != name:
-                raise InternalError("Hash collision")
-
         else:
+            game_list = {}
             board = state = player1 = player2 = None
 
         # 3. Validate the game data
@@ -183,10 +189,17 @@ class XoTransactionHandler:
             )
 
         # 6. Put the game data back in state storage
+        game_list[name] = board, state, player1, player2
+
+        state_data = '|'.join(sorted([
+            ','.join([name, board, state, player1, player2])
+            for name, (board, state, player1, player2) in game_list.items()
+        ])).encode()
+
         addresses = state_store.set([
             StateEntry(
                 address=game_address,
-                data=",".join([board, state, player1, player2, name]).encode()
+                data=state_data
             )
         ])
 

@@ -1,6 +1,9 @@
 - name: Shawn T. Amundson
   user: vaporos
 
+- name: Saurabh Badhwar
+  user: h4xr
+
 - name: Thomas J. Barnes
   user: TomBarnes
 
@@ -9,6 +12,9 @@
 
 - name: Benjamin Bollen
   user: benjaminbollen
+
+- name: Jordan Byrd
+  user: jabyrd3
 
 - name: Naissa Conde
   user: nconde
@@ -53,13 +59,16 @@
   user: jsmitchell
 
 - name: Cian Montgomery
-  user: cintel
+  user: cianx
 
 - name: Dalmo Manoel Veras Neto
   user: verasnt
 
 - name: Todd Ojala
   user: ojalatodd
+
+- name: Kelly Olson
+  user: ineffectualproperty
 
 - name: Darian Plumb
   user: dplumb94

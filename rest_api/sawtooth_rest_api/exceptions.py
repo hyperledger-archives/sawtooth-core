@@ -17,6 +17,10 @@ import json
 from aiohttp.web import HTTPError
 
 
+class RestApiConfigurationError(Exception):
+    pass
+
+
 class _ApiError(HTTPError):
     """A parent class for all REST API errors. Extends aiohttp's HTTPError,
     so instances will be caught automatically be the API, and turned into a
@@ -187,6 +191,14 @@ class PagingInvalid(_ApiError):
     message = ("Paging request failed as written. One or more of the "
                "'min', 'max', or 'count' query parameters were invalid or "
                "out of range.")
+
+
+class SortInvalid(_ApiError):
+    api_code = 57
+    status_code = 400
+    title = 'Invalid Sort Query'
+    message = ("The sort request failed as written. Some of the keys "
+               "specified were not valid.")
 
 
 class InvalidStateAddress(_ApiError):

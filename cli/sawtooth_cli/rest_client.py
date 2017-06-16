@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import json
+from base64 import b64encode
 from http.client import RemoteDisconnected
 import requests
 # pylint: disable=no-name-in-module,import-error
@@ -24,8 +25,14 @@ from sawtooth_cli.exceptions import CliException
 
 
 class RestClient(object):
-    def __init__(self, base_url=None):
+    def __init__(self, base_url=None, user=None):
         self._base_url = base_url or 'http://localhost:8080'
+
+        if user:
+            b64_string = b64encode(user.encode()).decode()
+            self._auth_header = 'Basic {}'.format(b64_string)
+        else:
+            self._auth_header = None
 
     def list_blocks(self):
         return self._get('/blocks')['data']
@@ -95,7 +102,8 @@ class RestClient(object):
         if code == 200:
             return json_result
         elif code == 404:
-            return None
+            raise CliException('There is no resource with the identifier "{}"'.
+                               format(path.split('/')[-1]))
         else:
             raise CliException("({}): {}".format(code, json_result))
 
@@ -137,6 +145,12 @@ class RestClient(object):
         Raises:
             `CliException`: If any issues occur with the URL.
         """
+        if headers is None:
+            headers = {}
+
+        if self._auth_header is not None:
+            headers['Authorization'] = self._auth_header
+
         try:
             if method == 'POST':
                 result = requests.post(

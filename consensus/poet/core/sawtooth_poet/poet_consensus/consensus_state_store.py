@@ -139,6 +139,7 @@ class ConsensusStateStore(MutableMapping):
 
         return ', '.join(out)
 
+    # pylint: disable=arguments-differ
     def get(self, block_id, default=None):
         """Return the consensus state corresponding to block ID or the default
         value if none exists

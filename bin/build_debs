@@ -64,7 +64,7 @@ main() {
     build_pkg "cli"
 
     # Group 3: Depends on 1 & 2
-    build_pkg "core_transactions/config"
+    build_pkg "families/settings"
 
     build_pkg "rest_api"
 

@@ -56,7 +56,7 @@ def _split_batch_list(batch_list):
         if len(new_list) == 100:
             yield batch_pb2.BatchList(batches=new_list)
             new_list = []
-    if len(new_list) > 0:
+    if new_list:
         yield batch_pb2.BatchList(batches=new_list)
 
 

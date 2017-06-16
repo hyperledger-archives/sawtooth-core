@@ -3,7 +3,7 @@ Signing Transactions
 -----------------------------------------------------------------
 
 Consistency in transaction signing is critical for successful submission
-of transactions to Sawtooth Lake.
+of transactions to Sawtooth.
 
 **Step 1: Serialize the transaction**
 

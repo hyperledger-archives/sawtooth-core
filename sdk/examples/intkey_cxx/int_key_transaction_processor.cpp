@@ -252,7 +252,7 @@ class IntKeyHandler: public sawtooth::TransactionHandler {
 
 int main(int argc, char** argv) {
     try {
-        std::string connectString = "tcp://127.0.0.1:40000";
+        std::string connectString = "tcp://127.0.0.1:4004";
 
         // Check if there is a command-line parameter.
         // currently we expect the command line arguement to be

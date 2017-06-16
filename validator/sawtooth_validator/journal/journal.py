@@ -38,7 +38,7 @@ class Journal(object):
     class _ChainThread(Thread):
         def __init__(self, chain_controller, block_queue, block_cache,
                      block_cache_purge_frequency):
-            Thread.__init__(self)
+            Thread.__init__(self, name='_ChainThread')
             self._chain_controller = chain_controller
             self._block_queue = block_queue
             self._block_cache = block_cache
@@ -51,8 +51,7 @@ class Journal(object):
                     self._block_cache_purge_frequency
                 while True:
                     try:
-                        block = self._block_queue.get(
-                            timeout=self._block_cache_purge_frequency)
+                        block = self._block_queue.get(timeout=1)
                         self._chain_controller.on_block_received(block)
                     except queue.Empty:
                         pass  # this exception only happens if the
@@ -76,7 +75,7 @@ class Journal(object):
     class _PublisherThread(Thread):
         def __init__(self, block_publisher, batch_queue,
                      check_publish_block_frequency):
-            Thread.__init__(self)
+            Thread.__init__(self, name='_PublisherThread')
             self._block_publisher = block_publisher
             self._batch_queue = batch_queue
             self._check_publish_block_frequency = \
@@ -176,6 +175,7 @@ class Journal(object):
         self._batch_queue = queue.Queue()
         self._publisher_thread = None
 
+        self._executor_threadpool = ThreadPoolExecutor(1)
         self._chain_controller = None
         self._block_queue = queue.Queue()
         self._chain_thread = None
@@ -206,8 +206,9 @@ class Journal(object):
             block_sender=self._block_sender,
             block_cache=self._block_cache,
             state_view_factory=self._state_view_factory,
-            executor=ThreadPoolExecutor(1),
+            executor=self._executor_threadpool,
             transaction_executor=self._transaction_executor,
+            chain_head_lock=self._block_publisher.chain_head_lock,
             on_chain_updated=self._block_publisher.on_chain_updated,
             squash_handler=self._squash_handler,
             chain_id_manager=self._chain_id_manager,
@@ -240,6 +241,8 @@ class Journal(object):
     def stop(self):
         # time to murder the child threads. First ask politely for
         # suicide
+        self._executor_threadpool.shutdown(wait=True)
+
         if self._publisher_thread is not None:
             self._publisher_thread.stop()
             self._publisher_thread = None

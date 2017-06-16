@@ -30,6 +30,10 @@ from sawtooth_validator.protobuf.state_delta_pb2 import \
     UnregisterStateDeltaSubscriberRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
     UnregisterStateDeltaSubscriberResponse
+from sawtooth_validator.protobuf.state_delta_pb2 import \
+    GetStateDeltaEventsRequest
+from sawtooth_validator.protobuf.state_delta_pb2 import \
+    GetStateDeltaEventsResponse
 
 LOGGER = logging.getLogger(__name__)
 
@@ -173,12 +177,12 @@ class StateDeltaProcessor(object):
             block (:obj:`BlockWrapper`): The block whose state delta will
                 be published.
         """
-        LOGGER.debug('Publishing state delta fro %s', block)
+        LOGGER.debug('Publishing state delta from %s', block)
         state_root_hash = block.header.state_root_hash
 
         deltas = self._get_delta(state_root_hash)
 
-        if len(self._subscribers) > 0:
+        if self._subscribers:
             self._broadcast_changes(block, deltas)
 
     def _get_delta(self, state_root_hash):
@@ -191,13 +195,14 @@ class StateDeltaProcessor(object):
         state_change_evt = StateDeltaEvent(
             block_id=block.header_signature,
             block_num=block.header.block_num,
-            state_root_hash=block.header.state_root_hash)
+            state_root_hash=block.header.state_root_hash,
+            previous_block_id=block.header.previous_block_id)
 
         for subscriber in self._subscribers.values():
             acceptable_changes = subscriber.deltas_of_interest(deltas)
             state_change_evt.ClearField('state_changes')
 
-            if len(acceptable_changes) > 0:
+            if acceptable_changes:
                 state_change_evt.state_changes.extend(acceptable_changes)
 
             LOGGER.debug('sending change event to %s',
@@ -210,6 +215,7 @@ class StateDeltaProcessor(object):
             block_id=block.header_signature,
             block_num=block.header.block_num,
             state_root_hash=block.header.state_root_hash,
+            previous_block_id=block.header.previous_block_id,
             state_changes=subscriber.deltas_of_interest(deltas))
 
         LOGGER.debug('sending change event to %s', subscriber.connection_id)
@@ -239,16 +245,18 @@ class StateDeltaSubscriberValidationHandler(Handler):
         if self._delta_processor.is_valid_subscription(
                 request.last_known_block_ids):
             ack.status = ack.OK
-            return HandlerResult(
+            result = HandlerResult(
                 HandlerStatus.RETURN_AND_PASS,
                 message_out=ack,
                 message_type=self._msg_type)
         else:
             ack.status = ack.UNKNOWN_BLOCK
-            return HandlerResult(
+            result = HandlerResult(
                 HandlerStatus.RETURN,
                 message_out=ack,
                 message_type=self._msg_type)
+
+        return result
 
 
 class StateDeltaAddSubscriberHandler(Handler):
@@ -289,6 +297,58 @@ class StateDeltaUnsubscriberHandler(Handler):
         ack = UnregisterStateDeltaSubscriberResponse()
         self._delta_processor.remove_subscriber(connection_id)
         ack.status = ack.OK
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=self._msg_type)
+
+
+class GetStateDeltaEventsHandler(Handler):
+    """Handles receiving messages for getting state delta events based on block
+    ids.
+    """
+    _msg_type = validator_pb2.Message.STATE_DELTA_GET_EVENTS_RESPONSE
+
+    def __init__(self, block_store, state_delta_store):
+        self._block_store = block_store
+        self._state_delta_store = state_delta_store
+
+    def handle(self, connection_id, message_content):
+        request = GetStateDeltaEventsRequest()
+        request.ParseFromString(message_content)
+
+        # Create a temporary subscriber for this response
+        temp_subscriber = _DeltaSubscriber(connection_id,
+                                           request.address_prefixes)
+        events = []
+        for block_id in request.block_ids:
+            try:
+                block = self._block_store[block_id]
+            except KeyError:
+                LOGGER.debug('Ignoring state delete event request for %s...',
+                             block_id[:8])
+                continue
+
+            try:
+                deltas = self._state_delta_store.get_state_deltas(
+                    block.header.state_root_hash)
+            except KeyError:
+                deltas = []
+
+            event = StateDeltaEvent(
+                block_id=block_id,
+                block_num=block.header.block_num,
+                state_root_hash=block.header.state_root_hash,
+                previous_block_id=block.header.previous_block_id,
+                state_changes=temp_subscriber.deltas_of_interest(deltas))
+
+            events.append(event)
+
+        status = GetStateDeltaEventsResponse.OK if events else \
+            GetStateDeltaEventsResponse.NO_VALID_BLOCKS_SPECIFIED
+
+        ack = GetStateDeltaEventsResponse(status=status, events=events)
 
         return HandlerResult(
             HandlerStatus.RETURN,

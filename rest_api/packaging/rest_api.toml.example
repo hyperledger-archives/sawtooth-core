@@ -1,0 +1,12 @@
+#
+# Sawtooth Lake -- REST API Configuration
+#
+
+# The port and host for the api to run on
+#   bind = ["127.0.0.1:8080"]
+
+# The url to connect to a running Validator
+#   connect = "tcp://localhost:4004"
+
+# Seconds to wait for a validator response
+#   timeout = 300

@@ -1,0 +1,86 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  validator:
+    image: sawtooth-validator:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8800
+    # start the validator with an empty genesis batch
+    command: "bash -c \"\
+        sawtooth admin keygen && \
+        sawtooth admin genesis && \
+        validator -v \
+            --endpoint tcp://validator:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+    \""
+    stop_signal: SIGKILL
+
+  rest_api:
+    image: sawtooth-rest_api:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8080
+    depends_on:
+      - validator
+    command: rest_api -v --connect tcp://validator:4004 --bind rest_api:8080
+    stop_signal: SIGKILL
+
+  basic_auth_proxy:
+    image: apache-basic_auth_proxy:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 80
+      - 443
+      - 8080
+    depends_on:
+      - validator
+      - rest_api
+    command: "bash -c \"\
+        apachectl start && \
+        tail -f /dev/null \
+        \""
+    stop_signal: SIGKILL
+
+  test-basic-auth-proxy:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 80
+      - 443
+    depends_on:
+      - validator
+      - rest_api
+      - basic_auth_proxy
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -v
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_basic_auth_proxy.TestBasicAuth
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/integration:"

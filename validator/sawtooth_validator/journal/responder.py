@@ -132,13 +132,13 @@ class ResponderBlockResponseHandler(Handler):
         if open_request is None:
             return HandlerResult(status=HandlerStatus.PASS)
 
-        for connection_id in open_request:
+        for connection in open_request:
             LOGGER.debug("Responding to block request: Send %s to %s",
                          block.header_signature,
-                         connection_id)
+                         connection)
             self._gossip.send(validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
                               message_content,
-                              connection_id)
+                              connection)
 
         self._responder.remove_request(block.header_signature)
         self._responder.purge_requests()
@@ -266,13 +266,13 @@ class ResponderBatchResponseHandler(Handler):
                 open_request += requests_by_txn
                 requests_to_remove += [txn.header_signature]
 
-        for connection_id in open_request:
+        for connection in open_request:
             LOGGER.debug("Responding to batch requests: Send %s to %s",
                          batch.header_signature,
-                         connection_id)
+                         connection)
             self._gossip.send(validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
                               message_content,
-                              connection_id)
+                              connection)
 
         for requested_id in requests_to_remove:
             self._responder.remove_request(requested_id)

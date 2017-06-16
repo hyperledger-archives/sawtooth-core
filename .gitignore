@@ -21,11 +21,13 @@
 /consensus/**/protobuf/
 
 /core/sawtooth_core.egg-info/
-/core_transactions/config/sawtooth_config/protobuf/
-/core_transactions/**/__pycache__/
+/families/settings/sawtooth_settings/protobuf/
+/families/supplychain/python/sawtooth_supplychain/protobuf
+/families/**/__pycache__/
 
 /coverage
 /coverage/html
+/**/.coverage
 
 /docs/build/
 /docs/source/_autogen/
@@ -49,15 +51,25 @@
 /sdk/examples/xo_python/**/__pycache__/
 /sdk/examples/xo_javascript/node_modules/
 /sdk/examples/intkey_python/**/__pycache__/
+/sdk/examples/supplychain/python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
 /sdk/examples/intkey_java/target/
+/sdk/examples/noop_python/**/__pycache__/
+/sdk/examples/xo_java/dependency-reduced-pom.xml
+/sdk/examples/xo_java/target/
 /sdk/java/target/
 /sdk/go/src/sawtooth_sdk/protobuf/
 /sdk/go/src/github.com/
 /sdk/go/bin/
 /sdk/examples/intkey_go/bin/
+/sdk/examples/xo_go/bin/
+/sdk/examples/noop_go/bin/
 /sdk/go/pkg/
+/sdk/go/src/golang.org/
+/sdk/go/src/gopkg.in/
+/families/burrow_evm/bin/
+/families/burrow_evm/src/sawtooth_burrow_evm/protobuf/
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/

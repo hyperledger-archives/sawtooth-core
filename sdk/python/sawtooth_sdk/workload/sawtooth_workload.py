@@ -112,7 +112,7 @@ class Workload(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def on_batch_committed(self, transaction_id):
+    def on_batch_committed(self, batch_id):
         """
         In the normal course of running the workload generator, this is called
         by the generator to let the workload know that a previously-

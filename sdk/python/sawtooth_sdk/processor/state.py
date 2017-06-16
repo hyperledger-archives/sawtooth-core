@@ -57,7 +57,7 @@ class State(object):
         if response.status == \
                 state_context_pb2.TpStateGetResponse.AUTHORIZATION_ERROR:
             raise InvalidTransaction(
-                "Tried to get unauthorized address: %s", addresses)
+                'Tried to get unauthorized address: {}'.format(addresses))
         entries = response.entries if response is not None else []
         results = [StateEntry(address=e.address, data=e.data)
                    for e in entries if len(e.data) != 0]
@@ -88,5 +88,5 @@ class State(object):
                 state_context_pb2.TpStateSetResponse.AUTHORIZATION_ERROR:
             addresses = [e.address for e in entries]
             raise InvalidTransaction(
-                "Tried to set unauthorized address: %s", addresses)
+                'Tried to set unauthorized address: {}'.format(addresses))
         return response.addresses

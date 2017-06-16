@@ -8,7 +8,7 @@ Overview
 ========
 
 The Python SDK is installed automatically when you install Hyperledger
-Sawtooth by following the instructions in :doc:`environment_setup`. This
+Sawtooth by following the instructions in :doc:`getting_started`. This
 tutorial explains how import the SDK into your Python environment.
 
 
@@ -19,8 +19,8 @@ The Sawtooth Python SDK requires Python version 3.5 or higher.
 
 .. note::
 
-    If you install Sawtooth as described in :doc:`environment_setup`, using the method
-    described under **Installing Sawtooth on Ubuntu Linux**, then Python is installed
+    If you install Sawtooth as described in :doc:`getting_started`, using the method
+    described in :doc:`ubuntu`, then Python is installed
     for you automatically if it is not already installed.
 
 

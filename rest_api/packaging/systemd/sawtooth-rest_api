@@ -1,1 +1,1 @@
-SAWTOOTH_REST_API_ARGS=--stream-url tcp://localhost:40000
+SAWTOOTH_REST_API_ARGS=--connect tcp://localhost:4004

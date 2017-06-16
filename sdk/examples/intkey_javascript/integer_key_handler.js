@@ -50,7 +50,7 @@ const _setEntry = (state, address, stateValue) => {
   return state.set(entries)
 }
 
-const _handleSet = (state, address, name, value) => (possibleAddressValues) => {
+const _applySet = (state, address, name, value) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
 
   let stateValue
@@ -72,14 +72,14 @@ const _handleSet = (state, address, name, value) => (possibleAddressValues) => {
   return _setEntry(state, address, stateValue)
 }
 
-const _handleOperator = (verb, op) => (state, address, name, value) => (possibleAddressValues) => {
+const _applyOperator = (verb, op) => (state, address, name, value) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
   if (!stateValueRep || stateValueRep.length === 0) {
     throw new InvalidTransaction(`Verb is ${verb} but Name is not in state`)
   }
 
   let stateValue = cbor.decodeFirstSync(stateValueRep)
-  if (!stateValue[name]) {
+  if (stateValue[name] == null || stateValue[name] == undefined) {
     throw new InvalidTransaction(`Verb is ${verb} but Name is not in state`)
   }
 
@@ -101,8 +101,8 @@ const _handleOperator = (verb, op) => (state, address, name, value) => (possible
   return _setEntry(state, address, stateValue)
 }
 
-const _handleInc = _handleOperator('inc', (x, y) => x + y)
-const _handleDec = _handleOperator('dec', (x, y) => x - y)
+const _applyInc = _applyOperator('inc', (x, y) => x + y)
+const _applyDec = _applyOperator('dec', (x, y) => x - y)
 
 class IntegerKeyHandler extends TransactionHandler {
   constructor () {
@@ -131,7 +131,7 @@ class IntegerKeyHandler extends TransactionHandler {
         }
 
         let value = update.Value
-        if (!value) {
+        if (value == null || value == undefined) {
           throw new InvalidTransaction('Value is required')
         }
 
@@ -145,23 +145,28 @@ class IntegerKeyHandler extends TransactionHandler {
 
         value = parsed
 
-        //
-        // Perform the action
-
-        let handlerFn
+        // Determine the action to apply based on the verb
+        let actionFn
         if (verb === 'set') {
-          handlerFn = _handleSet
+          actionFn = _applySet
         } else if (verb === 'dec') {
-          handlerFn = _handleDec
+          actionFn = _applyDec
         } else if (verb === 'inc') {
-          handlerFn = _handleInc
+          actionFn = _applyInc
         } else {
           throw new InvalidTransaction(`Verb must be set, inc, dec not ${verb}`)
         }
 
         let address = INT_KEY_NAMESPACE + _hash(name).slice(-64)
 
-        return state.get([address]).then(handlerFn(state, address, name, value))
+        // Get the current state, for the key's address:
+        let getPromise = state.get([address])
+
+        // Apply the action to the promise's result:
+        let actionPromise = getPromise.then(actionFn(state, address, name, value))
+
+        // Validate that the action promise results in the correctly set address:
+        return actionPromise
           .then((addresses) => {
             if (addresses.length === 0) {
               throw new InternalError('State Error!')
@@ -170,7 +175,6 @@ class IntegerKeyHandler extends TransactionHandler {
           })
       })
   }
-
 }
 
 module.exports = IntegerKeyHandler

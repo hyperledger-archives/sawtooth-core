@@ -18,6 +18,9 @@ from base64 import b64decode
 from sawtooth_cli import format_utils as fmt
 from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
+from sawtooth_cli.parent_parsers import base_http_parser
+from sawtooth_cli.parent_parsers import base_list_parser
+from sawtooth_cli.parent_parsers import base_show_parser
 
 
 def add_transaction_parser(subparsers, parent_parser):
@@ -32,24 +35,15 @@ def add_transaction_parser(subparsers, parent_parser):
     grand_parsers = parser.add_subparsers(title='grandchildcommands',
                                           dest='subcommand')
     grand_parsers.required = True
+
     epilog = '''details:
         Lists committed transactions from newest to oldest, including their id
     (i.e. header_signature), transaction family and version, and their payload.
     '''
-
-    list_parser = grand_parsers.add_parser(
+    grand_parsers.add_parser(
         'list', epilog=epilog,
+        parents=[base_http_parser(), base_list_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    list_parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of the validator's REST API")
-    list_parser.add_argument(
-        '-F', '--format',
-        action='store',
-        default='default',
-        choices=['csv', 'json', 'yaml', 'default'],
-        help='the format of the output, options: csv, json or yaml')
 
     epilog = '''details:
         Shows the data for a single transaction, or for a particular property
@@ -58,25 +52,12 @@ def add_transaction_parser(subparsers, parent_parser):
     '''
     show_parser = grand_parsers.add_parser(
         'show', epilog=epilog,
+        parents=[base_http_parser(), base_show_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
     show_parser.add_argument(
         'transaction_id',
         type=str,
         help='the id (i.e. header_signature) of the transaction')
-    show_parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of the validator's REST API")
-    show_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='specify to show one property from the transaction or header')
-    show_parser.add_argument(
-        '-F', '--format',
-        action='store',
-        default='yaml',
-        choices=['yaml', 'json'],
-        help='the format of the output, options: yaml (default), or json')
 
 
 def do_transaction(args):
@@ -85,7 +66,7 @@ def do_transaction(args):
         Args:
             args: The parsed arguments sent to the command at runtime
     """
-    rest_client = RestClient(args.url)
+    rest_client = RestClient(args.url, args.user)
 
     if args.subcommand == 'list':
         transactions = rest_client.list_transactions()

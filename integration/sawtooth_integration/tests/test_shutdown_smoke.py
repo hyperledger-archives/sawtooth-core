@@ -218,9 +218,9 @@ class TestShutdownSmoke(unittest.TestCase):
             validator_genesis = self._start_validator(
                 genesis,
                 ['--name', genesis_name],
-                ['--public-uri', 'tcp://{}:8800'.format(genesis_name),
-                 '--component-endpoint', 'tcp://eth0:40000',
-                 '--network-endpoint', 'tcp://eth0:8800'])
+                ['--endpoint', 'tcp://{}:8800'.format(genesis_name),
+                 '--bind', 'component:tcp://eth0:4004',
+                 '--bind', 'network:tcp://eth0:8800'])
             containers.append(validator_genesis)
             self._remove_docker_containers([genesis])
             keygen = self._run_keygen_non_genesis()
@@ -230,9 +230,9 @@ class TestShutdownSmoke(unittest.TestCase):
                 keygen, ['--link', validator_genesis,
                          '--name', validator_1_name],
                 ['--peers', 'tcp://{}:8800'.format(genesis_name),
-                 '--public-uri', 'tcp://{}:8800'.format(validator_1_name),
-                 '--component-endpoint', 'tcp://eth0:40000',
-                 '--network-endpoint', 'tcp://eth0:8800'])
+                 '--endpoint', 'tcp://{}:8800'.format(validator_1_name),
+                 '--bind', 'component:tcp://eth0:4004',
+                 '--bind', 'network:tcp://eth0:8800'])
             containers.append(validator_non_genesis)
             self._remove_docker_containers([keygen])
             # Make sure that the validators have completed startup -- cli path

@@ -46,6 +46,6 @@ RUN cd /debs \
 RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-xo
 
-EXPOSE 40000/tcp
+EXPOSE 4004/tcp
 
-CMD ["tp_xo_python", "tcp://validator:40000"]
+CMD ["tp_xo_python", "tcp://validator:4004"]

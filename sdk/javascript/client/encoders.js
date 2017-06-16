@@ -143,9 +143,9 @@ class TransactionEncoder {
    *
    * @param {Buffer|*} payload - Payload to be submitted in the Transaction.
    * @param {Object} [settings={}] - Values for the header of the Transaction.
-   *     Possible properties are identical to `create`.
+   *     Properties are identical to `TransactionEncoder.create` above.
    *
-   * @return {Buffer} A binary Buffer representation of a BatchList.
+   * @return {Buffer} A binary Buffer representation of a TransactionList.
    */
   createEncoded (payload, settings = {}) {
     const transaction = this.create(payload, settings)
@@ -176,10 +176,11 @@ class BatchEncoder {
    *     every Transactions' header must match this BatchEncoder's public key,
    *     or this Batch will be rejected by the validator.
    *
-   *     This method will directly accept a TransactionList protobuf encoded
-   *     for transmission either as a raw binary Buffer, or a url-safe base64
-   *     string. In-memory Transaction instances may also be used, either in
-   *     an array, or as a single Transaction.
+   *     This method accepts Transaction(s) in a number of formats:
+   *         - TransactionList protobuf encoded as a Buffer
+   *         - TransactionList protobuf encoded as a base64 string
+   *         - Array of Transaction instances
+   *         - Single Transaction instance
    *
    * @return {Batch} A new signed Batch instance.
    */
@@ -220,12 +221,14 @@ class BatchEncoder {
   }
 
   /**
-   * Creates a Batch and wraps it as the only Batch in a BatchList
+   * Creates a new Batch and then wraps it as the only one in a BatchList
    *     encoded for transmission to a validator.
    *
    * @param {Buffer|str|Transaction|Transaction[]} transactions - Transactions
-   *     to be combined into a single Batch. The same formatting and signing
-   *     rules for `create` apply here.
+   *     to be combined into a single Batch.
+   *
+   *     NOTE: The same formatting and signing rules for `BatchEncoder.create`
+   *     above apply here.
    *
    * @return {Buffer} A binary Buffer representation of a BatchList.
    */

@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
 import unittest
 
 from sawtooth_processor_test.mock_validator import MockValidator
@@ -21,7 +22,7 @@ from sawtooth_processor_test.mock_validator import MockValidator
 class TransactionProcessorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        url = 'eth0:40000'
+        url = os.getenv('TEST_BIND', 'tcp://127.0.0.1:4004')
 
         cls.validator = MockValidator()
 

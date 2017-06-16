@@ -54,7 +54,7 @@
                 <version>0.5.0</version>
                 <configuration>
                     <protocArtifact>com.google.protobuf:protoc:3.2.0:exe:${os.detected.classifier}</protocArtifact>
-                    <protoSourceRoot>/project/sawtooth-core/protos</protoSourceRoot>
+                    <protoSourceRoot>../../protos</protoSourceRoot>
                 </configuration>
                 <executions>
                     <execution>

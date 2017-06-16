@@ -76,7 +76,6 @@ func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*Connection, e
 
 	identity := GenerateId()
 	socket.SetIdentity(identity)
-	logger.Debug("Socket Identity set to ", identity)
 
 	logger.Info("Connecting to ", uri)
 	switch t {
@@ -103,17 +102,15 @@ func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*Connection, e
 // is useful for passing messages to a ROUTER socket so it can route them.
 func (self *Connection) SendData(id string, data []byte) error {
 	if id != "" {
-		sent, err := self.socket.SendMessage(id, [][]byte{data})
+		_, err := self.socket.SendMessage(id, [][]byte{data})
 		if err != nil {
 			return err
 		}
-		logger.Debugf("Sent %v bytes to %v", sent, id)
 	} else {
-		sent, err := self.socket.SendMessage([][]byte{data})
+		_, err := self.socket.SendMessage([][]byte{data})
 		if err != nil {
 			return err
 		}
-		logger.Debugf("Sent %v bytes", sent)
 	}
 	return nil
 }
@@ -160,12 +157,10 @@ func (self *Connection) RecvData() (string, []byte, error) {
 	switch len(msg) {
 	case 1:
 		data := []byte(msg[0])
-		logger.Debugf("Received %v bytes", len(data))
 		return "", data, nil
 	case 2:
 		id := msg[0]
 		data := []byte(msg[1])
-		logger.Debugf("Received %v bytes from %v", len(data), id)
 		return id, data, nil
 	default:
 		return "", nil, fmt.Errorf(

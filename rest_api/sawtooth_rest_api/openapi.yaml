@@ -73,6 +73,7 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
+        - $ref: "#/parameters/sort"
       responses:
         200:
           description: Successfully retrieved batches
@@ -214,6 +215,7 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
+        - $ref: "#/parameters/sort"
       responses:
         200:
           description: Successfully retrieved state data
@@ -249,9 +251,9 @@ paths:
           schema:
             properties:
               data:
-                type: array
-                items:
-                  $ref: "#/definitions/Leaf"
+                type: string
+                format: byte
+                example: Zm9vOmJhcg==
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -275,6 +277,7 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
+        - $ref: "#/parameters/sort"
       responses:
         200:
           description: Successfully retrieved blocks
@@ -333,6 +336,7 @@ paths:
         - $ref: "#/parameters/count"
         - $ref: "#/parameters/min"
         - $ref: "#/parameters/max"
+        - $ref: "#/parameters/sort"
       responses:
         200:
           description: Successfully retrieved transactions
@@ -451,6 +455,17 @@ parameters:
     in: query
     type: string
     description: Id or index to end paging (inclusive)
+  sort:
+    name: sort
+    in: query
+    type: string
+    description: |
+      Comma-separated keys to sort a list by:
+        - can reference header keys explicitly or implicitly
+        - dot-notation indicates nested keys
+        - starting a key with a minus-sign indicates descending order
+        - ending a key with `.length` sorts by the length
+        - example: `sort=header.signer_pubkey,-transaction_ids.length`
 
 definitions:
   Head:
@@ -507,7 +522,7 @@ definitions:
       data:
         type: string
         format: byte
-        example: oWZrbldVcmQZSRk=
+        example: Zm9vOmJhcg==
 
   TransactionHeader:
     properties:
@@ -546,7 +561,7 @@ definitions:
         example: fb6135ef73f4fe77367f9384b3bbbb158f4b8603c9d612157108e5c271868fce2242ee4abd7a29397ba63780c3ccab13783dfd4d9f0167beda03cdb0e37b87f4
       signer_pubkey:
         type: string
-        example: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2
+        example: 038bba5708acc262464c9fe30d3de9e905a9a5fa30cedd151dd9cd09ea26d46d00
   Transaction:
     properties:
       header:
@@ -562,7 +577,7 @@ definitions:
     properties:
       signer_pubkey:
         type: string
-        example: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2
+        example: 038bba5708acc262464c9fe30d3de9e905a9a5fa30cedd151dd9cd09ea26d46d00
       transaction_ids:
         type: array
         items:

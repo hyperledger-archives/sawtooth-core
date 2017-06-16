@@ -1,1 +1,0 @@
-SAWTOOTH_TP_CONFIG_ARGS=-v tcp://localhost:40000

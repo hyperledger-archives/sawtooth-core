@@ -53,6 +53,7 @@ class SerialScheduler(Scheduler):
         # The state hashes here are the ones added in add_batch, and
         # are the state hashes that correspond with block boundaries.
         self._required_state_hashes = {}
+        self._already_calculated = False
         self._always_persist = always_persist
 
     def __del__(self):
@@ -81,22 +82,16 @@ class SerialScheduler(Scheduler):
             else:
                 # txn is invalid, preemptively fail the batch
                 self._batch_statuses[batch_signature] = \
-                    BatchExecutionResult(is_valid=is_valid, state_hash=None)
+                    BatchExecutionResult(is_valid=False, state_hash=None)
             if txn_signature in self._last_in_batch:
                 if batch_signature not in self._batch_statuses:
                     # because of the else clause above, txn is valid here
                     self._previous_valid_batch_c_id = self._previous_context_id
-                    state_hash = None
-                    required_state_hash = self._required_state_hashes.get(
-                        batch_signature)
-                    if required_state_hash is not None \
-                            or self._last_in_batch[-1] == txn_signature:
-                        state_hash = self._compute_merkle_root(
-                            required_state_hash)
+                    state_hash = self._calculate_state_root_if_required(
+                        batch_id=batch_signature)
                     self._batch_statuses[batch_signature] = \
-                        BatchExecutionResult(
-                            is_valid=is_valid,
-                            state_hash=state_hash)
+                        BatchExecutionResult(is_valid=True,
+                                             state_hash=state_hash)
                 else:
                     self._previous_context_id = self._previous_valid_batch_c_id
 
@@ -173,16 +168,48 @@ class SerialScheduler(Scheduler):
             state_hash (str): The merkle root calculated from the previous
                 state hash and the state changes from the context_id
         """
-        state_hash = self._squash(
-            state_root=self._previous_state_hash,
-            context_ids=[self._previous_valid_batch_c_id],
-            persist=self._always_persist)
-        if self._always_persist is True:
-            return state_hash
-        if state_hash == required_state_root:
-            self._squash(state_root=self._previous_state_hash,
-                         context_ids=[self._previous_valid_batch_c_id],
-                         persist=True)
+
+        state_hash = None
+        if self._previous_valid_batch_c_id is not None:
+            publishing_or_genesis = self._always_persist or \
+                                    required_state_root is None
+            state_hash = self._squash(
+                state_root=self._previous_state_hash,
+                context_ids=[self._previous_valid_batch_c_id],
+                persist=self._always_persist, clean_up=publishing_or_genesis)
+            if self._always_persist is True:
+                return state_hash
+            if state_hash == required_state_root:
+                self._squash(state_root=self._previous_state_hash,
+                             context_ids=[self._previous_valid_batch_c_id],
+                             persist=True, clean_up=True)
+        return state_hash
+
+    def _calculate_state_root_if_not_already_done(self):
+        if not self._already_calculated:
+            if not self._last_in_batch:
+                return
+            last_txn_signature = self._last_in_batch[-1]
+            batch_id = self._txn_to_batch[last_txn_signature]
+            required_state_hash = self._required_state_hashes.get(
+                batch_id)
+
+            state_hash = self._compute_merkle_root(required_state_hash)
+            self._already_calculated = True
+            for t_id in self._last_in_batch[::-1]:
+                b_id = self._txn_to_batch[t_id]
+                if self._batch_statuses[b_id].is_valid:
+                    self._batch_statuses[b_id].state_hash = state_hash
+                    # found the last valid batch, so break out
+                    break
+
+    def _calculate_state_root_if_required(self, batch_id):
+        required_state_hash = self._required_state_hashes.get(
+            batch_id)
+        state_hash = None
+        if required_state_hash is not None:
+            state_hash = self._compute_merkle_root(required_state_hash)
+            self._already_calculated = True
         return state_hash
 
     def complete(self, block):
@@ -190,9 +217,11 @@ class SerialScheduler(Scheduler):
             if not self._final:
                 return False
             if self._complete:
+                self._calculate_state_root_if_not_already_done()
                 return True
             if block:
                 self._condition.wait_for(lambda: self._complete)
+                self._calculate_state_root_if_not_already_done()
                 return True
             return False
 

@@ -39,8 +39,8 @@ message TransactionHeader {
     // what addresses the transaction processor is allowed to read from.
     repeated string inputs = 5;
 
-    // A random string that will allow the same transaction to be submitted
-    // several times
+    // A random string that provides uniqueness for transactions with
+    // otherwise identical fields.
     string nonce = 6;
 
     // A list of addresses that are given to the context manager and control

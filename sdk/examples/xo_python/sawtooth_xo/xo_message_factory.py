@@ -22,16 +22,14 @@ class XoMessageFactory:
             encoding="csv-utf8",
             family_name="xo",
             family_version="1.0",
-            namespace="",
+            namespace=MessageFactory.sha512("xo".encode("utf-8"))[0:6],
             private=private,
             public=public
         )
-        self._factory.namespace = self._factory.sha512(
-            "xo".encode("utf-8"))[0:6]
 
     def _game_to_address(self, game):
         return self._factory.namespace + \
-            self._factory.sha512(game.encode())
+            self._factory.sha512(game.encode())[0:64]
 
     def create_tp_register(self):
         return self._factory.create_tp_register()
@@ -67,7 +65,7 @@ class XoMessageFactory:
 
         data = None
         if board is not None:
-            data = ",".join([board, state, player1, player2, game]).encode()
+            data = ",".join([game, board, state, player1, player2]).encode()
         else:
             data = None
 
@@ -80,11 +78,11 @@ class XoMessageFactory:
 
         data = None
         if state is not None:
-            data = ",".join([board, state, player1, player2, game]).encode()
+            data = ",".join([game, board, state, player1, player2]).encode()
         else:
             data = None
 
-        return self._factory.create_get_response({address: data})
+        return self._factory.create_set_request({address: data})
 
     def create_set_response(self, game):
         addresses = [self._game_to_address(game)]

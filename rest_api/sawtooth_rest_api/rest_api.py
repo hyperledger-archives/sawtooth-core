@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
 import sys
 import time
 import logging
@@ -25,7 +26,12 @@ from sawtooth_sdk.client.log import init_console_logging
 from sawtooth_sdk.client.log import log_configuration
 from sawtooth_sdk.client.config import get_log_config
 from sawtooth_sdk.client.config import get_log_dir
+from sawtooth_sdk.client.config import get_config_dir
 from sawtooth_rest_api.route_handlers import RouteHandler
+from sawtooth_rest_api.config import load_default_rest_api_config
+from sawtooth_rest_api.config import load_toml_rest_api_config
+from sawtooth_rest_api.config import merge_rest_api_config
+from sawtooth_rest_api.config import RestApiConfig
 
 
 LOGGER = logging.getLogger(__name__)
@@ -35,18 +41,13 @@ def parse_args(args):
     """Parse command line flags added to `rest_api` command.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--port',
-                        help='The port for the api to run on',
-                        default=8080)
-    parser.add_argument('--host',
-                        help='The host for the api to run on',
-                        default="127.0.0.1")
-    parser.add_argument('--stream-url',
-                        help='The url to connect to a running Validator',
-                        default='tcp://localhost:40000')
-    parser.add_argument('--timeout',
-                        help='Seconds to wait for a validator response',
-                        default=300)
+    parser.add_argument('-B', '--bind',
+                        help='The host and port for the api to run on.',
+                        action='append')
+    parser.add_argument('-C', '--connect',
+                        help='The url to connect to a running Validator')
+    parser.add_argument('-t', '--timeout',
+                        help='Seconds to wait for a validator response')
     parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
@@ -74,12 +75,22 @@ async def access_logger(app, handler):
 
         def log_response(response):
             # pylint: disable=protected-access
-            LOGGER.info(
-                'Response %s: %s status, %sB size, in %.3fs',
-                request_name,
-                response._status,
-                response._headers.get('Content-Length', 'UNKNOWN'),
-                time.time() - start_time)
+            content_length = response._headers.get('Content-Length',
+                                                   'UNKNOWN')
+            if content_length == 'UNKNOWN':
+                LOGGER.info(
+                    'Response %s: %s status, %s size, in %.3fs',
+                    request_name,
+                    response._status,
+                    content_length,
+                    time.time() - start_time)
+            else:
+                LOGGER.info(
+                    'Response %s: %s status, %sB size, in %.3fs',
+                    request_name,
+                    response._status,
+                    content_length,
+                    time.time() - start_time)
 
         try:
             response = await handler(request)
@@ -92,6 +103,12 @@ async def access_logger(app, handler):
     return logging_handler
 
 
+async def cors_handler(request):
+    headers = {}
+    RouteHandler.add_cors_headers(request, headers)
+    return web.Response(headers=headers)
+
+
 def start_rest_api(host, port, stream, timeout):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
@@ -101,6 +118,8 @@ def start_rest_api(host, port, stream, timeout):
     # Add routes to the web app
     LOGGER.info('Creating handlers for validator at %s', stream.url)
     handler = RouteHandler(loop, stream, timeout)
+
+    app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
 
     app.router.add_post('/batches', handler.submit_batches)
     app.router.add_get('/batch_status', handler.list_statuses)
@@ -125,12 +144,29 @@ def start_rest_api(host, port, stream, timeout):
     web.run_app(app, host=host, port=port, access_log=None)
 
 
+def load_rest_api_config(first_config):
+    default_config = load_default_rest_api_config()
+    config_dir = get_config_dir()
+    conf_file = os.path.join(config_dir, 'rest_api.toml')
+
+    toml_config = load_toml_rest_api_config(conf_file)
+    return merge_rest_api_config(
+        configs=[first_config, toml_config, default_config])
+
+
 def main():
     stream = None
     try:
         opts = parse_args(sys.argv[1:])
-        stream = Stream(opts.stream_url)
-
+        opts_config = RestApiConfig(
+            bind=opts.bind,
+            connect=opts.connect,
+            timeout=opts.timeout)
+        rest_api_config = load_rest_api_config(opts_config)
+        if "tcp://" not in rest_api_config.connect:
+            stream = Stream("tcp://" + rest_api_config.connect)
+        else:
+            stream = Stream(rest_api_config.connect)
         log_config = get_log_config(filename="rest_api_log_config.toml")
         if log_config is not None:
             log_configuration(log_config=log_config)
@@ -139,11 +175,19 @@ def main():
             log_configuration(log_dir=log_dir, name="sawtooth_rest_api")
         init_console_logging(verbose_level=opts.verbose)
 
+        try:
+            host, port = rest_api_config.bind[0].split(":")
+            port = int(port)
+        except ValueError as e:
+            print("Unable to parse binding {}: Must be in the format"
+                  " host:port".format(rest_api_config.bind[0]))
+            sys.exit(1)
+
         start_rest_api(
-            opts.host,
-            int(opts.port),
+            host,
+            port,
             stream,
-            int(opts.timeout))
+            int(rest_api_config.timeout))
         # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)

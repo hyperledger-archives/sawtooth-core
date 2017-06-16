@@ -132,8 +132,8 @@ class BlockStore(MutableMapping):
         """
         if not starting_block:
             return _BlockPredecessorIterator(self, start_block=self.chain_head)
-        else:
-            return _BlockPredecessorIterator(self, start_block=starting_block)
+
+        return _BlockPredecessorIterator(self, start_block=starting_block)
 
     def wait_for_batch_commits(self, batch_ids=None, timeout=None):
         """Waits for a set of batch ids to be committed to the block chain,

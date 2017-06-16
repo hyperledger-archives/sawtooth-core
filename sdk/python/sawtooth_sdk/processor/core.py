@@ -34,6 +34,7 @@ from sawtooth_sdk.protobuf.processor_pb2 import TpUnregisterRequest
 from sawtooth_sdk.protobuf.processor_pb2 import TpUnregisterResponse
 from sawtooth_sdk.protobuf.processor_pb2 import TpProcessRequest
 from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse
+from sawtooth_sdk.protobuf.processor_pb2 import TpPingResponse
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
@@ -134,7 +135,9 @@ class TransactionProcessor(object):
                     message_type=Message.TP_PROCESS_RESPONSE,
                     correlation_id=msg.correlation_id,
                     content=TpProcessResponse(
-                        status=TpProcessResponse.INVALID_TRANSACTION
+                        status=TpProcessResponse.INVALID_TRANSACTION,
+                        message=str(it),
+                        extended_data=it.extended_data
                     ).SerializeToString())
             except ValidatorConnectionError as vce:
                 # TP_PROCESS_REQUEST has made it through the
@@ -149,7 +152,9 @@ class TransactionProcessor(object):
                     message_type=Message.TP_PROCESS_RESPONSE,
                     correlation_id=msg.correlation_id,
                     content=TpProcessResponse(
-                        status=TpProcessResponse.INTERNAL_ERROR
+                        status=TpProcessResponse.INTERNAL_ERROR,
+                        message=str(ie),
+                        extended_data=ie.extended_data
                     ).SerializeToString())
             except ValidatorConnectionError as vce:
                 # Same as the prior except block, but an internal error has
@@ -180,6 +185,13 @@ class TransactionProcessor(object):
             LOGGER.debug(
                 'received message of type: %s',
                 Message.MessageType.Name(msg.message_type))
+            if msg.message_type == Message.TP_PING:
+                self._stream.send_back(
+                    message_type=Message.TP_PING_RESPONSE,
+                    correlation_id=msg.correlation_id,
+                    content=TpPingResponse(
+                        status=TpPingResponse.OK).SerializeToString())
+                return
             self._process(msg)
 
     def _register(self):

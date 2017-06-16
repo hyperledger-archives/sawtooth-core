@@ -82,7 +82,7 @@ class SubprocessNodeController(NodeController):
         node_name = node_args.node_name
         node_num = int(node_name[len('validator-'):])
 
-        base_component_port = 40000
+        base_component_port = 4004
         port = str(base_component_port + node_num)
         url = 'tcp://0.0.0.0:' + port
 
@@ -105,9 +105,9 @@ class SubprocessNodeController(NodeController):
 
             # validator takes ports as separate args, but this might change
             if cmd == 'validator':
-                component = '--component-endpoint', url
-                network = '--network-endpoint', gossip_port
-                public_uri = '--public-uri', 'tcp://localhost:{}'.\
+                component = '--bind', "component:" + url
+                network = '--bind', "network:" + gossip_port
+                endpoint = '--endpoint', 'tcp://localhost:{}'.\
                     format(gossip_port_num)
                 peer_list = ['tcp://localhost:' + str(base_gossip_port + i)
                              for i in range(node_num)]
@@ -116,15 +116,15 @@ class SubprocessNodeController(NodeController):
                 peers.extend(peer_list_comma_sep)
                 if peers:
                     peers_flag = tuple(peers)
-                flags = component + network + public_uri
-                if len(peer_list) > 0:
+                flags = component + network + endpoint
+                if peer_list:
                     flags += peers_flag
                 flags += tuple(['-vv'])
 
             elif cmd == 'sawtooth':
                 flags = 'admin', 'genesis'
             elif cmd == 'rest_api':
-                flags = '--stream-url', url
+                flags = '--connect', url
             else:
                 flags = (url,)
             subprocess.Popen((executable,) + flags)

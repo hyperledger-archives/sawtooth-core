@@ -46,11 +46,12 @@ func NewIntkeyHandler(namespace string) *IntkeyHandler {
 	}
 }
 
-var MIN_VALUE = 0
-var MAX_VALUE = 4294967295
-var MAX_NAME_LENGTH = 20
-
-var FAMILY_NAME = "intkey"
+const (
+	MIN_VALUE       = 0
+	MAX_VALUE       = 4294967295
+	MAX_NAME_LENGTH = 20
+	FAMILY_NAME     = "intkey"
+)
 
 func (self *IntkeyHandler) FamilyName() string {
 	return FAMILY_NAME
