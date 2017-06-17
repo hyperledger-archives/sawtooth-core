@@ -196,9 +196,17 @@ def _get_address_from_txn(txn_info):
 
 class TestSchedulers(unittest.TestCase):
 
+    def setUp(self):
+        self._context_manager = ContextManager(
+            dict_database.DictDatabase(),
+            state_delta_store=Mock())
+
+    def tearDown(self):
+        self._context_manager.stop()
+
     def _setup_serial_scheduler(self):
-        context_manager = ContextManager(dict_database.DictDatabase(),
-                                         state_delta_store=Mock())
+        context_manager = self._context_manager
+
         squash_handler = context_manager.get_squash_handler()
         first_state_root = context_manager.get_first_root()
         scheduler = SerialScheduler(squash_handler,
@@ -207,8 +215,8 @@ class TestSchedulers(unittest.TestCase):
         return context_manager, scheduler
 
     def _setup_parallel_scheduler(self):
-        context_manager = ContextManager(dict_database.DictDatabase(),
-                                         state_delta_store=Mock())
+        context_manager = self._context_manager
+
         squash_handler = context_manager.get_squash_handler()
         first_state_root = context_manager.get_first_root()
         scheduler = ParallelScheduler(squash_handler,
@@ -216,18 +224,12 @@ class TestSchedulers(unittest.TestCase):
         return context_manager, scheduler
 
     def test_serial_completion_on_finalize(self):
-        try:
             context_manager, scheduler = self._setup_serial_scheduler()
             self._completion_on_finalize(scheduler)
-        finally:
-            context_manager.stop()
 
     def test_parallel_completion_on_finalize(self):
-        try:
             context_manager, scheduler = self._setup_parallel_scheduler()
             self._completion_on_finalize(scheduler)
-        finally:
-            context_manager.stop()
 
     def _completion_on_finalize(self, scheduler):
         """Tests that iteration will stop when finalized is called on an
@@ -272,18 +274,12 @@ class TestSchedulers(unittest.TestCase):
             next(iterable)
 
     def test_serial_completion_on_finalize_only_when_done(self):
-        try:
-            context_manager, scheduler = self._setup_serial_scheduler()
-            self._completion_on_finalize_only_when_done(scheduler)
-        finally:
-            context_manager.stop()
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._completion_on_finalize_only_when_done(scheduler)
 
     def test_parallel_completion_on_finalize_only_when_done(self):
-        try:
-            context_manager, scheduler = self._setup_parallel_scheduler()
-            self._completion_on_finalize_only_when_done(scheduler)
-        finally:
-            context_manager.stop()
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._completion_on_finalize_only_when_done(scheduler)
 
     def _completion_on_finalize_only_when_done(self, scheduler):
         """Tests that iteration will stop when finalized is called on an
@@ -328,18 +324,13 @@ class TestSchedulers(unittest.TestCase):
             next(iterable)
 
     def test_serial_add_batch_after_empty_iteration(self):
-        try:
-            context_manager, scheduler = self._setup_serial_scheduler()
-            self._add_batch_after_empty_iteration(scheduler)
-        finally:
-            context_manager.stop()
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._add_batch_after_empty_iteration(scheduler)
 
     def test_parallel_add_batch_after_empty_iteration(self):
-        try:
-            context_manager, scheduler = self._setup_parallel_scheduler()
-            self._add_batch_after_empty_iteration(scheduler)
-        finally:
-            context_manager.stop()
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._add_batch_after_empty_iteration(scheduler)
 
     def _add_batch_after_empty_iteration(self, scheduler):
         """Tests that iterations will continue as result of add_batch().
@@ -434,18 +425,12 @@ class TestSchedulers(unittest.TestCase):
             next(iterable)
 
     def test_serial_valid_batch_invalid_batch(self):
-        try:
-            context_manager, scheduler = self._setup_serial_scheduler()
-            self._add_valid_batch_invalid_batch(scheduler, context_manager)
-        finally:
-            context_manager.stop()
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
     def test_parallel_add_valid_batch_invalid_batch(self):
-        try:
-            context_manager, scheduler = self._setup_parallel_scheduler()
-            self._valid_batch_invalid_batch(scheduler, context_manager)
-        finally:
-            context_manager.stop()
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
     def _add_valid_batch_invalid_batch(self, scheduler, context_manager):
         """Tests the squash function. That the correct hash is being used
@@ -547,13 +532,10 @@ class TestSchedulers(unittest.TestCase):
         self.assertEqual(batch3_result.state_hash, state_root_end)
 
     def test_serial_sequential_add_batch_after_all_results_set(self):
-        try:
-            context_manager, scheduler = self._setup_serial_scheduler()
-            self._sequential_add_batch_after_all_results_set(
-                scheduler=scheduler,
-                context_manager=context_manager)
-        finally:
-            context_manager.stop()
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._sequential_add_batch_after_all_results_set(
+            scheduler=scheduler,
+            context_manager=context_manager)
 
     def _sequential_add_batch_after_all_results_set(self,
                                                     scheduler,
