@@ -249,9 +249,9 @@ class PredecessorTree:
 
 class TransactionExecutionResult:
     def __init__(self, is_valid, context_id=None, state_hash=None):
-        if context_id is not None and state_hash is not None:
+        if is_valid and context_id is None:
             raise ValueError(
-                "context_id and state_hash are exclusive arguments")
+                "There must be a context_id for valid transactions")
         if not is_valid and context_id is not None:
             raise ValueError(
                 "context_id must be None for invalid transactions")
@@ -285,6 +285,9 @@ class ParallelScheduler(Scheduler):
         # All batches in their natural order (the order they were added to
         # the scheduler.
         self._batches = []
+        # The batches that have state hashes added in add_batch, used in
+        # Block validation.
+        self._batches_with_state_hash = {}
 
         # Indexes to find a batch quickly
         self._batches_by_id = {}
@@ -329,6 +332,10 @@ class ParallelScheduler(Scheduler):
             self._batches_by_id[batch.header_signature] = batch
             for txn in batch.transactions:
                 self._batches_by_txn_id[txn.header_signature] = batch
+
+            if state_hash is not None:
+                b_id = batch.header_signature
+                self._batches_with_state_hash[b_id] = state_hash
 
             # For dependency handling: First, we determine our dependencies
             # based on the current state of the predecessor tree.  Second,
@@ -377,34 +384,106 @@ class ParallelScheduler(Scheduler):
                 return i
         raise ValueError("no such batch: {}".format(batch.header_signature))
 
+    def _is_explicit_request_for_state_root(self, batch_signature):
+        return batch_signature in self._batches_with_state_hash
+
+    def _is_implicit_request_for_state_root(self, batch_signature):
+        return self._final and self._is_last_valid_batch(batch_signature)
+
+    def _is_valid_batch(self, batch):
+        for txn in batch.transactions:
+            result = self._txn_results[txn.header_signature]
+            if not result.is_valid:
+                return False
+        return True
+
+    def _is_last_valid_batch(self, batch_signature):
+        batch = self._batches_by_id[batch_signature]
+        if not self._is_valid_batch(batch):
+            return False
+        index_of_next = self._batches.index(batch) + 1
+        for later_batch in self._batches[index_of_next:]:
+            if self._is_valid_batch(later_batch):
+                return False
+        return True
+
+    def _get_contexts_for_squash(self, batch_signature):
+        """Starting with the batch referenced by batch_signature, iterate back
+        through the batches and for each valid batch collect the context_id.
+        At the end remove contexts for txns that are other txn's predecessors.
+
+        Args:
+            batch_signature (str): The batch to start from, moving back through
+                the batches in the scheduler
+
+        Returns:
+            (list): Context ids that haven't been previous base contexts.
+        """
+
+        batch = self._batches_by_id[batch_signature]
+        index = self._batches.index(batch)
+        contexts_by_txn_id = {}
+        some_txns_predecessor = []
+        for b in self._batches[index::-1]:
+            batch_is_valid = True
+            contexts_from_batch_by_txn_id = {}
+            for txn in b.transactions[::-1]:
+                result = self._txn_results[txn.header_signature]
+                if not result.is_valid:
+                    batch_is_valid = False
+                    break
+                else:
+                    txn_id = txn.header_signature
+                    contexts_from_batch_by_txn_id[txn_id] = result.context_id
+            if batch_is_valid:
+                for txn_id in contexts_from_batch_by_txn_id:
+                    some_txns_predecessor.extend(
+                        self._txn_predecessors[txn_id])
+                contexts_by_txn_id.update(contexts_from_batch_by_txn_id)
+        txn_ids_to_possibly_remove = list(contexts_by_txn_id.keys()).copy()
+        for txn_id in txn_ids_to_possibly_remove:
+            if txn_id in some_txns_predecessor:
+                del contexts_by_txn_id[txn_id]
+        return list(contexts_by_txn_id.values())
+
+    def _is_state_hash_correct(self, state_hash, batch_id):
+        return state_hash == self._batches_with_state_hash[batch_id]
+
     def get_batch_execution_result(self, batch_signature):
         with self._condition:
+            # This method calculates the BatchExecutionResult on the fly,
+            # where only the TransactionExecutionResults are cached, instead
+            # of BatchExecutionResults, as in the SerialScheduler
             batch = self._batches_by_id[batch_signature]
 
-            last_state_hash = None
-            contexts = []
             for txn in batch.transactions:
                 txn_result = self._txn_results[txn.header_signature]
                 if not txn_result.is_valid:
                     return BatchExecutionResult(
                         is_valid=False, state_hash=None)
-                if txn_result.context_id is not None:
-                    contexts.append(txn_result.context_id)
-                if txn_result.state_hash is not None:
-                    last_state_hash = txn_result.state_hash
-
-            if last_state_hash is None:
-                # Find the index of the batch
-                index = self._get_batch_index(batch)
-                if index == 0:
-                    last_state_hash = self._first_state_hash
+            state_hash = None
+            if self._is_explicit_request_for_state_root(batch_signature):
+                contexts = self._get_contexts_for_squash(batch_signature)
+                state_hash = self._squash(self._first_state_hash,
+                                          contexts,
+                                          persist=False,
+                                          clean_up=False)
+                if self._is_state_hash_correct(state_hash, batch_signature):
+                    self._squash(self._first_state_hash,
+                                 contexts,
+                                 persist=True,
+                                 clean_up=True)
                 else:
-                    prev_batch = self._batches[index - 1]
-                    last_state_hash = \
-                        self._batch_results[prev_batch].state_hash
-
-            state_hash = self._squash(last_state_hash, contexts, persist=True,
-                                      clean_up=False)
+                    self._squash(self._first_state_hash,
+                                 contexts,
+                                 persist=False,
+                                 clean_up=True)
+            elif self._is_implicit_request_for_state_root(batch_signature):
+                contexts = self._get_contexts_for_squash(batch_signature)
+                state_hash = self._squash(self._first_state_hash,
+                                          contexts,
+                                          persist=False,
+                                          clean_up=True)
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
 
     def set_transaction_execution_result(
@@ -416,16 +495,13 @@ class ParallelScheduler(Scheduler):
 
             txn_result = TransactionExecutionResult(
                 is_valid=is_valid,
-                context_id=context_id)
+                context_id=context_id if is_valid else None,
+                state_hash=self._first_state_hash if is_valid else None)
 
             self._txn_results[txn_signature] = txn_result
 
-            # mark all transactions which depend upon this one as
+            # mark all transactions which depend explicitly upon this one as
             # invalid as well
-
-            # mark all transactions in batches impacted by this failure
-            # as failed -- "failed by association"; this presumably trickles
-            # through and invalidates a lot
 
             self._condition.notify_all()
 
@@ -446,9 +522,60 @@ class ParallelScheduler(Scheduler):
 
         return False
 
+    def _txn_result_is_invalid(self, sig):
+        return sig in self._txn_results and \
+               not self._txn_results[sig].is_valid
+
+    def _txn_is_in_valid_batch(self, txn_id):
+        """Returns whether the transaction is in a valid batch.
+
+        Args:
+            txn_id (str): The transaction header signature.
+
+        Returns:
+            (bool): True if the txn's batch is valid, False otherwise.
+        """
+
+        batch = self._batches_by_txn_id[txn_id]
+        for txn in batch.transactions:
+            if self._txn_result_is_invalid(sig=txn.header_signature):
+                return False
+        return True
+
+    def _predecessor_not_predecessor_of_predecessors(self,
+                                                     prior_txn_id,
+                                                     predecessors):
+        """
+
+        Args:
+            prior_txn_id (str): The predecessor's txn header_signature.
+            predecessors (list): The predecessors of the txn that the
+                prior_txn_id is a predecessor of.
+
+        Returns:
+            (bool): The prior_txn_id is not a predecessor of a predecessor.
+        """
+
+        for pred_id in predecessors:
+            if prior_txn_id in self._txn_predecessors[pred_id]:
+                return False
+        return True
+
     def _get_initial_state_for_transaction(self, txn):
         # Collect contexts that this transaction depends upon
-        return self._last_state_hash
+        # We assume that all prior txns in the batch are valid
+        # or else this transaction wouldn't run. Also any explicit
+        # dependencies that could have failed this txn did so.
+        contexts = []
+        predecessors = self._txn_predecessors[txn.header_signature]
+        for prior_txn_id in predecessors:
+            if self._txn_is_in_valid_batch(prior_txn_id):
+                result = self._txn_results[prior_txn_id]
+                if self._predecessor_not_predecessor_of_predecessors(
+                        prior_txn_id,
+                        predecessors):
+                    contexts.append(result.context_id)
+        return contexts
 
     def next_transaction(self):
         with self._condition:
@@ -462,17 +589,16 @@ class ParallelScheduler(Scheduler):
                     break
 
             if next_txn is not None:
-                state_hash = self._get_initial_state_for_transaction(next_txn)
+                bases = self._get_initial_state_for_transaction(next_txn)
 
                 info = TxnInformation(
                     txn=next_txn,
-                    state_hash=state_hash,
-                    base_context_ids=[])
+                    state_hash=self._first_state_hash,
+                    base_context_ids=bases)
                 self._scheduled.append(next_txn.header_signature)
                 self._scheduled_txn_info[next_txn.header_signature] = info
                 return info
-            else:
-                return None
+            return None
 
     def available(self):
         with self._condition:
@@ -491,17 +617,18 @@ class ParallelScheduler(Scheduler):
             self._final = True
             self._condition.notify_all()
 
+    def _complete(self):
+        return self._final and \
+                    len(self._txn_results) == len(self._batches_by_txn_id)
+
     def complete(self, block=True):
         with self._condition:
-            while True:
-                if self._final and \
-                        len(self._unscheduled_transactions()) == 0:
-                    return True
-
-                if block:
-                    self._condition.wait()
-                else:
-                    return False
+            if self._complete():
+                return True
+            if block:
+                self._condition.wait_for(self._complete)
+            else:
+                return False
 
     def __del__(self):
         self.cancel()
