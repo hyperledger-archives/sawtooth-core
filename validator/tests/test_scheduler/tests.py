@@ -43,7 +43,55 @@ LOGGER = logging.getLogger(__name__)
 
 class TestSchedulersWithYaml(unittest.TestCase):
 
-    def test_single_block_files_individually(self):
+    def _setup_serial_scheduler(self):
+        context_manager = self._context_manager
+        squash_handler = context_manager.get_squash_handler()
+        first_state_root = context_manager.get_first_root()
+        scheduler = SerialScheduler(squash_handler,
+                                    first_state_root,
+                                    always_persist=False)
+        return context_manager, scheduler
+
+    def _setup_parallel_scheduler(self):
+        context_manager = self._context_manager
+        squash_handler = context_manager.get_squash_handler()
+        first_state_root = context_manager.get_first_root()
+        scheduler = ParallelScheduler(squash_handler,
+                                      first_state_root)
+        return context_manager, scheduler
+
+    def test_parallel_simple_scheduler_test(self):
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='simple_scheduler_test.yaml')
+
+    def test_serial_simple_scheduler_test(self):
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='simple_scheduler_test.yaml')
+
+    def test_parallel_intkey_small_batch(self):
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='intkey_small_batch.yaml')
+
+    def test_serial_intkey_small_batch(self):
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='intkey_small_batch.yaml')
+
+    def _single_block_files_individually(self,
+                                         scheduler,
+                                         context_manager,
+                                         name):
         """Tests scheduler(s) with yaml files that represent a single
         block.
 
@@ -53,41 +101,30 @@ class TestSchedulersWithYaml(unittest.TestCase):
 
         """
 
-        files_with_one_block = ['simple_scheduler_test.yaml',
-                                'intkey_small_batch.yaml']
-        for name in files_with_one_block:
-            file_name = self._path_to_yaml_file(name)
-            serial_scheduler = SerialScheduler(
-                squash_handler=self._context_manager.get_squash_handler(),
-                first_state_hash=self._context_manager.get_first_root(),
-                always_persist=False)
-            tester = SchedulerTester(file_name)
-            defined_batch_results_dict = tester.batch_results
-            batch_results = tester.run_scheduler(
-                scheduler=serial_scheduler,
-                context_manager=self._context_manager)
-            self.assert_batch_validity(
-                defined_batch_results_dict,
-                batch_results)
-            self.assert_one_state_hash(batch_results=batch_results)
-            sched_state_roots = self._get_state_roots(
-                batch_results=batch_results)
-            calc_state_hash = tester.compute_state_hashes_wo_scheduler()
+        file_name = self._path_to_yaml_file(name)
+        tester = SchedulerTester(file_name)
+        defined_batch_results_dict = tester.batch_results
+        batch_results = tester.run_scheduler(
+            scheduler=scheduler,
+            context_manager=context_manager)
+        self.assert_batch_validity(
+            defined_batch_results_dict,
+            batch_results)
+        self.assert_one_state_hash(batch_results=batch_results)
+        sched_state_roots = self._get_state_roots(
+            batch_results=batch_results)
+        calc_state_hash = tester.compute_state_hashes_wo_scheduler()
 
-            self.assertEquals(
-                sched_state_roots,
-                calc_state_hash,
-                "The state hashes calculated by the scheduler must"
-                " be the same as calculated by the tester")
-
-    def _create_context_manager(self):
-        database = dict_database.DictDatabase()
-        context_manager = ContextManager(database=database,
-                                         state_delta_store=Mock())
-        return context_manager
+        self.assertEquals(
+            sched_state_roots,
+            calc_state_hash,
+            "The state hashes calculated by the scheduler for yaml file {}"
+            " must be the same as calculated by the tester".format(name))
 
     def setUp(self):
-        self._context_manager = self._create_context_manager()
+        self._context_manager = ContextManager(
+            dict_database.DictDatabase(),
+            state_delta_store=Mock())
 
     def tearDown(self):
         self._context_manager.stop()
@@ -241,7 +278,6 @@ class TestSchedulers(unittest.TestCase):
         finally:
             context_manager.stop()
 
-    @unittest.skip("Scheduler.complete is not finished")
     def test_parallel_completion_on_finalize_only_when_done(self):
         try:
             context_manager, scheduler = self._setup_parallel_scheduler()
@@ -405,7 +441,6 @@ class TestSchedulers(unittest.TestCase):
         finally:
             context_manager.stop()
 
-    @unittest.skip("Scheduler does not have batch_results")
     def test_parallel_add_valid_batch_invalid_batch(self):
         try:
             context_manager, scheduler = self._setup_parallel_scheduler()
@@ -1014,7 +1049,7 @@ class TestParallelScheduler(unittest.TestCase):
         scheduled_txn_info.append(next(iterable))
         self.assertIsNotNone(scheduled_txn_info[3])
         self.assertEquals(txns[2].payload, scheduled_txn_info[3].txn.payload)
-        self.assertTrue(self.scheduler.complete(block=False))
+        self.assertFalse(self.scheduler.complete(block=False))
 
         self.assertEquals(0, self.scheduler.available())
         context_id3 = self.context_manager.create_context(
