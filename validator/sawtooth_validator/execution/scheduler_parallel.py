@@ -265,13 +265,15 @@ class TransactionExecutionResult:
 
 
 class ParallelScheduler(Scheduler):
-    def __init__(self, squash_handler, first_state_hash):
+    def __init__(self, squash_handler, first_state_hash, always_persist):
         self._squash = squash_handler
         self._first_state_hash = first_state_hash
         self._last_state_hash = first_state_hash
         self._condition = Condition()
         self._predecessor_tree = PredecessorTree()
         self._txn_predecessors = {}
+
+        self._always_persist = always_persist
 
         # Transaction identifiers which have been scheduled.  Stored as a list,
         # since order is important; SchedulerIterator instances, for example,
@@ -482,7 +484,7 @@ class ParallelScheduler(Scheduler):
                 contexts = self._get_contexts_for_squash(batch_signature)
                 state_hash = self._squash(self._first_state_hash,
                                           contexts,
-                                          persist=False,
+                                          persist=self._always_persist,
                                           clean_up=True)
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
 
