@@ -57,7 +57,8 @@ class TestSchedulersWithYaml(unittest.TestCase):
         squash_handler = context_manager.get_squash_handler()
         first_state_root = context_manager.get_first_root()
         scheduler = ParallelScheduler(squash_handler,
-                                      first_state_root)
+                                      first_state_root,
+                                      always_persist=False)
         return context_manager, scheduler
 
     def test_parallel_simple_scheduler_test(self):
@@ -220,7 +221,8 @@ class TestSchedulers(unittest.TestCase):
         squash_handler = context_manager.get_squash_handler()
         first_state_root = context_manager.get_first_root()
         scheduler = ParallelScheduler(squash_handler,
-                                      first_state_root)
+                                      first_state_root,
+                                      always_persist=False)
         return context_manager, scheduler
 
     def test_serial_completion_on_finalize(self):
@@ -824,7 +826,8 @@ class TestParallelScheduler(unittest.TestCase):
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
         self.scheduler = ParallelScheduler(squash_handler,
-                                           self.first_state_root)
+                                           self.first_state_root,
+                                           always_persist=False)
 
     def tearDown(self):
         self.context_manager.stop()

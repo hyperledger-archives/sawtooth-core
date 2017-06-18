@@ -322,7 +322,8 @@ class TransactionExecutor(object):
                                    always_persist=always_persist)
         elif self._scheduler_type == "parallel":
             return ParallelScheduler(squash_handler=squash_handler,
-                                     first_state_hash=first_state_root)
+                                     first_state_hash=first_state_root,
+                                     always_persist=always_persist)
 
         else:
             raise AssertionError(
