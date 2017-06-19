@@ -69,19 +69,19 @@ func (self *IntkeyHandler) Namespaces() []string {
 func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.State) error {
 	payloadData := request.GetPayload()
 	if payloadData == nil {
-		return &processor.InvalidTransactionError{"Must contain payload"}
+		return &processor.InvalidTransactionError{Msg: "Must contain payload"}
 	}
 	var payload IntkeyPayload
 	err := DecodeCBOR(payloadData, &payload)
 	if err != nil {
 		return &processor.InvalidTransactionError{
-			fmt.Sprint("Failed to decode payload: ", err),
+			Msg: fmt.Sprint("Failed to decode payload: ", err),
 		}
 	}
 
 	if err != nil {
 		logger.Error("Bad payload: ", payloadData)
-		return &processor.InternalError{fmt.Sprint("Failed to decode payload: ", err)}
+		return &processor.InternalError{Msg: fmt.Sprint("Failed to decode payload: ", err)}
 	}
 
 	verb := payload.Verb
@@ -90,7 +90,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 
 	if len(name) > MAX_NAME_LENGTH {
 		return &processor.InvalidTransactionError{
-			fmt.Sprintf(
+			Msg: fmt.Sprintf(
 				"Name must be a string of no more than %v characters",
 				MAX_NAME_LENGTH),
 		}
@@ -98,18 +98,18 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 
 	if value < MIN_VALUE {
 		return &processor.InvalidTransactionError{
-			fmt.Sprintf("Value must be >= %v, not: %v", MIN_VALUE, value),
+			Msg: fmt.Sprintf("Value must be >= %v, not: %v", MIN_VALUE, value),
 		}
 	}
 
 	if value > MAX_VALUE {
 		return &processor.InvalidTransactionError{
-			fmt.Sprintf("Value must be <= %v, not: %v", MAX_VALUE, value),
+			Msg: fmt.Sprintf("Value must be <= %v, not: %v", MAX_VALUE, value),
 		}
 	}
 
 	if !(verb == "set" || verb == "inc" || verb == "dec") {
-		return &processor.InvalidTransactionError{fmt.Sprintf("Invalid verb: %v", verb)}
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf("Invalid verb: %v", verb)}
 	}
 
 	hashed_name := Hexdigest(name)
@@ -117,7 +117,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 
 	results, err := state.Get([]string{address})
 	if err != nil {
-		return &processor.InternalError{fmt.Sprint("Error getting state:", err)}
+		return &processor.InternalError{Msg: fmt.Sprint("Error getting state:", err)}
 	}
 
 	var collisionMap map[string]int
@@ -126,7 +126,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 		err = DecodeCBOR(data, &collisionMap)
 		if err != nil {
 			return &processor.InternalError{
-				fmt.Sprint("Failed to decode data: ", err),
+				Msg: fmt.Sprint("Failed to decode data: ", err),
 			}
 		}
 	} else {
@@ -137,7 +137,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	storedValue, exists := collisionMap[name]
 	if verb == "inc" || verb == "dec" {
 		if !exists {
-			return &processor.InvalidTransactionError{"Need existing value for inc/dec"}
+			return &processor.InvalidTransactionError{Msg: "Need existing value for inc/dec"}
 		}
 
 		switch verb {
@@ -149,20 +149,20 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 
 		if newValue < MIN_VALUE {
 			return &processor.InvalidTransactionError{
-				fmt.Sprintf("New Value must be >= ", MIN_VALUE),
+				Msg: fmt.Sprintf("New Value must be >= ", MIN_VALUE),
 			}
 		}
 
 		if newValue > MAX_VALUE {
 			return &processor.InvalidTransactionError{
-				fmt.Sprintf("New Value must be <= ", MAX_VALUE),
+				Msg: fmt.Sprintf("New Value must be <= ", MAX_VALUE),
 			}
 		}
 	}
 
 	if verb == "set" {
 		if exists {
-			return &processor.InvalidTransactionError{"Cannot set existing value"}
+			return &processor.InvalidTransactionError{Msg: "Cannot set existing value"}
 		}
 		newValue = value
 	}
@@ -171,7 +171,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	data, err = EncodeCBOR(collisionMap)
 	if err != nil {
 		return &processor.InternalError{
-			fmt.Sprint("Failed to encode new map:", err),
+			Msg: fmt.Sprint("Failed to encode new map:", err),
 		}
 	}
 
@@ -179,10 +179,10 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 		address: data,
 	})
 	if err != nil {
-		return &processor.InternalError{fmt.Sprint("Failed to set new Value:", err)}
+		return &processor.InternalError{Msg: fmt.Sprint("Failed to set new Value:", err)}
 	}
 	if len(addresses) == 0 {
-		return &processor.InternalError{"No addresses in set response"}
+		return &processor.InternalError{Msg: "No addresses in set response"}
 	}
 
 	return nil
@@ -196,7 +196,7 @@ func EncodeCBOR(value interface{}) ([]byte, error) {
 func DecodeCBOR(data []byte, pointer interface{}) error {
 	defer func() error {
 		if recover() != nil {
-			return &processor.InvalidTransactionError{"Failed to decode payload"}
+			return &processor.InvalidTransactionError{Msg: "Failed to decode payload"}
 		}
 		return nil
 	}()
