@@ -13,12 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from time import time
-from threading import Condition
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 
 from sawtooth_validator.exceptions import PossibleForkDetectedError
+from sawtooth_validator.state.notification import Observable
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -34,14 +33,14 @@ class BlockStore(MutableMapping):
     """
     def __init__(self, block_db):
         self._block_store = block_db
-        self._commit_condition = Condition()
+        self.commit_notifier = Observable()
 
     def __setitem__(self, key, value):
         if key != value.identifier:
             raise KeyError("Invalid key to store block under: {} expected {}".
                            format(key, value.identifier))
         add_ops = self._build_add_block_ops(value)
-        self._block_store.set_batch(add_ops)
+        self.set_batch(add_ops)
 
     def __getitem__(self, key):
         stored_block = self._block_store[key]
@@ -77,6 +76,13 @@ class BlockStore(MutableMapping):
             out.append(str(value))
         return ','.join(out)
 
+    def set_batch(self, add_pairs, del_keys=None):
+        """Calls set_batch on the internal block store db, and then notifies
+        any observers.
+        """
+        self._block_store.set_batch(add_pairs, del_keys)
+        self.commit_notifier.notify_observers()
+
     def update_chain(self, new_chain, old_chain=None):
         """
         Set the current chain head, does not validate that the block
@@ -99,7 +105,7 @@ class BlockStore(MutableMapping):
                 del_keys = del_keys + self._build_remove_block_ops(blkw)
         add_pairs.append(("chain_head_id", new_chain[0].identifier))
 
-        self._block_store.set_batch(add_pairs, del_keys)
+        self.set_batch(add_pairs, del_keys)
 
     @property
     def chain_head(self):
@@ -135,23 +141,6 @@ class BlockStore(MutableMapping):
 
         return _BlockPredecessorIterator(self, start_block=starting_block)
 
-    def wait_for_batch_commits(self, batch_ids=None, timeout=None):
-        """Waits for a set of batch ids to be committed to the block chain,
-        and returns True when they have. If timeout is exceeded, returns False.
-        If no batch_ids are passed in, it will return True on the next commit.
-        """
-        batch_ids = batch_ids or []
-        timeout = timeout or 300
-        start_time = time()
-
-        with self._commit_condition:
-            while True:
-                if all(self.has_batch(b) for b in batch_ids):
-                    return True
-                if time() - start_time > timeout:
-                    return False
-                self._commit_condition.wait(timeout - (time() - start_time))
-
     def _build_add_block_ops(self, blkw):
         """Build the batch operations to add a block to the BlockStore.
 
@@ -161,13 +150,11 @@ class BlockStore(MutableMapping):
         """
         out = []
         blk_id = blkw.identifier
-        with self._commit_condition:
-            out.append((blk_id, blkw.block.SerializeToString()))
-            for batch in blkw.batches:
-                out.append((batch.header_signature, blk_id))
-                for txn in batch.transactions:
-                    out.append((txn.header_signature, blk_id))
-            self._commit_condition.notify_all()
+        out.append((blk_id, blkw.block.SerializeToString()))
+        for batch in blkw.batches:
+            out.append((batch.header_signature, blk_id))
+            for txn in batch.transactions:
+                out.append((txn.header_signature, blk_id))
         return out
 
     @staticmethod
