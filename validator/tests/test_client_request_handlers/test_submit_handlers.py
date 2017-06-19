@@ -79,7 +79,7 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
 
         self.assertGreater(8, time() - start_time)
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-new'], self.status.COMMITTED)
+        self.assertEqual(response.batch_statuses['b-new'], client_pb2.COMMITTED)
 
 
 class TestBatchStatusRequests(ClientHandlerTestCase):
@@ -107,7 +107,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['b-0'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-0'], self.status.COMMITTED)
+        self.assertEqual(response.batch_statuses['b-0'], client_pb2.COMMITTED)
 
     def test_batch_status_bad_request(self):
         """Verifies bad requests for status of a batch break properly.
@@ -145,7 +145,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['b-3'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-3'], self.status.PENDING)
+        self.assertEqual(response.batch_statuses['b-3'], client_pb2.PENDING)
 
     def test_batch_status_when_missing(self):
         """Verifies requests for status of a batch that is not found work.
@@ -157,7 +157,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['z'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['z'], self.status.UNKNOWN)
+        self.assertEqual(response.batch_statuses['z'], client_pb2.UNKNOWN)
 
     def test_batch_status_in_store_and_cache(self):
         """Verifies requests for status of batch in both store and cache work.
@@ -178,7 +178,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['b-2'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-2'], self.status.COMMITTED)
+        self.assertEqual(response.batch_statuses['b-2'], client_pb2.COMMITTED)
 
     def test_batch_status_for_many_batches(self):
         """Verifies requests for status of many batches work properly.
@@ -202,10 +202,10 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['b-1', 'b-2', 'b-3', 'y'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-1'], self.status.COMMITTED)
-        self.assertEqual(response.batch_statuses['b-2'], self.status.COMMITTED)
-        self.assertEqual(response.batch_statuses['b-3'], self.status.PENDING)
-        self.assertEqual(response.batch_statuses['y'], self.status.UNKNOWN)
+        self.assertEqual(response.batch_statuses['b-1'], client_pb2.COMMITTED)
+        self.assertEqual(response.batch_statuses['b-2'], client_pb2.COMMITTED)
+        self.assertEqual(response.batch_statuses['b-3'], client_pb2.PENDING)
+        self.assertEqual(response.batch_statuses['y'], client_pb2.UNKNOWN)
 
     def test_batch_status_with_wait(self):
         """Verifies requests for status that wait for commit work properly.
@@ -231,4 +231,4 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.assertGreater(8, time() - start_time)
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-new'], self.status.COMMITTED)
+        self.assertEqual(response.batch_statuses['b-new'], client_pb2.COMMITTED)

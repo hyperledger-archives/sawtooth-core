@@ -19,6 +19,7 @@ from aiohttp.test_utils import AioHTTPTestCase
 from base64 import b64decode
 
 from sawtooth_rest_api.route_handlers import RouteHandler
+from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf.client_pb2 import Leaf
 from sawtooth_rest_api.protobuf.client_pb2 import PagingControls
 from sawtooth_rest_api.protobuf.client_pb2 import PagingResponse
@@ -306,7 +307,7 @@ class BaseApiTest(AioHTTPTestCase):
         self.assertEqual(len(enum_statuses), len(json_statuses))
         for batch_id, status_string in json_statuses.items():
             self.assertIn(batch_id, enum_statuses)
-            status_enum = self.status.BatchStatus.Name(enum_statuses[batch_id])
+            status_enum = client_pb2.BatchStatus.Name(enum_statuses[batch_id])
             self.assertEqual(status_string, status_enum)
 
     def assert_blocks_well_formed(self, blocks, *expected_ids):

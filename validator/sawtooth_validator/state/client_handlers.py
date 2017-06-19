@@ -286,11 +286,11 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         statuses = {}
         for batch_id in batch_ids:
             if self._block_store.has_batch(batch_id):
-                statuses[batch_id] = self._status.COMMITTED
+                statuses[batch_id] = client_pb2.COMMITTED
             elif batch_id in self._batch_cache:
-                statuses[batch_id] = self._status.PENDING
+                statuses[batch_id] = client_pb2.PENDING
             else:
-                statuses[batch_id] = self._status.UNKNOWN
+                statuses[batch_id] = client_pb2.UNKNOWN
         return statuses
 
 
