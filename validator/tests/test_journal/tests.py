@@ -560,24 +560,6 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_invalid_block(new_block)
         self.assert_new_block_not_committed()
 
-    def test_block_missing_batch(self):
-        """
-        Test the case where the new block is missing a batch.
-        """
-        pass
-
-    def test_block_extra_batch(self):
-        """
-        Test the case where the new block has an extra batch.
-        """
-        pass
-
-    def test_block_batches_order(self):
-        """
-        Test the case where the new block has batches that are
-        out of order.
-        """
-        pass
 
     def test_block_missing_batch_dependency(self):
         """
