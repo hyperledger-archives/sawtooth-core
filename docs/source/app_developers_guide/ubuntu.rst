@@ -318,7 +318,7 @@ following commands from the Linux CLI:
 
 .. code-block:: console
 
-  $ sawtooth config proposal create --key /tmp/sawtooth.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
+  $ sawtooth config proposal create --key /tmp/sawtooth.priv sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/cbor"}, {"family":"sawtooth_config", "version":"1.0", "encoding":"application/protobuf"}]'
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
 and output similar to the following appears in the validator terminal:
