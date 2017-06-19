@@ -41,7 +41,9 @@ class BlockStore(MutableMapping):
             raise KeyError("Invalid key to store block under: {} expected {}".
                            format(key, value.identifier))
         add_ops = self._build_add_block_ops(value)
-        self._block_store.set_batch(add_ops)
+        with self._commit_condition:
+            self._block_store.set_batch(add_ops)
+            self._commit_condition.notify_all()
 
     def __getitem__(self, key):
         stored_block = self._block_store[key]
@@ -99,7 +101,9 @@ class BlockStore(MutableMapping):
                 del_keys = del_keys + self._build_remove_block_ops(blkw)
         add_pairs.append(("chain_head_id", new_chain[0].identifier))
 
-        self._block_store.set_batch(add_pairs, del_keys)
+        with self._commit_condition:
+            self._block_store.set_batch(add_pairs, del_keys)
+            self._commit_condition.notify_all()
 
     @property
     def chain_head(self):
@@ -161,13 +165,12 @@ class BlockStore(MutableMapping):
         """
         out = []
         blk_id = blkw.identifier
-        with self._commit_condition:
-            out.append((blk_id, blkw.block.SerializeToString()))
-            for batch in blkw.batches:
-                out.append((batch.header_signature, blk_id))
-                for txn in batch.transactions:
-                    out.append((txn.header_signature, blk_id))
-            self._commit_condition.notify_all()
+
+        out.append((blk_id, blkw.block.SerializeToString()))
+        for batch in blkw.batches:
+            out.append((batch.header_signature, blk_id))
+            for txn in batch.transactions:
+                out.append((txn.header_signature, blk_id))
         return out
 
     @staticmethod
