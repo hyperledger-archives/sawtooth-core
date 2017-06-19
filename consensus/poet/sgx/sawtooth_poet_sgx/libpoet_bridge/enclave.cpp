@@ -729,9 +729,6 @@ namespace sawtooth {
 
                 sgx_launch_token_t token = { 0 };
                 int flags = SGX_DEBUG_FLAG;
-//              #ifdef _DEBUG
-                    flags = 1;
-//              #endif // _DEBUG
 
                 // First attempt to load the enclave executable
                 sgx_status_t ret = SGX_SUCCESS;
