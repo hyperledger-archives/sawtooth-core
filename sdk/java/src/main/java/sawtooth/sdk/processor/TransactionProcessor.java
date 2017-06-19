@@ -28,7 +28,6 @@ import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TpProcessResponse;
 import sawtooth.sdk.protobuf.TpRegisterRequest;
 import sawtooth.sdk.protobuf.TpUnregisterRequest;
-import sawtooth.sdk.protobuf.TpUnregisterResponse;
 import sawtooth.sdk.protobuf.TransactionHeader;
 
 import java.util.ArrayList;
