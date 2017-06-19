@@ -30,6 +30,18 @@ message Leaf {
     bytes data = 2;
 }
 
+// Possible commit statuses for a batch submitted to a validator
+//   * COMMITTED - the batch was accepted and has been committed to the chain
+//   * INVALID - the batch failed validation, it should be resubmitted
+//   * PENDING - the batch is still being processed
+//   * UNKNOWN - no status for the batch could be found (possibly invalid)
+enum BatchStatus {
+    COMMITTED = 0;
+    INVALID = 1;
+    PENDING = 2;
+    UNKNOWN = 3;
+}
+
 // Paging controls to be sent with List requests.
 // Attributes:
 //     start_id: The id of a resource to start the page with
@@ -87,22 +99,11 @@ message ClientBatchSubmitRequest {
 //   * OK - everything with the request worked as expected
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * INVALID_BATCH - the batch failed validation, likely due to a bad signature
-// BatchesStatuses:
-//   * COMMITTED - the batch was accepted and has been committed to the chain
-//   * INVALID - the batch failed validation, it should be resubmitted
-//   * UNKNOWN - no status for the batch could be found (possibly invalid)
-//   * PENDING - the batch is still being processed
 message ClientBatchSubmitResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         INVALID_BATCH = 2;
-    }
-    enum BatchStatus {
-        COMMITTED = 0;
-        INVALID = 1;
-        UNKNOWN = 2;
-        PENDING = 3;
     }
     Status status = 1;
     map<string, BatchStatus> batch_statuses = 2;
@@ -126,22 +127,11 @@ message ClientBatchStatusRequest {
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * NO_RESOURCE - the response contains no data, likely because
 //     no ids were specified in the request
-// BatchesStatuses:
-//   * COMMITTED - the batch was accepted and has been committed to the chain
-//   * INVALID - the batch failed validation, it should be resubmitted
-//   * UNKNOWN - no status for the batch could be found (possibly invalid)
-//   * PENDING - the batch is still being processed
 message ClientBatchStatusResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         NO_RESOURCE = 4;
-    }
-    enum BatchStatus {
-        COMMITTED = 0;
-        INVALID = 1;
-        UNKNOWN = 2;
-        PENDING = 3;
     }
     Status status = 1;
     map<string, BatchStatus> batch_statuses = 2;

@@ -172,7 +172,7 @@ class PostBatchTests(BaseApiTest):
             - a link property that ends in '/batches?id=a'
         """
         batches = Mocks.make_batches('a')
-        statuses = {'a': self.status.COMMITTED}
+        statuses = {'a': client_pb2.COMMITTED}
         self.stream.preset_response(batch_statuses=statuses)
 
         request = await self.post_batches(batches, wait=True)
@@ -204,7 +204,7 @@ class PostBatchTests(BaseApiTest):
             - a data property matching the batch statuses received
         """
         batches = Mocks.make_batches('pending')
-        statuses = {'pending': self.status.PENDING}
+        statuses = {'pending': client_pb2.PENDING}
         self.stream.preset_response(batch_statuses=statuses)
 
         request = await self.post_batches(batches, wait=True)
@@ -245,7 +245,7 @@ class BatchStatusTests(BaseApiTest):
             - a link property that ends in '/batch_status?id=pending'
             - a data property matching the batch statuses received
         """
-        statuses = {'pending': self.status.PENDING}
+        statuses = {'pending': client_pb2.PENDING}
         self.stream.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200('/batch_status?id=pending')
@@ -303,7 +303,7 @@ class BatchStatusTests(BaseApiTest):
             - a link property that ends in '/batch_status?id=pending&wait'
             - a data property matching the batch statuses received
         """
-        statuses = {'pending': self.status.COMMITTED}
+        statuses = {'pending': client_pb2.COMMITTED}
         self.stream.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200('/batch_status?id=pending&wait')
@@ -334,9 +334,9 @@ class BatchStatusTests(BaseApiTest):
             - a data property matching the batch statuses received
         """
         statuses = {
-            'committed': self.status.COMMITTED,
-            'unknown': self.status.UNKNOWN,
-            'bad': self.status.UNKNOWN}
+            'committed': client_pb2.COMMITTED,
+            'unknown': client_pb2.UNKNOWN,
+            'bad': client_pb2.UNKNOWN}
         self.stream.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200(
@@ -380,9 +380,9 @@ class BatchStatusTests(BaseApiTest):
             - a data property matching the batch statuses received
         """
         statuses = {
-            'committed': self.status.COMMITTED,
-            'pending': self.status.PENDING,
-            'bad': self.status.UNKNOWN}
+            'committed': client_pb2.COMMITTED,
+            'pending': client_pb2.PENDING,
+            'bad': client_pb2.UNKNOWN}
         self.stream.preset_response(batch_statuses=statuses)
 
         request = await self.client.post(
