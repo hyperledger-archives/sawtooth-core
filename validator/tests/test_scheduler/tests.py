@@ -62,6 +62,15 @@ class TestSchedulersWithYaml(unittest.TestCase):
         return context_manager, scheduler
 
     def test_parallel_simple_scheduler_test(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/simple_scheduler_test.yaml file.
+
+        Notes:
+            To get a good understanding of the dependencies look at
+            simple_scheduler_test.yaml. In general, there are 4 batches,
+            2 are invalid. There will be 1 state root produced.
+        """
+
         context_manager, scheduler = self._setup_parallel_scheduler()
         self._single_block_files_individually(
             scheduler=scheduler,
@@ -69,6 +78,15 @@ class TestSchedulersWithYaml(unittest.TestCase):
             name='simple_scheduler_test.yaml')
 
     def test_serial_simple_scheduler_test(self):
+        """Tests the serial scheduler against the
+        test_scheduler/data/simple_scheduler_test.yaml file.
+
+        Notes:
+            To get a good understanding of the dependencies look at
+            simple_scheduler_test.yaml. In general, there are 4 batches,
+            2 are invalid. There will be 1 state root produced.
+        """
+
         context_manager, scheduler = self._setup_serial_scheduler()
         self._single_block_files_individually(
             scheduler=scheduler,
@@ -76,6 +94,16 @@ class TestSchedulersWithYaml(unittest.TestCase):
             name='simple_scheduler_test.yaml')
 
     def test_parallel_intkey_small_batch(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/intkey_small_batch.yaml file.
+
+        Notes:
+            In general, there are 8 batches, all valid, with intkey style
+            txns where the single input is the same as the single output.
+            The txn in batch 4 has an implicit dependency on the txn in
+            batch 3. There will be 1 state root produced
+        """
+
         context_manager, scheduler = self._setup_parallel_scheduler()
         self._single_block_files_individually(
             scheduler=scheduler,
@@ -83,6 +111,15 @@ class TestSchedulersWithYaml(unittest.TestCase):
             name='intkey_small_batch.yaml')
 
     def test_serial_intkey_small_batch(self):
+        """Tests the parallel scheduler against the
+                test_scheduler/data/intkey_small_batch.yaml file.
+
+        Notes:
+            In general, there are 8 batches, all valid, with intkey style
+            txns where the single input is the same as the single output.
+            The txn in batch 4 has an implicit dependency on the txn in
+            batch 3. There will be 1 state root produced
+        """
         context_manager, scheduler = self._setup_serial_scheduler()
         self._single_block_files_individually(
             scheduler=scheduler,
@@ -226,27 +263,38 @@ class TestSchedulers(unittest.TestCase):
         return context_manager, scheduler
 
     def test_serial_completion_on_finalize(self):
-            context_manager, scheduler = self._setup_serial_scheduler()
-            self._completion_on_finalize(scheduler)
+        """Tests that iteration will stop when finalized is called on an
+        otherwise complete serial scheduler.
+        """
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._completion_on_finalize(scheduler)
 
     def test_parallel_completion_on_finalize(self):
-            context_manager, scheduler = self._setup_parallel_scheduler()
-            self._completion_on_finalize(scheduler)
+        """Tests that iteration will stop when finalized is called on an
+        otherwise complete parallel scheduler.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._completion_on_finalize(scheduler)
 
     def _completion_on_finalize(self, scheduler):
         """Tests that iteration will stop when finalized is called on an
         otherwise complete scheduler.
-        Adds one batch and transaction, then verifies the iterable returns
-        that transaction.  Sets the execution result and then calls finalize.
-        Since the the scheduler is complete (all transactions have had
-        results set, and it's been finalized), we should get a StopIteration.
-        This check is useful in making sure the finalize() can occur after
-        all set_transaction_execution_result()s have been performed, because
-        in a normal situation, finalize will probably occur prior to those
-        calls.
+
+        Notes:
+            Adds one batch and transaction, then verifies the iterable returns
+            that transaction.  Sets the execution result and then calls finalize.
+            Since the the scheduler is complete (all transactions have had
+            results set, and it's been finalized), we should get a StopIteration.
+            This check is useful in making sure the finalize() can occur after
+            all set_transaction_execution_result()s have been performed, because
+            in a normal situation, finalize will probably occur prior to those
+            calls.
 
         This test should work for both a serial and parallel scheduler.
         """
+
         private_key = signing.generate_privkey()
         public_key = signing.generate_pubkey(private_key)
 
@@ -276,23 +324,34 @@ class TestSchedulers(unittest.TestCase):
             next(iterable)
 
     def test_serial_completion_on_finalize_only_when_done(self):
+        """Tests that complete will only be true when the serial scheduler
+        has had finalize called and all txns have execution result set.
+        """
+
         context_manager, scheduler = self._setup_serial_scheduler()
         self._completion_on_finalize_only_when_done(scheduler)
 
     def test_parallel_completion_on_finalize_only_when_done(self):
+        """Tests that complete will only be true when the parallel scheduler
+        has had finalize called and all txns have execution result set.
+        """
+
         context_manager, scheduler = self._setup_parallel_scheduler()
         self._completion_on_finalize_only_when_done(scheduler)
 
     def _completion_on_finalize_only_when_done(self, scheduler):
-        """Tests that iteration will stop when finalized is called on an
-        otherwise complete scheduler.
-        Adds one batch and transaction, then verifies the iterable returns
-        that transaction.  Finalizes then sets the execution result. The
-        schedule should not be marked as complete.
-        This check is useful in making sure the finalize() can occur after
-        all set_transaction_execution_result()s have been performed, because
-        in a normal situation, finalize will probably occur prior to those
-        calls.
+        """Tests that complete will only be true when the scheduler
+        has had finalize called and all txns have execution result set.
+
+        Notes:
+            Adds one batch and transaction, then verifies the iterable returns
+            that transaction.  Finalizes then sets the execution result. The
+            schedule should not be marked as complete until after the
+            execution result is set.
+            This check is useful in making sure the finalize() can occur after
+            all set_transaction_execution_result()s have been performed, because
+            in a normal situation, finalize will probably occur prior to those
+            calls.
 
         This test should work for both a serial and parallel scheduler.
         """
@@ -326,10 +385,17 @@ class TestSchedulers(unittest.TestCase):
             next(iterable)
 
     def test_serial_add_batch_after_empty_iteration(self):
+        """Tests that iterations of the serial scheduler will continue
+        as result of add_batch().
+        """
+
         context_manager, scheduler = self._setup_serial_scheduler()
         self._add_batch_after_empty_iteration(scheduler)
 
     def test_parallel_add_batch_after_empty_iteration(self):
+        """Tests that iterations of the parallel scheduler will continue
+        as result of add_batch().
+        """
 
         context_manager, scheduler = self._setup_parallel_scheduler()
         self._add_batch_after_empty_iteration(scheduler)
@@ -427,16 +493,26 @@ class TestSchedulers(unittest.TestCase):
             next(iterable)
 
     def test_serial_valid_batch_invalid_batch(self):
+        """Tests the squash function. That the correct state hash is found
+        at the end of valid and invalid batches, similar to block publishing.
+        """
+
         context_manager, scheduler = self._setup_serial_scheduler()
         self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
     def test_parallel_add_valid_batch_invalid_batch(self):
+        """Tests the squash function. That the correct state hash is found
+        at the end of valid and invalid batches, similar to block publishing.
+        """
+
         context_manager, scheduler = self._setup_parallel_scheduler()
         self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
     def _add_valid_batch_invalid_batch(self, scheduler, context_manager):
-        """Tests the squash function. That the correct hash is being used
-        for each txn and that the batch ending state hash is being set.
+
+        """Tests the squash function. That the correct state hash is found
+        at the end of valid and invalid batches, similar to block publishing.
+
          Basically:
             1. Adds two batches, one where all the txns are valid,
                and one where one of the txns is invalid.
