@@ -47,40 +47,7 @@ class XoTransactionHandler:
     def apply(self, transaction, state_store):
 
         # 1. Deserialize the transaction and verify it is valid
-        header = TransactionHeader()
-        header.ParseFromString(transaction.header)
-
-        # The transaction signer is the player
-        player = header.signer_pubkey
-
-        try:
-            # The payload is csv utf-8 encoded string
-            name, action, space = transaction.payload.decode().split(",")
-        except ValueError:
-            raise InvalidTransaction("Invalid payload serialization")
-
-        if name == "":
-            raise InvalidTransaction("Name is required")
-
-        if '|' in name:
-            raise InvalidTransaction('Name cannot contain "|"')
-
-        if action == "":
-            raise InvalidTransaction("Action is required")
-
-        elif action == "take":
-            try:
-                space = int(space)
-            except ValueError:
-                raise InvalidTransaction(
-                    "Space could not be converted as an integer."
-                )
-
-            if space < 1 or space > 9:
-                raise InvalidTransaction("Invalid space {}".format(space))
-
-        if action not in ("take", "create"):
-            raise InvalidTransaction("Invalid Action : '{}'".format(action))
+        name, action, space, signer = _unpack_transaction(transaction)
 
         # 2. Retrieve the game data from state storage
 
@@ -143,10 +110,10 @@ class XoTransactionHandler:
         elif action == "take":
             # Assign players if new game
             if player1 == "":
-                player1 = player
+                player1 = signer
 
             elif player2 == "":
-                player2 = player
+                player2 = signer
 
             # Verify player identity and take space
             lboard = list(board)
@@ -156,17 +123,17 @@ class XoTransactionHandler:
                     "Invalid Action: Space already taken."
                 )
 
-            if state == "P1-NEXT" and player == player1:
+            if state == "P1-NEXT" and signer == player1:
                 lboard[space - 1] = "X"
                 state = "P2-NEXT"
 
-            elif state == "P2-NEXT" and player == player2:
+            elif state == "P2-NEXT" and signer == player2:
                 lboard[space - 1] = "O"
                 state = "P1-NEXT"
 
             else:
                 raise InvalidTransaction(
-                    "Not this player's turn: {}".format(player[:6])
+                    "Not this player's turn: {}".format(signer[:6])
                 )
             board = "".join(lboard)
 
@@ -180,11 +147,11 @@ class XoTransactionHandler:
 
         # 5. Log for tutorial usage
         if action == "create":
-            _display("Player {} created a game.".format(player[:6]))
+            _display("Player {} created a game.".format(signer[:6]))
 
         elif action == "take":
             _display(
-                "Player {} takes space: {}\n\n".format(player[:6], space) +
+                "Player {} takes space: {}\n\n".format(signer[:6], space) +
                 _game_data_to_str(board, state, player1, player2, name)
             )
 
@@ -205,6 +172,47 @@ class XoTransactionHandler:
 
         if len(addresses) < 1:
             raise InternalError("State Error")
+
+
+def _unpack_transaction(transaction):
+    header = TransactionHeader()
+    header.ParseFromString(transaction.header)
+
+    # The transaction signer is the player
+    signer = header.signer_pubkey
+
+    try:
+        # The payload is csv utf-8 encoded string
+        name, action, space = transaction.payload.decode().split(",")
+    except ValueError:
+        raise InvalidTransaction("Invalid payload serialization")
+
+    _validate_transaction(name, action, space)
+
+    if action == 'take':
+        space = int(space)
+
+    return name, action, space, signer
+
+
+def _validate_transaction(name, action, space):
+    if not name:
+        raise InvalidTransaction('Name is required')
+
+    if '|' in name:
+        raise InvalidTransaction('Name cannot contain "|"')
+
+    if not action:
+        raise InvalidTransaction('Action is required')
+
+    if action not in ('create', 'take'):
+        raise InvalidTransaction('Invalid action: {}'.format(action))
+
+    if action == 'take':
+        try:
+            assert int(space) in range(1, 10)
+        except (ValueError, AssertionError):
+            raise InvalidTransaction('Space must be an integer from 1 to 9')
 
 
 def _is_win(board, letter):
