@@ -37,14 +37,28 @@ depicted.
 Installation
 ============
 
-Run the following commands from a terminal window, as root:
+Ubuntu packages are provided by the Sawtooth package repository.  To add the
+repository, run the following commands in a terminal window:
 
 .. code-block:: console
 
-  # echo 'deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe' | tee --append /etc/apt/sources.list
-  # apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-  # apt-get update && apt-get install -y sawtooth
+  $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
+  $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe'
+  $ sudo apt-get update
 
+Sawtooth consists of several Ubuntu packages, which can be installed together
+using the 'sawtooth' metapackage.  Run the following in a terminal window:
+
+.. code-block:: console
+
+  $ sudo apt-get install -y sawtooth
+
+At any time after installation, you can view the sawtooth packages installed
+with the following command:
+
+.. code-block:: console
+
+  $ dpkg -l '*sawtooth*'
 
 Validator Start-up Process
 ==========================
