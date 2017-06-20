@@ -95,7 +95,7 @@ func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 	// Load the entry for the sender from global state
 	senderEntry, err := sm.GetEntry(senderAddress)
 	if err != nil {
-		return &processor.InternalError{err.Error()}
+		return &processor.InternalError{Msg: err.Error()}
 	}
 
 	var newEntryAddress []byte
@@ -105,7 +105,7 @@ func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 		logger.Debugf("Creating new EOA")
 		if txn.GetNonce() != 0 {
 			return &processor.InvalidTransactionError{
-				"Nonce must be 0 when creating new Externally Owned Account",
+				Msg: "Nonce must be 0 when creating new Externally Owned Account",
 			}
 		}
 		newEntryAddress = senderAddress
@@ -116,12 +116,12 @@ func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 		logger.Debugf("Creating new CA")
 		senderAccount := toVmAccount(senderEntry.GetAccount())
 		if senderAccount == nil {
-			return &processor.InternalError{fmt.Sprintf(
+			return &processor.InternalError{Msg: fmt.Sprintf(
 				"Entry exists but no account (%v)", senderAddress,
 			)}
 		}
 		if txn.GetNonce() != uint64(senderEntry.GetAccount().GetNonce()) {
-			return &processor.InvalidTransactionError{fmt.Sprintf(
+			return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 				"Nonces do not match: Transaction (%v), State (%v)",
 				txn.GetNonce(), senderEntry.GetAccount().GetNonce(),
 			)}
@@ -135,7 +135,7 @@ func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 	// If there is an error creating the entry, something has gone very
 	// wrong, for example, an invalid public key making it passed the validator.
 	if err != nil {
-		return &processor.InternalError{fmt.Sprintf(
+		return &processor.InternalError{Msg: fmt.Sprintf(
 			"Couldn't create account at %v: %v",
 			newEntryAddress, err,
 		)}
@@ -151,7 +151,7 @@ func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 
 		out, err := callVm(sm, newVmAccount, nil, init, nil, gas)
 		if err != nil {
-			return &processor.InternalError{err.Error()}
+			return &processor.InternalError{Msg: err.Error()}
 		}
 		newVmAccount.Code = out
 
@@ -159,7 +159,7 @@ func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 		err = sm.SetEntry(newEntryAddress, newEntry)
 
 		if err != nil {
-			return &processor.InternalError{fmt.Sprintf(
+			return &processor.InternalError{Msg: fmt.Sprintf(
 				"Couldn't create account at %v: %v",
 				newEntryAddress, err,
 			)}
@@ -174,18 +174,18 @@ func execContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 	// Load the entry of the sender from global state
 	senderEntry, err := sm.GetEntry(senderAddress)
 	if err != nil {
-		return &processor.InternalError{err.Error()}
+		return &processor.InternalError{Msg: err.Error()}
 	}
 	senderAccount := toVmAccount(senderEntry.GetAccount())
 
 	if senderEntry == nil || senderAccount == nil {
-		return &processor.InvalidTransactionError{fmt.Sprintf(
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 			"Message call from non-existent account (%v)", senderAddress,
 		)}
 	}
 
 	if txn.GetNonce() != uint64(senderAccount.Nonce) {
-		return &processor.InvalidTransactionError{fmt.Sprintf(
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 			"Nonces do not match: Transaction (%v), State (%v)",
 			txn.GetNonce(), senderEntry.GetAccount().GetNonce(),
 		)}
@@ -194,12 +194,12 @@ func execContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 	// Load the entry of the contract to be called from global state
 	receiverEntry, err := sm.GetEntry(txn.GetTo())
 	if err != nil {
-		return &processor.InvalidTransactionError{err.Error()}
+		return &processor.InvalidTransactionError{Msg: err.Error()}
 	}
 	receiverAccount := toVmAccount(receiverEntry.GetAccount())
 
 	if receiverEntry == nil || receiverAccount == nil {
-		return &processor.InvalidTransactionError{fmt.Sprintf(
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 			"Call to non-existent account (%v)", txn.GetTo(),
 		)}
 	}
@@ -211,7 +211,7 @@ func execContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 	// Run the contract
 	out, err := callVm(sm, senderAccount, receiverAccount, code, data, gas)
 	if err != nil {
-		return &processor.InternalError{err.Error()}
+		return &processor.InternalError{Msg: err.Error()}
 	}
 
 	logger.Debug("EVM Output: ", strings.ToLower(hex.EncodeToString(out)))
@@ -245,7 +245,7 @@ func callVm(sm *StateManager, sender, receiver *evm.Account, code, input []byte,
 func unpackPayload(payload []byte) (*EvmTransaction, error) {
 	if payload == nil {
 		return nil, &processor.InvalidTransactionError{
-			"Request must contain payload",
+			Msg: "Request must contain payload",
 		}
 	}
 
@@ -253,7 +253,7 @@ func unpackPayload(payload []byte) (*EvmTransaction, error) {
 	err := proto.Unmarshal(payload, transaction)
 	if err != nil {
 		return nil, &processor.InvalidTransactionError{
-			"Malformed request payload",
+			Msg: "Malformed request payload",
 		}
 	}
 
@@ -265,12 +265,12 @@ func unpackHeader(headerBytes []byte) (*transaction_pb2.TransactionHeader, error
 	err := proto.Unmarshal(headerBytes, header)
 	if err != nil {
 		return nil, &processor.InvalidTransactionError{
-			"Malformed request header",
+			Msg: "Malformed request header",
 		}
 	}
 
 	if header.GetSignerPubkey() == "" {
-		return nil, &processor.InvalidTransactionError{"Public Key not set"}
+		return nil, &processor.InvalidTransactionError{Msg: "Public Key not set"}
 	}
 
 	return header, nil

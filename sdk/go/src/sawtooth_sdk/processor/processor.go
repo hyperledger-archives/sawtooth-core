@@ -208,7 +208,8 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 		default:
 			logger.Warnf("Work queue is full, denying request %v", corrId)
 			data, err := proto.Marshal(&processor_pb2.TpProcessResponse{
-				Status: processor_pb2.TpProcessResponse_INTERNAL_ERROR,
+				Status:  processor_pb2.TpProcessResponse_INTERNAL_ERROR,
+				Message: "Work queue is full, denying request",
 			})
 			if err != nil {
 				logger.Errorf(
