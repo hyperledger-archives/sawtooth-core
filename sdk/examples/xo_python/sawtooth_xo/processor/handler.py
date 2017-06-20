@@ -51,36 +51,8 @@ class XoTransactionHandler:
 
         # 2. Retrieve the game data from state storage
 
-        # Use the namespace prefix + the has of the game name to create the
-        # storage address
-        game_address = self._namespace_prefix \
-            + hashlib.sha512(name.encode("utf-8")).hexdigest()[0:64]
-
-        # Get data from address
-        state_entries = state_store.get([game_address])
-
-        # state_store.get() returns a list. If no data has been stored yet
-        # at the given address, it will be empty.
-        if state_entries:
-            try:
-                state_data = state_entries[0].data
-
-                game_list = {
-                    name: (board, state, player1, player2)
-                    for name, board, state, player1, player2 in [
-                        game.split(',')
-                        for game in state_data.decode().split('|')
-                    ]
-                }
-
-                board, state, player1, player2 = game_list[name]
-
-            except ValueError:
-                raise InternalError("Failed to deserialize game data.")
-
-        else:
-            game_list = {}
-            board = state = player1 = player2 = None
+        board, state, player1, player2, game_list = \
+            _get_state_data(state_store, name)
 
         # 3. Validate the game data
         if action == "create" and board is not None:
@@ -156,22 +128,10 @@ class XoTransactionHandler:
             )
 
         # 6. Put the game data back in state storage
-        game_list[name] = board, state, player1, player2
-
-        state_data = '|'.join(sorted([
-            ','.join([name, board, state, player1, player2])
-            for name, (board, state, player1, player2) in game_list.items()
-        ])).encode()
-
-        addresses = state_store.set([
-            StateEntry(
-                address=game_address,
-                data=state_data
-            )
-        ])
-
-        if len(addresses) < 1:
-            raise InternalError("State Error")
+        _store_state_data(
+            state_store, game_list,
+            name, board, state,
+            player1, player2)
 
 
 def _unpack_transaction(transaction):
@@ -213,6 +173,62 @@ def _validate_transaction(name, action, space):
             assert int(space) in range(1, 10)
         except (ValueError, AssertionError):
             raise InvalidTransaction('Space must be an integer from 1 to 9')
+
+
+def _make_xo_address(name):
+    return '5b7349' + hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
+
+
+def _get_state_data(state_store, name):
+    # Get data from address
+    state_entries = state_store.get([_make_xo_address(name)])
+
+    # state_store.get() returns a list. If no data has been stored yet
+    # at the given address, it will be empty.
+    if state_entries:
+        try:
+            state_data = state_entries[0].data
+
+            game_list = {
+                name: (board, state, player1, player2)
+                for name, board, state, player1, player2 in [
+                    game.split(',')
+                    for game in state_data.decode().split('|')
+                ]
+            }
+
+            board, state, player1, player2 = game_list[name]
+
+        except ValueError:
+            raise InternalError("Failed to deserialize game data.")
+
+    else:
+        game_list = {}
+        board = state = player1 = player2 = None
+
+    return board, state, player1, player2, game_list
+
+
+def _store_state_data(
+        state_store, game_list, name,
+        board, state, player1, player2):
+
+    game_list[name] = board, state, player1, player2
+
+    state_data = '|'.join(sorted([
+        ','.join([name, board, state, player1, player2])
+        for name, (board, state, player1, player2) in game_list.items()
+    ])).encode()
+
+    addresses = state_store.set([
+        StateEntry(
+            address=_make_xo_address(name),
+            data=state_data
+        )
+    ])
+
+    if len(addresses) < 1:
+        raise InternalError("State Error")
 
 
 def _is_win(board, letter):
