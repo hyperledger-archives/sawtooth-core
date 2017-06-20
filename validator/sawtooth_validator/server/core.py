@@ -51,6 +51,7 @@ from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
+from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
 from sawtooth_validator.state.state_delta_processor import \
@@ -142,6 +143,9 @@ class Validator(object):
         block_db = LMDBNoLockDatabase(block_db_filename, 'c')
         block_store = BlockStore(block_db)
 
+        batch_tracker = BatchTracker(block_store)
+        block_store.add_update_observer(batch_tracker)
+
         # setup network
         self._dispatcher = Dispatcher()
 
@@ -223,7 +227,8 @@ class Validator(object):
             config_dir=config_dir,
             check_publish_block_frequency=0.1,
             block_cache_purge_frequency=30,
-            block_cache_keep_time=300
+            block_cache_keep_time=300,
+            batch_observers=[batch_tracker]
         )
 
         self._genesis_controller = GenesisController(
@@ -441,16 +446,12 @@ class Validator(object):
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
-            client_handlers.BatchSubmitFinisher(
-                self._journal.get_block_store(),
-                completer.batch_cache),
+            client_handlers.BatchSubmitFinisher(batch_tracker),
             thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_STATUS_REQUEST,
-            client_handlers.BatchStatusRequest(
-                self._journal.get_block_store(),
-                completer.batch_cache),
+            client_handlers.BatchStatusRequest(batch_tracker),
             thread_pool)
 
         self._dispatcher.add_handler(

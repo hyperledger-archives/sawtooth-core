@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import abc
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import queue
@@ -126,6 +127,7 @@ class Journal(object):
                  check_publish_block_frequency=0.1,
                  block_cache_purge_frequency=30,
                  block_cache_keep_time=300,
+                 batch_observers=None,
                  block_cache=None):
         """
         Creates a Journal instance.
@@ -173,6 +175,7 @@ class Journal(object):
         self._block_publisher = None
         self._check_publish_block_frequency = check_publish_block_frequency
         self._batch_queue = queue.Queue()
+        self._batch_obs = [] if batch_observers is None else batch_observers
         self._publisher_thread = None
 
         self._executor_threadpool = ThreadPoolExecutor(1)
@@ -264,3 +267,21 @@ class Journal(object):
         inclusion in the next block.
         """
         self._batch_queue.put(batch)
+        for observer in self._batch_obs:
+            observer.notify_batch_pending(batch.header_signature)
+
+
+class PendingBatchObserver(metaclass=abc.ABCMeta):
+    """An interface class for components wishing to be notified when a Batch
+    has begun being processed.
+    """
+    @abc.abstractmethod
+    def notify_batch_pending(self, batch_id):
+        """This method will be called when a Batch has passed initial
+        validation and is queued to be processed by the Publisher.
+
+        Args:
+            batch_id (str): The header signature of the batch
+        """
+        raise NotImplementedError('PendingBatchObservers must have a '
+                                  '"notify_batch_pending" method')
