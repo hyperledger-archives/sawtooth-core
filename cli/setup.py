@@ -15,7 +15,6 @@
 
 from __future__ import print_function
 
-import os
 import subprocess
 
 from setuptools import setup, find_packages
