@@ -24,6 +24,7 @@ from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.state.batch_tracker import BatchTracker
 
 def _increment_key(key, offset=1):
     if type(key) == int:
@@ -101,19 +102,6 @@ class MockBlockStore(BlockStore):
         self.update_chain([BlockWrapper(block)], [])
 
 
-class MockBatchCache(TimedCache):
-    """
-    Creates a batch cache (TimedCache), containing a preseeded set of batches.
-    By default includes two batches with ids 'b-2', and 'b-3'.
-    """
-    def __init__(self, size=2, start='2'):
-        super().__init__()
-
-        for i in range(size):
-            base_id = _increment_key(start, i)
-            self['b-' + base_id] = make_mock_batch(base_id)
-
-
 def make_db_and_store(size=3, start='a'):
     """
     Creates and returns three related objects for testing:
@@ -143,18 +131,23 @@ def make_db_and_store(size=3, start='a'):
 
     return database, store, roots
 
-def make_store_and_cache(size=3):
+
+def make_store_and_tracker(size=3):
     """
     Creates and returns two related objects for testing:
         * store - a mock block store, with a default start
-        * cache - a batch cache with two batches, one in the store, and one not
+        * tracker - a batch tracker attached to the store, with one pending batch
+
     With defaults, the three block ids in the store will be:
         * 'B-0', 'B-1', B-2'
     The three batch ids in the store will be:
         * 'b-0', 'b-1', b-2'
-    And the two batch ids in the cache will be:
-        * 'b-2', 'b-3'
+    The pending batch in the tracker will be:
+        * 'b-3'
     """
     store = MockBlockStore(size=size)
-    cache = MockBatchCache(start=str(size-1))
-    return store, cache
+    tracker = BatchTracker(store)
+    store.add_update_observer(tracker)
+    tracker.notify_batch_pending('b-pending')
+
+    return store, tracker

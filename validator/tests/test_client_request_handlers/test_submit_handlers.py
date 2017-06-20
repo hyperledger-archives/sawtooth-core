@@ -20,18 +20,19 @@ import sawtooth_validator.state.client_handlers as handlers
 from sawtooth_validator.protobuf import client_pb2
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import make_mock_batch
-from test_client_request_handlers.mocks import make_store_and_cache
+from test_client_request_handlers.mocks import make_store_and_tracker
 
 
 class TestBatchSubmitFinisher(ClientHandlerTestCase):
     def setUp(self):
-        store, cache = make_store_and_cache()
+        store, tracker = make_store_and_tracker()
 
         self.initialize(
-            handlers.BatchSubmitFinisher(store, cache),
+            handlers.BatchSubmitFinisher(tracker),
             client_pb2.ClientBatchSubmitRequest,
             client_pb2.ClientBatchSubmitResponse,
-            store=store)
+            store=store,
+            tracker=tracker)
 
     def test_batch_submit_without_wait(self):
         """Verifies finisher simply returns OK when not set to wait.
@@ -66,6 +67,7 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
             - a response status of OK
             - a status of COMMITTED at key 'b-new' in batch_statuses
         """
+        self._tracker.notify_batch_pending('b-new')
         start_time = time()
         def delayed_add():
             sleep(2)
@@ -84,13 +86,14 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
 
 class TestBatchStatusRequests(ClientHandlerTestCase):
     def setUp(self):
-        store, cache = make_store_and_cache()
+        store, tracker = make_store_and_tracker()
 
         self.initialize(
-            handlers.BatchStatusRequest(store, cache),
+            handlers.BatchStatusRequest(tracker),
             client_pb2.ClientBatchStatusRequest,
             client_pb2.ClientBatchStatusResponse,
-            store=store)
+            store=store,
+            tracker=tracker)
 
     def test_batch_status_in_store(self):
         """Verifies requests for status of a batch in the block store work.
@@ -131,21 +134,20 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.batch_statuses)
 
-    def test_batch_status_in_cache(self):
-        """Verifies requests for status of a batch in the batch cache work.
+    def test_pending_batch_status(self):
+        """Verifies batch status requests marked PENDING by the tracker work.
 
-        Queries the default mock batch cache with two batches:
-            {header_signature: 'b-3' ...},
-            {header_signature: 'b-2' ...}
+        Queries the default mock batch tracker with pending batch ids of:
+            - 'b-pending'
 
         Expects to find:
             - a response status of OK
-            - a status of PENDING at key 'b-3' in batch_statuses
+            - a status of PENDING at key 'b-pending' in batch_statuses
         """
-        response = self.make_request(batch_ids=['b-3'])
+        response = self.make_request(batch_ids=['b-pending'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-3'], client_pb2.PENDING)
+        self.assertEqual(response.batch_statuses['b-pending'], client_pb2.PENDING)
 
     def test_batch_status_when_missing(self):
         """Verifies requests for status of a batch that is not found work.
@@ -159,27 +161,6 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(response.batch_statuses['z'], client_pb2.UNKNOWN)
 
-    def test_batch_status_in_store_and_cache(self):
-        """Verifies requests for status of batch in both store and cache work.
-
-        Queries the default mock block store with three blocks/batches:
-            {header: {batch_ids: ['b-2'] ...}, header_signature: 'B-2' ...},
-            {header: {batch_ids: ['b-1'] ...}, header_signature: 'B-1' ...},
-            {header: {batch_ids: ['b-0'] ...}, header_signature: 'B-0' ...}
-
-        ...and the default mock batch cache with two batches:
-            {header_signature: 'B-3' ...},
-            {header_signature: 'B-2' ...}
-
-        Expects to find:
-            - a response status of OK
-            - a status of COMMITTED at key '2' in batch_statuses
-        """
-        response = self.make_request(batch_ids=['b-2'])
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-2'], client_pb2.COMMITTED)
-
     def test_batch_status_for_many_batches(self):
         """Verifies requests for status of many batches work properly.
 
@@ -188,23 +169,22 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
             {header: {batch_ids: ['b-1'] ...}, header_signature: 'B-1' ...},
             {header: {batch_ids: ['b-0'] ...}, header_signature: 'B-0' ...}
 
-        ...and the default mock batch cache with two batches:
-            {header_signature: 'B-3' ...},
-            {header_signature: 'B-2' ...}
+        ...and the default mock batch tracker with pending batch ids of:
+            - 'b-pending'
 
         Expects to find:
             - a response status of OK
-            - a status of COMMITTED at key '1' in batch_statuses
-            - a status of COMMITTED at key '2' in batch_statuses
-            - a status of PENDING at key '3' in batch_statuses
-            - a status of UNKNOWN at key 'y' in batch_statuses
+            - a status of COMMITTED at key 'b-1' in batch_statuses
+            - a status of COMMITTED at key 'b-2' in batch_statuses
+            - a status of PENDING at key 'b-pending' in batch_statuses
+            - a status of UNKNOWN at key 'b-y' in batch_statuses
         """
-        response = self.make_request(batch_ids=['b-1', 'b-2', 'b-3', 'y'])
+        response = self.make_request(batch_ids=['b-1', 'b-2', 'b-pending', 'y'])
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(response.batch_statuses['b-1'], client_pb2.COMMITTED)
         self.assertEqual(response.batch_statuses['b-2'], client_pb2.COMMITTED)
-        self.assertEqual(response.batch_statuses['b-3'], client_pb2.PENDING)
+        self.assertEqual(response.batch_statuses['b-pending'], client_pb2.PENDING)
         self.assertEqual(response.batch_statuses['y'], client_pb2.UNKNOWN)
 
     def test_batch_status_with_wait(self):
@@ -218,6 +198,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
             - a response status of OK
             - a status of COMMITTED at key 'b-new' in batch_statuses
         """
+        self._tracker.notify_batch_pending('b-new')
         start_time = time()
         def delayed_add():
             sleep(2)

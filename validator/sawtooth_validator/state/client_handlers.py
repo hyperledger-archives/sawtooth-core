@@ -15,12 +15,15 @@
 
 import abc
 import logging
+from time import time
 from functools import cmp_to_key
+from threading import Condition
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.state.batch_tracker import BatchFinishObserver
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -271,28 +274,6 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
 
         return resources
 
-    def _get_statuses(self, batch_ids):
-        """Fetches the committed statuses for a set of batch ids.
-
-        Note:
-            This method will fail without a `_block_store` and `_batch_cache`
-
-        Args:
-            batch_ids (list of str): The set of batch ids to be queried
-
-        Returns:
-            dict of enum: keys are batch ids, and values are their status enum
-        """
-        statuses = {}
-        for batch_id in batch_ids:
-            if self._block_store.has_batch(batch_id):
-                statuses[batch_id] = client_pb2.COMMITTED
-            elif batch_id in self._batch_cache:
-                statuses[batch_id] = client_pb2.PENDING
-            else:
-                statuses[batch_id] = client_pb2.UNKNOWN
-        return statuses
-
 
 class _Pager(object):
     """A static class containing methods to paginate lists of resources.
@@ -497,45 +478,91 @@ class _Sorter(object):
             return header
 
 
+class _BatchWaiter(BatchFinishObserver):
+    """An observer which provides a method which locks until every batch in a
+    set of ids is committed.
+
+    Args:
+        batch_tracker (BatchTracker): The BatchTracker that will notify the
+            BatchWaiter that all of the batches it is interested in are no
+            longer PENDING.
+    """
+    def __init__(self, batch_tracker):
+        self._batch_tracker = batch_tracker
+        self._wait_condition = Condition()
+        self._statuses = None
+
+    def notify_batches_finished(self, statuses):
+        """Called by the BatchTracker the _BatchWaiter is observing. Should not
+        be called by handlers.
+
+        Args:
+            statuses (dict of int): A dict with keys of batch ids, and values
+                of status enums
+        """
+        with self._wait_condition:
+            self._statuses = statuses
+            self._wait_condition.notify()
+
+    def wait_for_batches(self, batch_ids, timeout=None):
+        """Locks until a list of batch ids is committed to the block chain
+        or a timeout is exceeded. Returns the statuses of those batches.
+
+        Args:
+            batch_ids (list of str): The ids of the batches to wait for
+            timeout(int): Maximum time in seconds to wait for
+
+        Returns:
+            dict of int: Statuses dict, with batch ids as keys, and committed
+                status enum as the values.
+        """
+        self._batch_tracker.watch_statuses(self, batch_ids)
+        timeout = timeout or DEFAULT_TIMEOUT
+        start_time = time()
+
+        with self._wait_condition:
+            while True:
+                if self._statuses or time() - start_time > timeout:
+                    return self._statuses
+                self._wait_condition.wait(timeout - (time() - start_time))
+
+
 class BatchSubmitFinisher(_ClientRequestHandler):
-    def __init__(self, block_store, batch_cache):
+    def __init__(self, batch_tracker):
+        self._batch_tracker = batch_tracker
         super().__init__(
             client_pb2.ClientBatchSubmitRequest,
             client_pb2.ClientBatchSubmitResponse,
-            validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE,
-            block_store=block_store,
-            batch_cache=batch_cache)
+            validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
     def _respond(self, request):
         if not request.wait_for_commit:
             return self._status.OK
 
+        waiter = _BatchWaiter(self._batch_tracker)
         batch_ids = [b.header_signature for b in request.batches]
+        statuses = waiter.wait_for_batches(batch_ids, request.timeout)
 
-        self._block_store.wait_for_batch_commits(
-            batch_ids=batch_ids,
-            timeout=request.timeout or DEFAULT_TIMEOUT)
-
-        statuses = self._get_statuses(batch_ids)
         return self._wrap_response(batch_statuses=statuses)
 
 
 class BatchStatusRequest(_ClientRequestHandler):
-    def __init__(self, block_store, batch_cache):
+    def __init__(self, batch_tracker):
+        self._batch_tracker = batch_tracker
         super().__init__(
             client_pb2.ClientBatchStatusRequest,
             client_pb2.ClientBatchStatusResponse,
-            validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE,
-            block_store=block_store,
-            batch_cache=batch_cache)
+            validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE)
 
     def _respond(self, request):
         if request.wait_for_commit:
-            self._block_store.wait_for_batch_commits(
-                batch_ids=request.batch_ids,
-                timeout=request.timeout or DEFAULT_TIMEOUT)
+            waiter = _BatchWaiter(self._batch_tracker)
+            statuses = waiter.wait_for_batches(
+                request.batch_ids,
+                request.timeout)
+        else:
+            statuses = self._batch_tracker.get_statuses(request.batch_ids)
 
-        statuses = self._get_statuses(request.batch_ids)
         if not statuses:
             return self._status.NO_RESOURCE
 

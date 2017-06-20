@@ -22,11 +22,12 @@ class ClientHandlerTestCase(unittest.TestCase):
     Run initialize as part of setUp, and then call make_request in each test.
     """
     def initialize(self, handler, request_proto, response_proto,
-                    store=None, roots=None):
+                    store=None, roots=None, tracker=None):
         self._identity = '1234567'
         self._handler = handler
         self._request_proto = request_proto
         self._store = store
+        self._tracker = tracker
         self.status = response_proto
         self.roots = roots
 
