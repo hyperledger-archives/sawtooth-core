@@ -50,27 +50,13 @@ class XoTransactionHandler:
         name, action, space, signer = _unpack_transaction(transaction)
 
         # 2. Retrieve the game data from state storage
-
         board, state, player1, player2, game_list = \
             _get_state_data(state_store, name)
 
         # 3. Validate the game data
-        if action == "create" and board is not None:
-            raise InvalidTransaction("Invalid Action: Game already exists.")
-
-        elif action == "take":
-            if board is None:
-                raise InvalidTransaction(
-                    "Invalid Action: Take requires an existing game."
-                )
-            else:
-                if state in ("P1-WIN", "P2-WIN", "TIE"):
-                    raise InvalidTransaction(
-                        "Invalid Action: Game has ended."
-                    )
-                elif state not in ("P1-NEXT", "P2-NEXT"):
-                    raise InternalError(
-                        "Game has reached an invalid state: {}".format(state))
+        _validate_game_data(
+            action, space, signer,
+            board, state, player1, player2)
 
         # 4. Apply the transaction
         if action == "create":
@@ -90,11 +76,6 @@ class XoTransactionHandler:
             # Verify player identity and take space
             lboard = list(board)
 
-            if lboard[space - 1] != '-':
-                raise InvalidTransaction(
-                    "Invalid Action: Space already taken."
-                )
-
             if state == "P1-NEXT" and signer == player1:
                 lboard[space - 1] = "X"
                 state = "P2-NEXT"
@@ -103,10 +84,6 @@ class XoTransactionHandler:
                 lboard[space - 1] = "O"
                 state = "P1-NEXT"
 
-            else:
-                raise InvalidTransaction(
-                    "Not this player's turn: {}".format(signer[:6])
-                )
             board = "".join(lboard)
 
             # Update game state
@@ -173,6 +150,31 @@ def _validate_transaction(name, action, space):
             assert int(space) in range(1, 10)
         except (ValueError, AssertionError):
             raise InvalidTransaction('Space must be an integer from 1 to 9')
+
+
+def _validate_game_data(action, space, signer, board, state, player1, player2):
+    if action == 'create':
+        if board is not None:
+            raise InvalidTransaction(
+                'Invalid action: Game already exists.')
+
+    elif action == 'take':
+        if board is None:
+            raise InvalidTransaction(
+                'Invalid action: Take requires an existing game.')
+
+        if state in ('P1-WIN', 'P2-WIN', 'TIE'):
+            raise InvalidTransaction(
+                'Invalid Action: Game has ended.')
+
+        if ((player1 and state == 'P1-NEXT' and player1 != signer)
+                or (player2 and state == 'P2-NEXT' and player2 != signer)):
+            raise InvalidTransaction(
+                "Not this player's turn: {}".format(signer[:6]))
+
+        if board[space - 1] != '-':
+            raise InvalidTransaction(
+                'Invalid Action: space {} already taken'.format(space))
 
 
 def _make_xo_address(name):
