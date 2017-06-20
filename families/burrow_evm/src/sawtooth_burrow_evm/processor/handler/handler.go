@@ -129,6 +129,14 @@ func createEoaAccount(address *EvmAddr, txn *EvmTransaction, sm *StateManager) e
 		)}
 	}
 
+	entry.GetAccount().Nonce = 1
+	err = sm.SetEntry(address, entry)
+	if err != nil {
+		return &processor.InternalError{Msg: fmt.Sprintf(
+			"Couldn't set new account nonce %v: %v", address, err,
+		)}
+	}
+
 	return nil
 }
 
@@ -140,10 +148,12 @@ func createContractAccount(senderAddress *EvmAddr, senderEntry *EvmEntry, txn *E
 			"Entry exists but no account (%v)", senderEntry,
 		)}
 	}
-	if txn.GetNonce() != uint64(senderEntry.GetAccount().GetNonce()) {
+
+	// Check that the nonce in the transaction matches expected nonce
+	if txn.GetNonce() != uint64(senderAccount.Nonce) {
 		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 			"Nonces do not match: Transaction (%v), State (%v)",
-			txn.GetNonce(), senderEntry.GetAccount().GetNonce(),
+			txn.GetNonce(), senderAccount.Nonce,
 		)}
 	}
 
@@ -182,6 +192,16 @@ func createContractAccount(senderAddress *EvmAddr, senderEntry *EvmEntry, txn *E
 		}
 	}
 
+	senderAccount.Nonce += 1
+	senderEntry.Account = toStateAccount(senderAccount)
+	err = sm.SetEntry(senderAddress, senderEntry)
+	if err != nil {
+		return &processor.InternalError{Msg: fmt.Sprintf(
+			"Couldn't update account nonce at %v: %v",
+			senderAddress, err,
+		)}
+	}
+
 	return nil
 }
 
@@ -200,10 +220,11 @@ func execAccount(senderAddress *EvmAddr, txn *EvmTransaction, sm *StateManager) 
 		)}
 	}
 
+	// Check that the nonce in the transaction matches expected nonce
 	if txn.GetNonce() != uint64(senderAccount.Nonce) {
 		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 			"Nonces do not match: Transaction (%v), State (%v)",
-			txn.GetNonce(), senderEntry.GetAccount().GetNonce(),
+			txn.GetNonce(), senderAccount.Nonce,
 		)}
 	}
 
@@ -237,6 +258,17 @@ func execAccount(senderAddress *EvmAddr, txn *EvmTransaction, sm *StateManager) 
 	}
 
 	logger.Debug("EVM Output: ", strings.ToLower(hex.EncodeToString(out)))
+
+	// Increment the sender's nonce
+	senderAccount.Nonce += 1
+	senderEntry.Account = toStateAccount(senderAccount)
+	err = sm.SetEntry(senderAddress, senderEntry)
+	if err != nil {
+		return &processor.InternalError{Msg: fmt.Sprintf(
+			"Couldn't update account nonce at %v: %v",
+			senderAddress, err,
+		)}
+	}
 	return nil
 }
 

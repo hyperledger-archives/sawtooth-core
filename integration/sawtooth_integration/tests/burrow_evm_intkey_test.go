@@ -35,15 +35,31 @@ const (
 )
 
 func TestIntkey(t *testing.T) {
-  client := burrow_evm_client.New("http://rest_api:8080")
+  client := client.New("http://rest_api:8080")
   priv := sdk.MustDecode(PRIV)
+  pub := sdk.GenPubKey(priv)
   init := sdk.MustDecode(INIT)
-  to := sdk.MustDecode(TO)
+  nonce := uint64(0)
 
-  _, err := client.Load(priv, init, 1000)
+  // Create the EOA
+  _, err := client.Load(priv, nil, 1000, nonce)
   if err != nil {
     t.Error(err.Error())
   }
+  nonce += 1
+  time.Sleep(time.Second)
+
+  // Create the Contract
+  _, err = client.Load(priv, init, 1000, nonce)
+  if err != nil {
+   t.Error(err.Error())
+  }
+
+  to, err := client.Lookup(pub, nonce)
+  if err != nil {
+    t.Error(err.Error())
+  }
+  nonce += 1
   time.Sleep(time.Second)
 
   cmds := []string{
@@ -54,12 +70,13 @@ func TestIntkey(t *testing.T) {
   }
 
   for _, c := range cmds {
-    exec(t, client, priv, to, sdk.MustDecode(c))
+    exec(t, client, priv, to, sdk.MustDecode(c), nonce)
+    nonce += 1
   }
 
-  time.Sleep(3 * time.Second)
+    time.Sleep(3 * time.Second)
 
-  entry, err := client.GetEntry(priv, "private")
+  entry, err := client.GetEntry(to, "address")
   if err != nil {
     t.Error(err.Error())
   }
@@ -89,8 +106,8 @@ func TestIntkey(t *testing.T) {
 
 }
 
-func exec(t *testing.T, client *burrow_evm_client.Client, priv, to, data []byte) {
-  _, err := client.Exec(priv, to, data, 1000)
+func exec(t *testing.T, client *client.Client, priv, to, data []byte, nonce uint64) {
+  _, err := client.Exec(priv, to, data, 1000, nonce)
   if err != nil {
     t.Error(err.Error())
   }
