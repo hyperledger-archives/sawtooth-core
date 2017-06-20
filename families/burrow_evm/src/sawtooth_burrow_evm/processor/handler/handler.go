@@ -79,9 +79,9 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, sta
 	sm := NewStateManager(PREFIX, state)
 
 	if transaction.GetTo() == nil {
-		err = loadContract(senderAddress, transaction, sm)
+		err = loadAccount(senderAddress, transaction, sm)
 	} else {
-		err = execContract(senderAddress, transaction, sm)
+		err = execAccount(senderAddress, transaction, sm)
 	}
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, sta
 	return nil
 }
 
-func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) error {
+func loadAccount(senderAddress []byte, txn *EvmTransaction, sm *StateManager) error {
 
 	// Load the entry for the sender from global state
 	senderEntry, err := sm.GetEntry(senderAddress)
@@ -98,42 +98,54 @@ func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 		return &processor.InternalError{Msg: err.Error()}
 	}
 
-	var newEntryAddress []byte
-	// If the entry doesn't already exist, this is a new Externally Owned
+	// If the sender entry doesn't already exist, this is a new Externally Owned
 	// Account and it will be created at the sender's address.
 	if senderEntry == nil {
-		logger.Debugf("Creating new EOA")
-		if txn.GetNonce() != 0 {
-			return &processor.InvalidTransactionError{
-				Msg: "Nonce must be 0 when creating new Externally Owned Account",
-			}
-		}
-		newEntryAddress = senderAddress
-
-		// If the entry does already exist, this is a new Contract Account and it
-		// will be created at a new address derived from the existing account.
-	} else {
-		logger.Debugf("Creating new CA")
-		senderAccount := toVmAccount(senderEntry.GetAccount())
-		if senderAccount == nil {
-			return &processor.InternalError{Msg: fmt.Sprintf(
-				"Entry exists but no account (%v)", senderAddress,
-			)}
-		}
-		if txn.GetNonce() != uint64(senderEntry.GetAccount().GetNonce()) {
-			return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
-				"Nonces do not match: Transaction (%v), State (%v)",
-				txn.GetNonce(), senderEntry.GetAccount().GetNonce(),
-			)}
-		}
-		newEntryAddress = deriveNewVmAddress(toVmAccount(senderEntry.GetAccount())).Bytes()
+		return createEoaAccount(senderAddress, txn, sm)
 	}
 
-	// Create the account
+	// If the entry does already exist, this is a new Contract Account and it
+	// will be created at a new address derived from the existing account.
+	return createContractAccount(senderEntry, txn, sm)
+}
+
+func createEoaAccount(address []byte, txn *EvmTransaction, sm *StateManager) error {
+	logger.Debugf("Creating new EOA")
+	if txn.GetNonce() != 0 {
+		return &processor.InvalidTransactionError{
+			Msg: "Nonce must be 0 when creating new Externally Owned Account",
+		}
+	}
+
+
+	entry, err := sm.NewEntry(address)
+	if err != nil {
+		return &processor.InternalError{Msg: fmt.Sprintf(
+			"Couldn't create account at %v: %v", address, err,
+		)}
+	}
+
+	return nil
+}
+
+func createContractAccount(senderEntry *EvmEntry, txn *EvmTransaction, sm *StateManager) error {
+	logger.Debugf("Creating new CA")
+	senderAccount := toVmAccount(senderEntry.GetAccount())
+	if senderAccount == nil {
+		return &processor.InternalError{Msg: fmt.Sprintf(
+			"Entry exists but no account (%v)", senderEntry,
+		)}
+	}
+	if txn.GetNonce() != uint64(senderEntry.GetAccount().GetNonce()) {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"Nonces do not match: Transaction (%v), State (%v)",
+			txn.GetNonce(), senderEntry.GetAccount().GetNonce(),
+		)}
+	}
+
+	newEntryAddress := deriveNewVmAddress(senderAccount).Bytes()
 	newEntry, err := sm.NewEntry(newEntryAddress)
 
-	// If there is an error creating the entry, something has gone very
-	// wrong, for example, an invalid public key making it passed the validator.
 	if err != nil {
 		return &processor.InternalError{Msg: fmt.Sprintf(
 			"Couldn't create account at %v: %v",
@@ -169,7 +181,7 @@ func loadContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) e
 	return nil
 }
 
-func execContract(senderAddress []byte, txn *EvmTransaction, sm *StateManager) error {
+func execAccount(senderAddress []byte, txn *EvmTransaction, sm *StateManager) error {
 
 	// Load the entry of the sender from global state
 	senderEntry, err := sm.GetEntry(senderAddress)
