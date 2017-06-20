@@ -117,6 +117,11 @@ func createEoaAccount(address []byte, txn *EvmTransaction, sm *StateManager) err
 		}
 	}
 
+	if txn.GetInit() != nil {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"EOAs cannot have code associated with them.",
+		)}
+	}
 
 	entry, err := sm.NewEntry(address)
 	if err != nil {
