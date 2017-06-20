@@ -84,7 +84,7 @@ To create the genesis block, run the following commands as root:
 
   $ sawtooth keygen
   $ sawtooth config genesis
-  $ sawtooth admin genesis config-genesis.batch
+  $ sudo -u sawtooth sawtooth admin genesis config-genesis.batch
 
 The following output appears:
 
@@ -107,8 +107,8 @@ following commands from a Linux terminal:
 
 .. code-block:: console
 
-   $ sawtooth admin keygen
-   $ validator -vv
+   $ sudo sawtooth admin keygen
+   $ sudo -u sawtooth validator -vv
 
 This will start the validator. Logging output will be printed to the
 terminal window. The validator outputs something similar to this to
@@ -137,7 +137,7 @@ the terminal window:
   `--bind` flag can be used. The following command is equivalent to the default
   behavior::
 
-    validator --bind network:tcp://127.0.0.1:8800 --bind component:tcp://127.0.0.1:4004
+    sudo -u sawtooth validator -vv --bind network:tcp://127.0.0.1:8800 --bind component:tcp://127.0.0.1:4004
 
   See :doc:`/cli/validator` for more information on the validator flags.
 
@@ -150,7 +150,7 @@ command to start the REST API and connect to a local validator:
 
 .. code-block:: console
 
-  $ rest_api -v
+  $ sudo -u sawtooth rest_api -v
 
 Running a Transaction Processor
 ===============================
@@ -165,7 +165,7 @@ To start an intkey transaction processor, run the following command:
 
 .. code-block:: console
 
-  $ tp_intkey_python -v
+  $ sudo -u sawtooth tp_intkey_python -v
 
 .. note::
 
@@ -291,7 +291,7 @@ from the Linux CLI:
 
 .. code-block:: console
 
-  $ tp_settings
+  $ sudo -u sawtooth tp_settings -v
 
 Confirm that the transaction processor registers with the validator by viewing
 the terminal window in which the validator is running. A successful
@@ -312,7 +312,7 @@ already been started.
 
 .. code-block:: console
 
-  $ rest_api
+  $ sudo -u sawtooth rest_api -v
 
 
 Step Three: Create and Submit Batch
@@ -364,7 +364,7 @@ already been started.
 
 .. code-block:: console
 
-  $ rest_api
+  $ sudo su - sawtooth rest_api -v
 
 
 Viewing List of Blocks
