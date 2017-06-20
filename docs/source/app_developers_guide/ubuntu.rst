@@ -8,15 +8,16 @@ for application development on Ubuntu, introduces some of the basic Sawtooth
 concepts necessary for application development, and walks through performing
 the following tasks:
 
-* Submit transactions to the REST API
-* View blocks, transactions, and state with the sawtooth CLI tool
-* Start and stop validators and transaction processors
+* Installing Sawtooth on Ubuntu 16.04
+* Starting a Sawtooth validator and related components
+* Submitting transactions to the REST API
+* Viewing blocks, transactions, and state with the sawtooth CLI tool
 
+Upon completion of this section, you will be prepared for subsequent sections
+that describe application development topics, such as implementing business
+logic with transaction families and writing clients which use Sawtooth's REST
+API.
 
-Upon completing this section, you will be prepared for the more advanced
-tutorials that guide you in performing app development tasks, such as
-implementing business logic with transaction families and writing clients
-which use Sawtooth's REST API.
 
 Overview Of Sawtooth Components
 ===============================
