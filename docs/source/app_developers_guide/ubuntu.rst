@@ -19,7 +19,7 @@ logic with transaction families and writing clients which use Sawtooth's REST
 API.
 
 
-Overview Of Sawtooth Components
+Overview of Sawtooth Components
 ===============================
 
 A running Sawtooth network consists of the following applications or processes:
@@ -221,7 +221,7 @@ The following lists the processors that are included:
   - An XO transaction processor written in Python
 
 
-Creating And Submitting Transactions
+Creating and Submitting Transactions
 ====================================
 
 The **intkey** command is provided to create sample transactions of the intkey
@@ -301,7 +301,7 @@ already been started.
   $ rest_api
 
 
-Step Three: Create And Submit Batch
+Step Three: Create and Submit Batch
 -----------------------------------
 
 In the example below, a JSON array is submitted to the `sawtooth config`
@@ -330,7 +330,7 @@ and output similar to the following appears in the validator terminal:
   sawtooth.validator.transaction_families: [{"family": "in...
 
 
-Viewing Blocks And State
+Viewing Blocks and State
 ========================
 
 You can view the blocks stored in the blockchain, and the nodes of the Markle
@@ -341,7 +341,7 @@ tree, using the sawtooth CLI.
   The sawtooth CLI provides help for all subcommands. For example, to get help
   for the `block` subcommand, enter the command `sawtooth block -h`.
 
-Starting The Rest API
+Starting the Rest API
 ---------------------
 
 In order to submit queries to the validator, you must start the REST API
@@ -353,7 +353,7 @@ already been started.
   $ rest_api
 
 
-Viewing List Of Blocks
+Viewing List of Blocks
 ----------------------
 
 Enter the command `sawtooth block list` to view the blocks stored by the state:
@@ -378,7 +378,7 @@ The output of the command will be similar to this:
   0    8821a997796f3e38a28dbb8e418ed5cbdd60b8a2e013edd20bca7ebf9a58f1302740374d98db76137e48b41dc404deda40ca4d2303a349133991513d0fec4074  0     0     02a0e049...
 
 
-Viewing A Particular Block
+Viewing a Particular Block
 --------------------------
 
 Using the `sawtooth block list` command as shown above, copy the block id you want to
@@ -449,7 +449,7 @@ The output of the command will be similar to this:
     An address is equivalent to a node id.
 
 
-Viewing Data In A Node
+Viewing Data in a Node
 ----------------------
 
 Using the `sawtooth state list` command show above, copy the node id you want to
