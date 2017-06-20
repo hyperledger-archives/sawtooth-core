@@ -47,23 +47,29 @@ func New(url string) *Client {
 	}
 }
 
-func (c *Client) Load(priv, init []byte, gas uint64) (*RespBody, error) {
+func (c *Client) Load(priv, init []byte, gas uint64, nonce uint64) (*RespBody, error) {
 	ea, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
+	}
+
+	addresses := []string{ea.ToStateAddr().String()}
+	if nonce != 0 {
+		addresses = append(addresses, ea.Derive(nonce).ToStateAddr().String())
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
 		FamilyName:      FAMILY_NAME,
 		FamilyVersion:   FAMILY_VERSION,
 		PayloadEncoding: ENCODING,
-		Inputs:          []string{ea.ToStateAddr().String()},
-		Outputs:         []string{ea.ToStateAddr().String()},
+		Inputs:          addresses,
+		Outputs:         addresses,
 	})
 
 	transaction := &EvmTransaction{
 		GasLimit: gas,
 		Init:     init,
+		Nonce:    nonce,
 	}
 
 	payload, err := proto.Marshal(transaction)
@@ -88,7 +94,7 @@ func (c *Client) Load(priv, init []byte, gas uint64) (*RespBody, error) {
 	return ParseRespBody(resp)
 }
 
-func (c *Client) Exec(priv, to, data []byte, gas uint64) (*RespBody, error) {
+func (c *Client) Exec(priv, to, data []byte, gas uint64, nonce uint64) (*RespBody, error) {
 	fromAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
@@ -116,6 +122,7 @@ func (c *Client) Exec(priv, to, data []byte, gas uint64) (*RespBody, error) {
 		GasLimit: gas,
 		Data:     data,
 		To:       toAddr.Bytes(),
+		Nonce:    nonce,
 	}
 
 	payload, err := proto.Marshal(transaction)
@@ -137,6 +144,14 @@ func (c *Client) Exec(priv, to, data []byte, gas uint64) (*RespBody, error) {
 	}
 
 	return ParseRespBody(resp)
+}
+
+func (c *Client) Lookup(pub []byte, nonce uint64) ([]byte, error) {
+	address, err := PubToEvmAddr(pub)
+	if err != nil {
+		return nil, err
+	}
+	return address.Derive(nonce).Bytes(), nil
 }
 
 func (c *Client) GetEntry(id []byte, idType string) (*EvmEntry, error) {

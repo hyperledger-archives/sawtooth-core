@@ -28,6 +28,7 @@ type Load struct {
 	Init    string `short:"i" long:"init" description:"Hex encoded initialization code to run on account creation."`
 	Url     string `short:"U" long:"url" description:"The REST API URL to connect to when sending the transaction." default:"http://127.0.0.1:8080"`
 	Gas     uint64 `short:"g" long:"gas" description:"Amount of gas to supply the transaction with." default:"1000"`
+	Nonce   uint64 `short:"n" long:"nonce" description:"Nonce to set in the transaction." default:"0"`
 }
 
 func (c *Load) Name() string {
@@ -52,7 +53,7 @@ func (c *Load) Run() error {
 		return err
 	}
 
-	response, err := client.Load(priv, init, c.Gas)
+	response, err := client.Load(priv, init, c.Gas, c.Nonce)
 	if err != nil {
 		return err
 	}
