@@ -82,8 +82,8 @@ To create the genesis block, run the following commands as root:
 
 .. code-block:: console
 
-  $ sawtooth keygen --key-dir /tmp sawtooth
-  $ sawtooth config genesis --key /tmp/sawtooth.priv
+  $ sawtooth keygen
+  $ sawtooth config genesis
   $ sawtooth admin genesis config-genesis.batch
 
 The following output appears:
