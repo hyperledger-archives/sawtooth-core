@@ -59,40 +59,10 @@ class XoTransactionHandler:
             board, state, player1, player2)
 
         # 4. Apply the transaction
-        if action == "create":
-            board = "---------"
-            state = "P1-NEXT"
-            player1 = ""
-            player2 = ""
-
-        elif action == "take":
-            # Assign players if new game
-            if player1 == "":
-                player1 = signer
-
-            elif player2 == "":
-                player2 = signer
-
-            # Verify player identity and take space
-            lboard = list(board)
-
-            if state == "P1-NEXT" and signer == player1:
-                lboard[space - 1] = "X"
-                state = "P2-NEXT"
-
-            elif state == "P2-NEXT" and signer == player2:
-                lboard[space - 1] = "O"
-                state = "P1-NEXT"
-
-            board = "".join(lboard)
-
-            # Update game state
-            if _is_win(board, "X"):
-                state = "P1-WIN"
-            elif _is_win(board, "O"):
-                state = "P2-WIN"
-            elif '-' not in board:
-                state = "TIE"
+        upd_board, upd_state, upd_player1, upd_player2 = _play_xo(
+            action, space, signer,
+            board, state,
+            player1, player2)
 
         # 5. Log for tutorial usage
         if action == "create":
@@ -101,14 +71,14 @@ class XoTransactionHandler:
         elif action == "take":
             _display(
                 "Player {} takes space: {}\n\n".format(signer[:6], space) +
-                _game_data_to_str(board, state, player1, player2, name)
-            )
+                _game_data_to_str(
+                    upd_board, upd_state, upd_player1, upd_player2, name))
 
         # 6. Put the game data back in state storage
         _store_state_data(
-            state_store, game_list,
-            name, board, state,
-            player1, player2)
+            state_store, game_list, name,
+            upd_board, upd_state,
+            upd_player1, upd_player2)
 
 
 def _unpack_transaction(transaction):
@@ -231,6 +201,81 @@ def _store_state_data(
 
     if len(addresses) < 1:
         raise InternalError("State Error")
+
+
+def _play_xo(action, space, signer, board, state, player1, player2):
+    if action == 'create':
+        return '---------', 'P1-NEXT', '', ''
+
+    elif action == 'take':
+        upd_player1, upd_player2 = _update_players(
+            player1, player2, signer)
+
+        upd_board = _update_board(board, space, state)
+
+        upd_state = _update_state(state, upd_board)
+
+        return upd_board, upd_state, upd_player1, upd_player2
+
+    else:
+        raise InternalError('Unhandled action: {}'.format(action))
+
+
+def _update_players(player1, player2, signer):
+    '''
+    Return: upd_player1, upd_player2
+    '''
+    if player1 == '':
+        return signer, player2
+
+    elif player2 == '':
+        return player1, signer
+
+    return player1, player2
+
+
+def _update_board(board, space, state):
+    if state == 'P1-NEXT':
+        mark = 'X'
+    elif state == 'P2-NEXT':
+        mark = 'O'
+
+    index = space - 1
+
+    # replace the index-th space with mark, leave everything else the same
+    return ''.join([current if square != index else mark
+                    for square, current in enumerate(board)])
+
+
+def _update_state(state, board):
+    x_wins = _is_win(board, 'X')
+    o_wins = _is_win(board, 'O')
+
+    if x_wins and o_wins:
+        raise InternalError(
+            'Two winners (there can be only one)')
+
+    elif x_wins:
+        return 'P1-WIN'
+
+    elif o_wins:
+        return 'P2-WIN'
+
+    elif '-' not in board:
+        return 'TIE'
+
+    elif state == 'P1-NEXT':
+        return 'P2-NEXT'
+
+    elif state == 'P2-NEXT':
+        return 'P1-NEXT'
+
+    elif state in ('P1-WINS', 'P2-WINS', 'TIE'):
+        return state
+
+    else:
+        raise InternalError(
+            'Unhandled state: {}'.format(state))
 
 
 def _is_win(board, letter):
