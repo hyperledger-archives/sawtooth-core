@@ -20,7 +20,7 @@ package main
 import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	client "sawtooth_burrow_evm/client"
+	"sawtooth_burrow_evm/client"
 )
 
 type Load struct {

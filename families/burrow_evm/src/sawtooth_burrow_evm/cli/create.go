@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
-	client "sawtooth_burrow_evm/client"
+	"sawtooth_burrow_evm/client"
 	sdk "sawtooth_sdk/client"
 )
 
