@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import hashlib
+import logging
 import pprint
 import random
 import string
@@ -44,7 +45,25 @@ from test_journal.mock import MockBlockSender
 from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
 
+
 pp = pprint.PrettyPrinter(indent=4)
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def dumps_batch(batch):
+    out = '\tbatch: {}\n'.format(batch.header_signature[:8])
+    for txn in batch.transactions:
+        out += '\ttxn: {}\n'.format(txn.header_signature[:8])
+    return out
+
+
+def dumps_block(block):
+    out = 'block: {}\n'.format(block)
+    for batch in block.batches:
+        out += dumps_batch(batch)
+    return out
 
 
 def _generate_id(length=16):
@@ -154,6 +173,7 @@ class BlockTreeManager(object):
         if add_to_store:
             self.block_store[block_wrapper.identifier] = block_wrapper
 
+        LOGGER.debug("Generated %s", dumps_block(block_wrapper))
         return block_wrapper
 
     def generate_chain(self, root_block, blocks, params=None):
@@ -197,7 +217,9 @@ class BlockTreeManager(object):
         signature = signing.sign(header_bytes, self.identity_signing_key)
         block_builder.set_signature(signature)
 
-        return BlockWrapper(block_builder.build_block())
+        block_wrapper = BlockWrapper(block_builder.build_block())
+        LOGGER.debug("Generated %s", dumps_block(block_wrapper))
+        return block_wrapper
 
     def generate_genesis_block(self):
         return self._generate_block(
@@ -274,6 +296,8 @@ class BlockTreeManager(object):
             header_signature=self._signed_header(batch_header),
             transactions=txns)
 
+        LOGGER.debug("Generated %s", dumps_batch(batch))
+
         return batch
 
     def generate_transaction(self, payload='txn', deps=None):
@@ -311,7 +335,7 @@ class BlockTreeManager(object):
             header=batch_header,
             header_signature=self._signed_header(batch_header),
             transactions=[txn])
-
+        LOGGER.debug("Generated %s", dumps_batch(batch))
         return batch
 
     def _signed_header(self, header):
