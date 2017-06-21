@@ -22,12 +22,12 @@ from sawtooth_rest_api.protobuf import client_pb2
 class BlockListTests(BaseApiTest):
 
     async def get_application(self, loop):
-        self.set_status_and_stream(
+        self.set_status_and_connection(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client_pb2.ClientBlockListRequest,
             client_pb2.ClientBlockListResponse)
 
-        handlers = self.build_handlers(loop, self.stream)
+        handlers = self.build_handlers(loop, self.connection)
         return self.build_app(loop, '/blocks', handlers.list_blocks)
 
     @unittest_run_loop
@@ -52,11 +52,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         blocks = Mocks.make_blocks('2', '1', '0')
-        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks')
         controls = Mocks.make_paging_controls()
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/blocks?head=2')
@@ -75,7 +75,7 @@ class BlockListTests(BaseApiTest):
             - a status of 500
             - an error property with a code of 10
         """
-        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        self.connection.preset_response(self.status.INTERNAL_ERROR)
         response = await self.get_assert_status('/blocks', 500)
 
         self.assert_has_valid_error(response, 10)
@@ -91,7 +91,7 @@ class BlockListTests(BaseApiTest):
             - a status of 503
             - an error property with a code of 15
         """
-        self.stream.preset_response(self.status.NOT_READY)
+        self.connection.preset_response(self.status.NOT_READY)
         response = await self.get_assert_status('/blocks', 503)
 
         self.assert_has_valid_error(response, 15)
@@ -119,11 +119,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 2)
         blocks = Mocks.make_blocks('1', '0')
-        self.stream.preset_response(head_id='1', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='1', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?head=1')
         controls = Mocks.make_paging_controls()
-        self.stream.assert_valid_request_sent(head_id='1', paging=controls)
+        self.connection.assert_valid_request_sent(head_id='1', paging=controls)
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/blocks?head=1')
@@ -142,7 +142,7 @@ class BlockListTests(BaseApiTest):
             - a status of 404
             - an error property with a code of 50
         """
-        self.stream.preset_response(self.status.NO_ROOT)
+        self.connection.preset_response(self.status.NO_ROOT)
         response = await self.get_assert_status('/blocks?head=bad', 404)
 
         self.assert_has_valid_error(response, 50)
@@ -170,11 +170,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 2)
         blocks = Mocks.make_blocks('0', '2')
-        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?id=0,2')
         controls = Mocks.make_paging_controls()
-        self.stream.assert_valid_request_sent(block_ids=['0', '2'], paging=controls)
+        self.connection.assert_valid_request_sent(block_ids=['0', '2'], paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/blocks?head=2&id=0,2')
@@ -198,7 +198,7 @@ class BlockListTests(BaseApiTest):
             - a data property that is an empty list
         """
         paging = Mocks.make_paging_response(None, 0)
-        self.stream.preset_response(
+        self.connection.preset_response(
             self.status.NO_RESOURCE,
             head_id='2',
             paging=paging)
@@ -233,10 +233,10 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 1)
         blocks = Mocks.make_blocks('0')
-        self.stream.preset_response(head_id='1', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='1', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?id=0&head=1')
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             head_id='1',
             block_ids=['0'],
             paging=Mocks.make_paging_controls())
@@ -269,11 +269,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4)
         blocks = Mocks.make_blocks('c')
-        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='d', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/blocks?head=d&min=1&count=1')
@@ -306,7 +306,7 @@ class BlockListTests(BaseApiTest):
             - a response status of 400
             - an error property with a code of 54
         """
-        self.stream.preset_response(self.status.INVALID_PAGING)
+        self.connection.preset_response(self.status.INVALID_PAGING)
         response = await self.get_assert_status('/blocks?min=-1', 400)
 
         self.assert_has_valid_error(response, 54)
@@ -334,11 +334,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 4)
         blocks = Mocks.make_blocks('d', 'c')
-        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='d', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?count=2')
         controls = Mocks.make_paging_controls(2)
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/blocks?head=d&count=2')
@@ -369,11 +369,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(2, 4)
         blocks = Mocks.make_blocks('b', 'a')
-        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='d', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/blocks?head=d&min=2')
@@ -407,11 +407,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4, previous_id='d')
         blocks = Mocks.make_blocks('c', 'b', 'a')
-        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='d', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/blocks?head=d&min=c&count=5')
@@ -446,11 +446,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4, previous_id='d', next_id='a')
         blocks = Mocks.make_blocks('c', 'b')
-        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='d', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/blocks?head=d&max=b&count=2')
@@ -482,11 +482,11 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 4)
         blocks = Mocks.make_blocks('d', 'c', 'b')
-        self.stream.preset_response(head_id='d', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='d', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/blocks?head=d&max=2&count=7')
@@ -518,12 +518,12 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         blocks = Mocks.make_blocks('0', '1', '2')
-        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?sort=header_signature')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('header_signature')
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -545,7 +545,7 @@ class BlockListTests(BaseApiTest):
             - a response status of 400
             - an error property with a code of 57
         """
-        self.stream.preset_response(self.status.INVALID_SORT)
+        self.connection.preset_response(self.status.INVALID_SORT)
         response = await self.get_assert_status('/blocks?sort=bad', 400)
 
         self.assert_has_valid_error(response, 57)
@@ -573,13 +573,13 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         blocks = Mocks.make_blocks('0', '1', '2')
-        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200(
             '/blocks?sort=header.signer_pubkey')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('header', 'signer_pubkey')
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -613,13 +613,13 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         blocks = Mocks.make_blocks('2', '1', '0')
-        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?sort=-header_signature')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls(
             'header_signature', reverse=True)
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -653,12 +653,12 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         blocks = Mocks.make_blocks('0', '1', '2')
-        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?sort=batches.length')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('batches', compare_length=True)
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -694,14 +694,14 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         blocks = Mocks.make_blocks('2', '1', '0')
-        self.stream.preset_response(head_id='2', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200(
             '/blocks?sort=-header_signature,batches.length')
         page_controls = Mocks.make_paging_controls()
         sorting = (Mocks.make_sort_controls('header_signature', reverse=True) +
                    Mocks.make_sort_controls('batches', compare_length=True))
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -716,12 +716,12 @@ class BlockListTests(BaseApiTest):
 class BlockGetTests(BaseApiTest):
 
     async def get_application(self, loop):
-        self.set_status_and_stream(
+        self.set_status_and_connection(
             Message.CLIENT_BLOCK_GET_REQUEST,
             client_pb2.ClientBlockGetRequest,
             client_pb2.ClientBlockGetResponse)
 
-        handlers = self.build_handlers(loop, self.stream)
+        handlers = self.build_handlers(loop, self.connection)
         return self.build_app(loop, '/blocks/{block_id}', handlers.fetch_block)
 
     @unittest_run_loop
@@ -740,10 +740,10 @@ class BlockGetTests(BaseApiTest):
             - a link property that ends in '/blocks/1'
             - a data property that is a full block with an id of '0'
         """
-        self.stream.preset_response(block=Mocks.make_blocks('1')[0])
+        self.connection.preset_response(block=Mocks.make_blocks('1')[0])
 
         response = await self.get_assert_200('/blocks/1')
-        self.stream.assert_valid_request_sent(block_id='1')
+        self.connection.assert_valid_request_sent(block_id='1')
 
         self.assertNotIn('head', response)
         self.assert_has_valid_link(response, '/blocks/1')
@@ -761,7 +761,7 @@ class BlockGetTests(BaseApiTest):
             - a status of 500
             - an error property with a code of 10
         """
-        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        self.connection.preset_response(self.status.INTERNAL_ERROR)
         response = await self.get_assert_status('/blocks/1', 500)
 
         self.assert_has_valid_error(response, 10)
@@ -777,7 +777,7 @@ class BlockGetTests(BaseApiTest):
             - a response status of 404
             - an error property with a code of 70
         """
-        self.stream.preset_response(self.status.NO_RESOURCE)
+        self.connection.preset_response(self.status.NO_RESOURCE)
         response = await self.get_assert_status('/blocks/bad', 404)
 
         self.assert_has_valid_error(response, 70)
