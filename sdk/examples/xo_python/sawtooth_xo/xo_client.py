@@ -109,7 +109,7 @@ class XoClient:
         return xo_prefix + game_address
 
     def _send_request(
-            self, suffix, data=None,
+            self, suffix, params=None, data=None,
             content_type=None, name=None, auth_user=None, auth_password=None):
         if self._base_url.startswith("http://"):
             url = "{}/{}".format(self._base_url, suffix)
@@ -128,9 +128,10 @@ class XoClient:
 
         try:
             if data is not None:
-                result = requests.post(url, headers=headers, data=data)
+                result = requests.post(url, params=params, headers=headers,
+                                       data=data)
             else:
-                result = requests.get(url, headers=headers)
+                result = requests.get(url, params=params, headers=headers)
 
             if result.status_code == 404:
                 raise XoException("No such game: {}".format(name))
@@ -174,34 +175,12 @@ class XoClient:
         )
 
         batch_list = self._create_batch_list([transaction])
-        batch_id = batch_list.batches[0].header_signature
-
-        if wait and wait > 0:
-            wait_time = 0
-            start_time = time.time()
-            response = self._send_request(
-                "batches", batch_list.SerializeToString(),
-                'application/octet-stream',
-                auth_user=auth_user,
-                auth_password=auth_password
-            )
-            while wait_time < wait:
-                status = self._get_status(
-                    batch_id,
-                    wait - int(wait_time),
-                    auth_user=auth_user,
-                    auth_password=auth_password
-                )
-                wait_time = time.time() - start_time
-
-                if status[batch_id] != 'PENDING':
-                    return response
-
-            return response
 
         return self._send_request(
-            "batches", batch_list.SerializeToString(),
-            'application/octet-stream',
+            "batches",
+            params=self._format_queries(wait=wait),
+            data=batch_list.SerializeToString(),
+            content_type='application/octet-stream',
             auth_user=auth_user,
             auth_password=auth_password
         )
@@ -222,3 +201,8 @@ class XoClient:
             header_signature=signature
         )
         return BatchList(batches=[batch])
+
+    @staticmethod
+    def _format_queries(**queries):
+        queries = {k: v for k, v in queries.items() if v is not None}
+        return queries if queries else ''
