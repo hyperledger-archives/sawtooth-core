@@ -96,8 +96,7 @@ The following output appears:
 .. note::
 
   If you need to delete previously existing block-chain data before running a
-  validator, simply run the following command:
-  `rm /var/lib/sawtooth/*`
+  validator, simply remove all files from /var/lib/sawtooth.
 
 
 Start Validator
