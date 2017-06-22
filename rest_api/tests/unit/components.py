@@ -301,14 +301,14 @@ class BaseApiTest(AioHTTPTestCase):
             self.assertEqual(pb_leaf.address, js_leaf['address'])
             self.assertEqual(pb_leaf.data, b64decode(js_leaf['data']))
 
-    def assert_statuses_match(self, enum_statuses, json_statuses):
+    def assert_statuses_match(self, proto_statuses, json_statuses):
         """Asserts that JSON statuses match the original enum statuses dict
         """
-        self.assertEqual(len(enum_statuses), len(json_statuses))
-        for batch_id, status_string in json_statuses.items():
-            self.assertIn(batch_id, enum_statuses)
-            status_enum = client_pb2.BatchStatus.Name(enum_statuses[batch_id])
-            self.assertEqual(status_string, status_enum)
+        self.assertEqual(len(proto_statuses), len(json_statuses))
+        for pb_status, js_status in zip(proto_statuses, json_statuses):
+            self.assertEqual(pb_status.batch_id, js_status['id'])
+            pb_enum_name = client_pb2.BatchStatus.Status.Name(pb_status.status)
+            self.assertEqual(pb_enum_name, js_status['status'])
 
     def assert_blocks_well_formed(self, blocks, *expected_ids):
         """Asserts a block dict or list of block dicts have expanded headers

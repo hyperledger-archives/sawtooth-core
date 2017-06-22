@@ -250,13 +250,16 @@ only once the batches are committed.
 
      .. code-block:: json
 
-        {
-          "data": {
-            "8980...029c": "COMMITTED",
-            "540a6...484a": "INVALID",
-            "65cd...47dd": "PENDING"
+        [
+          {
+            "id": "89807bfc9089e37e00d87d97357de14cfbc455cd608438d426a625a30a0da9a31c406983803c4aa27e1f32a3ff61709e8ec4b56abbc553d7d330635b5d27029c",
+            "status": "COMMITTED"
+          },
+          {
+            "id": "c0c2075e708c04b34903c5374f65c9352f9dc9662f187e4bab0605aba3eb697e459bfa3a61a8050c428d1347d47a11b0cf81d481467a18cd48ab137001a5fa29",
+            "status": "PENDING"
           }
-        }
+        ]
 
 
 Future Development

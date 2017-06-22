@@ -212,8 +212,7 @@ class WorkloadGenerator(object):
             result.raise_for_status()
 
             if code == 200 or code == 201 or code == 202:
-                status = list(json_result["data"].values())[0]
-                return status
+                return json_result['data'][0]['status']
             else:
                 if 'error' in json_result:
                     message = json_result['error']['message']

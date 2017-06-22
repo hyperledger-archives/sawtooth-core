@@ -18,6 +18,7 @@ from aiohttp.test_utils import unittest_run_loop
 from tests.unit.components import Mocks, BaseApiTest
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf.client_pb2 import BatchStatus
 
 
 class PostBatchTests(BaseApiTest):
@@ -172,7 +173,7 @@ class PostBatchTests(BaseApiTest):
             - a link property that ends in '/batches?id=a'
         """
         batches = Mocks.make_batches('a')
-        statuses = {'a': client_pb2.COMMITTED}
+        statuses = [BatchStatus(batch_id='a', status=BatchStatus.COMMITTED)]
         self.stream.preset_response(batch_statuses=statuses)
 
         request = await self.post_batches(batches, wait=True)
@@ -204,7 +205,7 @@ class PostBatchTests(BaseApiTest):
             - a data property matching the batch statuses received
         """
         batches = Mocks.make_batches('pending')
-        statuses = {'pending': client_pb2.PENDING}
+        statuses = [BatchStatus(batch_id='pending', status=BatchStatus.PENDING)]
         self.stream.preset_response(batch_statuses=statuses)
 
         request = await self.post_batches(batches, wait=True)
@@ -235,7 +236,7 @@ class BatchStatusTests(BaseApiTest):
         """Verifies a GET /batch_status with one id works properly.
 
         It will receive a Protobuf response with:
-            - batch statuses of {'pending': PENDING}
+            - batch statuses of {batch_id: 'pending',  status: PENDING}
 
         It should send a Protobuf request with:
             - a batch_ids property of ['pending']
@@ -245,7 +246,7 @@ class BatchStatusTests(BaseApiTest):
             - a link property that ends in '/batch_status?id=pending'
             - a data property matching the batch statuses received
         """
-        statuses = {'pending': client_pb2.PENDING}
+        statuses = [BatchStatus(batch_id='pending', status=BatchStatus.PENDING)]
         self.stream.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200('/batch_status?id=pending')
@@ -291,7 +292,7 @@ class BatchStatusTests(BaseApiTest):
         """Verifies a GET /batch_status with a wait set works properly.
 
         It will receive a Protobuf response with:
-            - batch statuses of {'pending': COMMITTED}
+            - batch statuses of {batch_id: 'pending', status: COMMITTED}
 
         It should send a Protobuf request with:
             - a batch_ids property of ['pending']
@@ -303,7 +304,7 @@ class BatchStatusTests(BaseApiTest):
             - a link property that ends in '/batch_status?id=pending&wait'
             - a data property matching the batch statuses received
         """
-        statuses = {'pending': client_pb2.COMMITTED}
+        statuses = [BatchStatus(batch_id='pending', status=BatchStatus.COMMITTED)]
         self.stream.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200('/batch_status?id=pending&wait')
@@ -333,10 +334,10 @@ class BatchStatusTests(BaseApiTest):
             - link property ending in '/batch_status?id=committed,unknown,bad'
             - a data property matching the batch statuses received
         """
-        statuses = {
-            'committed': client_pb2.COMMITTED,
-            'unknown': client_pb2.UNKNOWN,
-            'bad': client_pb2.UNKNOWN}
+        statuses = [
+            BatchStatus(batch_id='committed', status=BatchStatus.COMMITTED),
+            BatchStatus(batch_id='unknown', status=BatchStatus.UNKNOWN),
+            BatchStatus(batch_id='bad', status=BatchStatus.UNKNOWN)]
         self.stream.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200(
@@ -379,10 +380,10 @@ class BatchStatusTests(BaseApiTest):
             - an empty link property
             - a data property matching the batch statuses received
         """
-        statuses = {
-            'committed': client_pb2.COMMITTED,
-            'pending': client_pb2.PENDING,
-            'bad': client_pb2.UNKNOWN}
+        statuses = [
+            BatchStatus(batch_id='committed', status=BatchStatus.COMMITTED),
+            BatchStatus(batch_id='pending', status=BatchStatus.PENDING),
+            BatchStatus(batch_id='bad', status=BatchStatus.UNKNOWN)]
         self.stream.preset_response(batch_statuses=statuses)
 
         request = await self.client.post(

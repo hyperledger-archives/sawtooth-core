@@ -513,8 +513,7 @@ class _BatchWaiter(BatchFinishObserver):
             timeout(int): Maximum time in seconds to wait for
 
         Returns:
-            dict of int: Statuses dict, with batch ids as keys, and committed
-                status enum as the values.
+            list of BatchStatus: BatchStatuses to send back to client
         """
         self._batch_tracker.watch_statuses(self, batch_ids)
         timeout = timeout or DEFAULT_TIMEOUT
@@ -523,7 +522,9 @@ class _BatchWaiter(BatchFinishObserver):
         with self._wait_condition:
             while True:
                 if self._statuses or time() - start_time > timeout:
-                    return self._statuses
+                    return [client_pb2.BatchStatus(batch_id=i,
+                                                   status=self._statuses[i])
+                            for i in batch_ids]
                 self._wait_condition.wait(timeout - (time() - start_time))
 
 
@@ -561,7 +562,10 @@ class BatchStatusRequest(_ClientRequestHandler):
                 request.batch_ids,
                 request.timeout)
         else:
-            statuses = self._batch_tracker.get_statuses(request.batch_ids)
+            statuses_dict = self._batch_tracker.get_statuses(request.batch_ids)
+            statuses = [client_pb2.BatchStatus(batch_id=i,
+                                               status=statuses_dict[i])
+                        for i in request.batch_ids]
 
         if not statuses:
             return self._status.NO_RESOURCE

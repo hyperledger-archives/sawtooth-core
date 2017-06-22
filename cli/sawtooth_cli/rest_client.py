@@ -68,7 +68,7 @@ class RestClient(object):
                 time in seconds has elapsed.
 
         Returns:
-            dict: A statuses map, with ids as keys, and statuses values
+            list of dict: Dicts with 'id' and 'status' properties
         """
         return self._post('/batch_status', batch_ids, wait=wait)['data']
 
