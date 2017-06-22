@@ -266,7 +266,7 @@ def do_batch_submit(args):
                 args.wait - int(wait_time))
             wait_time = time.time() - start_time
 
-            if all(s == 'COMMITTED' for s in statuses.values()):
+            if all(s.status == 'COMMITTED' for s in statuses):
                 print('All batches committed in {:.6} sec'.format(wait_time))
                 return
 

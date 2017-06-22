@@ -125,10 +125,9 @@ paths:
     get:
       summary: Fetches the committed statuses for a set of batches
       description: |
-        Fetches an object with a status for each batch requested. The keys of
-        the data object will be the ids of the batch(es), while the values will
-        be a string status with the values `'COMMITTED'`, `'INVALID'`,
-        `'PENDING'`, or `'UNKNOWN'`.
+        Fetches an array of objects with a status and id for each batch
+        requested. There are for possible statuses with string values
+        `'COMMITTED'`, `'INVALID'`, `'PENDING'`, and `'UNKNOWN'`.
 
         The batch(es) you want to check can be specified using the `id` filter
         parameter. If a `wait` time is specified in the url, the API will wait
@@ -137,8 +136,9 @@ paths:
         it is set to any non-integer value other than `false`, the wait time
         will be just shy of the api's specified timeout (usually 300).
 
-        Note that as this route does not return a full resource, the response
-        body will _not_ include the `head` or `paging` properties.
+        Note that as this route does not return full resources, the response
+        will not be paginated, and there will be no `head` or `paging`
+        properties.
       parameters:
         - name: id
           in: query
@@ -504,15 +504,20 @@ definitions:
           Batches. You must submit at least one Batch.
 
   BatchStatuses:
-    properties:
-      "{batch_id}":
-        type: string
-        example: PENDING
-        enum:
-          - COMMITTED
-          - INVALID
-          - PENDING
-          - UNKNOWN
+    type: array
+    items:
+      properties:
+        id:
+          type: string
+          example: 89807bfc9089e37e00d87d97357de14cfbc455cd608438d426a625a30a0da9a31c406983803c4aa27e1f32a3ff61709e8ec4b56abbc553d7d330635b5d27029c
+        status:
+          type: string
+          example: PENDING
+          enum:
+            - COMMITTED
+            - INVALID
+            - PENDING
+            - UNKNOWN
 
   Leaf:
     properties:

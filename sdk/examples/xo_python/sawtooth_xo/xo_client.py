@@ -96,7 +96,7 @@ class XoClient:
                 'batch_status?id={}&wait={}'.format(batch_id, wait),
                 auth_user=auth_user,
                 auth_password=auth_password)
-            return yaml.safe_load(result)["data"]
+            return yaml.safe_load(result)['data'][0]['status']
         except BaseException as err:
             raise XoException(err)
 
@@ -194,7 +194,7 @@ class XoClient:
                 )
                 wait_time = time.time() - start_time
 
-                if status[batch_id] != 'PENDING':
+                if status != 'PENDING':
                     return response
 
             return response

@@ -18,6 +18,7 @@ from time import time, sleep
 
 import sawtooth_validator.state.client_handlers as handlers
 from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf.client_pb2 import BatchStatus
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import make_mock_batch
 from test_client_request_handlers.mocks import make_store_and_tracker
@@ -70,7 +71,7 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
         self._tracker.notify_batch_pending('b-new')
         start_time = time()
         def delayed_add():
-            sleep(2)
+            sleep(1)
             self._store.add_block('new')
         Thread(target=delayed_add).start()
 
@@ -81,7 +82,8 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
 
         self.assertGreater(8, time() - start_time)
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-new'], client_pb2.COMMITTED)
+        self.assertEqual(response.batch_statuses[0].batch_id, 'b-new')
+        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
 
 
 class TestBatchStatusRequests(ClientHandlerTestCase):
@@ -110,7 +112,8 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['b-0'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-0'], client_pb2.COMMITTED)
+        self.assertEqual(response.batch_statuses[0].batch_id, 'b-0')
+        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
 
     def test_batch_status_bad_request(self):
         """Verifies bad requests for status of a batch break properly.
@@ -147,7 +150,8 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['b-pending'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-pending'], client_pb2.PENDING)
+        self.assertEqual(response.batch_statuses[0].batch_id, 'b-pending')
+        self.assertEqual(response.batch_statuses[0].status, BatchStatus.PENDING)
 
     def test_batch_status_when_missing(self):
         """Verifies requests for status of a batch that is not found work.
@@ -159,7 +163,8 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['z'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['z'], client_pb2.UNKNOWN)
+        self.assertEqual(response.batch_statuses[0].batch_id, 'z')
+        self.assertEqual(response.batch_statuses[0].status, BatchStatus.UNKNOWN)
 
     def test_batch_status_for_many_batches(self):
         """Verifies requests for status of many batches work properly.
@@ -182,10 +187,10 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         response = self.make_request(batch_ids=['b-1', 'b-2', 'b-pending', 'y'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-1'], client_pb2.COMMITTED)
-        self.assertEqual(response.batch_statuses['b-2'], client_pb2.COMMITTED)
-        self.assertEqual(response.batch_statuses['b-pending'], client_pb2.PENDING)
-        self.assertEqual(response.batch_statuses['y'], client_pb2.UNKNOWN)
+        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
+        self.assertEqual(response.batch_statuses[1].status, BatchStatus.COMMITTED)
+        self.assertEqual(response.batch_statuses[2].status, BatchStatus.PENDING)
+        self.assertEqual(response.batch_statuses[3].status, BatchStatus.UNKNOWN)
 
     def test_batch_status_with_wait(self):
         """Verifies requests for status that wait for commit work properly.
@@ -201,7 +206,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self._tracker.notify_batch_pending('b-new')
         start_time = time()
         def delayed_add():
-            sleep(2)
+            sleep(1)
             self._store.add_block('new')
         Thread(target=delayed_add).start()
 
@@ -212,4 +217,4 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.assertGreater(8, time() - start_time)
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses['b-new'], client_pb2.COMMITTED)
+        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)

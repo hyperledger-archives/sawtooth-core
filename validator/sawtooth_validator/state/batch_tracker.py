@@ -15,10 +15,10 @@
 
 import abc
 from threading import RLock
-from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.block_store import StoreUpdateObserver
 from sawtooth_validator.journal.journal import PendingBatchObserver
+from sawtooth_validator.protobuf.client_pb2 import BatchStatus
 
 
 # By default pending batch ids will be kept for one hour
@@ -53,7 +53,7 @@ class BatchTracker(StoreUpdateObserver, PendingBatchObserver):
             for batch_id in set(self._pending):
                 if self._block_store.has_batch(batch_id):
                     self._pending.pop(batch_id)
-                    self._update_observers(batch_id, client_pb2.COMMITTED)
+                    self._update_observers(batch_id, BatchStatus.COMMITTED)
 
     def notify_batch_pending(self, batch_id):
         """Adds a batch to the pending list.
@@ -63,7 +63,7 @@ class BatchTracker(StoreUpdateObserver, PendingBatchObserver):
         """
         with self._lock:
             self._pending[batch_id] = True
-            self._update_observers(batch_id, client_pb2.PENDING)
+            self._update_observers(batch_id, BatchStatus.PENDING)
 
     def get_status(self, batch_id):
         """Returns the status enum for a batch.
@@ -76,10 +76,10 @@ class BatchTracker(StoreUpdateObserver, PendingBatchObserver):
         """
         with self._lock:
             if self._block_store.has_batch(batch_id):
-                return client_pb2.COMMITTED
+                return BatchStatus.COMMITTED
             if batch_id in self._pending:
-                return client_pb2.PENDING
-            return client_pb2.UNKNOWN
+                return BatchStatus.PENDING
+            return BatchStatus.UNKNOWN
 
     def get_statuses(self, batch_ids):
         """Returns a statuses dict for the requested batches.
@@ -125,7 +125,7 @@ class BatchTracker(StoreUpdateObserver, PendingBatchObserver):
     def _has_no_pendings(self, statuses):
         """Returns True if a statuses dict has no PENDING statuses.
         """
-        return all(s != client_pb2.PENDING for s in statuses.values())
+        return all(s != BatchStatus.PENDING for s in statuses.values())
 
 
 class BatchFinishObserver(metaclass=abc.ABCMeta):

@@ -114,10 +114,10 @@ class RouteHandler(object):
             error_traps)
 
         # Build response envelope
-        data = response['batch_statuses'] or None
+        data = self._format_statuses(response['batch_statuses']) or None
         id_string = ','.join(b.header_signature for b in batch_list.batches)
 
-        if data is None or any(s != 'COMMITTED' for _, s in data.items()):
+        if data is None or any(d['status'] != 'COMMITTED' for d in data):
             status = 202
             link = self._build_url(request, path='/batch_status', id=id_string)
         else:
@@ -186,7 +186,7 @@ class RouteHandler(object):
 
         return self._wrap_response(
             request,
-            data=response.get('batch_statuses'),
+            data=self._format_statuses(response['batch_statuses']),
             metadata=metadata)
 
     async def list_state(self, request):
@@ -832,6 +832,18 @@ class RouteHandler(object):
             except ValueError:
                 # By default, waits for 95% of REST API's configured timeout
                 validator_query.timeout = int(self._timeout * 0.95)
+
+    @staticmethod
+    def _format_statuses(statuses):
+        """Reformat converted BatchStatus dicts: drop empty keys, rename 'id'.
+        """
+        for status in statuses:
+            status['id'] = status.pop('batch_id')
+            for k, v in status.copy().items():
+                if v == '':
+                    status.pop(k)
+        return statuses
+
 
     @staticmethod
     def _get_filter_ids(request):
