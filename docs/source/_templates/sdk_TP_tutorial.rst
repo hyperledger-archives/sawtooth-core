@@ -353,7 +353,7 @@ game name prepended with some constant:
     const _makeGameAddress = (gameName) => {
        let prefix = XO_NAMESPACE
        let gameHash = crypto.createHash('sha512').update(gameName).digest('hex').toLowerCase()
-       return prefix + gameHash
+       return prefix + gameHash.substring(0, 64)
     }
 {% elif language == 'Java' %}
 
@@ -371,7 +371,7 @@ game name prepended with some constant:
     def _make_game_address(self, game_name):
         prefix = self._namespace_prefix
         game_name_utf8 = game_name.encode('utf-8')
-        return prefix + hashlib.sha512(game_name_utf8).hexdigest()
+        return prefix + hashlib.sha512(game_name_utf8).hexdigest()[0:64]
 
 
 {% endif %}
