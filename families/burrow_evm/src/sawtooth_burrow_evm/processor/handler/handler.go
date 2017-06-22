@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	. "sawtooth_burrow_evm/common"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
 	"sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
@@ -33,7 +34,6 @@ import (
 )
 
 const (
-	PREFIX    = "a84eda"
 	GAS_LIMIT = 1 << 31
 )
 
@@ -74,9 +74,8 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, sta
 
 	// Construct address of sender. This is the address used by the EVM to
 	// access the account.
-	pubkey := client.MustDecode(header.GetSignerPubkey())
-	senderAddress := createVmAddress(pubkey).Bytes()
-	sm := NewStateManager(PREFIX, state)
+	senderAddress, _ := PubToEvmAddr(client.MustDecode(header.GetSignerPubkey()))
+	sm := NewStateManager(state)
 
 	if transaction.GetTo() == nil {
 		err = loadAccount(senderAddress, transaction, sm)
@@ -90,7 +89,7 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, sta
 	return nil
 }
 
-func loadAccount(senderAddress []byte, txn *EvmTransaction, sm *StateManager) error {
+func loadAccount(senderAddress *EvmAddr, txn *EvmTransaction, sm *StateManager) error {
 
 	// Load the entry for the sender from global state
 	senderEntry, err := sm.GetEntry(senderAddress)
@@ -106,10 +105,10 @@ func loadAccount(senderAddress []byte, txn *EvmTransaction, sm *StateManager) er
 
 	// If the entry does already exist, this is a new Contract Account and it
 	// will be created at a new address derived from the existing account.
-	return createContractAccount(senderEntry, txn, sm)
+	return createContractAccount(senderAddress, senderEntry, txn, sm)
 }
 
-func createEoaAccount(address []byte, txn *EvmTransaction, sm *StateManager) error {
+func createEoaAccount(address *EvmAddr, txn *EvmTransaction, sm *StateManager) error {
 	logger.Debugf("Creating new EOA")
 	if txn.GetNonce() != 0 {
 		return &processor.InvalidTransactionError{
@@ -133,7 +132,7 @@ func createEoaAccount(address []byte, txn *EvmTransaction, sm *StateManager) err
 	return nil
 }
 
-func createContractAccount(senderEntry *EvmEntry, txn *EvmTransaction, sm *StateManager) error {
+func createContractAccount(senderAddress *EvmAddr, senderEntry *EvmEntry, txn *EvmTransaction, sm *StateManager) error {
 	logger.Debugf("Creating new CA")
 	senderAccount := toVmAccount(senderEntry.GetAccount())
 	if senderAccount == nil {
@@ -148,7 +147,7 @@ func createContractAccount(senderEntry *EvmEntry, txn *EvmTransaction, sm *State
 		)}
 	}
 
-	newEntryAddress := deriveNewVmAddress(senderAccount).Bytes()
+	newEntryAddress := senderAddress.Derive(uint64(senderAccount.Nonce))
 	newEntry, err := sm.NewEntry(newEntryAddress)
 
 	if err != nil {
@@ -186,7 +185,7 @@ func createContractAccount(senderEntry *EvmEntry, txn *EvmTransaction, sm *State
 	return nil
 }
 
-func execAccount(senderAddress []byte, txn *EvmTransaction, sm *StateManager) error {
+func execAccount(senderAddress *EvmAddr, txn *EvmTransaction, sm *StateManager) error {
 
 	// Load the entry of the sender from global state
 	senderEntry, err := sm.GetEntry(senderAddress)
@@ -209,7 +208,13 @@ func execAccount(senderAddress []byte, txn *EvmTransaction, sm *StateManager) er
 	}
 
 	// Load the entry of the contract to be called from global state
-	receiverEntry, err := sm.GetEntry(txn.GetTo())
+	receiverAddress, err := NewEvmAddrFromBytes(txn.GetTo())
+	if err != nil {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"Invalid 'to' address %v: %v", txn.GetTo(), err.Error(),
+		)}
+	}
+	receiverEntry, err := sm.GetEntry(receiverAddress)
 	if err != nil {
 		return &processor.InvalidTransactionError{Msg: err.Error()}
 	}

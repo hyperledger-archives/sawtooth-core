@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
-	"sawtooth_burrow_evm/client"
+	"sawtooth_burrow_evm/common"
 	sdk "sawtooth_sdk/client"
 )
 
@@ -70,8 +70,8 @@ func (c *Create) Run() error {
 func gen() (string, string, string, error) {
 	priv := sdk.GenPrivKey()
 	pub := sdk.GenPubKey(priv)
-	addr, err := client.PubToAddr(pub)
-	return sdk.MustEncode(priv), sdk.MustEncode(pub), addr[6 : 6+40], err
+	addr, err := common.PubToEvmAddr(pub)
+	return sdk.MustEncode(priv), sdk.MustEncode(pub), addr.String(), err
 }
 
 func write(name, s string) error {

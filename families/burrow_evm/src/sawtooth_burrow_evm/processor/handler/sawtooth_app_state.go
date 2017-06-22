@@ -19,9 +19,9 @@ package handler
 
 import (
 	. "burrow/evm"
-	"burrow/evm/sha3"
 	. "burrow/word256"
 	"fmt"
+	. "sawtooth_burrow_evm/common"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
 )
 
@@ -41,36 +41,47 @@ func NewSawtoothAppState(mgr *StateManager) *SawtoothAppState {
 
 // GetAccount retrieves an existing account with the given address. Panics if
 // the account doesn't exist.
-func (s *SawtoothAppState) GetAccount(vmAddress Word256) *Account {
-	logger.Debugf("GetAccount(%v)", vmAddress.Bytes())
+func (s *SawtoothAppState) GetAccount(addr Word256) *Account {
+	vmAddress, err := NewEvmAddrFromBytes(addr.Bytes()[:20])
+	if err != nil {
+		panic(err.Error())
+	}
+	logger.Debugf("GetAccount(%v)", vmAddress)
 
-	entry := s.mgr.MustGetEntry(vmAddress.Bytes())
+	entry := s.mgr.MustGetEntry(vmAddress)
 
 	return toVmAccount(entry.GetAccount())
 }
 
 // UpdateAccount updates the account in state. Panics if the account doesn't
 // exist.
-func (s *SawtoothAppState) UpdateAccount(vmAccount *Account) {
-	logger.Debugf("UpdateAccount(%v)", vmAccount.Address.Bytes())
-	address := vmAccount.Address.Bytes()
+func (s *SawtoothAppState) UpdateAccount(acct *Account) {
+	vmAddress, err := NewEvmAddrFromBytes(acct.Address.Bytes()[:20])
+	if err != nil {
+		panic(err.Error())
+	}
+	logger.Debugf("UpdateAccount(%v)", vmAddress)
 
-	entry := s.mgr.MustGetEntry(vmAccount.Address.Bytes())
+	entry := s.mgr.MustGetEntry(vmAddress)
 
-	entry.Account = toStateAccount(vmAccount)
+	entry.Account = toStateAccount(acct)
 
-	s.mgr.MustSetEntry(address, entry)
+	s.mgr.MustSetEntry(vmAddress, entry)
 }
 
 // RemoveAccount removes the account and associated storage from global state
 // and panics if it doesn't exist.
-func (s *SawtoothAppState) RemoveAccount(vmAccount *Account) {
-	logger.Debugf("RemoveAccount(%v)", vmAccount.Address.Bytes())
-	address := vmAccount.Address.Bytes()
-	err := s.mgr.DelEntry(address)
+func (s *SawtoothAppState) RemoveAccount(acct *Account) {
+	vmAddress, err := NewEvmAddrFromBytes(acct.Address.Bytes()[:20])
+	if err != nil {
+		panic(err.Error())
+	}
+	logger.Debugf("RemoveAccount(%v)", vmAddress)
+
+	err = s.mgr.DelEntry(vmAddress)
 	if err != nil {
 		panic(fmt.Sprintf(
-			"Tried to DelEntry(%v) but nothing exists there", address,
+			"Tried to DelEntry(%v) but nothing exists there", vmAddress,
 		))
 	}
 }
@@ -80,16 +91,23 @@ func (s *SawtoothAppState) RemoveAccount(vmAccount *Account) {
 // or the address of the newly created account conflicts with an existing
 // account.
 func (s *SawtoothAppState) CreateAccount(creator *Account) *Account {
-	logger.Debugf("CreateAccount(%v)", creator.Address.Bytes())
+	creatorAddress, err := NewEvmAddrFromBytes(creator.Address.Bytes()[:20])
+	if err != nil {
+		panic(err.Error())
+	}
+	logger.Debugf("CreateAccount(%v)", creatorAddress)
 
 	// Get address of new account
-	address := deriveNewVmAddress(creator).Bytes()
+	newAddress := creatorAddress.Derive(uint64(creator.Nonce))
+
+	// Increment nonce
+	creator.Nonce += 1
 
 	// If it already exists, something has gone wrong
-	entry, err := s.mgr.NewEntry(address)
+	entry, err := s.mgr.NewEntry(newAddress)
 	if err != nil {
 		panic(fmt.Sprintf(
-			"Failed to NewEntry(%v)", address,
+			"Failed to NewEntry(%v)", newAddress,
 		))
 	}
 
@@ -99,10 +117,14 @@ func (s *SawtoothAppState) CreateAccount(creator *Account) *Account {
 // GetStorage gets the 256 bit value stored with the given key in the given
 // account. panics if the account and key do not both exist.
 func (s *SawtoothAppState) GetStorage(address, key Word256) Word256 {
-	logger.Debugf("GetStorage(%v, %v)", address.Bytes(), key.Bytes())
+	vmAddress, err := NewEvmAddrFromBytes(address.Bytes()[:20])
+	if err != nil {
+		panic(err.Error())
+	}
+	logger.Debugf("GetStorage(%v, %v)", vmAddress, key.Bytes())
 
 	// Load the entry from global state
-	entry := s.mgr.MustGetEntry(address.Bytes())
+	entry := s.mgr.MustGetEntry(vmAddress)
 
 	storage := entry.GetStorage()
 
@@ -114,14 +136,18 @@ func (s *SawtoothAppState) GetStorage(address, key Word256) Word256 {
 	}
 
 	panic(fmt.Sprint(
-		"Key %v not set for account %v", key.Bytes(), address.Bytes(),
+		"Key %v not set for account %v", key.Bytes(), vmAddress,
 	))
 }
 
 func (s *SawtoothAppState) SetStorage(address, key, value Word256) {
-	logger.Debugf("SetStorage(%v, %v, %v)", address.Bytes(), key.Bytes(), value.Bytes())
+	vmAddress, err := NewEvmAddrFromBytes(address.Bytes()[:20])
+	if err != nil {
+		panic(err.Error())
+	}
+	logger.Debugf("SetStorage(%v, %v, %v)", vmAddress, key.Bytes(), value.Bytes())
 
-	entry := s.mgr.MustGetEntry(address.Bytes())
+	entry := s.mgr.MustGetEntry(vmAddress)
 
 	storage := entry.GetStorage()
 
@@ -132,7 +158,7 @@ func (s *SawtoothAppState) SetStorage(address, key, value Word256) {
 		for _, pair := range entry.GetStorage() {
 			logger.Debugf("%v -> %v", pair.GetKey(), pair.GetValue())
 		}
-		s.mgr.MustSetEntry(address.Bytes(), entry)
+		s.mgr.MustSetEntry(vmAddress, entry)
 	}()
 
 	for _, pair := range storage {
@@ -154,28 +180,15 @@ func (s *SawtoothAppState) SetStorage(address, key, value Word256) {
 
 // -- Utilities --
 
-// Creates a 20 byte address and bumps the nonce.
-func deriveNewVmAddress(sender *Account) Word256 {
-	buf := make([]byte, Word256Length+8)
-	copy(buf, sender.Address.Bytes())
-	PutInt64BE(buf[Word256Length:], sender.Nonce)
-	sender.Nonce += 1
-	return createVmAddress(buf)
-}
-
-func createVmAddress(b []byte) Word256 {
-	return RightPadWord256(sha3.Sha3(b)[:20])
-}
-
-func toStateAccount(a *Account) *EvmStateAccount {
-	if a == nil {
+func toStateAccount(acct *Account) *EvmStateAccount {
+	if acct == nil {
 		return nil
 	}
 	return &EvmStateAccount{
-		Address: a.Address.Bytes(),
-		Balance: a.Balance,
-		Code:    a.Code,
-		Nonce:   a.Nonce,
+		Address: acct.Address.Bytes(),
+		Balance: acct.Balance,
+		Code:    acct.Code,
+		Nonce:   acct.Nonce,
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"net/http"
+	. "sawtooth_burrow_evm/common"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
 	sdk "sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
@@ -34,7 +35,6 @@ const (
 	FAMILY_NAME    = "burrow-evm"
 	FAMILY_VERSION = "1.0"
 	ENCODING       = "application/protobuf"
-	PREFIX         = "a84eda"
 )
 
 type Client struct {
@@ -48,7 +48,7 @@ func New(url string) *Client {
 }
 
 func (c *Client) Load(priv, init []byte, gas uint64) (*RespBody, error) {
-	address, err := PrivToAddr(priv)
+	ea, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +57,8 @@ func (c *Client) Load(priv, init []byte, gas uint64) (*RespBody, error) {
 		FamilyName:      FAMILY_NAME,
 		FamilyVersion:   FAMILY_VERSION,
 		PayloadEncoding: ENCODING,
-		Inputs:          []string{address},
-		Outputs:         []string{address},
+		Inputs:          []string{ea.ToStateAddr().String()},
+		Outputs:         []string{ea.ToStateAddr().String()},
 	})
 
 	transaction := &EvmTransaction{
@@ -89,28 +89,33 @@ func (c *Client) Load(priv, init []byte, gas uint64) (*RespBody, error) {
 }
 
 func (c *Client) Exec(priv, to, data []byte, gas uint64) (*RespBody, error) {
-	fromAddr, err := PrivToAddr(priv)
+	fromAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
 	}
 
-	toAddr, err := VmAddrToAddr(to)
+	toAddr, err := NewEvmAddrFromBytes(to)
 	if err != nil {
 		return nil, err
+	}
+
+	addresses := []string{
+		fromAddr.ToStateAddr().String(),
+		toAddr.ToStateAddr().String(),
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
 		FamilyName:      FAMILY_NAME,
 		FamilyVersion:   FAMILY_VERSION,
 		PayloadEncoding: ENCODING,
-		Inputs:          []string{fromAddr, toAddr},
-		Outputs:         []string{fromAddr, toAddr},
+		Inputs:          addresses,
+		Outputs:         addresses,
 	})
 
 	transaction := &EvmTransaction{
 		GasLimit: gas,
 		Data:     data,
-		To:       to,
+		To:       toAddr.Bytes(),
 	}
 
 	payload, err := proto.Marshal(transaction)
@@ -136,18 +141,18 @@ func (c *Client) Exec(priv, to, data []byte, gas uint64) (*RespBody, error) {
 
 func (c *Client) GetEntry(id []byte, idType string) (*EvmEntry, error) {
 	var (
-		address string
+		address *EvmAddr
 		err     error
 	)
 	switch idType {
 	case "private":
-		address, err = PrivToAddr(id)
+		address, err = PrivToEvmAddr(id)
 
 	case "public":
-		address, err = PubToAddr(id)
+		address, err = PubToEvmAddr(id)
 
 	case "address":
-		address, err = VmAddrToAddr(id)
+		address, err = NewEvmAddrFromBytes(id)
 
 	default:
 		return nil, fmt.Errorf(
@@ -159,7 +164,7 @@ func (c *Client) GetEntry(id []byte, idType string) (*EvmEntry, error) {
 		return nil, err
 	}
 
-	resp, err := http.Get(c.Url + "/state/" + address)
+	resp, err := http.Get(c.Url + "/state/" + address.ToStateAddr().String())
 	if err != nil {
 		return nil, err
 	}

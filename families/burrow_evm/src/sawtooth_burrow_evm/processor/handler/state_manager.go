@@ -18,11 +18,10 @@
 package handler
 
 import (
-	"burrow/word256"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	. "sawtooth_burrow_evm/common"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
-	"sawtooth_sdk/client"
 	"sawtooth_sdk/processor"
 )
 
@@ -30,20 +29,18 @@ import (
 
 // StateManager simplifies accessing EVM related data stored in state
 type StateManager struct {
-	state  *processor.State
-	prefix string
+	state *processor.State
 }
 
-func NewStateManager(prefix string, state *processor.State) *StateManager {
+func NewStateManager(state *processor.State) *StateManager {
 	return &StateManager{
-		prefix: prefix,
-		state:  state,
+		state: state,
 	}
 }
 
 // NewEntry creates a new entry in state. If an entry already exists at the
 // given address or the entry cannot be created, an error is returned.
-func (mgr *StateManager) NewEntry(vmAddress []byte) (*EvmEntry, error) {
+func (mgr *StateManager) NewEntry(vmAddress *EvmAddr) (*EvmEntry, error) {
 	entry, err := mgr.GetEntry(vmAddress)
 	if err != nil {
 		return nil, err
@@ -55,7 +52,7 @@ func (mgr *StateManager) NewEntry(vmAddress []byte) (*EvmEntry, error) {
 
 	entry = &EvmEntry{
 		Account: &EvmStateAccount{
-			Address: vmAddress,
+			Address: vmAddress.Bytes(),
 			Balance: 0,
 			Code:    make([]byte, 0),
 			Nonce:   0,
@@ -73,7 +70,7 @@ func (mgr *StateManager) NewEntry(vmAddress []byte) (*EvmEntry, error) {
 
 // DelEntry removes the given entry from state. An error is returned if the
 // entry does not exist.
-func (mgr *StateManager) DelEntry(vmAddress []byte) error {
+func (mgr *StateManager) DelEntry(vmAddress *EvmAddr) error {
 	entry, err := mgr.GetEntry(vmAddress)
 	if err != nil {
 		return err
@@ -90,15 +87,15 @@ func (mgr *StateManager) DelEntry(vmAddress []byte) error {
 
 // GetEntry retrieve the entry from state at the given address. If the entry
 // does not exist, nil is returned.
-func (mgr *StateManager) GetEntry(vmAddress []byte) (*EvmEntry, error) {
-	address := toStateAddress(mgr.prefix, vmAddress)
+func (mgr *StateManager) GetEntry(vmAddress *EvmAddr) (*EvmEntry, error) {
+	address := vmAddress.ToStateAddr()
 
 	// Retrieve the account from global state
-	entries, err := mgr.state.Get([]string{address})
+	entries, err := mgr.state.Get([]string{address.String()})
 	if err != nil {
 		return nil, err
 	}
-	entryData, exists := entries[address]
+	entryData, exists := entries[address.String()]
 	if !exists {
 		return nil, nil
 	}
@@ -115,7 +112,7 @@ func (mgr *StateManager) GetEntry(vmAddress []byte) (*EvmEntry, error) {
 
 // MustGetEntry wraps GetEntry and panics if the entry does not exist of there
 // is an error.
-func (mgr *StateManager) MustGetEntry(vmAddress []byte) *EvmEntry {
+func (mgr *StateManager) MustGetEntry(vmAddress *EvmAddr) *EvmEntry {
 	entry, err := mgr.GetEntry(vmAddress)
 	if err != nil {
 		panic(fmt.Sprintf(
@@ -134,8 +131,8 @@ func (mgr *StateManager) MustGetEntry(vmAddress []byte) *EvmEntry {
 
 // SetEntry writes the entry to the given address. Returns an error if it fails
 // to set the address.
-func (mgr *StateManager) SetEntry(vmAddress []byte, entry *EvmEntry) error {
-	address := toStateAddress(mgr.prefix, vmAddress)
+func (mgr *StateManager) SetEntry(vmAddress *EvmAddr, entry *EvmEntry) error {
+	address := vmAddress.ToStateAddr()
 
 	entryData, err := proto.Marshal(entry)
 	if err != nil {
@@ -144,14 +141,14 @@ func (mgr *StateManager) SetEntry(vmAddress []byte, entry *EvmEntry) error {
 
 	// Store the account in global state
 	addresses, err := mgr.state.Set(map[string][]byte{
-		address: entryData,
+		address.String(): entryData,
 	})
 	if err != nil {
 		return err
 	}
 
 	for _, a := range addresses {
-		if a == address {
+		if a == address.String() {
 			return nil
 		}
 	}
@@ -159,20 +156,11 @@ func (mgr *StateManager) SetEntry(vmAddress []byte, entry *EvmEntry) error {
 }
 
 // MustSetEntry wraps set entry and panics if there is an error.
-func (mgr *StateManager) MustSetEntry(vmAddress []byte, entry *EvmEntry) {
+func (mgr *StateManager) MustSetEntry(vmAddress *EvmAddr, entry *EvmEntry) {
 	err := mgr.SetEntry(vmAddress, entry)
 	if err != nil {
 		panic(fmt.Sprintf(
 			"Failed to SetEntry(%v, %v): %v", vmAddress, entry, err,
 		))
 	}
-}
-
-// Convert the byte representation of an address used by the EVM to the string
-// representation used by global state.
-func toStateAddress(prefix string, b []byte) string {
-	// Make sure the address is padded correctly
-	b = word256.RightPadBytes(b, 32)
-
-	return prefix + client.MustEncode(b)
 }
