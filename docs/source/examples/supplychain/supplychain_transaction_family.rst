@@ -43,7 +43,7 @@ Agent
 Agents represent owners or custodian of goods in the system. All agents must
 be registered in the system before they can interact with records.
 
-.. literalinclude:: ../../../families/supplychain/protos/agent.proto
+.. literalinclude:: ../../../../families/supplychain/protos/agent.proto
     :language: protobuf
     :lines: 22-
 
@@ -53,7 +53,7 @@ Application
 An Application is an offer from an agent to change the Custodian or Owner field
 of a Record. Agents can only have one open application of a type at a time.
 
-.. literalinclude:: ../../../families/supplychain/protos/application.proto
+.. literalinclude:: ../../../../families/supplychain/protos/application.proto
     :language: protobuf
     :lines: 22-
 
@@ -61,7 +61,7 @@ Record
 ------
 A record represents a good or material that is being tracked in the system.
 
-.. literalinclude:: ../../../families/supplychain/protos/record.proto
+.. literalinclude:: ../../../../families/supplychain/protos/record.proto
     :language: protobuf
     :lines: 22-
 
@@ -146,7 +146,7 @@ All SCTP transactions are wrapped in a payload object that allows for the items
 to be dispatch to the correct handling logic.
 
 
-.. literalinclude:: ../../../families/supplychain/protos/payload.proto
+.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
     :language: protobuf
     :lines: 22-40
 
@@ -160,7 +160,7 @@ Create Agent
 Create an agent record, the signer_pubkey in the transaction header will
 be used as the agent's public key.
 
-.. literalinclude:: ../../../families/supplychain/protos/payload.proto
+.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
     :language: protobuf
     :lines: 42-44
 
@@ -174,7 +174,7 @@ Create Record
 Create a record of an item to be tracked. The current Owner and Custodian is
 set to the signer of this transaction.
 
-.. literalinclude:: ../../../families/supplychain/protos/payload.proto
+.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
     :language: protobuf
     :lines: 69-72
 
@@ -183,7 +183,7 @@ Create Application
 
 Create an application for transfer of ownership or custodianship of the record.
 
-.. literalinclude:: ../../../families/supplychain/protos/payload.proto
+.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
     :language: protobuf
     :lines: 46-51
 
@@ -194,7 +194,7 @@ Accept Application
 Accept an application for transfer of ownership or custodianship of the record.
 Must be submitted by the current owner or custodian.
 
-.. literalinclude:: ../../../families/supplychain/protos/payload.proto
+.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
     :language: protobuf
     :lines: 53-57
 
@@ -205,7 +205,7 @@ Reject an application for transfer of ownership or custodianship of the
 record. Must be submitted by the current owner or custodian depending on
 application type.
 
-.. literalinclude:: ../../../families/supplychain/protos/payload.proto
+.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
     :language: protobuf
     :lines: 59-62
 
@@ -215,7 +215,7 @@ Cancel Application
 Cancel an application for transfer of ownership or custodianship of the record.
 Must be submitted by the Applicant.
 
-.. literalinclude:: ../../../families/supplychain/protos/payload.proto
+.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
     :language: protobuf
     :lines: 64-67
 
@@ -226,7 +226,7 @@ Finalize Record
 Mark the record as final (no longer able to be updated). The owner must be
 the current custodian and this transaction must be signed by the owner.
 
-.. literalinclude:: ../../../families/supplychain/protos/payload.proto
+.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
     :language: protobuf
     :lines: 74-76
 
