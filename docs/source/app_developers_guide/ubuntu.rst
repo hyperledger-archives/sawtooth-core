@@ -90,7 +90,8 @@ The following output appears:
 
 .. code-block:: console
 
-    Generating /var/lib/sawtooth/genesis.batch
+  Processing config-genesis.batch...
+  Generating /var/lib/sawtooth/genesis.batch
 
 .. note::
 
