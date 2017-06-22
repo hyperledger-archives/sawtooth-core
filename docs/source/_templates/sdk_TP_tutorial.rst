@@ -1,11 +1,15 @@
 {% set short_lang = 'python' %}
 {% if language == 'JavaScript' %}
     {% set short_lang = 'js' %}
+{% elif language == 'Java' %}
+    {% set short_lang = 'java' %}
 {% endif %}
 
 {% set lowercase_lang = 'python' %}
 {% if language == 'JavaScript' %}
     {% set lowercase_lang = 'javascript' %}
+{% elif language == 'Java' %}
+    {% set lowercase_lang = 'java' %}
 {% endif %}
 
 ***********************************************
@@ -80,6 +84,16 @@ The transaction contains payload bytes that are opaque to the validator core,
 and transaction family specific. When implementing a transaction handler the
 binary serialization protocol is up to the implementer.
 
+{% elif language == 'Java' %}
+``apply`` gets called with two arguments, ``transactionRequest`` and ``stateStore``.
+``transactionRequest`` holds the command that is to be executed (e.g. taking a space or
+creating a game), while ``stateStore`` stores information about the current
+state of the game (e.g. the board layout and whose turn it is).
+
+The transaction contains payload bytes that are opaque to the validator core,
+and transaction family specific. When implementing a transaction handler the
+binary serialization protocol is up to the implementer.
+
 {% else %}
 ``apply`` gets called with two arguments, ``transaction`` and
 ``state_store``. The argument ``transaction`` is an instance of the class
@@ -129,6 +143,20 @@ Accordingly, a top-down approach to ``apply`` might look like this:
       }
     }
 
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    public void apply(TpProcessRequest transactionRequest, State stateStore) {
+      TransactionData transactionData = getUnpackedTransaction(transactionRequest);
+
+      GameData stateData = getStateData(stateStore, transactionData.gameName);
+
+      GameData updatedGameData = playXo(transactionData, stateData);
+
+      storeGameData(transactionData.gameName, updatedGameData, stateStore);
+    }
+
 {% else %}
 
 {# Python code is the default #}
@@ -168,9 +196,9 @@ So how do we get data out of the transaction? The transaction consists of a
 header and a payload. The header contains the "signer", which is used to
 identify the current player. The payload will contain an encoding of the game
 name, the action ('create' a game, 'take' a space), and the space (which will be
-an empty string if the action isn't 'take'). So our {% if language ==
-'JavaScript' %}``_unpackTransaction``{% else %}``_unpack_transaction``{% endif
-%} function will look like this:
+an empty string if the action isn't 'take'). So our {% if language == 'JavaScript' %}
+``_unpackTransaction``{% elif language == 'Java' %}``getUnpackedTransaction``{% else %}
+``_unpack_transaction``{% endif %} function will look like this:
 
 {% if language == 'JavaScript' %}
 
@@ -191,6 +219,25 @@ an empty string if the action isn't 'take'). So our {% if language ==
           reject(reason)
         }
       })
+
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private TransactionData getUnpackedTransaction(TpProcessRequest transactionRequest)
+        throws InvalidTransactionException {
+      String signer = transactionRequest.getHeader().getSignerPubkey();
+      ArrayList<String> payload
+          = decodeData(transactionRequest.getPayload().toStringUtf8());
+
+      if (payload.size() > 3) {
+        throw new InvalidTransactionException("Invalid payload serialization");
+      }
+      while (payload.size() < 3) {
+        payload.add("");
+      }
+      return new TransactionData(payload.get(0), payload.get(1), payload.get(2), signer);
+    }
 
 
 {% else %}
@@ -213,10 +260,10 @@ an empty string if the action isn't 'take'). So our {% if language ==
 
 
 Before we say how exactly the transaction payload will be decoded, let's look at
-{% if language == 'JavaScript' %}``_getStateData``{% else
-%}``_get_state_data``{% endif %}. Now, as far as the handler is concerned, it
-doesn't matter how the game data is stored. The only thing that matters is that
-given a game name, the state store is able to give back the correct game data.
+{% if language == 'JavaScript' %}``_getStateData``{% elif language == 'Java' %}
+``getStateData``{% else %}``_get_state_data``{% endif %}. Now, as far as the handler
+is concerned, it doesn't matter how the game data is stored. The only thing that matters
+is that given a game name, the state store is able to give back the correct game data.
 (In our full XO implementation, the game data is stored in a Merkle-radix tree.)
 
 
@@ -253,6 +300,30 @@ given a game name, the state store is able to give back the correct game data.
       throw new InternalError(message)
     }
 
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private GameData getStateData(String gameName, State stateStore)
+        throws InternalError {
+      String address = makeGameAddress(gameName);
+      String stateEntry = stateStore.get(address);
+      if (stateEntry.length() == 0) {
+        return new GameData("", "", "", "", "");
+      } else {
+        try {
+          ArrayList<String> data = decodeData(stateEntry, gameName);
+          while (data.size() < 5) {
+            data.add("");
+          }
+          return new GameData(
+            data.get(0), data.get(1), data.get(2), data.get(3), data.get(4));
+        } catch (Error e) {
+          throw new InternalError("Failed to deserialize game data");
+        }
+      }
+    }
+
 {% else %}
 
 .. code-block:: python
@@ -283,6 +354,14 @@ game name prepended with some constant:
        let prefix = XO_NAMESPACE
        let gameHash = crypto.createHash('sha512').update(gameName).digest('hex').toLowerCase()
        return prefix + gameHash
+    }
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private String makeGameAddress(String gameName) {
+      String hashedName = Utils.hash512(gameName.getBytes("UTF-8"));
+      return xoNameSpace + hashedName.substring(0, 64);
     }
 
 {% else %}
@@ -317,6 +396,29 @@ updated state of the game and store it back at the address from which it came.
         }
         console.log(`Set ${gameAddress} to ${gameData}`)
       })
+    }
+
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private void storeGameData(String gameName, GameData gameData, State stateStore) {
+      String address = makeGameAddress(gameName);
+
+      String encodedGameData = encodeData(gameData)
+      ByteString gameByteString = ByteString.copyFromUtf8(encodedGameData);
+
+      Map.Entry<String, ByteString> entry
+          = new AbstractMap.SimpleEntry<>(address, gameByteString);
+
+      Collection<Map.Entry<String, ByteString>> addressValues
+          = Collections.singletonList(entry);
+
+      Collection<String> addresses = stateStore.set(addressValues);
+
+      if (addresses.size() < 1) {
+        throw new InternalError("State Error");
+      }
     }
 
 {% else %}
@@ -359,6 +461,21 @@ sophisticated, `BSON <http://bsonspec.org/>`_.
       return Buffer.from(data.join())
     }
 
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private ArrayList<String> decodeData(String payload) {
+      return new ArrayList<>(Arrays.asList(payload.split(",")))
+    }
+
+    private String encodeData(GameData gameData) {
+      return String.format(
+          "%s,%s,%s,%s,%s",
+          gameData.gameName, gameData.board, gameData.state,
+          gameData.playerOne, gameData.playerTwo);
+    }
+
 {% else %}
 
 .. code-block:: python
@@ -375,17 +492,18 @@ Implementing Game Play
 ======================
 
 
-All that's left to do is describe how to play tic-tac-toe. The details here are
-fairly straighforward, and the {% if language == 'JavaScript' %}``_playXO``{%
-else %}``_play_xo``{% endif %} function could certainly be implemented in
-different ways. To see our implementation, go to ``/project/sawtooth-
-core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to represent the board as
-a string of length 9, with each character in the string representing a space
-taken by X, a space taken by O, or a free space. Updating the board
-configuration and the current state of the game proceeds straightforwardly.
+All that's left to do is describe how to play tic-tac-toe. The details here are fairly
+straighforward, and the {% if language == 'JavaScript' %}
+``_playXO``{% elif language == 'Java' %}``playXo``{% else %}``_play_xo``{% endif %}
+function could certainly be implemented in different ways. To see our implementation, go
+to ``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to represent
+the board as a string of length 9, with each character in the string representing a space
+taken by X, a space taken by O, or a free space. Updating the board configuration and the
+current state of the game proceeds straightforwardly.
 
 
-The {% if language == 'JavaScript' %}``XOHandler``{% else %}``XoTransactionHandler``{% endif %} Class
+The {% if language == 'JavaScript' %}``XOHandler``{% elif language == 'Java' %}
+``XoHandler``{% else %}``XoTransactionHandler``{% endif %} Class
 ===================================
 
 {% if language == 'JavaScript' %}
@@ -407,6 +525,52 @@ about what kinds of transactions it can handle.
 
 Note that the XOHandler class extends the TransactionHandler class defined in the
 JavaScript SDK.
+
+{% elif language == 'Java' %}
+
+And that's all there is to ``apply``! All that's left to do is set up the
+``XoHandler`` class and its metadata. The metadata is used to
+*register* the transaction processor with a validator by sending it information
+about what kinds of transactions it can handle.
+
+.. code-block:: java
+
+    public class XoHandler implements TransactionHandler {
+
+      private String xoNameSpace;
+
+      public XoHandler() {
+        try {
+          this.xoNameSpace = Utils.hash512(
+            this.transactionFamilyName().getBytes("UTF-8")).substring(0, 6);
+        } catch (UnsupportedEncodingException usee) {
+          usee.printStackTrace();
+          this.xoNameSpace = "";
+        }
+      }
+
+      @Override
+      public String transactionFamilyName() {
+        return "xo";
+      }
+
+      @Override
+      public String getEncoding() {
+        return "csv-utf8";
+      }
+
+      @Override
+      public String getVersion() {
+        return "1.0";
+      }
+
+      @Override
+      public Collection<String> getNameSpaces() {
+        ArrayList<String> namespaces = new ArrayList<>();
+        namespaces.add(this.xoNameSpace);
+        return namespaces;
+      }
+    }
 
 {% else %}
 

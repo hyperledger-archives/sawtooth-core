@@ -26,3 +26,8 @@ targets:
     template: sdk_TP_tutorial.rst
     args:
         language: JavaScript
+
+  sdk_TP_tutorial_java:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: Java
