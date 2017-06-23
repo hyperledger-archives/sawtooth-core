@@ -37,7 +37,8 @@ depicted.
 Installation
 ============
 
-Ubuntu packages are provided by the Sawtooth package repository.  To add the
+Ubuntu packages are provided by one of the Sawtooth package repositories:
+stable or nightly.  We recommend using the stable repository. To add the stable
 repository, run the following commands in a terminal window:
 
 .. code-block:: console
@@ -45,6 +46,20 @@ repository, run the following commands in a terminal window:
   $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
   $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe'
   $ sudo apt-get update
+
+or, to use the nightly repository:
+
+.. code-block:: console
+
+  $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
+  $ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
+  $ sudo apt-get update
+
+.. caution::
+
+  Nightly builds may be out-of-sync with the documentation and have not gone
+  through long-running network testing.  We really do recommend the stable
+  repository.
 
 Sawtooth consists of several Ubuntu packages, which can be installed together
 using the 'sawtooth' metapackage.  Run the following in a terminal window:
