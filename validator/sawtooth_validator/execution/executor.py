@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from concurrent.futures import ThreadPoolExecutor
+import abc
 import json
 import logging
 import threading
@@ -47,6 +48,7 @@ class TransactionExecutorThread(object):
                  processors,
                  waiting_threadpool,
                  settings_view_factory,
+                 invalid_observers,
                  open_futures):
         """
         Args:
@@ -76,6 +78,7 @@ class TransactionExecutorThread(object):
         self._waiters_by_type = _WaitersByType()
         self._waiting_threadpool = waiting_threadpool
         self._done = False
+        self._invalid_observers = invalid_observers
         self._open_futures = open_futures
 
     def _future_done_callback(self, request, result):
@@ -108,6 +111,11 @@ class TransactionExecutorThread(object):
                 context_id_list=[req.context_id])
             self._scheduler.set_transaction_execution_result(
                 req.signature, False, req.context_id)
+            for observer in self._invalid_observers:
+                observer.notify_txn_invalid(
+                    req.signature,
+                    response.message,
+                    response.extended_data)
 
     def execute_thread(self):
         for txn_info in self._scheduler:
@@ -265,7 +273,11 @@ class TransactionExecutorThread(object):
 
 
 class TransactionExecutor(object):
-    def __init__(self, service, context_manager, settings_view_factory):
+    def __init__(self,
+                 service,
+                 context_manager,
+                 settings_view_factory,
+                 invalid_observers=None):
         """
         Args:
             service (Interconnect): The zmq internal interface
@@ -290,6 +302,8 @@ class TransactionExecutor(object):
         self._executing_threadpool = ThreadPoolExecutor(max_workers=5)
         self._alive_threads = []
         self._lock = threading.Lock()
+        self._invalid_observers = ([] if invalid_observers is None
+                                   else invalid_observers)
         self._open_futures = ThreadsafeDict()
 
     def create_scheduler(self,
@@ -347,6 +361,7 @@ class TransactionExecutor(object):
             processors=self.processors,
             waiting_threadpool=self._waiting_threadpool,
             settings_view_factory=self._settings_view_factory,
+            invalid_observers=self._invalid_observers,
             open_futures=self._open_futures)
         self._executing_threadpool.submit(t.execute_thread)
         with self._lock:
@@ -356,6 +371,25 @@ class TransactionExecutor(object):
         self._cancel_threads()
         self._waiting_threadpool.shutdown(wait=True)
         self._executing_threadpool.shutdown(wait=True)
+
+
+class InvalidTransactionObserver(metaclass=abc.ABCMeta):
+    """An interface class for components wishing to be notified when a
+    Transaction Processor finds a Transaction is invalid.
+    """
+    @abc.abstractmethod
+    def notify_txn_invalid(self, txn_id, message=None, extended_data=None):
+        """This method will be called when a Transaction Processor sends back
+        a Transaction with the status INVALID_TRANSACTION, and includes any
+        error message or extended data sent back.
+
+        Args:
+            txn_id (str): The id of the invalid Transaction
+            message (str, optional): Message explaining why it is invalid
+            extended_data (bytes, optional): Additional error data
+        """
+        raise NotImplementedError('InvalidTransactionObservers must have a '
+                                  '"notify_txn_invalid" method')
 
 
 class _Waiter(object):

@@ -268,7 +268,7 @@ class Journal(object):
         """
         self._batch_queue.put(batch)
         for observer in self._batch_obs:
-            observer.notify_batch_pending(batch.header_signature)
+            observer.notify_batch_pending(batch)
 
 
 class PendingBatchObserver(metaclass=abc.ABCMeta):
@@ -276,12 +276,12 @@ class PendingBatchObserver(metaclass=abc.ABCMeta):
     has begun being processed.
     """
     @abc.abstractmethod
-    def notify_batch_pending(self, batch_id):
+    def notify_batch_pending(self, batch):
         """This method will be called when a Batch has passed initial
         validation and is queued to be processed by the Publisher.
 
         Args:
-            batch_id (str): The header signature of the batch
+            batch (Batch): The Batch that has been added to the Publisher
         """
         raise NotImplementedError('PendingBatchObservers must have a '
                                   '"notify_batch_pending" method')

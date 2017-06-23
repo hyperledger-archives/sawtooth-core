@@ -68,7 +68,7 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
             - a response status of OK
             - a status of COMMITTED at key 'b-new' in batch_statuses
         """
-        self._tracker.notify_batch_pending('b-new')
+        self._tracker.notify_batch_pending(make_mock_batch('new'))
         start_time = time()
         def delayed_add():
             sleep(1)
@@ -203,7 +203,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
             - a response status of OK
             - a status of COMMITTED at key 'b-new' in batch_statuses
         """
-        self._tracker.notify_batch_pending('b-new')
+        self._tracker.notify_batch_pending(make_mock_batch('new'))
         start_time = time()
         def delayed_add():
             sleep(1)
