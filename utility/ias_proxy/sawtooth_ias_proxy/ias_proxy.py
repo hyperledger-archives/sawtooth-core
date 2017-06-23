@@ -29,8 +29,8 @@ from http.server import BaseHTTPRequestHandler
 import requests
 import toml
 
-from sawtooth_poet_sgx.poet_enclave_sgx.ias_client import IasClient
-from sawtooth_poet_sgx.poet_enclave_sgx.utils import LruCache
+from sawtooth_ias_client import ias_client
+from sawtooth_ias_proxy.utils import LruCache
 
 
 LOGGER = logging.getLogger(__name__)
@@ -158,7 +158,7 @@ class IasProxyServer(object):
             LOGGER.critical('Missing config: %s', e)
             sys.exit(1)
         self.client = \
-            IasClient(
+            ias_client.IasClient(
                 ias_url=proxy_config['ias_url'],
                 spid_cert_file=proxy_config['spid_cert_file'])
 

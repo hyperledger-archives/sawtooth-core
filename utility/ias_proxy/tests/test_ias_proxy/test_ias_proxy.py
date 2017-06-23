@@ -24,8 +24,8 @@ import shutil
 from unittest import TestCase
 from unittest import mock
 
-from test_sgx.utils import random_name
-from test_sgx.utils import create_random_public_key_hash
+from test_ias_proxy.utils import random_name
+from test_ias_proxy.utils import create_random_public_key_hash
 
 # pylint: disable=no-name-in-module
 from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
@@ -45,8 +45,7 @@ class TestIasProxyClient(TestCase):
                         os.path.relpath(__file__))),
                 '..',
                 '..',
-                'sawtooth_poet_sgx',
-                'poet_enclave_sgx')
+                'sawtooth_ias_proxy')
         cls.proxy_proc = \
             subprocess.Popen(
                 args=['python3', 'ias_proxy.py'],
