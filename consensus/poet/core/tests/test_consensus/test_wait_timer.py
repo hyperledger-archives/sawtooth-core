@@ -19,7 +19,6 @@ import tempfile
 import shutil
 from unittest import TestCase
 from unittest import mock
-from unittest import skip
 
 import sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator \
     as poet_enclave
@@ -83,10 +82,25 @@ class TestWaitTimer(TestCase):
 
         stake_in_the_sand = time.time()
 
+        # create mock_poet_enclave_wait_timer
+        mock_poet_enclave_wait_timer = \
+            mock.Mock(validator_address='1060 W Addison Street',
+                      duration=1.0,
+                      previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                      local_mean=5.0,
+                      signature=None,
+                      serialized_timer=None,
+                      request_time=time.time())
+
+        # create mock_poet_enclave_simulator
+        mock_poet_enclave_simulator = mock.Mock()
+        mock_poet_enclave_simulator.create_wait_timer.return_value = \
+            mock_poet_enclave_wait_timer
+
         # An empty certificate list should result in a local mean that is
         # the target wait time
         wt = wait_timer.WaitTimer.create_wait_timer(
-            poet_enclave_module=self.poet_enclave_module,
+            poet_enclave_module=mock_poet_enclave_simulator,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -124,10 +138,12 @@ class TestWaitTimer(TestCase):
 
         stake_in_the_sand = time.time()
 
+        mock_poet_enclave_wait_timer.request_time = time.time()
+
         # An empty certificate list should result in a local mean that is
         # the target wait time
         wt = wait_timer.WaitTimer.create_wait_timer(
-            poet_enclave_module=self.poet_enclave_module,
+            poet_enclave_module=mock_poet_enclave_simulator,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -145,7 +161,6 @@ class TestWaitTimer(TestCase):
             self.mock_poet_settings_view.minimum_wait_time)
         self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
-    @skip("Disabled until poet integration -- too slow!!!!!")
     def test_has_expired(self):
         # Need to create signup information first
         SignupInfo.create_signup_info(
@@ -153,9 +168,24 @@ class TestWaitTimer(TestCase):
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 
+        # create mock_poet_enclave_wait_timer
+        mock_poet_enclave_wait_timer = \
+            mock.Mock(validator_address='1060 W Addison Street',
+                      duration=1.0,
+                      previous_certificate_id=NULL_BLOCK_IDENTIFIER,
+                      local_mean=5.0,
+                      signature=None,
+                      serialized_timer=None,
+                      request_time=time.time())
+
+        # create mock_poet_enclave_simulator
+        mock_poet_enclave_simulator = mock.Mock()
+        mock_poet_enclave_simulator.create_wait_timer.return_value = \
+            mock_poet_enclave_wait_timer
+
         # Verify that a timer doesn't expire before its creation time
         wt = wait_timer.WaitTimer.create_wait_timer(
-            poet_enclave_module=self.poet_enclave_module,
+            poet_enclave_module=mock_poet_enclave_simulator,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -165,20 +195,17 @@ class TestWaitTimer(TestCase):
         # Create a timer and when it has expired, verify that the duration is
         # not greater than actual elapsed time.
         wt = wait_timer.WaitTimer.create_wait_timer(
-            poet_enclave_module=self.poet_enclave_module,
+            poet_enclave_module=mock_poet_enclave_simulator,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
             poet_settings_view=self.mock_poet_settings_view)
 
-        while not wt.has_expired(time.time()):
-            time.sleep(1)
-
-        self.assertLessEqual(wt.duration, time.time() - wt.request_time)
+        self.assertTrue(wt.has_expired(wt.request_time + wt.duration + 1.0))
 
         # Tampering with the duration should not affect wait timer expiration
         wt = wait_timer.WaitTimer.create_wait_timer(
-            poet_enclave_module=self.poet_enclave_module,
+            poet_enclave_module=mock_poet_enclave_simulator,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -187,15 +214,13 @@ class TestWaitTimer(TestCase):
         assigned_duration = wt.duration
         wt.duration = 0
 
-        while not wt.has_expired(time.time()):
-            time.sleep(1)
-
-        self.assertLessEqual(assigned_duration, time.time() - wt.request_time)
+        self.assertTrue(wt.has_expired
+                        (wt.request_time + assigned_duration + 1.0))
 
         # Tampering with the request time should not affect wait timer
         # expiration
         wt = wait_timer.WaitTimer.create_wait_timer(
-            poet_enclave_module=self.poet_enclave_module,
+            poet_enclave_module=mock_poet_enclave_simulator,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -203,7 +228,5 @@ class TestWaitTimer(TestCase):
         assigned_request_time = wt.request_time
         wt.request_time -= wt.duration
 
-        while not wt.has_expired(time.time()):
-            time.sleep(1)
-
-        self.assertLessEqual(wt.duration, time.time() - assigned_request_time)
+        self.assertTrue(wt.has_expired
+                        (assigned_request_time + wt.duration + 1.0))
