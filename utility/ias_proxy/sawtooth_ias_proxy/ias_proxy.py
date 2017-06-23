@@ -31,6 +31,7 @@ import toml
 
 from sawtooth_ias_client import ias_client
 from sawtooth_ias_proxy.utils import LruCache
+from sawtooth_sdk.client import config
 
 
 LOGGER = logging.getLogger(__name__)
@@ -183,16 +184,7 @@ class IasProxyServer(object):
 
 
 def get_server():
-    if 'SAWTOOTH_HOME' in os.environ:
-        config_dir = os.path.join(os.environ['SAWTOOTH_HOME'], 'etc')
-    elif os.name == 'nt':
-        base_dir = \
-            os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-        config_dir = os.path.join(base_dir, 'conf')
-    else:
-        config_dir = '/etc/sawtooth'
-
-    config_file = os.path.join(config_dir, 'ias_proxy.toml')
+    config_file = os.path.join(config.get_config_dir(), 'ias_proxy.toml')
     LOGGER.info('Loading IAS Proxy config from: %s', config_file)
 
     # Lack of a config file is a fatal error, so let the exception percolate
