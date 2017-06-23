@@ -66,9 +66,7 @@ class TestIasProxyClient(TestCase):
         cls._mock_toml_config = {
             'spid': os.environ['POET_ENCLAVE_SPID'],
             'ias_url': 'http://localhost:8899',
-            'spid_cert_file': os.path.join(
-                get_default_path_config().config_dir,
-                'maiden-lane-poet-linkable-quotes.pem')
+            'spid_cert_file': 'dummy_cert.pem'
         }
 
         cls._temp_dir = tempfile.mkdtemp()
