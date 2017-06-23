@@ -250,43 +250,6 @@ The following lists the processors that are included:
   - An XO transaction processor written in Python
 
 
-Creating and Submitting Transactions
-====================================
-
-The **intkey** command is provided to create sample transactions of the intkey
-transaction type for testing purposes.
-
-This section guide you through the following tasks:
-
-1. Prepare a batch of intkey transactions that set the keys to random values.
-
-2. Generate *inc* (increment) and *dec* (decrement) transactions to apply to
-   the existing state stored in the blockchain.
-
-3. Submit these transactions to the validator.
-
-Run the following commands from the Linux CLI:
-
-.. code-block:: console
-
-  $ intkey create_batch
-  $ intkey load
-
-You can observe the processing of the intkey transactions by observing the
-logging output of the intkey transaction processor. A truncated example of
-the intkey transaction processor's output is shown below:
-
-.. code-block:: console
-
-  [19:29:26 INFO    core] register attempt: OK
-  [19:31:06 INFO    handler] processing: Verb=set Name=eBuPof Value=99811 address=1cf126c584128aaf1837c90c83748ab222c11b8bbd2fe6cc30f17fe35f2acb9af8efd4ee3f092b676546316cf85b2e929b68d9c5314e93ac318ba527ec74aa3ed1bc2e
-  [19:31:06 INFO    handler] processing: Verb=set Name=HOUUQS Value=10140 address=1cf126380fa9e716a05ac815741fd1960d5952e60f8747e13334f79504c57d0287b77cf9b78284d0e1544f6f0366d66c6e6eb99dc5c154b84175b2d20008d721c7b623
-  [19:31:06 INFO    handler] processing: Verb=set Name=lrnuDC Value=92318 address=1cf12617c797cf8c27254bbdb5c9bda09f9405b9494ae32b79b9b6d30881ca8552d5932a68f703d1b6754b9feb2edafa76a797fc0826110381b0f8614f2c6853316b47
-  [19:31:06 INFO    handler] processing: Verb=set Name=BKaiql Value=94175 address=1cf12669cbc17d076a1accb4b0bb61f40ed4f999173b90e3ca2591875a55fee2947661e60fa1c57b41ef0f2660176b945a01c85ff645543297068a3fb1306324a19612
-  [19:31:06 INFO    handler] processing: Verb=set Name=wpMQmE Value=47316 address=1cf1260f6bdf66b65ff7c00ec58c4deccffd167bfee7a85698880dfa485df3de1ec18a5b2d1dc12849743d1c74320108360a2d40d223b35fbc1c4ea03bbd8306480c62
-  [19:31:06 INFO    handler] processing: Verb=set Name=GTgrvP Value=31921 address=1cf12606ac7db03c756133c07d7d02b59f3ef9eae6774fe59c75c88ab66a9fabbbaef9975dbf9aa197d1090ed126d7b18e2
-
-
 Settings Transaction Family Usage
 =================================
 
@@ -357,6 +320,43 @@ and output similar to the following appears in the validator terminal:
 
   sawtooth.settings.vote.authorized_keys: 035bd41bf6ea872...
   sawtooth.validator.transaction_families: [{"family": "in...
+
+
+Creating and Submitting Transactions
+====================================
+
+The **intkey** command is provided to create sample transactions of the intkey
+transaction type for testing purposes.
+
+This section guide you through the following tasks:
+
+1. Prepare a batch of intkey transactions that set the keys to random values.
+
+2. Generate *inc* (increment) and *dec* (decrement) transactions to apply to
+   the existing state stored in the blockchain.
+
+3. Submit these transactions to the validator.
+
+Run the following commands from the Linux CLI:
+
+.. code-block:: console
+
+  $ intkey create_batch
+  $ intkey load
+
+You can observe the processing of the intkey transactions by observing the
+logging output of the intkey transaction processor. A truncated example of
+the intkey transaction processor's output is shown below:
+
+.. code-block:: console
+
+  [19:29:26 INFO    core] register attempt: OK
+  [19:31:06 INFO    handler] processing: Verb=set Name=eBuPof Value=99811 address=1cf126c584128aaf1837c90c83748ab222c11b8bbd2fe6cc30f17fe35f2acb9af8efd4ee3f092b676546316cf85b2e929b68d9c5314e93ac318ba527ec74aa3ed1bc2e
+  [19:31:06 INFO    handler] processing: Verb=set Name=HOUUQS Value=10140 address=1cf126380fa9e716a05ac815741fd1960d5952e60f8747e13334f79504c57d0287b77cf9b78284d0e1544f6f0366d66c6e6eb99dc5c154b84175b2d20008d721c7b623
+  [19:31:06 INFO    handler] processing: Verb=set Name=lrnuDC Value=92318 address=1cf12617c797cf8c27254bbdb5c9bda09f9405b9494ae32b79b9b6d30881ca8552d5932a68f703d1b6754b9feb2edafa76a797fc0826110381b0f8614f2c6853316b47
+  [19:31:06 INFO    handler] processing: Verb=set Name=BKaiql Value=94175 address=1cf12669cbc17d076a1accb4b0bb61f40ed4f999173b90e3ca2591875a55fee2947661e60fa1c57b41ef0f2660176b945a01c85ff645543297068a3fb1306324a19612
+  [19:31:06 INFO    handler] processing: Verb=set Name=wpMQmE Value=47316 address=1cf1260f6bdf66b65ff7c00ec58c4deccffd167bfee7a85698880dfa485df3de1ec18a5b2d1dc12849743d1c74320108360a2d40d223b35fbc1c4ea03bbd8306480c62
+  [19:31:06 INFO    handler] processing: Verb=set Name=GTgrvP Value=31921 address=1cf12606ac7db03c756133c07d7d02b59f3ef9eae6774fe59c75c88ab66a9fabbbaef9975dbf9aa197d1090ed126d7b18e2
 
 
 Viewing Blocks and State
