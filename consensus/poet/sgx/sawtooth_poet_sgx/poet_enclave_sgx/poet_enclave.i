@@ -38,7 +38,7 @@
     from requests.exceptions import Timeout
     from requests.exceptions import HTTPError
 
-    from sawtooth_poet_sgx.poet_enclave_sgx import ias_client
+    from sawtooth_ias_client import ias_client
 
     from sawtooth_poet_common import sgx_structs
 %}

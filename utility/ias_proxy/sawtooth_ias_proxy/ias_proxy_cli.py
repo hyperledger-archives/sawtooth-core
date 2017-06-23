@@ -21,7 +21,7 @@ import sys
 import toml
 
 from colorlog import ColoredFormatter
-from sawtooth_poet_sgx.poet_enclave_sgx import ias_proxy
+from sawtooth_ias_proxy import ias_proxy
 
 LOGGER = logging.getLogger(__name__)
 PP = pprint.PrettyPrinter(indent=4)
