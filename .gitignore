@@ -81,6 +81,8 @@
 /signing/sawtooth_signing.egg-info/
 /signing/**/__pycache__/
 
+/utility/**/__pycache__/
+
 /validator/build/
 /validator/sawtooth_validator.egg-info/
 /validator/sawtooth_validator/protobuf/
