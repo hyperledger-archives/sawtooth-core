@@ -30,8 +30,6 @@ from test_ias_proxy.utils import create_random_public_key_hash
 # pylint: disable=no-name-in-module
 from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
 
-from sawtooth_validator.config.path import get_default_path_config
-
 
 class TestIasProxyClient(TestCase):
 
