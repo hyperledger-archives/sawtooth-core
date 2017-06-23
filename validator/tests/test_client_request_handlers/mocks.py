@@ -148,6 +148,6 @@ def make_store_and_tracker(size=3):
     store = MockBlockStore(size=size)
     tracker = BatchTracker(store)
     store.add_update_observer(tracker)
-    tracker.notify_batch_pending('b-pending')
+    tracker.notify_batch_pending(make_mock_batch('pending'))
 
     return store, tracker
