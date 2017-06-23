@@ -137,6 +137,34 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.batch_statuses)
 
+    def test_invalid_batch_status(self):
+        """Verifies batch status requests marked INVALID by the tracker work.
+
+        Queries the default mock batch tracker with invalid batch ids of:
+            - 'b-invalid'
+
+        Expects to find:
+            - a response status of OK
+            - a status of INVALID at key 'b-invalid' in batch_statuses
+            - an invalid_transaction with
+                * an 'id' of 't-invalid'
+                * a message of 'error message'
+                * extended_data of b'error data'
+        """
+        response = self.make_request(batch_ids=['b-invalid'])
+
+        self.assertEqual(self.status.OK, response.status)
+        status = response.batch_statuses[0]
+        self.assertEqual(status.batch_id, 'b-invalid')
+        self.assertEqual(status.status, BatchStatus.INVALID)
+        self.assertEqual(1, len(status.invalid_transactions))
+
+        invalid_txn = status.invalid_transactions[0]
+        self.assertEqual(invalid_txn.transaction_id, 't-invalid')
+        self.assertEqual(invalid_txn.message, 'error message')
+        self.assertEqual(invalid_txn.extended_data, b'error data')
+
+
     def test_pending_batch_status(self):
         """Verifies batch status requests marked PENDING by the tracker work.
 
