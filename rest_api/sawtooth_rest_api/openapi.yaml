@@ -126,7 +126,7 @@ paths:
       summary: Fetches the committed statuses for a set of batches
       description: |
         Fetches an array of objects with a status and id for each batch
-        requested. There are for possible statuses with string values
+        requested. There are four possible statuses with string values
         `'COMMITTED'`, `'INVALID'`, `'PENDING'`, and `'UNKNOWN'`.
 
         The batch(es) you want to check can be specified using the `id` filter
@@ -512,12 +512,26 @@ definitions:
           example: 89807bfc9089e37e00d87d97357de14cfbc455cd608438d426a625a30a0da9a31c406983803c4aa27e1f32a3ff61709e8ec4b56abbc553d7d330635b5d27029c
         status:
           type: string
-          example: PENDING
+          example: INVALID
           enum:
             - COMMITTED
             - INVALID
             - PENDING
             - UNKNOWN
+        invalid_transactions:
+          type: array
+          items:
+            properties:
+              id:
+                type: string
+                example: 540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a
+              message:
+                type: string
+                example: Verb is \"inc\" but name \"foo\" not in state
+              extended_data:
+                type: string
+                format: byte
+                example: ZXJyb3IgZGF0YQ==
 
   Leaf:
     properties:

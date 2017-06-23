@@ -478,6 +478,33 @@ class _Sorter(object):
             return header
 
 
+def _format_batch_statuses(statuses, batch_ids, tracker):
+    """Takes a statuses dict and formats it for transmission with Protobuf and
+    ZMQ.
+
+    Args:
+        statuses (dict of int): Dict with batch ids as the key, status as value
+        batch_ids (list of str): The batch ids in their original order
+        tracker (BatchTracker): A batch tracker with access to invalid info
+    """
+    proto_statuses = []
+
+    for batch_id in batch_ids:
+        if statuses[batch_id] == client_pb2.BatchStatus.INVALID:
+            invalid_txns = tracker.get_invalid_txn_info(batch_id)
+            for txn_info in invalid_txns:
+                txn_info['transaction_id'] = txn_info.pop('id')
+        else:
+            invalid_txns = None
+
+        proto_statuses.append(client_pb2.BatchStatus(
+            batch_id=batch_id,
+            status=statuses[batch_id],
+            invalid_transactions=invalid_txns))
+
+    return proto_statuses
+
+
 class _BatchWaiter(BatchFinishObserver):
     """An observer which provides a method which locks until every batch in a
     set of ids is committed.
@@ -522,9 +549,8 @@ class _BatchWaiter(BatchFinishObserver):
         with self._wait_condition:
             while True:
                 if self._statuses or time() - start_time > timeout:
-                    return [client_pb2.BatchStatus(batch_id=i,
-                                                   status=self._statuses[i])
-                            for i in batch_ids]
+                    return _format_batch_statuses(
+                        self._statuses, batch_ids, self._batch_tracker)
                 self._wait_condition.wait(timeout - (time() - start_time))
 
 
@@ -563,9 +589,8 @@ class BatchStatusRequest(_ClientRequestHandler):
                 request.timeout)
         else:
             statuses_dict = self._batch_tracker.get_statuses(request.batch_ids)
-            statuses = [client_pb2.BatchStatus(batch_id=i,
-                                               status=statuses_dict[i])
-                        for i in request.batch_ids]
+            statuses = _format_batch_statuses(
+                statuses_dict, request.batch_ids, self._batch_tracker)
 
         if not statuses:
             return self._status.NO_RESOURCE
