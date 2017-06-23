@@ -256,6 +256,40 @@ class BatchStatusTests(BaseApiTest):
         self.assert_statuses_match(statuses, response['data'])
 
     @unittest_run_loop
+    async def test_batch_status_with_invalid_data(self):
+        """Verifies a GET /batch_status with fetched invalid data works.
+
+        It will receive a Protobuf response with:
+            - batch_id: 'bad-batch'
+            - status: INVALID
+            - invalid_transaction: 'bad-transaction'
+            - message: 'error message'
+            - extended_data: b'error data'
+
+        It should send a Protobuf request with:
+            - a batch_ids property of ['bad']
+
+        It should send back a JSON response with:
+            - a response status of 200
+            - a link property that ends in '/batch_status?id=bad'
+            - a data property matching the batch statuses received
+        """
+        statuses = [BatchStatus(
+            batch_id='bad-batch',
+            status=BatchStatus.INVALID,
+            invalid_transactions=[BatchStatus.InvalidTransaction(
+                transaction_id='bad-transaction',
+                message='error message',
+                extended_data=b'error data')])]
+        self.stream.preset_response(batch_statuses=statuses)
+
+        response = await self.get_assert_200('/batch_status?id=bad')
+        self.stream.assert_valid_request_sent(batch_ids=['bad'])
+
+        self.assert_has_valid_link(response, '/batch_status?id=bad')
+        self.assert_statuses_match(statuses, response['data'])
+
+    @unittest_run_loop
     async def test_batch_status_with_validator_error(self):
         """Verifies a GET /batch_status with a validator error breaks properly.
 

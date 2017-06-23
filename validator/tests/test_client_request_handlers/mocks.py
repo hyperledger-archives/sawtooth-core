@@ -149,5 +149,7 @@ def make_store_and_tracker(size=3):
     tracker = BatchTracker(store)
     store.add_update_observer(tracker)
     tracker.notify_batch_pending(make_mock_batch('pending'))
+    tracker.notify_batch_pending(make_mock_batch('invalid'))
+    tracker.notify_txn_invalid('t-invalid', 'error message', b'error data')
 
     return store, tracker

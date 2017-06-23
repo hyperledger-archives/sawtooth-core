@@ -310,6 +310,15 @@ class BaseApiTest(AioHTTPTestCase):
             pb_enum_name = client_pb2.BatchStatus.Status.Name(pb_status.status)
             self.assertEqual(pb_enum_name, js_status['status'])
 
+            if pb_status.invalid_transactions:
+                txn_info = zip(pb_status.invalid_transactions,
+                               js_status['invalid_transactions'])
+                for pb_txn, js_txn in txn_info:
+                    self.assertEqual(pb_txn.transaction_id, js_txn['id'])
+                    self.assertEqual(pb_txn.message, js_txn.get('message', ''))
+                    self.assertEqual(pb_txn.extended_data,
+                                     b64decode(js_txn.get('extended_data', b'')))
+
     def assert_blocks_well_formed(self, blocks, *expected_ids):
         """Asserts a block dict or list of block dicts have expanded headers
         and match the expected ids. Assumes each block contains one batch and
