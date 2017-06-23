@@ -166,6 +166,7 @@ setup(name='sawtooth-poet-sgx',
       install_requires=[
           'toml',
           'ecdsa',
+          'sawtooth-ias-client',
           'sawtooth-poet-common'
           ],
       ext_modules=[enclavemod],
