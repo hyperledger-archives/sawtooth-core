@@ -321,7 +321,7 @@ with this command:
 
 .. code-block:: console
 
-  $ sawtooth submit -f batches.intkey --url http://rest_api:8080
+  $ sawtooth batch submit -f batches.intkey --url http://rest_api:8080
 
 
 Viewing the Block Chain
