@@ -114,7 +114,8 @@ class RouteHandler(object):
             error_traps)
 
         # Build response envelope
-        data = self._format_statuses(response['batch_statuses']) or None
+        data = self._drop_id_prefixes(
+            self._drop_empty_props(response['batch_statuses'])) or None
         id_string = ','.join(b.header_signature for b in batch_list.batches)
 
         if data is None or any(d['status'] != 'COMMITTED' for d in data):
@@ -184,10 +185,10 @@ class RouteHandler(object):
         else:
             metadata = None
 
-        return self._wrap_response(
-            request,
-            data=self._format_statuses(response['batch_statuses']),
-            metadata=metadata)
+        data = self._drop_id_prefixes(
+            self._drop_empty_props(response['batch_statuses']))
+
+        return self._wrap_response(request, data=data, metadata=metadata)
 
     async def list_state(self, request):
         """Fetches list of data leaves, optionally filtered by address prefix.
@@ -833,17 +834,25 @@ class RouteHandler(object):
                 # By default, waits for 95% of REST API's configured timeout
                 validator_query.timeout = int(self._timeout * 0.95)
 
-    @staticmethod
-    def _format_statuses(statuses):
-        """Reformat converted BatchStatus dicts: drop empty keys, rename 'id'.
+    def _drop_empty_props(self, item):
+        """Remove properties with empty strings from nested dicts.
         """
-        for status in statuses:
-            status['id'] = status.pop('batch_id')
-            for k, v in status.copy().items():
-                if v == '':
-                    status.pop(k)
-        return statuses
+        if isinstance(item, list):
+            return [self._drop_empty_props(i) for i in item]
+        if isinstance(item, dict):
+            return {k: self._drop_empty_props(v)
+                    for k, v in item.items() if v != ''}
+        return item
 
+    def _drop_id_prefixes(self, item):
+        """Rename keys ending in 'id', to just be 'id' for nested dicts.
+        """
+        if isinstance(item, list):
+            return [self._drop_id_prefixes(i) for i in item]
+        if isinstance(item, dict):
+            return {'id' if k.endswith('id') else k: self._drop_id_prefixes(v)
+                    for k, v in item.items()}
+        return item
 
     @staticmethod
     def _get_filter_ids(request):
