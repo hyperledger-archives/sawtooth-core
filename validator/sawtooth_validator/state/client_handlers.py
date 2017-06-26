@@ -548,9 +548,15 @@ class _BatchWaiter(BatchFinishObserver):
 
         with self._wait_condition:
             while True:
-                if self._statuses or time() - start_time > timeout:
+                if self._statuses is not None:
                     return _format_batch_statuses(
                         self._statuses, batch_ids, self._batch_tracker)
+
+                if time() - start_time > timeout:
+                    statuses = self._batch_tracker.get_statuses(batch_ids)
+                    return _format_batch_statuses(
+                        statuses, batch_ids, self._batch_tracker)
+
                 self._wait_condition.wait(timeout - (time() - start_time))
 
 
