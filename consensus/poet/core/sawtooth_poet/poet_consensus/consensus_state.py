@@ -617,7 +617,7 @@ class ConsensusState(object):
                 return False
 
             if utils.block_id_is_genesis(block.previous_block_id):
-                LOGGER.error(
+                LOGGER.info(
                     'Validator %s (ID=%s...%s): Signup committed block %s, '
                     'hit start of blockchain looking for block %s',
                     validator_info.name,
@@ -629,7 +629,7 @@ class ConsensusState(object):
 
             block = block_cache[block.previous_block_id]
 
-        LOGGER.error(
+        LOGGER.info(
             'Validator %s (ID=%s...%s): Signup committed block %s, failed to '
             'find block with ID ending in %s in %d previous block(s)',
             validator_info.name,
@@ -660,7 +660,7 @@ class ConsensusState(object):
         if validator_state.poet_public_key == \
                 validator_info.signup_info.poet_public_key:
             if validator_state.key_block_claim_count >= key_block_claim_limit:
-                LOGGER.error(
+                LOGGER.info(
                     'Validator %s (ID=%s...%s): Reached block claim limit '
                     'for PoET keys %d >= %d',
                     validator_info.name,
@@ -754,7 +754,7 @@ class ConsensusState(object):
             block_number - commit_block.block_num - 1
 
         if block_claim_delay > blocks_claimed_since_registration:
-            LOGGER.error(
+            LOGGER.info(
                 'Validator %s (ID=%s...%s): Committed in block %d, trying to '
                 'claim block %d, must wait until block %d',
                 validator_info.name,
@@ -865,7 +865,7 @@ class ConsensusState(object):
                         (observed_wins - expected_wins) / \
                         standard_deviation
                     if z_score > maximum_win_deviation:
-                        LOGGER.error(
+                        LOGGER.info(
                             'Validator %s (ID=%s...%s): zTest failed at depth '
                             '%d, z_score=%f, expected=%f, observed=%d',
                             validator_info.name,

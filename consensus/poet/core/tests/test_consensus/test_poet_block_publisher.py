@@ -246,10 +246,11 @@ class TestPoetBlockPublisher(TestCase):
             # that this is fragile if the log message is changed, so would
             # accept any suggestions on a better way to verify that the
             # function fails for the reason we expect.
-
-            (message, *_), _ = mock_logger.error.call_args
-            self.assertTrue('Validator signup information '
-                            'not committed in a timely manner.' in message)
+            self.assertTrue(
+                any(
+                    'Validator signup information not committed in a timely '
+                    'manner.' in call[0][0] for call in
+                    mock_logger.info.call_args_list))
 
             # check that create.signup_info() was called to create
             # the validator registry payload with new set of keys
@@ -354,7 +355,7 @@ class TestPoetBlockPublisher(TestCase):
             # accept any suggestions on a better way to verify that the
             # function fails for the reason we expect.
 
-            (message, *_), _ = mock_logger.error.call_args
+            (message, *_), _ = mock_logger.info.call_args
             self.assertTrue('Validator has reached maximum number of '
                             'blocks with key pair' in message)
 
@@ -461,7 +462,7 @@ class TestPoetBlockPublisher(TestCase):
             # accept any suggestions on a better way to verify that the
             # function fails for the reason we expect.
 
-            (message, *_), _ = mock_logger.error.call_args
+            (message, *_), _ = mock_logger.info.call_args
             self.assertTrue('Validator has not waited long enough '
                             'since registering validator '
                             'information' in message)
@@ -564,7 +565,7 @@ class TestPoetBlockPublisher(TestCase):
             # accept any suggestions on a better way to verify that the
             # function fails for the reason we expect.
 
-            (message, *_), _ = mock_logger.error.call_args
+            (message, *_), _ = mock_logger.info.call_args
             self.assertTrue('Validator is claiming blocks too '
                             'frequently' in message)
 
