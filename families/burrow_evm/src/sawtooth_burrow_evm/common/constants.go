@@ -25,4 +25,16 @@ const (
 	EVMADDRLEN = 20
 	PREFIXLEN = 3
 	PREFIX    = "a84eda"
+	GAS_LIMIT = 1 << 31
+	FAMILY_NAME    = "burrow-evm"
+	FAMILY_VERSION = "1.0"
+	ENCODING       = "application/protobuf"
 )
+
+func GlobalPermissionsAddress() *EvmAddr {
+	addr, _ := NewEvmAddrFromBytes([]byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	})
+	return addr
+}

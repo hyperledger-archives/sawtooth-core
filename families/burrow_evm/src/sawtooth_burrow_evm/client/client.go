@@ -31,12 +31,6 @@ import (
 
 var logger *logging.Logger = logging.Get()
 
-const (
-	FAMILY_NAME    = "burrow-evm"
-	FAMILY_VERSION = "1.0"
-	ENCODING       = "application/protobuf"
-)
-
 type Client struct {
 	Url string
 }

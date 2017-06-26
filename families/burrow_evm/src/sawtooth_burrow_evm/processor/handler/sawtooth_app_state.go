@@ -23,6 +23,7 @@ import (
 	"fmt"
 	. "sawtooth_burrow_evm/common"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
+	"sawtooth_sdk/processor"
 )
 
 // -- AppState --
@@ -33,14 +34,14 @@ type SawtoothAppState struct {
 	mgr *StateManager
 }
 
-func NewSawtoothAppState(mgr *StateManager) *SawtoothAppState {
+func NewSawtoothAppState(state *processor.State) *SawtoothAppState {
 	return &SawtoothAppState{
-		mgr: mgr,
+		mgr: NewStateManager(state),
 	}
 }
 
-// GetAccount retrieves an existing account with the given address. Panics if
-// the account doesn't exist.
+// GetAccount retrieves an existing account with the given address. Returns nil
+// if the account doesn't exist.
 func (s *SawtoothAppState) GetAccount(addr Word256) *Account {
 	vmAddress, err := NewEvmAddrFromBytes(addr.Bytes()[:20])
 	if err != nil {
@@ -48,13 +49,19 @@ func (s *SawtoothAppState) GetAccount(addr Word256) *Account {
 	}
 	logger.Debugf("GetAccount(%v)", vmAddress)
 
-	entry := s.mgr.MustGetEntry(vmAddress)
+	entry, err := s.mgr.GetEntry(vmAddress)
+	if err != nil {
+		panic(err.Error())
+	}
+	if entry == nil {
+		return nil
+	}
 
 	return toVmAccount(entry.GetAccount())
 }
 
-// UpdateAccount updates the account in state. Panics if the account doesn't
-// exist.
+// UpdateAccount updates the account in state. Creates the account if it doesn't
+// exist yet.
 func (s *SawtoothAppState) UpdateAccount(acct *Account) {
 	vmAddress, err := NewEvmAddrFromBytes(acct.Address.Bytes()[:20])
 	if err != nil {
@@ -62,7 +69,16 @@ func (s *SawtoothAppState) UpdateAccount(acct *Account) {
 	}
 	logger.Debugf("UpdateAccount(%v)", vmAddress)
 
-	entry := s.mgr.MustGetEntry(vmAddress)
+	entry, err := s.mgr.GetEntry(vmAddress)
+	if err != nil {
+		panic(err.Error())
+	}
+	if entry == nil {
+		entry, err = s.mgr.NewEntry(vmAddress)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
 
 	entry.Account = toStateAccount(acct)
 
@@ -107,7 +123,7 @@ func (s *SawtoothAppState) CreateAccount(creator *Account) *Account {
 	entry, err := s.mgr.NewEntry(newAddress)
 	if err != nil {
 		panic(fmt.Sprintf(
-			"Failed to NewEntry(%v)", newAddress,
+			"Failed to NewEntry(%v): %v", newAddress, err.Error(),
 		))
 	}
 
