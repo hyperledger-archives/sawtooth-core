@@ -40,7 +40,7 @@ services:
         poet genesis -o poet.batch && \
         sawtooth admin genesis \
           config-genesis.batch config.batch poet.batch && \
-        validator -v \
+        validator -vvv \
             --endpoint tcp://validator-0:8800 \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
@@ -62,7 +62,7 @@ services:
       - validator-0
     command: "bash -c \"\
         sawtooth admin keygen --force && \
-        validator -v \
+        validator -vvv \
           --endpoint tcp://validator-1:8800 \
           --peers tcp://validator-0:8800 \
           --bind component:tcp://eth0:4004 \
@@ -86,7 +86,7 @@ services:
       - validator-1
     command: "bash -c \"\
         sawtooth admin keygen --force && \
-        validator -v \
+        validator -vvv \
           --endpoint tcp://validator-2:8800 \
           --peers tcp://validator-0:8800,tcp://validator-1:8800
           --bind component:tcp://eth0:4004 \

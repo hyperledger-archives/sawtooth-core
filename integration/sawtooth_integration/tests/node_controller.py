@@ -118,7 +118,7 @@ def validator_cmds(num,
     keygen = 'sawtooth admin keygen --force'
 
     validator = ' '.join([
-        'validator -v',
+        'validator -vvv',
         '--endpoint {}'.format(endpoint(num)),
         '--bind component:{}'.format(bind_component(num)),
         '--bind network:{}'.format(bind_network(num)),
