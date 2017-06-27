@@ -43,18 +43,14 @@ UnProcessedBatchInfo = namedtuple('UnprocessedBatchInfo',
 
 
 def create_transaction(payload, private_key, public_key, inputs=None,
-                        outputs=None, dependencies = None):
+                        outputs=None, dependencies=None):
     addr = '000000' + hashlib.sha512(payload).hexdigest()[:64]
 
     if inputs is None:
         inputs = [addr]
-    else:
-        inputs = inputs.copy().append(addr)
 
     if outputs is None:
         outputs = [addr]
-    else:
-        outputs.copy().append(addr)
 
     if dependencies is None:
         dependencies = []
@@ -295,7 +291,7 @@ class SchedulerTester(object):
         header = transaction_pb2.TransactionHeader()
         header.ParseFromString(txn.header)
 
-        return header.inputs, header.outputs
+        return list(header.inputs), list(header.outputs)
 
     def _bytes_if_none(self, value):
         if value is None:

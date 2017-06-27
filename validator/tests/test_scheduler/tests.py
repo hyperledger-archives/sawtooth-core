@@ -61,6 +61,7 @@ class TestSchedulersWithYaml(unittest.TestCase):
                                       always_persist=False)
         return context_manager, scheduler
 
+    @unittest.skip("Skip until STL-476")
     def test_parallel_simple_scheduler_test(self):
         """Tests the parallel scheduler against the
         test_scheduler/data/simple_scheduler_test.yaml file.
