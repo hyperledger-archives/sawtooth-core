@@ -178,15 +178,30 @@ class TestSchedulersWithYaml(unittest.TestCase):
         file_name = self._path_to_yaml_file(name)
         tester = SchedulerTester(file_name)
         defined_batch_results_dict = tester.batch_results
-        batch_results = tester.run_scheduler(
+        batch_results, txns_to_assert_state = tester.run_scheduler(
             scheduler=scheduler,
             context_manager=context_manager)
+
         self.assert_batch_validity(
             defined_batch_results_dict,
             batch_results)
+
+        for t_id in txns_to_assert_state:
+            state_and_txn_context = txns_to_assert_state.get(t_id)
+            if state_and_txn_context is not None:
+                txn_context, state_found, state_assert = state_and_txn_context
+
+                self.assertEquals(state_found, state_assert,
+                                  "Transaction {} in batch {} has the wrong "
+                                  "state in the context".format(
+                                  txn_context.txn_num,
+                                  txn_context.batch_num))
+
         self.assert_one_state_hash(batch_results=batch_results)
+
         sched_state_roots = self._get_state_roots(
             batch_results=batch_results)
+
         calc_state_hash = tester.compute_state_hashes_wo_scheduler()
 
         self.assertEquals(
