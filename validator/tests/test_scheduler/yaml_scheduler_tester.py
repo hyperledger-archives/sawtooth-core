@@ -185,6 +185,10 @@ class SchedulerTester(object):
 
         scheduler.finalize()
         txns_to_process = deque()
+
+        txn_context_by_txn_id = self._compute_transaction_execution_context()
+
+        transactions_to_assert_state = {}
         while not scheduler.complete(block=False):
             stop = False
             while not stop:
@@ -206,6 +210,24 @@ class SchedulerTester(object):
                 base_contexts=t_info.base_context_ids,
                 inputs=inputs,
                 outputs=outputs)
+
+            t_id = t_info.txn.header_signature
+
+            if t_id in txn_context_by_txn_id:
+                state_up_to_now = txn_context_by_txn_id[t_id].state
+                txn_context = txn_context_by_txn_id[t_id]
+                inputs, _ = self._get_inputs_outputs(txn_context.txn)
+                addresses = [input for input in inputs if len(input) == 70]
+                state_found = context_manager.get(
+                    context_id=c_id,
+                    address_list=addresses)
+
+                state_to_assert = [(add, state_up_to_now.get(add))
+                                   for add, _ in state_found]
+                transactions_to_assert_state[t_id] = (txn_context,
+                                                      state_found,
+                                                      state_to_assert)
+
             validity_of_transaction, address_values = self._txn_execution[
                 t_info.txn.header_signature]
 
@@ -213,9 +235,6 @@ class SchedulerTester(object):
                 context_id=c_id,
                 address_value_list=address_values)
 
-            if validity_of_transaction is False:
-                context_manager.delete_contexts(
-                    context_id_list=[c_id])
             scheduler.set_transaction_execution_result(
                 txn_signature=t_info.txn.header_signature,
                 is_valid=validity_of_transaction,
@@ -225,7 +244,8 @@ class SchedulerTester(object):
         batch_results = [
             (b_id, scheduler.get_batch_execution_result(b_id))
             for b_id in batch_ids]
-        return batch_results
+
+        return batch_results, transactions_to_assert_state
 
     def compute_state_hashes_wo_scheduler(self):
         """Creates a state hash from the state updates from each txn in a
@@ -260,6 +280,50 @@ class SchedulerTester(object):
         if not state_hashes:
             state_hashes.append(tree.update(set_items=updates))
         return state_hashes
+
+    def _compute_transaction_execution_context(self):
+        """Compute the serial state for each txn in the yaml file up to and
+        including the invalid txn in each invalid batch.
+
+        Notes:
+            The TransactionExecutionContext for a txn will contain the
+            state applied serially up to that point for each valid batch and
+            then for invalid batches up to the invalid txn.
+
+        Returns:
+            dict: The transaction id to the TransactionExecutionContext
+        """
+        transaction_contexts = {}
+        state_up_to_now = {}
+
+        for batch_num, batch in enumerate(self._batches):
+            partial_batch_transaction_contexts = {}
+            partial_batch_state_up_to_now = state_up_to_now.copy()
+            batch_is_valid = True
+            for txn_num, txn in enumerate(batch.transactions):
+                t_id = txn.header_signature
+                is_valid, address_values = self._txn_execution[t_id]
+                partial_batch_transaction_contexts[t_id] = \
+                        TransactionExecutionContext(
+                            txn=txn,
+                            txn_num=txn_num + 1,
+                            batch_num=batch_num + 1,
+                            state=partial_batch_state_up_to_now.copy())
+
+                for item in address_values:
+                    partial_batch_state_up_to_now.update(item)
+                if not is_valid:
+                    # After an invalid txn in a batch the batch is invalid,
+                    # and so we won't care about the state for those
+                    # subsequent txns.
+                    batch_is_valid = False
+                    break
+
+            transaction_contexts.update(partial_batch_transaction_contexts)
+            if batch_is_valid:
+                state_up_to_now.update(partial_batch_state_up_to_now)
+
+        return transaction_contexts
 
     def _address(self, add, require_full=False):
         if ':sha' not in add and ',' not in add:
@@ -498,3 +562,28 @@ class SchedulerTester(object):
 
         self._batch_results = batch_results
         self._batches = batches
+
+
+class TransactionExecutionContext(object):
+    """The state for a particular transaction built up serially based
+    on the Yaml file.
+    """
+
+    def __init__(self,
+                 txn,
+                 txn_num,
+                 batch_num,
+                 state):
+        """
+
+        Args:
+            txn (Transaction): The transaction
+            txn_num (int): The placement of the txn in the batch
+            batch_num (int): The placement of the batch in the scheduler
+            state (dict): The bytes at an address in state.
+        """
+
+        self.txn = txn
+        self.txn_num = txn_num
+        self.batch_num = batch_num
+        self.state = state
