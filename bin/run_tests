@@ -245,7 +245,11 @@ test_permission() {
 }
 
 test_supplychain() {
+    run_docker_test ./families/supplychain/python/tests/unit_supplychain_python.yaml
+    copy_coverage .coverage.config
     run_docker_test ./families/supplychain/python/tests/test_tp_supplychain_python.yaml
+    copy_coverage .coverage.config
+    run_docker_test ./families/supplychain/python/tests/int_supplychain_python.yaml
     copy_coverage .coverage.config
 }
 

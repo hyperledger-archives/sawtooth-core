@@ -17,29 +17,18 @@ version: "2.1"
 
 services:
 
-  test-tp-supplychain-python:
-    image: sawtooth-tp_supplychain_python:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: tp_supplychain_python tcp://validator:4004 -vvv
-    stop_signal: SIGKILL
-
-  validator:
+  unit-supplychain-python:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: nose2-3 -v
-        --log-level debug
+    command: nose2-3
+        -v
+        --log-level DEBUG
         -c /project/sawtooth-core/families/supplychain/python/nose2.cfg
         -s /project/sawtooth-core/families/supplychain/python/tests
-        test_tp_supplychain
+        test_supplychain_cli.TestSupplyChainCli
     stop_signal: SIGKILL
     environment:
-      TEST_BIND: "tcp://eth0:4004"
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/families/supplychain/python:\
         /project/sawtooth-core/integration:\
