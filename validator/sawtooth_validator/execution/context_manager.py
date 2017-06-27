@@ -67,8 +67,8 @@ class StateContext(object):
         self._state_hash = state_hash
 
         # Create copies of the read and write lists
-        self._read_list = list(read_list)
-        self._write_list = list(write_list)
+        self._read_list = read_list.copy()
+        self._write_list = write_list.copy()
 
         self._state = {}
         self._lock = Lock()
