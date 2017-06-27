@@ -20,7 +20,7 @@ package main
 import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	client "sawtooth_burrow_evm/client"
+	"sawtooth_burrow_evm/client"
 )
 
 type Exec struct {
@@ -29,6 +29,7 @@ type Exec struct {
 	Data    string `short:"d" long:"data" description:"Hex encoded data to call the account with."`
 	Url     string `short:"U" long:"url" description:"The REST API URL to connect to when sending the transaction." default:"http://127.0.0.1:8080"`
 	Gas     uint64 `short:"g" long:"gas" description:"Amount of gas to supply the transaction with." default:"1000"`
+	Nonce   uint64 `short:"n" long:"nonce" description:"Nonce to set in the transaction." default:"0"`
 }
 
 func (e *Exec) Name() string {
@@ -56,7 +57,7 @@ func (e *Exec) Run() error {
 		return err
 	}
 
-	response, err := client.Exec(priv, to, data, e.Gas)
+	response, err := client.Exec(priv, to, data, e.Gas, e.Nonce)
 	if err != nil {
 		return err
 	}
