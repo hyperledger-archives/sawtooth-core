@@ -44,15 +44,15 @@ func (e *Exec) Register(p *flags.Parser) error {
 func (e *Exec) Run() error {
 	client := client.New(e.Url)
 
-	priv, err := decodeFileOrArg(e.Private)
+	priv, err := decodeFileOrArg(e.Private, "wif")
 	if err != nil {
 		return err
 	}
-	to, err := decodeFileOrArg(e.To)
+	to, err := decodeFileOrArg(e.To, "hex")
 	if err != nil {
 		return err
 	}
-	data, err := decodeFileOrArg(e.Data)
+	data, err := decodeFileOrArg(e.Data, "hex")
 	if err != nil {
 		return err
 	}

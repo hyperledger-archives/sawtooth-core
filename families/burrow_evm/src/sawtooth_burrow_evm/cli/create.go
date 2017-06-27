@@ -71,7 +71,7 @@ func gen() (string, string, string, error) {
 	priv := sdk.GenPrivKey()
 	pub := sdk.GenPubKey(priv)
 	addr, err := common.PubToEvmAddr(pub)
-	return sdk.MustEncode(priv), sdk.MustEncode(pub), addr.String(), err
+	return sdk.PrivToWif(priv), sdk.MustEncode(pub), addr.String(), err
 }
 
 func write(name, s string) error {

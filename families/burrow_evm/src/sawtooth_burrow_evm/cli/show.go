@@ -57,8 +57,9 @@ func (s *Show) Run() (err error) {
 	}
 
 	var (
-		arg     string
-		argtype string
+		arg      string
+		argtype  string
+		argbytes []byte
 	)
 	if s.Private != "" {
 		arg = s.Private
@@ -73,7 +74,11 @@ func (s *Show) Run() (err error) {
 		argtype = "address"
 	}
 
-	argbytes, err := decodeFileOrArg(arg)
+	if argtype == "private" {
+		argbytes, err = decodeFileOrArg(arg, "wif")
+	} else {
+		argbytes, err = decodeFileOrArg(arg, "hex")
+	}
 	if err != nil {
 		return
 	}
