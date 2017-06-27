@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import binascii
+from collections import deque
 from collections import namedtuple
 import copy
 import hashlib
@@ -154,7 +155,8 @@ class SchedulerTester(object):
     def run_scheduler(self,
                       scheduler,
                       context_manager,
-                      validation_state_hash=None):
+                      validation_state_hash=None,
+                      txns_executed_fifo=True):
         """Add all the batches to the scheduler in order and then run through
         the txns in the scheduler, calling next_transaction() after each
         transaction_execution_result is set.
@@ -182,7 +184,7 @@ class SchedulerTester(object):
             scheduler.add_batch(batch=batch, state_hash=s_h)
 
         scheduler.finalize()
-        txns_to_process = []
+        txns_to_process = deque()
         while not scheduler.complete(block=False):
             stop = False
             while not stop:
@@ -191,8 +193,14 @@ class SchedulerTester(object):
                     txns_to_process.append(txn_info)
                 else:
                     stop = True
-            t_info = txns_to_process.pop()
+
+            if txns_executed_fifo:
+                t_info = txns_to_process.popleft()
+            else:
+                t_info = txns_to_process.pop()
+
             inputs, outputs = self._get_inputs_outputs(t_info.txn)
+
             c_id = context_manager.create_context(
                 state_hash=t_info.state_hash,
                 base_contexts=t_info.base_context_ids,
