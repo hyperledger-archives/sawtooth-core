@@ -15,7 +15,6 @@
 
 import os
 import sys
-import time
 import logging
 import asyncio
 import argparse
@@ -58,53 +57,6 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-async def access_logger(app, handler):
-    """Simple logging middleware to report info about each request/response.
-    """
-    async def logging_handler(request):
-        start_time = time.time()
-        request_name = hex(int(start_time * 10000))[-6:]
-        client_ip, _ = request.transport.get_extra_info(
-            'peername', ('UNKNOWN', None))
-
-        # log request
-        LOGGER.info(
-            'Request  %s: "%s %s" from %s',
-            request_name,
-            request.method,
-            request.rel_url,
-            client_ip)
-
-        def log_response(response):
-            # pylint: disable=protected-access
-            content_length = response._headers.get('Content-Length',
-                                                   'UNKNOWN')
-            if content_length == 'UNKNOWN':
-                LOGGER.info(
-                    'Response %s: %s status, %s size, in %.3fs',
-                    request_name,
-                    response._status,
-                    content_length,
-                    time.time() - start_time)
-            else:
-                LOGGER.info(
-                    'Response %s: %s status, %sB size, in %.3fs',
-                    request_name,
-                    response._status,
-                    content_length,
-                    time.time() - start_time)
-
-        try:
-            response = await handler(request)
-            log_response(response)
-            return response
-        except web.HTTPError as e:
-            log_response(e)
-            raise e
-
-    return logging_handler
-
-
 async def cors_handler(request):
     headers = {}
     RouteHandler.add_cors_headers(request, headers)
@@ -116,7 +68,7 @@ def start_rest_api(host, port, connection, timeout):
     """
     loop = asyncio.get_event_loop()
     connection.open()
-    app = web.Application(loop=loop, middlewares=[access_logger])
+    app = web.Application(loop=loop)
     app.on_cleanup.append(lambda app: connection.close())
 
     # Add routes to the web app
@@ -145,7 +97,10 @@ def start_rest_api(host, port, connection, timeout):
 
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)
-    web.run_app(app, host=host, port=port, access_log=None)
+
+    web.run_app(app, host=host, port=port,
+                access_log=LOGGER,
+                access_log_format='%r: %s status, %b size, in %Tf s')
 
 
 def load_rest_api_config(first_config):
