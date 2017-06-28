@@ -74,6 +74,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
     bandit
 
 RUN apt-get update && apt-get install -y -q \
+    dvipng \
     make \
     sudo \
     texlive-fonts-recommended \
