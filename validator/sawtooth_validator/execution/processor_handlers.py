@@ -41,7 +41,7 @@ class ProcessorRegisterHandler(Handler):
             request.family,
             request.version,
             request.encoding,
-            request.namespaces)
+            list(request.namespaces))
 
         processor_type = processor_iterator.ProcessorType(
             request.family,
