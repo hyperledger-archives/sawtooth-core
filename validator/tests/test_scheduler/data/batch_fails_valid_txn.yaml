@@ -1,0 +1,106 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# -----------------------------------------------------------------------------
+
+---
+-  #------------------------- Batch 1
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    valid: False
+- # ----------------------- Batch 2
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+- #----------------------- Batch 3
+  -
+    inputs:
+      - t:sha
+    outputs:
+      - t:sha
+    addresses_to_set:
+      - t:sha :
+  -
+    inputs:
+      - g:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+    valid: False
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+- #---------------------- Batch 4
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
