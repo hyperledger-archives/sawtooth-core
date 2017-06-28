@@ -112,8 +112,8 @@ class TestSchedulersWithYaml(unittest.TestCase):
             name='intkey_small_batch.yaml')
 
     def test_serial_intkey_small_batch(self):
-        """Tests the parallel scheduler against the
-                test_scheduler/data/intkey_small_batch.yaml file.
+        """Tests the serial scheduler against the
+        test_scheduler/data/intkey_small_batch.yaml file.
 
         Notes:
             In general, there are 8 batches, all valid, with intkey style
