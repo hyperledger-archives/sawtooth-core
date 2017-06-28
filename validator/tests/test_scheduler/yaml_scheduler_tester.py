@@ -151,7 +151,10 @@ class SchedulerTester(object):
         """
         return self._batch_results
 
-    def run_scheduler(self, scheduler, context_manager, validation_state_hash=None):
+    def run_scheduler(self,
+                      scheduler,
+                      context_manager,
+                      validation_state_hash=None):
         """Add all the batches to the scheduler in order and then run through
         the txns in the scheduler, calling next_transaction() after each
         transaction_execution_result is set.
@@ -177,6 +180,7 @@ class SchedulerTester(object):
             else:
                 s_h = self._batch_results[batch.header_signature].state_hash
             scheduler.add_batch(batch=batch, state_hash=s_h)
+
         scheduler.finalize()
         txns_to_process = []
         while not scheduler.complete(block=False):
@@ -188,17 +192,19 @@ class SchedulerTester(object):
                 else:
                     stop = True
             t_info = txns_to_process.pop()
-            inputs_outputs = self._get_inputs_outputs(t_info.txn)
+            inputs, outputs = self._get_inputs_outputs(t_info.txn)
             c_id = context_manager.create_context(
                 state_hash=t_info.state_hash,
                 base_contexts=t_info.base_context_ids,
-                inputs=inputs_outputs[0],
-                outputs=inputs_outputs[1])
+                inputs=inputs,
+                outputs=outputs)
             validity_of_transaction, address_values = self._txn_execution[
                 t_info.txn.header_signature]
+
             context_manager.set(
                 context_id=c_id,
                 address_value_list=address_values)
+
             if validity_of_transaction is False:
                 context_manager.delete_contexts(
                     context_id_list=[c_id])
@@ -243,7 +249,7 @@ class SchedulerTester(object):
                 s_h = tree.update(set_items=updates, virtual=False)
                 tree.set_merkle_root(merkle_root=s_h)
                 state_hashes.append(s_h)
-        if len(state_hashes) == 0:
+        if not state_hashes:
             state_hashes.append(tree.update(set_items=updates))
         return state_hashes
 
@@ -454,7 +460,7 @@ class SchedulerTester(object):
         # if there aren't any explicit dependencies that need to be created
         # based on the transaction 'id' listed in the yaml, the next two
         # code blocks won't be run.
-        while len(batches_waiting) > 0:
+        while batches_waiting:
             b, b_r, b_w = self._process_prev_batches(
                 unprocessed_batches=batches_waiting,
                 priv_key=priv_key,
