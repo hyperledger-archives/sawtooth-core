@@ -67,4 +67,4 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin
 
 WORKDIR /
 
-CMD build_go
+CMD build_go && build_burrow_evm
