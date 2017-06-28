@@ -127,6 +127,41 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='intkey_small_batch.yaml')
 
+    @unittest.skip("Skip until STL-485, STL-476")
+    def test_parallel_batch_fails_valid_txn(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/batch_fails_valid_txn.yaml file.
+
+        Notes:
+            The yaml file has 4 batches, batches 1 and 3 are invalid, batch
+            2 has a txn that implicitly depends on batch 1.
+            Batch 4 has txns that implicitly depend on batch 2 and 1.
+            Batch 2 and Batch 4 are the only valid batches
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='batch_fails_valid_txn.yaml')
+
+    def test_serial_batch_fails_valid_txn(self):
+        """Tests the serial scheduler against the
+        test_scheduler/data/batch_fails_valid_txn.yaml file.
+
+        Notes:
+            The yaml file has 4 batches, batches 1 and 3 are invalid, batch
+            2 has a txn that implicitly depends on batch 1.
+            Batch 4 has txns that implicitly depend on batch 2 and 1.
+            Batch 2 and Batch 4 are the only valid batches
+        """
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='batch_fails_valid_txn.yaml')
+
     def _single_block_files_individually(self,
                                          scheduler,
                                          context_manager,
