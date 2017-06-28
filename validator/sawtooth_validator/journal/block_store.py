@@ -24,6 +24,8 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 
+CHAIN_HEAD_KEY = "chain_head_id"
+
 
 class BlockStore(MutableMapping):
     """
@@ -98,7 +100,7 @@ class BlockStore(MutableMapping):
         if old_chain is not None:
             for blkw in old_chain:
                 del_keys = del_keys + self._build_remove_block_ops(blkw)
-        add_pairs.append(("chain_head_id", new_chain[0].identifier))
+        add_pairs.append((CHAIN_HEAD_KEY, new_chain[0].identifier))
 
         self._block_store.set_batch(add_pairs, del_keys)
         for observer in self._update_obs:
@@ -114,10 +116,10 @@ class BlockStore(MutableMapping):
         """
         Return the head block of the current chain.
         """
-        if "chain_head_id" not in self._block_store:
+        if CHAIN_HEAD_KEY not in self._block_store:
             return None
-        if self._block_store["chain_head_id"] in self._block_store:
-            return self.__getitem__(self._block_store["chain_head_id"])
+        if self._block_store[CHAIN_HEAD_KEY] in self._block_store:
+            return self.__getitem__(self._block_store[CHAIN_HEAD_KEY])
         return None
 
     @property
