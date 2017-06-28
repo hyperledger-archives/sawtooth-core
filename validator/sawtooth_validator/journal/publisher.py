@@ -37,6 +37,7 @@ from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
 
+LOGGER.info("Publisher Loaded")
 
 class _CandidateBlock(object):
     """This is a helper class for the BlockPublisher. The _CandidateBlock
@@ -460,6 +461,8 @@ class BlockPublisher(object):
         now de-committed when the new chain was selected.
         :return: None
         """
+        LOGGER.info("Publisher on_chain_updated")
+
         try:
             with self._lock:
                 if chain_head is not None:
@@ -489,6 +492,7 @@ class BlockPublisher(object):
         :return:
             None
         """
+        LOGGER.info("Publisher on_check_publish_block")
         try:
             with self._lock:
                 if self._chain_head is not None and\
@@ -518,6 +522,10 @@ class BlockPublisher(object):
                     if block:
                         blkw = BlockWrapper(block)
                         LOGGER.info("Claimed Block: %s", blkw)
+                        for batch in blkw.batches:
+                            LOGGER.debug("Batch %s",
+                                batch.header_signature[:8])
+
                         self._block_sender.send(blkw.block)
 
                         # We built our candidate, disable processing until

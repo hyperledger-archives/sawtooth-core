@@ -174,6 +174,7 @@ class BlockValidator(object):
             self._executor.execute(scheduler)
             try:
                 for batch, has_more in look_ahead(blkw.block.batches):
+                    LOGGER.debug("_chain_commit_state: %s", self._chain_commit_state)
                     if self._chain_commit_state.has_batch(
                             batch.header_signature):
                         LOGGER.debug("Block(%s) rejected due duplicate "
@@ -365,6 +366,10 @@ class BlockValidator(object):
             # 3) Determine the validity of the new fork
             # build the transaction cache to simulate the state of the
             # chain at the common root.
+            LOGGER.info("_chain_head %s", self._chain_head)
+            LOGGER.info("_new_block %s", self._new_block)
+            LOGGER.info("new_blkw: %s cur_blkw: %s", new_blkw, cur_blkw)
+            LOGGER.info("new_chain: %s cur_chain: %s", new_chain, cur_chain)
             self._chain_commit_state = ChainCommitState(
                 self._block_cache.block_store, cur_chain)
 

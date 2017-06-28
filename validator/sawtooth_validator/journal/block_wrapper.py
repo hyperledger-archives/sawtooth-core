@@ -149,6 +149,9 @@ class BlockWrapper(object):
                    self.state_root_hash, self.previous_block_id)
 
     def __str__(self):
-        return "{}({}, S:{}, P:{})". \
+        return "{}({}, S:{}, P:{} {}) ". \
             format(self.identifier[:8], self.block_num,
-                   self.state_root_hash[:8], self.previous_block_id[:8])
+                   self.state_root_hash[:8], self.previous_block_id[:8],
+                   [b.header_signature[:8] for b in self.batches])
+
+    __repr__ = __str__

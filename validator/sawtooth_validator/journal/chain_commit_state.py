@@ -46,6 +46,11 @@ class _CommitCache(object):
             return False
         return self.block_store_check(identifier)
 
+    def __str__(self):
+        return "\t\tCommited {}\n\t\tUncommitted{}".format(
+            [x[:8] for x in self._committed],
+            [x[:8] for x in self._uncommitted])
+
 
 class ChainCommitState(object):
     """Tracks the set of Batches and Transactions that are committed to a
@@ -87,6 +92,11 @@ class ChainCommitState(object):
 
     def has_transaction(self, txn_id):
         return txn_id in self._transaction_commit_state
+
+    def __str__(self):
+        return "batches\n{}\ntransactions\n{}\n".format(
+            self._batch_commit_state,
+            self._transaction_commit_state)
 
 
 class TransactionCommitState(_CommitCache):

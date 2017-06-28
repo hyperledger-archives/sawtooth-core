@@ -77,10 +77,10 @@ def do_block(args):
             txns = [t for b in batches for t in b['transactions']]
             return (
                 block['header'].get('block_num', 0),
-                block['header_signature'],
+                block['header_signature'][:8],
                 len(batches),
                 len(txns),
-                block['header']['signer_pubkey'])
+                block['header']['signer_pubkey'][:8])
 
         if args.format == 'default':
             fmt.print_terminal_table(headers, blocks, parse_block_row)
