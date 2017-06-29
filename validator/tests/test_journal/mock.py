@@ -89,8 +89,17 @@ class MockScheduler(Scheduler):
         self.batches[batch.header_signature] = batch
 
     def get_batch_execution_result(self, batch_signature):
+        result = True
+        if self.batch_execution_result is None:
+            batch = self.batches[batch_signature]
+            for txn in batch.transactions:
+                if txn.payload == b'BAD':
+                    result = False
+        else:
+            result = self.batch_execution_result
+
         return BatchExecutionResult(
-            is_valid=self.batch_execution_result,
+            is_valid=result,
             state_hash="0000000000")
 
     def set_transaction_execution_result(

@@ -24,7 +24,9 @@ services:
     command: nose2-3
         -c /project/sawtooth-core/validator/nose2.cfg
         -v
+        --log-level DEBUG
         -s /project/sawtooth-core/validator/tests
+        test_journal.tests.TestBlockPublisher.test_duplicate_transactions
     environment:
         PYTHONPATH: "/project/sawtooth-core/signing:\
             /project/sawtooth-core/core:\

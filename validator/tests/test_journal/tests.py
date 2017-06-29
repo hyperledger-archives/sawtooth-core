@@ -426,8 +426,7 @@ class TestBlockValidator(unittest.TestCase):
         """
 
         new_block = self.block_tree_manager.generate_block(
-            previous_block=self.root,
-            add_to_store=True)
+            previous_block=self.root)
 
         self.validate_block(new_block)
 
@@ -560,31 +559,121 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_invalid_block(new_block)
         self.assert_new_block_not_committed()
 
-    def test_block_missing_batch(self):
-        """
-        Test the case where the new block is missing a batch.
-        """
-        pass
-
-    def test_block_extra_batch(self):
-        """
-        Test the case where the new block has an extra batch.
-        """
-        pass
-
-    def test_block_batches_order(self):
-        """
-        Test the case where the new block has batches that are
-        out of order.
-        """
-        pass
 
     def test_block_missing_batch_dependency(self):
         """
         Test the case where the new block has a batch that is missing a
         dependency.
         """
-        pass
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        txn = self.block_tree_manager.generate_transaction(deps=["missing"])
+        batch = self.block_tree_manager.generate_batch(txns=[txn])
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
+
+    def test_block_duplicate_batch(self):
+        """
+        Test the case where the new block has a batch that is missing already
+        committed.
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        batch = self.block_tree_manager.generate_batch()
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
+
+    def test_block_duplicate_batch_in_block(self):
+        """
+        Test the case where the new block has a duplicate batches.
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        batch = self.block_tree_manager.generate_batch()
+
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch, batch])
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
+
+    def test_block_duplicate_transaction(self):
+        """
+        Test the case where the new block has a transaction that is already
+        committed.
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        txn = self.block_tree_manager.generate_transaction()
+        batch = self.block_tree_manager.generate_batch(txns=[txn])
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        txn2 = self.block_tree_manager.generate_transaction()
+        batch = self.block_tree_manager.generate_batch(txns=[txn, txn2])
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
+
+    def test_block_duplicate_transaction_in_batch(self):
+        """
+        Test the case where the new block has a batch that contains duplicate
+        transactions.
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        txn = self.block_tree_manager.generate_transaction()
+        batch = self.block_tree_manager.generate_batch(txns=[txn, txn])
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
 
     # assertions
 
@@ -631,7 +720,7 @@ class TestBlockValidator(unittest.TestCase):
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
             done_cb=on_block_validated,
-            executor=MockTransactionExecutor(),
+            executor=MockTransactionExecutor(batch_execution_result=None),
             squash_handler=None,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
@@ -680,7 +769,8 @@ class TestChainController(unittest.TestCase):
                 self.block_tree_manager.state_db),
             block_sender=self.block_sender,
             executor=self.executor,
-            transaction_executor=MockTransactionExecutor(),
+            transaction_executor=MockTransactionExecutor(
+                batch_execution_result=None),
             chain_head_lock=self._chain_head_lock,
             on_chain_updated=chain_updated,
             squash_handler=None,

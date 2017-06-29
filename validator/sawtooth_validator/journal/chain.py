@@ -17,12 +17,14 @@ from threading import RLock
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.exceptions import ChainHeadUpdatedError
+
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
-from sawtooth_validator.journal.transaction_cache import TransactionCache
+from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
@@ -32,12 +34,36 @@ from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 LOGGER = logging.getLogger(__name__)
 
 
+class InvalidBatch(Exception):
+    """ Raised when a batch fails validation as a signal to reject the
+    block.
+    """
+    pass
+
+
 class BlockValidationAborted(Exception):
     """
     Indication that the validation of this fork has terminated for an
     expected(handled) case and that the processing should exit.
     """
     pass
+
+
+def look_ahead(iterable):
+    """Pass through all values from the given iterable, augmented by the
+    information if there are more values to come after the current one
+    (True), or if it is the last value (False).
+    """
+    # Get an iterator and pull the first value.
+    it = iter(iterable)
+    last = next(it)
+    # Run the iterator to exhaustion (starting from the second value).
+    for val in it:
+        # Report the *previous* value (more to come).
+        yield last, True
+        last = val
+    # Report the last value.
+    yield last, False
 
 
 class BlockValidator(object):
@@ -83,6 +109,8 @@ class BlockValidator(object):
         """
         self._consensus_module = consensus_module
         self._block_cache = block_cache
+        self._chain_commit_state = ChainCommitState(
+            self._block_cache.block_store, [], chain_head.identifier)
         self._new_block = new_block
         self._chain_head = chain_head
         self._state_view_factory = state_view_factory
@@ -109,79 +137,74 @@ class BlockValidator(object):
 
         return self._block_cache[blkw.previous_block_id].state_root_hash
 
-    def _is_block_complete(self, blkw):
-        """
-        Check that the block is formally complete.
-        - all batches are present and in the correct order
-        :param blkw: the block to verify
-        :return: Boolean - True on success.
-        """
+    def _txn_header(self, txn):
+        txn_hdr = TransactionHeader()
+        txn_hdr.ParseFromString(txn.header)
+        return txn_hdr
 
-        batch_ids = blkw.header.batch_ids
-        batches = blkw.batches
-
-        if len(batch_ids) != len(batches):
-            return False
-
-        for i in range(0, len(batch_ids)):
-            if batch_ids[i] != batches[i].header_signature:
-                return False
-
-        return True
-
-    def _verify_batches_dependencies(self, batch, committed_txn):
-        """Verify that all transactions dependencies in this batch have been
-        satisfied, ie already committed by this block or prior block in the
-        chain.
+    def _verify_batch_transactions(self, batch):
+        """Verify that all transactions in are unique and that all
+        transactions dependencies in this batch have been satisfied, ie
+        already committed by this block or prior block in the chain.
 
         :param batch: the batch to verify
-        :param committed_txn(TransactionCache): Current set of committed
-        transaction, updated during processing.
         :return:
         Boolean: True if all dependencies are present.
         """
         for txn in batch.transactions:
-            txn_hdr = TransactionHeader()
-            txn_hdr.ParseFromString(txn.header)
+            txn_hdr = self._txn_header(txn)
+            if self._chain_commit_state. \
+                    has_transaction(txn.header_signature):
+                LOGGER.debug("Block rejected due duplicate" +
+                             " transaction, transaction: %s",
+                             txn.header_signature[:8])
+                raise InvalidBatch()
             for dep in txn_hdr.dependencies:
-                if dep not in committed_txn:
-                    LOGGER.debug("Block rejected due missing" +
-                                 " transaction dependency, transaction %s"
-                                 " depends on %s",
+                if not self._chain_commit_state.has_transaction(dep):
+                    LOGGER.debug("Block rejected due missing "
+                                 "transaction dependency, transaction %s "
+                                 "depends on %s",
                                  txn.header_signature[:8], dep[:8])
-                    return False
-            committed_txn.add_txn(txn.header_signature)
-        return True
+                    raise InvalidBatch()
+            self._chain_commit_state.add_txn(txn.header_signature)
 
-    def _verify_block_batches(self, blkw, committed_txn):
+    def _verify_block_batches(self, blkw):
         if blkw.block.batches:
-
             prev_state = self._get_previous_block_root_state_hash(blkw)
             scheduler = self._executor.create_scheduler(
                 self._squash_handler, prev_state)
             self._executor.execute(scheduler)
+            try:
+                for batch, has_more in look_ahead(blkw.block.batches):
+                    LOGGER.debug("_chain_commit_state: %s", self._chain_commit_state)
+                    if self._chain_commit_state.has_batch(
+                            batch.header_signature):
+                        LOGGER.debug("Block(%s) rejected due duplicate "
+                                     "batch, batch: %s", blkw,
+                                     batch.header_signature[:8])
+                        raise InvalidBatch()
 
-            for i in range(len(blkw.block.batches) - 1):
-                batch = blkw.batches[i]
-                if not self._verify_batches_dependencies(batch, committed_txn):
-                    return False
-                scheduler.add_batch(batch)
-
-            batch = blkw.batches[-1]
-            if not self._verify_batches_dependencies(batch, committed_txn):
+                    self._verify_batch_transactions(batch)
+                    self._chain_commit_state.add_batch(
+                        batch, add_transactions=False)
+                    if has_more:
+                        scheduler.add_batch(batch)
+                    else:
+                        scheduler.add_batch(batch, blkw.state_root_hash)
+            except InvalidBatch:
                 scheduler.cancel()
                 return False
-            scheduler.add_batch(batch,
-                                blkw.state_root_hash)
+            except:
+                scheduler.cancel()
+                raise
 
             scheduler.finalize()
             scheduler.complete(block=True)
             state_hash = None
-            for i in range(len(blkw.batches)):
+
+            for batch in blkw.batches:
                 result = scheduler.get_batch_execution_result(
-                    blkw.batches[i].header_signature)
-                # If the result is None, the executor did not
-                # receive the batch
+                    batch.header_signature)
                 if result is not None and result.is_valid:
                     state_hash = result.state_hash
                 else:
@@ -190,7 +213,7 @@ class BlockValidator(object):
                 return False
         return True
 
-    def validate_block(self, blkw, committed_txn):
+    def validate_block(self, blkw):
         try:
             if blkw.status == BlockStatus.Valid:
                 return True
@@ -207,10 +230,7 @@ class BlockValidator(object):
                                   validator_id=self._identity_public_key)
 
                 if valid:
-                    valid = self._is_block_complete(blkw)
-
-                if valid:
-                    valid = self._verify_block_batches(blkw, committed_txn)
+                    valid = self._verify_block_batches(blkw)
 
                 if valid:
                     valid = consensus.verify_block(blkw)
@@ -348,15 +368,18 @@ class BlockValidator(object):
             # 3) Determine the validity of the new fork
             # build the transaction cache to simulate the state of the
             # chain at the common root.
-            committed_txn = TransactionCache(self._block_cache.block_store)
-            for block in cur_chain:
-                for batch in block.batches:
-                    committed_txn.uncommit_batch(batch)
+            LOGGER.info("_chain_head %s", self._chain_head)
+            LOGGER.info("_new_block %s", self._new_block)
+            LOGGER.info("new_blkw: %s cur_blkw: %s", new_blkw, cur_blkw)
+            LOGGER.info("new_chain: %s cur_chain: %s", new_chain, cur_chain)
+            self._chain_commit_state = ChainCommitState(
+                self._block_cache.block_store, cur_chain,
+                self._chain_head.identifier)
 
             valid = True
             for block in reversed(new_chain):
                 if valid:
-                    if not self.validate_block(block, committed_txn):
+                    if not self.validate_block(block):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
                 else:
@@ -383,9 +406,13 @@ class BlockValidator(object):
                           self._result)
             LOGGER.info("Finished block validation of: %s",
                         self._new_block)
+        except ChainHeadUpdatedError:
+            # callback to get the block validation scheduled with the new
+            # chain head.
+            self._done_cb(False, self._result)
         except BlockValidationAborted:
-            return
-
+            # callback to clean up the block out of the processing list.
+            self._done_cb(False, self._result)
         except Exception as exc:  # pylint: disable=broad-except
             LOGGER.error("Block validation failed with unexpected error: %s",
                          self._new_block)
@@ -680,8 +707,6 @@ class ChainController(object):
                         NULL_BLOCK_IDENTIFIER,
                         state_view)
 
-                committed_txn = TransactionCache(self._block_cache.block_store)
-
                 validator = BlockValidator(
                     consensus_module=consensus_module,
                     new_block=block,
@@ -695,7 +720,7 @@ class ChainController(object):
                     data_dir=self._data_dir,
                     config_dir=self._config_dir)
 
-                valid = validator.validate_block(block, committed_txn)
+                valid = validator.validate_block(block)
                 if valid:
                     if chain_id is None:
                         self._chain_id_manager.save_block_chain_id(

@@ -26,7 +26,8 @@ from sawtooth_validator.journal.consensus.batch_publisher import \
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
 
-from sawtooth_validator.journal.transaction_cache import TransactionCache
+from sawtooth_validator.journal.chain_commit_state import \
+    TransactionCommitState
 
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -36,6 +37,7 @@ from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
 
+LOGGER.info("Publisher Loaded")
 
 class _CandidateBlock(object):
     """This is a helper class for the BlockPublisher. The _CandidateBlock
@@ -104,15 +106,14 @@ class _CandidateBlock(object):
                              "%s", txn.header_signature[:8])
                 return False
             elif not self._check_transaction_dependencies(
-                    txn,
-                    committed_txn_cache):
+                    txn, committed_txn_cache):
                 # if any transaction in this batch fails the whole batch
                 # fails.
                 committed_txn_cache.remove_batch(batch)
                 return False
             # update so any subsequent txn in the same batch can be dependent
             # on this transaction.
-            committed_txn_cache.add_txn(txn.header_signature)
+            committed_txn_cache.add(txn.header_signature)
         return True
 
     def _check_transaction_dependencies(self, txn, committed_txn_cache):
@@ -208,7 +209,7 @@ class _CandidateBlock(object):
         # this is a transaction cache to track the transactions committed
         # up to this batch. Only valid transactions that were processed
         # by the scheduler are added.
-        committed_txn_cache = TransactionCache(self._block_store)
+        committed_txn_cache = TransactionCommitState(self._block_store)
 
         builder = self._block_builder
         bad_batches = []  # the list of batches that failed processing
@@ -388,8 +389,9 @@ class BlockPublisher(object):
         scheduler = self._transaction_executor.create_scheduler(
             self._squash_handler, chain_head.state_root_hash)
 
-        # build the TransactionCache
-        committed_txn_cache = TransactionCache(self._block_cache.block_store)
+        # build the TransactionCommitState
+        committed_txn_cache = TransactionCommitState(
+            self._block_cache.block_store)
 
         self._transaction_executor.execute(scheduler)
         self._candidate_block = _CandidateBlock(self._block_cache.block_store,
@@ -459,6 +461,8 @@ class BlockPublisher(object):
         now de-committed when the new chain was selected.
         :return: None
         """
+        LOGGER.info("Publisher on_chain_updated")
+
         try:
             with self._lock:
                 if chain_head is not None:
@@ -488,6 +492,7 @@ class BlockPublisher(object):
         :return:
             None
         """
+        LOGGER.info("Publisher on_check_publish_block")
         try:
             with self._lock:
                 if self._chain_head is not None and\
@@ -517,6 +522,10 @@ class BlockPublisher(object):
                     if block:
                         blkw = BlockWrapper(block)
                         LOGGER.info("Claimed Block: %s", blkw)
+                        for batch in blkw.batches:
+                            LOGGER.debug("Batch %s",
+                                batch.header_signature[:8])
+
                         self._block_sender.send(blkw.block)
 
                         # We built our candidate, disable processing until

@@ -18,11 +18,14 @@ import abc
 from collections.abc import MutableMapping
 
 from sawtooth_validator.exceptions import PossibleForkDetectedError
+from sawtooth_validator.exceptions import ChainHeadUpdatedError
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
+
+CHAIN_HEAD_KEY = "chain_head_id"
 
 
 class BlockStore(MutableMapping):
@@ -45,18 +48,7 @@ class BlockStore(MutableMapping):
             observer.notify_store_updated()
 
     def __getitem__(self, key):
-        stored_block = self._block_store[key]
-
-        # Block id strings are stored under batch/txn ids for reference.
-        # Only Blocks, not ids or Nones, should be returned by __getitem__.
-        if isinstance(stored_block, bytes):
-            block = Block()
-            block.ParseFromString(stored_block)
-            return BlockWrapper(
-                status=BlockStatus.Valid,
-                block=block)
-
-        raise KeyError('Block "{}" not found in store'.format(key))
+        self._get_item(key)
 
     def __delitem__(self, key):
         del self._block_store[key]
@@ -98,7 +90,7 @@ class BlockStore(MutableMapping):
         if old_chain is not None:
             for blkw in old_chain:
                 del_keys = del_keys + self._build_remove_block_ops(blkw)
-        add_pairs.append(("chain_head_id", new_chain[0].identifier))
+        add_pairs.append((CHAIN_HEAD_KEY, new_chain[0].identifier))
 
         self._block_store.set_batch(add_pairs, del_keys)
         for observer in self._update_obs:
@@ -114,10 +106,10 @@ class BlockStore(MutableMapping):
         """
         Return the head block of the current chain.
         """
-        if "chain_head_id" not in self._block_store:
+        if CHAIN_HEAD_KEY not in self._block_store:
             return None
-        if self._block_store["chain_head_id"] in self._block_store:
-            return self.__getitem__(self._block_store["chain_head_id"])
+        if self._block_store[CHAIN_HEAD_KEY] in self._block_store:
+            return self.__getitem__(self._block_store[CHAIN_HEAD_KEY])
         return None
 
     @property
@@ -176,25 +168,53 @@ class BlockStore(MutableMapping):
                 out.append(txn.header_signature)
         return out
 
-    def get_block_by_transaction_id(self, txn_id):
+    def _get(self, key, assert_chain_head_id):
+        if assert_chain_head_id is not None:
+            result = self._block_store.get_batch([CHAIN_HEAD_KEY, key])
+            current_head_id = result[0]
+            if current_head_id != assert_chain_head_id:
+                raise ChainHeadUpdatedError(
+                    "Chain head is now {}, asserted {}", current_head_id[:8],
+                    assert_chain_head_id[:8])
+            return result[1]
+        return self._block_store.get(key)
+
+    def _get_item(self, key, assert_chain_head_id=None):
+        stored_block = self._get(key, assert_chain_head_id)
+
+        # Block id strings are stored under batch/txn ids for reference.
+        # Only Blocks, not ids or Nones, should be returned by _get_item.
+        if isinstance(stored_block, bytes):
+            block = Block()
+            block.ParseFromString(stored_block)
+            return BlockWrapper(
+                status=BlockStatus.Valid,
+                block=block)
+
+        raise KeyError('Item "{}" not found in store'.format(key))
+
+    def get_block_by_transaction_id(self, txn_id, assert_chain_head_id=None):
         try:
-            return self.__getitem__(self._block_store[txn_id])
+            block_id = self._get(txn_id, assert_chain_head_id)
+            return self._get_item(block_id, assert_chain_head_id)
         except KeyError:
-            raise ValueError('Transaction "%s" not in BlockStore', txn_id)
+            raise ValueError('Transaction "%s" not in BlockStore', txn_id[:8])
 
-    def has_transaction(self, txn_id):
-        return txn_id in self._block_store
+    def has_transaction(self, txn_id, assert_chain_head_id=None):
+        return self._get(txn_id, assert_chain_head_id) is not None
 
-    def get_block_by_batch_id(self, batch_id):
+    def get_block_by_batch_id(self, batch_id, assert_chain_head_id=None):
         try:
-            return self.__getitem__(self._block_store[batch_id])
+            block_id = self._get(batch_id, assert_chain_head_id)
+            return self._get_item(block_id, assert_chain_head_id)
         except KeyError:
-            raise ValueError('Batch "%s" not in BlockStore', batch_id)
+            raise ValueError('Batch "%s" not in BlockStore', batch_id[:8])
 
-    def has_batch(self, batch_id):
-        return batch_id in self._block_store
+    def has_batch(self, batch_id, assert_chain_head_id=None):
+        return self._get(batch_id, assert_chain_head_id) is not None
 
-    def get_batch_by_transaction(self, transaction_id):
+    def get_batch_by_transaction(self, transaction_id,
+                                 assert_chain_head_id=None):
         """
         Check to see if the requested transaction_id is in the current chain.
         If so, find the batch that has the transaction referenced by the
@@ -206,18 +226,16 @@ class BlockStore(MutableMapping):
         :return:
         The batch that has the transaction.
         """
-        if self.has_transaction(transaction_id):
-            block = self.get_block_by_transaction_id(transaction_id)
-            # Find batch in block
-            for batch in block.batches:
-                batch_header = BatchHeader()
-                batch_header.ParseFromString(batch.header)
-                if transaction_id in batch_header.transaction_ids:
-                    return batch
+        block = self.get_block_by_transaction_id(transaction_id,
+                                                 assert_chain_head_id)
+        # Find batch in block
+        for batch in block.batches:
+            batch_header = BatchHeader()
+            batch_header.ParseFromString(batch.header)
+            if transaction_id in batch_header.transaction_ids:
+                return batch
 
-        raise ValueError('Transaction "%s" not in BlockStore', transaction_id)
-
-    def get_batch(self, batch_id):
+    def get_batch(self, batch_id, assert_chain_head_id=None):
         """
         Check to see if the requested batch_id is in the current chain. If so,
         find the batch with the batch_id and return it. This is done by
@@ -227,16 +245,13 @@ class BlockStore(MutableMapping):
         :return:
         The batch with the batch_id.
         """
-        if self.has_batch(batch_id):
-            block = self.get_block_by_batch_id(batch_id)
+        block = self.get_block_by_batch_id(batch_id, assert_chain_head_id)
 
-            for batch in block.batches:
-                if batch.header_signature == batch_id:
-                    return batch
+        for batch in block.batches:
+            if batch.header_signature == batch_id:
+                return batch
 
-        raise ValueError("Batch_id %s not found in BlockStore.", batch_id)
-
-    def get_transaction(self, transaction_id):
+    def get_transaction(self, transaction_id, assert_chain_head_id=None):
         """Returns a Transaction object from the block store by its id.
 
         Params:
@@ -248,14 +263,12 @@ class BlockStore(MutableMapping):
         Raises:
             ValueError: The transaction is not in the block store
         """
-        if self.has_transaction(transaction_id):
-            batch = self.get_batch_by_transaction(transaction_id)
-            # Find transaction in batch
-            for txn in batch.transactions:
-                if txn.header_signature == transaction_id:
-                    return txn
-
-        raise ValueError('Transaction "%s" not in BlockStore', transaction_id)
+        batch = self.get_batch_by_transaction(transaction_id,
+                                              assert_chain_head_id)
+        # Find transaction in batch
+        for txn in batch.transactions:
+            if txn.header_signature == transaction_id:
+                return txn
 
 
 class StoreUpdateObserver(metaclass=abc.ABCMeta):

@@ -72,3 +72,15 @@ class PossibleForkDetectedError(Exception):
     through the block store.
     """
     pass
+
+class ChainHeadUpdatedError(Exception):
+    """Exception thrown when a the "chain_head_id" in the BlockStore does not
+    match the expected value. This occurs when a BlockStore client is
+    performing an operation on the BlockStore and has asserted the expected
+    value of the "chain_head_id". When this occurs the client needs to abandon
+    the work it is doing that assumes the previous state of the BlockStore.
+    For example the block publisher should abandon the block it was building
+    on top of the previous chain head and start a new block on top of the
+    new chain head.
+    """
+    pass
