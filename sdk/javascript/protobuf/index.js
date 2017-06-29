@@ -66,8 +66,7 @@ module.exports = {
 
   TpProcessResponse,
 
-  TpPingResponse:
-    root.lookup("TpProcessResponse"),
+  TpPingResponse,
 
   //
   // State
