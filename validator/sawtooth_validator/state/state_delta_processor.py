@@ -53,6 +53,10 @@ class _DeltaSubscriber(object):
         return [delta for delta in deltas if self._match(delta.address)]
 
     def _match(self, address):
+        # Match all if there are no prefixes
+        if not self.address_prefixes:
+            return True
+
         for prefix in self.address_prefixes:
             if address.startswith(prefix):
                 return True
