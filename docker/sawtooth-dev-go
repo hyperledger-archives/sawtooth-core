@@ -50,6 +50,7 @@ RUN mkdir /go \
     github.com/brianolson/cbor_go \
     github.com/satori/go.uuid \
     github.com/btcsuite/btcd/btcec \
+    github.com/btcsuite/btcutil/base58 \
     gopkg.in/fatih/set.v0 \
     golang.org/x/crypto/ripemd160 \
     github.com/jessevdk/go-flags
@@ -66,4 +67,4 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin
 
 WORKDIR /
 
-CMD build_go
+CMD build_go && build_burrow_evm

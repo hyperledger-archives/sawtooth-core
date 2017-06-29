@@ -39,14 +39,3 @@ export GOPATH=/go:$top_dir/sdk/go:$top_dir/sdk/examples/noop_go
 cd $top_dir/sdk/examples/noop_go/src/sawtooth_noop
 mkdir -p $top_dir/sdk/examples/noop_go/bin
 go build -o $top_dir/sdk/examples/noop_go/bin/tp_noop_go
-
-echo -e "\033[0;32m--- Building tp_burrow_evm ---\n\033[0m"
-export GOPATH=/go:$top_dir/sdk/go:$top_dir/families/burrow_evm
-cd $top_dir/families/burrow_evm/src/sawtooth_burrow_evm/processor
-mkdir -p $top_dir/families/burrow_evm/bin
-go build -o $top_dir/families/burrow_evm/bin/tp_burrow_evm
-
-echo -e "\033[0;32m--- Building seth ---\n\033[0m"
-export GOPATH=/go:$top_dir/sdk/go:$top_dir/families/burrow_evm
-cd $top_dir/families/burrow_evm/src/sawtooth_burrow_evm/cli
-go build -o $top_dir/families/burrow_evm/bin/seth

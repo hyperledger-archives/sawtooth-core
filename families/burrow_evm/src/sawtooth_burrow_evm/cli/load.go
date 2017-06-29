@@ -43,12 +43,12 @@ func (c *Load) Register(p *flags.Parser) error {
 func (c *Load) Run() error {
 	client := client.New(c.Url)
 
-	priv, err := decodeFileOrArg(c.Private)
+	priv, err := decodeFileOrArg(c.Private, "wif")
 	if err != nil {
 		return err
 	}
 
-	init, err := decodeFileOrArg(c.Init)
+	init, err := decodeFileOrArg(c.Init, "hex")
 	if err != nil {
 		return err
 	}

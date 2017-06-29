@@ -21,6 +21,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	ellcurv "github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcutil/base58"
 	"math/big"
 )
 
@@ -89,6 +90,22 @@ func SHA256(input []byte) []byte {
 	hash := sha256.New()
 	hash.Write(input)
 	return hash.Sum(nil)
+}
+
+// -- WIF --
+
+// PrivToWif converts a private key generated to a WIF string
+func PrivToWif(priv []byte) string {
+	extended := append([]byte{0x80}, priv...)
+	checksum := SHA256(SHA256(extended))[:4]
+	extcheck := append(extended, checksum...)
+	return base58.Encode(extcheck)
+}
+
+// WifToPriv converts a WIF string to a private key
+func WifToPriv(wif string) []byte {
+	extcheck := base58.Decode(wif)
+	return extcheck[1 : len(extcheck)-4]
 }
 
 // ---
