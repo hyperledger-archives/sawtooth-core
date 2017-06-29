@@ -17,6 +17,8 @@ from threading import RLock
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.exceptions import ChainHeadUpdatedError
+
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -108,7 +110,7 @@ class BlockValidator(object):
         self._consensus_module = consensus_module
         self._block_cache = block_cache
         self._chain_commit_state = ChainCommitState(
-            self._block_cache.block_store, [])
+            self._block_cache.block_store, [], chain_head.identifier)
         self._new_block = new_block
         self._chain_head = chain_head
         self._state_view_factory = state_view_factory
@@ -371,7 +373,8 @@ class BlockValidator(object):
             LOGGER.info("new_blkw: %s cur_blkw: %s", new_blkw, cur_blkw)
             LOGGER.info("new_chain: %s cur_chain: %s", new_chain, cur_chain)
             self._chain_commit_state = ChainCommitState(
-                self._block_cache.block_store, cur_chain)
+                self._block_cache.block_store, cur_chain,
+                self._chain_head.identifier)
 
             valid = True
             for block in reversed(new_chain):
@@ -403,9 +406,13 @@ class BlockValidator(object):
                           self._result)
             LOGGER.info("Finished block validation of: %s",
                         self._new_block)
+        except ChainHeadUpdatedError:
+            # callback to get the block validation scheduled with the new
+            # chain head.
+            self._done_cb(False, self._result)
         except BlockValidationAborted:
-            return
-
+            # callback to clean up the block out of the processing list.
+            self._done_cb(False, self._result)
         except Exception as exc:  # pylint: disable=broad-except
             LOGGER.error("Block validation failed with unexpected error: %s",
                          self._new_block)
