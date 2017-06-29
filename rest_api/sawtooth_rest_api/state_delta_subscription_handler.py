@@ -252,6 +252,10 @@ class StateDeltaSubscriberHandler:
                     'previous_block_id': state_delta_event.previous_block_id,
                 }
 
+                if state_delta_event.block_num <= \
+                        self._latest_state_delta_event.block_num:
+                    base_event['fork_detected'] = True
+
                 LOGGER.debug('Updating %s subscribers', len(self._subscribers))
 
                 for (web_sock, addr_prefixes) in self._subscribers:
