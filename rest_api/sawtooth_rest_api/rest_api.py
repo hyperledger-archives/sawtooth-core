@@ -29,6 +29,8 @@ from sawtooth_sdk.client.config import get_log_dir
 from sawtooth_sdk.client.config import get_config_dir
 from sawtooth_rest_api.messaging import Connection
 from sawtooth_rest_api.route_handlers import RouteHandler
+from sawtooth_rest_api.state_delta_subscription_handler \
+    import StateDeltaSubscriberHandler
 from sawtooth_rest_api.config import load_default_rest_api_config
 from sawtooth_rest_api.config import load_toml_rest_api_config
 from sawtooth_rest_api.config import merge_rest_api_config
@@ -69,7 +71,6 @@ def start_rest_api(host, port, connection, timeout):
     loop = asyncio.get_event_loop()
     connection.open()
     app = web.Application(loop=loop)
-    app.on_cleanup.append(lambda app: connection.close())
 
     # Add routes to the web app
     LOGGER.info('Creating handlers for validator at %s', connection.url)
@@ -95,6 +96,12 @@ def start_rest_api(host, port, connection, timeout):
         '/transactions/{transaction_id}',
         handler.fetch_transaction)
 
+    handler = StateDeltaSubscriberHandler(connection)
+    app.router.add_get('/subscriptions', handler.subscriptions)
+    app.on_cleanup.append(lambda app: handler.on_shutdown())
+
+    # close connection last
+    app.on_cleanup.append(lambda app: connection.close())
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)
 
