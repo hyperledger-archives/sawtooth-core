@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "standard && node_modules/mocha/bin/mocha --recursive spec",
-    "compile_protobuf": "node compile_protobuf.js > protobuf/protobuf_bundle.json"
+    "compile_protobuf": "node compile_protobuf.js > protobuf/protobuf_bundle.json",
+    "prepublish": "npm run compile_protobuf && npm test"
   },
   "author": "",
   "license": "Apache-2.0",
