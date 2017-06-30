@@ -23,11 +23,15 @@ from google.protobuf.json_format import MessageToDict
 
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 
+from sawtooth_rest_api.messaging import ConnectionEvent
+from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf import state_delta_pb2
 
 
 LOGGER = logging.getLogger(__name__)
+
+DEFAULT_TIMEOUT = 30
 
 
 class StateDeltaSubscriberHandler:
@@ -57,6 +61,13 @@ class StateDeltaSubscriberHandler:
         self._delta_task = None
         self._listening = False
         self._accepting = True
+
+        self._connection.on_connection_state_change(
+            ConnectionEvent.DISCONNECTED,
+            self._handle_disconnect)
+        self._connection.on_connection_state_change(
+            ConnectionEvent.RECONNECTED,
+            self._handle_reconnection)
 
     async def on_shutdown(self):
         """
@@ -124,29 +135,7 @@ class StateDeltaSubscriberHandler:
 
     async def _handle_subscribe(self, web_sock, subscription_message):
         if not self._subscribers:
-            last_known_block_id = await self._get_latest_block_id()
-            self._latest_state_delta_event = \
-                await self._get_block_deltas(last_known_block_id)
-
-            LOGGER.debug('Starting subscriber from %s',
-                         last_known_block_id[:8])
-
-            resp = await self._connection.send(
-                Message.STATE_DELTA_SUBSCRIBE_REQUEST,
-                state_delta_pb2.RegisterStateDeltaSubscriberRequest(
-                    last_known_block_ids=[last_known_block_id]
-                ).SerializeToString())
-
-            subscription = state_delta_pb2.\
-                RegisterStateDeltaSubscriberResponse()
-            subscription.ParseFromString(resp.content)
-
-            if subscription.status != \
-                    state_delta_pb2.RegisterStateDeltaSubscriberResponse.OK:
-                LOGGER.error('unable to subscribe!')
-
-            self._listening = True
-            self._delta_task = asyncio.ensure_future(self._listen_for_events())
+            await self._register_subscriptions()
 
         LOGGER.debug('Sending initial most recent event to new subscriber')
 
@@ -178,6 +167,54 @@ class StateDeltaSubscriberHandler:
             if not self._subscribers:
                 await self._unregister_subscriptions()
 
+    async def _handle_disconnect(self):
+        LOGGER.debug('Validator disconnected')
+        for (ws, _) in self._subscribers:
+            await ws.send_str(json.dumps({
+                'warning': 'Validator unavailable'
+            }))
+
+    async def _handle_reconnection(self):
+        LOGGER.debug('Attempting to resubscribe...')
+        # Send an unregister message (just in case it was a network hiccup,
+        # not a validator restart)
+        try:
+            await self._unregister_subscriptions()
+            if self._subscribers:
+                await self._register_subscriptions()
+        except DisconnectError:
+            LOGGER.debug('Validator is not yet available')
+            return
+
+    async def _register_subscriptions(self):
+        try:
+            last_known_block_id = await self._get_latest_block_id()
+            self._latest_state_delta_event = \
+                await self._get_block_deltas(last_known_block_id)
+
+            LOGGER.debug('Starting subscriber from %s',
+                         last_known_block_id[:8])
+
+            resp = await self._connection.send(
+                Message.STATE_DELTA_SUBSCRIBE_REQUEST,
+                state_delta_pb2.RegisterStateDeltaSubscriberRequest(
+                    last_known_block_ids=[last_known_block_id]
+                ).SerializeToString())
+
+            subscription = state_delta_pb2.\
+                RegisterStateDeltaSubscriberResponse()
+            subscription.ParseFromString(resp.content)
+
+            if subscription.status != \
+                    state_delta_pb2.RegisterStateDeltaSubscriberResponse.OK:
+                LOGGER.error('unable to subscribe!')
+
+            self._listening = True
+            self._delta_task = asyncio.ensure_future(self._listen_for_events())
+        except DisconnectError:
+            LOGGER.debug(
+                'Unable to register: validator connection is missing.')
+
     async def _unregister_subscriptions(self):
         if self._delta_task:
             self._listening = False
@@ -189,7 +226,7 @@ class StateDeltaSubscriberHandler:
             await self._connection.send(
                 Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
                 req.SerializeToString(),
-                timeout=30)
+                timeout=DEFAULT_TIMEOUT)
 
     async def _handle_get_block_deltas(self, web_sock, get_block_message):
         if 'block_id' not in get_block_message:
@@ -214,7 +251,8 @@ class StateDeltaSubscriberHandler:
         resp = await self._connection.send(
             Message.STATE_DELTA_GET_EVENTS_REQUEST,
             state_delta_pb2.GetStateDeltaEventsRequest(
-                block_ids=[block_id]).SerializeToString())
+                block_ids=[block_id]).SerializeToString(),
+            timeout=DEFAULT_TIMEOUT)
 
         state_deltas_resp = state_delta_pb2.GetStateDeltaEventsResponse()
         state_deltas_resp.ParseFromString(resp.content)
