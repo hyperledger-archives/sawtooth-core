@@ -71,6 +71,7 @@ def start_rest_api(host, port, connection, timeout):
     loop = asyncio.get_event_loop()
     connection.open()
     app = web.Application(loop=loop)
+    app.on_cleanup.append(lambda app: connection.close())
 
     # Add routes to the web app
     LOGGER.info('Creating handlers for validator at %s', connection.url)
@@ -96,12 +97,10 @@ def start_rest_api(host, port, connection, timeout):
         '/transactions/{transaction_id}',
         handler.fetch_transaction)
 
-    handler = StateDeltaSubscriberHandler(connection)
-    app.router.add_get('/subscriptions', handler.subscriptions)
-    app.on_cleanup.append(lambda app: handler.on_shutdown())
+    subscriber_handler = StateDeltaSubscriberHandler(connection)
+    app.router.add_get('/subscriptions', subscriber_handler.subscriptions)
+    app.on_shutdown.append(lambda app: subscriber_handler.on_shutdown())
 
-    # close connection last
-    app.on_cleanup.append(lambda app: connection.close())
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)
 

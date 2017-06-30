@@ -56,12 +56,19 @@ class StateDeltaSubscriberHandler:
         self._subscriber_lock = asyncio.Lock()
         self._delta_task = None
         self._listening = False
+        self._accepting = True
 
     async def on_shutdown(self):
         """
         Cleans up any outstanding subscriptions.
         """
         await self._unregister_subscriptions()
+
+        self._accepting = False
+
+        for (ws, _) in self._subscribers:
+            await ws.close(code=aiohttp.WSCloseCode.GOING_AWAY,
+                           message='Server shutdown')
 
     async def subscriptions(self, request):
         """
@@ -74,6 +81,10 @@ class StateDeltaSubscriberHandler:
             aiohttp.web.WebSocketResponse: the websocket response, when the
                 resulting websocket is closed
         """
+
+        if not self._accepting:
+            return web.Response(status=503)
+
         web_sock = web.WebSocketResponse()
         await web_sock.prepare(request)
 
