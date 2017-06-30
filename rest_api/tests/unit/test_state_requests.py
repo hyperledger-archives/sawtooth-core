@@ -23,12 +23,12 @@ from sawtooth_rest_api.protobuf import client_pb2
 class StateListTests(BaseApiTest):
 
     async def get_application(self, loop):
-        self.set_status_and_stream(
+        self.set_status_and_connection(
             Message.CLIENT_STATE_LIST_REQUEST,
             client_pb2.ClientStateListRequest,
             client_pb2.ClientStateListResponse)
 
-        handlers = self.build_handlers(loop, self.stream)
+        handlers = self.build_handlers(loop, self.connection)
         return self.build_app(loop, '/state', handlers.list_state)
 
     @unittest_run_loop
@@ -56,11 +56,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         leaves = Mocks.make_leaves(a=b'3', b=b'5', c=b'7')
-        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state')
         controls = Mocks.make_paging_controls()
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state?head=2')
@@ -79,7 +79,7 @@ class StateListTests(BaseApiTest):
             - a status of 500
             - an error property with a code of 10
         """
-        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        self.connection.preset_response(self.status.INTERNAL_ERROR)
         response = await self.get_assert_status('/state', 500)
 
         self.assert_has_valid_error(response, 10)
@@ -95,7 +95,7 @@ class StateListTests(BaseApiTest):
             - a status of 503
             - an error property with a code of 15
         """
-        self.stream.preset_response(self.status.NOT_READY)
+        self.connection.preset_response(self.status.NOT_READY)
         response = await self.get_assert_status('/state', 503)
 
         self.assert_has_valid_error(response, 15)
@@ -125,11 +125,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 2)
         leaves = Mocks.make_leaves(a=b'2', b=b'4')
-        self.stream.preset_response(head_id='1', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='1', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?head=1')
         controls = Mocks.make_paging_controls()
-        self.stream.assert_valid_request_sent(head_id='1', paging=controls)
+        self.connection.assert_valid_request_sent(head_id='1', paging=controls)
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/state?head=1')
@@ -148,7 +148,7 @@ class StateListTests(BaseApiTest):
             - a response status of 404
             - an error property with a code of 50
         """
-        self.stream.preset_response(self.status.NO_ROOT)
+        self.connection.preset_response(self.status.NO_ROOT)
         response = await self.get_assert_status('/state?head=bad', 404)
 
         self.assert_has_valid_error(response, 50)
@@ -176,11 +176,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 1)
         leaves = Mocks.make_leaves(c=b'7')
-        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?address=c')
         controls = Mocks.make_paging_controls()
-        self.stream.assert_valid_request_sent(address='c', paging=controls)
+        self.connection.assert_valid_request_sent(address='c', paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state?head=2&address=c')
@@ -204,7 +204,7 @@ class StateListTests(BaseApiTest):
             - a data property that is an empty list
         """
         paging = Mocks.make_paging_response(None, 0)
-        self.stream.preset_response(
+        self.connection.preset_response(
             self.status.NO_RESOURCE,
             head_id='2',
             paging=paging)
@@ -239,10 +239,10 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 1)
         leaves = Mocks.make_leaves(a=b'2')
-        self.stream.preset_response(head_id='1', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='1', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?address=a&head=1')
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             head_id='1',
             address='a',
             paging=Mocks.make_paging_controls())
@@ -275,11 +275,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4)
         leaves = Mocks.make_leaves(c=b'3')
-        self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&min=1&count=1')
@@ -312,7 +312,7 @@ class StateListTests(BaseApiTest):
             - a response status of 400
             - an error property with a code of 54
         """
-        self.stream.preset_response(self.status.INVALID_PAGING)
+        self.connection.preset_response(self.status.INVALID_PAGING)
         response = await self.get_assert_status('/state?min=-1', 400)
 
         self.assert_has_valid_error(response, 54)
@@ -339,11 +339,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 4)
         leaves = Mocks.make_leaves(d=b'4', c=b'3')
-        self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?count=2')
         controls = Mocks.make_paging_controls(2)
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&count=2')
@@ -374,11 +374,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(2, 4)
         leaves = Mocks.make_leaves(b=b'2', a=b'1')
-        self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&min=2')
@@ -412,11 +412,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4, previous_id='d')
         leaves = Mocks.make_leaves(c=b'3', b=b'2', a=b'1')
-        self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&min=c&count=5')
@@ -451,11 +451,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4, previous_id='d', next_id='a')
         leaves = Mocks.make_leaves(c=b'3', b=b'2')
-        self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&max=b&count=2')
@@ -487,11 +487,11 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 4)
         leaves = Mocks.make_leaves(d=b'4', c=b'3', b=b'2')
-        self.stream.preset_response(head_id='d', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
-        self.stream.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&max=2&count=7')
@@ -526,12 +526,12 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         leaves = Mocks.make_leaves(a=b'3', b=b'5', c=b'7')
-        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?sort=address')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('address')
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -552,7 +552,7 @@ class StateListTests(BaseApiTest):
             - a response status of 400
             - an error property with a code of 57
         """
-        self.stream.preset_response(self.status.INVALID_SORT)
+        self.connection.preset_response(self.status.INVALID_SORT)
         response = await self.get_assert_status('/state?sort=bad', 400)
 
         self.assert_has_valid_error(response, 57)
@@ -583,12 +583,12 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         leaves = Mocks.make_leaves(c=b'7', b=b'5', a=b'3')
-        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?sort=-address')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('address', reverse=True)
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -624,12 +624,12 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         leaves = Mocks.make_leaves(c=b'7', b=b'45', a=b'123')
-        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200('/state?sort=value.length')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('value', compare_length=True)
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -667,14 +667,14 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         leaves = Mocks.make_leaves(c=b'7', b=b'5', a=b'3')
-        self.stream.preset_response(head_id='2', paging=paging, leaves=leaves)
+        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
 
         response = await self.get_assert_200(
             '/state?sort=-address,value.length')
         page_controls = Mocks.make_paging_controls()
         sorting = (Mocks.make_sort_controls('address', reverse=True) +
                    Mocks.make_sort_controls('value', compare_length=True))
-        self.stream.assert_valid_request_sent(
+        self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
@@ -689,12 +689,12 @@ class StateListTests(BaseApiTest):
 class StateGetTests(BaseApiTest):
 
     async def get_application(self, loop):
-        self.set_status_and_stream(
+        self.set_status_and_connection(
             Message.CLIENT_STATE_GET_REQUEST,
             client_pb2.ClientStateGetRequest,
             client_pb2.ClientStateGetResponse)
 
-        handlers = self.build_handlers(loop, self.stream)
+        handlers = self.build_handlers(loop, self.connection)
         return self.build_app(loop, '/state/{address}', handlers.fetch_state)
 
     @unittest_run_loop
@@ -714,10 +714,10 @@ class StateGetTests(BaseApiTest):
             - a link property that ends in '/state/b?head=2'
             - a data property that b64decodes to b'3'
         """
-        self.stream.preset_response(head_id='2', value=b'3')
+        self.connection.preset_response(head_id='2', value=b'3')
 
         response = await self.get_assert_200('/state/a')
-        self.stream.assert_valid_request_sent(address='a')
+        self.connection.assert_valid_request_sent(address='a')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state/a?head=2')
@@ -738,7 +738,7 @@ class StateGetTests(BaseApiTest):
             - a status of 500
             - an error property with a code of 10
         """
-        self.stream.preset_response(self.status.INTERNAL_ERROR)
+        self.connection.preset_response(self.status.INTERNAL_ERROR)
         response = await self.get_assert_status('/state/a', 500)
 
         self.assert_has_valid_error(response, 10)
@@ -754,7 +754,7 @@ class StateGetTests(BaseApiTest):
             - a status of 503
             - an error property with a code of 15
         """
-        self.stream.preset_response(self.status.NOT_READY)
+        self.connection.preset_response(self.status.NOT_READY)
         response = await self.get_assert_status('/state/a', 503)
 
         self.assert_has_valid_error(response, 15)
@@ -770,7 +770,7 @@ class StateGetTests(BaseApiTest):
             - a response status of 404
             - an error property with a code of 75
         """
-        self.stream.preset_response(self.status.NO_RESOURCE)
+        self.connection.preset_response(self.status.NO_RESOURCE)
         response = await self.get_assert_status('/state/bad', 404)
 
         self.assert_has_valid_error(response, 75)
@@ -793,10 +793,10 @@ class StateGetTests(BaseApiTest):
             - a link property that ends in '/state/b?head=2'
             - a data property that b64decodes to b'4'
         """
-        self.stream.preset_response(head_id='1', value=b'4')
+        self.connection.preset_response(head_id='1', value=b'4')
 
         response = await self.get_assert_200('/state/b?head=1')
-        self.stream.assert_valid_request_sent(head_id='1', address='b')
+        self.connection.assert_valid_request_sent(head_id='1', address='b')
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/state/b?head=1')
@@ -817,7 +817,7 @@ class StateGetTests(BaseApiTest):
             - a response status of 404
             - an error property with a code of 50
         """
-        self.stream.preset_response(self.status.NO_ROOT)
+        self.connection.preset_response(self.status.NO_ROOT)
         response = await self.get_assert_status('/state/b?head=bad', 404)
 
         self.assert_has_valid_error(response, 50)

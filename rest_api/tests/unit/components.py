@@ -32,16 +32,18 @@ from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
 from sawtooth_rest_api.protobuf.transaction_pb2 import Transaction
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
+from sawtooth_rest_api.protobuf.validator_pb2 import Message
 
 TEST_TIMEOUT = 5
 
 
-class MockStream(object):
-    """Replaces a route handler's stream to allow tests to preset the response
-    to send back as well as run asserts on the protobufs sent to the stream.
+class MockConnection(object):
+    """Replaces a route handler's connection to allow tests to preset the response
+    to send back as well as run asserts on the protobufs sent to the
+    connection.
 
-    Methods can be accessed using `self.stream` within a test case. MockStream
-    should not be initialized directly.
+    Methods can be accessed using `self.connection` within a test case.
+    MockConnection should not be initialized directly.
     """
     def __init__(self, test_case, request_type, request_proto, response_proto):
         self._tests = test_case
@@ -53,7 +55,8 @@ class MockStream(object):
 
     def preset_response(self, status=None, **response_data):
         """Sets the response that will be returned by the next `send` call.
-        Should be set once before every test call the Rest Api makes to stream.
+        Should be set once before every test call the Rest Api makes to
+        Connection.
 
         Args:
             status (int, optional): Enum of the response status, defaults to OK
@@ -82,11 +85,11 @@ class MockStream(object):
 
         self._reset_sent_request()
 
-    def send(self, message_type, content):
-        """Replaces send method on Stream. Should not be called directly.
+    async def send(self, message_type, message_content, timeout):
+        """Replaces send method on Connection. Should not be called directly.
         """
         request = self._request_proto()
-        request.ParseFromString(content)
+        request.ParseFromString(message_content)
 
         self._sent_request_type = message_type
         self._sent_request = request
@@ -96,8 +99,7 @@ class MockStream(object):
         except AttributeError:
             raise AssertionError("Preset a response before sending a request!")
 
-        self._reset_response()
-        return self._MockFuture(response_bytes)
+        return Message(content=response_bytes)
 
     def _reset_sent_request(self):
         self._sent_request_type = None
@@ -128,11 +130,11 @@ class BaseApiTest(AioHTTPTestCase):
         sets up aiohttp's async test cases.
 
         Additionally, within this method each child should run the methods
-        `set_status_and_steam`, `build_handlers`, and `build_app` as part of
-        the setup process.
+        `set_status_and_connection`, `build_handlers`, and `build_app` as part
+        of the setup process.
 
         Args:
-            loop (object): Provided by aiohttp for acync operations,
+            loop (object): Provided by aiohttp for async operations,
                 will be needed in order to `build_app`.
 
         Returns:
@@ -140,28 +142,31 @@ class BaseApiTest(AioHTTPTestCase):
         """
         raise NotImplementedError('Rest Api tests need get_application method')
 
-    def set_status_and_stream(self, req_type, req_proto, resp_proto):
-        """Sets the `status` and `stream` properties for the test case.
+    def set_status_and_connection(self, req_type, req_proto, resp_proto):
+        """Sets the `status` and `connection` properties for the test case.
 
         Args:
-            req_type (int): Expected enum of the type of Message sent to stream
-            req_proto (class): Protobuf of requests that will be sent to stream
-            resp_proto (class): Protobuf of responses to send back from stream
+            req_type (int): Expected enum of the type of Message sent to
+                connection
+            req_proto (class): Protobuf of requests that will be sent to
+                connection
+            resp_proto (class): Protobuf of responses to send back from
+                connection
         """
         self.status = resp_proto
-        self.stream = MockStream(self, req_type, req_proto, resp_proto)
+        self.connection = MockConnection(self, req_type, req_proto, resp_proto)
 
     @staticmethod
-    def build_handlers(loop, stream):
-        """Returns Rest Api route handlers modified with some a mock stream.
+    def build_handlers(loop, connection):
+        """Returns Rest Api route handlers modified with some a mock connection.
 
         Args:
-            stream (object): The MockStream set to `self.stream`
+            connection (object): The MockConnection set to `self.connection`
 
         Returns:
             RouteHandler: The route handlers to handle test queries
         """
-        handlers = RouteHandler(loop, stream, TEST_TIMEOUT)
+        handlers = RouteHandler(loop, connection, TEST_TIMEOUT)
         return handlers
 
     @staticmethod

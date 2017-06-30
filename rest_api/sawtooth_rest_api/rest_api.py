@@ -15,18 +15,19 @@
 
 import os
 import sys
-import time
 import logging
 import asyncio
 import argparse
 from aiohttp import web
 
-from sawtooth_sdk.messaging.stream import Stream
+from zmq.asyncio import ZMQEventLoop
+
 from sawtooth_sdk.client.log import init_console_logging
 from sawtooth_sdk.client.log import log_configuration
 from sawtooth_sdk.client.config import get_log_config
 from sawtooth_sdk.client.config import get_log_dir
 from sawtooth_sdk.client.config import get_config_dir
+from sawtooth_rest_api.messaging import Connection
 from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.config import load_default_rest_api_config
 from sawtooth_rest_api.config import load_toml_rest_api_config
@@ -56,68 +57,23 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-async def access_logger(app, handler):
-    """Simple logging middleware to report info about each request/response.
-    """
-    async def logging_handler(request):
-        start_time = time.time()
-        request_name = hex(int(start_time * 10000))[-6:]
-        client_ip, _ = request.transport.get_extra_info(
-            'peername', ('UNKNOWN', None))
-
-        # log request
-        LOGGER.info(
-            'Request  %s: "%s %s" from %s',
-            request_name,
-            request.method,
-            request.rel_url,
-            client_ip)
-
-        def log_response(response):
-            # pylint: disable=protected-access
-            content_length = response._headers.get('Content-Length',
-                                                   'UNKNOWN')
-            if content_length == 'UNKNOWN':
-                LOGGER.info(
-                    'Response %s: %s status, %s size, in %.3fs',
-                    request_name,
-                    response._status,
-                    content_length,
-                    time.time() - start_time)
-            else:
-                LOGGER.info(
-                    'Response %s: %s status, %sB size, in %.3fs',
-                    request_name,
-                    response._status,
-                    content_length,
-                    time.time() - start_time)
-
-        try:
-            response = await handler(request)
-            log_response(response)
-            return response
-        except web.HTTPError as e:
-            log_response(e)
-            raise e
-
-    return logging_handler
-
-
 async def cors_handler(request):
     headers = {}
     RouteHandler.add_cors_headers(request, headers)
     return web.Response(headers=headers)
 
 
-def start_rest_api(host, port, stream, timeout):
+def start_rest_api(host, port, connection, timeout):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
     loop = asyncio.get_event_loop()
-    app = web.Application(loop=loop, middlewares=[access_logger])
+    connection.open()
+    app = web.Application(loop=loop)
+    app.on_cleanup.append(lambda app: connection.close())
 
     # Add routes to the web app
-    LOGGER.info('Creating handlers for validator at %s', stream.url)
-    handler = RouteHandler(loop, stream, timeout)
+    LOGGER.info('Creating handlers for validator at %s', connection.url)
+    handler = RouteHandler(loop, connection, timeout)
 
     app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
 
@@ -141,7 +97,10 @@ def start_rest_api(host, port, stream, timeout):
 
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)
-    web.run_app(app, host=host, port=port, access_log=None)
+
+    web.run_app(app, host=host, port=port,
+                access_log=LOGGER,
+                access_log_format='%r: %s status, %b size, in %Tf s')
 
 
 def load_rest_api_config(first_config):
@@ -155,7 +114,10 @@ def load_rest_api_config(first_config):
 
 
 def main():
-    stream = None
+    loop = ZMQEventLoop()
+    asyncio.set_event_loop(loop)
+
+    connection = None
     try:
         opts = parse_args(sys.argv[1:])
         opts_config = RestApiConfig(
@@ -163,10 +125,14 @@ def main():
             connect=opts.connect,
             timeout=opts.timeout)
         rest_api_config = load_rest_api_config(opts_config)
+        url = None
         if "tcp://" not in rest_api_config.connect:
-            stream = Stream("tcp://" + rest_api_config.connect)
+            url = "tcp://" + rest_api_config.connect
         else:
-            stream = Stream(rest_api_config.connect)
+            url = rest_api_config.connect
+
+        connection = Connection(url)
+
         log_config = get_log_config(filename="rest_api_log_config.toml")
         if log_config is not None:
             log_configuration(log_config=log_config)
@@ -186,12 +152,11 @@ def main():
         start_rest_api(
             host,
             port,
-            stream,
+            connection,
             int(rest_api_config.timeout))
         # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
-        sys.exit(1)
     finally:
-        if stream is not None:
-            stream.close()
+        if connection is not None:
+            connection.close()

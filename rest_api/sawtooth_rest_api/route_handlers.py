@@ -13,11 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import asyncio
 import re
 import logging
 import json
 import base64
-from concurrent.futures import ThreadPoolExecutor
 from aiohttp import web
 
 # pylint: disable=no-name-in-module,import-error
@@ -25,12 +25,11 @@ from aiohttp import web
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import DecodeError
 
-from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
-from sawtooth_sdk.messaging.future import FutureTimeoutError
-from sawtooth_sdk.protobuf.validator_pb2 import Message
+from sawtooth_rest_api.protobuf.validator_pb2 import Message
 
 import sawtooth_rest_api.exceptions as errors
 import sawtooth_rest_api.error_handlers as error_handlers
+from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
@@ -54,15 +53,14 @@ class RouteHandler(object):
     instead.
 
     Args:
-        stream (:obj: messaging.stream.Stream): The object that communicates
+        connection (:obj: messaging.Connection): The object that communicates
             with the validator.
         timeout (int, optional): The time in seconds before the Api should
             cancel a request and report that the validator is unavailable.
     """
-    def __init__(self, loop, stream, timeout=DEFAULT_TIMEOUT):
-        loop.set_default_executor(ThreadPoolExecutor())
+    def __init__(self, loop, connection, timeout=DEFAULT_TIMEOUT):
         self._loop = loop
-        self._stream = stream
+        self._connection = connection
         self._timeout = timeout
 
     async def submit_batches(self, request):
@@ -450,14 +448,17 @@ class RouteHandler(object):
 
     async def _send_request(self, request_type, payload):
         """Uses an executor to send an asynchronous ZMQ request to the validator
-        with the handler's Stream.
+        with the handler's Connection
         """
-        future = self._stream.send(message_type=request_type, content=payload)
-
         try:
-            return await self._loop.run_in_executor(
-                None, future.result, self._timeout)
-        except FutureTimeoutError:
+            return await self._connection.send(
+                message_type=request_type,
+                message_content=payload,
+                timeout=self._timeout)
+        except DisconnectError:
+            LOGGER.warning('Validator disconnected while waiting for response')
+            raise errors.ValidatorDisconnected()
+        except asyncio.TimeoutError:
             LOGGER.warning('Timed out while waiting for validator response')
             raise errors.ValidatorTimedOut()
 
@@ -469,9 +470,6 @@ class RouteHandler(object):
             content = proto()
             content.ParseFromString(response.content)
             return content
-        except ValidatorConnectionError:
-            LOGGER.warning('Validator disconnected while waiting for response')
-            raise errors.ValidatorDisconnected()
         except (DecodeError, AttributeError):
             LOGGER.error('Validator response was not parsable: %s', response)
             raise errors.ValidatorResponseInvalid()
