@@ -1,8 +1,3 @@
-{% set short_lang = 'python' %}
-{% if language == 'JavaScript' %}
-    {% set short_lang = 'js' %}
-{% endif -%}
-
 ************************************
 Building and Submitting Transactions
 ************************************
