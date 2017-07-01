@@ -16,6 +16,10 @@ targets:
     args:
       language: JavaScript
 
+  sdk_submit_tutorial_python:
+    template: sdk_submit_tutorial.rst
+    args:
+      language: Python 3
 
   sdk_TP_tutorial_python:
     template: sdk_TP_tutorial.rst
