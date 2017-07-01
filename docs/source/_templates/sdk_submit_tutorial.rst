@@ -27,7 +27,15 @@ key, and it is fairly simple to generate this using the SDK's *signer* module.
     const privateKey = signer.makePrivateKey()
 
 {% else %}
+
 {# Python 3 code should be the default #}
+
+.. code-block::  python
+
+    from sawtooth_signing.secp256k1_signer import generate_privkey
+
+    private_key = privkey = generate_privkey(privkey_format='bytes')
+
 
 {% endif %}
 
@@ -93,6 +101,23 @@ these Transactions (see below).
 
 {% else %}
 
+.. code-block::  python
+
+    from sawtooth_sdk.client.encoding import TransactionEncoder
+
+    encoder = TransactionEncoder(
+        private_key,
+        # We don't want a batcher pubkey or dependencies for our example,
+        # but this is what setting them might look like:
+        # batcherPubkey='02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
+        # dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
+        payload_encoder=cbor.dumps,
+        family_name='intkey',
+        family_version='1.0',
+        inputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
+        outputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7']
+        payload_encoding='application/cbor')
+
 {% endif %}
 
 .. note::
@@ -137,6 +162,18 @@ Optionally, you may pass in header properties in order to override any defaults 
     })
 
 {% else %}
+
+.. code-block::  python
+
+    txn = encoder.create(
+        payload,
+        inputs=['1cf12663ae9d398142a7d84c49b73ba2f667c8d377ceb7832db69b1a416133562ea496'],
+        outputs=['1cf12663ae9d398142a7d84c49b73ba2f667c8d377ceb7832db69b1a416133562ea496'])
+
+    txn2 = encoder.create({
+        'Verb': 'inc',
+        'Name': 'foo',
+        'Value': 1})
 
 {% endif %}
 
@@ -184,6 +221,15 @@ encoding can done in a single step with *createEncoded*.
 
 {% else %}
 
+.. code-block:: python
+
+    txn_bytes = encoder.encode([txn, txn2])
+
+    txn_bytes2 = encoder.create_encoded({
+        'Verb': 'dec',
+        'Name': 'foo',
+        'Value': 3})
+
 {% endif %}
 
 
@@ -216,6 +262,12 @@ instantiation is the private key to sign the Batches with.
 
 {% else %}
 
+.. code-block:: python
+
+    from sawtooth_sdk.client.encoding import BatchEncoder
+
+    batcher = BatchEncoder(private_key)
+
 {% endif %}
 
 
@@ -242,6 +294,14 @@ strings.
 
 {% else %}
 
+.. code-block:: python
+
+    batch = batcher.create(txn)
+
+    batch2 = batcher.create([txn, txn2])
+
+    batch3 = batcher.create(txn_bytes)
+
 {% endif %}
 
 
@@ -264,6 +324,12 @@ can happen in one step.
     const batchBytes2 = batcher.createEncoded(txn)
 
 {% else %}
+
+.. code-block:: python
+
+    batch_bytes = batcher.encode([batch, batch2, batch3])
+
+    batch_bytes2 = batcher.create_encoded(txn)
 
 {% endif %}
 
