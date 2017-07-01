@@ -50,6 +50,8 @@ class TransactionEncoder {
    * @param {Object} [template={}] - Default values for each Transaction.
    * @param {string} [template.batcherPubkey] - Hex string encoded public key
    *     of the batcher, if not the same as the transaction encoder.
+   * @param {string[]} [template.dependencies=[]] - Ids of Transactions that
+   *     must be committed before Transactions created by encoder (unusual).
    * @param {string} [template.familyName=''] - Name of the transaction family.
    * @param {string} [template.familyVersion=''] - Version of the txn family.
    * @param {string[]} [template.inputs=[]] - Addresses to read from.
@@ -70,6 +72,7 @@ class TransactionEncoder {
 
     // TransactionHeader defaults can be modified after instantiation
     this.batcherPubkey = template.batcherPubkey || this._publicKey
+    this.dependencies = template.dependencies || []
     this.familyName = template.familyName || ''
     this.familyVersion = template.familyVersion || ''
     this.inputs = template.inputs || []
@@ -90,6 +93,8 @@ class TransactionEncoder {
    *     Overrides any template values set during encoder instantiation.
    * @param {string} [settings.batcherPubkey] - Hex string encoded public key
    *     of the batcher, if not the same as the transaction encoder.
+   * @param {string[]} [settings.dependencies=[]] - Ids of Transactions that
+   *     must be committed before this Transaction.
    * @param {string} [settings.familyName=''] - Name of the transaction family.
    * @param {string} [settings.familyVersion=''] - Version of the txn family.
    * @param {string[]} [settings.inputs=[]] - Addresses to read from.
@@ -105,7 +110,7 @@ class TransactionEncoder {
 
     const header = TransactionHeader.encode({
       batcherPubkey: settings.batcherPubkey || this.batcherPubkey,
-      dependencies: settings.dependencies || [],
+      dependencies: settings.dependencies || this.dependencies,
       familyName: settings.familyName || this.familyName,
       familyVersion: settings.familyVersion || this.familyVersion,
       inputs: settings.inputs || this.inputs,
