@@ -195,6 +195,8 @@ class SchedulerTester(object):
                 txn_info = scheduler.next_transaction()
                 if txn_info is not None:
                     txns_to_process.append(txn_info)
+                    LOGGER.debug("Transaction %s scheduled",
+                                 txn_info.txn.header_signature[:16])
                 else:
                     stop = True
 
@@ -222,6 +224,14 @@ class SchedulerTester(object):
                     context_id=c_id,
                     address_list=addresses)
 
+                LOGGER.debug("Transaction Id %s, Batch %s, Txn %s, "
+                             "Context_id %s, Base Contexts %s",
+                             t_id[:16],
+                             txn_context.batch_num,
+                             txn_context.txn_num,
+                             c_id,
+                             t_info.base_context_ids)
+
                 state_to_assert = [(add, state_up_to_now.get(add))
                                    for add, _ in state_found]
                 transactions_to_assert_state[t_id] = (txn_context,
@@ -234,7 +244,9 @@ class SchedulerTester(object):
             context_manager.set(
                 context_id=c_id,
                 address_value_list=address_values)
-
+            LOGGER.debug("Transaction %s is %s",
+                         t_id[:16],
+                         'valid' if validity_of_transaction else 'invalid')
             scheduler.set_transaction_execution_result(
                 txn_signature=t_info.txn.header_signature,
                 is_valid=validity_of_transaction,
@@ -334,13 +346,15 @@ class SchedulerTester(object):
                 [int(i) for i in add.split(',')]))
 
         parts = add.split(':')
-        assert parts[0] is not '', "{} is not correctly specified".format(add)
-        if len(parts) > 2 and not require_full:
-            # eg. 'aaabbbb:sha:56'
+        if len(parts) == 3 and parts[2] == 'sha':
+            # eg. 'yy:aaabbbb:sha'
+            namespace = hashlib.sha512(parts[0].encode()).hexdigest()[:6]
+            address = namespace + hashlib.sha512(
+                parts[1].encode()).hexdigest()[:64]
+        elif len(parts) == 3 and not require_full:
+            # eg. 'a:sha:56'
             length = min(int(parts[2]), 70)
-            intermediate = parts[0]
-            address = hashlib.sha512(
-                intermediate.encode()).hexdigest()[:length]
+            address = hashlib.sha512(parts[0].encode()).hexdigest()[:length]
         elif len(parts) == 2:
             # eg. 'aaabbbb:sha'
             intermediate = parts[0]
