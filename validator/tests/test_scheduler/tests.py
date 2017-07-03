@@ -61,7 +61,6 @@ class TestSchedulersWithYaml(unittest.TestCase):
                                       always_persist=False)
         return context_manager, scheduler
 
-    @unittest.skip("Skip until STL-476")
     def test_parallel_simple_scheduler_test(self):
         """Tests the parallel scheduler against the
         test_scheduler/data/simple_scheduler_test.yaml file.
@@ -77,6 +76,23 @@ class TestSchedulersWithYaml(unittest.TestCase):
             scheduler=scheduler,
             context_manager=context_manager,
             name='simple_scheduler_test.yaml')
+
+    def test_parallel_lifo_simple_scheduler_test(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/simple_scheduler_test.yaml file.
+
+        Notes:
+            To get a good understanding of the dependencies look at
+            simple_scheduler_test.yaml. In general, there are 4 batches,
+            2 are invalid. There will be 1 state root produced.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='simple_scheduler_test.yaml',
+            lifo=True)
 
     def test_serial_simple_scheduler_test(self):
         """Tests the serial scheduler against the
@@ -111,6 +127,24 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='intkey_small_batch.yaml')
 
+    def test_parallel_lifo_intkey_small_batch(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/intkey_small_batch.yaml file.
+
+        Notes:
+            In general, there are 8 batches, all valid, with intkey style
+            txns where the single input is the same as the single output.
+            The txn in batch 4 has an implicit dependency on the txn in
+            batch 3. There will be 1 state root produced
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='intkey_small_batch.yaml',
+            lifo=True)
+
     def test_serial_intkey_small_batch(self):
         """Tests the serial scheduler against the
         test_scheduler/data/intkey_small_batch.yaml file.
@@ -127,7 +161,6 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='intkey_small_batch.yaml')
 
-    @unittest.skip("Skip until STL-485, STL-476")
     def test_parallel_batch_fails_valid_txn(self):
         """Tests the parallel scheduler against the
         test_scheduler/data/batch_fails_valid_txn.yaml file.
@@ -144,6 +177,24 @@ class TestSchedulersWithYaml(unittest.TestCase):
             scheduler=scheduler,
             context_manager=context_manager,
             name='batch_fails_valid_txn.yaml')
+
+    def test_parallel_lifo_batch_fails_valid_txn(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/batch_fails_valid_txn.yaml file.
+
+        Notes:
+            The yaml file has 4 batches, batches 1 and 3 are invalid, batch
+            2 has a txn that implicitly depends on batch 1.
+            Batch 4 has txns that implicitly depend on batch 2 and 1.
+            Batch 2 and Batch 4 are the only valid batches
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='batch_fails_valid_txn.yaml',
+            lifo=True)
 
     def test_serial_batch_fails_valid_txn(self):
         """Tests the serial scheduler against the
@@ -162,10 +213,158 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='batch_fails_valid_txn.yaml')
 
+    def test_parallel_complex_batches_multiple_failures(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/complex_batches_multiple_failures.yaml file.
+
+        Notes:
+            This yaml file has txns that depend on txns in several batches
+            and several failed batches.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_batches_multiple_failures.yaml')
+
+    def test_parallel_lifo_complex_batches_multiple_failures(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/complex_batches_multiple_failures.yaml file.
+
+        Notes:
+            This yaml file has txns that depend on txns in several batches
+            and several failed batches.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_batches_multiple_failures.yaml',
+            lifo=True)
+
+    def test_serial_complex_batches_multiple_failures(self):
+        """Tests the serial scheduler against the
+        test_scheduler/data/complex_batches_multiple_failures.yaml file.
+
+        Notes:
+            This yaml file has txns that depend on txns in several batches
+            and several failed batches.
+        """
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_batches_multiple_failures.yaml')
+
+    def test_parallel_enclosing_writer_fails(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/enclosing_writer_fails.yaml file.
+
+        Notes:
+            This yaml file has failed batches that have txns that implicitly
+            depend on multiple prior txns because they have the
+            whole tree ('') in the inputs and outputs, and also are
+            the implicit dependency of several subsequent txns. When
+            the batch fails, those dependent txns need to be replayed with
+            a different state.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='enclosing_writer_fails.yaml')
+
+    def test_parallel_lifo_enclosing_writer_fails(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/enclosing_writer_fails.yaml file.
+
+        Notes:
+            This yaml file has failed batches that have txns that implicitly
+            depend on multiple prior txns because they have the
+            whole tree ('') in the inputs and outputs, and also are
+            the implicit dependency of several subsequent txns. When
+            the batch fails, those dependent txns need to be replayed with
+            a different state.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='enclosing_writer_fails.yaml',
+            lifo=True)
+
+    def test_serial_enclosing_writer_fails(self):
+        """Tests the serial scheduler against the
+        test_scheduler/data/complex_batches_multiple_failures.yaml file.
+
+        Notes:
+            This yaml file has failed batches that have txns that implicitly
+            depend on multiple prior txns because they have the
+            whole tree ('') in the inputs and outputs, and also are
+            the implicit dependency of several subsequent txns. When
+            the batch fails, those dependent txns need to be replayed with
+            a different state.
+        """
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='enclosing_writer_fails.yaml')
+
+    def test_parallel_heterogeneous_workload(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/heterogeneous_workload.yaml file.
+
+        Notes:
+            This yaml file has namespaced addresses and several failed batches
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='heterogeneous_workload.yaml')
+
+    def test_parallel_lifo_heterogeneous_workload(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/heterogeneous_workload.yaml file.
+
+        Notes:
+            This yaml file has namespaced addresses and several failed batches
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='heterogeneous_workload.yaml',
+            lifo=True)
+
+    def test_serial_heterogeneous_workload(self):
+        """Tests the serial scheduler against the
+        test_scheduler/data/heterogeneous_workload.yaml file.
+
+        Notes:
+            This yaml file has namespaced addresses and several failed batches
+        """
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='heterogeneous_workload.yaml')
+
     def _single_block_files_individually(self,
                                          scheduler,
                                          context_manager,
-                                         name):
+                                         name,
+                                         lifo=False):
         """Tests scheduler(s) with yaml files that represent a single
         block.
 
@@ -180,7 +379,8 @@ class TestSchedulersWithYaml(unittest.TestCase):
         defined_batch_results_dict = tester.batch_results
         batch_results, txns_to_assert_state = tester.run_scheduler(
             scheduler=scheduler,
-            context_manager=context_manager)
+            context_manager=context_manager,
+            txns_executed_fifo=not lifo)
 
         self.assert_batch_validity(
             defined_batch_results_dict,
