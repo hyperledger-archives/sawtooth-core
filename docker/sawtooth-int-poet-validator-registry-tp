@@ -21,7 +21,7 @@
 #   This image should be built using `build_all installed`.
 #
 # Run:
-#   $ docker run sawtooth-tp_validator_registry
+#   $ docker run sawtooth-poet-validator-registry-tp
 
 FROM ubuntu:xenial
 
@@ -48,4 +48,4 @@ RUN apt-get install -y -q --allow-unauthenticated \
 
 EXPOSE 4004/tcp
 
-CMD ["tp_validator_registry", "tcp://validator:4004"]
+CMD ["poet-validator-registry-tp", "tcp://validator:4004"]

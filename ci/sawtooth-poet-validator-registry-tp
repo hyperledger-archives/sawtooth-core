@@ -19,11 +19,11 @@
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-tp_validator_registry -t sawtooth-tp_validator_registry
+#   $ docker build . -f sawtooth-poet-validator-registry-tp -t sawtooth-poet-validator-registry-tp
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run sawtooth-tp_validator_registry
+#   $ docker run sawtooth-poet-validator-registry-tp
 
 FROM ubuntu:xenial
 
@@ -39,4 +39,4 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
 
 EXPOSE 4004/tcp
 
-CMD ["tp_validator_registry", "-vv"]
+CMD ["poet-validator-registry-tp", "-vv"]

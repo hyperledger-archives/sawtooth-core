@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_validator_registry:
-    image: sawtooth-tp_validator_registry:$ISOLATION_ID
+  poet-validator-registry-tp:
+    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_validator_registry -vv tcp://test-tp-validator-registry:4004
+    command: poet-validator-registry-tp -vv tcp://test-tp-validator-registry:4004
     stop_signal: SIGKILL
     environment:
         PYTHONPATH: "/project/sawtooth-core/consensus/poet/families/:\
