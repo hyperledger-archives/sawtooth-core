@@ -212,7 +212,7 @@ Sawtooth supports multiple languages for transaction processor development and
 includes additional transaction processors written in several languages.
 The following lists the processors that are included:
 
-* tp_settings
+* settings-tp
 
   - A settings family transaction processor written in Python
 
@@ -269,7 +269,7 @@ from the Linux CLI:
 
 .. code-block:: console
 
-  $ sudo -u sawtooth tp_settings -v
+  $ sudo -u sawtooth settings-tp -v
 
 Confirm that the transaction processor registers with the validator by viewing
 the terminal window in which the validator is running. A successful

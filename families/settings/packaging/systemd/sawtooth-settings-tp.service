@@ -5,8 +5,8 @@ After=network.target
 [Service]
 User=sawtooth
 Group=sawtooth
-EnvironmentFile=-/etc/default/sawtooth-tp_settings
-ExecStart=/usr/bin/tp_settings $SAWTOOTH_TP_SETTINGS_ARGS
+EnvironmentFile=-/etc/default/sawtooth-settings-tp
+ExecStart=/usr/bin/settings-tp $SAWTOOTH_SETTINGS-TP_ARGS
 
 [Install]
 WantedBy=multi-user.target

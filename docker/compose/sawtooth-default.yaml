@@ -17,14 +17,14 @@ version: "2.1"
 
 services:
 
-  tp_settings:
+  settings-tp:
     image: hyperledger/sawtooth-tp_settings:latest
-    container_name: sawtooth-tp_settings-default
+    container_name: sawtooth-settings-tp-default
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: tp_settings -vv tcp://validator:4004
+    entrypoint: settings-tp -vv tcp://validator:4004
 
   tp_intkey_python:
     image: hyperledger/sawtooth-tp_intkey_python:latest

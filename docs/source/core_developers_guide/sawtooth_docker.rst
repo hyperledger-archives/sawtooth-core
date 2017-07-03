@@ -22,7 +22,7 @@ The docker subdirectory is structured as follows:
 
  ci/
   sawtooth-all
-  sawtooth-tp_settings
+  sawtooth-settings-tp
   sawtooth-tp_intkey_python
   ...
   sawtooth-validator
@@ -35,7 +35,7 @@ The docker subdirectory is structured as follows:
   sawtooth-dev-python
   ...
   sawtooth-int-rest_api
-  sawtooth-int-tp_settings
+  sawtooth-int-settings-tp
   ...
 
 
