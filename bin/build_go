@@ -28,11 +28,11 @@ cd $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
 mkdir -p $top_dir/sdk/examples/intkey_go/bin
 go build -o $top_dir/sdk/examples/intkey_go/bin/tp_intkey_go
 
-echo -e "\033[0;32m--- Building tp_xo_go ---\n\033[0m"
+echo -e "\033[0;32m--- Building xo-tp-go ---\n\033[0m"
 export GOPATH=/go:$top_dir/sdk/go:$top_dir/sdk/examples/xo_go
 cd $top_dir/sdk/examples/xo_go/src/sawtooth_xo
 mkdir -p $top_dir/sdk/examples/xo_go/bin
-go build -o $top_dir/sdk/examples/xo_go/bin/tp_xo_go
+go build -o $top_dir/sdk/examples/xo_go/bin/xo-tp-go
 
 echo -e "\033[0;32m--- Building tp_noop_go ---\n\033[0m"
 export GOPATH=/go:$top_dir/sdk/go:$top_dir/sdk/examples/noop_go

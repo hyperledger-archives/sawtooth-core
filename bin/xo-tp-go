@@ -16,7 +16,7 @@
 # ------------------------------------------------------------------------------
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/sdk/examples/xo_go/bin/tp_xo_go
+bin=$top_dir/sdk/examples/xo_go/bin/xo-tp-go
 
 if [ -e $bin ]
 then

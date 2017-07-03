@@ -59,7 +59,7 @@ def intkey_xo_config_registry(num):
     # all nodes get the same processors
     return (
         'tp_intkey_python',
-        'tp_xo_python',
+        'xo-tp-python',
         'settings-tp',
         'poet-validator-registry-tp'
     )

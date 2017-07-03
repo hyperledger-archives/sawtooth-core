@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_xo_java:
-    image: sawtooth-tp_xo_java:$ISOLATION_ID
+  xo-tp-java:
+    image: sawtooth-xo-tp-java:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_xo_java tcp://test-tp-xo-java:4004
+    command: xo-tp-java tcp://test-tp-xo-java:4004
     stop_signal: SIGKILL
 
   test-tp-xo-java:

@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_xo_go:
-    image: sawtooth-tp_xo_go:$ISOLATION_ID
+  xo-tp-go:
+    image: sawtooth-xo-tp-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_xo_go -vv tcp://test-tp-xo-go:4004
+    command: xo-tp-go -vv tcp://test-tp-xo-go:4004
     stop_signal: SIGKILL
 
   test-tp-xo-go:
