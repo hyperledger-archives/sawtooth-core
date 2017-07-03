@@ -61,9 +61,9 @@ intkey workload
    :language: console
    :linenos:
 
-tp_intkey_python
+intkey-tp-python
 ================
 
-.. literalinclude:: output/tp_intkey_python_usage.out
+.. literalinclude:: output/intkey-tp-python_usage.out
    :language: console
    :linenos:

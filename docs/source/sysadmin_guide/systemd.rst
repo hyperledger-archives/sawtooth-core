@@ -55,7 +55,7 @@ To start a component using *systemd*, run the following command where
 
   * validator
   * rest_api
-  * tp_intkey_python
+  * intkey-tp-python
   * settings-tp
   * xo-tp-python
 

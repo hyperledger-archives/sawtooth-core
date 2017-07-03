@@ -5,8 +5,8 @@ After=network.target
 [Service]
 User=sawtooth
 Group=sawtooth
-EnvironmentFile=-/etc/default/sawtooth-tp_intkey_python
-ExecStart=/usr/bin/tp_intkey_python $SAWTOOTH_TP_INTKEY_PYTHON_ARGS
+EnvironmentFile=-/etc/default/sawtooth-intkey-tp-python
+ExecStart=/usr/bin/intkey-tp-python $SAWTOOTH_INTKEY-TP-PYTHON_ARGS
 
 [Install]
 WantedBy=multi-user.target

@@ -227,7 +227,7 @@ then
 
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
-        docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_intkey_go
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-intkey-tp-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_burrow_evm
         docker_build docker/sawtooth-dev-go docker/ sawtooth-xo-tp-go
         docker_run sawtooth-dev-go
@@ -235,14 +235,14 @@ then
 
     build_java() {
         docker_build docker/sawtooth-dev-java docker/ sawtooth-dev-java
-        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_intkey_java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-intkey-tp-java
         docker_build docker/sawtooth-dev-java docker/ sawtooth-xo-tp-java
         docker_run sawtooth-dev-java
     }
 
     build_javascript() {
         docker_build docker/sawtooth-dev-javascript docker/ sawtooth-dev-javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-tp_intkey_javascript
+        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-intkey-tp-javascript
         docker_build docker/sawtooth-dev-javascript docker/ sawtooth-xo-tp-javascript
         docker_run sawtooth-dev-javascript
     }
@@ -251,7 +251,7 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest_api
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-settings-tp
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_intkey_python
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_supplychain_python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
@@ -274,9 +274,9 @@ then
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir
         mkdir -p $build_dir
-        cp $top_dir/docker/sawtooth-int-tp_intkey_go $build_dir
+        cp $top_dir/docker/sawtooth-int-intkey-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
-        cp $top_dir/sdk/examples/intkey_go/bin/tp_intkey_go \
+        cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
             $build_dir
         cp $top_dir/docker/sawtooth-int-tp_burrow_evm $build_dir
         cp $top_dir/families/burrow_evm/bin/tp_burrow_evm \
@@ -285,8 +285,8 @@ then
             $build_dir
         ls $build_dir
 
-        docker_build $build_dir/sawtooth-int-tp_intkey_go $build_dir/ \
-            sawtooth-tp_intkey_go
+        docker_build $build_dir/sawtooth-int-intkey-tp-go $build_dir/ \
+            sawtooth-intkey-tp-go
         docker_build $build_dir/sawtooth-int-tp_burrow_evm $build_dir/ \
             sawtooth-tp_burrow_evm
         docker_build $build_dir/sawtooth-int-xo-tp-go $build_dir/ \
@@ -296,7 +296,7 @@ then
     build_java() {
         warn "Installed java images not implemented, building mounted instead"
         docker_build docker/sawtooth-dev-java docker/ sawtooth-dev-java
-        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_intkey_java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-intkey-tp-java
         docker_build docker/sawtooth-dev-java docker/ sawtooth-xo-tp-java
         docker_run sawtooth-dev-java
     }
@@ -304,7 +304,7 @@ then
     build_javascript() {
         warn "Installed javascript images not implemented, building mounted instead"
         docker_build docker/sawtooth-dev-javascript docker/ sawtooth-dev-javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-tp_intkey_javascript
+        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-intkey-tp-javascript
         docker_build docker/sawtooth-dev-javascript docker/ sawtooth-xo-tp-javascript
         docker_run sawtooth-dev-javascript
     }
@@ -332,8 +332,8 @@ then
         docker_build $build_dir/sawtooth-int-settings-tp \
             $build_dir/ sawtooth-settings-tp
 
-        docker_build $build_dir/sawtooth-int-tp_intkey_python \
-            $build_dir/ sawtooth-tp_intkey_python
+        docker_build $build_dir/sawtooth-int-intkey-tp-python \
+            $build_dir/ sawtooth-intkey-tp-python
 
         docker_build $build_dir/sawtooth-int-poet-validator-registry-tp \
             $build_dir/ sawtooth-poet-validator-registry-tp

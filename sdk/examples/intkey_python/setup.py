@@ -24,11 +24,11 @@ from setuptools import setup, find_packages
 data_files = []
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-tp_intkey_python']))
+    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-intkey-tp-python']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
-                       ['packaging/systemd/sawtooth-tp_intkey_python.service']))
+                       ['packaging/systemd/sawtooth-intkey-tp-python.service']))
 
 setup(name='sawtooth-intkey',
       version=subprocess.check_output(
@@ -47,6 +47,6 @@ setup(name='sawtooth-intkey',
       entry_points={
           'console_scripts': [
               'intkey = sawtooth_intkey.client_cli.main:main_wrapper',
-              'tp_intkey_python = sawtooth_intkey.processor.main:main'
+              'intkey-tp-python = sawtooth_intkey.processor.main:main'
           ]
       })

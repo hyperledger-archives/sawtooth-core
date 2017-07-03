@@ -58,7 +58,7 @@ In a new terminal, run the following to start the transaction processor:
 
 ```
    %cd /project/sawtooth-core
-   % ./bin/tp_intkey_python
+   % ./bin/intkey-tp-python
 ```
 
 Finally, it is time to load the transactions. In a new terminal, run:
@@ -107,7 +107,7 @@ In a new terminal, run the following to start the transaction processor:
 
 ```
    %cd /project/sawtooth-core
-   % ./bin/tp_intkey_java tcp://localhost:4004
+   % ./bin/intkey-tp-java tcp://localhost:4004
 ```
 
 Finally, it is time to load the transactions. In a new terminal, run:

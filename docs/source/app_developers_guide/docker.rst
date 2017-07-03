@@ -150,7 +150,7 @@ registering and creating initial blocks you can move on to the next step.
 
 .. code-block:: console
 
-  Attaching to sawtooth-validator-default, sawtooth-xo-tp-python-default, sawtooth-tp_intkey_python-default, sawtooth-rest_api-default, sawtooth-settings-tp-default, sawtooth-client-default
+  Attaching to sawtooth-validator-default, sawtooth-xo-tp-python-default, sawtooth-intkey-tp-python-default, sawtooth-rest_api-default, sawtooth-settings-tp-default, sawtooth-client-default
   sawtooth-validator-default | writing file: /etc/sawtooth/keys/validator.priv
   sawtooth-validator-default | writing file: /etc/sawtooth/keys/validator.pub
   sawtooth-validator-default | creating key directory: /root/.sawtooth/keys
@@ -184,7 +184,7 @@ Sample output after pressing CTRL-c:
   Stopping sawtooth-settings-tp-default ... done
   Stopping sawtooth-client-default... done
   Stopping sawtooth-rest_api-default ... done
-  Stopping sawtooth-tp_intkey_python-default ... done
+  Stopping sawtooth-intkey-tp-python-default ... done
   Stopping sawtooth-validator-default ... done
 
 
@@ -296,18 +296,18 @@ transactions just submitted:
 
 .. code-block:: console
 
-  tp_intkey_python_1  | [21:02:53.164 DEBUG    handler] Incrementing "VaUEPt" by 1
+  intkey-tp-python_1  | [21:02:53.164 DEBUG    handler] Incrementing "VaUEPt" by 1
   sawtooth-validator-default         | [21:02:53.169 DEBUG    interconnect] ServerThread receiving TP_STATE_SET_REQUEST message: 194 bytes
   sawtooth-validator-default         | [21:02:53.171 DEBUG    tp_state_handlers] SET: ['1cf126d8a50604ea6ab1b82b33705fc3eeb7199f09ff2ccbc52016bbf33ade68dc23f5']
   sawtooth-validator-default         | [21:02:53.172 DEBUG    interconnect] ServerThread sending TP_STATE_SET_RESPONSE to b'63cf2e2566714070'
   sawtooth-validator-default         | [21:02:53.176 DEBUG    interconnect] ServerThread receiving TP_PROCESS_RESPONSE message: 69 bytes
   sawtooth-validator-default         | [21:02:53.177 DEBUG    interconnect] message round trip: TP_PROCESS_RESPONSE 0.042026519775390625
   sawtooth-validator-default         | [21:02:53.182 DEBUG    interconnect] ServerThread sending TP_PROCESS_REQUEST to b'63cf2e2566714070'
-  tp_intkey_python_1  | [21:02:53.185 DEBUG    core] received message of type: TP_PROCESS_REQUEST
+  intkey-tp-python_1  | [21:02:53.185 DEBUG    core] received message of type: TP_PROCESS_REQUEST
   sawtooth-validator-default         | [21:02:53.191 DEBUG    interconnect] ServerThread receiving TP_STATE_GET_REQUEST message: 177 bytes
   sawtooth-validator-default         | [21:02:53.195 DEBUG    tp_state_handlers] GET: [('1cf126721fff0dc4ccb345fb145eb9e30cb7b046a7dd7b51bf7393998eb58d40df5f9a', b'\xa1fZeuYwh\x1a\x00\x019%')]
   sawtooth-validator-default         | [21:02:53.200 DEBUG    interconnect] ServerThread sending TP_STATE_GET_RESPONSE to b'63cf2e2566714070'
-  tp_intkey_python_1  | [21:02:53.202 DEBUG    handler] Incrementing "ZeuYwh" by 1
+  intkey-tp-python_1  | [21:02:53.202 DEBUG    handler] Incrementing "ZeuYwh" by 1
 
 
 Submitting Transactions With Sawtooth Submit
@@ -584,7 +584,7 @@ The Intkey Transaction Processor Container
 ------------------------------------------
 
 * Runs a single Intkey transaction processor
-* Hostname: tp_intkey_python
+* Hostname: intkey-tp-python
 * Handles transactions of the *intkey transaction family*
 
 Log into this container by running this command from the host computer's
@@ -592,7 +592,7 @@ terminal:
 
 .. code-block:: console
 
-  $ docker exec -it sawtooth-tp_intkey_python-default bash
+  $ docker exec -it sawtooth-intkey-tp-python-default bash
 
 To see which components are running, run this command from the container:
 
@@ -600,7 +600,7 @@ To see which components are running, run this command from the container:
 
   $ ps --pid 1 fw
     PID TTY      STAT   TIME COMMAND
-    1 ?        Ssl    0:00 /usr/bin/python3 /usr/bin/tp_intkey_python -vv tcp://validator:4004
+    1 ?        Ssl    0:00 /usr/bin/python3 /usr/bin/intkey-tp-python -vv tcp://validator:4004
 
 
 The XO Transaction Processor Container

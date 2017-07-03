@@ -47,7 +47,7 @@ rm -rf families/supplychain/python/sawtooth_supplychain/protobuf/
 rm -rf rest_api/sawtooth_rest_api/protobuf/
 rm -rf sdk/python/sawtooth_sdk/protobuf/
 rm -rf sdk/go/src/sawtooth_sdk/protobuf/
-rm -rf sdk/examples/intkey_go/bin/tp_intkey_go
+rm -rf sdk/examples/intkey_go/bin/intkey-tp-go
 rm -rf validator/sawtooth_validator/protobuf/
 rm -rf tools/ubuntu-xenial-16.04-cloudimg-console.log
 rm -rf tools/cache/
