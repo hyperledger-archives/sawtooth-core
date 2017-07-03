@@ -28,16 +28,16 @@ services:
     command: tp_supplychain_python tcp://validator:4004 -vvv
     stop_signal: SIGKILL
 
-  tp_settings:
-    image: sawtooth-tp_settings:$ISOLATION_ID
-    container_name: sawtooth-tp_settings-default
+  settings-tp:
+    image: sawtooth-settings-tp:$ISOLATION_ID
+    container_name: sawtooth-settings-tp-default
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: tp_settings -vv tcp://validator:4004
+    entrypoint: settings-tp -vv tcp://validator:4004
 
   validator:
     image: sawtooth-dev-python:$ISOLATION_ID

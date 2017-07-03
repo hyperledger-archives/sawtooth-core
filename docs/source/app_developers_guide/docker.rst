@@ -150,7 +150,7 @@ registering and creating initial blocks you can move on to the next step.
 
 .. code-block:: console
 
-  Attaching to sawtooth-validator-default, sawtooth-tp_xo_python-default, sawtooth-tp_intkey_python-default, sawtooth-rest_api-default, sawtooth-tp_settings-default, sawtooth-client-default
+  Attaching to sawtooth-validator-default, sawtooth-tp_xo_python-default, sawtooth-tp_intkey_python-default, sawtooth-rest_api-default, sawtooth-settings-tp-default, sawtooth-client-default
   sawtooth-validator-default | writing file: /etc/sawtooth/keys/validator.priv
   sawtooth-validator-default | writing file: /etc/sawtooth/keys/validator.pub
   sawtooth-validator-default | creating key directory: /root/.sawtooth/keys
@@ -181,7 +181,7 @@ Sample output after pressing CTRL-c:
   sawtooth-validator-default         | [00:27:56.763 INFO     chain] Finished block validation of: 44ccc3e6(1, S:910b9c23, P:05b2a651)
   Gracefully stopping... (press Ctrl+C again to force)
   Stopping sawtooth-tp_xo_python-default ... done
-  Stopping sawtooth-tp_settings-default ... done
+  Stopping sawtooth-settings-tp-default ... done
   Stopping sawtooth-client-default... done
   Stopping sawtooth-rest_api-default ... done
   Stopping sawtooth-tp_intkey_python-default ... done
@@ -561,7 +561,7 @@ The Settings Transaction Processor Container
 --------------------------------------------
 
 * Runs a single settings transaction proccessor
-* Hostname: tp_settings
+* Hostname: settings-tp
 * Handles transactions of the *settings transaction family*
 
 Log into this container by running this command from the host computer's
@@ -569,7 +569,7 @@ terminal:
 
 .. code-block:: console
 
-  $ docker exec -it sawtooth-tp_settings-default bash
+  $ docker exec -it sawtooth-settings-tp-default bash
 
 To see which components are running, run this command from the container:
 
@@ -577,7 +577,7 @@ To see which components are running, run this command from the container:
 
   $ ps --pid 1 fw
     PID TTY      STAT   TIME COMMAND
-    1 ?        Ssl    0:00 /usr/bin/python3 /usr/bin/tp_settings -vv tcp://validator:4004
+    1 ?        Ssl    0:00 /usr/bin/python3 /usr/bin/settings-tp -vv tcp://validator:4004
 
 
 The Intkey Transaction Processor Container

@@ -53,14 +53,14 @@ def everyone_peers_with_everyone(num):
 
 def intkey_config_registry(num):
     # all nodes get the same processors
-    return 'tp_intkey_python', 'tp_settings', 'poet-validator-registry-tp'
+    return 'tp_intkey_python', 'settings-tp', 'poet-validator-registry-tp'
 
 def intkey_xo_config_registry(num):
     # all nodes get the same processors
     return (
         'tp_intkey_python',
         'tp_xo_python',
-        'tp_settings',
+        'settings-tp',
         'poet-validator-registry-tp'
     )
 
