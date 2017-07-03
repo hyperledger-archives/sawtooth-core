@@ -95,7 +95,7 @@ def add_cluster_start_parser(subparsers, parent_parser):
         '--processors',
         '-P',
         help='the transaction processors that are part of node,'
-             'e.g. tp_intkey_python, tp_intkey_java',
+             'e.g. intkey-tp-python, intkey-tp-java',
         nargs='*')
 
 

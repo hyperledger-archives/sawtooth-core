@@ -26,14 +26,14 @@ services:
       - validator
     entrypoint: settings-tp -vv tcp://validator:4004
 
-  tp_intkey_python:
+  intkey-tp-python:
     image: hyperledger/sawtooth-tp_intkey_python:latest
-    container_name: sawtooth-tp_intkey_python-default
+    container_name: sawtooth-intkey-tp-python-default
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: tp_intkey_python -vv tcp://validator:4004
+    entrypoint: intkey-tp-python -vv tcp://validator:4004
 
   xo-tp-python:
     image: hyperledger/sawtooth-tp_xo_python:latest

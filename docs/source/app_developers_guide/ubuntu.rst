@@ -180,7 +180,7 @@ To start an intkey transaction processor, run the following command:
 
 .. code-block:: console
 
-  $ sudo -u sawtooth tp_intkey_python -v
+  $ sudo -u sawtooth intkey-tp-python -v
 
 .. note::
 
@@ -188,7 +188,7 @@ To start an intkey transaction processor, run the following command:
   on port 4004. This can be modified by passing a different endpoint as an
   argument. The following is equivalent to the default::
 
-    tp_intkey_python -v tcp://127.0.0.1:4004
+    intkey-tp-python -v tcp://127.0.0.1:4004
 
 This will start a transaction processor with an **intkey** handler that can
 understand and process transactions from the intkey transaction family.
@@ -216,15 +216,15 @@ The following lists the processors that are included:
 
   - A settings family transaction processor written in Python
 
-* tp_intkey_go
+* intkey-tp-go
 
   - An intkey transaction processor written in Go
 
-* tp_intkey_java
+* intkey-tp-java
 
   - An intkey transaction processor written in Java
 
-* tp_intkey_javascript
+* intkey-tp-javascript
 
   - An intkey transaction processor written in JavaScript
   - Requires node.js

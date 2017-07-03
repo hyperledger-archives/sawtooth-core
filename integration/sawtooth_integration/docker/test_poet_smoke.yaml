@@ -128,31 +128,31 @@ services:
     command: rest_api -v --connect tcp://validator-2:4004 --bind rest-api-2:8080
     stop_signal: SIGKILL
 
-  tp-intkey-0:
-    image: sawtooth-tp_intkey_python:$ISOLATION_ID
+  intkey-tp-0:
+    image: sawtooth-intkey-tp-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_intkey_python tcp://validator-0:4004
+    command: intkey-tp-python tcp://validator-0:4004
     stop_signal: SIGKILL
 
-  tp-intkey-1:
-    image: sawtooth-tp_intkey_python:$ISOLATION_ID
+  intkey-tp-1:
+    image: sawtooth-intkey-tp-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_intkey_python tcp://validator-1:4004
+    command: intkey-tp-python tcp://validator-1:4004
     stop_signal: SIGKILL
 
-  tp-intkey-2:
-    image: sawtooth-tp_intkey_python:$ISOLATION_ID
+  intkey-tp-2:
+    image: sawtooth-intkey-tp-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_intkey_python tcp://validator-2:4004
+    command: intkey-tp-python tcp://validator-2:4004
     stop_signal: SIGKILL
 
   settings-tp-0:

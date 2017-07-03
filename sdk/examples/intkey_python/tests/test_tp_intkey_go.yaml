@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_intkey_go:
-    image: sawtooth-tp_intkey_go:$ISOLATION_ID
+  intkey-tp-go:
+    image: sawtooth-intkey-tp-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_intkey_go tcp://test-tp-intkey-go:4004
+    command: intkey-tp-go tcp://test-tp-intkey-go:4004
     stop_signal: SIGKILL
 
   test-tp-intkey-go:

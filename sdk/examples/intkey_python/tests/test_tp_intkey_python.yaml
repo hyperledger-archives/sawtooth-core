@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_intkey_python:
-    image: sawtooth-tp_intkey_python:$ISOLATION_ID
+  intkey-tp-python:
+    image: sawtooth-intkey-tp-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_intkey_python -vv tcp://test-tp-intkey-python:4004
+    command: intkey-tp-python -vv tcp://test-tp-intkey-python:4004
     stop_signal: SIGKILL
 
   test-tp-intkey-python:

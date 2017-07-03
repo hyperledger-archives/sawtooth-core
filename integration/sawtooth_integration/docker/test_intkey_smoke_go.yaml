@@ -28,15 +28,15 @@ services:
     command: settings-tp -vv tcp://validator:4004
     stop_signal: SIGKILL
 
-  tp_intkey_go:
-    image: sawtooth-tp_intkey_go:$ISOLATION_ID
+  intkey-tp-go:
+    image: sawtooth-intkey-tp-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    command: tp_intkey_go -v tcp://validator:4004
+    command: intkey-tp-go -v tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
@@ -77,7 +77,7 @@ services:
     depends_on:
       - validator
       - rest_api
-      - tp_intkey_go
+      - intkey-tp-go
       - settings-tp
     command: nose2-3
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg

@@ -21,7 +21,7 @@
 #   This image should be built using `build_all installed`.
 #
 # Run:
-#   $ docker run sawtooth-tp_intkey_python
+#   $ docker run sawtooth-intkey-tp-python
 
 FROM ubuntu:xenial
 
@@ -48,4 +48,4 @@ RUN apt-get install -y -q --allow-unauthenticated \
 
 EXPOSE 4004/tcp
 
-CMD ["tp_intkey_python", "tcp://validator:4004"]
+CMD ["intkey-tp-python", "tcp://validator:4004"]

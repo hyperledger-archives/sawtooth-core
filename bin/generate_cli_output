@@ -63,7 +63,7 @@ save_usage intkey load
 save_usage intkey populate
 save_usage intkey create_batch
 save_usage intkey workload
-save_usage tp_intkey_python
+save_usage intkey-tp-python
 
 save_usage xo
 save_usage xo create

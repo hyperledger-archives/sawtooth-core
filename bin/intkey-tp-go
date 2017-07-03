@@ -16,7 +16,7 @@
 # ------------------------------------------------------------------------------
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/sdk/examples/intkey_go/bin/tp_intkey_go
+bin=$top_dir/sdk/examples/intkey_go/bin/intkey-tp-go
 
 if [ -e $bin ]
 then
