@@ -14,14 +14,14 @@
 # -----------------------------------------------------------------------------
 
 ---
--  #------------------------- Batch 1
+- # --------------------------- Batch 1
   -
     inputs:
       - a:sha
     outputs:
-      - a:sha
+      - b:sha
     addresses_to_set:
-      - a:sha :
+      - b:sha :
   -
     inputs:
       - b:sha
@@ -29,15 +29,30 @@
       - b:sha
     addresses_to_set:
       - b:sha :
-    valid: False
-- # ----------------------- Batch 2
   -
     inputs:
-      - a:sha
+      - c:sha
     outputs:
-      - a:sha
+      - c:sha
     addresses_to_set:
-      - a:sha :
+      - c:sha :
+- # ------------------------- Batch 2
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - c:sha :
+    valid: False
+- # ------------------------ Batch 3
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
   -
     inputs:
       - c:sha
@@ -52,21 +67,49 @@
       - d:sha
     addresses_to_set:
       - d:sha :
+- # ------------------------ Batch 4
   -
     inputs:
-      - e:sha
+      - ""
     outputs:
-      - e:sha
+      - ""
     addresses_to_set:
-      - e:sha :
-- #----------------------- Batch 3
+      - c:sha :
+      - b:sha :
+    valid: False
+- # ------------------------ Batch 5
   -
     inputs:
-      - t:sha
+      - a:sha
     outputs:
-      - t:sha
+      - a:sha
     addresses_to_set:
-      - t:sha :
+      - a:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+- # -------------------------- Batch 6
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - g:sha :
+      - k:sha :
+      - a:sha :
+      - b:sha :
   -
     inputs:
       - g:sha
@@ -74,6 +117,64 @@
       - g:sha
     addresses_to_set:
       - g:sha :
+    valid: False
+- # -------------------------- Batch 7
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - u:sha
+    addresses_to_set:
+      - u:sha :
+    valid: False
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - y:sha
+    addresses_to_set:
+      - y:sha :
+- # --------------------------- Batch 8
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    valid: False
+  -
+    inputs:
+      - t:sha
+    outputs:
+      - t:sha
+    addresses_to_set:
+      - t:sha :
+- # --------------------------- Batch 9
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - q:sha :
+      - a:sha :
+      - b:sha :
+      - c:sha :
   -
     inputs:
       - e:sha
@@ -82,6 +183,7 @@
     addresses_to_set:
       - e:sha :
     valid: False
+- # -------------------------- Batch 10
   -
     inputs:
       - a:sha
@@ -89,101 +191,44 @@
       - a:sha
     addresses_to_set:
       - a:sha :
-- #---------------------- Batch 4
-  -
-    inputs:
-      - d:sha
-    outputs:
-      - d:sha
-    addresses_to_set:
-      - d:sha :
-  -
-    inputs:
-      - b:sha
-    outputs:
-      - b:sha
-    addresses_to_set:
-      - b:sha :
-- #------------------------- Batch 5
-  -
-    inputs:
-      - d:sha
-      - "15,222,172,98,65,15,18,57,75,26"
-    outputs:
-      - abe7f89e8d4fc3fd5d8888888ffffffffff99999f99f999f99f1098fff840585984888
-    addresses_to_set:
-      - abe7f89e8d4fc3fd5d8888888ffffffffff99999f99f999f99f1098fff840585984888 :
-  -
-    inputs:
-      - tt:sha
-    outputs:
-      - dt:sha
-    addresses_to_set:
-      - dt:sha :
-  -
-    inputs:
-      - ad:sha
-    outputs:
-      - qq:sha
-    addresses_to_set:
-      - qq:sha :
-    valid: False
-- # --------------------------- Batch 6
   -
     inputs:
       - e:sha
     outputs:
-      - d:sha
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
       - b:sha
     addresses_to_set:
-      - d:sha :
       - b:sha :
+- # ------------------------- Batch 11
   -
     inputs:
-      - dt:sha
+      - d:sha
     outputs:
-      - bb:sha
+      - d:sha
     addresses_to_set:
-      - bb:sha :
+      - d:sha :
   -
     inputs:
-      - dt:sha
+      - e:sha
     outputs:
-      - bb:sha
+      - ""
     addresses_to_set:
-      - bb:sha :
-    valid: False
+      - g:sha :
+      - e:sha :
+      - k:sha :
+      - i:sha :
+      - m:sha :
   -
     inputs:
-      - tz:sha
+      - k:sha
     outputs:
-      - zt:sha
+      - k:sha
     addresses_to_set:
-      - zt:sha :
-- # ------------------------ Batch 7
-  -
-    inputs:
-      - c:sha
-      - a:sha
-    outputs:
-      - c:sha
-      - a:sha
-    addresses_to_set:
-      - c:sha :
-- # ----------------------- Batch 8
-  -
-    inputs:
-      - a:sha
-    outputs:
-      - bb:sha
-    addresses_to_set:
-      - bb:sha :
-  -
-    inputs:
-      - zz:sha
-    outputs:
-      - bb:sha
-      - c:sha
-    addresses_to_set:
-      - c:sha :
+      - k:sha :
     valid: False
