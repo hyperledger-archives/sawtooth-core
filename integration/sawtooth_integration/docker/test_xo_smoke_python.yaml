@@ -28,15 +28,15 @@ services:
     command: settings-tp -vv tcp://validator:4004
     stop_signal: SIGKILL
 
-  tp_xo_python:
-    image: sawtooth-tp_xo_python:$ISOLATION_ID
+  xo-tp-python:
+    image: sawtooth-xo-tp-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    command: tp_xo_python -vv tcp://validator:4004
+    command: xo-tp-python -vv tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:

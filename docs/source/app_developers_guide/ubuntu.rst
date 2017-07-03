@@ -240,12 +240,12 @@ The following lists the processors that are included:
   - A transaction family used by the PoET consensus algorithm implementation
     to keep track of other validators.
 
-* tp_xo_javascript
+* xo-tp-javascript
 
   - An XO transaction processor written in JavaScript
   - Requires node.js
 
-* tp_xo_python
+* xo-tp-python
 
   - An XO transaction processor written in Python
 

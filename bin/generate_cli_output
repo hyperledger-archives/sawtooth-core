@@ -72,7 +72,7 @@ save_usage xo list
 save_usage xo reset
 save_usage xo show
 save_usage xo take
-save_usage tp_xo_python
+save_usage xo-tp-python
 
 save_usage validator
 save_usage rest_api

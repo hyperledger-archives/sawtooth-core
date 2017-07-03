@@ -28,15 +28,15 @@ services:
     command: settings-tp -vv tcp://validator:4004
     stop_signal: SIGKILL
 
-  tp_xo_javascript:
-    image: sawtooth-tp_xo_javascript:$ISOLATION_ID
+  xo-tp-javascript:
+    image: sawtooth-xo-tp-javascript:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    command: tp_xo_javascript tcp://validator:4004
+    command: xo-tp-javascript tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:

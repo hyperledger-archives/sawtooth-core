@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_xo_javascript:
-    image: sawtooth-tp_xo_javascript:$ISOLATION_ID
+  xo-tp-javascript:
+    image: sawtooth-xo-tp-javascript:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_xo_javascript tcp://test-tp-xo-javascript:4004
+    command: xo-tp-javascript tcp://test-tp-xo-javascript:4004
     stop_signal: SIGKILL
 
   test-tp-xo-javascript:
