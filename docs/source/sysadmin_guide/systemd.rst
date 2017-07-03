@@ -27,7 +27,7 @@ manually, run the following command:
   $ sudo journalctl -f \
       -u sawtooth-validator \
       -u sawtooth-tp_settings \
-      -u sawtooth-tp_validator_registry \
+      -u sawtooth-poet-validator-registry-tp \
       -u sawtooth-rest_api
 
 Validator Start-up Process

@@ -8,7 +8,7 @@ validator
 rest_api
 tp_intkey_python
 tp_settings
-tp_validator_registry
+poet-validator-registry-tp
 "
 
 if [ -z $ISOLATION_ID ]

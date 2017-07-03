@@ -235,7 +235,7 @@ The following lists the processors that are included:
   - The bytecode to run a transaction is stored in state and the blockchain.
   - Requires Java
 
-* tp_validator_registry
+* poet-validator-registry-tp
 
   - A transaction family used by the PoET consensus algorithm implementation
     to keep track of other validators.

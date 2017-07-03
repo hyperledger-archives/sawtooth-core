@@ -182,35 +182,35 @@ services:
     command: tp_settings -v tcp://validator-2:4004
     stop_signal: SIGKILL
 
-  tp-validator-registry-0:
-    image: sawtooth-tp_validator_registry:$ISOLATION_ID
+  poet-validator-registry-tp-0:
+    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_validator_registry -v tcp://validator-0:4004
+    command: poet-validator-registry-tp -v tcp://validator-0:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
 
-  tp-validator-registry-1:
-    image: sawtooth-tp_validator_registry:$ISOLATION_ID
+  poet-validator-registry-tp-1:
+    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_validator_registry -v tcp://validator-1:4004
+    command: poet-validator-registry-tp -v tcp://validator-1:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
 
-  tp-validator-registry-2:
-    image: sawtooth-tp_validator_registry:$ISOLATION_ID
+  poet-validator-registry-tp-2:
+    image: sawtooth-poet-validator-registry-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_validator_registry -v tcp://validator-2:4004
+    command: poet-validator-registry-tp -v tcp://validator-2:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL

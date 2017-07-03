@@ -24,11 +24,11 @@ from setuptools import setup, find_packages
 data_files = []
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-tp_validator_registry']))
+    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-poet-validator-registry-tp']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
-                       ['packaging/systemd/sawtooth-tp_validator_registry.service']))
+                       ['packaging/systemd/sawtooth-poet-validator-registry-tp.service']))
 
 
 setup(name='sawtooth-poet-families',
@@ -48,6 +48,6 @@ setup(name='sawtooth-poet-families',
       data_files=data_files,
       entry_points={
           'console_scripts': [
-              'tp_validator_registry = sawtooth_validator_registry.validator_registry.processor.main:main'
+              'poet-validator-registry-tp = sawtooth_validator_registry.validator_registry.processor.main:main'
           ]
       })
