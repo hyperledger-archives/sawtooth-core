@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-#
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +13,27 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/sdk/examples/noop_go/bin/tp_noop_go
+# Description:
+#   Builds an image with Sawtooth TP Noop Go installed.
+#
+# Build:
+#   This image should be built using `build_all installed`.
+#
+# Run:
+#   $ docker run sawtooth-noop-tp-go
 
-if [ -e $bin ]
-then
-    $bin $*
-else
-    echo "Please build Noop Go first with 'build_all -l go' or 'build_go'"
-fi
+FROM ubuntu:xenial
+
+LABEL "install-type"="copied-bin"
+
+RUN apt-get update \
+ && apt-get install -y -q \
+    libzmq3-dev \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY noop-tp-go /usr/bin/noop-tp-go
+
+EXPOSE 4004/tcp
+
+CMD ["noop-tp-go", "tcp://validator:4004"]
