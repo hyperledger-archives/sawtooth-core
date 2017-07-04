@@ -252,7 +252,7 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest_api
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-settings-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_supplychain_python
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-supplychain-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
