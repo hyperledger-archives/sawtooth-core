@@ -164,7 +164,7 @@ In a new terminal, run the following to start the transaction processor:
 
 ```
    % cd /project/sawtooth-core
-   % ./bin/tp_intkey_jvm_sc
+   % ./bin/jvm-sc-tp
 ```
 
 Finally, it is time to load the transactions. In a new terminal
