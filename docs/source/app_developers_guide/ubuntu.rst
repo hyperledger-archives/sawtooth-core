@@ -229,7 +229,7 @@ The following lists the processors that are included:
   - An intkey transaction processor written in JavaScript
   - Requires node.js
 
-* tp_intkey_jvm_sc
+* jvm-sc-tp
 
   - An intkey transaction processor implemented as a smart contract.
   - The bytecode to run a transaction is stored in state and the blockchain.
