@@ -17,15 +17,15 @@ version: "2.1"
 
 services:
 
-  tp_supplychain_python:
-    image: sawtooth-tp_supplychain_python:$ISOLATION_ID
+  supplychain-tp:
+    image: sawtooth-supplychain-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    command: tp_supplychain_python tcp://validator:4004 -vvv
+    command: supplychain-tp tcp://validator:4004 -vvv
     stop_signal: SIGKILL
 
   settings-tp:
@@ -89,7 +89,7 @@ services:
     stop_signal: SIGKILL
     depends_on:
       - restapi
-      - tp_supplychain_python
+      - supplychain-tp
     environment:
       RESTAPI_URL: 'restapi:8080'
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
