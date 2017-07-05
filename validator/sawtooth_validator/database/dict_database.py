@@ -31,6 +31,18 @@ class DictDatabase(database.Database):
     def get(self, key):
         return self._data.get(key)
 
+    def get_batch(self, keys):
+        out = []
+        for k in keys:
+            out.append((k, self._data.get(k)))
+        return out
+
+    def get_indirect(self, key):
+        key_2 = self._data.get(key)
+        if key_2 is not None:
+            return self._data.get(key_2)
+        return None
+
     def __contains__(self, item):
         return item in self._data
 
@@ -59,3 +71,10 @@ class DictDatabase(database.Database):
 
     def sync(self):
         pass
+
+    def __str__(self):
+        out = []
+        for key in self._data.keys():
+            value = self._data[key]
+            out.append('{}: {}'.format(key, str(value)))
+        return ','.join(out)

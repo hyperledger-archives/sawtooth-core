@@ -73,6 +73,7 @@ class LMDBNoLockDatabase(database.Database):
             packed = txn.get(key.encode())
             if packed is not None:
                 return cbor.loads(packed)
+        return None
 
     def get_batch(self, keys):
         with self._lmdb.begin() as txn:
@@ -82,6 +83,21 @@ class LMDBNoLockDatabase(database.Database):
                 if packed is not None:
                     result.append((key, cbor.loads(packed)))
         return result
+
+    def get_indirect(self, key):
+        """Retrieves a value associated with a persisted key, whose location in
+        the database is specified by the given key.
+
+        Args: key (str): The key of the persisted key in the database
+        """
+        with self._lmdb.begin() as txn:
+            packed = txn.get(key.encode())
+            if packed is not None:
+                key_2 = cbor.loads(packed)
+                packed = txn.get(key_2.encode())
+                if packed is not None:
+                    return cbor.loads(packed)
+        return None
 
     def set(self, key, value):
         """Sets a value associated with a key in the database
