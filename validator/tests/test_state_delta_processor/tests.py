@@ -33,22 +33,22 @@ from sawtooth_validator.state.state_delta_processor import \
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaUnsubscriberHandler
 from sawtooth_validator.state.state_delta_processor import \
-    GetStateDeltaEventsHandler
+    StateDeltaGetEventsHandler
 
 from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
 from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaEvent
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    RegisterStateDeltaSubscriberRequest
+    StateDeltaSubscribeRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    RegisterStateDeltaSubscriberResponse
+    StateDeltaSubscribeResponse
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    UnregisterStateDeltaSubscriberRequest
+    StateDeltaUnsubscribeRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    UnregisterStateDeltaSubscriberResponse
+    StateDeltaUnsubscribeResponse
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    GetStateDeltaEventsRequest
+    StateDeltaGetEventsRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    GetStateDeltaEventsResponse
+    StateDeltaGetEventsResponse
 from sawtooth_validator.protobuf import validator_pb2
 
 from test_journal.block_tree_manager import BlockTreeManager
@@ -69,7 +69,7 @@ class StateDeltaSubscriberValidationHandlerTest(unittest.TestCase):
 
         handler = StateDeltaSubscriberValidationHandler(delta_processor)
 
-        request = RegisterStateDeltaSubscriberRequest(
+        request = StateDeltaSubscribeRequest(
             last_known_block_ids=[block_tree_manager.chain_head.identifier],
             address_prefixes=['000000']).SerializeToString()
 
@@ -77,7 +77,7 @@ class StateDeltaSubscriberValidationHandlerTest(unittest.TestCase):
 
         self.assertEqual(HandlerStatus.RETURN_AND_PASS, response.status)
 
-        self.assertEqual(RegisterStateDeltaSubscriberResponse.OK,
+        self.assertEqual(StateDeltaSubscribeResponse.OK,
                          response.message_out.status)
 
     def test_register_with_uknown_block_ids(self):
@@ -94,7 +94,7 @@ class StateDeltaSubscriberValidationHandlerTest(unittest.TestCase):
 
         handler = StateDeltaSubscriberValidationHandler(delta_processor)
 
-        request = RegisterStateDeltaSubscriberRequest(
+        request = StateDeltaSubscribeRequest(
             last_known_block_ids=['a'],
             address_prefixes=['000000']).SerializeToString()
 
@@ -103,7 +103,7 @@ class StateDeltaSubscriberValidationHandlerTest(unittest.TestCase):
         self.assertEqual(HandlerStatus.RETURN, response.status)
 
         self.assertEqual(
-            RegisterStateDeltaSubscriberResponse.UNKNOWN_BLOCK,
+            StateDeltaSubscribeResponse.UNKNOWN_BLOCK,
             response.message_out.status)
 
 
@@ -120,7 +120,7 @@ class StateDeltaAddSubscriberHandlerTest(unittest.TestCase):
 
         handler = StateDeltaAddSubscriberHandler(delta_processor)
 
-        request = RegisterStateDeltaSubscriberRequest(
+        request = StateDeltaSubscribeRequest(
             last_known_block_ids=[block_tree_manager.chain_head.identifier],
             address_prefixes=['0123456']).SerializeToString()
 
@@ -144,7 +144,7 @@ class StateDeltaAddSubscriberHandlerTest(unittest.TestCase):
 
         handler = StateDeltaAddSubscriberHandler(delta_processor)
 
-        request = RegisterStateDeltaSubscriberRequest(
+        request = StateDeltaSubscribeRequest(
             last_known_block_ids=['a'],
             address_prefixes=['000000']).SerializeToString()
 
@@ -163,7 +163,7 @@ class StateDeltaUnregisterSubscriberHandlerTest(unittest.TestCase):
         mock_delta_processor = Mock()
         handler = StateDeltaUnsubscriberHandler(mock_delta_processor)
 
-        request = UnregisterStateDeltaSubscriberRequest().SerializeToString()
+        request = StateDeltaUnsubscribeRequest().SerializeToString()
 
         response = handler.handle('test_conn_id', request)
 
@@ -171,13 +171,13 @@ class StateDeltaUnregisterSubscriberHandlerTest(unittest.TestCase):
             'test_conn_id')
 
         self.assertEqual(HandlerStatus.RETURN, response.status)
-        self.assertEqual(UnregisterStateDeltaSubscriberResponse.OK,
+        self.assertEqual(StateDeltaUnsubscribeResponse.OK,
                          response.message_out.status)
 
 
-class GetStateDeltaEventsHandlerTest(unittest.TestCase):
+class StateDeltaGetEventsHandlerTest(unittest.TestCase):
     def test_get_events(self):
-        """Tests that the GetStateDeltaEventsHandler will return a response
+        """Tests that the StateDeltaGetEventsHandler will return a response
         with the state event for the block requested.
         """
         block_tree_manager = BlockTreeManager()
@@ -193,16 +193,16 @@ class GetStateDeltaEventsHandlerTest(unittest.TestCase):
                          value='some other state value'.encode(),
                          type=StateChange.SET)])
 
-        handler = GetStateDeltaEventsHandler(block_tree_manager.block_store,
+        handler = StateDeltaGetEventsHandler(block_tree_manager.block_store,
                                              delta_store)
 
-        request = GetStateDeltaEventsRequest(
+        request = StateDeltaGetEventsRequest(
             block_ids=[block_tree_manager.chain_head.identifier],
             address_prefixes=['deadbeef']).SerializeToString()
 
         response = handler.handle('test_conn_id', request)
         self.assertEqual(HandlerStatus.RETURN, response.status)
-        self.assertEqual(GetStateDeltaEventsResponse.OK,
+        self.assertEqual(StateDeltaGetEventsResponse.OK,
                          response.message_out.status)
 
         chain_head = block_tree_manager.chain_head
@@ -218,7 +218,7 @@ class GetStateDeltaEventsHandlerTest(unittest.TestCase):
             [event for event in response.message_out.events])
 
     def test_get_events_ignore_bad_blocks(self):
-        """Tests that the GetStateDeltaEventsHandler will return a response
+        """Tests that the StateDeltaGetEventsHandler will return a response
         containing only the events for blocks that exists.
         """
         block_tree_manager = BlockTreeManager()
@@ -234,17 +234,17 @@ class GetStateDeltaEventsHandlerTest(unittest.TestCase):
                          value='some other state value'.encode(),
                          type=StateChange.SET)])
 
-        handler = GetStateDeltaEventsHandler(block_tree_manager.block_store,
+        handler = StateDeltaGetEventsHandler(block_tree_manager.block_store,
                                              delta_store)
 
-        request = GetStateDeltaEventsRequest(
+        request = StateDeltaGetEventsRequest(
             block_ids=[block_tree_manager.chain_head.identifier,
                        'somebadblockid'],
             address_prefixes=['deadbeef']).SerializeToString()
 
         response = handler.handle('test_conn_id', request)
         self.assertEqual(HandlerStatus.RETURN, response.status)
-        self.assertEqual(GetStateDeltaEventsResponse.OK,
+        self.assertEqual(StateDeltaGetEventsResponse.OK,
                          response.message_out.status)
 
         chain_head = block_tree_manager.chain_head
@@ -260,7 +260,7 @@ class GetStateDeltaEventsHandlerTest(unittest.TestCase):
             [event for event in response.message_out.events])
 
     def test_get_events_no_valid_block_ids(self):
-        """Tests that the GetStateDeltaEventsHandler will return a response
+        """Tests that the StateDeltaGetEventsHandler will return a response
         with NO_VALID_BLOCKS_SPECIFIED error when no valid blocks are
         specified in the request.
         """
@@ -268,17 +268,17 @@ class GetStateDeltaEventsHandlerTest(unittest.TestCase):
 
         delta_store = StateDeltaStore(DictDatabase())
 
-        handler = GetStateDeltaEventsHandler(block_tree_manager.block_store,
+        handler = StateDeltaGetEventsHandler(block_tree_manager.block_store,
                                              delta_store)
 
-        request = GetStateDeltaEventsRequest(
+        request = StateDeltaGetEventsRequest(
             block_ids=['somebadblockid'],
             address_prefixes=['deadbeef']).SerializeToString()
 
         response = handler.handle('test_conn_id', request)
 
         self.assertEqual(HandlerStatus.RETURN, response.status)
-        self.assertEqual(GetStateDeltaEventsResponse.NO_VALID_BLOCKS_SPECIFIED,
+        self.assertEqual(StateDeltaGetEventsResponse.NO_VALID_BLOCKS_SPECIFIED,
                          response.message_out.status)
 
 

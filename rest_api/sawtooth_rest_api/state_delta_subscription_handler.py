@@ -197,16 +197,16 @@ class StateDeltaSubscriberHandler:
 
             resp = await self._connection.send(
                 Message.STATE_DELTA_SUBSCRIBE_REQUEST,
-                state_delta_pb2.RegisterStateDeltaSubscriberRequest(
+                state_delta_pb2.StateDeltaSubscribeRequest(
                     last_known_block_ids=[last_known_block_id]
                 ).SerializeToString())
 
             subscription = state_delta_pb2.\
-                RegisterStateDeltaSubscriberResponse()
+                StateDeltaSubscribeResponse()
             subscription.ParseFromString(resp.content)
 
             if subscription.status != \
-                    state_delta_pb2.RegisterStateDeltaSubscriberResponse.OK:
+                    state_delta_pb2.StateDeltaSubscribeResponse.OK:
                 LOGGER.error('unable to subscribe!')
 
             self._listening = True
@@ -222,7 +222,7 @@ class StateDeltaSubscriberHandler:
             self._delta_task = None
 
             LOGGER.info('Unsubscribing for state delta events')
-            req = state_delta_pb2.UnregisterStateDeltaSubscriberRequest()
+            req = state_delta_pb2.StateDeltaUnsubscribeRequest()
             await self._connection.send(
                 Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
                 req.SerializeToString(),
@@ -250,15 +250,15 @@ class StateDeltaSubscriberHandler:
     async def _get_block_deltas(self, block_id):
         resp = await self._connection.send(
             Message.STATE_DELTA_GET_EVENTS_REQUEST,
-            state_delta_pb2.GetStateDeltaEventsRequest(
+            state_delta_pb2.StateDeltaGetEventsRequest(
                 block_ids=[block_id]).SerializeToString(),
             timeout=DEFAULT_TIMEOUT)
 
-        state_deltas_resp = state_delta_pb2.GetStateDeltaEventsResponse()
+        state_deltas_resp = state_delta_pb2.StateDeltaGetEventsResponse()
         state_deltas_resp.ParseFromString(resp.content)
 
         if state_deltas_resp.status == \
-                state_delta_pb2.GetStateDeltaEventsResponse.OK:
+                state_delta_pb2.StateDeltaGetEventsResponse.OK:
             return state_deltas_resp.events[0]
 
         return None
