@@ -17,15 +17,15 @@ version: "2.1"
 
 services:
 
-  tp_burrow_evm:
-    image: sawtooth-tp_burrow_evm:$ISOLATION_ID
+  burrow-evm-tp:
+    image: sawtooth-burrow-evm-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    command: tp_burrow_evm -vv tcp://validator:4004
+    command: burrow-evm-tp -vv tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
