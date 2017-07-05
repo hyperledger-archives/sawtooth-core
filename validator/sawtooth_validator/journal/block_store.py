@@ -197,7 +197,6 @@ class BlockStore(MutableMapping):
         return BlockWrapper(
             status=BlockStatus.Valid,
             block=block)
-        return value
 
     def get_block_by_transaction_id(self, txn_id):
         try:

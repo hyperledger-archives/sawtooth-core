@@ -17,7 +17,6 @@ import logging
 import unittest
 
 from sawtooth_validator.database.dict_database import DictDatabase
-from sawtooth_validator.exceptions import ChainHeadUpdatedError
 from sawtooth_validator.exceptions import PossibleForkDetectedError
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
