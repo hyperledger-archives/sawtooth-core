@@ -32,17 +32,23 @@ from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 LOGGER = logging.getLogger(__name__)
 
 
-class InvalidBatch(Exception):
-    """ Raised when a batch fails validation as a signal to reject the
-    block.
-    """
-    pass
-
-
 class BlockValidationAborted(Exception):
     """
     Indication that the validation of this fork has terminated for an
     expected(handled) case and that the processing should exit.
+    """
+    pass
+
+
+class ChainHeadUpdated(Exception):
+    """ Raised when a chain head changed event is detected and we need to abort
+    processing and restart processing with the new chain head.
+    """
+
+
+class InvalidBatch(Exception):
+    """ Raised when a batch fails validation as a signal to reject the
+    block.
     """
     pass
 
@@ -208,10 +214,14 @@ class BlockValidator(object):
                 else:
                     return False
             if blkw.state_root_hash != state_hash:
+                LOGGER.debug("Block(%s) rejected due to state root hash "
+                             "mismatch: %s != %s", blkw, blkw.state_root_hash,
+                             state_hash)
                 return False
         return True
 
     def validate_block(self, blkw):
+        # pylint: disable=broad-except
         try:
             if blkw.status == BlockStatus.Valid:
                 return True
@@ -233,10 +243,17 @@ class BlockValidator(object):
                 if valid:
                     valid = consensus.verify_block(blkw)
 
-                blkw.status = BlockStatus.Valid if \
+                block_store = self._block_cache.block_store
+                if self._chain_head is not None and\
+                        self._chain_head.identifier !=\
+                        block_store.chain_head.identifier:
+                    raise ChainHeadUpdated()
+
+                blkw.status = BlockStatus.Valid if\
                     valid else BlockStatus.Invalid
                 return valid
-        # pylint: disable=broad-except
+        except ChainHeadUpdated:
+            raise
         except Exception as exc:
             LOGGER.exception(exc)
             return False
@@ -400,8 +417,11 @@ class BlockValidator(object):
             LOGGER.info("Finished block validation of: %s",
                         self._new_block)
         except BlockValidationAborted:
+            self._done_cb(False, self._result)
             return
-
+        except ChainHeadUpdated:
+            self._done_cb(False, self._result)
+            return
         except Exception as exc:  # pylint: disable=broad-except
             LOGGER.error("Block validation failed with unexpected error: %s",
                          self._new_block)
