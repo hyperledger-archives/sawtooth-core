@@ -41,7 +41,7 @@ class TestTwoFamilies(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest_api:8080'])
+        wait_for_rest_apis(['rest-api:8080'])
 
     def test_two_families(self):
         '''
@@ -71,7 +71,7 @@ class TestTwoFamilies(unittest.TestCase):
         self.intkey_verifier = IntkeyTestVerifier()
         self.xo_verifier = XoTestVerifier()
 
-        _send_xo_cmd('xo init --url rest_api:8080')
+        _send_xo_cmd('xo init --url rest-api:8080')
 
         self.verify_empty_state()
 
@@ -183,7 +183,7 @@ def _get_state():
     return response['data']
 
 def _query_rest_api(suffix='', data=None, headers={}):
-    url = 'http://rest_api:8080' + suffix
+    url = 'http://rest-api:8080' + suffix
     request = urllib.request.Request(url, data, headers)
     response = urllib.request.urlopen(request).read().decode('utf-8')
     return json.loads(response)

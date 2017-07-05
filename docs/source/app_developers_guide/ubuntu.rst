@@ -165,7 +165,7 @@ command to start the REST API and connect to a local validator:
 
 .. code-block:: console
 
-  $ sudo -u sawtooth rest_api -v
+  $ sudo -u sawtooth sawtooth-rest-api -v
 
 Running a Transaction Processor
 ===============================
@@ -290,7 +290,7 @@ already been started.
 
 .. code-block:: console
 
-  $ sudo -u sawtooth rest_api -v
+  $ sudo -u sawtooth sawtooth-rest-api -v
 
 
 Step Three: Create and Submit Batch
@@ -379,7 +379,7 @@ already been started.
 
 .. code-block:: console
 
-  $ sudo su - sawtooth rest_api -v
+  $ sudo su - sawtooth sawtooth-rest-api -v
 
 
 Viewing List of Blocks

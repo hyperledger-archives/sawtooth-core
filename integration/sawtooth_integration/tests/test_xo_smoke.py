@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 
-REST_API = 'rest_api:8080'
+REST_API = 'rest-api:8080'
 
 class TestXoSmoke(unittest.TestCase):
 

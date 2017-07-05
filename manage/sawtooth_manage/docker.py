@@ -180,13 +180,13 @@ class DockerNodeController(NodeController):
         # start the rest_api for the first node only
         if node_num == '000':
             compose_dict['services']['rest_api'] = {
-                'image': 'sawtooth-rest_api',
+                'image': 'sawtooth-rest-api',
                 'expose': ['4004', '8080'],
                 'links': ['validator'],
                 'volumes': ['%s:/project/sawtooth-core' % SAWTOOTH_CORE],
                 'container_name': '-'.join([self._prefix, 'rest_api',
                                             node_num]),
-                'command': 'rest_api --connect tcp://{}:4004'.
+                'command': 'sawtooth-rest-api --connect tcp://{}:4004'.
                 format(node_name),
                 'ports': ['8080:8080']
             }

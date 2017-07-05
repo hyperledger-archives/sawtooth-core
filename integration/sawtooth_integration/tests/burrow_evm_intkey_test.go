@@ -34,7 +34,7 @@ const (
 )
 
 func TestIntkey(t *testing.T) {
-  client := client.New("http://rest_api:8080")
+  client := client.New("http://rest-api:8080")
   priv := sdk.WifToPriv(PRIV)
   pub := sdk.GenPubKey(priv)
   init := sdk.MustDecode(INIT)

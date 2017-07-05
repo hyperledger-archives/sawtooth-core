@@ -249,7 +249,7 @@ then
 
     build_python() {
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest_api
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest-api
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-settings-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-supplychain-tp
@@ -326,8 +326,8 @@ then
         cp $top_dir/docker/sawtooth-int-* $build_dir/
         ls $build_dir
 
-        docker_build $build_dir/sawtooth-int-rest_api \
-            $build_dir/ sawtooth-rest_api
+        docker_build $build_dir/sawtooth-int-rest-api \
+            $build_dir/ sawtooth-rest-api
 
         docker_build $build_dir/sawtooth-int-settings-tp \
             $build_dir/ sawtooth-settings-tp
