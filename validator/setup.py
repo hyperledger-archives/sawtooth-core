@@ -64,6 +64,6 @@ setup(
     data_files=data_files,
     entry_points={
         'console_scripts': [
-            'validator = sawtooth_validator.server.cli:main'
+            'sawtooth-validator = sawtooth_validator.server.cli:main'
         ]
     })

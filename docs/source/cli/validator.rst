@@ -22,6 +22,6 @@ Validator CLI
 validator
 =========
 
-.. literalinclude:: output/validator_usage.out
+.. literalinclude:: output/sawtooth-validator_usage.out
    :language: console
    :linenos:
