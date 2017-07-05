@@ -14,39 +14,30 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the Hyperledger Sawtooth REST API installed from local
-#   debs.
+#   Builds an image with the Sawtooth Lake Rest API package installed from
+#   the Sawtooth Lake Package Repository.
 #
 # Build:
-#   This image should be built using `build_all installed`.
+#   $ cd sawtooth-core/docker
+#   $ docker build . -f sawtooth-rest-api -t sawtooth-rest-api
 #
 # Run:
-#   $ docker run sawtooth-rest_api
+#   $ cd sawtooth-core
+#   $ docker run sawtooth-rest-api
 
 FROM ubuntu:xenial
 
-LABEL "install-type"="local-debs"
+LABEL "install-type"="repo"
 
-RUN apt-get update \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc/apt/sources.list \
+ && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
+ && apt-get update \
  && apt-get install -y -q \
-    dpkg-dev \
+    python3-sawtooth-rest-api \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/* \
- && mkdir /debs
-
-COPY python3-sawtooth-*.deb /debs/
-
-RUN cd /debs \
- && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz \
- && echo "deb file:/debs ./" >> /etc/apt/sources.list \
- && echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
- && apt-get update
-
-RUN apt-get install -y -q --allow-unauthenticated \
-    python3-sawtooth-rest-api
+ && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 4004/tcp
 EXPOSE 8080
 
-CMD ["rest_api"]
+CMD ["sawtooth-rest-api"]

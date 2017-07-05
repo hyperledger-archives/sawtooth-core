@@ -22,6 +22,6 @@ REST API CLI
 rest_api
 ========
 
-.. literalinclude:: output/rest_api_usage.out
+.. literalinclude:: output/sawtooth-rest-api_usage.out
    :language: console
    :linenos:

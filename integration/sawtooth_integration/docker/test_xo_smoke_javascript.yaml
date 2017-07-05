@@ -55,8 +55,8 @@ services:
     \""
     stop_signal: SIGKILL
 
-  rest_api:
-    image: sawtooth-rest_api:$ISOLATION_ID
+  rest-api:
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -64,7 +64,7 @@ services:
       - 8080
     depends_on:
      - validator
-    command: rest_api -v --connect tcp://validator:4004 --bind rest_api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
     stop_signal: SIGKILL
 
   test-xo-smoke-javascript:
@@ -75,7 +75,7 @@ services:
       - 8080
     depends_on:
       - validator
-      - rest_api
+      - rest-api
     # Wait for rest_api
     command: nose2-3
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg

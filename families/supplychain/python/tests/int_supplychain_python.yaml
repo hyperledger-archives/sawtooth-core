@@ -64,7 +64,7 @@ services:
         /project/sawtooth-core/signing"
 
   restapi:
-    image: sawtooth-rest_api:$ISOLATION_ID
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -74,7 +74,7 @@ services:
       - "8080:8080"
     depends_on:
       - validator
-    entrypoint: rest_api --connect tcp://validator:4004 --bind restapi:8080 -vvv
+    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind restapi:8080 -vvv
 
   int-supplychain-python:
     image: sawtooth-dev-python:$ISOLATION_ID

@@ -28,7 +28,7 @@ manually, run the following command:
       -u sawtooth-validator \
       -u sawtooth-settings-tp \
       -u sawtooth-poet-validator-registry-tp \
-      -u sawtooth-rest_api
+      -u sawtooth-rest-api
 
 Validator Start-up Process
 ==========================

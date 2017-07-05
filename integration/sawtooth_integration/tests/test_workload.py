@@ -36,7 +36,7 @@ class TestWorkload(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        url = 'rest_api:8080'
+        url = 'rest-api:8080'
         wait_for_rest_apis([url])
         http = 'http://' + url
         cls.client = RestClient(http)

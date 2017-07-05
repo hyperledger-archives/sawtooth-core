@@ -34,7 +34,7 @@ The docker subdirectory is structured as follows:
   sawtooth-dev-javascript
   sawtooth-dev-python
   ...
-  sawtooth-int-rest_api
+  sawtooth-int-rest-api
   sawtooth-int-settings-tp
   ...
 

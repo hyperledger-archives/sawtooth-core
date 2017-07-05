@@ -24,11 +24,11 @@ from setuptools import setup, find_packages
 data_files = []
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-rest_api']))
+    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-rest-api']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
-                       ['packaging/systemd/sawtooth-rest_api.service']))
+                       ['packaging/systemd/sawtooth-rest-api.service']))
 
 setup(name='sawtooth-rest-api',
       version=subprocess.check_output(
@@ -47,6 +47,6 @@ setup(name='sawtooth-rest-api',
       data_files=data_files,
       entry_points={
           'console_scripts': [
-              'rest_api = sawtooth_rest_api.rest_api:main'
+              'sawtooth-rest-api = sawtooth_rest_api.rest_api:main'
           ]
       })

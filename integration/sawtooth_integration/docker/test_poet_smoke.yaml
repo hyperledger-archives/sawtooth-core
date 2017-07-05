@@ -99,33 +99,33 @@ services:
     stop_signal: SIGKILL
 
   rest-api-0:
-    image: sawtooth-rest_api:$ISOLATION_ID
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
       - 8080
-    command: rest_api -v --connect tcp://validator-0:4004 --bind rest-api-0:8080
+    command: sawtooth-rest-api -v --connect tcp://validator-0:4004 --bind rest-api-0:8080
     stop_signal: SIGKILL
 
   rest-api-1:
-    image: sawtooth-rest_api:$ISOLATION_ID
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
       - 8080
-    command: rest_api -v --connect tcp://validator-1:4004 --bind rest-api-1:8080
+    command: sawtooth-rest-api -v --connect tcp://validator-1:4004 --bind rest-api-1:8080
     stop_signal: SIGKILL
 
   rest-api-2:
-    image: sawtooth-rest_api:$ISOLATION_ID
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
       - 8080
-    command: rest_api -v --connect tcp://validator-2:4004 --bind rest-api-2:8080
+    command: sawtooth-rest-api -v --connect tcp://validator-2:4004 --bind rest-api-2:8080
     stop_signal: SIGKILL
 
   intkey-tp-0:

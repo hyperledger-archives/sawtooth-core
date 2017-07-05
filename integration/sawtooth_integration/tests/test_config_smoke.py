@@ -38,7 +38,7 @@ class TestConfigSmoke(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest_api:8080'])
+        wait_for_rest_apis(['rest-api:8080'])
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
@@ -86,16 +86,16 @@ class TestConfigSmoke(unittest.TestCase):
         # Submit transaction, then list it using subprocess
         cmds = [
             ['sawtooth', 'config', 'proposal', 'create', '-k', self._wif_file,
-             '--url', 'http://rest_api:8080', 'x=1', 'y=1'],
+             '--url', 'http://rest-api:8080', 'x=1', 'y=1'],
             ['sawtooth', 'config', 'settings', 'list', '--url',
-             'http://rest_api:8080']
+             'http://rest-api:8080']
         ]
 
         for cmd in cmds:
             self._run(cmd)
 
         command = 'sawtooth'
-        args = ['config', 'settings', 'list', '--url', 'http://rest_api:8080']
+        args = ['config', 'settings', 'list', '--url', 'http://rest-api:8080']
         settings = self._read_from_stdout(command, args).split('\n')
 
         _expected_output = [

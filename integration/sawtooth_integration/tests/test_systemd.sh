@@ -5,7 +5,7 @@
 
 services="
 validator
-rest_api
+rest-api
 intkey-tp-python
 settings-tp
 poet-validator-registry-tp

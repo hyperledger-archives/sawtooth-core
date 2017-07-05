@@ -5,8 +5,8 @@ After=network.target
 [Service]
 User=sawtooth
 Group=sawtooth
-EnvironmentFile=-/etc/default/sawtooth-rest_api
-ExecStart=/usr/bin/rest_api $SAWTOOTH_REST_API_ARGS
+EnvironmentFile=-/etc/default/sawtooth-rest-api
+ExecStart=/usr/bin/sawtooth-rest-api $SAWTOOTH_REST_API_ARGS
 
 [Install]
 WantedBy=multi-user.target
