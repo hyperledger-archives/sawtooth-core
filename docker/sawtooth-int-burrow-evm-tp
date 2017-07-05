@@ -20,7 +20,7 @@
 #   This image should be built using `build_all installed`.
 #
 # Run:
-#   $ docker run sawtooth-tp_burrow_evm
+#   $ docker run sawtooth-burrow-evm-tp
 
 FROM ubuntu:xenial
 
@@ -32,8 +32,8 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-COPY tp_burrow_evm /usr/bin/tp_burrow_evm
+COPY burrow-evm-tp /usr/bin/burrow-evm-tp
 
 EXPOSE 40000/tcp
 
-CMD ["tp_burrow_evm", "tcp://validator:40000"]
+CMD ["burrow-evm-tp", "tcp://validator:40000"]

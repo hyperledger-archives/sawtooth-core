@@ -22,11 +22,11 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 echo -e "\033[0;32m--- Running protogen go ---\n\033[0m"
 $top_dir/bin/protogen go
 
-echo -e "\033[0;32m--- Building tp_burrow_evm ---\n\033[0m"
+echo -e "\033[0;32m--- Building burrow-evm-tp ---\n\033[0m"
 export GOPATH=/go:$top_dir/sdk/go:$top_dir/families/burrow_evm
 cd $top_dir/families/burrow_evm/src/sawtooth_burrow_evm/processor
 mkdir -p $top_dir/families/burrow_evm/bin
-go build -o $top_dir/families/burrow_evm/bin/tp_burrow_evm
+go build -o $top_dir/families/burrow_evm/bin/burrow-evm-tp
 
 echo -e "\033[0;32m--- Building seth ---\n\033[0m"
 export GOPATH=/go:$top_dir/sdk/go:$top_dir/families/burrow_evm

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/families/burrow_evm/bin/tp_burrow_evm
+bin=$top_dir/families/burrow_evm/bin/burrow-evm-tp
 
 if [ -e $bin ]
 then
