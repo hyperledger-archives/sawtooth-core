@@ -41,7 +41,7 @@ services:
         sawtooth admin keygen && \
         sawtooth config genesis -k test.priv -o setting-genesis.batch && \
         sawtooth admin genesis setting-genesis.batch  && \
-        validator -v --endpoint tcp://validator:8800 \
+        sawtooth-validator -v --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:40000 \
             --bind network:tcp://eth0:8800 \
     \""

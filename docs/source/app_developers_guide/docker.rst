@@ -531,7 +531,7 @@ To see which components are running, run this command from the container:
 
   $ ps --pid 1 fw
     PID TTY      STAT   TIME COMMAND
-    1 ?        Ss     0:00 bash -c sawtooth admin keygen && sawtooth keygen my_key && sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && sawtooth admin genesis config-genesis.batch && validator -vv --endpoint
+    1 ?        Ss     0:00 bash -c sawtooth admin keygen && sawtooth keygen my_key && sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && sawtooth admin genesis config-genesis.batch && sawtooth-validator -vv --endpoint
 
 
 

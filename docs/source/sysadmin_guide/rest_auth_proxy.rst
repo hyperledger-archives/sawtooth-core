@@ -225,7 +225,7 @@ Start a validator, and the REST API.
 
    $ sawtooth admin keygen
    $ sawtooth admin genesis
-   $ validator -v --endpoint localhost:8800
+   $ sawtooth-validator -v --endpoint localhost:8800
    $ rest_api -v
 
 

@@ -74,5 +74,5 @@ save_usage xo show
 save_usage xo take
 save_usage xo-tp-python
 
-save_usage validator
+save_usage sawtooth-validator
 save_usage rest_api

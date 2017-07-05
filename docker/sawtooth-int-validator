@@ -50,4 +50,4 @@ RUN apt-get install -y -q --allow-unauthenticated \
 
 EXPOSE 4004/tcp
 
-CMD ["bash", "-c", "\"sawtooth admin keygen && validator\""]
+CMD ["bash", "-c", "\"sawtooth admin keygen && sawtooth-validator\""]

@@ -123,7 +123,7 @@ following commands from a Linux terminal:
 .. code-block:: console
 
    $ sudo sawtooth admin keygen
-   $ sudo -u sawtooth validator -vv
+   $ sudo -u sawtooth sawtooth-validator -vv
 
 This will start the validator. Logging output will be printed to the
 terminal window. The validator outputs something similar to this to
@@ -152,7 +152,7 @@ the terminal window:
   `--bind` flag can be used. The following command is equivalent to the default
   behavior::
 
-    sudo -u sawtooth validator -vv --bind network:tcp://127.0.0.1:8800 --bind component:tcp://127.0.0.1:4004
+    sudo -u sawtooth sawtooth-validator -vv --bind network:tcp://127.0.0.1:8800 --bind component:tcp://127.0.0.1:4004
 
   See :doc:`/cli/validator` for more information on the validator flags.
 
