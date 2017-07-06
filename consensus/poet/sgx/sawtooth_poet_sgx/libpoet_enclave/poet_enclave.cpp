@@ -62,9 +62,9 @@ static const std::string    NULL_IDENTIFIER = "0000000000000000";
 static const uint32_t       WAIT_CERTIFICATE_NONCE_LENGTH = 32;
 
 // Timers, once expired, should not be usuable indefinitely.
-// This constant allows a 3-second window after expiration for
+// This constant allows a 30-second window after expiration for
 // which a timer may be used to create a wait certificate.
-static const double         TIMER_TIMEOUT_PERIOD = 3.0;
+static const double         TIMER_TIMEOUT_PERIOD = 30.0;
 #if defined(SGX_SIMULATOR)
     static const bool IS_SGX_SIMULATOR = true;
 #else
