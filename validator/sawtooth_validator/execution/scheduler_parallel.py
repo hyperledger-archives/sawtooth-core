@@ -280,6 +280,10 @@ class ParallelScheduler(Scheduler):
         # must all return scheduled transactions in the same order.
         self._scheduled = []
 
+        # Transactions that must be replayed but the prior result hasn't
+        # been returned yet.
+        self._outstanding = []
+
         # A dict of transaction id to TxnInformation objects, containing all
         # transactions present in self._scheduled.
         self._scheduled_txn_info = {}
@@ -352,10 +356,10 @@ class ParallelScheduler(Scheduler):
                 predecessors = self._find_input_dependencies(header.inputs)
                 predecessors.extend(
                     self._find_output_dependencies(header.outputs))
-                predecessors.extend(header.dependencies)
 
+                txn_id = txn.header_signature
                 # Update our internal state with the computed predecessors.
-                self._txn_predecessors[txn.header_signature] = predecessors
+                self._txn_predecessors[txn_id] = list(set(predecessors))
 
                 # Update the predecessor tree.
                 #
@@ -373,10 +377,10 @@ class ParallelScheduler(Scheduler):
                 # automatically discarded by the set_writer() call.
                 for address in header.inputs:
                     self._predecessor_tree.add_reader(
-                        address, txn.header_signature)
+                        address, txn_id)
                 for address in header.outputs:
                     self._predecessor_tree.set_writer(
-                        address, txn.header_signature)
+                        address, txn_id)
 
             self._condition.notify_all()
 
@@ -488,19 +492,89 @@ class ParallelScheduler(Scheduler):
                                           clean_up=True)
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
 
+    def _is_predecessor_of_possible_successor(self,
+                                              txn_id,
+                                              possible_successor):
+        return txn_id in self._txn_predecessors[possible_successor]
+
+    def _txn_has_result(self, txn_id):
+        return txn_id in self._txn_results
+
+    def _is_in_same_batch(self, txn_id_1, txn_id_2):
+        return self._batches_by_txn_id[txn_id_1] == \
+               self._batches_by_txn_id[txn_id_2]
+
+    def _is_txn_to_replay(self, txn_id, possible_successor, already_seen):
+        """Decide if possible_successor should be replayed.
+
+        Args:
+            txn_id (str): Id of txn in failed batch.
+            possible_successor (str): Id of txn to possibly replay.
+            already_seen (list): A list of possible_successors that have
+                been replayed.
+
+        Returns:
+            (bool): If the possible_successor should be replayed.
+        """
+
+        is_successor = self._is_predecessor_of_possible_successor(
+            txn_id,
+            possible_successor)
+        in_different_batch = not self._is_in_same_batch(txn_id,
+                                                        possible_successor)
+        has_not_been_seen = possible_successor not in already_seen
+
+        return is_successor and in_different_batch and has_not_been_seen
+
+    def _remove_subsequent_result_because_of_batch_failure(self, sig):
+        """Remove transactions from scheduled and txn_results for
+        successors of txns in a failed batch. These transactions will now,
+        or in the future be rescheduled in next_transaction; giving a
+        replay ability.
+
+        Args:
+            sig (str): Transaction header signature
+
+        """
+
+        batch = self._batches_by_txn_id[sig]
+        seen = []
+        for txn in batch.transactions:
+            txn_id = txn.header_signature
+            for poss_successor in self._scheduled.copy():
+                if self._is_txn_to_replay(txn_id, poss_successor, seen):
+                    if self._txn_has_result(poss_successor):
+                        del self._txn_results[poss_successor]
+                        self._scheduled.remove(poss_successor)
+                    else:
+                        self._outstanding.append(poss_successor)
+                    seen.append(poss_successor)
+
+    def _reschedule_if_outstanding(self, txn_signature):
+        if txn_signature in self._outstanding:
+            self._scheduled.remove(txn_signature)
+            self._outstanding.remove(txn_signature)
+            return True
+        return False
+
     def set_transaction_execution_result(
             self, txn_signature, is_valid, context_id):
         with self._condition:
             if txn_signature not in self._scheduled:
                 raise SchedulerError("transaction not scheduled: {}".format(
                     txn_signature))
+            if not is_valid:
+                self._remove_subsequent_result_because_of_batch_failure(
+                    txn_signature)
+            is_rescheduled = self._reschedule_if_outstanding(txn_signature)
 
-            txn_result = TransactionExecutionResult(
-                is_valid=is_valid,
-                context_id=context_id if is_valid else None,
-                state_hash=self._first_state_hash if is_valid else None)
+            if not is_rescheduled:
+                txn_result = TransactionExecutionResult(
+                    is_valid=is_valid,
+                    context_id=context_id if is_valid else None,
+                    state_hash=self._first_state_hash if is_valid else None)
 
-            self._txn_results[txn_signature] = txn_result
+                self._txn_results[txn_signature] = txn_result
 
             # mark all transactions which depend explicitly upon this one as
             # invalid as well
@@ -523,6 +597,9 @@ class ParallelScheduler(Scheduler):
                 return True
 
         return False
+
+    def _is_outstanding(self, txn):
+        return txn.header_signature in self._outstanding
 
     def _txn_result_is_invalid(self, sig):
         return sig in self._txn_results and \
@@ -586,7 +663,8 @@ class ParallelScheduler(Scheduler):
 
             next_txn = None
             for txn in self._unscheduled_transactions():
-                if not self._has_predecessors(txn):
+                if not self._has_predecessors(txn) and \
+                        not self._is_outstanding(txn):
                     next_txn = txn
                     break
 
