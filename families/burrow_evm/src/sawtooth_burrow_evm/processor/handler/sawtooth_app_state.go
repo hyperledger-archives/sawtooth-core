@@ -19,6 +19,7 @@ package handler
 
 import (
 	. "burrow/evm"
+	ptypes "burrow/permission/types"
 	. "burrow/word256"
 	"fmt"
 	. "sawtooth_burrow_evm/common"
@@ -201,10 +202,11 @@ func toStateAccount(acct *Account) *EvmStateAccount {
 		return nil
 	}
 	return &EvmStateAccount{
-		Address: acct.Address.Bytes(),
-		Balance: acct.Balance,
-		Code:    acct.Code,
-		Nonce:   acct.Nonce,
+		Address:     acct.Address.Bytes(),
+		Balance:     acct.Balance,
+		Code:        acct.Code,
+		Nonce:       acct.Nonce,
+		Permissions: toStatePermissions(acct.Permissions),
 	}
 }
 
@@ -213,9 +215,26 @@ func toVmAccount(sa *EvmStateAccount) *Account {
 		return nil
 	}
 	return &Account{
-		Address: RightPadWord256(sa.Address),
-		Balance: sa.Balance,
-		Code:    sa.Code,
-		Nonce:   sa.Nonce,
+		Address:     RightPadWord256(sa.Address),
+		Balance:     sa.Balance,
+		Code:        sa.Code,
+		Nonce:       sa.Nonce,
+		Permissions: toVmPermissions(sa.Permissions),
+	}
+}
+
+func toStatePermissions(aPerm ptypes.AccountPermissions) *EvmPermissions {
+	return &EvmPermissions{
+		Perms:  uint64(aPerm.Base.Perms),
+		SetBit: uint64(aPerm.Base.SetBit),
+	}
+}
+
+func toVmPermissions(ePerm *EvmPermissions) ptypes.AccountPermissions {
+	return ptypes.AccountPermissions{
+		Base: ptypes.BasePermissions{
+			Perms:  ptypes.PermFlag(ePerm.Perms),
+			SetBit: ptypes.PermFlag(ePerm.SetBit),
+		},
 	}
 }

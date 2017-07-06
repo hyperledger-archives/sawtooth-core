@@ -28,12 +28,23 @@ message EvmStateAccount {
     int64 balance = 2;
     bytes code = 3;
     int64 nonce = 4;
+    EvmPermissions permissions = 5;
 
     // In a future iteration, a storage_root field may be added so account data
     // can be separated from data stored by the account (storage).
 
     // In a future iteration, a public_key field may be added to validate
     // message calls have been sent by an authorized account.
+}
+
+message EvmPermissions {
+    // Bit array where true means "has permission" and false means "doesn't have
+    // permission"
+    uint64 perms = 1;
+
+    // Bit array where true means "the permission has been set" and false means
+    // "the permission has not been set".
+    uint64 set_bit = 2;
 }
 
 message EvmStorage {
@@ -49,6 +60,7 @@ message EvmTransaction {
       CREATE_EXTERNAL_ACCOUNT = 1;
       CREATE_CONTRACT_ACCOUNT = 2;
       MESSAGE_CALL = 3;
+      SET_PERMISSIONS = 4;
     }
     TransactionType transaction_type = 1;
 
@@ -58,6 +70,7 @@ message EvmTransaction {
     CreateExternalAccountTxn create_external_account = 2;
     CreateContractAccountTxn create_contract_account = 3;
     MessageCallTxn message_call = 4;
+    SetPermissionsTxn set_permissions = 5;
 }
 
 // The following transactions have fields that correspond to the transaction
@@ -72,6 +85,9 @@ message CreateExternalAccountTxn {
     // contract creation transaction, ∅, used here to denote (the empty byte
     // array); formally T_t."
     bytes to = 2;
+
+    // The Burrow-EVM permissions to assign to the new account
+    EvmPermissions permissions = 3;
 }
 
 message CreateContractAccountTxn {
@@ -98,6 +114,9 @@ message CreateContractAccountTxn {
     //
     // This should only be set if this is a contract creation transaction.
     bytes init = 5;
+
+    // The Burrow-EVM permissions to assign to this account
+    EvmPermissions permissions = 6;
 }
 
 message MessageCallTxn {
@@ -129,4 +148,17 @@ message MessageCallTxn {
     //
     // This should only be set if this is a message call transaction.
     bytes data = 6;
+}
+
+message SetPermissionsTxn {
+    // "...the number of transactions sent by the sender; formally T_n."
+    uint64 nonce = 1;
+
+    // "...the 160-bit address of the message call's recipient or, for a
+    // contract creation transaction, ∅, used here to denote (the empty byte
+    // array); formally T_t."
+    bytes to = 2;
+
+    // The Burrow-EVM permissions to assign to this account
+    EvmPermissions permissions = 3;
 }

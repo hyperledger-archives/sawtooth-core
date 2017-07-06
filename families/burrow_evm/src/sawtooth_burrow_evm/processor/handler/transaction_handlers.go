@@ -18,6 +18,7 @@ package handler
 
 import (
 	evm "burrow/evm"
+	ptypes "burrow/permission/types"
 	"encoding/hex"
 	"fmt"
 	. "sawtooth_burrow_evm/common"
@@ -30,6 +31,7 @@ var TxnHandlers = map[EvmTransaction_TransactionType]TransactionHandler{
 	EvmTransaction_CREATE_EXTERNAL_ACCOUNT: CreateExternalAccount,
 	EvmTransaction_CREATE_CONTRACT_ACCOUNT: CreateContractAccount,
 	EvmTransaction_MESSAGE_CALL:            MessageCall,
+	EvmTransaction_SET_PERMISSIONS:         SetPermissions,
 }
 
 func CreateExternalAccount(wrapper *EvmTransaction, sender *EvmAddr, sapps *SawtoothAppState) error {
@@ -39,10 +41,17 @@ func CreateExternalAccount(wrapper *EvmTransaction, sender *EvmAddr, sapps *Sawt
 	// when gas is free and the sender has permission to create accounts
 	if txn.GetTo() != nil {
 
+		// The creating account must exist and have permission to create accounts
 		senderAcct := sapps.GetAccount(sender.ToWord256())
 		if senderAcct == nil {
 			return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 				"Creating account must already exist for it to be able to create other accounts: %v",
+				sender,
+			)}
+		}
+		if !evm.HasPermission(sapps, senderAcct, ptypes.CreateAccount) {
+			return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+				"Sender account does not have permission to create external accounts: %v",
 				sender,
 			)}
 		}
@@ -71,10 +80,28 @@ func CreateExternalAccount(wrapper *EvmTransaction, sender *EvmAddr, sapps *Sawt
 			)}
 		}
 
+		// If no permissions were passed by the transaction, inherit them from
+		// sender. Otherwise, set them from transaction.
+		var newPerms ptypes.AccountPermissions
+		if txn.GetPermissions() == nil {
+			newPerms = senderAcct.Permissions
+			newPerms.Base.Set(ptypes.Root, false)
+
+		} else {
+			if !evm.HasPermission(sapps, senderAcct, ptypes.Root) {
+				return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+					"Creating account does not have permission to set permissions: %v",
+					sender,
+				)}
+			}
+			newPerms = toVmPermissions(txn.GetPermissions())
+		}
+
 		// Create new account
 		newAcct := &evm.Account{
 			Address:     newAcctAddr.ToWord256(),
 			Nonce:       1,
+			Permissions: newPerms,
 		}
 		senderAcct.Nonce += 1
 
@@ -93,9 +120,34 @@ func CreateExternalAccount(wrapper *EvmTransaction, sender *EvmAddr, sapps *Sawt
 			)}
 		}
 
+		// Check global permissions to decide if the account can be created
+		global := sapps.GetAccount(ptypes.GlobalPermissionsAddress256)
+
+		// If global permissions have not been set yet, everything is allowed and
+		// the account will have all permissions.
+		var newPerms ptypes.AccountPermissions
+		if global == nil {
+			logger.Warnf("Global Permissions not set, all actions allowed!")
+			newPerms.Base.Set(ptypes.AllPermFlags, true)
+
+		} else {
+			// If global permissions have been set, check the setting.
+			if !evm.HasPermission(sapps, global, ptypes.CreateAccount) {
+				return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+					"New account creation is disabled, couldn't create account: %v",
+					sender,
+				)}
+			}
+
+			// New account inherits global permissions except for Root
+			newPerms = global.Permissions
+			newPerms.Base.Set(ptypes.Root, false)
+		}
+
 		newAcct := &evm.Account{
 			Address:     sender.ToWord256(),
 			Nonce:       1,
+			Permissions: newPerms,
 		}
 
 		sapps.UpdateAccount(newAcct)
@@ -116,12 +168,35 @@ func CreateContractAccount(wrapper *EvmTransaction, sender *EvmAddr, sapps *Sawt
 		)}
 	}
 
+	// Verify this account has permission to create contract accounts
+	if !evm.HasPermission(sapps, senderAcct, ptypes.CreateContract) {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"Sender account does not have permission to create contracts: %v",
+			sender,
+		)}
+	}
+
 	// Check that the nonce in the transaction matches the nonce in state
 	if txn.GetNonce() != uint64(senderAcct.Nonce) {
 		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 			"Nonces do not match: Transaction (%v), State (%v)",
 			txn.GetNonce(), senderAcct.Nonce,
 		)}
+	}
+
+	var newPerms ptypes.AccountPermissions
+	if txn.GetPermissions() == nil {
+		newPerms = senderAcct.Permissions
+		newPerms.Base.Set(ptypes.Root, false)
+
+	} else {
+		if !evm.HasPermission(sapps, senderAcct, ptypes.Root) {
+			return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+				"Creating account does not have permission to set permissions: %v",
+				sender,
+			)}
+		}
+		newPerms = toVmPermissions(txn.GetPermissions())
 	}
 
 	// Create the new account
@@ -135,6 +210,7 @@ func CreateContractAccount(wrapper *EvmTransaction, sender *EvmAddr, sapps *Sawt
 	}
 	newAcct.Nonce = 1
 	newAcct.Code = out
+	newAcct.Permissions = newPerms
 
 	// Update accounts in state
 	sapps.UpdateAccount(senderAcct)
@@ -151,6 +227,14 @@ func MessageCall(wrapper *EvmTransaction, sender *EvmAddr, sapps *SawtoothAppSta
 	if senderAcct == nil {
 		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 			"Sender account must already exist to message call: %v", sender,
+		)}
+	}
+
+	// Verify this account has permission to make message calls
+	if !evm.HasPermission(sapps, senderAcct, ptypes.Call) {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"Sender account does not have permission to make message calls: %v",
+			sender,
 		)}
 	}
 
@@ -187,6 +271,77 @@ func MessageCall(wrapper *EvmTransaction, sender *EvmAddr, sapps *SawtoothAppSta
 	logger.Debug("EVM Output: ", strings.ToLower(hex.EncodeToString(out)))
 
 	senderAcct.Nonce += 1
+
+	sapps.UpdateAccount(senderAcct)
+	sapps.UpdateAccount(receiverAcct)
+
+	return nil
+}
+
+func SetPermissions(wrapper *EvmTransaction, sender *EvmAddr, sapps *SawtoothAppState) error {
+	txn := wrapper.GetSetPermissions()
+
+	if txn.GetPermissions() == nil {
+		return &processor.InvalidTransactionError{Msg: "Permissions field cannot be blank in UpdatePermissions transaction"}
+	}
+	newPerms := toVmPermissions(txn.GetPermissions())
+
+	// Get the account that is trying to update permissions
+	senderAcct := sapps.GetAccount(sender.ToWord256())
+	if senderAcct == nil {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"Sender account must already exist for updating permissions: %v", sender,
+		)}
+	}
+
+	// Verify this account has permission to update permissions
+	if !evm.HasPermission(sapps, senderAcct, ptypes.Root) {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"Sender account does not have permission to change permissions: %v",
+			sender,
+		)}
+	}
+
+	// Check that the nonce in the transaction matches the nonce in state
+	if txn.GetNonce() != uint64(senderAcct.Nonce) {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"Nonces do not match: Transaction (%v), State (%v)",
+			txn.GetNonce(), senderAcct.Nonce,
+		)}
+	}
+
+	receiver, err := NewEvmAddrFromBytes(txn.GetTo())
+	if err != nil {
+		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+			"Failed to construct receiver address for permission change: %v",
+			txn.GetTo(),
+		)}
+	}
+
+	logger.Debugf(
+		"SetPermissions(%v): Perms(%v), SetBit(%v)\n", receiver,
+		newPerms.Base.Perms, newPerms.Base.SetBit,
+	)
+
+	receiverWord256 := receiver.ToWord256()
+	receiverAcct := sapps.GetAccount(receiverWord256)
+	if receiverAcct == nil {
+		if receiverWord256 == ptypes.GlobalPermissionsAddress256 {
+			receiverAcct = &evm.Account{
+				Address: receiverWord256,
+				Nonce:   1,
+			}
+		} else {
+			return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
+				"Receiver account must already exist to change its permissions: %v",
+				receiver,
+			)}
+		}
+	}
+
+	// Update accounts
+	senderAcct.Nonce += 1
+	receiverAcct.Permissions = newPerms
 
 	sapps.UpdateAccount(senderAcct)
 	sapps.UpdateAccount(receiverAcct)
