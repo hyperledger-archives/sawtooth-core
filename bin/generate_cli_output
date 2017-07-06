@@ -49,10 +49,17 @@ save_usage sawtooth transaction list
 save_usage sawtooth transaction show
 
 save_usage seth
-save_usage seth create
-save_usage seth load
-save_usage seth exec
+save_usage seth init
 save_usage seth show
+save_usage seth account
+save_usage seth account import
+save_usage seth account list
+save_usage seth account create
+save_usage seth contract
+save_usage seth contract call
+save_usage seth contract create
+save_usage seth permissions
+save_usage seth permissions set
 
 save_usage poet
 save_usage poet genesis

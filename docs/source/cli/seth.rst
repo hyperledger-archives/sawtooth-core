@@ -39,31 +39,70 @@ seth
    :language: console
    :linenos:
 
-seth create
------------
 
-.. literalinclude:: output/seth_create_usage.out
-   :language: console
-   :linenos:
-
-seth exec
+seth init
 ---------
-
-.. literalinclude:: output/seth_exec_usage.out
-   :language: console
-   :linenos:
-
-seth load
----------
-
-.. literalinclude:: output/seth_load_usage.out
+.. literalinclude:: output/seth_init_usage.out
    :language: console
    :linenos:
 
 seth show
 ---------
-
 .. literalinclude:: output/seth_show_usage.out
+   :language: console
+   :linenos:
+
+seth account
+------------
+.. literalinclude:: output/seth_account_usage.out
+   :language: console
+   :linenos:
+
+seth account import
+-------------------
+.. literalinclude:: output/seth_account_import_usage.out
+   :language: console
+   :linenos:
+
+seth account list
+-----------------
+.. literalinclude:: output/seth_account_list_usage.out
+   :language: console
+   :linenos:
+
+seth account create
+-------------------
+.. literalinclude:: output/seth_account_create_usage.out
+   :language: console
+   :linenos:
+
+seth contract
+-------------
+.. literalinclude:: output/seth_contract_usage.out
+   :language: console
+   :linenos:
+
+seth contract call
+------------------
+.. literalinclude:: output/seth_contract_call_usage.out
+   :language: console
+   :linenos:
+
+seth contract create
+--------------------
+.. literalinclude:: output/seth_contract_create_usage.out
+   :language: console
+   :linenos:
+
+seth permissions
+----------------
+.. literalinclude:: output/seth_permissions_usage.out
+   :language: console
+   :linenos:
+
+seth permissions set
+--------------------
+.. literalinclude:: output/seth_permissions_set_usage.out
    :language: console
    :linenos:
 
