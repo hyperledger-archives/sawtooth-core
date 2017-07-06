@@ -428,11 +428,11 @@ class ParallelScheduler(Scheduler):
 
         batch = self._batches_by_id[batch_signature]
         index = self._batches.index(batch)
-        contexts_by_txn_id = {}
-        some_txns_predecessor = []
+        contexts = []
+        txns_added_predecessors = []
         for b in self._batches[index::-1]:
             batch_is_valid = True
-            contexts_from_batch_by_txn_id = {}
+            contexts_from_batch = []
             for txn in b.transactions[::-1]:
                 result = self._txn_results[txn.header_signature]
                 if not result.is_valid:
@@ -440,17 +440,14 @@ class ParallelScheduler(Scheduler):
                     break
                 else:
                     txn_id = txn.header_signature
-                    contexts_from_batch_by_txn_id[txn_id] = result.context_id
+                    if txn_id not in txns_added_predecessors:
+                        txns_added_predecessors.append(
+                            self._txn_predecessors[txn_id])
+                        contexts_from_batch.append(result.context_id)
             if batch_is_valid:
-                for txn_id in contexts_from_batch_by_txn_id:
-                    some_txns_predecessor.extend(
-                        self._txn_predecessors[txn_id])
-                contexts_by_txn_id.update(contexts_from_batch_by_txn_id)
-        txn_ids_to_possibly_remove = list(contexts_by_txn_id.keys()).copy()
-        for txn_id in txn_ids_to_possibly_remove:
-            if txn_id in some_txns_predecessor:
-                del contexts_by_txn_id[txn_id]
-        return list(contexts_by_txn_id.values())
+                contexts.extend(contexts_from_batch)
+
+        return contexts
 
     def _is_state_hash_correct(self, state_hash, batch_id):
         return state_hash == self._batches_with_state_hash[batch_id]
@@ -621,40 +618,69 @@ class ParallelScheduler(Scheduler):
                 return False
         return True
 
-    def _predecessor_not_predecessor_of_predecessors(self,
-                                                     prior_txn_id,
-                                                     predecessors):
+    def _predecessor_not_in_chain(self,
+                                  prior_txn_id,
+                                  chain):
         """
 
         Args:
             prior_txn_id (str): The predecessor's txn header_signature.
-            predecessors (list): The predecessors of the txn that the
-                prior_txn_id is a predecessor of.
+            chain (list): The txn_ids whose context_ids have already been
+                added.
 
         Returns:
-            (bool): The prior_txn_id is not a predecessor of a predecessor.
+            (bool): The prior_txn_id has not had its state added yet.
         """
 
-        for pred_id in predecessors:
-            if prior_txn_id in self._txn_predecessors[pred_id]:
+        for pred_id in chain:
+            if (prior_txn_id in self._txn_predecessors[pred_id] or
+                prior_txn_id in chain) and \
+                    self._txn_is_in_valid_batch(pred_id):
                 return False
         return True
 
     def _get_initial_state_for_transaction(self, txn):
         # Collect contexts that this transaction depends upon
         # We assume that all prior txns in the batch are valid
-        # or else this transaction wouldn't run. Also any explicit
+        # or else this transaction wouldn't run. We assume that
+        # the mechanism in next_transaction makes sure that each
+        # predecessor txn has a result. Also any explicit
         # dependencies that could have failed this txn did so.
         contexts = []
+        txn_dependencies = deque()
         predecessors = self._txn_predecessors[txn.header_signature]
-        for prior_txn_id in predecessors:
+        txn_dependencies.extend(self._sort_txn_ids_in_reverse(
+            predecessors))
+        in_chain = []
+        while txn_dependencies:
+            prior_txn_id = txn_dependencies.popleft()
             if self._txn_is_in_valid_batch(prior_txn_id):
                 result = self._txn_results[prior_txn_id]
-                if self._predecessor_not_predecessor_of_predecessors(
+                if self._predecessor_not_in_chain(
                         prior_txn_id,
-                        predecessors):
+                        in_chain):
+                    in_chain.append(prior_txn_id)
                     contexts.append(result.context_id)
+            else:
+                predecessors_sorted = self._sort_txn_ids_in_reverse(
+                    self._txn_predecessors[prior_txn_id])
+                txn_dependencies.extend(predecessors_sorted)
         return contexts
+
+    def _sort_txn_ids_in_reverse(self, txn_ids):
+        return sorted(txn_ids,
+                      key=self._index_of_txn_in_schedule, reverse=True)
+
+    def _index_of_txn_in_schedule(self, txn_id):
+        batch = self._batches_by_txn_id[txn_id]
+        index_of_batch_in_schedule = self._batches.index(batch)
+        number_of_txns_in_prior_batches = 0
+        for prior in self._batches[:index_of_batch_in_schedule]:
+            number_of_txns_in_prior_batches += len(prior.transactions) - 1
+
+        txn_ids_in_order = [t.header_signature for t in batch.transactions]
+        txn_index = txn_ids_in_order.index(txn_id)
+        return number_of_txns_in_prior_batches + txn_index
 
     def next_transaction(self):
         with self._condition:
