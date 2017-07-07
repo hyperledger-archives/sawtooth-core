@@ -34,6 +34,9 @@ class RestClient(object):
         else:
             self._auth_header = None
 
+    def get_version(self):
+        return self._get('/version')['data']
+
     def list_blocks(self):
         return self._get('/blocks')['data']
 
