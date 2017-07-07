@@ -203,8 +203,9 @@ class TestSchedulersWithYaml(unittest.TestCase):
         test_scheduler/data/complex_batches_multiple_failures.yaml file.
 
         Notes:
-            This yaml file has txns that depend on txns in several batches
-            and several failed batches.
+            This yaml file has 21 batches with several txns per batch,
+            multiple implicit dependencies per txn, and several
+            failed batches.
         """
 
         context_manager, scheduler = self._setup_parallel_scheduler()
@@ -218,8 +219,9 @@ class TestSchedulersWithYaml(unittest.TestCase):
         test_scheduler/data/complex_batches_multiple_failures.yaml file.
 
         Notes:
-            This yaml file has txns that depend on txns in several batches
-            and several failed batches.
+            This yaml file has 21 batches with several txns per batch,
+            multiple implicit dependencies per txn, and several
+            failed batches.
         """
 
         context_manager, scheduler = self._setup_parallel_scheduler()
@@ -234,8 +236,9 @@ class TestSchedulersWithYaml(unittest.TestCase):
         test_scheduler/data/complex_batches_multiple_failures.yaml file.
 
         Notes:
-            This yaml file has txns that depend on txns in several batches
-            and several failed batches.
+            This yaml file has 21 batches with several txns per batch,
+            multiple implicit dependencies per txn, and several
+            failed batches.
         """
 
         context_manager, scheduler = self._setup_serial_scheduler()
@@ -307,7 +310,10 @@ class TestSchedulersWithYaml(unittest.TestCase):
         test_scheduler/data/heterogeneous_workload.yaml file.
 
         Notes:
-            This yaml file has namespaced addresses and several failed batches
+            This yaml file has namespaced addresses with 10 batches. Some
+            batches are composed of txns with only one namespace in inputs
+            and outputs, then other batches with txns with several namespaces.
+            There are 6 failed batches.
         """
 
         context_manager, scheduler = self._setup_parallel_scheduler()
@@ -321,7 +327,10 @@ class TestSchedulersWithYaml(unittest.TestCase):
         test_scheduler/data/heterogeneous_workload.yaml file.
 
         Notes:
-            This yaml file has namespaced addresses and several failed batches
+            This yaml file has namespaced addresses with 10 batches. Some
+            batches are composed of txns with only one namespace in inputs
+            and outputs, then other batches with txns with several namespaces.
+            There are 6 failed batches.
         """
 
         context_manager, scheduler = self._setup_parallel_scheduler()
@@ -336,7 +345,10 @@ class TestSchedulersWithYaml(unittest.TestCase):
         test_scheduler/data/heterogeneous_workload.yaml file.
 
         Notes:
-            This yaml file has namespaced addresses and several failed batches
+            This yaml file has namespaced addresses with 10 batches. Some
+            batches are composed of txns with only one namespace in inputs
+            and outputs, then other batches with txns with several namespaces.
+            There are 6 failed batches.
         """
 
         context_manager, scheduler = self._setup_serial_scheduler()
