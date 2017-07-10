@@ -29,6 +29,8 @@ from sawtooth_sdk.client.config import get_log_dir
 from sawtooth_sdk.client.config import get_config_dir
 from sawtooth_rest_api.messaging import Connection
 from sawtooth_rest_api.route_handlers import RouteHandler
+from sawtooth_rest_api.state_delta_subscription_handler \
+    import StateDeltaSubscriberHandler
 from sawtooth_rest_api.config import load_default_rest_api_config
 from sawtooth_rest_api.config import load_toml_rest_api_config
 from sawtooth_rest_api.config import merge_rest_api_config
@@ -94,6 +96,10 @@ def start_rest_api(host, port, connection, timeout):
     app.router.add_get(
         '/transactions/{transaction_id}',
         handler.fetch_transaction)
+
+    subscriber_handler = StateDeltaSubscriberHandler(connection)
+    app.router.add_get('/subscriptions', subscriber_handler.subscriptions)
+    app.on_shutdown.append(lambda app: subscriber_handler.on_shutdown())
 
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)

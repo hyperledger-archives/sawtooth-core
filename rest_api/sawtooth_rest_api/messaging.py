@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import asyncio
+from enum import Enum
 import logging
 import uuid
 
@@ -42,7 +43,9 @@ class _MessageRouter:
     async def incoming(self):
         """Returns the next incoming message.
         """
-        return await self._queue.get()
+        msg = await self._queue.get()
+        self._queue.task_done()
+        return msg
 
     def expect_reply(self, correlation_id):
         """Informs the router that a reply to the given correlation_id is
@@ -161,6 +164,17 @@ class DisconnectError(Exception):
         super().__init__("The connection was lost")
 
 
+class ConnectionEvent(Enum):
+    """Event types that indicate a state change in a connection.
+
+    Attributes:
+        DISCONNECTED (int): Event fired when a disconnect occurs
+        RECONNECTED (int) Event fired on reconnect
+    """
+    DISCONNECTED = 1
+    RECONNECTED = 2
+
+
 class Connection:
     """A connection, over which validator Message objects may be sent.
     """
@@ -174,6 +188,8 @@ class Connection:
         self._msg_router = _MessageRouter()
         self._receiver = _Receiver(self._socket, self._msg_router)
         self._sender = _Sender(self._socket, self._msg_router)
+
+        self._connection_state_listeners = {}
 
         self._recv_task = None
 
@@ -196,7 +212,28 @@ class Connection:
         LOGGER.info('Connecting to %s', self._url)
         asyncio.ensure_future(self._do_start())
 
-    async def _do_start(self):
+    def on_connection_state_change(self, event_type, callback):
+        """Register a callback for a specific connection state change.
+
+        Register a callback to be triggered when the connection changes to
+        the specified state, signified by a ConnectionEvent.
+
+        The callback must be a coroutine.
+
+        Args:
+            event_type (ConnectionEvent): the connection event to listen for
+            callback (coroutine): a coroutine to call on the event occurrence
+        """
+        listeners = self._connection_state_listeners.get(event_type, [])
+        listeners.append(callback)
+        self._connection_state_listeners[event_type] = listeners
+
+    def _notify_listeners(self, event_type):
+        listeners = self._connection_state_listeners.get(event_type, [])
+        for coroutine_fn in listeners:
+            asyncio.ensure_future(coroutine_fn())
+
+    async def _do_start(self, reconnect=False):
         self._socket.connect(self._url)
 
         self._monitor_fd = "inproc://monitor.s-{}".format(
@@ -206,6 +243,9 @@ class Connection:
             addr=self._monitor_fd)
 
         self._recv_task = asyncio.ensure_future(self._receiver.start())
+
+        if reconnect:
+            self._notify_listeners(ConnectionEvent.RECONNECTED)
 
         self._monitor_task = asyncio.ensure_future(self._monitor_disconnects())
 
@@ -271,6 +311,8 @@ class Connection:
             self._recv_task.cancel()
             self._recv_task = None
 
+            self._notify_listeners(ConnectionEvent.DISCONNECTED)
+
             if cancelled:
                 return
 
@@ -282,7 +324,7 @@ class Connection:
                 # We've been cancelled, so let's just exit
                 return
 
-            asyncio.ensure_future(self._do_start())
+            asyncio.ensure_future(self._do_start(reconnect=True))
         except zmq.ZMQError as e:
             # The monitor socket was probably closed
             LOGGER.warning('Error occurred while monitoring the socket: %s', e)

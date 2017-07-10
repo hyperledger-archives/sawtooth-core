@@ -121,12 +121,24 @@ def do_workload(args):
     generator and run.
     """
     try:
+        args.auth_info = _get_auth_info(args.auth_user, args.auth_password)
         generator = WorkloadGenerator(args)
         workload = NoopWorkload(generator, args)
         generator.set_workload(workload)
         generator.run()
     except KeyboardInterrupt:
         generator.stop()
+
+
+def _get_auth_info(auth_user, auth_password):
+    if auth_user is not None:
+        if auth_password is None:
+            auth_password = getpass.getpass(prompt="Auth Password: ")
+        auth_string = "{}:{}".format(auth_user, auth_password)
+        b64_string = b64encode(auth_string.encode()).decode()
+        return b64_string
+    else:
+        return None
 
 
 def add_workload_parser(subparsers, parent_parser):
@@ -149,3 +161,12 @@ def add_workload_parser(subparsers, parent_parser):
                         help='comma separated urls of the REST API to connect '
                         'to.',
                         default="http://127.0.0.1:8080")
+    parser.add_argument('--auth-user',
+                        type=str,
+                        help='username for authentication '
+                             'if REST API is using Basic Auth')
+
+    parser.add_argument('--auth-password',
+                        type=str,
+                        help='password for authentication '
+                             'if REST API is using Basic Auth')
