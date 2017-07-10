@@ -109,26 +109,6 @@ class BlockValidator(object):
 
         return self._block_cache[blkw.previous_block_id].state_root_hash
 
-    def _is_block_complete(self, blkw):
-        """
-        Check that the block is formally complete.
-        - all batches are present and in the correct order
-        :param blkw: the block to verify
-        :return: Boolean - True on success.
-        """
-
-        batch_ids = blkw.header.batch_ids
-        batches = blkw.batches
-
-        if len(batch_ids) != len(batches):
-            return False
-
-        for i in range(0, len(batch_ids)):
-            if batch_ids[i] != batches[i].header_signature:
-                return False
-
-        return True
-
     def _verify_batches_dependencies(self, batch, committed_txn):
         """Verify that all transactions dependencies in this batch have been
         satisfied, ie already committed by this block or prior block in the
@@ -205,9 +185,6 @@ class BlockValidator(object):
                                   data_dir=self._data_dir,
                                   config_dir=self._config_dir,
                                   validator_id=self._identity_public_key)
-
-                if valid:
-                    valid = self._is_block_complete(blkw)
 
                 if valid:
                     valid = self._verify_block_batches(blkw, committed_txn)

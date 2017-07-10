@@ -1,11 +1,15 @@
 {% set short_lang = 'python' %}
 {% if language == 'JavaScript' %}
     {% set short_lang = 'js' %}
+{% elif language == 'Java' %}
+    {% set short_lang = 'java' %}
 {% endif %}
 
 {% set lowercase_lang = 'python' %}
 {% if language == 'JavaScript' %}
     {% set lowercase_lang = 'javascript' %}
+{% elif language == 'Java' %}
+    {% set lowercase_lang = 'java' %}
 {% endif %}
 
 ***********************************************
@@ -41,12 +45,13 @@ A full implementation of the tic-tac-toe transaction family can be found in
 Prerequisites
 =============
 
-This tutorial assumes that you have gone through :doc:`/app_developers_guide/getting_started` and are
-familiar with the concepts introduced there.
+This tutorial assumes that you have gone through
+:doc:`/app_developers_guide/installing_sawtooth` and are familiar with the
+concepts introduced there.
 
 You should be familiar with the concepts introduced in the
-:doc:`/app_developers_guide/getting_started` guide and have a working Sawtooth
-environment prior to completing this tutorial.
+:doc:`/app_developers_guide/installing_sawtooth` guide and have a working
+Sawtooth environment prior to completing this tutorial.
 
 The Transaction Processor
 =========================
@@ -79,7 +84,17 @@ The transaction contains payload bytes that are opaque to the validator core,
 and transaction family specific. When implementing a transaction handler the
 binary serialization protocol is up to the implementer.
 
-{% else %} 
+{% elif language == 'Java' %}
+``apply`` gets called with two arguments, ``transactionRequest`` and ``stateStore``.
+``transactionRequest`` holds the command that is to be executed (e.g. taking a space or
+creating a game), while ``stateStore`` stores information about the current
+state of the game (e.g. the board layout and whose turn it is).
+
+The transaction contains payload bytes that are opaque to the validator core,
+and transaction family specific. When implementing a transaction handler the
+binary serialization protocol is up to the implementer.
+
+{% else %}
 ``apply`` gets called with two arguments, ``transaction`` and
 ``state_store``. The argument ``transaction`` is an instance of the class
 Transaction that is created from the  protobuf definition. Also,
@@ -128,6 +143,20 @@ Accordingly, a top-down approach to ``apply`` might look like this:
       }
     }
 
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    public void apply(TpProcessRequest transactionRequest, State stateStore) {
+      TransactionData transactionData = getUnpackedTransaction(transactionRequest);
+
+      GameData stateData = getStateData(stateStore, transactionData.gameName);
+
+      GameData updatedGameData = playXo(transactionData, stateData);
+
+      storeGameData(transactionData.gameName, updatedGameData, stateStore);
+    }
+
 {% else %}
 
 {# Python code is the default #}
@@ -167,9 +196,9 @@ So how do we get data out of the transaction? The transaction consists of a
 header and a payload. The header contains the "signer", which is used to
 identify the current player. The payload will contain an encoding of the game
 name, the action ('create' a game, 'take' a space), and the space (which will be
-an empty string if the action isn't 'take'). So our {% if language ==
-'JavaScript' %}``_unpackTransaction``{% else %}``_unpack_transaction``{% endif
-%} function will look like this:
+an empty string if the action isn't 'take'). So our {% if language == 'JavaScript' %}
+``_unpackTransaction``{% elif language == 'Java' %}``getUnpackedTransaction``{% else %}
+``_unpack_transaction``{% endif %} function will look like this:
 
 {% if language == 'JavaScript' %}
 
@@ -190,6 +219,25 @@ an empty string if the action isn't 'take'). So our {% if language ==
           reject(reason)
         }
       })
+
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private TransactionData getUnpackedTransaction(TpProcessRequest transactionRequest)
+        throws InvalidTransactionException {
+      String signer = transactionRequest.getHeader().getSignerPubkey();
+      ArrayList<String> payload
+          = decodeData(transactionRequest.getPayload().toStringUtf8());
+
+      if (payload.size() > 3) {
+        throw new InvalidTransactionException("Invalid payload serialization");
+      }
+      while (payload.size() < 3) {
+        payload.add("");
+      }
+      return new TransactionData(payload.get(0), payload.get(1), payload.get(2), signer);
+    }
 
 
 {% else %}
@@ -212,10 +260,10 @@ an empty string if the action isn't 'take'). So our {% if language ==
 
 
 Before we say how exactly the transaction payload will be decoded, let's look at
-{% if language == 'JavaScript' %}``_getStateData``{% else
-%}``_get_state_data``{% endif %}. Now, as far as the handler is concerned, it
-doesn't matter how the game data is stored. The only thing that matters is that
-given a game name, the state store is able to give back the correct game data.
+{% if language == 'JavaScript' %}``_getStateData``{% elif language == 'Java' %}
+``getStateData``{% else %}``_get_state_data``{% endif %}. Now, as far as the handler
+is concerned, it doesn't matter how the game data is stored. The only thing that matters
+is that given a game name, the state store is able to give back the correct game data.
 (In our full XO implementation, the game data is stored in a Merkle-radix tree.)
 
 
@@ -252,6 +300,30 @@ given a game name, the state store is able to give back the correct game data.
       throw new InternalError(message)
     }
 
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private GameData getStateData(String gameName, State stateStore)
+        throws InternalError {
+      String address = makeGameAddress(gameName);
+      String stateEntry = stateStore.get(address);
+      if (stateEntry.length() == 0) {
+        return new GameData("", "", "", "", "");
+      } else {
+        try {
+          ArrayList<String> data = decodeData(stateEntry, gameName);
+          while (data.size() < 5) {
+            data.add("");
+          }
+          return new GameData(
+            data.get(0), data.get(1), data.get(2), data.get(3), data.get(4));
+        } catch (Error e) {
+          throw new InternalError("Failed to deserialize game data");
+        }
+      }
+    }
+
 {% else %}
 
 .. code-block:: python
@@ -281,9 +353,17 @@ game name prepended with some constant:
     const _makeGameAddress = (gameName) => {
        let prefix = XO_NAMESPACE
        let gameHash = crypto.createHash('sha512').update(gameName).digest('hex').toLowerCase()
-       return prefix + gameHash
+       return prefix + gameHash.substring(0, 64)
     }
-        
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private String makeGameAddress(String gameName) {
+      String hashedName = Utils.hash512(gameName.getBytes("UTF-8"));
+      return xoNameSpace + hashedName.substring(0, 64);
+    }
+
 {% else %}
 
 .. code-block:: python
@@ -291,7 +371,7 @@ game name prepended with some constant:
     def _make_game_address(self, game_name):
         prefix = self._namespace_prefix
         game_name_utf8 = game_name.encode('utf-8')
-        return prefix + hashlib.sha512(game_name_utf8).hexdigest()
+        return prefix + hashlib.sha512(game_name_utf8).hexdigest()[0:64]
 
 
 {% endif %}
@@ -316,6 +396,29 @@ updated state of the game and store it back at the address from which it came.
         }
         console.log(`Set ${gameAddress} to ${gameData}`)
       })
+    }
+
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private void storeGameData(String gameName, GameData gameData, State stateStore) {
+      String address = makeGameAddress(gameName);
+
+      String encodedGameData = encodeData(gameData)
+      ByteString gameByteString = ByteString.copyFromUtf8(encodedGameData);
+
+      Map.Entry<String, ByteString> entry
+          = new AbstractMap.SimpleEntry<>(address, gameByteString);
+
+      Collection<Map.Entry<String, ByteString>> addressValues
+          = Collections.singletonList(entry);
+
+      Collection<String> addresses = stateStore.set(addressValues);
+
+      if (addresses.size() < 1) {
+        throw new InternalError("State Error");
+      }
     }
 
 {% else %}
@@ -358,6 +461,21 @@ sophisticated, `BSON <http://bsonspec.org/>`_.
       return Buffer.from(data.join())
     }
 
+{% elif language == 'Java' %}
+
+.. code-block:: java
+
+    private ArrayList<String> decodeData(String payload) {
+      return new ArrayList<>(Arrays.asList(payload.split(",")))
+    }
+
+    private String encodeData(GameData gameData) {
+      return String.format(
+          "%s,%s,%s,%s,%s",
+          gameData.gameName, gameData.board, gameData.state,
+          gameData.playerOne, gameData.playerTwo);
+    }
+
 {% else %}
 
 .. code-block:: python
@@ -374,17 +492,18 @@ Implementing Game Play
 ======================
 
 
-All that's left to do is describe how to play tic-tac-toe. The details here are
-fairly straighforward, and the {% if language == 'JavaScript' %}``_playXO``{%
-else %}``_play_xo``{% endif %} function could certainly be implemented in
-different ways. To see our implementation, go to ``/project/sawtooth-
-core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to represent the board as
-a string of length 9, with each character in the string representing a space
-taken by X, a space taken by O, or a free space. Updating the board
-configuration and the current state of the game proceeds straightforwardly.
+All that's left to do is describe how to play tic-tac-toe. The details here are fairly
+straighforward, and the {% if language == 'JavaScript' %}
+``_playXO``{% elif language == 'Java' %}``playXo``{% else %}``_play_xo``{% endif %}
+function could certainly be implemented in different ways. To see our implementation, go
+to ``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to represent
+the board as a string of length 9, with each character in the string representing a space
+taken by X, a space taken by O, or a free space. Updating the board configuration and the
+current state of the game proceeds straightforwardly.
 
 
-The {% if language == 'JavaScript' %}``XOHandler``{% else %}``XoTransactionHandler``{% endif %} Class
+The {% if language == 'JavaScript' %}``XOHandler``{% elif language == 'Java' %}
+``XoHandler``{% else %}``XoTransactionHandler``{% endif %} Class
 ===================================
 
 {% if language == 'JavaScript' %}
@@ -402,10 +521,56 @@ about what kinds of transactions it can handle.
       }
 
       apply (transactionProcessRequest, stateStore) {
-        // 
+        //
 
-Note that the XOHandler class extends the TransactionHandler class defined in the 
-JavaScript SDK. 
+Note that the XOHandler class extends the TransactionHandler class defined in the
+JavaScript SDK.
+
+{% elif language == 'Java' %}
+
+And that's all there is to ``apply``! All that's left to do is set up the
+``XoHandler`` class and its metadata. The metadata is used to
+*register* the transaction processor with a validator by sending it information
+about what kinds of transactions it can handle.
+
+.. code-block:: java
+
+    public class XoHandler implements TransactionHandler {
+
+      private String xoNameSpace;
+
+      public XoHandler() {
+        try {
+          this.xoNameSpace = Utils.hash512(
+            this.transactionFamilyName().getBytes("UTF-8")).substring(0, 6);
+        } catch (UnsupportedEncodingException usee) {
+          usee.printStackTrace();
+          this.xoNameSpace = "";
+        }
+      }
+
+      @Override
+      public String transactionFamilyName() {
+        return "xo";
+      }
+
+      @Override
+      public String getEncoding() {
+        return "csv-utf8";
+      }
+
+      @Override
+      public String getVersion() {
+        return "1.0";
+      }
+
+      @Override
+      public Collection<String> getNameSpaces() {
+        ArrayList<String> namespaces = new ArrayList<>();
+        namespaces.add(this.xoNameSpace);
+        return namespaces;
+      }
+    }
 
 {% else %}
 
@@ -441,182 +606,3 @@ about what kinds of transactions it can handle.
 
 
 {% endif %}
-
-
-
-Playing XO With The XO Client
-=============================
-
-You can now use the included XO client to test your new XO transaction
-processor. Sawtooth includes an XO CLI-based client written in Python, which
-can interact with any correctly written XO transaction processor, regardless
-of language.
-
-The steps below show you how to set up and play a game.
-
-
-Start The Necessary Components
-------------------------------
-
-To play tic-tac-toe, you need the following components to be running and
-connected:
-
-#. At least one validator
-#. The config family transaction processor, tp_config
-#. An XO family transaction processor (the one you have written, or one
-   of the included XO processors)
-#. The REST API
-
-
-For more information on configuring and runing Sawtooth components, see
-:doc:`/app_developers_guide/getting_started`.
-
-
-Create Players
---------------
-
-
-Create two players to play the game:
-
-.. code-block:: console
-
-    $ xo init --username jack
-    $ xo init --username jill
-
-
-The command produces output similar to the following for both players:
-
-.. code-block:: console
-
-    set username: jack
-    set url: http://127.0.0.1:8080
-    writing file: /home/ubuntu/.sawtooth/keys/jack.priv
-    writing file: /home/ubuntu/.sawtooth/keys/jack.addr
-    set username: jill
-    set url: http://127.0.0.1:8080
-    writing file: /home/ubuntu/.sawtooth/keys/jill.priv
-    writing file: /home/ubuntu/.sawtooth/keys/jill.addr
-
-
-When interacting with the XO cli, `xo --init` can also be used to set the
-active player. If the above commands are run in the order shown, both players
-will be created, but "jill" will be the active player. To switch the active
-player, simply run the `xo init` command again with the name of the
-desired player.
-
-Set "jack" as the active player now with:
-
-.. code-block:: console
-
-    $ xo init --username jack
-
-
-Create A Game
--------------
-
-Create a game with the following command:
-
-.. code-block:: console
-
-    $ xo create game1
-
-To see list of the created games, enter the following command:
-
-.. code-block:: console
-
-    $ xo list
-
-The command outputs a list of the games that have been created:
-
-.. code-block:: console
-
-    GAME            PLAYER 1        PLAYER 2        BOARD     STATE
-    game1                                           --------- P1-NEXT
-
-
-Take A Space As Player One
---------------------------
-
-Start playing by taking a space as the first player, "jack":
-
-.. code-block:: console
-
-    $ xo take game1 4
-
-.. note::
-
-    The board spaces are numbered from one to nine. The upper-left corner is
-    number one, and the lower right corner is number nine.
-
-
-Take A Space As Player Two
---------------------------
-
-To take a space on the board as player two, "jill" needs to be set as the
-active player. Run the following command:
-
-.. code-block:: console
-
-    $ xo init --username jill
-
-
-Now take a space on the board as player two:
-
-.. code-block:: console
-
-    $ xo take game1 3
-
-
-Show The Current State Of The Game Board
-----------------------------------------
-
-Whenever you want to see the current state of the game board, enter the
-following command:
-
-.. code-block:: console
-
-    $ xo show game1
-
-You will see the current state of the board displayed:
-
-.. code-block:: console
-
-    GAME:     : game1
-    PLAYER 1  : 024c8f
-    PLAYER 2  : 03f8f2
-    STATE     : P1-NEXT
-
-        |   | O
-     ---|---|---
-      X |   |
-     ---|---|---
-        |   |
-
-
-Continue Game
--------------
-
-You can continue the game until one of the players wins, or
-the game ends in a draw:
-
-.. warning::
-
-  Be sure to switch users before taking each move to simulate two distinct
-  users playing.
-
-
-.. code-block:: console
-
-    $ xo show game1
-    GAME:     : game1
-    PLAYER 1  : 024c8f
-    PLAYER 2  : 03f8f2
-    STATE     : P2-WIN
-
-      X |   | O
-     ---|---|---
-      X | O |
-     ---|---|---
-      O |   | X
-
-

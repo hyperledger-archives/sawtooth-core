@@ -8,7 +8,7 @@ apt-get install -y -q \
     golang
 
 
-GOPATH=/project/sawtooth-core/sdk/go
+export GOPATH=/project/sawtooth-core/sdk/go
 
 go get -u \
     github.com/golang/protobuf/proto \
@@ -17,6 +17,7 @@ go get -u \
     github.com/brianolson/cbor_go \
     github.com/satori/go.uuid \
     github.com/btcsuite/btcd/btcec \
+    github.com/btcsuite/btcutil/base58 \
     gopkg.in/fatih/set.v0 \
     golang.org/x/crypto/ripemd160 \
     github.com/jessevdk/go-flags

@@ -32,7 +32,7 @@ class TestBasicAuth(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_until_status('http://rest_api:8080/blocks', status_code=200)
+        wait_until_status('http://rest-api:8080/blocks', status_code=200)
         wait_until_status('http://basic_auth_proxy/sawtooth', status_code=401)
 
     def test_http_basic_auth(self):
@@ -53,7 +53,7 @@ class TestBasicAuth(unittest.TestCase):
         reflects the url of the proxy.
 
         The proxy should redirect from the passed url's domain to
-        `http://rest_api:8080`, and be configured with a Basic Auth
+        `http://rest-api:8080`, and be configured with a Basic Auth
         username:password combination of 'sawtooth:sawtooth'.
 
         In order to get back the correct link, the proxy must both forward the

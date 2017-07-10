@@ -17,26 +17,26 @@ version: "2.1"
 
 services:
 
-  tp_settings:
-    image: sawtooth-tp_settings:$ISOLATION_ID
+  settings-tp:
+    image: sawtooth-settings-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    command: tp_settings -vv tcp://validator:4004
+    command: settings-tp -vv tcp://validator:4004
     stop_signal: SIGKILL
 
-  tp_xo_javascript:
-    image: sawtooth-tp_xo_javascript:$ISOLATION_ID
+  xo-tp-javascript:
+    image: sawtooth-xo-tp-javascript:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    command: tp_xo_javascript tcp://validator:4004
+    command: xo-tp-javascript tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
@@ -49,14 +49,14 @@ services:
     command: "bash -c \"\
         sawtooth admin keygen && \
         sawtooth admin genesis && \
-        validator --endpoint tcp://validator:8800 -v \
+        sawtooth-validator --endpoint tcp://validator:8800 -v \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
     \""
     stop_signal: SIGKILL
 
-  rest_api:
-    image: sawtooth-rest_api:$ISOLATION_ID
+  rest-api:
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -64,7 +64,7 @@ services:
       - 8080
     depends_on:
      - validator
-    command: rest_api -v --connect tcp://validator:4004 --bind rest_api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
     stop_signal: SIGKILL
 
   test-xo-smoke-javascript:
@@ -75,7 +75,7 @@ services:
       - 8080
     depends_on:
       - validator
-      - rest_api
+      - rest-api
     # Wait for rest_api
     command: nose2-3
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg

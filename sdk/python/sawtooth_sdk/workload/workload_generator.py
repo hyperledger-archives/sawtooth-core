@@ -40,6 +40,7 @@ class WorkloadGenerator(object):
     """
     def __init__(self, args):
         self._workload = None
+        self._auth_info = args.auth_info
         self._lock = Lock()
         # needs to be locked
         self._pending_batches = deque()
@@ -145,7 +146,8 @@ class WorkloadGenerator(object):
                        the url the batch was submitted to.
         """
         if batch is not None:
-            status = self._status_request([batch.id], batch.url)
+            status = self._status_request([batch.id], batch.url,
+                                          auth_info=self._auth_info)
             if status == "COMMITTED":
                 with self._lock:
                     self._committed_batches_sample += 1
@@ -194,10 +196,12 @@ class WorkloadGenerator(object):
                 self._pending_batches.append(
                     PendingBatch(id=batch_id, url=url))
 
-    def _status_request(self, batch_id, url):
+    def _status_request(self, batch_id, url, auth_info=None):
         data = json.dumps(batch_id).encode()
         headers = {'Content-Type': 'application/json'}
         headers['Content-Length'] = '%d' % len(data)
+        if auth_info is not None:
+            headers['Authorization'] = 'Basic {}'.format(auth_info)
 
         try:
             result = requests.post(
@@ -208,8 +212,7 @@ class WorkloadGenerator(object):
             result.raise_for_status()
 
             if code == 200 or code == 201 or code == 202:
-                status = list(json_result["data"].values())[0]
-                return status
+                return json_result['data'][0]['status']
             else:
                 if 'error' in json_result:
                     message = json_result['error']['message']
@@ -218,6 +221,10 @@ class WorkloadGenerator(object):
 
                 LOGGER.debug("(%s): %s", code, message)
                 return "UNKNOWN"
+
+        except json.decoder.JSONDecodeError as e:
+            LOGGER.warning('Unable to retrieve status')
+            return "UNKNOWN"
 
         except requests.exceptions.HTTPError as e:
             error_code = e.response.json()['error']['code']

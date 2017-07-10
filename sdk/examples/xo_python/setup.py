@@ -39,6 +39,6 @@ setup(name='sawtooth-xo',
       entry_points={
           'console_scripts': [
               'xo = sawtooth_xo.xo_cli:main_wrapper',
-              'tp_xo_python = sawtooth_xo.processor.main:main',
+              'xo-tp-python = sawtooth_xo.processor.main:main',
           ]
       })

@@ -63,7 +63,7 @@ save_usage intkey load
 save_usage intkey populate
 save_usage intkey create_batch
 save_usage intkey workload
-save_usage tp_intkey_python
+save_usage intkey-tp-python
 
 save_usage xo
 save_usage xo create
@@ -72,7 +72,7 @@ save_usage xo list
 save_usage xo reset
 save_usage xo show
 save_usage xo take
-save_usage tp_xo_python
+save_usage xo-tp-python
 
-save_usage validator
-save_usage rest_api
+save_usage sawtooth-validator
+save_usage sawtooth-rest-api

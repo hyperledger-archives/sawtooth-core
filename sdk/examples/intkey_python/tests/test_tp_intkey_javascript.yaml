@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_intkey_javascript:
-    image: sawtooth-tp_intkey_javascript:$ISOLATION_ID
+  intkey-tp-javascript:
+    image: sawtooth-intkey-tp-javascript:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_intkey_javascript tcp://test-tp-intkey-javascript:4004
+    command: intkey-tp-javascript tcp://test-tp-intkey-javascript:4004
     stop_signal: SIGKILL
 
   test-tp-intkey-javascript:

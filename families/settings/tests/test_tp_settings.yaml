@@ -17,13 +17,13 @@ version: "2.1"
 
 services:
 
-  tp_settings:
-    image: sawtooth-tp_settings:$ISOLATION_ID
+  settings-tp:
+    image: sawtooth-settings-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: tp_settings -vv tcp://test-tp-settings:4004
+    command: settings-tp -vv tcp://test-tp-settings:4004
     stop_signal: SIGKILL
 
   test-tp-settings:

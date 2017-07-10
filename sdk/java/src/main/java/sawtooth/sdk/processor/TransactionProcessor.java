@@ -28,7 +28,6 @@ import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TpProcessResponse;
 import sawtooth.sdk.protobuf.TpRegisterRequest;
 import sawtooth.sdk.protobuf.TpUnregisterRequest;
-import sawtooth.sdk.protobuf.TpUnregisterResponse;
 import sawtooth.sdk.protobuf.TransactionHeader;
 
 import java.util.ArrayList;
@@ -140,31 +139,29 @@ public class TransactionProcessor implements Runnable {
       TpProcessRequest transactionRequest = TpProcessRequest
               .parseFrom(message.getContent());
       State state = new State(stream, transactionRequest.getContextId());
+
+      TpProcessResponse.Builder builder = TpProcessResponse.newBuilder();
       try {
         handler.apply(transactionRequest, state);
-        TpProcessResponse response = TpProcessResponse.newBuilder()
-                .setStatus(TpProcessResponse.Status.OK).build();
-
-        stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
-                message.getCorrelationId(),
-                response.toByteString());
+        builder.setStatus(TpProcessResponse.Status.OK);
       } catch (InvalidTransactionException ite) {
         logger.log(Level.WARNING, "Invalid Transaction: " + ite.toString());
-        TpProcessResponse response = TpProcessResponse.newBuilder()
-                .setStatus(TpProcessResponse.Status.INVALID_TRANSACTION)
-                .build();
-        stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
-                message.getCorrelationId(),
-                response.toByteString());
+        builder.setStatus(TpProcessResponse.Status.INVALID_TRANSACTION);
+        builder.setMessage(ite.getMessage());
+        if (ite.getExtendedData() != null) {
+          builder.setExtendedData(ByteString.copyFrom(ite.getExtendedData()));
+        }
       } catch (InternalError ie) {
         logger.log(Level.WARNING, "State Exception!: " + ie.toString());
-        TpProcessResponse response = TpProcessResponse.newBuilder()
-                .setStatus(TpProcessResponse.Status.INTERNAL_ERROR)
-                .build();
-        stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
-                message.getCorrelationId(),
-                response.toByteString());
+        builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
+        builder.setMessage(ie.getMessage());
+        if (ie.getExtendedData() != null) {
+          builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
+        }
       }
+      stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
+              message.getCorrelationId(),
+              builder.build().toByteString());
 
     } catch (InvalidProtocolBufferException ipbe) {
       logger.info(

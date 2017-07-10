@@ -16,7 +16,7 @@
 # Description:
 #   Builds an image to be used in testing REST API behavior behind a proxy with
 #   Basic Authentication. Redirects from 'basic_auth_proxy/sawtooth' to
-#   'rest_api:8080' with both HTTP and HTTPS.
+#   'rest-api:8080' with both HTTP and HTTPS.
 #
 # Build:
 #   $ cd sawtooth-core/docker
@@ -72,8 +72,8 @@ RUN echo "\
         Require all denied\n\
 </Location>\n\
 \n\
-ProxyPass /sawtooth http://rest_api:8080\n\
-ProxyPassReverse /sawtooth http://rest_api:8080\n\
+ProxyPass /sawtooth http://rest-api:8080\n\
+ProxyPassReverse /sawtooth http://rest-api:8080\n\
 RequestHeader set X-Forwarded-Path \"/sawtooth\"\n\
 \n\
 " >/etc/apache2/sites-enabled/000-default.conf

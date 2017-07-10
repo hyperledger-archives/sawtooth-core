@@ -96,7 +96,7 @@ class XoClient:
                 'batch_status?id={}&wait={}'.format(batch_id, wait),
                 auth_user=auth_user,
                 auth_password=auth_password)
-            return yaml.safe_load(result)["data"]
+            return yaml.safe_load(result)['data'][0]['status']
         except BaseException as err:
             raise XoException(err)
 
@@ -179,7 +179,7 @@ class XoClient:
         if wait and wait > 0:
             wait_time = 0
             start_time = time.time()
-            self._send_request(
+            response = self._send_request(
                 "batches", batch_list.SerializeToString(),
                 'application/octet-stream',
                 auth_user=auth_user,
@@ -194,19 +194,10 @@ class XoClient:
                 )
                 wait_time = time.time() - start_time
 
-                if status[batch_id] == 'COMMITTED':
-                    return 'Game created in {:.6} sec'.format(wait_time)
-                elif status[batch_id] == 'INVALID':
-                    return ('Error: You chose an invalid game name. '
-                            'Try again with a different name')
-                elif status[batch_id] == 'UNKNOWN':
-                    return ('Error: Something went wrong with your game. '
-                            'Try again with a different name.')
-                # Wait a moment so as not to hammer the Rest Api
-                time.sleep(0.2)
+                if status != 'PENDING':
+                    return response
 
-            return ('Timed out while waiting for game to be created. '
-                    'It may need to be resubmitted.')
+            return response
 
         return self._send_request(
             "batches", batch_list.SerializeToString(),

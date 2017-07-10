@@ -20,7 +20,7 @@ package main
 import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	client "sawtooth_burrow_evm/client"
+	"sawtooth_burrow_evm/client"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
 	sdk "sawtooth_sdk/client"
 )
@@ -57,8 +57,9 @@ func (s *Show) Run() (err error) {
 	}
 
 	var (
-		arg     string
-		argtype string
+		arg      string
+		argtype  string
+		argbytes []byte
 	)
 	if s.Private != "" {
 		arg = s.Private
@@ -73,7 +74,11 @@ func (s *Show) Run() (err error) {
 		argtype = "address"
 	}
 
-	argbytes, err := decodeFileOrArg(arg)
+	if argtype == "private" {
+		argbytes, err = decodeFileOrArg(arg, "wif")
+	} else {
+		argbytes, err = decodeFileOrArg(arg, "hex")
+	}
 	if err != nil {
 		return
 	}

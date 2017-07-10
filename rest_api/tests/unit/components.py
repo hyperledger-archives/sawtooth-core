@@ -19,6 +19,7 @@ from aiohttp.test_utils import AioHTTPTestCase
 from base64 import b64decode
 
 from sawtooth_rest_api.route_handlers import RouteHandler
+from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf.client_pb2 import Leaf
 from sawtooth_rest_api.protobuf.client_pb2 import PagingControls
 from sawtooth_rest_api.protobuf.client_pb2 import PagingResponse
@@ -31,16 +32,18 @@ from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
 from sawtooth_rest_api.protobuf.transaction_pb2 import Transaction
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
+from sawtooth_rest_api.protobuf.validator_pb2 import Message
 
 TEST_TIMEOUT = 5
 
 
-class MockStream(object):
-    """Replaces a route handler's stream to allow tests to preset the response
-    to send back as well as run asserts on the protobufs sent to the stream.
+class MockConnection(object):
+    """Replaces a route handler's connection to allow tests to preset the response
+    to send back as well as run asserts on the protobufs sent to the
+    connection.
 
-    Methods can be accessed using `self.stream` within a test case. MockStream
-    should not be initialized directly.
+    Methods can be accessed using `self.connection` within a test case.
+    MockConnection should not be initialized directly.
     """
     def __init__(self, test_case, request_type, request_proto, response_proto):
         self._tests = test_case
@@ -52,7 +55,8 @@ class MockStream(object):
 
     def preset_response(self, status=None, **response_data):
         """Sets the response that will be returned by the next `send` call.
-        Should be set once before every test call the Rest Api makes to stream.
+        Should be set once before every test call the Rest Api makes to
+        Connection.
 
         Args:
             status (int, optional): Enum of the response status, defaults to OK
@@ -81,11 +85,11 @@ class MockStream(object):
 
         self._reset_sent_request()
 
-    def send(self, message_type, content):
-        """Replaces send method on Stream. Should not be called directly.
+    async def send(self, message_type, message_content, timeout):
+        """Replaces send method on Connection. Should not be called directly.
         """
         request = self._request_proto()
-        request.ParseFromString(content)
+        request.ParseFromString(message_content)
 
         self._sent_request_type = message_type
         self._sent_request = request
@@ -95,8 +99,7 @@ class MockStream(object):
         except AttributeError:
             raise AssertionError("Preset a response before sending a request!")
 
-        self._reset_response()
-        return self._MockFuture(response_bytes)
+        return Message(content=response_bytes)
 
     def _reset_sent_request(self):
         self._sent_request_type = None
@@ -127,11 +130,11 @@ class BaseApiTest(AioHTTPTestCase):
         sets up aiohttp's async test cases.
 
         Additionally, within this method each child should run the methods
-        `set_status_and_steam`, `build_handlers`, and `build_app` as part of
-        the setup process.
+        `set_status_and_connection`, `build_handlers`, and `build_app` as part
+        of the setup process.
 
         Args:
-            loop (object): Provided by aiohttp for acync operations,
+            loop (object): Provided by aiohttp for async operations,
                 will be needed in order to `build_app`.
 
         Returns:
@@ -139,28 +142,31 @@ class BaseApiTest(AioHTTPTestCase):
         """
         raise NotImplementedError('Rest Api tests need get_application method')
 
-    def set_status_and_stream(self, req_type, req_proto, resp_proto):
-        """Sets the `status` and `stream` properties for the test case.
+    def set_status_and_connection(self, req_type, req_proto, resp_proto):
+        """Sets the `status` and `connection` properties for the test case.
 
         Args:
-            req_type (int): Expected enum of the type of Message sent to stream
-            req_proto (class): Protobuf of requests that will be sent to stream
-            resp_proto (class): Protobuf of responses to send back from stream
+            req_type (int): Expected enum of the type of Message sent to
+                connection
+            req_proto (class): Protobuf of requests that will be sent to
+                connection
+            resp_proto (class): Protobuf of responses to send back from
+                connection
         """
         self.status = resp_proto
-        self.stream = MockStream(self, req_type, req_proto, resp_proto)
+        self.connection = MockConnection(self, req_type, req_proto, resp_proto)
 
     @staticmethod
-    def build_handlers(loop, stream):
-        """Returns Rest Api route handlers modified with some a mock stream.
+    def build_handlers(loop, connection):
+        """Returns Rest Api route handlers modified with some a mock connection.
 
         Args:
-            stream (object): The MockStream set to `self.stream`
+            connection (object): The MockConnection set to `self.connection`
 
         Returns:
             RouteHandler: The route handlers to handle test queries
         """
-        handlers = RouteHandler(loop, stream, TEST_TIMEOUT)
+        handlers = RouteHandler(loop, connection, TEST_TIMEOUT)
         return handlers
 
     @staticmethod
@@ -300,14 +306,23 @@ class BaseApiTest(AioHTTPTestCase):
             self.assertEqual(pb_leaf.address, js_leaf['address'])
             self.assertEqual(pb_leaf.data, b64decode(js_leaf['data']))
 
-    def assert_statuses_match(self, enum_statuses, json_statuses):
+    def assert_statuses_match(self, proto_statuses, json_statuses):
         """Asserts that JSON statuses match the original enum statuses dict
         """
-        self.assertEqual(len(enum_statuses), len(json_statuses))
-        for batch_id, status_string in json_statuses.items():
-            self.assertIn(batch_id, enum_statuses)
-            status_enum = self.status.BatchStatus.Name(enum_statuses[batch_id])
-            self.assertEqual(status_string, status_enum)
+        self.assertEqual(len(proto_statuses), len(json_statuses))
+        for pb_status, js_status in zip(proto_statuses, json_statuses):
+            self.assertEqual(pb_status.batch_id, js_status['id'])
+            pb_enum_name = client_pb2.BatchStatus.Status.Name(pb_status.status)
+            self.assertEqual(pb_enum_name, js_status['status'])
+
+            if pb_status.invalid_transactions:
+                txn_info = zip(pb_status.invalid_transactions,
+                               js_status['invalid_transactions'])
+                for pb_txn, js_txn in txn_info:
+                    self.assertEqual(pb_txn.transaction_id, js_txn['id'])
+                    self.assertEqual(pb_txn.message, js_txn.get('message', ''))
+                    self.assertEqual(pb_txn.extended_data,
+                                     b64decode(js_txn.get('extended_data', b'')))
 
     def assert_blocks_well_formed(self, blocks, *expected_ids):
         """Asserts a block dict or list of block dicts have expanded headers

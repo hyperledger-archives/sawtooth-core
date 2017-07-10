@@ -23,17 +23,17 @@ from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaEvent
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    RegisterStateDeltaSubscriberRequest
+    StateDeltaSubscribeRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    RegisterStateDeltaSubscriberResponse
+    StateDeltaSubscribeResponse
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    UnregisterStateDeltaSubscriberRequest
+    StateDeltaUnsubscribeRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    UnregisterStateDeltaSubscriberResponse
+    StateDeltaUnsubscribeResponse
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    GetStateDeltaEventsRequest
+    StateDeltaGetEventsRequest
 from sawtooth_validator.protobuf.state_delta_pb2 import \
-    GetStateDeltaEventsResponse
+    StateDeltaGetEventsResponse
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,6 +53,10 @@ class _DeltaSubscriber(object):
         return [delta for delta in deltas if self._match(delta.address)]
 
     def _match(self, address):
+        # Match all if there are no prefixes
+        if not self.address_prefixes:
+            return True
+
         for prefix in self.address_prefixes:
             if address.startswith(prefix):
                 return True
@@ -238,10 +242,10 @@ class StateDeltaSubscriberValidationHandler(Handler):
         self._delta_processor = delta_processor
 
     def handle(self, connection_id, message_content):
-        request = RegisterStateDeltaSubscriberRequest()
+        request = StateDeltaSubscribeRequest()
         request.ParseFromString(message_content)
 
-        ack = RegisterStateDeltaSubscriberResponse()
+        ack = StateDeltaSubscribeResponse()
         if self._delta_processor.is_valid_subscription(
                 request.last_known_block_ids):
             ack.status = ack.OK
@@ -265,7 +269,7 @@ class StateDeltaAddSubscriberHandler(Handler):
         self._delta_processor = delta_processor
 
     def handle(self, connection_id, message_content):
-        request = RegisterStateDeltaSubscriberRequest()
+        request = StateDeltaSubscribeRequest()
         request.ParseFromString(message_content)
 
         try:
@@ -291,10 +295,10 @@ class StateDeltaUnsubscriberHandler(Handler):
         self._delta_processor = delta_processor
 
     def handle(self, connection_id, message_content):
-        request = UnregisterStateDeltaSubscriberRequest()
+        request = StateDeltaUnsubscribeRequest()
         request.ParseFromString(message_content)
 
-        ack = UnregisterStateDeltaSubscriberResponse()
+        ack = StateDeltaUnsubscribeResponse()
         self._delta_processor.remove_subscriber(connection_id)
         ack.status = ack.OK
 
@@ -304,7 +308,7 @@ class StateDeltaUnsubscriberHandler(Handler):
             message_type=self._msg_type)
 
 
-class GetStateDeltaEventsHandler(Handler):
+class StateDeltaGetEventsHandler(Handler):
     """Handles receiving messages for getting state delta events based on block
     ids.
     """
@@ -315,7 +319,7 @@ class GetStateDeltaEventsHandler(Handler):
         self._state_delta_store = state_delta_store
 
     def handle(self, connection_id, message_content):
-        request = GetStateDeltaEventsRequest()
+        request = StateDeltaGetEventsRequest()
         request.ParseFromString(message_content)
 
         # Create a temporary subscriber for this response
@@ -345,10 +349,10 @@ class GetStateDeltaEventsHandler(Handler):
 
             events.append(event)
 
-        status = GetStateDeltaEventsResponse.OK if events else \
-            GetStateDeltaEventsResponse.NO_VALID_BLOCKS_SPECIFIED
+        status = StateDeltaGetEventsResponse.OK if events else \
+            StateDeltaGetEventsResponse.NO_VALID_BLOCKS_SPECIFIED
 
-        ack = GetStateDeltaEventsResponse(status=status, events=events)
+        ack = StateDeltaGetEventsResponse(status=status, events=events)
 
         return HandlerResult(
             HandlerStatus.RETURN,

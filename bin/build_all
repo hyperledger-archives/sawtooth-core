@@ -85,6 +85,7 @@ fi
 if [[ $LANGUAGES = "" ]]
 then
     LANGUAGES="
+        cxx
         go
         java
         javascript
@@ -129,6 +130,9 @@ main() {
         else
             info "Building $language"
             case $language in
+                cxx)
+                    build_cxx
+                    ;;
                 go)
                     build_go
                     ;;
@@ -216,36 +220,41 @@ build_debs() {
 
 if [[ $BUILD_MODE == $MOUNTED ]]
 then
+    build_cxx() {
+        docker_build docker/sawtooth-dev-cxx docker/ sawtooth-dev-cxx
+        docker_run sawtooth-dev-cxx
+    }
+
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
-        docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_intkey_go
-        docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_burrow_evm
-        docker_build docker/sawtooth-dev-go docker/ sawtooth-tp_xo_go
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-intkey-tp-go
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-burrow-evm-tp
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-xo-tp-go
         docker_run sawtooth-dev-go
     }
 
     build_java() {
         docker_build docker/sawtooth-dev-java docker/ sawtooth-dev-java
-        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_intkey_java
-        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_xo_java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-intkey-tp-java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-xo-tp-java
         docker_run sawtooth-dev-java
     }
 
     build_javascript() {
         docker_build docker/sawtooth-dev-javascript docker/ sawtooth-dev-javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-tp_intkey_javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-tp_xo_javascript
+        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-intkey-tp-javascript
+        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-xo-tp-javascript
         docker_run sawtooth-dev-javascript
     }
 
     build_python() {
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest_api
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_settings
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_intkey_python
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_supplychain_python
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_validator_registry
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-tp_xo_python
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest-api
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-settings-tp
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-supplychain-tp
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
         docker_run sawtooth-dev-python
     }
@@ -253,6 +262,11 @@ fi
 
 if [[ $BUILD_MODE == $INSTALLED ]]
 then
+    build_cxx() {
+        docker_build docker/sawtooth-dev-cxx docker/ sawtooth-dev-cxx
+        docker_run sawtooth-dev-cxx
+    }
+
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_run sawtooth-dev-go
@@ -260,38 +274,38 @@ then
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir
         mkdir -p $build_dir
-        cp $top_dir/docker/sawtooth-int-tp_intkey_go $build_dir
-        cp $top_dir/docker/sawtooth-int-tp_xo_go $build_dir
-        cp $top_dir/sdk/examples/intkey_go/bin/tp_intkey_go \
+        cp $top_dir/docker/sawtooth-int-intkey-tp-go $build_dir
+        cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
+        cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
             $build_dir
-        cp $top_dir/docker/sawtooth-int-tp_burrow_evm $build_dir
-        cp $top_dir/families/burrow_evm/bin/tp_burrow_evm \
+        cp $top_dir/docker/sawtooth-int-burrow-evm-tp $build_dir
+        cp $top_dir/families/burrow_evm/bin/burrow-evm-tp \
             $build_dir
-        cp $top_dir/sdk/examples/xo_go/bin/tp_xo_go \
+        cp $top_dir/sdk/examples/xo_go/bin/xo-tp-go \
             $build_dir
         ls $build_dir
 
-        docker_build $build_dir/sawtooth-int-tp_intkey_go $build_dir/ \
-            sawtooth-tp_intkey_go
-        docker_build $build_dir/sawtooth-int-tp_burrow_evm $build_dir/ \
-            sawtooth-tp_burrow_evm
-        docker_build $build_dir/sawtooth-int-tp_xo_go $build_dir/ \
-            sawtooth-tp_xo_go
+        docker_build $build_dir/sawtooth-int-intkey-tp-go $build_dir/ \
+            sawtooth-intkey-tp-go
+        docker_build $build_dir/sawtooth-int-burrow-evm-tp $build_dir/ \
+            sawtooth-burrow-evm-tp
+        docker_build $build_dir/sawtooth-int-xo-tp-go $build_dir/ \
+            sawtooth-xo-tp-go
     }
 
     build_java() {
         warn "Installed java images not implemented, building mounted instead"
         docker_build docker/sawtooth-dev-java docker/ sawtooth-dev-java
-        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_intkey_java
-        docker_build docker/sawtooth-dev-java docker/ sawtooth-tp_xo_java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-intkey-tp-java
+        docker_build docker/sawtooth-dev-java docker/ sawtooth-xo-tp-java
         docker_run sawtooth-dev-java
     }
 
     build_javascript() {
         warn "Installed javascript images not implemented, building mounted instead"
         docker_build docker/sawtooth-dev-javascript docker/ sawtooth-dev-javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-tp_intkey_javascript
-        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-tp_xo_javascript
+        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-intkey-tp-javascript
+        docker_build docker/sawtooth-dev-javascript docker/ sawtooth-xo-tp-javascript
         docker_run sawtooth-dev-javascript
     }
 
@@ -312,20 +326,20 @@ then
         cp $top_dir/docker/sawtooth-int-* $build_dir/
         ls $build_dir
 
-        docker_build $build_dir/sawtooth-int-rest_api \
-            $build_dir/ sawtooth-rest_api
+        docker_build $build_dir/sawtooth-int-rest-api \
+            $build_dir/ sawtooth-rest-api
 
-        docker_build $build_dir/sawtooth-int-tp_settings \
-            $build_dir/ sawtooth-tp_settings
+        docker_build $build_dir/sawtooth-int-settings-tp \
+            $build_dir/ sawtooth-settings-tp
 
-        docker_build $build_dir/sawtooth-int-tp_intkey_python \
-            $build_dir/ sawtooth-tp_intkey_python
+        docker_build $build_dir/sawtooth-int-intkey-tp-python \
+            $build_dir/ sawtooth-intkey-tp-python
 
-        docker_build $build_dir/sawtooth-int-tp_validator_registry \
-            $build_dir/ sawtooth-tp_validator_registry
+        docker_build $build_dir/sawtooth-int-poet-validator-registry-tp \
+            $build_dir/ sawtooth-poet-validator-registry-tp
 
-        docker_build $build_dir/sawtooth-int-tp_xo_python \
-            $build_dir/ sawtooth-tp_xo_python
+        docker_build $build_dir/sawtooth-int-xo-tp-python \
+            $build_dir/ sawtooth-xo-tp-python
 
         docker_build $build_dir/sawtooth-int-validator \
             $build_dir/ sawtooth-validator

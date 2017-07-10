@@ -17,32 +17,32 @@ version: "2.1"
 
 services:
 
-  tp_settings:
+  settings-tp:
     image: hyperledger/sawtooth-tp_settings:latest
-    container_name: sawtooth-tp_settings-default
+    container_name: sawtooth-settings-tp-default
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: tp_settings -vv tcp://validator:4004
+    entrypoint: settings-tp -vv tcp://validator:4004
 
-  tp_intkey_python:
+  intkey-tp-python:
     image: hyperledger/sawtooth-tp_intkey_python:latest
-    container_name: sawtooth-tp_intkey_python-default
+    container_name: sawtooth-intkey-tp-python-default
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: tp_intkey_python -vv tcp://validator:4004
+    entrypoint: intkey-tp-python -vv tcp://validator:4004
 
-  tp_xo_python:
+  xo-tp-python:
     image: hyperledger/sawtooth-tp_xo_python:latest
-    container_name: sawtooth-tp_xo_python-default
+    container_name: sawtooth-xo-tp-python-default
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: tp_xo_python -vv tcp://validator:4004
+    entrypoint: xo-tp-python -vv tcp://validator:4004
 
   validator:
     image: hyperledger/sawtooth-validator:latest
@@ -57,15 +57,15 @@ services:
         sawtooth keygen my_key && \
         sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && \
         sawtooth admin genesis config-genesis.batch && \
-        validator -vv \
+        sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
         \""
 
-  rest_api:
+  rest-api:
     image: hyperledger/sawtooth-rest_api:latest
-    container_name: sawtooth-rest_api-default
+    container_name: sawtooth-rest-api-default
     expose:
       - 4004
       - 8080
@@ -73,7 +73,7 @@ services:
       - "8080:8080"
     depends_on:
       - validator
-    entrypoint: rest_api --connect tcp://validator:4004 --bind rest_api:8080
+    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8080
 
   client:
     image: hyperledger/sawtooth-all:latest
@@ -82,7 +82,7 @@ services:
       - 8080
       - 4004
     depends_on:
-      - rest_api
+      - rest-api
     entrypoint: "bash -c \"\
         sawtooth keygen && \
         tail -f /dev/null \

@@ -68,9 +68,9 @@ xo take
    :language: console
    :linenos:
 
-tp_xo_python
+xo-tp-python
 ============
 
-.. literalinclude:: output/tp_xo_python_usage.out
+.. literalinclude:: output/xo-tp-python_usage.out
    :language: console
    :linenos:

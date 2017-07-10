@@ -60,7 +60,7 @@ message StateDeltaEvent {
 // Registers a subscriber for StateDeltaEvent objects.  The
 // identity of the subscriber will be based on the ZMQ connection
 // id. This is an idempotent request.
-message RegisterStateDeltaSubscriberRequest {
+message StateDeltaSubscribeRequest {
     // The block id (or ids, if trying to walk back a fork) the
     // subscriber last received deltas on.  It can be set to empty
     // if it has not yet received the genesis block.
@@ -71,8 +71,8 @@ message RegisterStateDeltaSubscriberRequest {
     repeated string address_prefixes = 2;
 }
 
-// The response to a RegisterStateDeltaSubscriberRequest
-message RegisterStateDeltaSubscriberResponse {
+// The response to a StateDeltaSubscribeRequest
+message StateDeltaSubscribeResponse {
     enum Status {
         // returned on successful registration
         OK = 0;
@@ -92,11 +92,11 @@ message RegisterStateDeltaSubscriberResponse {
 // Unregisters a subscriber for StateDeltaEvent objects.  The
 // identity of the subscriber will be based on the ZMQ connection
 // id.  This is an idempotent request.
-message UnregisterStateDeltaSubscriberRequest {
+message StateDeltaUnsubscribeRequest {
     // No data
 }
 
-message UnregisterStateDeltaSubscriberResponse {
+message StateDeltaUnsubscribeResponse {
     enum Status {
         // returned on successful registration
         OK = 0;
@@ -110,7 +110,7 @@ message UnregisterStateDeltaSubscriberResponse {
 // Request message for a set of StateDeltaEvent objects, based on a given list
 // of block_ids and a known filter.  The result will include a set of
 // StateDeltaEvent objects.
-message GetStateDeltaEventsRequest {
+message StateDeltaGetEventsRequest {
     // The block ids to query
     repeated string block_ids = 1;
 
@@ -123,7 +123,7 @@ message GetStateDeltaEventsRequest {
 // Response message for a GetStateDeltasRequest.  Returns a list of
 // StateDeltaEvent objects for the block_ids requested.  Only block_ids known
 // to the validator will result in events.
-message GetStateDeltaEventsResponse {
+message StateDeltaGetEventsResponse {
     enum Status {
         // returned on a successful request
         OK = 0;

@@ -8,15 +8,8 @@
 
 targets:
 
-  txn_submit_tutorial_python:
+  txn_submit_tutorial:
     template: txn_submit_tutorial.rst
-    args:
-      language: Python 3
-
-  txn_submit_tutorial_js:
-    template: txn_submit_tutorial.rst
-    args:
-      language: JavaScript
 
   sdk_submit_tutorial_js:
     template: sdk_submit_tutorial.rst
@@ -33,3 +26,8 @@ targets:
     template: sdk_TP_tutorial.rst
     args:
         language: JavaScript
+
+  sdk_TP_tutorial_java:
+    template: sdk_TP_tutorial.rst
+    args:
+        language: Java

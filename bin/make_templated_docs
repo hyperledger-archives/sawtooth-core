@@ -50,6 +50,10 @@ env = Environment(
     keep_trailing_newline=True)
 warning = env.get_template('partials/warning_header')
 
+# Remove old templated docs
+for file_rel in os.listdir(output_abs):
+    os.unlink(os.path.join(output_abs, file_rel))
+
 # Render templates
 for name, target in conf['targets'].items():
     template = env.get_template(target['template'])

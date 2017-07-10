@@ -25,11 +25,11 @@ data_files = []
 
 if os.path.exists("/etc/default"):
     data_files.append(('/etc/default',
-                       ['packaging/systemd/sawtooth-tp_settings']))
+                       ['packaging/systemd/sawtooth-settings-tp']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
-                       ['packaging/systemd/sawtooth-tp_settings.service']))
+                       ['packaging/systemd/sawtooth-settings-tp.service']))
 
 setup(name='sawtooth-settings',
       version=subprocess.check_output(
@@ -46,6 +46,6 @@ setup(name='sawtooth-settings',
       data_files=data_files,
       entry_points={
           'console_scripts': [
-              'tp_settings= sawtooth_settings.processor.main:main'
+              'settings-tp= sawtooth_settings.processor.main:main'
           ]
       })

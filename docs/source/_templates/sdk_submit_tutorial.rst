@@ -12,9 +12,7 @@ generally non-trivial. A series of cryptographic safeguards are used to
 confirm identity and data validity. *Hyperledger Sawtooth* is no different, but
 the {{ language }} SDK does provide client functionality that abstracts away
 most of these details, and greatly simplifies the process of making changes to
-the blockchain. If you are interested in getting into these details, you
-should check out the
-:doc:`txn_submit_tutorial_{{ short_lang }}` instead.
+the blockchain.
 
 
 Creating a Private Key

@@ -426,8 +426,7 @@ class TestBlockValidator(unittest.TestCase):
         """
 
         new_block = self.block_tree_manager.generate_block(
-            previous_block=self.root,
-            add_to_store=True)
+            previous_block=self.root)
 
         self.validate_block(new_block)
 
@@ -560,24 +559,6 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_invalid_block(new_block)
         self.assert_new_block_not_committed()
 
-    def test_block_missing_batch(self):
-        """
-        Test the case where the new block is missing a batch.
-        """
-        pass
-
-    def test_block_extra_batch(self):
-        """
-        Test the case where the new block has an extra batch.
-        """
-        pass
-
-    def test_block_batches_order(self):
-        """
-        Test the case where the new block has batches that are
-        out of order.
-        """
-        pass
 
     def test_block_missing_batch_dependency(self):
         """
@@ -631,7 +612,7 @@ class TestBlockValidator(unittest.TestCase):
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
             done_cb=on_block_validated,
-            executor=MockTransactionExecutor(),
+            executor=MockTransactionExecutor(batch_execution_result=None),
             squash_handler=None,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
@@ -680,7 +661,8 @@ class TestChainController(unittest.TestCase):
                 self.block_tree_manager.state_db),
             block_sender=self.block_sender,
             executor=self.executor,
-            transaction_executor=MockTransactionExecutor(),
+            transaction_executor=MockTransactionExecutor(
+                batch_execution_result=None),
             chain_head_lock=self._chain_head_lock,
             on_chain_updated=chain_updated,
             squash_handler=None,

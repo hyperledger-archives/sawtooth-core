@@ -20,6 +20,8 @@ import threading
 from collections import namedtuple
 from datetime import datetime
 from http.client import RemoteDisconnected
+import getpass
+from base64 import b64encode
 
 import requests
 import sawtooth_signing as signing
@@ -34,10 +36,11 @@ LOGGER = logging.getLogger(__name__)
 IntKeyState = namedtuple('IntKeyState', ['name', 'url', 'value'])
 
 
-def post_batches(url, batches):
+def post_batches(url, batches, auth_info=None):
     data = batches.SerializeToString()
     headers = {'Content-Type': 'application/octet-stream'}
     headers['Content-Length'] = str(len(data))
+    headers['Authorization'] = 'Basic {}'.format(auth_info)
 
     try:
         result = requests.post(url + "/batches", data, headers=headers)
@@ -76,6 +79,7 @@ class IntKeyWorkload(Workload):
     """
     def __init__(self, delegate, args):
         super(IntKeyWorkload, self).__init__(delegate, args)
+        self._auth_info = args.auth_info
         self._urls = []
         self._pending_batches = {}
         self._lock = threading.Lock()
@@ -127,7 +131,7 @@ class IntKeyWorkload(Workload):
 
                 batch_list = batch_pb2.BatchList(batches=[batch])
 
-                post_batches(key.url, batch_list)
+                post_batches(key.url, batch_list, auth_info=self._auth_info)
 
                 with self._lock:
                     self._pending_batches[batch.header_signature] = \
@@ -168,7 +172,7 @@ class IntKeyWorkload(Workload):
             batch_id = batch.header_signature
 
             batch_list = batch_pb2.BatchList(batches=[batch])
-            post_batches(url, batch_list)
+            post_batches(url, batch_list, auth_info=self._auth_info)
 
             with self._lock:
                 self._pending_batches[batch_id] = \
@@ -183,12 +187,24 @@ def do_workload(args):
     generator and run.
     """
     try:
+        args.auth_info = _get_auth_info(args.auth_user, args.auth_password)
         generator = WorkloadGenerator(args)
         workload = IntKeyWorkload(generator, args)
         generator.set_workload(workload)
         generator.run()
     except KeyboardInterrupt:
         generator.stop()
+
+
+def _get_auth_info(auth_user, auth_password):
+    if auth_user is not None:
+        if auth_password is None:
+            auth_password = getpass.getpass(prompt="Auth Password: ")
+        auth_string = "{}:{}".format(auth_user, auth_password)
+        b64_string = b64encode(auth_string.encode()).decode()
+        return b64_string
+    else:
+        return None
 
 
 def add_workload_parser(subparsers, parent_parser):
@@ -211,3 +227,12 @@ def add_workload_parser(subparsers, parent_parser):
                         help='comma separated urls of the REST API to connect '
                         'to.',
                         default="http://127.0.0.1:8080")
+    parser.add_argument('--auth-user',
+                        type=str,
+                        help='username for authentication '
+                             'if REST API is using Basic Auth')
+
+    parser.add_argument('--auth-password',
+                        type=str,
+                        help='password for authentication '
+                             'if REST API is using Basic Auth')

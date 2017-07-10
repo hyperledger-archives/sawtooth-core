@@ -34,8 +34,8 @@ MODULE_LIST="
 
 usage() {
     echo "Usage:"
-    echo "  $0 [-m Module]"
-    echo "  (-m can be passed multiple times)"
+    echo "  $0 [-m Module] [-x Module] [-i Module]"
+    echo "  (-m, -x and -i can be passed multiple times)"
     echo ""
     echo "Options:"
     echo "  -h          print usage and exit"
@@ -245,7 +245,11 @@ test_permission() {
 }
 
 test_supplychain() {
+    run_docker_test ./families/supplychain/python/tests/unit_supplychain_python.yaml
+    copy_coverage .coverage.config
     run_docker_test ./families/supplychain/python/tests/test_tp_supplychain_python.yaml
+    copy_coverage .coverage.config
+    run_docker_test ./families/supplychain/python/tests/int_supplychain_python.yaml
     copy_coverage .coverage.config
 }
 
@@ -305,6 +309,7 @@ test_python_sdk() {
 }
 
 test_burrow_evm() {
+  run_docker_test ./families/burrow_evm/tests/unit_burrow_evm.yaml
   run_docker_test burrow_evm_intkey_test
 }
 

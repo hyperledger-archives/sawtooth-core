@@ -53,15 +53,15 @@ def everyone_peers_with_everyone(num):
 
 def intkey_config_registry(num):
     # all nodes get the same processors
-    return 'tp_intkey_python', 'tp_settings', 'tp_validator_registry'
+    return 'intkey-tp-python', 'settings-tp', 'poet-validator-registry-tp'
 
 def intkey_xo_config_registry(num):
     # all nodes get the same processors
     return (
-        'tp_intkey_python',
-        'tp_xo_python',
-        'tp_settings',
-        'tp_validator_registry'
+        'intkey-tp-python',
+        'xo-tp-python',
+        'settings-tp',
+        'poet-validator-registry-tp'
     )
 
 
@@ -118,7 +118,7 @@ def validator_cmds(num,
     keygen = 'sawtooth admin keygen --force'
 
     validator = ' '.join([
-        'validator -v',
+        'sawtooth-validator -v',
         '--endpoint {}'.format(endpoint(num)),
         '--bind component:{}'.format(bind_component(num)),
         '--bind network:{}'.format(bind_network(num)),
@@ -252,7 +252,7 @@ def start_processors(num, processor_func):
 # rest_api
 
 def rest_api_cmd(num):
-    return 'rest_api --connect {s} --bind 127.0.0.1:{p}'.format(
+    return 'sawtooth-rest-api --connect {s} --bind 127.0.0.1:{p}'.format(
         s=connection_address(num),
         p=(8080 + num)
     )

@@ -108,7 +108,7 @@ func main() {
 
 // Try to interpret the argument as a file path. If that fails, assume the
 // argument passed on the command line is the actual hex-encoded string
-func decodeFileOrArg(arg string) (b []byte, err error) {
+func decodeFileOrArg(arg, enc string) (b []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("Failed to load arg: %v", r)
@@ -121,5 +121,14 @@ func decodeFileOrArg(arg string) (b []byte, err error) {
 		arg = strings.TrimSpace(string(buf))
 	}
 
-	return sdk.MustDecode(arg), nil
+	if enc == "hex" {
+		return sdk.MustDecode(arg), nil
+	}
+
+	if enc == "wif" {
+		return sdk.WifToPriv(arg), nil
+	}
+
+	return nil, fmt.Errorf("Unknown format for arg: %v", enc)
+
 }

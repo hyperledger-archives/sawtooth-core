@@ -72,11 +72,15 @@ class _CandidateBlock(object):
     def previous_block_id(self):
         return self._block_builder.previous_block_id
 
+    def has_pending_batches(self):
+        return len(self._pending_batches) != 0
+
     @property
     def last_batch(self):
         if self._pending_batches:
             return self._pending_batches[-1]
-        return None
+        raise ValueError('last_batch called on an empty block.'
+                         'Empty block publishing is not supported.')
 
     @property
     def can_add_batch(self):
@@ -405,11 +409,12 @@ class BlockPublisher(object):
         :param batch: the new pending batch
         :return: None
         """
-        self._pending_batches.append(batch)
-        # if we are building a block then send schedule it for
-        # execution.
-        if self._candidate_block and self._candidate_block.can_add_batch:
-            self._candidate_block.add_batch(batch)
+        with self._lock:
+            self._pending_batches.append(batch)
+            # if we are building a block then send schedule it for
+            # execution.
+            if self._candidate_block and self._candidate_block.can_add_batch:
+                self._candidate_block.add_batch(batch)
 
     def _rebuild_pending_batches(self, committed_batches, uncommitted_batches):
         """When the chain head is changed. This recomputes the list of pending
@@ -490,8 +495,9 @@ class BlockPublisher(object):
                         self._pending_batches:
                     self._build_candidate_block(self._chain_head)
 
-                if self._candidate_block and \
-                        (force or self._pending_batches) and \
+                if self._candidate_block and (
+                            force or
+                            self._candidate_block.has_pending_batches()) and \
                         self._candidate_block.check_publish_block():
 
                     pending_batches = []  # will receive the list of batches

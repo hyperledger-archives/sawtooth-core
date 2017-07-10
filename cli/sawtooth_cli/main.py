@@ -20,6 +20,7 @@ import logging
 import os
 import traceback
 import sys
+import pkg_resources
 
 from colorlog import ColoredFormatter
 
@@ -82,6 +83,18 @@ def create_parent_parser(prog_name):
         '-v', '--verbose',
         action='count',
         help='enable more verbose output')
+
+    try:
+        version = pkg_resources.get_distribution('sawtooth-cli').version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parent_parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version='sawtooth-cli (Hyperledger Sawtooth) version {}'
+                .format(version),
+        help='print version information')
 
     return parent_parser
 

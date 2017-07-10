@@ -60,8 +60,6 @@ def main(args=None):
                 log_dir=log_dir,
                 name="supplychain-" + str(processor.zmq_id)[2:-1])
 
-        init_console_logging(verbose_level=opts.verbose)
-
         processor.add_handler(SupplyChainHandler())
 
         processor.start()

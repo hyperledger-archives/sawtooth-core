@@ -40,4 +40,4 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
 
 EXPOSE 4004/tcp
 
-CMD ["validator", "-vv"]
+CMD ["sawtooth-validator", "-vv"]

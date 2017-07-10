@@ -28,7 +28,7 @@ if os.path.exists("/etc/default"):
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
-                       ['packaging/systemd/sawtooth-tp_supplychain_python.service']))
+                       ['packaging/systemd/sawtooth-supplychain-tp.service']))
 
 setup(name='sawtooth-supplychain',
       version=subprocess.check_output(
@@ -44,6 +44,6 @@ setup(name='sawtooth-supplychain',
       data_files=data_files,
       entry_points={
           'console_scripts': [
-              'tp_supplychain_python = sawtooth_supplychain.processor.main:main'
+              'supplychain-tp = sawtooth_supplychain.processor.main:main'
           ]
       })

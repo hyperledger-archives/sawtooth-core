@@ -13,8 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from time import time
-from threading import Condition
+import abc
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 
@@ -25,6 +24,8 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 
+CHAIN_HEAD_KEY = "chain_head_id"
+
 
 class BlockStore(MutableMapping):
     """
@@ -32,9 +33,9 @@ class BlockStore(MutableMapping):
     objects are correctly wrapped and unwrapped as they are stored and
     retrieved.
     """
-    def __init__(self, block_db):
+    def __init__(self, block_db, update_observers=None):
         self._block_store = block_db
-        self._commit_condition = Condition()
+        self._update_obs = [] if update_observers is None else update_observers
 
     def __setitem__(self, key, value):
         if key != value.identifier:
@@ -42,6 +43,8 @@ class BlockStore(MutableMapping):
                            format(key, value.identifier))
         add_ops = self._build_add_block_ops(value)
         self._block_store.set_batch(add_ops)
+        for observer in self._update_obs:
+            observer.notify_store_updated()
 
     def __getitem__(self, key):
         stored_block = self._block_store[key]
@@ -97,19 +100,26 @@ class BlockStore(MutableMapping):
         if old_chain is not None:
             for blkw in old_chain:
                 del_keys = del_keys + self._build_remove_block_ops(blkw)
-        add_pairs.append(("chain_head_id", new_chain[0].identifier))
+        add_pairs.append((CHAIN_HEAD_KEY, new_chain[0].identifier))
 
         self._block_store.set_batch(add_pairs, del_keys)
+        for observer in self._update_obs:
+            observer.notify_store_updated()
+
+    def add_update_observer(self, observer):
+        """Adds a new BlocksCommittedObserver to commit observers.
+        """
+        self._update_obs.append(observer)
 
     @property
     def chain_head(self):
         """
         Return the head block of the current chain.
         """
-        if "chain_head_id" not in self._block_store:
+        if CHAIN_HEAD_KEY not in self._block_store:
             return None
-        if self._block_store["chain_head_id"] in self._block_store:
-            return self.__getitem__(self._block_store["chain_head_id"])
+        if self._block_store[CHAIN_HEAD_KEY] in self._block_store:
+            return self.__getitem__(self._block_store[CHAIN_HEAD_KEY])
         return None
 
     @property
@@ -135,23 +145,6 @@ class BlockStore(MutableMapping):
 
         return _BlockPredecessorIterator(self, start_block=starting_block)
 
-    def wait_for_batch_commits(self, batch_ids=None, timeout=None):
-        """Waits for a set of batch ids to be committed to the block chain,
-        and returns True when they have. If timeout is exceeded, returns False.
-        If no batch_ids are passed in, it will return True on the next commit.
-        """
-        batch_ids = batch_ids or []
-        timeout = timeout or 300
-        start_time = time()
-
-        with self._commit_condition:
-            while True:
-                if all(self.has_batch(b) for b in batch_ids):
-                    return True
-                if time() - start_time > timeout:
-                    return False
-                self._commit_condition.wait(timeout - (time() - start_time))
-
     def _build_add_block_ops(self, blkw):
         """Build the batch operations to add a block to the BlockStore.
 
@@ -161,13 +154,11 @@ class BlockStore(MutableMapping):
         """
         out = []
         blk_id = blkw.identifier
-        with self._commit_condition:
-            out.append((blk_id, blkw.block.SerializeToString()))
-            for batch in blkw.batches:
-                out.append((batch.header_signature, blk_id))
-                for txn in batch.transactions:
-                    out.append((txn.header_signature, blk_id))
-            self._commit_condition.notify_all()
+        out.append((blk_id, blkw.block.SerializeToString()))
+        for batch in blkw.batches:
+            out.append((batch.header_signature, blk_id))
+            for txn in batch.transactions:
+                out.append((txn.header_signature, blk_id))
         return out
 
     @staticmethod
@@ -267,6 +258,18 @@ class BlockStore(MutableMapping):
                     return txn
 
         raise ValueError('Transaction "%s" not in BlockStore', transaction_id)
+
+
+class StoreUpdateObserver(metaclass=abc.ABCMeta):
+    """An interface class for components wishing to be notified when the block
+    store is being updated.
+    """
+    @abc.abstractmethod
+    def notify_store_updated(self):
+        """This method will be called when the blockchain is being updated.
+        """
+        raise NotImplementedError('StoreUpdatedObservers must have a '
+                                  '"notify_store_updated" method')
 
 
 class _BlockPredecessorIterator(object):

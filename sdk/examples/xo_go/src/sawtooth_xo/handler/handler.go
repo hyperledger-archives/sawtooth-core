@@ -93,7 +93,7 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, state *pro
 		return applyTake(payload.Name, payload.Space, player, state)
 	default:
 		return &processor.InvalidTransactionError{
-			fmt.Sprintf("Invalid Action : '%v'", payload.Action)}
+			Msg: fmt.Sprintf("Invalid Action : '%v'", payload.Action)}
 	}
 }
 
@@ -103,7 +103,7 @@ func applyCreate(name string, state *processor.State) error {
 		return err
 	}
 	if game != nil {
-		return &processor.InvalidTransactionError{"Game already exists"}
+		return &processor.InvalidTransactionError{Msg: "Game already exists"}
 	}
 
 	game = &Game{
@@ -123,10 +123,10 @@ func applyTake(name string, space int, player string, state *processor.State) er
 		return err
 	}
 	if game == nil {
-		return &processor.InvalidTransactionError{"Take requires an existing game"}
+		return &processor.InvalidTransactionError{Msg: "Take requires an existing game"}
 	}
 	if game.State == "P1-WIN" || game.State == "P2-WIN" || game.State == "TIE" {
-		return &processor.InvalidTransactionError{"Game has ended"}
+		return &processor.InvalidTransactionError{Msg: "Game has ended"}
 	}
 
 	// Assign players if new game
@@ -137,7 +137,7 @@ func applyTake(name string, space int, player string, state *processor.State) er
 	}
 
 	if game.Board[space-1] != '-' {
-		return &processor.InvalidTransactionError{"Space already taken"}
+		return &processor.InvalidTransactionError{Msg: "Space already taken"}
 	}
 
 	if game.State == "P1-NEXT" && player == game.Player1 {
@@ -152,7 +152,7 @@ func applyTake(name string, space int, player string, state *processor.State) er
 		game.State = "P1-NEXT"
 	} else {
 		return &processor.InvalidTransactionError{
-			fmt.Sprintf("Not this player's turn: '%v'", player)}
+			Msg: fmt.Sprintf("Not this player's turn: '%v'", player)}
 	}
 
 	if isWin(game.Board, 'X') {
@@ -183,12 +183,12 @@ func isWin(board string, letter byte) bool {
 
 func unpackPayload(payloadData []byte) (*XoPayload, error) {
 	if payloadData == nil {
-		return nil, &processor.InvalidTransactionError{"Must contain payload"}
+		return nil, &processor.InvalidTransactionError{Msg: "Must contain payload"}
 	}
 
 	parts := strings.Split(string(payloadData), ",")
 	if len(parts) != 3 {
-		return nil, &processor.InvalidTransactionError{"Payload is malformed"}
+		return nil, &processor.InvalidTransactionError{Msg: "Payload is malformed"}
 	}
 
 	payload := XoPayload{}
@@ -196,25 +196,25 @@ func unpackPayload(payloadData []byte) (*XoPayload, error) {
 	payload.Action = parts[1]
 
 	if len(payload.Name) < 1 {
-		return nil, &processor.InvalidTransactionError{"Name is required"}
+		return nil, &processor.InvalidTransactionError{Msg: "Name is required"}
 	}
 
 	if len(payload.Action) < 1 {
-		return nil, &processor.InvalidTransactionError{"Action is required"}
+		return nil, &processor.InvalidTransactionError{Msg: "Action is required"}
 	}
 
 	if payload.Action == "take" {
 		space, err := strconv.Atoi(parts[2])
 		if err != nil {
 			return nil, &processor.InvalidTransactionError{
-				fmt.Sprintf("Invalid Space: '%v'", parts[2])}
+				Msg: fmt.Sprintf("Invalid Space: '%v'", parts[2])}
 		}
 		payload.Space = space
 	}
 
 	if strings.Contains(payload.Name, "|") {
 		return nil, &processor.InvalidTransactionError{
-			fmt.Sprintf("Invalid Name (char '|' not allowed): '%v'", parts[2])}
+			Msg: fmt.Sprintf("Invalid Name (char '|' not allowed): '%v'", parts[2])}
 	}
 
 	return &payload, nil
@@ -225,7 +225,7 @@ func unpackHeader(headerData []byte) (*transaction_pb2.TransactionHeader, error)
 	err := proto.Unmarshal(headerData, header)
 	if err != nil {
 		return nil, &processor.InternalError{
-			fmt.Sprint("Failed to unmarshal TransactionHeader: %v", err)}
+			Msg: fmt.Sprint("Failed to unmarshal TransactionHeader: %v", err)}
 	}
 	return header, nil
 }
@@ -234,7 +234,7 @@ func unpackGame(gameData []byte) (*Game, error) {
 	parts := strings.Split(string(gameData), ",")
 	if len(parts) != 5 {
 		return nil, &processor.InternalError{
-			fmt.Sprintf("Malformed game data: '%v'", string(gameData))}
+			Msg: fmt.Sprintf("Malformed game data: '%v'", string(gameData))}
 	}
 
 	game := &Game{
@@ -249,7 +249,7 @@ func unpackGame(gameData []byte) (*Game, error) {
 	case "P1-WIN", "P2-WIN", "TIE", "P1-NEXT", "P2-NEXT":
 	default:
 		return nil, &processor.InternalError{
-			fmt.Sprintf("Game '%v' has reached invalid state: '%v'", string(gameData), game.State)}
+			Msg: fmt.Sprintf("Game '%v' has reached invalid state: '%v'", string(gameData), game.State)}
 	}
 
 	return game, nil
@@ -276,7 +276,7 @@ func loadGame(name string, state *processor.State) (*Game, error) {
 
 	results, err := state.Get([]string{address})
 	if err != nil {
-		return nil, &processor.InternalError{fmt.Sprint("Error getting state:", err)}
+		return nil, &processor.InternalError{Msg: fmt.Sprint("Error getting state:", err)}
 	}
 
 	if len(string(results[address])) > 0 {
@@ -291,7 +291,7 @@ func loadGame(name string, state *processor.State) (*Game, error) {
 		// the same location. See the python intkey handler for an example
 		// of this.
 		if game.Name != name {
-			return nil, &processor.InternalError{"Hash collision"}
+			return nil, &processor.InternalError{Msg: "Hash collision"}
 		}
 		return game, nil
 	}
@@ -306,10 +306,10 @@ func saveGame(game *Game, state *processor.State) error {
 		address: data,
 	})
 	if err != nil {
-		return &processor.InternalError{fmt.Sprint("Failed to set new Value:", err)}
+		return &processor.InternalError{Msg: fmt.Sprint("Failed to set new Value:", err)}
 	}
 	if len(addresses) == 0 {
-		return &processor.InternalError{"No addresses in set response"}
+		return &processor.InternalError{Msg: "No addresses in set response"}
 	}
 	return nil
 }

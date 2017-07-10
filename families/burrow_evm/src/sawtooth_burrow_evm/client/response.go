@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-package burrow_evm_client
+package client
 
 import (
 	"encoding/json"

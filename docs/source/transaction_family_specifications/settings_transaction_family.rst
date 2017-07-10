@@ -266,7 +266,8 @@ Initially, the transaction processor gets the current values of
 *sawtooth.settings.vote.authorized_keys* from the state.
 
 The public key of the transaction signer is checked against the values in
-the list of authorized keys.  If it is empty, all public keys are allowed.
+the list of authorized keys.  If it is empty, no settings can be proposed,
+save for the authorized keys.
 
 A Propose action is validated.  If it fails, it is considered an invalid
 transaction.  A *proposal_id* is calculated by taking the sha256 hash of

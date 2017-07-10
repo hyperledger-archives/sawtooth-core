@@ -1,11 +1,21 @@
 {
   "name": "sawtooth-sdk",
   "version": "0.0.0",
-  "description": "An SDK for interacting with the Sawtooth Lake distributed ledger",
+  "description": "An SDK for interacting with the Hyperledger Sawtooth distributed ledger.",
+  "keywords": [
+    "hyperledger",
+    "blockchain",
+    "signing",
+    "crypto",
+    "protobuf"
+  ],
+  "homepage": "https://www.hyperledger.org/projects/sawtooth",
+  "repository": "https://github.com/hyperledger/sawtooth-core.git",
   "main": "index.js",
   "scripts": {
     "test": "standard && node_modules/mocha/bin/mocha --recursive spec",
-    "compile_protobuf": "node compile_protobuf.js > protobuf/protobuf_bundle.json"
+    "compile_protobuf": "node compile_protobuf.js > protobuf/protobuf_bundle.json",
+    "prepublish": "npm run compile_protobuf && npm test"
   },
   "author": "",
   "license": "Apache-2.0",

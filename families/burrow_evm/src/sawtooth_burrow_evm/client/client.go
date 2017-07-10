@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-package burrow_evm_client
+package client
 
 import (
 	"bytes"
@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"net/http"
+	. "sawtooth_burrow_evm/common"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
 	sdk "sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
@@ -34,7 +35,6 @@ const (
 	FAMILY_NAME    = "burrow-evm"
 	FAMILY_VERSION = "1.0"
 	ENCODING       = "application/protobuf"
-	PREFIX         = "a84eda"
 )
 
 type Client struct {
@@ -47,23 +47,29 @@ func New(url string) *Client {
 	}
 }
 
-func (c *Client) Load(priv, init []byte, gas uint64) (*RespBody, error) {
-	address, err := PrivToAddr(priv)
+func (c *Client) Load(priv, init []byte, gas uint64, nonce uint64) (*RespBody, error) {
+	ea, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
+	}
+
+	addresses := []string{ea.ToStateAddr().String()}
+	if nonce != 0 {
+		addresses = append(addresses, ea.Derive(nonce).ToStateAddr().String())
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
 		FamilyName:      FAMILY_NAME,
 		FamilyVersion:   FAMILY_VERSION,
 		PayloadEncoding: ENCODING,
-		Inputs:          []string{address},
-		Outputs:         []string{address},
+		Inputs:          addresses,
+		Outputs:         addresses,
 	})
 
 	transaction := &EvmTransaction{
 		GasLimit: gas,
 		Init:     init,
+		Nonce:    nonce,
 	}
 
 	payload, err := proto.Marshal(transaction)
@@ -88,29 +94,35 @@ func (c *Client) Load(priv, init []byte, gas uint64) (*RespBody, error) {
 	return ParseRespBody(resp)
 }
 
-func (c *Client) Exec(priv, to, data []byte, gas uint64) (*RespBody, error) {
-	fromAddr, err := PrivToAddr(priv)
+func (c *Client) Exec(priv, to, data []byte, gas uint64, nonce uint64) (*RespBody, error) {
+	fromAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
 	}
 
-	toAddr, err := VmAddrToAddr(to)
+	toAddr, err := NewEvmAddrFromBytes(to)
 	if err != nil {
 		return nil, err
+	}
+
+	addresses := []string{
+		fromAddr.ToStateAddr().String(),
+		toAddr.ToStateAddr().String(),
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
 		FamilyName:      FAMILY_NAME,
 		FamilyVersion:   FAMILY_VERSION,
 		PayloadEncoding: ENCODING,
-		Inputs:          []string{fromAddr, toAddr},
-		Outputs:         []string{fromAddr, toAddr},
+		Inputs:          addresses,
+		Outputs:         addresses,
 	})
 
 	transaction := &EvmTransaction{
 		GasLimit: gas,
 		Data:     data,
-		To:       to,
+		To:       toAddr.Bytes(),
+		Nonce:    nonce,
 	}
 
 	payload, err := proto.Marshal(transaction)
@@ -134,20 +146,28 @@ func (c *Client) Exec(priv, to, data []byte, gas uint64) (*RespBody, error) {
 	return ParseRespBody(resp)
 }
 
+func (c *Client) Lookup(pub []byte, nonce uint64) ([]byte, error) {
+	address, err := PubToEvmAddr(pub)
+	if err != nil {
+		return nil, err
+	}
+	return address.Derive(nonce).Bytes(), nil
+}
+
 func (c *Client) GetEntry(id []byte, idType string) (*EvmEntry, error) {
 	var (
-		address string
+		address *EvmAddr
 		err     error
 	)
 	switch idType {
 	case "private":
-		address, err = PrivToAddr(id)
+		address, err = PrivToEvmAddr(id)
 
 	case "public":
-		address, err = PubToAddr(id)
+		address, err = PubToEvmAddr(id)
 
 	case "address":
-		address, err = VmAddrToAddr(id)
+		address, err = NewEvmAddrFromBytes(id)
 
 	default:
 		return nil, fmt.Errorf(
@@ -159,7 +179,7 @@ func (c *Client) GetEntry(id []byte, idType string) (*EvmEntry, error) {
 		return nil, err
 	}
 
-	resp, err := http.Get(c.Url + "/state/" + address)
+	resp, err := http.Get(c.Url + "/state/" + address.ToStateAddr().String())
 	if err != nil {
 		return nil, err
 	}

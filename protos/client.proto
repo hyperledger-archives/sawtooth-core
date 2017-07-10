@@ -30,6 +30,35 @@ message Leaf {
     bytes data = 2;
 }
 
+// Information about the status of a batch submitted to the validator.
+//
+// Attributes:
+//     batch_id: The id (header_signature) of the batch
+//     status: The committed status of the batch
+//     invalid_transactions: Info for transactions that failed, if any
+//
+// Statuses:
+//     COMMITTED - the batch was accepted and has been committed to the chain
+//     INVALID - the batch failed validation, it should be resubmitted
+//     PENDING - the batch is still being processed
+//     UNKNOWN - no status for the batch could be found (possibly invalid)
+message BatchStatus {
+    enum Status {
+        COMMITTED = 0;
+        INVALID = 1;
+        PENDING = 2;
+        UNKNOWN = 3;
+    }
+    message InvalidTransaction {
+        string transaction_id = 1;
+        string message = 2;
+        bytes extended_data = 3;
+    }
+    string batch_id = 1;
+    Status status = 2;
+    repeated InvalidTransaction invalid_transactions = 3;
+}
+
 // Paging controls to be sent with List requests.
 // Attributes:
 //     start_id: The id of a resource to start the page with
@@ -82,30 +111,19 @@ message ClientBatchSubmitRequest {
 
 // This is a response to a submission of one or more Batches.
 // If `wait_for_commit` was set in the request, this response will include a
-// `batch_statuses` hashmap, with the status of each batch submitted.
+// `batch_statuses` property, with the status of each batch submitted.
 // Statuses:
 //   * OK - everything with the request worked as expected
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * INVALID_BATCH - the batch failed validation, likely due to a bad signature
-// BatchesStatuses:
-//   * COMMITTED - the batch was accepted and has been committed to the chain
-//   * INVALID - the batch failed validation, it should be resubmitted
-//   * UNKNOWN - no status for the batch could be found (possibly invalid)
-//   * PENDING - the batch is still being processed
 message ClientBatchSubmitResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         INVALID_BATCH = 2;
     }
-    enum BatchStatus {
-        COMMITTED = 0;
-        INVALID = 1;
-        UNKNOWN = 2;
-        PENDING = 3;
-    }
     Status status = 1;
-    map<string, BatchStatus> batch_statuses = 2;
+    repeated BatchStatus batch_statuses = 2;
 }
 
 // A request for the status of one or more batches, specified by id.
@@ -118,33 +136,20 @@ message ClientBatchStatusRequest {
     int32 timeout = 3;
 }
 
-// This is a response to a request for the status of specific batches. The
-// batches_statuses field is a hashmap where the keys correspond to the ids
-// of the batches queried, and the values are their status.
+// This is a response to a request for the status of specific batches.
 // Statuses:
 //   * OK - everything with the request worked as expected
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * NO_RESOURCE - the response contains no data, likely because
 //     no ids were specified in the request
-// BatchesStatuses:
-//   * COMMITTED - the batch was accepted and has been committed to the chain
-//   * INVALID - the batch failed validation, it should be resubmitted
-//   * UNKNOWN - no status for the batch could be found (possibly invalid)
-//   * PENDING - the batch is still being processed
 message ClientBatchStatusResponse {
     enum Status {
         OK = 0;
         INTERNAL_ERROR = 1;
         NO_RESOURCE = 4;
     }
-    enum BatchStatus {
-        COMMITTED = 0;
-        INVALID = 1;
-        UNKNOWN = 2;
-        PENDING = 3;
-    }
     Status status = 1;
-    map<string, BatchStatus> batch_statuses = 2;
+    repeated BatchStatus batch_statuses = 2;
 }
 
 message ClientStateCurrentRequest {

@@ -20,7 +20,8 @@ package processor
 import "fmt"
 
 type InvalidTransactionError struct {
-	Msg string
+	Msg          string
+	ExtendedData []byte
 }
 
 func (err *InvalidTransactionError) Error() string {
@@ -28,7 +29,8 @@ func (err *InvalidTransactionError) Error() string {
 }
 
 type InternalError struct {
-	Msg string
+	Msg          string
+	ExtendedData []byte
 }
 
 func (err *InternalError) Error() string {

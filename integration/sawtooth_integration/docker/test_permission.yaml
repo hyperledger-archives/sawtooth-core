@@ -17,15 +17,15 @@ version: "2.1"
 
 services:
 
-  tp_settings:
-    image: sawtooth-tp_settings:$ISOLATION_ID
+  settings-tp:
+    image: sawtooth-settings-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
     depends_on:
       - validator
-    command: tp_settings -vv tcp://validator:40000
+    command: settings-tp -vv tcp://validator:40000
     stop_signal: SIGKILL
 
   validator:
@@ -41,14 +41,14 @@ services:
         sawtooth admin keygen && \
         sawtooth config genesis -k test.priv -o setting-genesis.batch && \
         sawtooth admin genesis setting-genesis.batch  && \
-        validator -v --endpoint tcp://validator:8800 \
+        sawtooth-validator -v --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:40000 \
             --bind network:tcp://eth0:8800 \
     \""
     stop_signal: SIGKILL
 
-  rest_api:
-    image: sawtooth-rest_api:$ISOLATION_ID
+  rest-api:
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -56,7 +56,7 @@ services:
       - 8080
     depends_on:
       - validator
-    command: rest_api -v --connect tcp://validator:40000 --bind rest_api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:40000 --bind rest-api:8080
     stop_signal: SIGKILL
 
   test-permission:
@@ -67,7 +67,7 @@ services:
       - 8080
     depends_on:
       - validator
-      - rest_api
+      - rest-api
     command: nose2-3
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
         -v

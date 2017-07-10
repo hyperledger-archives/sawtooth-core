@@ -39,7 +39,7 @@ class TestPermission(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest_api:8080'])
+        wait_for_rest_apis(['rest-api:8080'])
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
@@ -120,15 +120,15 @@ class TestPermission(unittest.TestCase):
         # Submit transaction, then list it using subprocess
         cmds = [
             ['sawtooth', 'config', 'proposal', 'create', '-k', self._wif_file,
-             '--url', 'http://rest_api:8080', 'x=1'],
+             '--url', 'http://rest-api:8080', 'x=1'],
             ['sawtooth', 'config', 'settings', 'list', '--url',
-             'http://rest_api:8080']
+             'http://rest-api:8080']
         ]
         for cmd in cmds:
             self._run(cmd)
 
         command = 'sawtooth'
-        args = ['config', 'settings', 'list', '--url', 'http://rest_api:8080']
+        args = ['config', 'settings', 'list', '--url', 'http://rest-api:8080']
         settings = self._try_to_get_output(command, args, 'x: 1')
         _expected_output = [
             'sawtooth.settings.vote.authorized_keys: {}'.format(
@@ -147,19 +147,19 @@ class TestPermission(unittest.TestCase):
         '''
         # Set allowed_signing_keys
         command = 'sawtooth'
-        args = ['config', 'settings', 'list', '--url', 'http://rest_api:8080']
+        args = ['config', 'settings', 'list', '--url', 'http://rest-api:8080']
         _fail_msg ='Setting results did not match.'
         self._run(['sawtooth', 'config', 'proposal', 'create', '-k',
-                  self._wif_file, '--url', 'http://rest_api:8080',
+                  self._wif_file, '--url', 'http://rest-api:8080',
                   'sawtooth.validator.allowed_signing_keys={}'
                   .format(TEST_PUBKEY)])
         self._try_to_get_output(command, args,
             'sawtooth.validator.allowed_signing_keys')
         self._run(['sawtooth', 'config', 'proposal', 'create', '-k',
-                 self._wif_file, '--url', 'http://rest_api:8080', 'y=1'])
+                 self._wif_file, '--url', 'http://rest-api:8080', 'y=1'])
         # Wait for block to be processed
         self._run(['sawtooth', 'config', 'settings', 'list', '--url',
-                  'http://rest_api:8080'])
+                  'http://rest-api:8080'])
 
         settings = self._try_to_get_output(command, args, 'y: 1')
         _expected_output = [
@@ -181,18 +181,18 @@ class TestPermission(unittest.TestCase):
 
         '''
         command = 'sawtooth'
-        args = ['config', 'settings', 'list', '--url', 'http://rest_api:8080']
+        args = ['config', 'settings', 'list', '--url', 'http://rest-api:8080']
         _fail_msg ='Setting results did not match.'
         self._run(['sawtooth', 'config', 'proposal', 'create', '-k',
-                  self._wif_file, '--url', 'http://rest_api:8080',
+                  self._wif_file, '--url', 'http://rest-api:8080',
                   'sawtooth.validator.allowed_signing_keys=SomeOtherKey,{}'
                   .format(TEST_PUBKEY)])
         self._try_to_get_output(command, args, 'SomeOtherKey')
         self._run(['sawtooth', 'config', 'proposal', 'create', '-k',
-                 self._wif_file, '--url', 'http://rest_api:8080', 'z=1'])
+                 self._wif_file, '--url', 'http://rest-api:8080', 'z=1'])
         # Wait for block to be processed
         self._run(['sawtooth', 'config', 'settings', 'list', '--url',
-                  'http://rest_api:8080'])
+                  'http://rest-api:8080'])
         # Check that allowed_signing_keys is set.
         settings = self._try_to_get_output(command, args, 'z: 1')
         _expected_output = [
@@ -216,17 +216,17 @@ class TestPermission(unittest.TestCase):
 
         '''
         command = 'sawtooth'
-        args = ['config', 'settings', 'list', '--url', 'http://rest_api:8080']
+        args = ['config', 'settings', 'list', '--url', 'http://rest-api:8080']
         _fail_msg ='Setting results did not match.'
         # Set allowed signing key to a different key to "SomeOtherKey".
         # This should make any batches sent from the configured keys fail.
         self._run(['sawtooth', 'config', 'proposal', 'create', '-k',
-                  self._wif_file, '--url', 'http://rest_api:8080',
+                  self._wif_file, '--url', 'http://rest-api:8080',
                   'sawtooth.validator.allowed_signing_keys=SomeOtherKey'])
         # Wait for block to be processed
         time.sleep(1)
         self._run(['sawtooth', 'config', 'settings', 'list', '--url',
-                  'http://rest_api:8080'])
+                  'http://rest-api:8080'])
 
         # Check that allowed_signing_key is set.
         settings = self._try_to_get_output(
@@ -242,11 +242,11 @@ class TestPermission(unittest.TestCase):
         self._assert_line_starts_match(settings, _expected_output)
 
         self._run(['sawtooth', 'config', 'proposal', 'create', '-k',
-                 self._wif_file, '--url', 'http://rest_api:8080', 'a=1'])
+                 self._wif_file, '--url', 'http://rest-api:8080', 'a=1'])
         # Wait for block to be processed
         time.sleep(3)
         self._run(['sawtooth', 'config', 'settings', 'list', '--url',
-                  'http://rest_api:8080'])
+                  'http://rest-api:8080'])
         settings = self._read_from_stdout(command, args)
 
         # Same _expected_setting_result as the last assert
