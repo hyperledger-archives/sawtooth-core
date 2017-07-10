@@ -103,6 +103,24 @@ main() {
     # Group 5: Depends on 1-4
     build_pkg "consensus/poet/cli" $pypath
 
+    # Group 6: PoET
+    # No dependencies on anything above, builds last for simplicity
+    if [ -z ${POET_ENCLAVE_PEM+x} ];
+    then
+        export POET_ENCLAVE_PEM=/tmp/sgxsdk/SampleCode/SampleEnclave/Enclave/Enclave_private.pem
+    fi
+
+    export SGXSDKInstallPath=/tmp/sgxsdk/
+
+    SAWTOOTH_CORE=/project/sawtooth-core
+    SAWTOOTH_POET=/project/sawtooth-core/consensus/poet/sgx
+
+    PATH=$PATH:$SAWTOOTH_CORE/bin
+    export PATH
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SAWTOOTH_POET
+
+    build_pkg "consensus/poet/sgx"
+
     # 5. Build the meta-package
     VERSION=$($top_dir/bin/get_version)
     cd $top_dir/ci
