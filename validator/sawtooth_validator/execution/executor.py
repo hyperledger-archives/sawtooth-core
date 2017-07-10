@@ -48,8 +48,7 @@ class TransactionExecutorThread(object):
                  processors,
                  waiting_threadpool,
                  settings_view_factory,
-                 invalid_observers,
-                 open_futures):
+                 invalid_observers):
         """
         Args:
             service (Interconnect): The zmq internal interface
@@ -79,7 +78,7 @@ class TransactionExecutorThread(object):
         self._waiting_threadpool = waiting_threadpool
         self._done = False
         self._invalid_observers = invalid_observers
-        self._open_futures = open_futures
+        self._open_futures = ThreadsafeDict()
 
     def _future_done_callback(self, request, result):
         """
@@ -90,7 +89,11 @@ class TransactionExecutorThread(object):
         req.ParseFromString(request)
         response = processor_pb2.TpProcessResponse()
         response.ParseFromString(result.content)
-        del self._open_futures[result.connection_id][req.signature]
+
+        if result.connection_id in self._open_futures and \
+                req.signature in self._open_futures[result.connection_id]:
+            del self._open_futures[result.connection_id][req.signature]
+
         if response.status == processor_pb2.TpProcessResponse.OK:
             self._scheduler.set_transaction_execution_result(
                 req.signature, True, req.context_id)
@@ -304,7 +307,6 @@ class TransactionExecutor(object):
         self._lock = threading.Lock()
         self._invalid_observers = ([] if invalid_observers is None
                                    else invalid_observers)
-        self._open_futures = ThreadsafeDict()
 
     def create_scheduler(self,
                          squash_handler,
@@ -361,8 +363,7 @@ class TransactionExecutor(object):
             processors=self.processors,
             waiting_threadpool=self._waiting_threadpool,
             settings_view_factory=self._settings_view_factory,
-            invalid_observers=self._invalid_observers,
-            open_futures=self._open_futures)
+            invalid_observers=self._invalid_observers)
         self._executing_threadpool.submit(t.execute_thread)
         with self._lock:
             self._alive_threads.append(t)
