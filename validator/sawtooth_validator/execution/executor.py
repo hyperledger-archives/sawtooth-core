@@ -27,6 +27,7 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.execution.context_manager import \
     CreateContextException
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
+from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution import processor_iterator
 from sawtooth_validator.networking.future import FutureResult
 from sawtooth_validator.networking.future import FutureTimeoutError
@@ -273,11 +274,11 @@ class TransactionExecutorThread(object):
 
 
 class TransactionExecutor(object):
-    def __init__(self,
-                 service,
-                 context_manager,
-                 settings_view_factory,
+
+    def __init__(self, service, context_manager, settings_view_factory,
+                 scheduler_type,
                  invalid_observers=None):
+
         """
         Args:
             service (Interconnect): The zmq internal interface
@@ -302,17 +303,31 @@ class TransactionExecutor(object):
         self._executing_threadpool = ThreadPoolExecutor(max_workers=5)
         self._alive_threads = []
         self._lock = threading.Lock()
+
+        self._scheduler_type = scheduler_type
+
         self._invalid_observers = ([] if invalid_observers is None
                                    else invalid_observers)
+
         self._open_futures = ThreadsafeDict()
 
     def create_scheduler(self,
                          squash_handler,
                          first_state_root,
                          always_persist=False):
-        return SerialScheduler(squash_handler=squash_handler,
-                               first_state_hash=first_state_root,
-                               always_persist=always_persist)
+        if self._scheduler_type == "serial":
+            return SerialScheduler(squash_handler=squash_handler,
+                                   first_state_hash=first_state_root,
+                                   always_persist=always_persist)
+        elif self._scheduler_type == "parallel":
+            return ParallelScheduler(squash_handler=squash_handler,
+                                     first_state_hash=first_state_root,
+                                     always_persist=always_persist)
+
+        else:
+            raise AssertionError(
+                "Scheduler type must be either serial or parallel. Current"
+                " scheduler type is {}.".format(self._scheduler_type))
 
     def check_connections(self):
         self._executing_threadpool.submit(self._check_connections)

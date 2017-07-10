@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import binascii
+from collections import deque
 from collections import namedtuple
 import copy
 import hashlib
@@ -43,18 +44,14 @@ UnProcessedBatchInfo = namedtuple('UnprocessedBatchInfo',
 
 
 def create_transaction(payload, private_key, public_key, inputs=None,
-                        outputs=None, dependencies = None):
+                        outputs=None, dependencies=None):
     addr = '000000' + hashlib.sha512(payload).hexdigest()[:64]
 
     if inputs is None:
         inputs = [addr]
-    else:
-        inputs = inputs.copy().append(addr)
 
     if outputs is None:
         outputs = [addr]
-    else:
-        outputs.copy().append(addr)
 
     if dependencies is None:
         dependencies = []
@@ -155,7 +152,11 @@ class SchedulerTester(object):
         """
         return self._batch_results
 
-    def run_scheduler(self, scheduler, context_manager, validation_state_hash=None):
+    def run_scheduler(self,
+                      scheduler,
+                      context_manager,
+                      validation_state_hash=None,
+                      txns_executed_fifo=True):
         """Add all the batches to the scheduler in order and then run through
         the txns in the scheduler, calling next_transaction() after each
         transaction_execution_result is set.
@@ -181,31 +182,71 @@ class SchedulerTester(object):
             else:
                 s_h = self._batch_results[batch.header_signature].state_hash
             scheduler.add_batch(batch=batch, state_hash=s_h)
+
         scheduler.finalize()
-        txns_to_process = []
+        txns_to_process = deque()
+
+        txn_context_by_txn_id = self._compute_transaction_execution_context()
+
+        transactions_to_assert_state = {}
         while not scheduler.complete(block=False):
             stop = False
             while not stop:
                 txn_info = scheduler.next_transaction()
                 if txn_info is not None:
                     txns_to_process.append(txn_info)
+                    LOGGER.debug("Transaction %s scheduled",
+                                 txn_info.txn.header_signature[:16])
                 else:
                     stop = True
-            t_info = txns_to_process.pop()
-            inputs_outputs = self._get_inputs_outputs(t_info.txn)
+
+            if txns_executed_fifo:
+                t_info = txns_to_process.popleft()
+            else:
+                t_info = txns_to_process.pop()
+
+            inputs, outputs = self._get_inputs_outputs(t_info.txn)
+
             c_id = context_manager.create_context(
                 state_hash=t_info.state_hash,
                 base_contexts=t_info.base_context_ids,
-                inputs=inputs_outputs[0],
-                outputs=inputs_outputs[1])
+                inputs=inputs,
+                outputs=outputs)
+
+            t_id = t_info.txn.header_signature
+
+            if t_id in txn_context_by_txn_id:
+                state_up_to_now = txn_context_by_txn_id[t_id].state
+                txn_context = txn_context_by_txn_id[t_id]
+                inputs, _ = self._get_inputs_outputs(txn_context.txn)
+                addresses = [input for input in inputs if len(input) == 70]
+                state_found = context_manager.get(
+                    context_id=c_id,
+                    address_list=addresses)
+
+                LOGGER.debug("Transaction Id %s, Batch %s, Txn %s, "
+                             "Context_id %s, Base Contexts %s",
+                             t_id[:16],
+                             txn_context.batch_num,
+                             txn_context.txn_num,
+                             c_id,
+                             t_info.base_context_ids)
+
+                state_to_assert = [(add, state_up_to_now.get(add))
+                                   for add, _ in state_found]
+                transactions_to_assert_state[t_id] = (txn_context,
+                                                      state_found,
+                                                      state_to_assert)
+
             validity_of_transaction, address_values = self._txn_execution[
                 t_info.txn.header_signature]
+
             context_manager.set(
                 context_id=c_id,
                 address_value_list=address_values)
-            if validity_of_transaction is False:
-                context_manager.delete_contexts(
-                    context_id_list=[c_id])
+            LOGGER.debug("Transaction %s is %s",
+                         t_id[:16],
+                         'valid' if validity_of_transaction else 'invalid')
             scheduler.set_transaction_execution_result(
                 txn_signature=t_info.txn.header_signature,
                 is_valid=validity_of_transaction,
@@ -215,7 +256,8 @@ class SchedulerTester(object):
         batch_results = [
             (b_id, scheduler.get_batch_execution_result(b_id))
             for b_id in batch_ids]
-        return batch_results
+
+        return batch_results, transactions_to_assert_state
 
     def compute_state_hashes_wo_scheduler(self):
         """Creates a state hash from the state updates from each txn in a
@@ -247,9 +289,53 @@ class SchedulerTester(object):
                 s_h = tree.update(set_items=updates, virtual=False)
                 tree.set_merkle_root(merkle_root=s_h)
                 state_hashes.append(s_h)
-        if len(state_hashes) == 0:
+        if not state_hashes:
             state_hashes.append(tree.update(set_items=updates))
         return state_hashes
+
+    def _compute_transaction_execution_context(self):
+        """Compute the serial state for each txn in the yaml file up to and
+        including the invalid txn in each invalid batch.
+
+        Notes:
+            The TransactionExecutionContext for a txn will contain the
+            state applied serially up to that point for each valid batch and
+            then for invalid batches up to the invalid txn.
+
+        Returns:
+            dict: The transaction id to the TransactionExecutionContext
+        """
+        transaction_contexts = {}
+        state_up_to_now = {}
+
+        for batch_num, batch in enumerate(self._batches):
+            partial_batch_transaction_contexts = {}
+            partial_batch_state_up_to_now = state_up_to_now.copy()
+            batch_is_valid = True
+            for txn_num, txn in enumerate(batch.transactions):
+                t_id = txn.header_signature
+                is_valid, address_values = self._txn_execution[t_id]
+                partial_batch_transaction_contexts[t_id] = \
+                        TransactionExecutionContext(
+                            txn=txn,
+                            txn_num=txn_num + 1,
+                            batch_num=batch_num + 1,
+                            state=partial_batch_state_up_to_now.copy())
+
+                for item in address_values:
+                    partial_batch_state_up_to_now.update(item)
+                if not is_valid:
+                    # After an invalid txn in a batch the batch is invalid,
+                    # and so we won't care about the state for those
+                    # subsequent txns.
+                    batch_is_valid = False
+                    break
+
+            transaction_contexts.update(partial_batch_transaction_contexts)
+            if batch_is_valid:
+                state_up_to_now.update(partial_batch_state_up_to_now)
+
+        return transaction_contexts
 
     def _address(self, add, require_full=False):
         if ':sha' not in add and ',' not in add:
@@ -260,13 +346,15 @@ class SchedulerTester(object):
                 [int(i) for i in add.split(',')]))
 
         parts = add.split(':')
-        assert parts[0] is not '', "{} is not correctly specified".format(add)
-        if len(parts) > 2 and not require_full:
-            # eg. 'aaabbbb:sha:56'
+        if len(parts) == 3 and parts[2] == 'sha':
+            # eg. 'yy:aaabbbb:sha'
+            namespace = hashlib.sha512(parts[0].encode()).hexdigest()[:6]
+            address = namespace + hashlib.sha512(
+                parts[1].encode()).hexdigest()[:64]
+        elif len(parts) == 3 and not require_full:
+            # eg. 'a:sha:56'
             length = min(int(parts[2]), 70)
-            intermediate = parts[0]
-            address = hashlib.sha512(
-                intermediate.encode()).hexdigest()[:length]
+            address = hashlib.sha512(parts[0].encode()).hexdigest()[:length]
         elif len(parts) == 2:
             # eg. 'aaabbbb:sha'
             intermediate = parts[0]
@@ -295,7 +383,7 @@ class SchedulerTester(object):
         header = transaction_pb2.TransactionHeader()
         header.ParseFromString(txn.header)
 
-        return header.inputs, header.outputs
+        return list(header.inputs), list(header.outputs)
 
     def _bytes_if_none(self, value):
         if value is None:
@@ -458,7 +546,7 @@ class SchedulerTester(object):
         # if there aren't any explicit dependencies that need to be created
         # based on the transaction 'id' listed in the yaml, the next two
         # code blocks won't be run.
-        while len(batches_waiting) > 0:
+        while batches_waiting:
             b, b_r, b_w = self._process_prev_batches(
                 unprocessed_batches=batches_waiting,
                 priv_key=priv_key,
@@ -488,3 +576,28 @@ class SchedulerTester(object):
 
         self._batch_results = batch_results
         self._batches = batches
+
+
+class TransactionExecutionContext(object):
+    """The state for a particular transaction built up serially based
+    on the Yaml file.
+    """
+
+    def __init__(self,
+                 txn,
+                 txn_num,
+                 batch_num,
+                 state):
+        """
+
+        Args:
+            txn (Transaction): The transaction
+            txn_num (int): The placement of the txn in the batch
+            batch_num (int): The placement of the batch in the scheduler
+            state (dict): The bytes at an address in state.
+        """
+
+        self.txn = txn
+        self.txn_num = txn_num
+        self.batch_num = batch_num
+        self.state = state
