@@ -136,9 +136,15 @@ class ResponderBlockResponseHandler(Handler):
             LOGGER.debug("Responding to block request: Send %s to %s",
                          block.header_signature,
                          connection)
-            self._gossip.send(validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
-                              message_content,
-                              connection)
+            try:
+                self._gossip.send(validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+                                  message_content,
+                                  connection)
+            except ValueError:
+                LOGGER.debug("Can't send block response %s to closed "
+                             "connection %s",
+                             block.header_signature,
+                             connection)
 
         self._responder.remove_request(block.header_signature)
         self._responder.purge_requests()
@@ -270,9 +276,15 @@ class ResponderBatchResponseHandler(Handler):
             LOGGER.debug("Responding to batch requests: Send %s to %s",
                          batch.header_signature,
                          connection)
-            self._gossip.send(validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
-                              message_content,
-                              connection)
+            try:
+                self._gossip.send(validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+                                  message_content,
+                                  connection)
+            except ValueError:
+                LOGGER.debug("Can't send batch response %s to closed "
+                             "connection %s",
+                             batch.header_signature,
+                             connection)
 
         for requested_id in requests_to_remove:
             self._responder.remove_request(requested_id)
