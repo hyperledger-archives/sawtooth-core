@@ -26,7 +26,7 @@ formatted as a YAML file. This documentation provides a single source of truth
 that completely documents every implemented aspect of the API, is both human and
 machine readable, and can be compiled by a variety of toolsets (including for
 this Sphinx-based document). The spec file itself can be found
-`here <https://github.com/hyperledger/sawtooth-core/blob/master/rest_api/sawtooth_rest_api/openapi.yaml>`_.
+`here <https://github.com/hyperledger/sawtooth-core/blob/master/rest_api/openapi.yaml>`_.
 
 
 HTTP Status Codes
