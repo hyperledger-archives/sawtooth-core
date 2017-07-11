@@ -20,6 +20,7 @@ package common
 import (
 	"burrow/evm/sha3"
 	"burrow/word256"
+	"encoding/hex"
 	"fmt"
 	"sawtooth_sdk/client"
 )
@@ -67,13 +68,13 @@ func NewEvmAddrFromBytes(b []byte) (*EvmAddr, error) {
 }
 
 func NewEvmAddrFromString(s string) (ea *EvmAddr, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			ea = nil
-			err = fmt.Errorf("%v could not be decoded: %v", s, r)
-		}
-	}()
-	return NewEvmAddrFromBytes(client.MustDecode(s))
+	bytes, err := hex.DecodeString(s)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"Malformed address (%s): Invalid hex encoding", s,
+		)
+	}
+	return NewEvmAddrFromBytes(bytes)
 }
 
 func (ea *EvmAddr) Derive(nonce uint64) *EvmAddr {
@@ -101,7 +102,7 @@ func (ea *EvmAddr) ToWord256() word256.Word256 {
 }
 
 func (ea *EvmAddr) String() string {
-	return client.MustEncode(ea.Bytes())
+	return hex.EncodeToString(ea.Bytes())
 }
 
 func (ea *EvmAddr) Bytes() []byte {

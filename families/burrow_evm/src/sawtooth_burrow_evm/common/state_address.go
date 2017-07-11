@@ -19,8 +19,8 @@ package common
 
 import (
 	"burrow/word256"
+	"encoding/hex"
 	"fmt"
-	"sawtooth_sdk/client"
 )
 
 type StateAddr string
@@ -29,9 +29,9 @@ func NewStateAddrFromBytes(b []byte) (StateAddr, error) {
 	switch len(b) {
 	case EVMADDRLEN:
 		b := word256.RightPadBytes(b, 32)
-		return StateAddr(PREFIX + client.MustEncode(b)), nil
+		return StateAddr(PREFIX + hex.EncodeToString(b)), nil
 	case STATEADDRLEN:
-		return StateAddr(client.MustEncode(b)), nil
+		return StateAddr(hex.EncodeToString(b)), nil
 	}
 
 	return "", fmt.Errorf(
@@ -41,13 +41,13 @@ func NewStateAddrFromBytes(b []byte) (StateAddr, error) {
 }
 
 func NewStateAddrFromString(s string) (sa StateAddr, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			sa = ""
-			err = fmt.Errorf("%v could not be decoded: %v", s, r)
-		}
-	}()
-  return NewStateAddrFromBytes(client.MustDecode(s))
+	bytes, err := hex.DecodeString(s)
+	if err != nil {
+		return "", fmt.Errorf(
+			"Malformed address (%s): Invalid hex encoding", s,
+		)
+	}
+	return NewStateAddrFromBytes(bytes)
 }
 
 

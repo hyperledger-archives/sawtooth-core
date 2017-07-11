@@ -18,9 +18,9 @@
 package tests
 
 import (
+  "encoding/hex"
   "testing"
   . "sawtooth_burrow_evm/common"
-  "sawtooth_sdk/client"
 )
 
 const (
@@ -37,7 +37,7 @@ func check(err error) {
 }
 
 func TestAddresses(t *testing.T) {
-  priv := client.MustDecode(PRIV)
+  priv, _ := hex.DecodeString(PRIV)
 
   // Test from private key bytes, public key bytes, and from bytes
   ea, err := PrivToEvmAddr(priv)

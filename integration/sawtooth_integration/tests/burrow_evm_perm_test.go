@@ -18,6 +18,7 @@
 package tests
 
 import (
+  "encoding/hex"
   "time"
   "testing"
   "sawtooth_burrow_evm/client"
@@ -40,7 +41,7 @@ func TestPermissions(t *testing.T) {
   client := client.New("http://rest-api:8080")
   priv := sdk.WifToPriv(PRIV)
   priv2 := sdk.WifToPriv(PRIV2)
-  init := sdk.MustDecode(INIT)
+  init, _ := hex.DecodeString(INIT)
   nonce := uint64(0)
 
   // At the beginning of the chain, all actions are allowed because the global
@@ -146,7 +147,8 @@ func TestPermissions(t *testing.T) {
   }
 
   // Verify the account can call a contract
-  _, err = client.MessageCall(priv2, contractAddr, sdk.MustDecode(SET_0_42), nonce2, 1000)
+  cmd, _ := hex.DecodeString(SET_0_42)
+  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000)
   if err != nil {
     t.Error(err.Error())
   }
@@ -160,7 +162,7 @@ func TestPermissions(t *testing.T) {
   key := "ad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5"
   val := "000000000000000000000000000000000000000000000000000000000000002a"
   pair := contractEntry.GetStorage()[0]
-  if sdk.MustEncode(pair.GetKey()) != key || sdk.MustEncode(pair.GetValue()) != val {
+  if hex.EncodeToString(pair.GetKey()) != key || hex.EncodeToString(pair.GetValue()) != val {
     t.Error("Failed to call contract.")
   }
 
@@ -188,7 +190,8 @@ func TestPermissions(t *testing.T) {
   }
 
   // Verify the account can't call a contract
-  _, err = client.MessageCall(priv2, contractAddr, sdk.MustDecode(SET_0_42), nonce2, 1000)
+  cmd, _ = hex.DecodeString(SET_0_42)
+  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000)
   if err != nil {
     t.Error(err.Error())
   }
@@ -199,7 +202,7 @@ func TestPermissions(t *testing.T) {
   }
 
   pair = contractEntry.GetStorage()[0]
-  if sdk.MustEncode(pair.GetValue()) != val {
+  if hex.EncodeToString(pair.GetValue()) != val {
     t.Error("Contract called but calling is disabled for this account.")
   }
 }

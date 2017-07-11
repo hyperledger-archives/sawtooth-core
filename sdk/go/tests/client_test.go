@@ -1,6 +1,7 @@
 package tests
 
 import (
+    "encoding/hex"
     "testing"
     . "sawtooth_sdk/client"
 )
@@ -30,17 +31,10 @@ func TestEncoding(t *testing.T) {
     if PrivToWif(priv) != WIFSTR {
         t.Error("Private key is different after encoding/decoding")
     }
-
-    pubstr := MustEncode(GenPubKey(priv))
-    if pubstr != PUBSTR {
-        t.Error("Public key doesn't match expected. Got", pubstr)
+    if hex.EncodeToString(GenPubKey(priv)) != PUBSTR {
+        t.Error("Public key doesn't match expected. Got", GenPubKey(priv))
     }
-    pub := MustDecode(pubstr)
-    if len(pub) != 33 {
-        t.Error("Encoded pubkey wrong length. Should be 33, but is", len(pub))
-    }
-
-    sigstr := MustEncode(Sign(data, priv))
+    sigstr := hex.EncodeToString(Sign(data, priv))
     if sigstr != SIGSTR {
         t.Error("Signature doesn't match expected. Got", sigstr)
     }
@@ -61,7 +55,7 @@ func TestEncoder(t *testing.T) {
         Outputs: []string{"def"},
     })
 
-    pubstr := MustEncode(GenPubKey(priv))
+    pubstr := hex.EncodeToString(GenPubKey(priv))
     txn2 := encoder.NewTransaction(data, TransactionParams{
         Nonce: "456",
         Outputs: []string{"ghi"},
@@ -82,7 +76,7 @@ func TestEncoder(t *testing.T) {
         t.Error(err)
     }
     data := SerializeBatches(batches)
-    datastr := MustEncode(data)
+    datastr := hex.EncodeToString(data)
 
     expected := ENCDED
 
