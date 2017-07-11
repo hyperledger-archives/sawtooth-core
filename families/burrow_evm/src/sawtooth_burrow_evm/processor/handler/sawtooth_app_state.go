@@ -202,7 +202,7 @@ func toStateAccount(acct *Account) *EvmStateAccount {
 		return nil
 	}
 	return &EvmStateAccount{
-		Address:     acct.Address.Bytes(),
+		Address:     acct.Address.Bytes()[:20],
 		Balance:     acct.Balance,
 		Code:        acct.Code,
 		Nonce:       acct.Nonce,
