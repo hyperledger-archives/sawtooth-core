@@ -60,7 +60,6 @@ The dev tools directory is structured as follows:
     plugins/
     scripts/
     tests/
-    win-bin/
     Vagrantfile
 
 
@@ -96,10 +95,6 @@ tests
   The tests directory includes tests run within the Vagrant environment. These are
   in addition to the unit and integration tests found in the tests directory of
   sawtooth-core and sawtooth-validator.
-
-win-bin
-  The win-bin directory includes scripts for running Sawtooth natively
-  under Windows and is not used in the Vagrant environment.
 
 
 Layout in the Virtual Machine
