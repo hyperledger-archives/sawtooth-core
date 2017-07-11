@@ -20,11 +20,11 @@ package handler
 import (
 	evm "burrow/evm"
 	. "burrow/word256"
+	"encoding/hex"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	. "sawtooth_burrow_evm/common"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
-	"sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
@@ -78,7 +78,13 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, sta
 
 	// Construct address of sender. This is the address used by the EVM to
 	// access the account.
-	sender, err := PubToEvmAddr(client.MustDecode(header.GetSignerPubkey()))
+	pubkey, decodeErr := hex.DecodeString(header.GetSignerPubkey())
+	if decodeErr != nil {
+		return &processor.InternalError{Msg: fmt.Sprintf(
+			"Couldn't decode public key",
+		)}
+	}
+	sender, err := PubToEvmAddr(pubkey)
 	if err != nil {
 		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
 			"Couldn't determine sender from public key: %v", header.GetSignerPubkey(),

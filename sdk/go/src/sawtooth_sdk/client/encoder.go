@@ -23,7 +23,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"sawtooth_sdk/protobuf/batch_pb2"
 	"sawtooth_sdk/protobuf/transaction_pb2"
-	"strings"
 	"time"
 )
 
@@ -50,7 +49,7 @@ type Encoder struct {
 func NewEncoder(privkey []byte, defaults TransactionParams) *Encoder {
 	return &Encoder{
 		privkey:  privkey,
-		pubkey:   MustEncode(GenPubKey(privkey)),
+		pubkey:   hex.EncodeToString(GenPubKey(privkey)),
 		defaults: defaults,
 	}
 }
@@ -73,7 +72,7 @@ func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transa
 		Dependencies: self.defaults.Dependencies,
 
 		// Set unique fields
-		PayloadSha512: MustEncode(SHA512(payload)),
+		PayloadSha512: hex.EncodeToString(SHA512(payload)),
 		SignerPubkey:  self.pubkey,
 	}
 
@@ -118,7 +117,7 @@ func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transa
 	if err != nil {
 		panic(err)
 	}
-	hs := MustEncode(Sign(hb, self.privkey))
+	hs := hex.EncodeToString(Sign(hb, self.privkey))
 
 	transaction := &transaction_pb2.Transaction{
 		Header:          hb,
@@ -190,7 +189,7 @@ func (self *Encoder) NewBatch(transactions []*Transaction) *Batch {
 		panic(err)
 	}
 
-	hs := MustEncode(Sign(hb, self.privkey))
+	hs := hex.EncodeToString(Sign(hb, self.privkey))
 
 	batch := &batch_pb2.Batch{
 		Header:          hb,
@@ -237,24 +236,6 @@ func ParseBatches(b []byte) ([]*Batch, error) {
 	}
 
 	return batches, nil
-}
-
-// -- Encoding --
-
-// MustEncode converts the given byte slice to a lower-case hex-encoded string.
-// Panics if encoding fails.
-func MustEncode(data []byte) string {
-	return strings.ToLower(hex.EncodeToString(data))
-}
-
-// MustDecode converts the given lower-case, hex-encoded string to a byte slice
-// and panics if decoding fails.
-func MustDecode(encoded string) []byte {
-	bytes, err := hex.DecodeString(encoded)
-	if err != nil {
-		panic("Couldn't decode")
-	}
-	return bytes
 }
 
 // -- Wrap Protobuf --

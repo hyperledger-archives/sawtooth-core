@@ -18,6 +18,7 @@
 package tests
 
 import (
+  "encoding/hex"
   "time"
   "testing"
   "sawtooth_burrow_evm/client"
@@ -36,7 +37,7 @@ const (
 func TestIntkey(t *testing.T) {
   client := client.New("http://rest-api:8080")
   priv := sdk.WifToPriv(PRIV)
-  init := sdk.MustDecode(INIT)
+  init, _ := hex.DecodeString(INIT)
   nonce := uint64(0)
 
   // Create the EOA
@@ -63,7 +64,8 @@ func TestIntkey(t *testing.T) {
   }
 
   for _, c := range cmds {
-    _, err = client.MessageCall(priv, contractAddr, sdk.MustDecode(c), nonce, 1000)
+    cmd, _ := hex.DecodeString(c)
+    _, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000)
     if err != nil {
       t.Error(err.Error())
     }
@@ -90,8 +92,8 @@ func TestIntkey(t *testing.T) {
     "0000000000000000000000000000000000000000000000000000000000000055",
   }
   for i, pair := range entry.Storage {
-    key := sdk.MustEncode(pair.GetKey())
-    val := sdk.MustEncode(pair.GetValue())
+    key := hex.EncodeToString(pair.GetKey())
+    val := hex.EncodeToString(pair.GetValue())
     if key != keys[i] {
       t.Errorf("Unexpected key in storage: %v", key)
     }
