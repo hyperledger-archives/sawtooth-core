@@ -135,6 +135,7 @@ main() {
                     test_poet_core
                     test_poet_simulator
                     test_poet_families
+                    test_ias
                     ;;
                 poet_cli)
                     test_poet_cli
@@ -150,6 +151,9 @@ main() {
                     ;;
                 poet_families)
                     test_poet_families
+                    ;;
+                ias)
+                    test_ias
                     ;;
                 settings)
                     test_settings
@@ -230,6 +234,11 @@ test_poet_simulator() {
 test_poet_families() {
     run_docker_test ./consensus/poet/families/tests/test_tp_validator_registry.yaml
     copy_coverage .coverage.poet_families
+}
+
+test_ias() {
+    run_docker_test ./utility/ias_client/tests/unit_ias_client.yaml
+    copy_coverage .coverage.ias
 }
 
 test_settings() {
