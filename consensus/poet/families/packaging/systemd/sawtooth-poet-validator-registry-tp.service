@@ -1,5 +1,5 @@
 [Unit]
-Description=Sawtooth TP Validator Registry
+Description=Sawtooth PoET TP Validator Registry
 After=network.target
 
 [Service]
