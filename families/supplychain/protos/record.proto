@@ -18,8 +18,8 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "sawtooth.supplychain.protobuf";
 
-// Record State Representation
-// represents an item being tracked
+// The representation of a Record to store in state.
+// A Record tracks a physical item with a history of its owners and custodians.
 message Record {
     string identifier = 1; // the natural key of the record, serial number or
     // attached sensor identifier
@@ -30,20 +30,20 @@ message Record {
         string agent_identifier = 1; // the public key of the agent
         int64 start_time = 2; // the time the agent started in the role
     }
-    repeated AgentRecord owners = 3; // ordered list of the owners, current
-    // owner is first in the list. List is ordered in chronological order oldest
-    // to most recent. The first by definition is the creator of the record.
+    repeated AgentRecord owners = 3; // list of the owners, ordered from oldest
+    // to newest. The first by definition is the creator of the record.
     // The last is the current owner of the record.
     repeated AgentRecord custodians = 4; // ordered list of custodians.
-    // current owner is first in the list. Same ordering as the owners list.
+    // Same ordering as the owners list.
 
     bool final = 5; // is the record finalized, finalized records cannot be
     // changed.
 }
 
-// Setting Container for on-chain configuration key/value pairs
+// Container for on-chain Records.
+// Allows multiple to be saved at a single address in case of hash collision.
 message RecordContainer {
-    // List of Record entries - more than one implies a state key collision
+    // List of Records - more than one implies a state address collision
     repeated Record entries = 1;
 }
 

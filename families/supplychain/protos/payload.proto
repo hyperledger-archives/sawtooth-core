@@ -19,9 +19,10 @@ import "application.proto";
 option java_multiple_files = true;
 option java_package = "sawtooth.supplychain.protobuf";
 
-// Supplychain Transaction Setting Payload
+// Wrapper for Transaction payloads for the Supply Chain Transaction Family
 message SupplyChainPayload {
-    // The action indicates data is contained within this payload
+    // Describes the action this payload is initiating.
+    // Used to "route" the data to the proper handler.
     enum Action {
         AGENT_CREATE = 0;
         APPLICATION_CREATE = 1;
@@ -32,10 +33,8 @@ message SupplyChainPayload {
         RECORD_FINALIZE = 6;
     }
 
-    // The action of this payload
     Action action = 1;
 
-    // The content of this payload
     bytes data = 2;
 }
 

@@ -18,15 +18,19 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "sawtooth.supplychain.protobuf";
 
-// Agent State Representation
+// The representation of an Agent to store in state.
+// Agents are essentially public keys registered with a human readable name on
+// the chain. They will be able to create Records and submit Applications for
+// ownership or custodianship.
 message Agent {
-    string identifier = 1; // the hex encoded public key of the agent
-    string name = 2; // the agent name
+    string identifier = 1; // the hex-encoded public key of the Agent
+    string name = 2; // a human readable name
 }
 
-// Agent Container for storage in global state
+// Container for on-chain Agents.
+// Allows multiple to be saved at a single address in case of hash collision.
 message AgentContainer {
-    // List of agents entries - more than one implies a state key collision
+    // List of Agents - more than one implies a state address collision
     repeated Agent entries = 1;
 }
 
