@@ -18,8 +18,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	toml "github.com/pelletier/go-toml"
 	"io/ioutil"
 	"os"
 	"path"
@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	CONFIG_FILE = "config.json"
+	CONFIG_FILE = "seth-config.toml"
 )
 
 type Config struct {
@@ -66,7 +66,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	config := &Config{}
-	err = json.Unmarshal(buf, &config)
+	err = toml.Unmarshal(buf, config)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't parse config: %v", err)
 	}
@@ -79,7 +79,7 @@ func SaveConfig(config *Config) error {
 
 	configFilePath := path.Join(getDataDir(), CONFIG_FILE)
 
-	buf, err := json.Marshal(config)
+	buf, err := toml.Marshal(*config)
 	if err != nil {
 		return fmt.Errorf("Couldn't marshal config: %v", err)
 	}
