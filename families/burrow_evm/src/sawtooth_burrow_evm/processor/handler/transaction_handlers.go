@@ -206,7 +206,7 @@ func CreateContractAccount(wrapper *EvmTransaction, sender *EvmAddr, sapps *Sawt
 	// Initialize the new account
 	out, err := callVm(sapps, newAcct, nil, txn.GetInit(), nil, txn.GetGasLimit())
 	if err != nil {
-		return &processor.InternalError{Msg: err.Error()}
+		return &processor.InvalidTransactionError{Msg: err.Error()}
 	}
 	newAcct.Nonce = 1
 	newAcct.Code = out
@@ -266,7 +266,7 @@ func MessageCall(wrapper *EvmTransaction, sender *EvmAddr, sapps *SawtoothAppSta
 	out, err := callVm(sapps, senderAcct, receiverAcct, receiverAcct.Code,
 		txn.GetData(), txn.GetGasLimit())
 	if err != nil {
-		return &processor.InternalError{Msg: err.Error()}
+		return &processor.InvalidTransactionError{Msg: err.Error()}
 	}
 	logger.Debug("EVM Output: ", strings.ToLower(hex.EncodeToString(out)))
 

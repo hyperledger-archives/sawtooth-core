@@ -112,7 +112,12 @@ func callVm(sas *SawtoothAppState, sender, receiver *evm.Account,
 	if receiver == nil {
 		receiver = sender
 	}
-	return vm.Call(sender, receiver, code, input, 0, &sGas)
+
+	output, err := vm.Call(sender, receiver, code, input, 0, &sGas)
+	if err != nil {
+		return nil, fmt.Errorf("EVM Error: %v", err)
+	}
+	return output, nil
 }
 
 func unpackPayload(payload []byte) (*EvmTransaction, error) {
