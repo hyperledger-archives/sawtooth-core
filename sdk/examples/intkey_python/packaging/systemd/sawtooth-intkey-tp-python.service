@@ -1,5 +1,5 @@
 [Unit]
-Description=Sawtooth TP Config
+Description=Sawtooth Intkey TP Python
 After=network.target
 
 [Service]
