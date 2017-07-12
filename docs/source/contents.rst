@@ -12,6 +12,7 @@ Table of Contents
    rest_api.rst
    cli.rst
    transaction_family_specifications.rst
+   poet.rst
    examples.rst
    community.rst
    faq.rst
