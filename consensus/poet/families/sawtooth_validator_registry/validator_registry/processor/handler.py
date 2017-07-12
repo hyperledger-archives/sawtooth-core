@@ -124,24 +124,20 @@ def _update_validator_state(state,
                             validator_info):
 
     validator_map = _get_validator_state(state)
-    add_to_map = True
+    updated_map = ValidatorMap()
+    # Clean out old entries in ValidatorInfo and ValidatorMap
+    # Protobuf doesn't offer delete item for ValidatorMap so create a new list
     for entry in validator_map.entries:
         if anti_sybil_id == entry.key:
-            # The validator's old signup info is stale and needs to be revoked
-            revoked_info = _get_validator_state(state, entry.value)
+            address = _get_address(entry.value)
+            _set_data(state, address, b'')
+        else:
+            updated_map.entries.add(key=entry.key, value=entry.value)
 
-            revoked_info.registered = "revoked"
-            revoked_info = revoked_info.SerializeToString()
-            address = _get_address(validator_id)
-            _set_data(state, address, revoked_info)
-            add_to_map = False
-            break
-
-    # This is a new validator that needs to be added to the map
-    if add_to_map:
-        validator_map.entries.add(key=anti_sybil_id, value=validator_id)
-        address_map = _get_address('validator_map')
-        _set_data(state, address_map, validator_map.SerializeToString())
+    # Add new state entries to ValidatorMap and ValidatorInfo
+    updated_map.entries.add(key=anti_sybil_id, value=validator_id)
+    address_map = _get_address('validator_map')
+    _set_data(state, address_map, updated_map.SerializeToString())
 
     address = _get_address(validator_id)
     _set_data(state, address, validator_info)
@@ -158,7 +154,7 @@ def _set_data(state, address, data):
 
     except FutureTimeoutError:
         LOGGER.warning(
-            'Timeout occured on state.set([%s, <value>])', address)
+            'Timeout occurred on state.set([%s, <value>])', address)
         raise InternalError(
             'Failed to save value on address {}'.format(address))
 

@@ -262,6 +262,15 @@ class ValidatorRegistryMessageFactory(object):
         addresses = [self._key_to_address(self.public_key)]
         return self._factory.create_set_response(addresses)
 
+    def create_del_request_validator_info(self):
+        data = b''
+        address = self._key_to_address(self.public_key)
+        return self._factory.create_set_request({address: data})
+
+    def create_del_response_validator_info(self):
+        addresses = [self._key_to_address(self.public_key)]
+        return self._factory.create_set_response(addresses)
+
     def create_get_request_validator_map(self):
         address = self._key_to_address("validator_map")
         addresses = [address]

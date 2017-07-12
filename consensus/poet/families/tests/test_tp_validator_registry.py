@@ -165,26 +165,27 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         self.validator.respond(
             self.factory.create_get_response_validator_map(),
             received)
-        # Expect to receive a validator_info request
+
+        # Clear the validator info for the address
+        # Expect del validator info
         received = self.validator.expect(
-            self.factory.create_get_request_validator_info())
+            self.factory.create_del_request_validator_info())
 
-        # Respond with the ValidatorInfo
+        # Respond with an empty data message
         self.validator.respond(
-            self.factory.create_get_response_validator_info(
-                "val_1"), received)
+            self.factory.create_del_response_validator_info(), received)
 
-        # Expect a request to set ValidatorInfo for val_1
+        # Set the Map
+        # Expect set request ValidatorMap
         received = self.validator.expect(
-            self.factory.create_set_request_validator_info(
-                "val_1", "revoked"))
+            self.factory.create_set_request_validator_map())
 
-        # Respond with address for val_1
-        # val_1 address is derived from the validators id
-        # val id is the same as the pubkey for the factory
+        # Respond with the ValidatorMap address
         self.validator.respond(
-            self.factory.create_set_response_validator_info(), received)
+            self.factory.create_set_response_validator_map(),
+            received)
 
+        # Set the validator address
         # Expect a request to set ValidatorInfo for val_1
         received = self.validator.expect(
             self.factory.create_set_request_validator_info("val_1",
