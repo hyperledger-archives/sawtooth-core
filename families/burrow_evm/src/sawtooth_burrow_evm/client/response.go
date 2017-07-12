@@ -53,6 +53,10 @@ Message : %v
 `, e.Code, e.Title, e.Message)
 }
 
+func (e *ErrorBody) Error() string {
+	return e.String()
+}
+
 func ParseRespBody(resp *http.Response) (*RespBody, error) {
 	defer resp.Body.Close()
 	buf, err := ioutil.ReadAll(resp.Body)

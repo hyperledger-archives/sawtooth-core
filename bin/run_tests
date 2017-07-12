@@ -29,6 +29,7 @@ MODULE_LIST="
     java_sdk
     javascript_sdk
     python_sdk
+    burrow_evm
     integration
 "
 
@@ -320,6 +321,7 @@ test_python_sdk() {
 test_burrow_evm() {
   run_docker_test ./families/burrow_evm/tests/unit_burrow_evm.yaml
   run_docker_test burrow_evm_intkey_test
+  run_docker_test burrow_evm_perm_test
 }
 
 test_integration() {

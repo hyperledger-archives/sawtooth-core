@@ -58,7 +58,7 @@ services:
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
     stop_signal: SIGKILL
 
-  burrow-evm-intkey-test:
+  burrow-evm-perm-test:
     image: sawtooth-dev-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -68,5 +68,5 @@ services:
       - validator
       - rest-api
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
-    command: go test burrow_evm_intkey_test.go
+    command: go test burrow_evm_perm_test.go
     stop_signal: SIGKILL

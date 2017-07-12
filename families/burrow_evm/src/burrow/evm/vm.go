@@ -100,19 +100,33 @@ func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
 // (unlike in state/execution, where we guarantee HasPermission is called
 // on known permissions and panics else)
 // If the perm is not defined in the acc nor set by default in GlobalPermissions,
-// this function returns false.
+// this function returns true.
 func HasPermission(appState AppState, acc *Account, perm ptypes.PermFlag) bool {
-	return true
-	// TODO: Store and handle permissions
-	//v, err := acc.Permissions.Base.Get(perm)
-	//if _, ok := err.(ptypes.ErrValueNotSet); ok {
-	//if appState == nil {
-	//// In this case the permission is unknown
-	//return false
-	//}
-	//return HasPermission(nil, appState.GetAccount(ptypes.GlobalPermissionsAddress256), perm)
-	//}
-	//return v
+	// CASE 1, acc set, acc != global   => accPerm
+	//      2, acc unset, global set    => globalPerm
+	//      3, acc unset, global unset  => true
+	//      4, acc unset, global nil    => true
+	//      5, acc set, acc == global   => globalPerm
+	//      6, acc unset, acc == global => true
+	accPerm, err := acc.Permissions.Base.Get(perm)
+
+	// If the permission is not set, check GlobalPermissions
+	if _, ok := err.(ptypes.ErrValueNotSet); ok {
+		// If we were already checking global permissions, return true
+		if acc.Address == ptypes.GlobalPermissionsAddress256 {
+			return true
+		}
+
+		// If the global permissions have not been set, all permissions are allowed
+		global := appState.GetAccount(ptypes.GlobalPermissionsAddress256)
+		if global == nil {
+			return true
+		}
+
+		return HasPermission(appState, global, perm)
+	}
+
+	return accPerm
 }
 
 // NOTE: [ben] revise event structure

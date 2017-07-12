@@ -18,74 +18,39 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"sawtooth_burrow_evm/client"
 	. "sawtooth_burrow_evm/protobuf/evm_pb2"
-	sdk "sawtooth_sdk/client"
 )
 
 type Show struct {
-	Private string `short:"k" long:"key" description:"A hex encoded private key to derive an address from for accessing state."`
-	Public  string `short:"p" long:"public" description:"A hex encoded public key to derive an address from for accessing state."`
-	Address string `short:"a" long:"address" description:"A hex encoded VM address for accessing state."`
-	Url     string `short:"U" long:"url" description:"The REST API URL to connect to when sending the transaction." default:"http://127.0.0.1:8080"`
+	Positional struct {
+		Address string `positional-arg-name:"address" description:"Address of account to show"`
+	} `positional-args:"true" required:"true"`
 }
 
-func (s *Show) Name() string {
+func (args *Show) Name() string {
 	return "show"
 }
 
-func (s *Show) Register(p *flags.Parser) error {
-	_, err := p.AddCommand("show", "Show all data associated with a given account", "", s)
+func (args *Show) Register(parent *flags.Command) error {
+	_, err := parent.AddCommand("show", "Show all data associated with a given account", "", args)
 	return err
 }
 
-func (s *Show) Run() (err error) {
-	client := client.New(s.Url)
+func (args *Show) Run(config *Config) (err error) {
+	client := client.New(config.Url)
 
-	// Make sure only one was passed
-	n := 0
-	args := []string{s.Private, s.Public, s.Address}
-	for _, a := range args {
-		if a != "" {
-			n += 1
-		}
-	}
-	if n != 1 {
-		return fmt.Errorf("Must pass exactly one of {-k PRIVATE, -p PUBLIC, -a ADDRESS}")
-	}
-
-	var (
-		arg      string
-		argtype  string
-		argbytes []byte
-	)
-	if s.Private != "" {
-		arg = s.Private
-		argtype = "private"
-	}
-	if s.Public != "" {
-		arg = s.Public
-		argtype = "public"
-	}
-	if s.Address != "" {
-		arg = s.Address
-		argtype = "address"
-	}
-
-	if argtype == "private" {
-		argbytes, err = decodeFileOrArg(arg, "wif")
-	} else {
-		argbytes, err = decodeFileOrArg(arg, "hex")
-	}
+	addr, err := hex.DecodeString(args.Positional.Address)
 	if err != nil {
-		return
+		return fmt.Errorf("Invalid address: %v", err)
 	}
 
-	entry, err := client.GetEntry(argbytes, argtype)
+	entry, err := client.Get(addr)
 	if err != nil {
-		return
+		return fmt.Errorf("Couldn't get data at %v: %v", addr, err)
 	}
 
 	DisplayEntry(entry)
@@ -95,35 +60,50 @@ func (s *Show) Run() (err error) {
 
 func DisplayEntry(entry *EvmEntry) {
 	if entry == nil {
-		fmt.Println("Entry is nil")
+		fmt.Println("Nothing at that address")
 		return
 	}
 
-	act := entry.GetAccount()
-	stg := entry.GetStorage()
+	acct := entry.GetAccount()
 
-	if len(act.GetAddress()) == 0 {
+	if len(acct.GetAddress()) == 0 {
 		fmt.Println("Account does not exist")
 		return
 	}
+
+	addr := hex.EncodeToString(acct.GetAddress())
+	code := hex.EncodeToString(acct.GetCode())
 
 	fmt.Printf(`
 Address: %v
 Balance: %v
 Code   : %v
 Nonce  : %v
-`, sdk.MustEncode(act.GetAddress()[:20]), act.GetBalance(), sdk.MustEncode(act.GetCode()), act.GetNonce())
+`, addr, acct.GetBalance(), code, acct.GetNonce())
 
-	if len(stg) == 0 {
+	displayPermissions(acct.GetPermissions())
+	displayStorage(entry.GetStorage())
+
+}
+
+func displayStorage(stg []*EvmStorage) {
+	if stg == nil || len(stg) == 0 {
 		fmt.Println("(No Storage Set)\n")
 		return
 	}
 
 	fmt.Println("Storage:")
 	for _, pair := range stg {
-		key := sdk.MustEncode(pair.GetKey())
-		val := sdk.MustEncode(pair.GetValue())
+		key := hex.EncodeToString(pair.GetKey())
+		val := hex.EncodeToString(pair.GetValue())
 		fmt.Printf("%v -> %v\n", key, val)
 	}
-	fmt.Println("")
+}
+
+func displayPermissions(perms *EvmPermissions) {
+	if perms == nil {
+		fmt.Println("(No Permissions Set)\n")
+	}
+
+	fmt.Printf("Perms  : %v\n", SerializePermissions(perms))
 }

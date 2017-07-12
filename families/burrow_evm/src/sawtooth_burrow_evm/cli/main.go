@@ -20,20 +20,17 @@ package main
 import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	"io/ioutil"
 	"os"
-	sdk "sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
-	"strings"
 )
 
 var logger *logging.Logger = logging.Get()
 
 // All subcommands implement this interface
 type Command interface {
-	Register(*flags.Parser) error
+	Register(*flags.Command) error
 	Name() string
-	Run() error
+	Run(*Config) error
 }
 
 // Opts to the main command
@@ -42,7 +39,6 @@ type MainOpts struct {
 }
 
 func main() {
-
 	var opts MainOpts
 
 	// Create top-level parser
@@ -51,13 +47,14 @@ func main() {
 
 	// Add sub-commands
 	commands := []Command{
-		&Create{},
-		&Exec{},
-		&Load{},
+		&Account{},
+		&Contract{},
 		&Show{},
+		&Init{},
+		&Permissions{},
 	}
 	for _, cmd := range commands {
-		err := cmd.Register(parser)
+		err := cmd.Register(parser.Command)
 		if err != nil {
 			logger.Errorf("Couldn't register command %v: %v", cmd.Name(), err)
 			os.Exit(1)
@@ -93,10 +90,16 @@ func main() {
 		os.Exit(2)
 	}
 
+	config, err := LoadConfig()
+	if err != nil {
+		fmt.Println("Error: Failed to load config: %v", err)
+		return
+	}
+
 	name := parser.Command.Active.Name
 	for _, cmd := range commands {
 		if cmd.Name() == name {
-			err := cmd.Run()
+			err := cmd.Run(config)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
@@ -104,31 +107,6 @@ func main() {
 			return
 		}
 	}
-}
 
-// Try to interpret the argument as a file path. If that fails, assume the
-// argument passed on the command line is the actual hex-encoded string
-func decodeFileOrArg(arg, enc string) (b []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("Failed to load arg: %v", r)
-		}
-	}()
-
-	// Assume the argument is a path to a file and try to read it
-	buf, err := ioutil.ReadFile(arg)
-	if err == nil {
-		arg = strings.TrimSpace(string(buf))
-	}
-
-	if enc == "hex" {
-		return sdk.MustDecode(arg), nil
-	}
-
-	if enc == "wif" {
-		return sdk.WifToPriv(arg), nil
-	}
-
-	return nil, fmt.Errorf("Unknown format for arg: %v", enc)
-
+	fmt.Println("Error: Command not found: %v", name)
 }

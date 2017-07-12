@@ -52,10 +52,11 @@ func (mgr *StateManager) NewEntry(vmAddress *EvmAddr) (*EvmEntry, error) {
 
 	entry = &EvmEntry{
 		Account: &EvmStateAccount{
-			Address: vmAddress.Bytes(),
-			Balance: 0,
-			Code:    make([]byte, 0),
-			Nonce:   0,
+			Address:     vmAddress.Bytes(),
+			Balance:     0,
+			Code:        make([]byte, 0),
+			Nonce:       0,
+			Permissions: &EvmPermissions{},
 		},
 		Storage: make([]*EvmStorage, 0),
 	}

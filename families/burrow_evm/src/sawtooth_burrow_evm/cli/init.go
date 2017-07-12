@@ -15,26 +15,40 @@
  * ------------------------------------------------------------------------------
  */
 
-package common
+package main
 
-// Lengths are in bytes
-const (
-	PRIVLEN   = 32
-	PUBLEN    = 33
-	STATEADDRLEN = 35
-	EVMADDRLEN = 20
-	PREFIXLEN = 3
-	PREFIX    = "a84eda"
-	GAS_LIMIT = 1 << 31
-	FAMILY_NAME    = "burrow-evm"
-	FAMILY_VERSION = "1.0"
-	ENCODING       = "application/protobuf"
+import (
+	"fmt"
+	"github.com/jessevdk/go-flags"
 )
 
-func GlobalPermissionsAddress() *EvmAddr {
-	addr, _ := NewEvmAddrFromBytes([]byte{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+type Init struct {
+	Positional struct {
+		Url string `positional-arg-name:"[url]"`
+	} `positional-args:"true" required:"true"`
+}
+
+func (cmd *Init) Name() string {
+	return "init"
+}
+
+func (cmd *Init) Register(parent *flags.Command) error {
+	_, err := parent.AddCommand(
+		"init", "Initialize seth to communicate with the given URL", "", cmd,
+	)
+	return err
+}
+
+func (cmd *Init) Run(*Config) error {
+	fmt.Printf("Initializing seth to communicate with %v\n", cmd.Positional.Url)
+
+	err := SaveConfig(&Config{
+		Url: cmd.Positional.Url,
 	})
-	return addr
+
+	if err != nil {
+		return fmt.Errorf("Failed to initialize: %v", err)
+	}
+
+	return nil
 }

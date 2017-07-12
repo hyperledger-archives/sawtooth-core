@@ -36,12 +36,11 @@ const (
 func TestIntkey(t *testing.T) {
   client := client.New("http://rest-api:8080")
   priv := sdk.WifToPriv(PRIV)
-  pub := sdk.GenPubKey(priv)
   init := sdk.MustDecode(INIT)
   nonce := uint64(0)
 
   // Create the EOA
-  _, err := client.Load(priv, nil, 1000, nonce)
+  _, err := client.CreateExternalAccount(priv, nil, nil, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -49,14 +48,9 @@ func TestIntkey(t *testing.T) {
   time.Sleep(time.Second)
 
   // Create the Contract
-  _, err = client.Load(priv, init, 1000, nonce)
+  contractAddr, err := client.CreateContractAccount(priv, init, nil, nonce, 1000)
   if err != nil {
    t.Error(err.Error())
-  }
-
-  to, err := client.Lookup(pub, nonce)
-  if err != nil {
-    t.Error(err.Error())
   }
   nonce += 1
   time.Sleep(time.Second)
@@ -69,13 +63,16 @@ func TestIntkey(t *testing.T) {
   }
 
   for _, c := range cmds {
-    exec(t, client, priv, to, sdk.MustDecode(c), nonce)
+    _, err = client.MessageCall(priv, contractAddr, sdk.MustDecode(c), nonce, 1000)
+    if err != nil {
+      t.Error(err.Error())
+    }
     nonce += 1
   }
 
-    time.Sleep(3 * time.Second)
+  time.Sleep(3 * time.Second)
 
-  entry, err := client.GetEntry(to, "address")
+  entry, err := client.Get(contractAddr)
   if err != nil {
     t.Error(err.Error())
   }
@@ -103,11 +100,4 @@ func TestIntkey(t *testing.T) {
     }
   }
 
-}
-
-func exec(t *testing.T, client *client.Client, priv, to, data []byte, nonce uint64) {
-  _, err := client.Exec(priv, to, data, 1000, nonce)
-  if err != nil {
-    t.Error(err.Error())
-  }
 }
