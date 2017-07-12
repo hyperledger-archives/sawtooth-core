@@ -37,7 +37,7 @@ type Config struct {
 // -- Data Dir --
 
 func getDataDir() string {
-	return path.Join(os.Getenv("HOME"), ".seth")
+	return path.Join(os.Getenv("HOME"), ".sawtooth")
 }
 
 func CreateDataDir() error {
