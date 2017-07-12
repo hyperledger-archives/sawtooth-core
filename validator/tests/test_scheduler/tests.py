@@ -72,6 +72,169 @@ class TestSchedulers(unittest.TestCase):
                                       always_persist=False)
         return context_manager, scheduler
 
+    @unittest.skip("Waiting for STL-499")
+    def test_parallel_dependencies(self):
+        """Tests that transactions dependent on other transactions will fail
+        their batch, if the dependency fails
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._dependencies(scheduler, context_manager)
+
+    def test_serial_dependencies(self):
+        """Tests that transactions dependent on other transactions will fail
+        their batch, if the dependency fails
+        """
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._dependencies(scheduler, context_manager)
+
+    def _dependencies(self, scheduler, context_manager):
+        """Tests that transactions dependent on other transactions will fail
+        their batch, if the dependency fails.
+
+            1        2    3   4   5
+        dependency--> B       D   F
+        [A, B, C] [D, E] [F] [G] [H]
+               x <------- invalid
+        Notes:
+            1. Add 5 batches with 8 txns with dependencies as in the diagram.
+            2. Run through the scheduler setting all the transaction results,
+               including the single invalid txn, C.
+            3. Assert the batch validity, that there are 2 valid batches,
+               3 and 5.
+
+        """
+
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+
+        transaction_validity = {}
+
+        # 1.
+
+        txn_a, _ = create_transaction(
+            payload='A'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        transaction_validity[txn_a.header_signature] = True
+
+        txn_b, _ = create_transaction(
+            payload='B'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        transaction_validity[txn_b.header_signature] = True
+
+        txn_c, _ = create_transaction(
+            payload='C'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        transaction_validity[txn_c.header_signature] = False
+
+        batch_1 = create_batch(
+            transactions=[txn_a, txn_b, txn_c],
+            private_key=private_key,
+            public_key=public_key)
+
+        txn_d, _ = create_transaction(
+            payload='D'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        transaction_validity[txn_d.header_signature] = True
+
+        txn_e, _ = create_transaction(
+            payload='E'.encode(),
+            private_key=private_key,
+            public_key=public_key,
+            dependencies=[txn_b.header_signature])
+
+        transaction_validity[txn_e.header_signature] = True
+
+        batch_2 = create_batch(
+            transactions=[txn_d, txn_e],
+            private_key=private_key,
+            public_key=public_key)
+
+        txn_f, _ = create_transaction(
+            payload='F'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        transaction_validity[txn_f.header_signature] = True
+
+        batch_3 = create_batch(
+            transactions=[txn_f],
+            private_key=private_key,
+            public_key=public_key)
+
+        txn_g, _ = create_transaction(
+            payload='G'.encode(),
+            private_key=private_key,
+            public_key=public_key,
+            dependencies=[txn_d.header_signature])
+
+        transaction_validity[txn_g.header_signature] = True
+
+        batch_4 = create_batch(
+            transactions=[txn_g],
+            private_key=private_key,
+            public_key=public_key)
+
+        txn_h, _ = create_transaction(
+            payload='H'.encode(),
+            private_key=private_key,
+            public_key=public_key,
+            dependencies=[txn_f.header_signature])
+
+        transaction_validity[txn_h.header_signature] = True
+
+        batch_5 = create_batch(
+            transactions=[txn_h],
+            private_key=private_key,
+            public_key=public_key)
+
+        for batch in [batch_1, batch_2, batch_3, batch_4, batch_5]:
+            scheduler.add_batch(batch)
+
+        # 2.
+        scheduler.finalize()
+        scheduler_iter = iter(scheduler)
+        while not scheduler.complete(block=False):
+            txn_info = next(scheduler_iter)
+            context_id = context_manager.create_context(
+                state_hash=txn_info.state_hash,
+                base_contexts=txn_info.base_context_ids,
+                inputs=[_get_address_from_txn(txn_info)],
+                outputs=[_get_address_from_txn(txn_info)])
+            txn_id = txn_info.txn.header_signature
+            validity = transaction_validity[txn_id]
+
+            scheduler.set_transaction_execution_result(
+                txn_signature=txn_id,
+                is_valid=validity,
+                context_id=context_id)
+
+        # 3.
+        for i, batch_info in enumerate(
+                [(batch_1.header_signature, False),
+                 (batch_2.header_signature, False),
+                 (batch_3.header_signature, True),
+                 (batch_4.header_signature, False),
+                 (batch_5.header_signature, True)]):
+            batch_id, validity = batch_info
+            result = scheduler.get_batch_execution_result(batch_id)
+            self.assertEqual(
+                result.is_valid,
+                validity,
+                "Batch {} was {} when it should have been {}".format(
+                    i + 1,
+                    'valid' if result.is_valid else 'invalid',
+                    'valid' if validity else 'invalid'))
+
     def test_serial_completion_on_finalize(self):
         """Tests that iteration will stop when finalized is called on an
         otherwise complete serial scheduler.

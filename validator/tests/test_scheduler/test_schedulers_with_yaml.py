@@ -357,6 +357,54 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='heterogeneous_workload.yaml')
 
+    @unittest.skip("Waiting for STL-499")
+    def test_parallel_dependencies(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/dependencies.yaml file.
+
+        Notes:
+            This yaml file has batches with transactions that have implicit
+            dependencies, explicit dependencies, and multiple failed batches.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='dependencies.yaml')
+
+    @unittest.skip("Waiting for STL-499")
+    def test_parallel_lifo_dependencies(self):
+        """Tests the parallel scheduler against the
+        test_scheduler/data/dependencies.yaml file.
+
+        Notes:
+            This yaml file has batches with transactions that have implicit
+            dependencies, explicit dependencies, and multiple failed batches.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='dependencies.yaml',
+            lifo=True)
+
+    def test_serial_dependencies(self):
+        """Tests the serial scheduler against the
+        test_scheduler/data/dependencies.yaml file.
+
+        Notes:
+            This yaml file has batches with transactions that have implicit
+            dependencies, explicit dependencies, and multiple failed batches.
+        """
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='dependencies.yaml')
+
     def _single_block_files_individually(self,
                                          scheduler,
                                          context_manager,
