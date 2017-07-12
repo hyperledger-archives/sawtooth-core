@@ -159,7 +159,7 @@ class Processor(object):
 
     def __repr__(self):
         return "{}: {}".format(self.connection_id,
-                               self.namespaces)
+                               list(self.namespaces))
 
     def __eq__(self, other):
         return self.connection_id == other.connection_id
