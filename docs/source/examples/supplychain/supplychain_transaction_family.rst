@@ -43,9 +43,19 @@ Agent
 Agents represent owners or custodian of goods in the system. All agents must
 be registered in the system before they can interact with records.
 
-.. literalinclude:: ../../../../families/supplychain/protos/agent.proto
-    :language: protobuf
-    :lines: 22-
+.. code-block:: protobuf
+
+    message Agent {
+        string identifier = 1; // the hex-encoded public key of the Agent
+        string name = 2; // a human readable name
+    }
+
+    // Container for on-chain Agents.
+    // Allows multiple to be saved at a single address in case of hash collision.
+    message AgentContainer {
+        // List of Agents - more than one implies a state address collision
+        repeated Agent entries = 1;
+    }
 
 Application
 -----------
@@ -53,17 +63,66 @@ Application
 An Application is an offer from an agent to change the Custodian or Owner field
 of a Record. Agents can only have one open application of a type at a time.
 
-.. literalinclude:: ../../../../families/supplychain/protos/application.proto
-    :language: protobuf
-    :lines: 22-
+.. code-block:: protobuf
+
+    message Application {
+
+        string record_identifier = 1; // the natural key of the record
+        string applicant = 2; // public key of the applicant
+        int64 creation_time = 3;
+
+        // Whether the application is a request for ownership or custodianship
+        enum Type {
+            OWNER = 0;
+            CUSTODIAN = 1;
+        }
+        Type type = 4;
+
+        // The current acceptance status of the Application
+        enum Status {
+            OPEN = 0;
+            CANCELED = 1;
+            REJECTED = 2;
+            ACCEPTED = 3;
+        }
+        Status status = 5;
+
+        string terms = 6; // the terms of the application. Human readable.
+    }
+
+    message ApplicationContainer {
+        repeated Application entries = 1;
+    }
 
 Record
 ------
 A record represents a good or material that is being tracked in the system.
 
-.. literalinclude:: ../../../../families/supplychain/protos/record.proto
-    :language: protobuf
-    :lines: 22-
+.. code-block:: protobuf
+
+    message Record {
+        string identifier = 1; // the natural key of the record, serial number or
+        // attached sensor identifier
+
+        int64 creation_time = 2; // the time the record was created
+
+        message AgentRecord {
+            string agent_identifier = 1; // the public key of the agent
+            int64 start_time = 2; // the time the agent started in the role
+        }
+        repeated AgentRecord owners = 3; // list of the owners, ordered from oldest
+        // to newest. The first by definition is the creator of the record.
+        // The last is the current owner of the record.
+        repeated AgentRecord custodians = 4; // ordered list of custodians.
+        // Same ordering as the owners list.
+
+        bool final = 5; // is the record finalized, finalized records cannot be
+        // changed.
+    }
+
+    message RecordContainer {
+        repeated Record entries = 1;
+    }
 
 Addressing
 ----------
@@ -148,9 +207,25 @@ All SCTP transactions are wrapped in a payload object that allows for the items
 to be dispatched to the correct handling logic.
 
 
-.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
-    :language: protobuf
-    :lines: 22-40
+.. code-block:: protobuf
+
+    message SupplyChainPayload {
+        // Describes the action this payload is initiating.
+        // Used to "route" the data to the proper handler.
+        enum Action {
+            AGENT_CREATE = 0;
+            APPLICATION_CREATE = 1;
+            APPLICATION_ACCEPT = 2;
+            APPLICATION_REJECT = 3;
+            APPLICATION_CANCEL = 4;
+            RECORD_CREATE = 5;
+            RECORD_FINALIZE = 6;
+        }
+
+        Action action = 1;
+
+        bytes data = 2;
+    }
 
 
 Agent Transactions
@@ -163,9 +238,11 @@ Register a signing participant that can update Records and Applications. The
 ``signer_pubkey`` in the transaction header will be used as the Agent's public
 key.
 
-.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
-    :language: protobuf
-    :lines: 42-44
+.. code-block:: protobuf
+
+    message AgentCreatePayload {
+        string name = 1;
+    }
 
 
 Record Operations
@@ -177,18 +254,26 @@ Create Record
 Create a record of an item to be tracked. The current Owner and Custodian is
 set to the signer of this transaction.
 
-.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
-    :language: protobuf
-    :lines: 69-72
+.. code-block:: protobuf
+
+    message RecordCreatePayload {
+        string identifier = 1;
+        int64 creation_time = 2;
+    }
 
 Create Application
 ++++++++++++++++++
 
 Create a request for transfer of ownership or custodianship of the record.
 
-.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
-    :language: protobuf
-    :lines: 46-51
+.. code-block:: protobuf
+
+    message ApplicationCreatePayload {
+        string record_identifier = 1;
+        int64 creation_time = 2;
+        Application.Type type = 3;
+        string terms = 4;
+    }
 
 
 Accept Application
@@ -197,9 +282,14 @@ Accept Application
 Accept an Application for transfer of ownership or custodianship of a Record.
 Must be submitted by the current Owner or Custodian.
 
-.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
-    :language: protobuf
-    :lines: 53-57
+.. code-block:: protobuf
+
+    message ApplicationAcceptPayload {
+        string record_identifier = 1;
+        string applicant = 2;
+        Application.Type type = 3;
+        int64 timestamp = 4;
+    }
 
 Reject Application
 ++++++++++++++++++
@@ -208,9 +298,13 @@ Reject an Application for transfer of ownership or custodianship of the
 record. Must be submitted by the current Owner or Custodian depending on
 Application type.
 
-.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
-    :language: protobuf
-    :lines: 59-62
+.. code-block:: protobuf
+
+    message ApplicationRejectPayload {
+        string record_identifier = 1;
+        string applicant = 2;
+        Application.Type type = 3;
+    }
 
 Cancel Application
 ++++++++++++++++++
@@ -218,9 +312,13 @@ Cancel Application
 Cancel an Application for transfer of ownership or custodianship of the record.
 Must be submitted by the applicant.
 
-.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
-    :language: protobuf
-    :lines: 64-67
+.. code-block:: protobuf
+
+    message ApplicationCancelPayload {
+        string record_identifier = 1;
+        string applicant = 2;
+        Application.Type type = 3;
+    }
 
 
 Finalize Record
@@ -229,9 +327,11 @@ Finalize Record
 Mark the record as final (no longer able to be updated). The Owner must be
 the current Custodian and this transaction must be signed by the Owner.
 
-.. literalinclude:: ../../../../families/supplychain/protos/payload.proto
-    :language: protobuf
-    :lines: 74-76
+.. code-block:: protobuf
+
+    message RecordFinalizePayload {
+        string identifier = 1;
+    }
 
 Execution
 =========
