@@ -1,1 +1,1 @@
-SAWTOOTH_INTKEY-TP-PYTHON_ARGS=-v tcp://localhost:4004
+SAWTOOTH_INTKEY_TP_PYTHON_ARGS=-v tcp://localhost:4004

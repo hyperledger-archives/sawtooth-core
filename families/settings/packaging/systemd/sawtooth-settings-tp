@@ -1,1 +1,1 @@
-SAWTOOTH_SETTINGS-TP_ARGS=-v tcp://localhost:4004
+SAWTOOTH_SETTINGS_TP_ARGS=-v tcp://localhost:4004

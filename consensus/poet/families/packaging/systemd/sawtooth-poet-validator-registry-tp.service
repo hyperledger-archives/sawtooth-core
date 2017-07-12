@@ -6,7 +6,7 @@ After=network.target
 User=sawtooth
 Group=sawtooth
 EnvironmentFile=-/etc/default/sawtooth-poet-validator-registry-tp
-ExecStart=/usr/bin/poet-validator-registry-tp $SAWTOOTH_POET-VALIDATOR-REGISTRY-TP_ARGS
+ExecStart=/usr/bin/poet-validator-registry-tp $SAWTOOTH_POET_VALIDATOR_REGISTRY_TP_ARGS
 
 [Install]
 WantedBy=multi-user.target
