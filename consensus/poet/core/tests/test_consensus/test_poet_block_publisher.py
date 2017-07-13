@@ -198,6 +198,12 @@ class TestPoetBlockPublisher(TestCase):
         mock_consensus_state_store.return_value.__getitem__.return_value = \
             mock_consensus_state
 
+        # Create mock key state
+        mock_poet_key_state_store.return_value.__getitem__.return_value = \
+            mock.Mock(
+                sealed_signup_data='sealed signup data',
+                has_been_refreshed=False)
+
         # create mock_signup_info
         mock_signup_info.create_signup_info.return_value = \
             mock.Mock(
@@ -293,7 +299,9 @@ class TestPoetBlockPublisher(TestCase):
                 name='validator_001',
                 id='validator_deadbeef',
                 signup_info=SignUpInfo(
-                    poet_public_key='00112233445566778899aabbccddeeff'))
+                    poet_public_key='00112233445566778899aabbccddeeff',
+                    anti_sybil_id='Sally Fields',
+                    proof_data="You can't handle the truth"))
 
         # create a mock_wait_certificate that does nothing in check_valid
         mock_wait_certificate = mock.Mock()
@@ -313,7 +321,20 @@ class TestPoetBlockPublisher(TestCase):
         mock_consensus_state_store.return_value.__getitem__.return_value = \
             mock_consensus_state
 
+        # Create mock key state
+        mock_poet_key_state_store.return_value.__getitem__.return_value = \
+            mock.Mock(
+                sealed_signup_data='sealed signup data',
+                has_been_refreshed=False)
+
         # create mock_signup_info
+        mock_signup_info.block_id_to_nonce.return_value = 'nonce'
+        mock_signup_info.create_signup_info.return_value = \
+            mock.Mock(
+                poet_public_key='00112233445566778899aabbccddeeff',
+                anti_sybil_id='Sally Fields',
+                proof_data="You can't handle the truth",
+                sealed_signup_data='00112233445566778899aabbccddee')
         mock_signup_info.unseal_signup_data.return_value = \
             '00112233445566778899aabbccddeeff'
 
@@ -359,9 +380,9 @@ class TestPoetBlockPublisher(TestCase):
             self.assertTrue('Validator has reached maximum number of '
                             'blocks with key pair' in message)
 
-            # check that create.signup_info() wasn't called
-            # to renew the set of keys
-            self.assertFalse(mock_signup_info.create_signup_info.called)
+            # check that create.signup_info() was called to renew the set of
+            # keys
+            self.assertTrue(mock_signup_info.create_signup_info.called)
 
     @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
                 'SignupInfo')
@@ -419,6 +440,12 @@ class TestPoetBlockPublisher(TestCase):
 
         mock_consensus_state_store.return_value.__getitem__.return_value = \
             mock_consensus_state
+
+        # Create mock key state
+        mock_poet_key_state_store.return_value.__getitem__.return_value = \
+            mock.Mock(
+                sealed_signup_data='sealed signup data',
+                has_been_refreshed=False)
 
         # create mock_signup_info
         mock_signup_info.unseal_signup_data.return_value = \
@@ -523,6 +550,12 @@ class TestPoetBlockPublisher(TestCase):
         mock_consensus_state_store.return_value.__getitem__.return_value = \
             mock_consensus_state
 
+        # Create mock key state
+        mock_poet_key_state_store.return_value.__getitem__.return_value = \
+            mock.Mock(
+                sealed_signup_data='sealed signup data',
+                has_been_refreshed=False)
+
         # create mock_signup_info
         mock_signup_info.unseal_signup_data.return_value = \
             '00112233445566778899aabbccddeeff'
@@ -625,6 +658,12 @@ class TestPoetBlockPublisher(TestCase):
         mock_consensus_state_store.return_value.__getitem__.return_value = \
             mock_consensus_state
 
+        # Create mock key state
+        mock_poet_key_state_store.return_value.__getitem__.return_value = \
+            mock.Mock(
+                sealed_signup_data='sealed signup data',
+                has_been_refreshed=False)
+
         # create mock_signup_info
         mock_signup_info.unseal_signup_data.return_value = \
             '00112233445566778899aabbccddeeff'
@@ -707,6 +746,12 @@ class TestPoetBlockPublisher(TestCase):
 
         mock_consensus_state_store.return_value.__getitem__.return_value = \
             mock_consensus_state
+
+        # Create mock key state
+        mock_poet_key_state_store.return_value.__getitem__.return_value = \
+            mock.Mock(
+                sealed_signup_data='sealed signup data',
+                has_been_refreshed=False)
 
         # create mock_signup_info
         mock_signup_info.unseal_signup_data.return_value = \
@@ -808,6 +853,12 @@ class TestPoetBlockPublisher(TestCase):
 
         mock_consensus_state_store.return_value.__getitem__.return_value = \
             mock_consensus_state
+
+        # Create mock key state
+        mock_poet_key_state_store.return_value.__getitem__.return_value = \
+            mock.Mock(
+                sealed_signup_data='sealed signup data',
+                has_been_refreshed=False)
 
         # create mock_signup_info
         mock_signup_info.unseal_signup_data.return_value = \
