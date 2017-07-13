@@ -184,9 +184,8 @@ class SupplyChainClient(object):
         except BaseException:
             return None
 
-    def application_accept(self, record_identifier,
-                           applicant, application_type,
-                           timestamp=None, wait=None):
+    def application_accept(self, record_identifier, applicant_public_key,
+                           application_type, timestamp=None, wait=None):
         outputs = [Addressing.application_address(record_identifier),
                    Addressing.record_address(record_identifier)]
         inputs = outputs + [Addressing.agent_address(self.public_key),
@@ -195,9 +194,9 @@ class SupplyChainClient(object):
             SupplyChainPayload.APPLICATION_ACCEPT,
             ApplicationAcceptPayload(
                 record_identifier=record_identifier,
-                applicant=applicant,
+                applicant=applicant_public_key,
                 type=application_type,
-                timestamp=timestamp or time.time()),
+                timestamp=timestamp or int(time.time())),
             inputs=inputs, outputs=outputs, wait=wait)
 
     def application_reject(self, record_identifier, applicant_public_key,
