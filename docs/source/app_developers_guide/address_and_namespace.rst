@@ -92,7 +92,7 @@ calculated like this:
 	address = "1cf126" + hashlib.sha512('name'.encode('utf-8')).hexdigest()[-64:]
 
 A value could then be stored at this address, by constructing and sending a
-transaction to a validator, where the the transaction will be processed and
+transaction to a validator, where the transaction will be processed and
 included in a block.
 
 This address would also be used to retrieve the data.
