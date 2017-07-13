@@ -65,15 +65,32 @@ def intkey_xo_config_registry(num):
     )
 
 
+# scheduler arrangements
+
+def all_serial(num):
+    return 'serial'
+
+def all_parallel(num):
+    return 'parallel'
+
+def even_parallel_odd_serial(num):
+    return 'parallel' if num % 2 == 0 else 'serial'
+
+def even_serial_odd_parallel(num):
+    return 'parallel' if num % 2 == 1 else 'serial'
+
+
 # node
 
 def start_node(num,
                processor_func,
                peering_func,
+               scheduler_func,
                poet_kwargs):
     rest_api = start_rest_api(num)
     processors = start_processors(num, processor_func)
-    validator = start_validator(num, peering_func, poet_kwargs)
+    validator = start_validator(
+        num, peering_func, scheduler_func, poet_kwargs)
 
     wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)])
 
@@ -94,6 +111,7 @@ def stop_node(process_list):
 
 def validator_cmds(num,
                    peering_func,
+                   scheduler_func,
                    initial_wait_time=3000.0,
                    minimum_wait_time=1.0,
                    target_wait_time=20.0,
@@ -119,6 +137,7 @@ def validator_cmds(num,
 
     validator = ' '.join([
         'sawtooth-validator -v',
+        '--scheduler {}'.format(scheduler_func(num)),
         '--endpoint {}'.format(endpoint(num)),
         '--bind component:{}'.format(bind_component(num)),
         '--bind network:{}'.format(bind_network(num)),
@@ -191,8 +210,8 @@ def validator_cmds(num,
 
     return validator_cmds
 
-def start_validator(num, peering_func, poet_kwargs):
-    cmds = validator_cmds(num, peering_func, **poet_kwargs)
+def start_validator(num, peering_func, scheduler_func, poet_kwargs):
+    cmds = validator_cmds(num, peering_func, scheduler_func, **poet_kwargs)
     for cmd in cmds[:-1]:
         process = start_process(cmd)
         process.wait(timeout=60)
