@@ -45,6 +45,7 @@ class TestDynamicNetwork(unittest.TestCase):
         self._run_dynamic_network_test(**{
             'processors': NodeController.intkey_config_registry,
             'peering': NodeController.peer_to_preceding_only,
+            'schedulers': NodeController.all_serial,
             'rounds': 3,
             'start_nodes_per_round': 2,
             'stop_nodes_per_round': 0,
@@ -71,6 +72,7 @@ class TestDynamicNetwork(unittest.TestCase):
         self._run_dynamic_network_test(**{
             'processors': NodeController.intkey_config_registry,
             'peering': NodeController.everyone_peers_with_everyone,
+            'schedulers': NodeController.all_serial,
             'rounds': 1,
             'start_nodes_per_round': 3,
             'stop_nodes_per_round': 0,
@@ -82,6 +84,7 @@ class TestDynamicNetwork(unittest.TestCase):
             self,
             processors=NodeController.intkey_config_registry,
             peering=NodeController.peer_to_preceding_only,
+            schedulers=NodeController.all_serial,
             rounds=2,
             start_nodes_per_round=3,
             stop_nodes_per_round=1,
@@ -105,7 +108,7 @@ class TestDynamicNetwork(unittest.TestCase):
 
         for round_ in range(rounds):
             self.start_new_nodes(
-                processors, peering,
+                processors, peering, schedulers,
                 start_nodes_per_round, round_, poet_kwargs)
             self.send_populate_batch(time_between_batches)
             self.send_txns_alternating(batches, time_between_batches)
@@ -154,20 +157,22 @@ class TestDynamicNetwork(unittest.TestCase):
     def start_new_nodes(self,
                         processors,
                         peering,
+                        schedulers,
                         start_nodes_per_round,
                         round_,
                         poet_kwargs):
         start = round_ * start_nodes_per_round
         for num in range(start, start + start_nodes_per_round):
-            self.start_node(num, processors, peering, poet_kwargs)
+            self.start_node(num, processors, peering, schedulers, poet_kwargs)
 
     def start_node(self, num,
                    processors,
                    peering,
+                   schedulers,
                    poet_kwargs):
         LOGGER.info('Starting node {}'.format(num))
         processes = NodeController.start_node(
-            num, processors, peering, poet_kwargs)
+            num, processors, peering, schedulers, poet_kwargs)
 
         # Check that none of the processes have returned
         for proc in processes:
