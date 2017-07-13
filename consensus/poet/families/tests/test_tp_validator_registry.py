@@ -107,8 +107,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
         # Expect a request to set ValidatorInfo for val_1
         received = self.validator.expect(
-            self.factory.create_set_request_validator_info("val_1",
-                                                           "registered"))
+            self.factory.create_set_request_validator_info("val_1"))
 
         # Respond with address for val_1
         # val_1 address is derived from the validators id
@@ -188,8 +187,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         # Set the validator address
         # Expect a request to set ValidatorInfo for val_1
         received = self.validator.expect(
-            self.factory.create_set_request_validator_info("val_1",
-                                                           "registered"))
+            self.factory.create_set_request_validator_info("val_1"))
 
         # Respond with address for val_1
         # val_1 address is derived from the validators id

@@ -231,7 +231,6 @@ class ValidatorRegistryMessageFactory(object):
     def create_get_response_validator_info(self, validator_name):
         signup_info = self.create_signup_info(self.pubkey_hash, "000")
         data = ValidatorInfo(
-            registered="registered",
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
@@ -243,10 +242,9 @@ class ValidatorRegistryMessageFactory(object):
         address = self._key_to_address(self.public_key)
         return self._factory.create_get_response({address: data})
 
-    def create_set_request_validator_info(self, validator_name, reg):
+    def create_set_request_validator_info(self, validator_name):
         signup_info = self.create_signup_info(self.pubkey_hash, "000")
         data = ValidatorInfo(
-            registered=reg,
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
