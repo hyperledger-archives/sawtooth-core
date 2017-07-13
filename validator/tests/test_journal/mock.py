@@ -100,7 +100,7 @@ class MockScheduler(Scheduler):
 
         return BatchExecutionResult(
             is_valid=result,
-            state_hash="0000000000")
+            state_hash='0'*70)
 
     def set_transaction_execution_result(
             self, txn_signature, is_valid, context_id):

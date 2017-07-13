@@ -24,13 +24,17 @@ from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
+from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.chain import BlockValidator
 from sawtooth_validator.journal.chain import ChainController
+from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.timed_cache import TimedCache
 
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+
+from sawtooth_validator.state.merkle import MerkleDatabase
 
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.state.settings_view import SettingsView
@@ -426,7 +430,8 @@ class TestBlockValidator(unittest.TestCase):
         """
 
         new_block = self.block_tree_manager.generate_block(
-            previous_block=self.root)
+            previous_block=self.root,
+            add_to_cache=True)
 
         self.validate_block(new_block)
 
@@ -565,7 +570,115 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where the new block has a batch that is missing a
         dependency.
         """
-        pass
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        txn = self.block_tree_manager.generate_transaction(deps=["missing"])
+        batch = self.block_tree_manager.generate_batch(txns=[txn])
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
+
+    def test_block_duplicate_batch(self):
+        """
+        Test the case where the new block has a batch that already committed to
+        the chain.
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        batch = self.block_tree_manager.generate_batch()
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
+
+    def test_block_duplicate_batch_in_block(self):
+        """
+        Test the case where the new block has a duplicate batches.
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        batch = self.block_tree_manager.generate_batch()
+
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch, batch])
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
+
+    def test_block_duplicate_transaction(self):
+        """
+        Test the case where the new block has a transaction that is already
+        committed.
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        txn = self.block_tree_manager.generate_transaction()
+        batch = self.block_tree_manager.generate_batch(txns=[txn])
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        txn2 = self.block_tree_manager.generate_transaction()
+        batch = self.block_tree_manager.generate_batch(txns=[txn, txn2])
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=new_block,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
+
+    def test_block_duplicate_transaction_in_batch(self):
+        """
+        Test the case where the new block has a batch that contains duplicate
+        transactions.
+        """
+        chain, head = self.generate_chain_with_head(
+            self.root, 5, {'add_to_store': True})
+
+        txn = self.block_tree_manager.generate_transaction()
+        batch = self.block_tree_manager.generate_batch(txns=[txn, txn])
+        new_block = self.block_tree_manager.generate_block(
+            previous_block=head,
+            add_to_cache=True,
+            invalid_batch=True,
+            batches=[batch])
+        self.validate_block(new_block)
+
+        self.assert_invalid_block(new_block)
+        self.assert_new_block_not_committed()
 
     # assertions
 
@@ -1055,12 +1168,11 @@ class TestJournal(unittest.TestCase):
         # gossip layer.
 
         btm = BlockTreeManager()
-        journal = None
         try:
             journal = Journal(
                 block_store=btm.block_store,
                 block_cache=btm.block_cache,
-                state_view_factory=StateViewFactory(DictDatabase()),
+                state_view_factory=MockStateViewFactory(btm.state_db),
                 block_sender=self.block_sender,
                 batch_sender=self.batch_sender,
                 transaction_executor=self.txn_executor,
@@ -1146,3 +1258,130 @@ class TestTimedCache(unittest.TestCase):
         self.assertEqual(len(bc), 2)
         self.assertTrue("test" in bc)
         self.assertTrue("test2" in bc)
+
+
+class TestChainCommitState(unittest.TestCase):
+
+    def setUp(self):
+        self.commit_state = None
+        self.block_tree_manager = BlockTreeManager()
+
+    def test_fall_thru(self):
+        """ Test that the requests correctly fall thru to the
+        underlying BlockStore.
+        """
+        blocks = self.generate_chain(1)
+        commit_state = self.create_chain_commit_state(blocks)
+        self.commit_state = commit_state
+
+        self.assert_block_present(blocks[0])
+
+        self.assert_missing()
+
+    def test_uncommitted_blocks(self):
+        """ Test that the ChainCommitState can simulate blocks being
+        uncommited from the BlockStore
+        """
+        blocks = self.generate_chain(2)
+        block, uncommitted_block = blocks
+        commit_state = self.create_chain_commit_state(
+            blocks=blocks,
+            uncommitted_blocks=[uncommitted_block],
+            )
+        self.commit_state = commit_state
+
+        # the first block is still present
+        self.assert_block_present(block)
+        # batch from the uncommited block should not be present
+        self.assert_block_not_present(uncommitted_block)
+
+        self.assert_missing()
+
+    def test_add_remove_batch(self):
+        """ Test that we can incrementatlly build the commit state and
+        roll it back
+        """
+        blocks = self.generate_chain(2)
+        block, uncommitted_block = blocks
+        commit_state = self.create_chain_commit_state(
+            blocks=blocks,
+            uncommitted_blocks=[uncommitted_block],
+            )
+        self.commit_state = commit_state
+
+        # the first block is still present
+        self.assert_block_present(block)
+        # batch from the uncommited block should not be present
+        self.assert_block_not_present(uncommitted_block)
+
+        batch = uncommitted_block.batches[0]
+        commit_state.add_batch(batch)
+
+        # the batch should appear present
+        self.assert_batch_present(batch)
+
+        # check that we can remove the batch again.
+        commit_state.remove_batch(batch)
+        self.assert_batch_not_present(batch)
+
+        # Do an incremental add of the batch
+        for txn in batch.transactions:
+            commit_state.add_txn(txn.header_signature)
+            self.assert_txn_present(txn)
+        self.assertFalse(commit_state.has_batch(
+            batch.header_signature))
+
+        commit_state.add_batch(batch, add_transactions=False)
+        self.assert_batch_present(batch)
+
+        # check that we can remove the batch again.
+        commit_state.remove_batch(batch)
+        self.assert_batch_not_present(batch)
+
+    def generate_chain(self, block_count):
+        return self.block_tree_manager.generate_chain(
+            None, [{} for _ in range(block_count)])
+
+    def create_chain_commit_state(self, blocks, uncommitted_blocks=None,
+                                  chain_head=None):
+        block_store = BlockStore(DictDatabase())
+        block_store.update_chain(blocks)
+        if chain_head is None:
+            chain_head = block_store.chain_head.identifier
+        if uncommitted_blocks is None:
+            uncommitted_blocks = []
+        return ChainCommitState(block_store, uncommitted_blocks)
+
+    def assert_txn_present(self, txn):
+        self.assertTrue(self.commit_state.has_transaction(
+            txn.header_signature))
+
+    def assert_batch_present(self, batch):
+        self.assertTrue(self.commit_state.has_batch(
+            batch.header_signature))
+        for txn in batch.transactions:
+            self.assert_txn_present(txn)
+
+    def assert_block_present(self, block):
+        for batch in block.batches:
+            self.assert_batch_present(batch)
+
+    def assert_txn_not_present(self, txn):
+        self.assertFalse(self.commit_state.has_transaction(
+            txn.header_signature))
+
+    def assert_batch_not_present(self, batch):
+        self.assertFalse(self.commit_state.has_batch(
+            batch.header_signature))
+        for txn in batch.transactions:
+            self.assert_txn_not_present(txn)
+
+    def assert_block_not_present(self, block):
+        for batch in block.batches:
+            self.assert_batch_not_present(batch)
+
+    def assert_missing(self):
+        """check missing keys behave as expected.
+        """
+        self.assertFalse(self.commit_state.has_batch("missing"))
+        self.assertFalse(self.commit_state.has_transaction("missing"))

@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
 import hashlib
 import logging
 import pprint
@@ -40,6 +41,8 @@ from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.state.settings_view import SettingsView
 
+from test_journal import mock_consensus
+
 from test_journal.mock import MockBatchSender
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockStateViewFactory
@@ -55,7 +58,8 @@ LOGGER = logging.getLogger(__name__)
 def dumps_batch(batch):
     out = '\tbatch: {}\n'.format(batch.header_signature[:8])
     for txn in batch.transactions:
-        out += '\ttxn: {}\n'.format(txn.header_signature[:8])
+        out += '\t\ttxn: {} {}\n'.format(
+            txn.header_signature[:8], txn.payload)
     return out
 
 
@@ -131,7 +135,8 @@ class BlockTreeManager(object):
     def generate_block(self, previous_block=None,
                        add_to_store=False,
                        add_to_cache=False,
-                       batch_count=0,
+                       batch_count=1,
+                       batches=None,
                        status=BlockStatus.Unknown,
                        invalid_consensus=False,
                        invalid_batch=False,
@@ -142,27 +147,47 @@ class BlockTreeManager(object):
         if previous is None:
             previous = self.chain_head
 
-        self.block_publisher.on_chain_updated(previous)
+        header = BlockHeader(
+            previous_block_id=previous.identifier,
+            signer_pubkey=self.public_key,
+            block_num=previous.block_num+1)
 
-        while self.block_sender.new_block is None:
-            self.block_publisher.on_batch_received(
-                self._generate_batch_from_payload(''))
-            self.block_publisher.on_check_publish_block(True)
+        block_builder = BlockBuilder(header)
+        if batches:
+            block_builder.add_batches(batches)
 
-        block_from_sender = self.block_sender.new_block
-        self.block_sender.new_block = None
+        if batch_count != 0:
+            block_builder.add_batches(
+                [self._generate_batch()
+                    for _ in range(batch_count)])
 
-        block_wrapper = BlockWrapper(block_from_sender)
+        if invalid_batch:
+            block_builder.add_batches(
+                [self._generate_batch_from_payload('BAD')])
+
+        block_builder.set_state_hash('0'*70)
+
+        consensus = mock_consensus.BlockPublisher()
+        consensus.finalize_block(block_builder.block_header)
+
+        header_bytes = block_builder.block_header.SerializeToString()
+        signature = signing.sign(header_bytes, self.identity_signing_key)
+        block_builder.set_signature(signature)
+
+        block_wrapper = BlockWrapper(block_builder.build_block())
+
+        if batches:
+            block_wrapper.block.batches.extend(batches)
+
+        if batch_count:
+            block_wrapper.block.batches.extend(
+                [self.generate_batch() for _ in range(batch_count)])
 
         if invalid_signature:
             block_wrapper.block.header_signature = "BAD"
 
         if invalid_consensus:
             block_wrapper.header.consensus = b'BAD'
-
-        if invalid_batch:
-            block_wrapper.block.batches.extend(
-                [self._generate_batch_from_payload('BAD')])
 
         block_wrapper.weight = weight
         block_wrapper.status = status
@@ -203,7 +228,8 @@ class BlockTreeManager(object):
             previous = new_block
         return out
 
-    def _generate_block(self, payload, previous_block_id, block_num):
+    def create_block(self, payload='payload', batch_count=1,
+                     previous_block_id=NULL_BLOCK_IDENTIFIER, block_num=0):
         header = BlockHeader(
             previous_block_id=previous_block_id,
             signer_pubkey=self.public_key,
@@ -211,7 +237,9 @@ class BlockTreeManager(object):
 
         block_builder = BlockBuilder(header)
         block_builder.add_batches(
-            [self._generate_batch_from_payload(payload)])
+            [self._generate_batch_from_payload(payload)
+                for _ in range(batch_count)])
+        block_builder.set_state_hash('0'*70)
 
         header_bytes = block_builder.block_header.SerializeToString()
         signature = signing.sign(header_bytes, self.identity_signing_key)
@@ -222,7 +250,7 @@ class BlockTreeManager(object):
         return block_wrapper
 
     def generate_genesis_block(self):
-        return self._generate_block(
+        return self.create_block(
             payload='Genesis',
             previous_block_id=NULL_BLOCK_IDENTIFIER,
             block_num=0)
@@ -230,7 +258,7 @@ class BlockTreeManager(object):
     def _block_def(self,
                    add_to_store=False,
                    add_to_cache=False,
-                   batch_count=0,
+                   batch_count=1,
                    status=BlockStatus.Unknown,
                    invalid_consensus=False,
                    invalid_batch=False,
@@ -272,8 +300,20 @@ class BlockTreeManager(object):
 
     def generate_batch(self, txn_count=2, missing_deps=False,
                        txns=None):
+
+        batch = self._generate_batch(txn_count, missing_deps, txns)
+
+        LOGGER.debug("Generated Batch:\n%s", dumps_batch(batch))
+
+        return batch
+
+    def _generate_batch(self, txn_count=2, missing_deps=False,
+                       txns=None):
         if txns is None:
-            txns = [
+            txns = []
+
+        if txn_count != 0:
+            txns += [
                 self.generate_transaction('txn_' + str(i))
                 for i in range(txn_count)
             ]
@@ -295,8 +335,6 @@ class BlockTreeManager(object):
             header=batch_header,
             header_signature=self._signed_header(batch_header),
             transactions=txns)
-
-        LOGGER.debug("Generated %s", dumps_batch(batch))
 
         return batch
 
@@ -335,7 +373,6 @@ class BlockTreeManager(object):
             header=batch_header,
             header_signature=self._signed_header(batch_header),
             transactions=[txn])
-        LOGGER.debug("Generated %s", dumps_batch(batch))
         return batch
 
     def _signed_header(self, header):

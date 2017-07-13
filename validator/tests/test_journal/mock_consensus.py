@@ -24,12 +24,12 @@ class BlockPublisher(BlockPublisherInterface):
     """ MockConsensus BlockPublisher
     """
     def __init__(self,
-                 block_cache,
-                 state_view_factory,
-                 batch_publisher,
-                 data_dir,
-                 config_dir,
-                 validator_id):
+                 block_cache=None,
+                 state_view_factory=None,
+                 batch_publisher=None,
+                 data_dir=None,
+                 config_dir=None,
+                 validator_id=None):
         super().__init__(
             block_cache,
             state_view_factory,
