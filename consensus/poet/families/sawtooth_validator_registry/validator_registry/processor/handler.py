@@ -472,7 +472,6 @@ class ValidatorRegistryTransactionHandler(object):
                     error))
 
         validator_info = ValidatorInfo(
-            registered="registered",
             name=validator_name,
             id=validator_id,
             signup_info=val_reg_payload.signup_info,

@@ -32,7 +32,6 @@ class TestValidatorRegistryView(unittest.TestCase):
 
         state_view = MockStateView({
             to_address('my_id'): ValidatorInfo(
-                registered='sure',
                 name='my_validator',
                 id='my_id',
                 signup_info=SignUpInfo(poet_public_key='my_pubkey',
@@ -46,7 +45,6 @@ class TestValidatorRegistryView(unittest.TestCase):
         info = validator_registry_view.get_validator_info('my_id')
         self.assertEqual('my_id', info.id)
         self.assertEqual('my_validator', info.name)
-        self.assertEqual('sure', info.registered)
         self.assertEqual("signature", info.transaction_id)
         self.assertEqual('my_pubkey', info.signup_info.poet_public_key)
         self.assertEqual('beleive me', info.signup_info.proof_data)
@@ -69,7 +67,6 @@ class TestValidatorRegistryView(unittest.TestCase):
 
         state_view = MockStateView({
             to_address('my_id'): ValidatorInfo(
-                registered='sure',
                 name='my_validator',
                 id='my_id',
                 signup_info=SignUpInfo(poet_public_key='my_pubkey',
@@ -100,7 +97,6 @@ class TestValidatorRegistryView(unittest.TestCase):
         state_view = MockStateView({
             to_address('validator_map'): b'this should be ignored',
             to_address('my_id'): ValidatorInfo(
-                registered='sure',
                 name='my_validator',
                 id='my_id',
                 signup_info=SignUpInfo(poet_public_key='my_pubkey',
@@ -109,7 +105,6 @@ class TestValidatorRegistryView(unittest.TestCase):
                 transaction_id="signature"
             ).SerializeToString(),
             to_address('another_id'): ValidatorInfo(
-                registered='yep',
                 name='your_validator',
                 id='another_id',
                 signup_info=SignUpInfo(poet_public_key='your_pubkey',

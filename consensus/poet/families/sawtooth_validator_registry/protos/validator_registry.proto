@@ -19,22 +19,19 @@ option java_multiple_files = true;
 option java_package = "sawtooth.config.protobuf";
 
 message ValidatorInfo {
-    // Used to check if the validator's signup has been revoked.
-    string registered = 1;
-
     // The name of the endpoint. It should be a human readable name.
-    string name = 2;
+    string name = 1;
 
     // The validator's public key (currently using signer_pubkey as this is
     // stored in the transaction header)
-    string id = 3;
+    string id = 2;
 
     // This is the protocol buffer described below.
-    SignUpInfo signup_info = 4;
+    SignUpInfo signup_info = 3;
 
     // The header signature for the ValidatorRegistryPayload transaction. This
     // will be used to look up the block the ValidatorInfo was committed on.
-    string transaction_id = 5;
+    string transaction_id = 4;
 }
 
 message SignUpInfo {
