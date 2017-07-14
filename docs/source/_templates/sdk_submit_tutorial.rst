@@ -90,8 +90,8 @@ these Transactions (see below).
         // dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         familyName: 'intkey',
         familyVersion: '1.0',
-        inputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
-        outputs: ['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
+        inputs: ['1cf126'],
+        outputs: ['1cf126'],
         payloadEncoding: 'application/cbor',
         payloadEncoder: cbor.encode
     })
@@ -103,16 +103,15 @@ these Transactions (see below).
 .. note::
 
    Remember that a *batcher pubkey* is the hex public key matching the private
-   key that will later be used to sign a Transaction's Batch, *inputs* and
-   *outputs* are state addresses that this Transaction is allowed to read from
-   or write to, and *dependencies* are the *header signatures* of Transactions
-   that must be committed before this one (see *TransactionHeaders* in
+   key that will later be used to sign a Transaction's Batch, and
+   *dependencies* are the *header signatures* of Transactions that must be
+   committed before this one (see *TransactionHeaders* in
    :doc:`/architecture/transactions_and_batches`).
 
    Although possible, it would be unusual to set these properties when
    creating a *TransactionEncoder*. The default batcher pubkey will be valid
-   as long as the Transactions and Batches are signed by the same key, and the
-   other properties are typically different from Transaction to Transaction.
+   as long as the Transactions and Batches are signed by the same key, and
+   dependencies are typically different from Transaction to Transaction.
 
 
 2. Create the Transaction
@@ -132,8 +131,8 @@ Optionally, you may pass in header properties in order to override any defaults 
 .. code-block:: javascript
 
     const txn = encoder.create(payload, {
-        inputs: ['1cf12663ae9d398142a7d84c49b73ba2f667c8d377ceb7832db69b1a416133562ea496'],
-        outputs: ['1cf12663ae9d398142a7d84c49b73ba2f667c8d377ceb7832db69b1a416133562ea496']
+        inputs: ['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
+        outputs: ['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7']
     })
 
     const txn2 = encoder.create({
@@ -145,6 +144,24 @@ Optionally, you may pass in header properties in order to override any defaults 
 {% else %}
 
 {% endif %}
+
+.. note::
+
+   Remember that *inputs* and *outputs* are the state addresses a Transaction
+   is allowed to read from or write to. When initializing our
+   *TransactionEncoder* we used only the six character IntKey prefix, allowing
+   Transactions which don't specify inputs/outputs to access any IntKey
+   address. With ``txn`` above, we referenced the specific address where the
+   value of  ``'foo'`` is stored. Whenever possible, specific addresses should
+   be used, as this will allow the validator to better schedule Transaction
+   processing.
+
+   Note that the methods for assigning and validating addresses are entirely up
+   to the Transaction Processor. In the case of IntKey, there are `specific
+   rules to generate valid addresses <../transaction_family_specifications
+   /integerkey_transaction_family.html#addressing>`_, which must be followed or
+   Transactions will be rejected. You will need to know and follow the
+   addressing rules for whichever Transaction Family you are working with.
 
 
 3. (optional) Encode the Transaction(s)

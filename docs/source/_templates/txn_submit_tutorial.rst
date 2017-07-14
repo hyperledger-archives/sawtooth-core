@@ -116,9 +116,9 @@ the right data into the right keys.
         # dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         family_name='intkey',
         family_version='1.0',
-        inputs=['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
+        inputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
         nonce=str(randint(0, 1000000000)),
-        outputs=['1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c'],
+        outputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
         payload_encoding='application/cbor',
         payload_sha512=payload_sha512,
         signer_pubkey=public_key_hex)
@@ -132,7 +132,10 @@ the right data into the right keys.
    *header signatures* of Transactions that must be committed before this one
    (see TransactionHeaders in :doc:`/architecture/transactions_and_batches`).
    The dependencies property will frequently be left empty, but generally at
-   least one input and output must always be set.
+   least one input and output must always be set, and those addresses must
+   adhere to validation rules specific to your Transaction Family (`in this
+   case IntKey <../transaction_family_specifications
+   /integerkey_transaction_family.html#addressing>`_).
 
 
 3. Sign the Header
