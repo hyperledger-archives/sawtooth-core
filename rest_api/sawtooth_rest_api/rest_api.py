@@ -18,6 +18,7 @@ import sys
 import logging
 import asyncio
 import argparse
+import pkg_resources
 from aiohttp import web
 
 from zmq.asyncio import ZMQEventLoop
@@ -38,6 +39,7 @@ from sawtooth_rest_api.config import RestApiConfig
 
 
 LOGGER = logging.getLogger(__name__)
+DISTRIBUTION_NAME = 'sawtooth-rest-api'
 
 
 def parse_args(args):
@@ -55,6 +57,18 @@ def parse_args(args):
                         action='count',
                         default=0,
                         help='Increase level of output sent to stderr')
+
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
+        help='print version information')
 
     return parser.parse_args(args)
 

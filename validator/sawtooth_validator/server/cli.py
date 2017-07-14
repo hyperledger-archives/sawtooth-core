@@ -17,6 +17,7 @@ import logging
 import sys
 import argparse
 import os
+import pkg_resources
 import netifaces
 
 import sawtooth_signing as signing
@@ -36,6 +37,7 @@ from sawtooth_validator.exceptions import LocalConfigurationError
 
 
 LOGGER = logging.getLogger(__name__)
+DISTRIBUTION_NAME = 'sawtooth-validator'
 
 
 def parse_args(args):
@@ -92,6 +94,18 @@ def parse_args(args):
     parser.add_argument('--scheduler',
                         choices=['serial', 'parallel'],
                         help='The type of scheduler to be used.')
+
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
+        help='print version information')
 
     return parser.parse_args(args)
 

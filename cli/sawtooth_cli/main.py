@@ -44,6 +44,9 @@ from sawtooth_cli.cluster import add_cluster_parser
 from sawtooth_cli.cluster import do_cluster
 
 
+DISTRIBUTION_NAME = 'sawtooth-cli'
+
+
 def create_console_handler(verbose_level):
     clog = logging.StreamHandler()
     formatter = ColoredFormatter(
@@ -85,15 +88,15 @@ def create_parent_parser(prog_name):
         help='enable more verbose output')
 
     try:
-        version = pkg_resources.get_distribution('sawtooth-cli').version
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
     except pkg_resources.DistributionNotFound:
         version = 'UNKNOWN'
 
     parent_parser.add_argument(
         '-V', '--version',
         action='version',
-        version='sawtooth-cli (Hyperledger Sawtooth) version {}'
-                .format(version),
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
         help='print version information')
 
     return parent_parser
