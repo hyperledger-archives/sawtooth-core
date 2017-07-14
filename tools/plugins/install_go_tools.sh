@@ -20,7 +20,8 @@ go get -u \
     github.com/btcsuite/btcutil/base58 \
     gopkg.in/fatih/set.v0 \
     golang.org/x/crypto/ripemd160 \
-    github.com/jessevdk/go-flags
+    github.com/jessevdk/go-flags \
+    github.com/pelletier/go-toml
 
 chown -R $VAGRANT_USER:$VAGRANT_USER $GOPATH
 chown -R $VAGRANT_USER:$VAGRANT_USER $GOPATH/bin
