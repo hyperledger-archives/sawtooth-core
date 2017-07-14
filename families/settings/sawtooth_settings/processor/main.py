@@ -17,11 +17,15 @@ import argparse
 import logging
 import os
 import sys
+import pkg_resources
 
 from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
 from sawtooth_settings.processor.handler import SettingsTransactionHandler
+
+
+DISTRIBUTION_NAME = 'sawtooth-settings'
 
 
 def create_console_handler(verbose_level):
@@ -72,6 +76,18 @@ def create_parser(prog_name):
         action='count',
         default=0,
         help='Increase output sent to stderr')
+
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
+        help='print version information')
 
     return parser
 
