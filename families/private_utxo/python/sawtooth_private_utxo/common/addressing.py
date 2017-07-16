@@ -43,8 +43,8 @@ class Addressing(object):
         return PRIVATE_UTXO_HOLDINGS_NAMESPACE
 
     @classmethod
-    def holdings_address(cls, record_identifier):
-        address = hashlib.sha512(record_identifier.encode()).hexdigest()[0:64]
+    def holdings_address(cls, public_key):
+        address = hashlib.sha512(public_key.encode()).hexdigest()[0:64]
         return cls.holdings_namespace() + address
 
     @classmethod

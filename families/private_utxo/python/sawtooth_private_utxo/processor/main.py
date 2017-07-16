@@ -13,8 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sys
 import argparse
+import sys
 
 from sawtooth_sdk.client.log import init_console_logging
 from sawtooth_sdk.client.log import log_configuration

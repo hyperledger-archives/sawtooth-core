@@ -30,7 +30,7 @@ from sawtooth_private_utxo.protobuf.utxo_document_pb2 import UtxoDocument
 
 LOGGER = logging.getLogger(__name__)
 
-PRIVATE_UTXO_VERSION = '0.5'
+PRIVATE_UTXO_VERSION = '1.0'
 PRIVATE_UTXO_FAMILY_NAME = 'sawtooth_private_utxo'
 
 

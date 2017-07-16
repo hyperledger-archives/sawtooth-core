@@ -182,8 +182,7 @@ class PrivateUtxoMessageFactory(object):
             document.owner,
             document.asset_type,
             document.amount,
-            document.nonce
-            )
+            document.nonce)
 
         return self.create_tp_process_request(
             PrivateUtxoPayload.CONVERT_FROM_UTXO,

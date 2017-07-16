@@ -156,6 +156,7 @@ main() {
                     ;;
                 ias)
                     test_ias
+                    ;;
                 private_utxo)
                     test_private_utxo
                     ;;
@@ -250,6 +251,10 @@ test_ias() {
 
 test_private_utxo() {
     run_docker_test ./families/private_utxo/python/tests/unit_private_utxo_python.yaml
+    copy_coverage .coverage.config
+    run_docker_test ./families/private_utxo/python/tests/test_tp_private_utxo_python.yaml
+    copy_coverage .coverage.config
+    run_docker_test ./families/private_utxo/python/tests/int_private_utxo_python.yaml
     copy_coverage .coverage.config
 }
 

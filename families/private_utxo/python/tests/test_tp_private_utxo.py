@@ -26,7 +26,7 @@ from sawtooth_private_utxo.common.addressing import Addressing
 LOGGER = logging.getLogger(__name__)
 
 
-class TestSupplyChain(TransactionProcessorTestCase):
+class TestPrivateUtxo(TransactionProcessorTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestPrivateUtxo, cls).setUpClass()

@@ -16,29 +16,17 @@
 version: "2.1"
 
 services:
-  test-tp-private-utxo-python:
-    image: sawtooth-private-utxo-tp-python:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
-    command: private-utxo-tp tcp://validator:4004 -vvv
-    stop_signal: SIGKILL
-
-  validator:
+  unit-private-utxo-python:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose:
-      - 4004
     command: nose2-3 -v
         --log-level debug
         -c /project/sawtooth-core/families/private_utxo/python/nose2.cfg
         -s /project/sawtooth-core/families/private_utxo/python/tests
-        test_tp_private_utxo
+        test_private_utxo_cli
     stop_signal: SIGKILL
     environment:
-      TEST_BIND: "tcp://eth0:4004"
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/families/private_utxo/python:\
         /project/sawtooth-core/integration:\
