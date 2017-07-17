@@ -128,7 +128,7 @@ class SchedulerTester(object):
         self._yaml_file_name = file_name
         self._counter = itertools.count(0)
         self._referenced_txns_in_other_batches = {}
-        # txn.header_signature : (is_valid, [{add: bytes}
+        self._batch_id_by_txn_id = {}
         self._txn_execution = {}
 
         self._batch_results = {}
@@ -193,11 +193,15 @@ class SchedulerTester(object):
                                  txn_info.txn.header_signature[:16])
                 else:
                     stop = True
-
-            if txns_executed_fifo:
-                t_info = txns_to_process.popleft()
-            else:
-                t_info = txns_to_process.pop()
+            try:
+                if txns_executed_fifo:
+                    t_info = txns_to_process.popleft()
+                else:
+                    t_info = txns_to_process.pop()
+            except IndexError:
+                # No new txn was returned from next_transaction so
+                # check again if complete.
+                continue
 
             inputs, outputs = self._get_inputs_outputs(t_info.txn)
 
@@ -402,6 +406,7 @@ class SchedulerTester(object):
 
             txn_processing_result = self._process_txns(
                 batch=batch,
+                previous_batch_results=b_results.copy(),
                 priv_key=priv_key,
                 pub_key=pub_key)
             txns, batch_is_valid = txn_processing_result
@@ -420,7 +425,15 @@ class SchedulerTester(object):
             batches.append(batch_real)
         return batches, b_results
 
-    def _process_txns(self, batch, priv_key, pub_key, strip_deps=False):
+    def _dependencies_are_valid(self, dependencies, previous_batch_results):
+        for dep in dependencies:
+            batch_id = self._batch_id_by_txn_id[dep]
+            dep_result = previous_batch_results[batch_id]
+            if not dep_result.is_valid:
+                return False
+        return True
+
+    def _process_txns(self, batch, previous_batch_results, priv_key, pub_key):
         txns = []
         referenced_txns = {}
         execution = {}
@@ -440,17 +453,11 @@ class SchedulerTester(object):
                     for d in transaction['addresses_to_set']
                 ]
 
-            if self._contains_and_not_none('valid', transaction):
-                is_valid = bool(transaction['valid'])
-            if not is_valid:
-                batch_is_valid = False
-
-            if self._contains_and_not_none('dependencies', transaction) and \
-                    not strip_deps:
+            if self._contains_and_not_none('dependencies', transaction):
                 if any([a not in self._referenced_txns_in_other_batches and
                         len(a) <= 20 for a in transaction['dependencies']]):
                     # This txn has a dependency with a txn signature that is
-                    # not known about, so delay processing this batch.
+                    # not known about,
                     return None
 
                 dependencies = [
@@ -460,6 +467,18 @@ class SchedulerTester(object):
                 dependencies = [a for a in dependencies if len(a) > 20]
             else:
                 dependencies = []
+
+            deps_valid = self._dependencies_are_valid(
+                dependencies,
+                previous_batch_results)
+
+            if self._contains_and_not_none('valid', transaction):
+                is_valid = bool(transaction['valid'])
+            else:
+                is_valid = deps_valid
+
+            if not is_valid:
+                batch_is_valid = False
 
             txn, _ = create_transaction(
                 payload=uuid.uuid4().hex.encode(),
