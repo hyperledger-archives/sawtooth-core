@@ -26,8 +26,7 @@
 ---
 - # start of first batch
   - # first transaction
-    dependencies: # Optional. No default. List.
-    id: a # Optional. No Default. Must be unique for 1 scheduler.
+    name: a # Optional. No Default. Must be unique for 1 scheduler.
     inputs: # Required
       - aaaa:sha
       - bbbb:sha
