@@ -11,7 +11,7 @@ improve on the efficiency of present solutions such as Proof-of-Work. The
 initial reference implementation of PoET released to Hyperledger was written for
 an abstract TEE to keep it flexible to any TEE implementation. This
 specification defines a concrete implementation for SGX. The following
-presentation assumes the use of Intel SGX as the trusted execution environment.
+presentation assumes the use of Intel® SGX as the trusted execution environment.
 
 At a high-level, PoET stochastically elects individual peers to execute requests
 at a given target rate. Individual peers sample an exponentially distributed
