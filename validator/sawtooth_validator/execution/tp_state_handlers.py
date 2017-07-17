@@ -83,10 +83,10 @@ class TpStateSetHandler(Handler):
             return HandlerResult(
                 HandlerStatus.RETURN,
                 response,
-                validator_pb2.Message.TP_STATE_GET_RESPONSE)
+                validator_pb2.Message.TP_STATE_SET_RESPONSE)
 
         response = state_context_pb2.TpStateSetResponse(
-            status=state_context_pb2.TpStateGetResponse.OK)
+            status=state_context_pb2.TpStateSetResponse.OK)
         if return_value is True:
             address_list = [e.address for e in set_request.entries]
             LOGGER.debug("SET: %s", address_list)
