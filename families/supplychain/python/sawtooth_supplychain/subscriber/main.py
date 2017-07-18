@@ -12,18 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
+import os
 import sys
 import argparse
 
 import psycopg2
 
 from sawtooth_supplychain.subscriber.subscriber import Subscriber
+from sawtooth_supplychain.subscriber.config import SubscriberConfig
+from sawtooth_supplychain.subscriber.config import \
+    load_default_subscriber_config
+from sawtooth_supplychain.subscriber.config import \
+    load_toml_subscriber_config
+from sawtooth_supplychain.subscriber.config import \
+    merge_subscriber_configs
 
 from sawtooth_sdk.client.log import init_console_logging
 from sawtooth_sdk.client.log import log_configuration
 from sawtooth_sdk.client.config import get_log_config
 from sawtooth_sdk.client.config import get_log_dir
+from sawtooth_sdk.client.config import get_config_dir
 from sawtooth_sdk.messaging.stream import Stream
 
 
@@ -47,23 +55,43 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
+def load_subscriber_config(first_config):
+    default_config = load_default_subscriber_config()
+    config_dir = get_config_dir()
+    conf_file = os.path.join(config_dir, 'supplychain_sds.toml')
+
+    toml_config = load_toml_subscriber_config(conf_file)
+    return merge_subscriber_configs(
+        configs=[first_config, toml_config, default_config])
+
+
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
-
-    opts = parse_args(args)
 
     subscriber = None
     stream = None
     connection = None
     # pylint: disable=broad-except
     try:
-        stream = Stream(opts.endpoint)
-        connection = psycopg2.connect(opts.database)
+        opts = parse_args(args)
+        opts_config = SubscriberConfig(
+            connect=opts.connect,
+            database=opts.database)
+
+        subscriber_config = load_subscriber_config(opts_config)
+        url = None
+        if "tcp://" not in subscriber_config.connect:
+            url = "tcp://" + subscriber_config.connect
+        else:
+            url = subscriber_config.connect
+
+        stream = Stream(url)
+        connection = psycopg2.connect(subscriber_config.database)
         subscriber = Subscriber(stream, connection)
 
         log_config = get_log_config(
-            filename="supplychain_deltas_log_config.toml")
+            filename="supplychain_sds_log_config.toml")
         if log_config is not None:
             log_configuration(log_config=log_config)
         else:
@@ -71,7 +99,7 @@ def main(args=None):
             # use the stream zmq identity for filename
             log_configuration(
                 log_dir=log_dir,
-                name="supplychain-deltas-" + str(stream.zmq_id)[2:-1])
+                name="supplychain-sds-" + str(stream.zmq_id)[2:-1])
 
         init_console_logging(verbose_level=opts.verbose)
 
