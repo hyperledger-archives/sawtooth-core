@@ -98,3 +98,40 @@ class TpStateSetHandler(Handler):
             HandlerStatus.RETURN,
             response,
             validator_pb2.Message.TP_STATE_SET_RESPONSE)
+
+
+class TpStateDeleteHandler(Handler):
+
+    def __init__(self, context_manager):
+        """
+
+        Args:
+            context_manager (sawtooth_validator.context_manager.
+            ContextManager):
+        """
+        self._context_manager = context_manager
+
+    def handle(self, connection_id, message_content):
+        delete_request = state_context_pb2.TpStateDeleteRequest()
+        delete_request.ParseFromString(message_content)
+        try:
+            return_values = self._context_manager.delete(
+                delete_request.context_id, list(delete_request.addresses))
+        except AuthorizationException:
+            response = \
+                state_context_pb2.TpStateDeleteResponse(
+                    status=state_context_pb2.
+                    TpStateDeleteResponse.AUTHORIZATION_ERROR)
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                response,
+                validator_pb2.Message.TP_STATE_DEL_RESPONSE)
+
+        LOGGER.debug("DELETE: %s", return_values)
+        response = state_context_pb2.TpStateDeleteResponse(
+            addresses=delete_request.addresses,
+            status=state_context_pb2.TpStateDeleteResponse.OK)
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            response,
+            validator_pb2.Message.TP_STATE_DEL_RESPONSE)
