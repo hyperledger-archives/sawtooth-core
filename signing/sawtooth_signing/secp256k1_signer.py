@@ -32,15 +32,20 @@ __CONTEXTBASE__ = secp256k1.Base(ctx=None, flags=secp256k1.ALL_FLAGS)
 __CTX__ = __CONTEXTBASE__.ctx
 
 
-def generate_privkey():
+def generate_privkey(privkey_format='wif'):
     """ Create a random private key
+    Args:
+        privkey_format: the format to export the key ('wif', 'hex', or 'bytes')
     Returns:
         Serialized private key suitable for subsequent calls to e.g. sign().
     """
-    return _encode_privkey(secp256k1.PrivateKey(ctx=__CTX__))
+    return _encode_privkey(secp256k1.PrivateKey(ctx=__CTX__), privkey_format)
 
 
 def _encode_privkey(privkey, encoding_format='wif'):
+    if encoding_format == 'bytes':
+        return privkey.private_key
+
     try:  # check python3
         priv = int.from_bytes(privkey.private_key, byteorder='big')
     except AttributeError:
@@ -73,20 +78,24 @@ def _decode_privkey(encoded_privkey, encoding_format='wif'):
             priv = encoded_privkey.to_bytes(32, byteorder='big')
         except AttributeError:
             priv = binascii.unhexlify(encoded_privkey)
+    elif encoding_format == 'bytes':
+        priv = encoded_privkey
     else:
         raise TypeError("unsupported private key format")
 
     return secp256k1.PrivateKey(priv, ctx=__CTX__)
 
 
-def generate_pubkey(privkey):
+def generate_pubkey(privkey, privkey_format='wif'):
     """ Generate the public key based on a given private key
     Args:
         privkey: a serialized private key string
+        privkey_format: the format of the privkey ('wif', 'hex', or 'bytes')
     Returns:
         pubkey: a serialized public key string
      """
-    return _encode_pubkey(_decode_privkey(privkey).pubkey, 'hex')
+    return _encode_pubkey(
+        _decode_privkey(privkey, privkey_format).pubkey, 'hex')
 
 
 def _encode_pubkey(pubkey, encoding_format='hex'):
@@ -121,16 +130,17 @@ def generate_identifier(pubkey):
     return hashlib.sha256(pubkey.encode('utf-8')).hexdigest()
 
 
-def sign(message, privkey):
+def sign(message, privkey, privkey_format='wif'):
     """ Signs a message using the specified private key
     Args:
         message: Message string
         privkey: A serialized private key string
+        privkey_format: the format of the privkey ('wif', 'hex', or 'bytes')
 
     Returns:
         A compact signature (64 byte concatenation of R and S)
     """
-    privkey = _decode_privkey(privkey)
+    privkey = _decode_privkey(privkey, privkey_format)
     if isinstance(message, str):
         message = message.encode('utf-8')
     sig = privkey.ecdsa_sign(message)
