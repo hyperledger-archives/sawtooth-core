@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_PAGE_SIZE = 1000    # Reasonable default
 
 POSTGRES_CONNECTION_STRING = \
-    "dbname='mydb' user='testuser' host='localhost' password='password'"
+    "dbname='sc_rest_api' user='sc_rest_api' host='localhost' password='my_passwd'"
 
 
 class RouteHandler(object):
@@ -165,7 +165,7 @@ class RouteHandler(object):
         try:
             self._db_close(conn, cur)
         except:
-            LOGGER.debug("Could not close database connection.")
+            LOGGER.exception("Could not close database connection.")
             raise errors.UnknownDatabaseError()
 
         fields = ('identifier', 'name')
@@ -229,7 +229,7 @@ class RouteHandler(object):
             try:
                 self._db_close(conn, cur)
             except:
-                LOGGER.debug("Could not close database connection.")
+                LOGGER.exception("Could not close database connection.")
                 raise errors.UnknownDatabaseError()
 
         elif len(rows) == 1:
@@ -237,7 +237,7 @@ class RouteHandler(object):
             try:
                 self._db_close(conn, cur)
             except:
-                LOGGER.debug("Could not close database connection.")
+                LOGGER.exception("Could not close database connection.")
                 raise errors.UnknownDatabaseError()
 
             # Return the data
@@ -254,7 +254,7 @@ class RouteHandler(object):
             try:
                 self._db_close(conn, cur)
             except:
-                LOGGER.debug("Could not close database connection.")
+                LOGGER.exception("Could not close database connection.")
                 raise errors.UnknownDatabaseError()
 
             raise errors.AgentNotFound()
@@ -332,7 +332,7 @@ class RouteHandler(object):
         try:
             self._db_close(conn, cur)
         except:
-            LOGGER.debug("Could not close database connection.")
+            LOGGER.exception("Could not close database connection.")
             raise errors.UnknownDatabaseError()
 
         # Return the data
@@ -456,7 +456,7 @@ class RouteHandler(object):
         try:
             self._db_close(conn, cur)
         except:
-            LOGGER.debug("Could not close database connection.")
+            LOGGER.exception("Could not close database connection.")
             raise errors.UnknownDatabaseError()
 
         return self._wrap_response(
@@ -503,8 +503,13 @@ class RouteHandler(object):
 
         # Only one record should be returned
         if len(main_rows) > 1:
+            try:
+                self._db_close(conn, cur)
+            except:
+                LOGGER.exception("Could not close database connection.")
+                raise errors.UnknownDatabaseError()
 
-            self._db_close(conn, cur)
+            LOGGER.debug("Too many rows returned in query.")
             raise errors.UnknownDatabaseError
 
         elif len(main_rows) == 1:
@@ -567,7 +572,7 @@ class RouteHandler(object):
             try:
                 self._db_close(conn, cur)
             except:
-                LOGGER.debug("Could not close database connection.")
+                LOGGER.exception("Could not close database connection.")
                 raise errors.UnknownDatabaseError()
 
             # Return only the single item from list
