@@ -40,7 +40,6 @@ class SerialScheduler(Scheduler):
         self._txn_to_batch = {}
         self._in_progress_transaction = None
         self._final = False
-        self._complete = False
         self._cancelled = False
         self._previous_context_id = None
         self._previous_valid_batch_c_id = None
@@ -95,11 +94,7 @@ class SerialScheduler(Scheduler):
                 else:
                     self._previous_context_id = self._previous_valid_batch_c_id
 
-                is_last_batch = \
-                    len(self._batch_statuses) == len(self._last_in_batch)
 
-                if self._final and is_last_batch:
-                    self._complete = True
             self._condition.notify_all()
 
     def add_batch(self, batch, state_hash=None):
@@ -151,8 +146,6 @@ class SerialScheduler(Scheduler):
     def finalize(self):
         with self._condition:
             self._final = True
-            if len(self._batch_statuses) == len(self._last_in_batch):
-                self._complete = True
             self._condition.notify_all()
 
     def _compute_merkle_root(self, required_state_root):
@@ -212,15 +205,19 @@ class SerialScheduler(Scheduler):
             self._already_calculated = True
         return state_hash
 
+    def _complete(self):
+        return self._final and \
+               len(self._batch_statuses) == len(self._last_in_batch)
+
     def complete(self, block):
         with self._condition:
             if not self._final:
                 return False
-            if self._complete:
+            if self._complete():
                 self._calculate_state_root_if_not_already_done()
                 return True
             if block:
-                self._condition.wait_for(lambda: self._complete)
+                self._condition.wait_for(self._complete)
                 self._calculate_state_root_if_not_already_done()
                 return True
             return False
