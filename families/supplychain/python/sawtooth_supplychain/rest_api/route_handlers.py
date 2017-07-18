@@ -23,7 +23,7 @@ import psycopg2
 
 from aiohttp import web
 
-import rest_api.exceptions as errors
+import sawtooth_supplychain.rest_api.exceptions as errors
 
 
 DEFAULT_TIMEOUT = 300
@@ -127,7 +127,7 @@ class RouteHandler(object):
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
 
-        count, p_min, p_max = self._check_paging_params(count, p_min, p_max)
+        count, p_min, p_max = RouteHandler._check_paging_params(count, p_min, p_max)
 
         # Create query
         query_tuple = ()
@@ -172,10 +172,20 @@ class RouteHandler(object):
         data = self._make_dict(fields, rows)
 
         # Return the data
-        return self._wrap_response(
+        # return self._wrap_response(
+        #     request,
+        #     data=data,
+        #     metadata="")
+
+        response = self._wrap_response(
             request,
             data=data,
             metadata="")
+
+        return self._wrap_paginated_response(
+            request=request,
+            response=response,
+            data='data')
 
     async def fetch_agent(self, request):
         """Fetches a specific agent, by identifier.
@@ -272,7 +282,7 @@ class RouteHandler(object):
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
 
-        count, p_min, p_max = self._check_paging_params(count, p_min, p_max)
+        count, p_min, p_max = RouteHandler._check_paging_params(count, p_min, p_max)
 
         # Create query
         query = ("SELECT application.record_identifier, application.applicant,"
@@ -355,7 +365,7 @@ class RouteHandler(object):
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
 
-        count, p_min, p_max = self._check_paging_params(count, p_min, p_max)
+        count, p_min, p_max = RouteHandler._check_paging_params(count, p_min, p_max)
 
     # Create query
         query = ("SELECT id, identifier, creation_time, finalized "
@@ -601,7 +611,7 @@ class RouteHandler(object):
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
 
-        count, p_min, p_max = self._check_paging_params(count, p_min, p_max)
+        count, p_min, p_max = RouteHandler._check_paging_params(count, p_min, p_max)
 
         # Create query
         query = ("SELECT record.identifier, application.applicant, "
@@ -708,6 +718,56 @@ class RouteHandler(object):
                 separators=(',', ': '),
                 sort_keys=True))
 
+    @classmethod
+    def _wrap_paginated_response(cls, request, response, data):
+        """Builds the metadata for a pagingated response and wraps everying in
+        a JSON encoded web.Response
+        """
+        # head = response['head_id']
+        link = cls._build_url(request, head=head)
+
+        paging_response = response['paging']
+        total = paging_response['total_resources']
+        paging = {'total_count': total}
+
+        # If there are no resources, there should be nothing else in paging
+        if total == 0:
+            return cls._wrap_response(
+                request,
+                data=data,
+                metadata={'head': head, 'link': link, 'paging': paging})
+
+        count = controls.get('count', len(data))
+        start = paging_response['start_index']
+        paging['start_index'] = start
+
+        # Builds paging urls specific to this response
+        def build_pg_url(min_pos=None, max_pos=None):
+            return cls._build_url(request, head=head, count=count,
+                                  min=min_pos, max=max_pos)
+
+        # Build paging urls based on ids
+        if 'start_id' in controls or 'end_id' in controls:
+            if paging_response['next_id']:
+                paging['next'] = build_pg_url(paging_response['next_id'])
+            if paging_response['previous_id']:
+                paging['previous'] = build_pg_url(
+                    max_pos=paging_response['previous_id'])
+
+        # Build paging urls based on indexes
+        else:
+            end_index = controls.get('end_index', None)
+            if end_index is None and start + count < total:
+                paging['next'] = build_pg_url(start + count)
+            elif end_index is not None and end_index + 1 < total:
+                paging['next'] = build_pg_url(end_index + 1)
+            if start - count >= 0:
+                paging['previous'] = build_pg_url(start - count)
+
+        return cls._wrap_response(
+            request,
+            data=data,
+            metadata={'head': head, 'link': link, 'paging': paging})
 
     @classmethod
     def _build_url(cls, request, path=None, **changes):

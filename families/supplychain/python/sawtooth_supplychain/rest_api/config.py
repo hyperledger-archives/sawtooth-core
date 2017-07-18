@@ -18,7 +18,7 @@ import logging
 import os
 import toml
 
-from rest_api.exceptions import RestApiConfigurationError
+from sawtooth_supplychain.rest_api.exceptions import RestApiConfigurationError
 
 
 LOGGER = logging.getLogger(__name__)

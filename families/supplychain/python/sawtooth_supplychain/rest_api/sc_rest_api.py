@@ -31,11 +31,11 @@ from sawtooth_sdk.client.log import log_configuration
 from sawtooth_sdk.client.config import get_log_config
 from sawtooth_sdk.client.config import get_log_dir
 
-from rest_api.config import load_default_rest_api_config
-from rest_api.config import load_toml_rest_api_config
-from rest_api.config import merge_rest_api_config
-from rest_api.config import RestApiConfig
-from rest_api.route_handlers import RouteHandler
+from sawtooth_supplychain.rest_api.config import load_default_rest_api_config
+from sawtooth_supplychain.rest_api.config import load_toml_rest_api_config
+from sawtooth_supplychain.rest_api.config import merge_rest_api_config
+from sawtooth_supplychain.rest_api.config import RestApiConfig
+from sawtooth_supplychain.rest_api.route_handlers import RouteHandler
 
 LOGGER = logging.getLogger(__name__)
 
@@ -137,7 +137,6 @@ def start_rest_api(host, port, stream, timeout):
     web.run_app(app, host=host, port=port, access_log=None)
 
 
-# Config stuff
 def load_rest_api_config(first_config):
     default_config = load_default_rest_api_config()
     config_dir = get_config_dir()

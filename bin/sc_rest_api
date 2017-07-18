@@ -25,7 +25,7 @@ build_str = "lib.{}-{}.{}".format(
 
 sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'families', 'supplychain', 'python', 'sawtooth_supplychain'))
+            'families', 'supplychain', 'python'))
 sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
             'sdk', 'python'))
@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
             'signing'))
 
-from rest_api.sc_rest_api import main
+from sawtooth_supplychain.rest_api.sc_rest_api import main
 
 if __name__ == '__main__':
     main()
