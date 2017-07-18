@@ -87,6 +87,10 @@ class StateContext(object):
     def merkle_root(self):
         return self._state_hash
 
+    def _contains_and_deleted(self, address):
+        return address in self._state and\
+            self._state[address].deleted_in_context()
+
     def _contains_and_set(self, address):
         return address in self._state and self._state[address].set_in_context()
 
@@ -199,6 +203,22 @@ class StateContext(object):
                     results[add] = fut.result()
             return results
 
+    def get_all_if_deleted(self):
+        """Return all the addresses deleted in the context.
+        Useful in the squash method.
+
+        Returns:
+            (dict of str to bytes): The addresses and bytes that have
+                been deleted in the context.
+        """
+
+        with self._lock:
+            results = {}
+            for add, fut in self._state.items():
+                if self._contains_and_deleted(add):
+                    results[add] = fut.result()
+            return results
+
     def create_prefetch(self, addresses):
         """Create futures needed before starting the process of reading the
         address's value from the merkle tree.
@@ -239,6 +259,28 @@ class StateContext(object):
             if address in self._state:
                 self._state[address].set_result(result=value,
                                                 from_tree=True)
+
+    def delete_direct(self, addresses):
+        """Called in the context manager's delete method to either
+        mark an entry for deletion , or create a new future and immediately
+        set it for deletion in the future.
+
+        Args:
+            address_list (list of str): The unique full addresses.
+
+        Raises:
+            AuthorizationException
+        """
+
+        with self._lock:
+            for address in addresses:
+                self._validate_write(address)
+                if address in self._state:
+                    self._state[address].set_deleted()
+                else:
+                    fut = _ContextFuture(address=address)
+                    self._state[address] = fut
+                    fut.set_deleted()
 
     def set_direct(self, address_value_dict):
         """Called in the context manager's set method to either overwrite the
@@ -484,6 +526,40 @@ class ContextManager(object):
             if c_id in self._contexts:
                 del self._contexts[c_id]
 
+    def delete(self, context_id, address_list):
+        """Delete the values associated with list of addresses, for a specific
+        context referenced by context_id.
+
+        Args:
+            context_id (str): the return value of create_context, referencing
+                a particular context.
+            address_list (list): a list of address strs
+
+        Returns:
+            (bool): True if the operation is successful, False if
+                the context_id doesn't reference a known context.
+
+        Raises:
+            AuthorizationException: Raised when an address in address_list is
+                not authorized either by not being in the inputs for the
+                txn associated with this context, or it is under a namespace
+                but the characters that are under the namespace are not valid
+                address characters.
+        """
+
+        if context_id not in self._contexts:
+            return False
+
+        context = self._contexts[context_id]
+
+        for add in address_list:
+            if not self.address_is_valid(address=add):
+                raise AuthorizationException(address=add)
+
+        context.delete_direct(address_list)
+
+        return True
+
     def get(self, context_id, address_list):
         """Get the values associated with list of addresses, for a specific
         context referenced by context_id.
@@ -589,6 +665,7 @@ class ContextManager(object):
             # There is only one exit condition and that is when all the
             # contexts have been accessed once.
             updates = dict()
+            deletes = set()
             while contexts_in_chain:
                 current_c_id = contexts_in_chain.popleft()
                 current_context = self._contexts[current_c_id]
@@ -599,26 +676,42 @@ class ContextManager(object):
                 for add, val in addresses_w_values.items():
                     # Since we are moving backwards through the graph of
                     # contexts, only update if the address hasn't been set
-                    if add not in updates:
+                    # or deleted
+                    if add not in updates and add not in deletes:
                         updates[add] = val
+
+                addresses_w_values = current_context.get_all_if_deleted()
+                for add, _ in addresses_w_values.items():
+                    # Since we are moving backwards through the graph of
+                    # contexts, only add to deletes if the address hasn't been
+                    # previously deleted or set in the graph
+                    if add not in updates and add not in deletes:
+                        deletes.add(add)
 
                 for c_id in current_context.base_contexts:
                     if c_id not in context_ids_already_searched:
                         contexts_in_chain.append(c_id)
                         context_ids_already_searched.append(c_id)
 
-            if not updates:
+            tree = MerkleDatabase(self._database, state_root)
+
+            # filter the delete list to just those items in the tree
+            deletes = [addr for addr in deletes if addr in tree]
+
+            if not updates and not deletes:
                 return state_root
 
-            tree = MerkleDatabase(self._database, state_root)
             virtual = not persist
-            state_hash = tree.update(updates, virtual=virtual)
+            state_hash = tree.update(updates, deletes, virtual=virtual)
             if persist:
                 # save the state changes to the state_delta_store
                 changes = [StateChange(address=addr,
                                        value=value,
                                        type=StateChange.SET)
-                           for addr, value in updates.items()]
+                           for addr, value in updates.items()] +\
+                          [StateChange(address=addr,
+                                       type=StateChange.DELETE)
+                           for addr in deletes]
                 self._state_delta_store.save_state_deltas(state_hash, changes)
             if clean_up:
                 self.delete_contexts(context_ids_already_searched)
@@ -744,6 +837,7 @@ class _ContextFuture(object):
         self._wait_for_tree = wait_for_tree
         self._tree_has_set = False
         self._read_only = False
+        self._deleted = False
 
     def make_read_only(self):
         with self._condition:
@@ -756,6 +850,10 @@ class _ContextFuture(object):
     def set_in_context(self):
         with self._condition:
             return self._result_set_in_context
+
+    def deleted_in_context(self):
+        with self._condition:
+            return self._deleted
 
     def result(self):
         """Return the value at an address, optionally waiting until it is
@@ -772,6 +870,10 @@ class _ContextFuture(object):
                 self._condition.wait_for(
                     lambda: self._tree_has_set or self._result_set_in_context)
             return self._result
+
+    def set_deleted(self):
+        self._result_set_in_context = False
+        self._deleted = True
 
     def set_result(self, result, from_tree=False):
         """Set the addresses's value unless the future has been declared
@@ -802,6 +904,7 @@ class _ContextFuture(object):
             else:
                 self._result = result
                 self._result_set_in_context = True
+                self._deleted = False
 
             self._condition.notify_all()
 

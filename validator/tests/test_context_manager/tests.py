@@ -27,7 +27,7 @@ from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
 
 
 TestAddresses = namedtuple('TestAddresses',
-                              ['inputs', 'outputs', 'reads', 'writes'])
+                           ['inputs', 'outputs', 'reads', 'writes'])
 
 
 class TestContextManager(unittest.TestCase):
@@ -551,6 +551,58 @@ class TestContextManager(unittest.TestCase):
             [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)],
             [c for c in changes])
 
+    def test_squash_deletes_no_update(self):
+        """Tests that squashing a context that has no state updates,
+        due to sets that were subsequently deleted, will return
+        the starting state root hash.
+
+        Notes:
+            Set up the context
+
+            Test:
+                1) Send Updates that reverse each other.
+                2) Squash the context.
+                3) Assert that the state hash is the same as the starting
+                hash.
+                4) Assert that the state deltas have not been overwritten
+        """
+        self.state_delta_store.save_state_deltas(
+            self.first_state_hash,
+            [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)])
+
+        context_id = self.context_manager.create_context(
+            state_hash=self.first_state_hash,
+            base_contexts=[],
+            inputs=[],
+            outputs=[self._create_address(a) for a in
+                     ['yyyy', 'tttt']])
+
+        # 1)
+        self.context_manager.set(
+            context_id,
+            [{self._create_address(a): v} for a, v in
+             [('yyyy', b'2'),
+              ('tttt', b'4')]])
+        self.context_manager.delete(
+            context_id,
+            [self._create_address(a) for a in
+             ['yyyy', 'tttt']])
+
+        # 2)
+        squash = self.context_manager.get_squash_handler()
+        resulting_state_hash = squash(self.first_state_hash, [context_id],
+                                      persist=True, clean_up=True)
+        # 3)
+        self.assertIsNotNone(resulting_state_hash)
+        self.assertEquals(resulting_state_hash, self.first_state_hash)
+
+        # 4)
+        changes = self.state_delta_store.get_state_deltas(resulting_state_hash)
+
+        self.assertEqual(
+            [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)],
+            [c for c in changes])
+
     def test_reads_from_context_w_several_writes(self):
         """Tests that those context values that have been written to the
         Merkle tree, or that have been set to a base_context, will have the
@@ -984,7 +1036,7 @@ class TestContextManager(unittest.TestCase):
     @unittest.skip("Necessary to catch scheduler bugs--Depth-first search")
     def test_check_for_bad_combination(self):
         """Tests that the context manager will raise
-        an exception if asked to combine contexts, either via base contexts 
+        an exception if asked to combine contexts, either via base contexts
         in create_context or via squash that shouldn't be
         combined because they share addresses that can't be determined by the
         scheduler to not have been parallel. This is a check on scheduler bugs.

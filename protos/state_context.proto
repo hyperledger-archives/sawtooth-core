@@ -67,5 +67,11 @@ message TpStateDeleteRequest {
 
 // A response form the contextmanager/validator with the addresses that were deleted
 message TpStateDeleteResponse {
+    enum Status {
+      OK = 0;
+      AUTHORIZATION_ERROR = 1;
+    }
+
     repeated string addresses = 1;
+    Status status = 2;
 }

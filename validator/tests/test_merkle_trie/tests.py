@@ -78,31 +78,47 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
     def test_merkle_trie_update(self):
         init_root = self.get_merkle_root()
 
+        values = {}
         key_hashes = {
             key: _hash(key) for key in
             (_random_string(10) for _ in range(1000))
         }
 
         for key, hashed in key_hashes.items():
+            value = {key: _random_string(512)}
             new_root = self.set(
-                hashed,
-                {key: _random_string(512)})
+                hashed, value, ishash=True)
+            values[hashed] = value
             self.set_merkle_root(new_root)
 
         self.assert_not_root(init_root)
+
+        for address, value in values.items():
+            self.assert_value_at_address(
+                address, value, ishash=True)
 
         set_items = {
             hashed: {key: 5.0} for key, hashed in
             random.sample(key_hashes.items(), 50)
         }
+        values.update(set_items)
+        delete_items = {
+            hashed for hashed in
+            random.sample(list(key_hashes.values()), 50)
+        }
 
-        virtual_root = self.update(set_items, virtual=True)
+        # make sure there are no sets and deletes of the same key
+        delete_items = delete_items - set_items.keys()
+        for addr in delete_items:
+            del values[addr]
+
+        virtual_root = self.update(set_items, delete_items, virtual=True)
 
         # virtual root shouldn't match actual contents of tree
         with self.assertRaises(KeyError):
             self.set_merkle_root(virtual_root)
 
-        actual_root = self.update(set_items, virtual=False)
+        actual_root = self.update(set_items, delete_items, virtual=False)
 
         # the virtual root should be the same as the actual root
         self.assertEqual(virtual_root, actual_root)
@@ -115,12 +131,15 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
         self.set_merkle_root(actual_root)
         self.assert_root(actual_root)
 
-        for address, value in set_items.items():
+        for address, value in values.items():
             self.assert_value_at_address(
                 address, value, ishash=True)
 
-    # assertions
+        for address in delete_items:
+            with self.assertRaises(KeyError):
+                self.get(address, ishash=True)
 
+    # assertions
     def assert_value_at_address(self, address, value, ishash=False):
         self.assertEqual(
             self.get(address, ishash),
@@ -168,8 +187,8 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
     def get_merkle_root(self):
         return self.trie.get_merkle_root()
 
-    def update(self, items, virtual=True):
-        return self.trie.update(items, virtual)
+    def update(self, set_items, delete_items=None, virtual=True):
+        return self.trie.update(set_items, delete_items, virtual=virtual)
 
 
 def _hash(key):
