@@ -28,7 +28,9 @@ def load_default_rest_api_config():
     return RestApiConfig(
         bind=["127.0.0.1:8080"],
         connect="tcp://localhost:4004",
-        timeout=300)
+        timeout=300,
+        db_cnx=("dbname='sc_rest_api' "
+                "user='sc_rest_api' host='localhost' password='my_passwd'"))
 
 
 def load_toml_rest_api_config(filename):
@@ -53,7 +55,7 @@ def load_toml_rest_api_config(filename):
     toml_config = toml.loads(raw_config)
 
     invalid_keys = set(toml_config.keys()).difference(
-        ['bind', 'connect', 'timeout'])
+        ['bind', 'connect', 'timeout', 'db_cnx'])
     if invalid_keys:
         raise RestApiConfigurationError(
             "Invalid keys in rest api config: {}".format(
@@ -61,7 +63,8 @@ def load_toml_rest_api_config(filename):
     config = RestApiConfig(
         bind=toml_config.get("bind", None),
         connect=toml_config.get('connect', None),
-        timeout=toml_config.get('timeout', None)
+        timeout=toml_config.get('timeout', None),
+        db_cnx=toml_config.get('db_cnx', None)
     )
 
     return config
@@ -75,6 +78,7 @@ def merge_rest_api_config(configs):
     bind = None
     connect = None
     timeout = None
+    db_cnx = None
 
     for config in reversed(configs):
         if config.bind is not None:
@@ -83,18 +87,22 @@ def merge_rest_api_config(configs):
             connect = config.connect
         if config.timeout is not None:
             timeout = config.timeout
+        if config.db_cnx is not None:
+            db_cnx = config.db_cnx
 
     return RestApiConfig(
         bind=bind,
         connect=connect,
-        timeout=timeout)
+        timeout=timeout,
+        db_cnx=db_cnx)
 
 
 class RestApiConfig:
-    def __init__(self, bind=None, connect=None, timeout=None):
+    def __init__(self, bind=None, connect=None, timeout=None, db_cnx=None):
         self._bind = bind
         self._connect = connect
         self._timeout = timeout
+        self._db_cnx = db_cnx
 
     @property
     def bind(self):
@@ -108,19 +116,25 @@ class RestApiConfig:
     def timeout(self):
         return self._timeout
 
+    @property
+    def db_cnx(self):
+        return self._db_cnx
+
     def __repr__(self):
         return \
-            "{}(bind={}, connect={}, timeout={})".format(
+            "{}(bind={}, connect={}, timeout={}, db_cnx={})".format(
                 self.__class__.__name__,
                 repr(self._bind),
                 repr(self._connect),
-                repr(self._timeout))
+                repr(self._timeout),
+                repr(self._db_cnx))
 
     def to_dict(self):
         return collections.OrderedDict([
             ('bind', self._bind),
             ('connect', self._connect),
-            ('timeout', self._timeout)
+            ('timeout', self._timeout),
+            ('db_cnx', self._db_cnx)
         ])
 
     def to_toml_string(self):

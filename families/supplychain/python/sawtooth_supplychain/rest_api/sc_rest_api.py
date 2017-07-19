@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ from sawtooth_supplychain.rest_api.config import merge_rest_api_config
 from sawtooth_supplychain.rest_api.config import RestApiConfig
 from sawtooth_supplychain.rest_api.route_handlers import RouteHandler
 
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -55,6 +56,10 @@ def parse_args(args):
                         action='count',
                         default=0,
                         help='Increase level of output sent to stderr')
+    parser.add_argument('-D', '--db_cnx',
+                        action='store',
+                        required=True,
+                        help='The database connection string')
 
     return parser.parse_args(args)
 
@@ -112,7 +117,7 @@ async def cors_handler(request):
     return web.Response(headers=headers)
 
 
-def start_rest_api(host, port, stream, timeout):
+def start_rest_api(host, port, stream, timeout, db_cnx):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
     loop = asyncio.get_event_loop()
@@ -120,7 +125,7 @@ def start_rest_api(host, port, stream, timeout):
 
     # Add routes to the web app
     LOGGER.info('Creating handlers for validator at %s', stream.url)
-    handler = RouteHandler(loop, stream, timeout)
+    handler = RouteHandler(loop, stream, timeout, db_cnx)
 
     app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
 
@@ -154,8 +159,11 @@ def main():
         opts_config = RestApiConfig(
             bind=opts.bind,
             connect=opts.connect,
-            timeout=opts.timeout)
+            timeout=opts.timeout,
+            db_cnx=opts.db_cnx)
         rest_api_config = load_rest_api_config(opts_config)
+        # Adding parameters for db connection
+        db_cnx = opts.db_cnx
         if "tcp://" not in rest_api_config.connect:
             stream = Stream("tcp://" + rest_api_config.connect)
         else:
@@ -180,7 +188,8 @@ def main():
             host,
             port,
             stream,
-            int(rest_api_config.timeout))
+            int(rest_api_config.timeout),
+            db_cnx)
         # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)

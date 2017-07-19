@@ -30,8 +30,27 @@ DEFAULT_TIMEOUT = 300
 LOGGER = logging.getLogger(__name__)
 DEFAULT_PAGE_SIZE = 1000    # Reasonable default
 
-POSTGRES_CONNECTION_STRING = \
-    "dbname='sc_rest_api' user='sc_rest_api' host='localhost' password='my_passwd'"
+
+
+
+def db_connect(db_cnx):
+    """Connect to a PostgreSQL database. The credentials are currently
+    included in the hard-coded connection string, but a more sophisticated
+    method could be implemented if needed.
+    """
+    try:
+        # conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
+        conn = psycopg2.connect(db_cnx)
+    except psycopg2.OperationalError as e:
+        raise e
+    return conn
+
+
+def db_close(conn, cur):
+    """Closes the open PostgreSQL connection.
+    """
+    cur.close()
+    conn.close()
 
 
 class RouteHandler(object):
@@ -51,30 +70,13 @@ class RouteHandler(object):
         timeout (int, optional): The time in seconds before the Api should
             cancel a request and report that the validator is unavailable.
     """
-    def __init__(self, loop, stream, timeout=DEFAULT_TIMEOUT):
+    def __init__(self, loop, stream, timeout=DEFAULT_TIMEOUT, db_cnx=None):
         loop.set_default_executor(ThreadPoolExecutor())
         self._loop = loop
         self._stream = stream
         self._timeout = timeout
-
-    @staticmethod
-    def _db_connect():
-        """Connect to a PostgreSQL database. The credentials are currently
-        included in the hard-coded connection string, but a more sophisticated
-        method could be implemented if needed.
-        """
-        try:
-            conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
-        except psycopg2.OperationalError as e:
-            raise e
-        return conn
-
-    @staticmethod
-    def _db_close(conn, cur):
-        """Closes the open PostgreSQL connection.
-        """
-        cur.close()
-        conn.close()
+        self._db_cnx = db_cnx
+        # print (self._db_cnx)
 
     @staticmethod
     def _check_paging_params(count, p_min, p_max):
@@ -127,7 +129,8 @@ class RouteHandler(object):
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
 
-        count, p_min, p_max = RouteHandler._check_paging_params(count, p_min, p_max)
+        count, p_min, p_max = \
+            RouteHandler._check_paging_params(count, p_min, p_max)
 
         # Create query
         query_tuple = ()
@@ -144,7 +147,7 @@ class RouteHandler(object):
 
         # Get a connection and cursor
         try:
-            conn = self._db_connect()
+            conn = db_connect(self._db_cnx)
         except psycopg2.OperationalError:
             LOGGER.debug("Could not connect to database.")
             raise errors.DatabaseConnectionError()
@@ -163,7 +166,8 @@ class RouteHandler(object):
 
         # Close DB connection
         try:
-            self._db_close(conn, cur)
+            # self._db_close(conn, cur)
+            db_close(conn, cur)
         except:
             LOGGER.exception("Could not close database connection.")
             raise errors.UnknownDatabaseError()
@@ -171,21 +175,12 @@ class RouteHandler(object):
         fields = ('identifier', 'name')
         data = self._make_dict(fields, rows)
 
-        # Return the data
-        # return self._wrap_response(
-        #     request,
-        #     data=data,
-        #     metadata="")
-
         response = self._wrap_response(
             request,
             data=data,
             metadata="")
 
-        return self._wrap_paginated_response(
-            request=request,
-            response=response,
-            data='data')
+        return response
 
     async def fetch_agent(self, request):
         """Fetches a specific agent, by identifier.
@@ -205,7 +200,7 @@ class RouteHandler(object):
 
         # Get a connection and cursor
         try:
-            conn = self._db_connect()
+            conn = db_connect(self._db_cnx)
         except psycopg2.OperationalError:
             LOGGER.debug("Could not connect to database.")
             raise errors.DatabaseConnectionError()
@@ -227,7 +222,7 @@ class RouteHandler(object):
 
             # Close DB connection
             try:
-                self._db_close(conn, cur)
+                db_close(conn, cur)
             except:
                 LOGGER.exception("Could not close database connection.")
                 raise errors.UnknownDatabaseError()
@@ -235,7 +230,7 @@ class RouteHandler(object):
         elif len(rows) == 1:
             # Close DB connection
             try:
-                self._db_close(conn, cur)
+                db_close(conn, cur)
             except:
                 LOGGER.exception("Could not close database connection.")
                 raise errors.UnknownDatabaseError()
@@ -252,7 +247,7 @@ class RouteHandler(object):
         else:
             # Close DB connection
             try:
-                self._db_close(conn, cur)
+                db_close(conn, cur)
             except:
                 LOGGER.exception("Could not close database connection.")
                 raise errors.UnknownDatabaseError()
@@ -282,7 +277,8 @@ class RouteHandler(object):
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
 
-        count, p_min, p_max = RouteHandler._check_paging_params(count, p_min, p_max)
+        count, p_min, p_max = \
+            RouteHandler._check_paging_params(count, p_min, p_max)
 
         # Create query
         query = ("SELECT application.record_identifier, application.applicant,"
@@ -311,7 +307,7 @@ class RouteHandler(object):
 
         # Get a connection and cursor
         try:
-            conn = self._db_connect()
+            conn = db_connect(self._db_cnx)
         except psycopg2.OperationalError:
             LOGGER.debug("Could not connect to database.")
             raise errors.DatabaseConnectionError()
@@ -330,7 +326,7 @@ class RouteHandler(object):
 
         # Close DB connection
         try:
-            self._db_close(conn, cur)
+            db_close(conn, cur)
         except:
             LOGGER.exception("Could not close database connection.")
             raise errors.UnknownDatabaseError()
@@ -365,7 +361,8 @@ class RouteHandler(object):
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
 
-        count, p_min, p_max = RouteHandler._check_paging_params(count, p_min, p_max)
+        count, p_min, p_max = \
+            RouteHandler._check_paging_params(count, p_min, p_max)
 
     # Create query
         query = ("SELECT id, identifier, creation_time, finalized "
@@ -384,7 +381,7 @@ class RouteHandler(object):
 
         # Get a connection and cursor
         try:
-            conn = self._db_connect()
+            conn = db_connect(self._db_cnx)
         except psycopg2.OperationalError:
             LOGGER.debug("Could not connect to database.")
             raise errors.DatabaseConnectionError()
@@ -454,7 +451,7 @@ class RouteHandler(object):
 
         # Close DB connection
         try:
-            self._db_close(conn, cur)
+            db_close(conn, cur)
         except:
             LOGGER.exception("Could not close database connection.")
             raise errors.UnknownDatabaseError()
@@ -484,7 +481,7 @@ class RouteHandler(object):
 
         # Get a connection and cursor
         try:
-            conn = self._db_connect()
+            conn = db_connect(self._db_cnx)
         except psycopg2.OperationalError:
             LOGGER.debug("Could not connect to database.")
             raise errors.DatabaseConnectionError()
@@ -570,7 +567,7 @@ class RouteHandler(object):
 
             # Close DB connection
             try:
-                self._db_close(conn, cur)
+                db_close(conn, cur)
             except:
                 LOGGER.exception("Could not close database connection.")
                 raise errors.UnknownDatabaseError()
@@ -616,7 +613,8 @@ class RouteHandler(object):
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
 
-        count, p_min, p_max = RouteHandler._check_paging_params(count, p_min, p_max)
+        count, p_min, p_max = \
+            RouteHandler._check_paging_params(count, p_min, p_max)
 
         # Create query
         query = ("SELECT record.identifier, application.applicant, "
@@ -648,7 +646,7 @@ class RouteHandler(object):
 
         # Get a connection and cursor
         try:
-            conn = self._db_connect()
+            conn = db_connect(self._db_cnx)
         except psycopg2.OperationalError:
             LOGGER.debug("Could not connect to database.")
             raise errors.DatabaseConnectionError()
@@ -667,6 +665,13 @@ class RouteHandler(object):
 
         fields = ('identifier', 'applicant', 'type', 'status', 'terms')
         data = self._make_dict(fields, rows)
+
+        # Close DB connection
+        try:
+            db_close(conn, cur)
+        except:
+            LOGGER.exception("Could not close database connection.")
+            raise errors.UnknownDatabaseError()
 
         return self._wrap_response(
             request,
@@ -722,127 +727,3 @@ class RouteHandler(object):
                 indent=2,
                 separators=(',', ': '),
                 sort_keys=True))
-
-    @classmethod
-    def _wrap_paginated_response(cls, request, response, data):
-        """Builds the metadata for a pagingated response and wraps everying in
-        a JSON encoded web.Response
-        """
-        # head = response['head_id']
-        link = cls._build_url(request, head=head)
-
-        paging_response = response['paging']
-        total = paging_response['total_resources']
-        paging = {'total_count': total}
-
-        # If there are no resources, there should be nothing else in paging
-        if total == 0:
-            return cls._wrap_response(
-                request,
-                data=data,
-                metadata={'head': head, 'link': link, 'paging': paging})
-
-        count = controls.get('count', len(data))
-        start = paging_response['start_index']
-        paging['start_index'] = start
-
-        # Builds paging urls specific to this response
-        def build_pg_url(min_pos=None, max_pos=None):
-            return cls._build_url(request, head=head, count=count,
-                                  min=min_pos, max=max_pos)
-
-        # Build paging urls based on ids
-        if 'start_id' in controls or 'end_id' in controls:
-            if paging_response['next_id']:
-                paging['next'] = build_pg_url(paging_response['next_id'])
-            if paging_response['previous_id']:
-                paging['previous'] = build_pg_url(
-                    max_pos=paging_response['previous_id'])
-
-        # Build paging urls based on indexes
-        else:
-            end_index = controls.get('end_index', None)
-            if end_index is None and start + count < total:
-                paging['next'] = build_pg_url(start + count)
-            elif end_index is not None and end_index + 1 < total:
-                paging['next'] = build_pg_url(end_index + 1)
-            if start - count >= 0:
-                paging['previous'] = build_pg_url(start - count)
-
-        return cls._wrap_response(
-            request,
-            data=data,
-            metadata={'head': head, 'link': link, 'paging': paging})
-
-    @classmethod
-    def _build_url(cls, request, path=None, **changes):
-        """Builds a response URL by overriding the original queries with
-        specified change queries. Change queries set to None will not be used.
-        Setting a change query to False will remove it even if there is an
-        original query with a value.
-        """
-        changes = {k: v for k, v in changes.items() if v is not None}
-        queries = {**request.url.query, **changes}
-        queries = {k: v for k, v in queries.items() if v is not False}
-        query_strings = []
-
-        def add_query(key):
-            query_strings.append('{}={}'.format(key, queries[key])
-                                 if queries[key] != '' else key)
-
-        def del_query(key):
-            queries.pop(key, None)
-
-        if 'head' in queries:
-            add_query('head')
-            del_query('head')
-
-        if 'min' in changes:
-            add_query('min')
-        elif 'max' in changes:
-            add_query('max')
-        elif 'min' in queries:
-            add_query('min')
-        elif 'max' in queries:
-            add_query('max')
-
-        del_query('min')
-        del_query('max')
-
-        if 'count' in queries:
-            add_query('count')
-            del_query('count')
-
-        for key in sorted(queries):
-            add_query(key)
-
-        scheme = cls._get_forwarded(request, 'proto') or request.url.scheme
-        host = cls._get_forwarded(request, 'host') or request.host
-        forwarded_path = cls._get_forwarded(request, 'path')
-        path = path if path is not None else request.path
-        query = '?' + '&'.join(query_strings) if query_strings else ''
-
-        url = '{}://{}{}{}{}'.format(scheme, host, forwarded_path, path, query)
-        return url
-
-    @staticmethod
-    def _get_forwarded(request, key):
-        """Gets a forwarded value from the `Forwarded` header if present, or
-        the equivalent `X-Forwarded-` header if not. If neither is present,
-        returns an empty string.
-        """
-        forwarded = request.headers.get('Forwarded', '')
-        match = re.search(
-            r'(?<={}=).+?(?=[\s,;]|$)'.format(key),
-            forwarded,
-            re.IGNORECASE)
-
-        if match is not None:
-            header = match.group(0)
-
-            if header[0] == '"' and header[-1] == '"':
-                return header[1:-1]
-
-            return header
-
-        return request.headers.get('X-Forwarded-{}'.format(key.title()), '')
