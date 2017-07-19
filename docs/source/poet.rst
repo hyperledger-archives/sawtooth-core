@@ -7,4 +7,5 @@ Proof of Elapsed Time
    :maxdepth: 2
 
    poet/sgx_primer
+   poet/poet_primer
    poet/poet_spec
