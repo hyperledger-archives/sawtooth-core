@@ -14,11 +14,16 @@
 # ------------------------------------------------------------------------------
 
 from collections import namedtuple
+from concurrent.futures import CancelledError
 import logging
+import time
 
 import psycopg2
 
 from google.protobuf.message import DecodeError
+
+from sawtooth_sdk.messaging.exceptions import ValidatorConnectionError
+from sawtooth_sdk.messaging.stream import RECONNECT_EVENT
 
 from sawtooth_sdk.protobuf.state_delta_pb2 import \
     StateDeltaSubscribeRequest
@@ -63,7 +68,9 @@ class Subscriber:
 
         Sends a subscribe request and begins processing the received events.
         """
+        self._do_start()
 
+    def _do_start(self, is_resubscribing=False):
         current_block = self._get_current_block()
 
         last_known_blocks = None
@@ -77,9 +84,12 @@ class Subscriber:
         status = self._subscribe(last_known_blocks)
 
         if status == StateDeltaSubscribeResponse.OK:
-            self._listen_for_events()
+            if not is_resubscribing:
+                self._listen_for_events()
         elif status == StateDeltaSubscribeResponse.UNKNOWN_BLOCK:
             self._resolve_registration_fork()
+            if not is_resubscribing:
+                self._listen_for_events()
         else:
             LOGGER.error('Unable to subscribe due to validator error.')
 
@@ -90,12 +100,15 @@ class Subscriber:
         events.
         """
         self._active = False
-        LOGGER.debug('Unsubscribing from validator')
-        fut = self._stream.send(
-            Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
-            StateDeltaUnsubscribeRequest().SerializeToString())
+        try:
+            LOGGER.debug('Unsubscribing from validator')
+            fut = self._stream.send(
+                Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
+                StateDeltaUnsubscribeRequest().SerializeToString())
 
-        fut.result(timeout=10)
+            fut.result(timeout=10)
+        except ValidatorConnectionError:
+            LOGGER.debug('Validator connection lost while unsubscribing')
 
     def _get_current_block(self, cur=None):
         close_on_return = False
@@ -116,29 +129,34 @@ class Subscriber:
                 cur.close()
 
     def _subscribe(self, last_known_block_ids):
-        future = self._stream.send(
-            Message.STATE_DELTA_SUBSCRIBE_REQUEST,
-            StateDeltaSubscribeRequest(
-                last_known_block_ids=last_known_block_ids,
-                address_prefixes=[
-                    AGENT_NAMESPACE,
-                    APPLICATION_NAMESPACE,
-                    RECORD_NAMESPACE]
-            ).SerializeToString())
+        try:
+            self._stream.wait_for_ready()
 
-        register_response = StateDeltaSubscribeResponse()
-        register_response.ParseFromString(future.result().content)
+            future = self._stream.send(
+                Message.STATE_DELTA_SUBSCRIBE_REQUEST,
+                StateDeltaSubscribeRequest(
+                    last_known_block_ids=last_known_block_ids,
+                    address_prefixes=[
+                        AGENT_NAMESPACE,
+                        APPLICATION_NAMESPACE,
+                        RECORD_NAMESPACE]
+                ).SerializeToString())
 
-        return register_response.status
+            register_response = StateDeltaSubscribeResponse()
+            register_response.ParseFromString(future.result().content)
+            return register_response.status
+        except ValidatorConnectionError:
+            LOGGER.debug('Validator connection lost while subscribing')
+            return None
 
     def _resolve_registration_fork(self):
         """Scans through the set of block ids and sends known blocks, in order
         to find a common block id to restart event handling.
         """
+        status = None
         with self._db_connection.cursor() as cur:
             cur.execute('SELECT block_id '
                         'FROM block ORDER BY block_num DESC')
-            status = None
             while status != StateDeltaSubscribeResponse.OK:
                 block_id_rows = cur.fetchmany(10)
                 block_ids = [row[0] for row in block_id_rows]
@@ -147,17 +165,26 @@ class Subscriber:
 
                 if status == StateDeltaSubscribeResponse.INTERNAL_ERROR:
                     LOGGER.error('Unable to subscribe due to validator error.')
-                    return
+                    return status
 
-        self._listen_for_events()
+        return status
 
     def _listen_for_events(self):
         while self._active:
             future = self._stream.receive()
 
-            incoming = future.result()
+            incoming = None
+            try:
+                incoming = future.result()
+            except CancelledError:
+                time.sleep(2)
+                continue
 
-            if incoming.message_type == Message.STATE_DELTA_EVENT:
+            if incoming == RECONNECT_EVENT:
+                self._stream.wait_for_ready()
+                LOGGER.debug('Resubscribing to validator')
+                self._do_start(is_resubscribing=True)
+            elif incoming.message_type == Message.STATE_DELTA_EVENT:
                 state_delta_event = StateDeltaEvent()
                 try:
                     state_delta_event.ParseFromString(incoming.content)
@@ -168,7 +195,7 @@ class Subscriber:
                 self._handle_event(state_delta_event)
             else:
                 LOGGER.debug('Received unknown event %s',
-                             incoming.message_type)
+                             Message.Type.Name(incoming.message_type))
 
     def _handle_event(self, event):
         """Handles an incoming StateDeltaEvent.
