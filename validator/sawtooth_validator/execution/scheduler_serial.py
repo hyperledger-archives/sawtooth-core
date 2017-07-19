@@ -22,6 +22,8 @@ from sawtooth_validator.execution.scheduler import Scheduler
 from sawtooth_validator.execution.scheduler import SchedulerIterator
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
+from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
+
 
 class SerialScheduler(Scheduler):
     """Serial scheduler which returns transactions in the natural order.
@@ -38,9 +40,10 @@ class SerialScheduler(Scheduler):
         self._scheduled_transactions = []
         self._batch_statuses = {}
         self._txn_to_batch = {}
+        self._batch_by_id = {}
+        self._txns_with_results = []
         self._in_progress_transaction = None
         self._final = False
-        self._complete = False
         self._cancelled = False
         self._previous_context_id = None
         self._previous_valid_batch_c_id = None
@@ -75,6 +78,9 @@ class SerialScheduler(Scheduler):
                 raise ValueError("transaction not in any batches: {}".format(
                     txn_signature))
 
+            if txn_signature not in self._txns_with_results:
+                self._txns_with_results.append(txn_signature)
+
             batch_signature = self._txn_to_batch[txn_signature]
             if is_valid:
                 self._previous_context_id = context_id
@@ -95,11 +101,6 @@ class SerialScheduler(Scheduler):
                 else:
                     self._previous_context_id = self._previous_valid_batch_c_id
 
-                is_last_batch = \
-                    len(self._batch_statuses) == len(self._last_in_batch)
-
-                if self._final and is_last_batch:
-                    self._complete = True
             self._condition.notify_all()
 
     def add_batch(self, batch, state_hash=None):
@@ -108,6 +109,7 @@ class SerialScheduler(Scheduler):
                 raise SchedulerError("Scheduler is finalized. Cannot take"
                                      " new batches")
             batch_signature = batch.header_signature
+            self._batch_by_id[batch_signature] = batch
             if state_hash is not None:
                 self._required_state_hashes[batch_signature] = state_hash
             batch_length = len(batch.transactions)
@@ -130,12 +132,50 @@ class SerialScheduler(Scheduler):
         with self._condition:
             return self._scheduled_transactions[index]
 
+    def _get_dependencies(self, transaction):
+        header = TransactionHeader()
+        header.ParseFromString(transaction.header)
+        return list(header.dependencies)
+
+    def _set_batch_result(self, txn_id, valid, state_hash):
+        batch_id = self._txn_to_batch[txn_id]
+        self._batch_statuses[batch_id] = BatchExecutionResult(
+            is_valid=valid,
+            state_hash=state_hash)
+        batch = self._batch_by_id[batch_id]
+        for txn in batch.transactions:
+            if txn.header_signature not in self._txns_with_results:
+                self._txns_with_results.append(txn.header_signature)
+
+    def _get_batch_result(self, txn_id):
+        batch_id = self._txn_to_batch[txn_id]
+        return self._batch_statuses[batch_id]
+
+    def _dep_is_known(self, txn_id):
+        return txn_id in self._txn_to_batch
+
+    def _dep_is_not_valid(self, txn_id):
+        dependency_result = self._get_batch_result(txn_id)
+        return not dependency_result.is_valid
+
     def next_transaction(self):
         with self._condition:
             if self._in_progress_transaction is not None:
                 return None
+
+            txn = None
             try:
-                txn = self._txn_queue.get(block=False)
+                while txn is None:
+                    txn = self._txn_queue.get(block=False)
+                    # Handle this transaction being invalid based on a
+                    # dependency.
+                    if any(self._dep_is_known(d) and self._dep_is_not_valid(d)
+                            for d in self._get_dependencies(txn)):
+                        self._set_batch_result(
+                            txn.header_signature,
+                            False,
+                            None)
+                        txn = None
             except queue.Empty:
                 return None
 
@@ -151,8 +191,6 @@ class SerialScheduler(Scheduler):
     def finalize(self):
         with self._condition:
             self._final = True
-            if len(self._batch_statuses) == len(self._last_in_batch):
-                self._complete = True
             self._condition.notify_all()
 
     def _compute_merkle_root(self, required_state_root):
@@ -212,15 +250,19 @@ class SerialScheduler(Scheduler):
             self._already_calculated = True
         return state_hash
 
+    def _complete(self):
+        return self._final and \
+               len(self._txns_with_results) == len(self._txn_to_batch)
+
     def complete(self, block):
         with self._condition:
             if not self._final:
                 return False
-            if self._complete:
+            if self._complete():
                 self._calculate_state_root_if_not_already_done()
                 return True
             if block:
-                self._condition.wait_for(lambda: self._complete)
+                self._condition.wait_for(self._complete)
                 self._calculate_state_root_if_not_already_done()
                 return True
             return False

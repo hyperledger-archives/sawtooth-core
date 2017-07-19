@@ -37,12 +37,6 @@ import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 LOGGER = logging.getLogger(__name__)
 
 
-# Used in creating batches from the yaml file and keeping the
-# ordering specified in the yaml file.
-UnProcessedBatchInfo = namedtuple('UnprocessedBatchInfo',
-                                  ['batch', 'key'])
-
-
 def create_transaction(payload, private_key, public_key, inputs=None,
                         outputs=None, dependencies=None):
     addr = '000000' + hashlib.sha512(payload).hexdigest()[:64]
@@ -134,7 +128,7 @@ class SchedulerTester(object):
         self._yaml_file_name = file_name
         self._counter = itertools.count(0)
         self._referenced_txns_in_other_batches = {}
-        # txn.header_signature : (is_valid, [{add: bytes}
+        self._batch_id_by_txn_id = {}
         self._txn_execution = {}
 
         self._batch_results = {}
@@ -199,11 +193,15 @@ class SchedulerTester(object):
                                  txn_info.txn.header_signature[:16])
                 else:
                     stop = True
-
-            if txns_executed_fifo:
-                t_info = txns_to_process.popleft()
-            else:
-                t_info = txns_to_process.pop()
+            try:
+                if txns_executed_fifo:
+                    t_info = txns_to_process.popleft()
+                else:
+                    t_info = txns_to_process.pop()
+            except IndexError:
+                # No new txn was returned from next_transaction so
+                # check again if complete.
+                continue
 
             inputs, outputs = self._get_inputs_outputs(t_info.txn)
 
@@ -395,87 +393,47 @@ class SchedulerTester(object):
             test_yaml = yaml.safe_load(infile)
         return test_yaml
 
-    def _unique_integer_key(self):
-        return next(self._counter)
-
     def _contains_and_not_none(self, key, obj):
         return key in obj and obj[key] is not None
 
-    def _process_prev_batches(self,
-                              unprocessed_batches,
-                              priv_key,
-                              pub_key,
-                              strip_deps=False):
-        batches = []
-        batches_waiting = []
-        b_results = {}
-        for batch_info in unprocessed_batches:
-            batch = batch_info.batch
-            key = batch_info.key
-            batch_state_root = None
-            if self._contains_and_not_none('state_hash', batch):
-                batch_state_root = batch['state_hash']
-            if 'state_hash' in batch:  # here we don't care if it is None
-                del batch['state_hash']
-
-            txn_processing_result = self._process_txns(
-                batch=batch,
-                priv_key=priv_key,
-                pub_key=pub_key,
-                strip_deps=strip_deps)
-            if txn_processing_result is None:
-                batches_waiting.append(batch_info)
-
-            else:
-                txns, batch_is_valid = txn_processing_result
-                batch_real = create_batch(
-                    transactions=txns,
-                    private_key=priv_key,
-                    public_key=pub_key)
-                b_results[batch_real.header_signature] = BatchExecutionResult(
-                    is_valid=batch_is_valid,
-                    state_hash=batch_state_root)
-                batches.append((batch_real, key))
-        return batches, b_results, batches_waiting
-
     def _process_batches(self, yaml_batches, priv_key, pub_key):
         batches = []
-        batches_waiting = []
         b_results = {}
         for batch in yaml_batches:
             batch_state_root = None
-            batch_dict = None
             if self._contains_and_not_none('state_hash', batch):
                 batch_state_root = batch['state_hash']
 
-            if 'state_hash' in batch:  # here we don't care if it is None
-                batch_dict = copy.copy(batch)
-                del batch['state_hash']
-
             txn_processing_result = self._process_txns(
                 batch=batch,
+                previous_batch_results=b_results.copy(),
                 priv_key=priv_key,
                 pub_key=pub_key)
-            if txn_processing_result is None:
-                key = self._unique_integer_key()
-                batches.append(key)
-                waiting_batch = UnProcessedBatchInfo(
-                    batch=batch_dict if batch_dict is not None else batch,
-                    key=key)
-                batches_waiting.append(waiting_batch)
-            else:
-                txns, batch_is_valid = txn_processing_result
-                batch_real = create_batch(
-                    transactions=txns,
-                    private_key=priv_key,
-                    public_key=pub_key)
-                b_results[batch_real.header_signature] = BatchExecutionResult(
-                    is_valid=batch_is_valid,
-                    state_hash=batch_state_root)
-                batches.append(batch_real)
-        return batches, b_results, batches_waiting
+            txns, batch_is_valid = txn_processing_result
+            batch_real = create_batch(
+                transactions=txns,
+                private_key=priv_key,
+                public_key=pub_key)
+            for txn in txns:
+                txn_id = txn.header_signature
+                batch_id = batch_real.header_signature
+                self._batch_id_by_txn_id[txn_id] = batch_id
 
-    def _process_txns(self, batch, priv_key, pub_key, strip_deps=False):
+            b_results[batch_real.header_signature] = BatchExecutionResult(
+                is_valid=batch_is_valid,
+                state_hash=batch_state_root)
+            batches.append(batch_real)
+        return batches, b_results
+
+    def _dependencies_are_valid(self, dependencies, previous_batch_results):
+        for dep in dependencies:
+            batch_id = self._batch_id_by_txn_id[dep]
+            dep_result = previous_batch_results[batch_id]
+            if not dep_result.is_valid:
+                return False
+        return True
+
+    def _process_txns(self, batch, previous_batch_results, priv_key, pub_key):
         txns = []
         referenced_txns = {}
         execution = {}
@@ -495,17 +453,11 @@ class SchedulerTester(object):
                     for d in transaction['addresses_to_set']
                 ]
 
-            if self._contains_and_not_none('valid', transaction):
-                is_valid = bool(transaction['valid'])
-            if not is_valid:
-                batch_is_valid = False
-
-            if self._contains_and_not_none('dependencies', transaction) and \
-                    not strip_deps:
+            if self._contains_and_not_none('dependencies', transaction):
                 if any([a not in self._referenced_txns_in_other_batches and
                         len(a) <= 20 for a in transaction['dependencies']]):
                     # This txn has a dependency with a txn signature that is
-                    # not known about, so delay processing this batch.
+                    # not known about,
                     return None
 
                 dependencies = [
@@ -515,6 +467,18 @@ class SchedulerTester(object):
                 dependencies = [a for a in dependencies if len(a) > 20]
             else:
                 dependencies = []
+
+            deps_valid = self._dependencies_are_valid(
+                dependencies,
+                previous_batch_results)
+
+            if self._contains_and_not_none('valid', transaction):
+                is_valid = bool(transaction['valid'])
+            else:
+                is_valid = deps_valid
+
+            if not is_valid:
+                batch_is_valid = False
 
             txn, _ = create_transaction(
                 payload=uuid.uuid4().hex.encode(),
@@ -539,40 +503,10 @@ class SchedulerTester(object):
         priv_key = signing.generate_privkey()
         pub_key = signing.generate_pubkey(priv_key)
 
-        batches, batch_results, batches_waiting = self._process_batches(
+        batches, batch_results = self._process_batches(
             yaml_batches=test_yaml,
             priv_key=priv_key,
             pub_key=pub_key)
-        # if there aren't any explicit dependencies that need to be created
-        # based on the transaction 'id' listed in the yaml, the next two
-        # code blocks won't be run.
-        while batches_waiting:
-            b, b_r, b_w = self._process_prev_batches(
-                unprocessed_batches=batches_waiting,
-                priv_key=priv_key,
-                pub_key=pub_key)
-            if len(batches_waiting) == len(b_w):
-                # If any process attempt doesn't produce a new batch,
-                # there is probably a cyclic dependency
-                break
-            if b:
-                for batch, key in b:
-                    ind = batches.index(key)
-                    batches[ind] = batch
-                batch_results.update(b_r)
-            batches_waiting = b_w
-        # Here process the batches with transaction dependencies that can't
-        # be computed for some reason, so just strip them out.
-        if batches_waiting:
-            b, b_r, b_w = self._process_prev_batches(
-                batches_waiting,
-                priv_key=priv_key,
-                pub_key=pub_key,
-                strip_deps=True)
-            for batch, key in b:
-                ind = batches.index(key)
-                batches[ind] = batch
-            batch_results.update(b_r)
 
         self._batch_results = batch_results
         self._batches = batches
