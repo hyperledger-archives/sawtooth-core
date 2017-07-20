@@ -46,10 +46,6 @@ def parse_args(args):
     parser.add_argument('-B', '--bind',
                         help='The host and port for the api to run on.',
                         action='append')
-    parser.add_argument('-C', '--connect',
-                        help='The url to connect to a running Validator')
-    parser.add_argument('-t', '--timeout',
-                        help='Seconds to wait for a validator response')
     parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
@@ -68,18 +64,16 @@ async def cors_handler(request):
     return web.Response(headers=headers)
 
 
-def start_rest_api(host, port, connection, timeout, db_cnx):
+def start_rest_api(host, port, db_cnx):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
     loop = asyncio.get_event_loop()
-    connection.open()
     app = web.Application(loop=loop)
-    app.on_cleanup.append(lambda app: connection.close())  # new
 
     # Add routes to the web app
-    LOGGER.info('Creating handlers for validator at %s', connection.url)
+    LOGGER.info('Creating handlers for db queries at %s', db_cnx)
 
-    handler = RouteHandler(loop, connection, timeout, db_cnx)
+    handler = RouteHandler(loop, db_cnx)
 
     app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
 
@@ -117,26 +111,17 @@ def main():
         opts = parse_args(sys.argv[1:])
         opts_config = RestApiConfig(
             bind=opts.bind,
-            connect=opts.connect,
-            timeout=opts.timeout,
             db_cnx=opts.db_cnx)
         rest_api_config = load_rest_api_config(opts_config)
         # Adding parameters for db connection
         db_cnx = opts.db_cnx
 
-        if "tcp://" not in rest_api_config.connect:
-            url = "tcp://" + rest_api_config.connect
-        else:
-            url = rest_api_config.connect
-
-        connection = Connection(url)
-
-        log_config = get_log_config(filename="rest_api_log_config.toml")
+        log_config = get_log_config(filename="supply_chain_rest_api_log_config.toml")
         if log_config is not None:
             log_configuration(log_config=log_config)
         else:
             log_dir = get_log_dir()
-            log_configuration(log_dir=log_dir, name="sawtooth_rest_api")
+            log_configuration(log_dir=log_dir, name="supply_chain_rest_api")
         init_console_logging(verbose_level=opts.verbose)
 
         try:
@@ -150,8 +135,6 @@ def main():
         start_rest_api(
             host,
             port,
-            connection,
-            int(rest_api_config.timeout),
             db_cnx)
         # pylint: disable=broad-except
     except Exception as e:

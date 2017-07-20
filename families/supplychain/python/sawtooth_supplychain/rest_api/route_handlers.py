@@ -69,11 +69,9 @@ class RouteHandler(object):
         timeout (int, optional): The time in seconds before the Api should
             cancel a request and report that the validator is unavailable.
     """
-    def __init__(self, loop, stream, timeout=DEFAULT_TIMEOUT, db_cnx=None):
+    def __init__(self, loop, db_cnx=None):
         loop.set_default_executor(ThreadPoolExecutor())
         self._loop = loop
-        self._stream = stream
-        self._timeout = timeout
         self._db_cnx = db_cnx
 
     async def list_agents(self, request):
