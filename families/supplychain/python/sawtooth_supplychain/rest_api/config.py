@@ -25,6 +25,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 def load_default_rest_api_config():
+    """Returns a default configuration for the Supply Chain REST API.
+    Args:
+        None
+
+    Returns:
+        bind: the host and port for the api to run on
+        connect: the url to connect to a running Validator
+        timeout: seconds to wait for a validator response
+        db_cnx: the database connection string
+    """
     return RestApiConfig(
         bind=["127.0.0.1:8080"],
         connect="tcp://localhost:4004",
@@ -36,6 +46,15 @@ def load_default_rest_api_config():
 def load_toml_rest_api_config(filename):
     """Returns a RestApiConfig created by loading a TOML file from the
     filesystem.
+
+    Args:
+        filename: the config file to load
+    Returns:
+        config: A configuration with following values:
+        * bind
+        * connect
+        * timeout
+        * db_cnx
     """
     if not os.path.exists(filename):
         LOGGER.info(
@@ -74,6 +93,15 @@ def merge_rest_api_config(configs):
     """
     Given a list of PathConfig objects, merges them into a single PathConfig,
     giving priority in the order of the configs (first has highest priority).
+
+    Args:
+        configs: a list of configs to merge
+    Returns:
+        A single config with values:
+            * bind
+            * connect
+            * timeout
+            * db_cnx
     """
     bind = None
     connect = None
@@ -130,6 +158,16 @@ class RestApiConfig:
                 repr(self._db_cnx))
 
     def to_dict(self):
+        """Returns a dict of the config values.
+        Args:
+            None
+        Returns:
+            An ordered dict of key/value pairs:
+            * bind
+            * connect
+            * timeout
+            * db_cnx
+        """
         return collections.OrderedDict([
             ('bind', self._bind),
             ('connect', self._connect),

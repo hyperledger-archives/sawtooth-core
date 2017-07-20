@@ -23,7 +23,7 @@ class RestApiConfigurationError(Exception):
 
 class _ApiError(HTTPError):
     """A parent class for all REST API errors. Extends aiohttp's HTTPError,
-    so instances will be caught automatically be the API, and turned into a
+    so instances will by caught automatically by the API, and turned into a
     response to send back to clients. Children should not define any methods,
     just four class variables which the parent __init__ will reference.
 
@@ -66,7 +66,7 @@ class _ApiError(HTTPError):
 
 class UnknownDatabaseError(_ApiError):
     api_code = 1000
-    status_code = 503
+    status_code = 500
     title = 'Unknown Database Error'
     message = ("An unknown error occurred with the database while "
                "processing the request.")
