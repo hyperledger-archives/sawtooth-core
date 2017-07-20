@@ -17,6 +17,7 @@ import logging
 import os
 import sys
 import traceback
+import pkg_resources
 
 from colorlog import ColoredFormatter
 
@@ -25,6 +26,9 @@ from sawtooth_poet_cli.genesis import add_genesis_parser
 from sawtooth_poet_cli.genesis import do_genesis
 from sawtooth_poet_cli.enclave import add_enclave_parser
 from sawtooth_poet_cli.enclave import do_enclave
+
+
+DISTRIBUTION_NAME = 'sawtooth-poet-cli'
 
 
 def create_console_handler(verbose_level):
@@ -66,6 +70,18 @@ def create_parent_parser(prog_name):
         '-v', '--verbose',
         action='count',
         help='enable more verbose output')
+
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parent_parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
+        help='print version information')
 
     return parent_parser
 

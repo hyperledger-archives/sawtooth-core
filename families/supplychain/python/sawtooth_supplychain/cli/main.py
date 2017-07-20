@@ -22,6 +22,7 @@ import logging
 import os
 import traceback
 import sys
+import pkg_resources
 
 from colorlog import ColoredFormatter
 
@@ -37,6 +38,9 @@ from sawtooth_supplychain.cli.record import add_record_parser
 from sawtooth_supplychain.cli.record import do_record
 from sawtooth_supplychain.cli.reset import add_reset_parser
 from sawtooth_supplychain.cli.reset import do_reset
+
+
+DISTRIBUTION_NAME = 'sawtooth-supplychain'
 
 
 def create_console_handler(verbose_level):
@@ -78,6 +82,18 @@ def create_parent_parser(program_name):
         '-v', '--verbose',
         action='count',
         help='enable more verbose output')
+
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parent_parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
+        help='print version information')
 
     parent_parser.add_argument(
         '--wait',

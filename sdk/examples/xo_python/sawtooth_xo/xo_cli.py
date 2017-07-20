@@ -23,6 +23,7 @@ import os
 import traceback
 import sys
 import shutil
+import pkg_resources
 
 from colorlog import ColoredFormatter
 
@@ -30,6 +31,9 @@ import sawtooth_signing.secp256k1_signer as signing
 
 from sawtooth_xo.xo_client import XoClient
 from sawtooth_xo.xo_exceptions import XoException
+
+
+DISTRIBUTION_NAME = 'sawtooth-xo'
 
 
 def create_console_handler(verbose_level):
@@ -138,6 +142,18 @@ def create_parent_parser(prog_name):
         '-v', '--verbose',
         action='count',
         help='enable more verbose output')
+
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parent_parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
+        help='print version information')
 
     parent_parser.add_argument(
         '--auth-user',

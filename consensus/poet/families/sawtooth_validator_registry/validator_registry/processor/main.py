@@ -16,12 +16,16 @@
 import sys
 import argparse
 import logging
+import pkg_resources
 
 from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
 from sawtooth_validator_registry.validator_registry.processor.handler import \
     ValidatorRegistryTransactionHandler
+
+
+DISTRIBUTION_NAME = 'sawtooth-poet-families'
 
 
 def create_console_handler(verbose_level):
@@ -71,6 +75,18 @@ def parse_args(args):
                         action='count',
                         default=0,
                         help='Increase output sent to stderr')
+
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
+        help='print version information')
 
     return parser.parse_args(args)
 
