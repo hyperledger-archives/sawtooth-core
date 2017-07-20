@@ -3,28 +3,28 @@
 
 
 CREATE TABLE block (
-	block_id			char(128) primary key,		-- primary key
+	block_id			char(128) primary key,
 	block_num			integer, 
 	state_root_hash		char(64)
 );
 
 
 CREATE TABLE record (
-	id 					bigserial primary key, 		-- primary key
+	id 					bigserial primary key,
 	start_block_num		integer, 		-- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
 	end_block_num		integer, 		-- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
-	identifier			varchar(128), 	-- The natural key of the record, serial number of attached sensor identifier.
-	creation_time		bigint,			-- The time the record was created
-	finalized			boolean			-- Is the record finalized?
+	identifier 			varchar(128), 	-- The natural key of the record, serial number of attached sensor identifier.
+	creation_time 		bigint,			-- The time the record was created
+	finalized 			boolean			-- Is the record finalized?
 );
 
 
 CREATE TABLE agent(
 	id 					bigserial primary key,		-- primary key
-	start_block_num		integer, 		-- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
-	end_block_num		integer, 		-- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
-	identifier 			varchar(128),	-- Hex-encoded public key of agent
-	name				text			-- The agent name
+	start_block_num 	integer, 		-- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
+	end_block_num 		integer, 		-- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
+	identifier  		varchar(128),	-- Hex-encoded public key of agent
+	name 				text			-- The agent name
 );
 
 CREATE TABLE type_enum(
