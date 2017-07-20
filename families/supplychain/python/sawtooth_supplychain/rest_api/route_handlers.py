@@ -15,12 +15,11 @@
 
 # Supply Chain REST API
 
-import re
 import logging
 import json
 from concurrent.futures import ThreadPoolExecutor
 import psycopg2
-
+import aiopg
 from aiohttp import web
 
 import sawtooth_supplychain.rest_api.exceptions as errors
@@ -31,26 +30,26 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_PAGE_SIZE = 1000    # Reasonable default
 
 
-
-
-def db_connect(db_cnx):
-    """Connect to a PostgreSQL database. The credentials are currently
-    included in the hard-coded connection string, but a more sophisticated
-    method could be implemented if needed.
-    """
+async def db_query(db_cnx, query, query_tuple):
     try:
-        # conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
-        conn = psycopg2.connect(db_cnx)
+        async with aiopg.create_pool(db_cnx) as pool:
+            async with pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    # Execute the query
+                    try:
+                        await cur.execute(query, query_tuple)
+                    except:
+                        LOGGER.debug("Could not execute query: %s", query)
+                        raise errors.UnknownDatabaseError()
+
+                    # Fetch the rows
+                    rows = []
+                    async for row in cur:
+                        rows.append(row)
+                    return rows
+
     except psycopg2.OperationalError as e:
         raise e
-    return conn
-
-
-def db_close(conn, cur):
-    """Closes the open PostgreSQL connection.
-    """
-    cur.close()
-    conn.close()
 
 
 class RouteHandler(object):
@@ -76,36 +75,6 @@ class RouteHandler(object):
         self._stream = stream
         self._timeout = timeout
         self._db_cnx = db_cnx
-        # print (self._db_cnx)
-
-    @staticmethod
-    def _check_paging_params(count, p_min, p_max):
-        """Check paging params to make sure they are integers and
-        that they are not out of range.
-        """
-        try:
-            count = int(count)
-            p_min = int(p_min)
-            if p_max is not None:
-                p_max = int(p_max)
-        except:
-            LOGGER.debug("Non-integer paging parameter.")
-            raise errors.InvalidPagingQuery()
-
-        if int(count) > DEFAULT_PAGE_SIZE:
-            LOGGER.debug("Count parameter is greater than DEFAULT_PAGE_SIZE.")
-            raise errors.CountInvalid()
-
-        if not (count >= 0 and p_min >= 0):
-            LOGGER.debug("Invalid paging parameter.")
-            raise errors.InvalidPagingQuery()
-
-        if p_max is not None:
-            if p_max < 0:
-                LOGGER.debug("Invalid paging parameter.")
-                raise errors.InvalidPagingQuery()
-
-        return count, p_min, p_max
 
     async def list_agents(self, request):
         """Fetches a paginated list of all Agents. Using the name filter
@@ -133,8 +102,9 @@ class RouteHandler(object):
             RouteHandler._check_paging_params(count, p_min, p_max)
 
         # Create query
-        query_tuple = ()
         name = "%" + name + "%"  # Add pattern matching to search string
+        query_tuple = ()
+
 
         if p_max is not None:
             query = ("SELECT identifier, name FROM agent WHERE name like %s "
@@ -145,32 +115,28 @@ class RouteHandler(object):
                      "AND id >= %s ORDER BY id limit %s")
             query_tuple += (name, p_min, count)
 
-        # Get a connection and cursor
         try:
-            conn = db_connect(self._db_cnx)
-        except psycopg2.OperationalError:
+            # async with aiopg.create_pool(self._db_cnx) as pool:
+            #     async with pool.acquire() as conn:
+            #         async with conn.cursor() as cur:
+            #
+            #             # Execute the query
+            #             try:
+            #                 await cur.execute(query, query_tuple)
+            #             except:
+            #                 LOGGER.debug("Could not execute query: %s", query)
+            #                 raise errors.UnknownDatabaseError()
+            #
+            #             # Fetch the rows
+            #             rows = []
+            #             async for row in cur:
+            #                 rows.append(row)
+
+            rows = await db_query(self._db_cnx, query, query_tuple)
+
+        except psycopg2.OperationalError as e:
             LOGGER.debug("Could not connect to database.")
-            raise errors.DatabaseConnectionError()
-
-        cur = conn.cursor()
-
-        # Execute the query
-        try:
-            cur.execute(query, query_tuple)
-        except:
-            LOGGER.debug("Could not execute query: %s", query)
-            raise errors.UnknownDatabaseError()
-
-        # Fetch the rows
-        rows = cur.fetchall()
-
-        # Close DB connection
-        try:
-            # self._db_close(conn, cur)
-            db_close(conn, cur)
-        except:
-            LOGGER.exception("Could not close database connection.")
-            raise errors.UnknownDatabaseError()
+            raise errors.DatabaseConnectionError
 
         fields = ('identifier', 'name')
         data = self._make_dict(fields, rows)
@@ -197,44 +163,34 @@ class RouteHandler(object):
 
         # Create query
         query = "select identifier, name from agent where identifier = %s;"
+        query_tuple = (agent_id,)
 
-        # Get a connection and cursor
         try:
-            conn = db_connect(self._db_cnx)
-        except psycopg2.OperationalError:
+            # async with aiopg.create_pool(self._db_cnx) as pool:
+            #     async with pool.acquire() as conn:
+            #         async with conn.cursor() as cur:
+            #
+            #             # Execute the query
+            #             try:
+            #                 await cur.execute(query, query_tuple)
+            #             except:
+            #                 LOGGER.debug("Could not execute query: %s", query)
+            #                 raise errors.UnknownDatabaseError()
+            #
+            #             # Fetch the rows
+            #             rows = []
+            #             async for row in cur:
+            #                 rows.append(row)
+            rows = await db_query(self._db_cnx, query, query_tuple)
+        except psycopg2.OperationalError as e:
             LOGGER.debug("Could not connect to database.")
-            raise errors.DatabaseConnectionError()
+            raise errors.DatabaseConnectionError
 
-        cur = conn.cursor()
-
-        # Execute the query
-        try:
-            cur.execute(query, (agent_id,))
-        except:
-            LOGGER.debug("Could not execute query: %s", query)
-            raise errors.UnknownDatabaseError()
-
-        # Fetch the rows
-        rows = cur.fetchall()
         if len(rows) > 1:
             LOGGER.debug("Too many rows returned.")
             errors.UnknownDatabaseError()
 
-            # Close DB connection
-            try:
-                db_close(conn, cur)
-            except:
-                LOGGER.exception("Could not close database connection.")
-                raise errors.UnknownDatabaseError()
-
         elif len(rows) == 1:
-            # Close DB connection
-            try:
-                db_close(conn, cur)
-            except:
-                LOGGER.exception("Could not close database connection.")
-                raise errors.UnknownDatabaseError()
-
             # Return the data
             fields = ('identifier', 'name')
             data = self._make_dict(fields, rows).pop()
@@ -245,13 +201,6 @@ class RouteHandler(object):
                 metadata="")
 
         else:
-            # Close DB connection
-            try:
-                db_close(conn, cur)
-            except:
-                LOGGER.exception("Could not close database connection.")
-                raise errors.UnknownDatabaseError()
-
             raise errors.AgentNotFound()
 
     async def list_applications(self, request):
@@ -288,6 +237,7 @@ class RouteHandler(object):
                  "AND application.status = status_enum.id")
 
         query_tuple = ()
+
         if applicant is not None:
             query += " AND application.applicant = %s"
             query_tuple += (applicant,)
@@ -305,31 +255,26 @@ class RouteHandler(object):
                       "ORDER BY application.id limit %s")
             query_tuple += (p_min, count)
 
-        # Get a connection and cursor
         try:
-            conn = db_connect(self._db_cnx)
-        except psycopg2.OperationalError:
+            # async with aiopg.create_pool(self._db_cnx) as pool:
+            #     async with pool.acquire() as conn:
+            #         async with conn.cursor() as cur:
+            #
+            #             # Execute the query
+            #             try:
+            #                 await cur.execute(query, query_tuple)
+            #             except:
+            #                 LOGGER.debug("Could not execute query: %s", query)
+            #                 raise errors.UnknownDatabaseError()
+            #
+            #             # Fetch the rows
+            #             rows = []
+            #             async for row in cur:
+            #                 rows.append(row)
+            rows = await db_query(self._db_cnx, query, query_tuple)
+        except psycopg2.OperationalError as e:
             LOGGER.debug("Could not connect to database.")
-            raise errors.DatabaseConnectionError()
-
-        cur = conn.cursor()
-
-        # Execute the query
-        try:
-            cur.execute(query, query_tuple)
-        except:
-            LOGGER.debug("Could not execute query: %s", query)
-            raise errors.UnknownDatabaseError()
-
-        # Fetch the rows
-        rows = cur.fetchall()
-
-        # Close DB connection
-        try:
-            db_close(conn, cur)
-        except:
-            LOGGER.exception("Could not close database connection.")
-            raise errors.UnknownDatabaseError()
+            raise errors.DatabaseConnectionError
 
         # Return the data
         fields = ('identifier', 'applicant', 'type', 'status', 'terms')
@@ -364,7 +309,7 @@ class RouteHandler(object):
         count, p_min, p_max = \
             RouteHandler._check_paging_params(count, p_min, p_max)
 
-    # Create query
+        # Create query
         query = ("SELECT id, identifier, creation_time, finalized "
                  "FROM record WHERE identifier LIKE %s")
 
@@ -381,85 +326,59 @@ class RouteHandler(object):
 
         # Get a connection and cursor
         try:
-            conn = db_connect(self._db_cnx)
-        except psycopg2.OperationalError:
+            rows = await db_query(self._db_cnx, query, query_tuple)
+
+            # Get the owners for each record
+            owners = []
+            for row in rows:
+                record_id = row[0]
+                query = ("SELECT agent_identifier, start_time FROM record_agent "
+                         "INNER JOIN type_enum ON record_agent.agent_type = "
+                         "type_enum.id WHERE record_agent.record_id = %s "
+                         "AND type_enum.name='OWNER';")
+
+                query_tuple = (record_id,)
+                owner_rows = await db_query(self._db_cnx, query, query_tuple)
+
+                fields = ('agent_identifier', 'start_time')
+                owner_data = self._make_dict(fields, owner_rows)
+
+                owners.append(owner_data)
+
+            # Get the custodians for each record
+            custodians = []
+            for row in rows:
+                record_id = row[0]
+                query = ("SELECT agent_identifier, start_time FROM record_agent "
+                         "INNER JOIN type_enum ON record_agent.agent_type = "
+                         "type_enum.id WHERE record_agent.record_id = %s "
+                         "AND type_enum.name='CUSTODIAN';")
+
+                query_tuple = (record_id,)
+                custodian_rows = await db_query(self._db_cnx, query, query_tuple)
+
+                fields = ('agent_identifier', 'start_time')
+                custodian_data = self._make_dict(fields, custodian_rows)
+
+                custodians.append(custodian_data)
+
+            fields = ('id', 'identifier', 'creation_time', 'final')
+            main_data = self._make_dict(fields, rows)
+
+            # Insert the owner and custodian data, remove id field
+            for i, d in enumerate(main_data):
+                d['owners'] = owners[i]
+                d['custodians'] = custodians[i]
+                d.pop('id', None)
+
+            return self._wrap_response(
+                request,
+                data=main_data,
+                metadata="")
+
+        except psycopg2.OperationalError as e:
             LOGGER.debug("Could not connect to database.")
-            raise errors.DatabaseConnectionError()
-
-        cur = conn.cursor()
-
-        # Execute the query
-        try:
-            cur.execute(query, query_tuple)
-        except:
-            LOGGER.debug("Could not execute query: %s", query)
-            raise errors.UnknownDatabaseError()
-
-        # Fetch the rows
-        main_rows = cur.fetchall()
-
-        # Get the owners for each record
-        owners = []
-        for row in main_rows:
-            record_id = row[0]
-            query = ("SELECT agent_identifier, start_time FROM record_agent "
-                     "INNER JOIN type_enum ON record_agent.agent_type = "
-                     "type_enum.id WHERE record_agent.record_id = %s "
-                     "AND type_enum.name='OWNER';")
-
-            try:
-                cur.execute(query, (record_id,))
-            except:
-                LOGGER.debug("Could not execute query: %s", query)
-                raise errors.UnknownDatabaseError()
-
-            owner_rows = cur.fetchall()
-            fields = ('agent_identifier', 'start_time')
-            owner_data = self._make_dict(fields, owner_rows)
-
-            owners.append(owner_data)
-
-        # Get the custodians for each record
-        custodians = []
-        for row in main_rows:
-            record_id = row[0]
-            query = ("SELECT agent_identifier, start_time FROM record_agent "
-                     "INNER JOIN type_enum ON record_agent.agent_type = "
-                     "type_enum.id WHERE record_agent.record_id = %s "
-                     "AND type_enum.name='CUSTODIAN';")
-
-            try:
-                cur.execute(query, (record_id,))
-            except:
-                LOGGER.debug("Could not execute query: %s", query)
-                raise errors.UnknownDatabaseError()
-
-            custodian_rows = cur.fetchall()
-            fields = ('agent_identifier', 'start_time')
-            custodian_data = self._make_dict(fields, custodian_rows)
-
-            custodians.append(custodian_data)
-
-        fields = ('id', 'identifier', 'creation_time', 'final')
-        main_data = self._make_dict(fields, main_rows)
-
-        # Insert the owner and custodian data, remove id field
-        for i, d in enumerate(main_data):
-            d['owners'] = owners[i]
-            d['custodians'] = custodians[i]
-            d.pop('id', None)
-
-        # Close DB connection
-        try:
-            db_close(conn, cur)
-        except:
-            LOGGER.exception("Could not close database connection.")
-            raise errors.UnknownDatabaseError()
-
-        return self._wrap_response(
-            request,
-            data=main_data,
-            metadata="")
+            raise errors.DatabaseConnectionError
 
     async def fetch_record(self, request):
         """Fetches a specific record, by record_id.
@@ -479,46 +398,26 @@ class RouteHandler(object):
         query = ("SELECT id, identifier, creation_time, finalized "
                  "FROM record WHERE identifier = %s;")
 
-        # Get a connection and cursor
+        query_tuple = (record_id,)
+
         try:
-            conn = db_connect(self._db_cnx)
-        except psycopg2.OperationalError:
-            LOGGER.debug("Could not connect to database.")
-            raise errors.DatabaseConnectionError()
+            rows = await db_query(self._db_cnx, query, query_tuple)
 
-        cur = conn.cursor()
+            # Only one record should be returned
+            if len(rows) > 1:
 
-        # Execute the query
-        try:
-            cur.execute(query, (record_id,))
-        except:
-            LOGGER.debug("Could not execute query: %s", query)
-            raise errors.UnknownDatabaseError()
+                LOGGER.debug("Too many rows returned in query.")
+                raise errors.UnknownDatabaseError
 
-        # Fetch the rows
-        main_rows = cur.fetchall()
+            elif len(rows) == 1:
 
-        # Only one record should be returned
-        if len(main_rows) > 1:
-            try:
-                self._db_close(conn, cur)
-            except:
-                LOGGER.exception("Could not close database connection.")
-                raise errors.UnknownDatabaseError()
+                # Return the data
+                fields = ('id', 'identifier', 'creation_time', 'final')
+                data = self._make_dict(fields, rows)
 
-            LOGGER.debug("Too many rows returned in query.")
-            raise errors.UnknownDatabaseError
-
-        elif len(main_rows) == 1:
-
-            # Return the data
-            fields = ('id', 'identifier', 'creation_time', 'final')
-            data = self._make_dict(fields, main_rows)
-
-            # Get the owners for each record
-            owners = []
-            for row in main_rows:
-                record_id = row[0]
+                # Get the owners for the record
+                owners = []
+                record_id = data[0]['id']
 
                 query = ("SELECT agent_identifier, start_time "
                          "FROM record_agent INNER JOIN type_enum "
@@ -526,62 +425,48 @@ class RouteHandler(object):
                          "WHERE record_agent.record_id = %s "
                          "AND type_enum.name='OWNER';")
 
-                try:
-                    cur.execute(query, (record_id,))
-                except:
-                    LOGGER.debug("Could not execute query: %s", query)
-                    raise errors.UnknownDatabaseError()
+                query_tuple = (record_id,)
+                owner_rows = await db_query(self._db_cnx, query, query_tuple)
 
-                owner_rows = cur.fetchall()
                 fields = ('agent_identifier', 'start_time')
                 owner_data = self._make_dict(fields, owner_rows)
                 owners.append(owner_data)
 
-            # Get the custodians for each record
-            custodians = []
-            for row in main_rows:
-                record_id = row[0]
+                #Get the custodians for the record
+                custodians = []
                 query = ("SELECT agent_identifier, start_time "
                          "FROM record_agent INNER JOIN type_enum "
                          "ON record_agent.agent_type = type_enum.id "
                          "WHERE record_agent.record_id = %s "
                          "AND type_enum.name='CUSTODIAN';")
 
-                try:
-                    cur.execute(query, (record_id,))
-                except:
-                    LOGGER.debug("Could not execute query: %s", query)
-                    raise errors.UnknownDatabaseError()
+                query_tuple = (record_id,)
+                custodian_rows = await db_query(self._db_cnx, query, query_tuple)
 
-                custodian_rows = cur.fetchall()
                 fields = ('agent_identifier', 'start_time')
                 custodian_data = self._make_dict(fields, custodian_rows)
 
                 custodians.append(custodian_data)
 
-            # Insert the owner and custodian data, remove id field
-            for i, d in enumerate(data):
-                d['owners'] = owners[i]
-                d['custodians'] = custodians[i]
-                d.pop('id', None)
+                # Insert the owner and custodian data, remove id field
+                for i, d in enumerate(data):
+                    d['owners'] = owners[i]
+                    d['custodians'] = custodians[i]
+                    d.pop('id', None)
 
-            # Close DB connection
-            try:
-                db_close(conn, cur)
-            except:
-                LOGGER.exception("Could not close database connection.")
-                raise errors.UnknownDatabaseError()
+                return_data = data.pop()
 
-            # Return only the single item from list
-            return_data = data.pop()
+                return self._wrap_response(
+                    request,
+                    data=return_data,
+                    metadata="")
 
-            return self._wrap_response(
-                request,
-                data=return_data,
-                metadata="")
+            else:
+                raise errors.RecordNotFound()
 
-        else:
-            raise errors.RecordNotFound()
+        except psycopg2.OperationalError as e:
+            LOGGER.debug("Could not connect to database.")
+            raise errors.DatabaseConnectionError
 
     async def fetch_applications(self, request):
         """Fetches a paginated list of Applications for a record. Applications
@@ -646,32 +531,14 @@ class RouteHandler(object):
 
         # Get a connection and cursor
         try:
-            conn = db_connect(self._db_cnx)
-        except psycopg2.OperationalError:
+            rows = await db_query(self._db_cnx, query, query_tuple)
+
+        except psycopg2.OperationalError as e:
             LOGGER.debug("Could not connect to database.")
-            raise errors.DatabaseConnectionError()
-
-        cur = conn.cursor()
-
-        # Execute the query
-        try:
-            cur.execute(query, query_tuple)
-        except:
-            LOGGER.debug("Could not execute query: %s", query)
-            raise errors.UnknownDatabaseError()
-
-        # Fetch the rows
-        rows = cur.fetchall()
+            raise errors.DatabaseConnectionError
 
         fields = ('identifier', 'applicant', 'type', 'status', 'terms')
         data = self._make_dict(fields, rows)
-
-        # Close DB connection
-        try:
-            db_close(conn, cur)
-        except:
-            LOGGER.exception("Could not close database connection.")
-            raise errors.UnknownDatabaseError()
 
         return self._wrap_response(
             request,
@@ -705,6 +572,35 @@ class RouteHandler(object):
             headers["Access-Control-Allow-Methods"] = "GET,POST"
             headers["Access-Control-Allow-Headers"] =\
                 "Origin, X-Requested-With, Content-Type, Accept"
+
+    @staticmethod
+    def _check_paging_params(count, p_min, p_max):
+        """Check paging params to make sure they are integers and
+        that they are not out of range.
+        """
+        try:
+            count = int(count)
+            p_min = int(p_min)
+            if p_max is not None:
+                p_max = int(p_max)
+        except:
+            LOGGER.debug("Non-integer paging parameter.")
+            raise errors.InvalidPagingQuery()
+
+        if int(count) > DEFAULT_PAGE_SIZE:
+            LOGGER.debug("Count parameter is greater than DEFAULT_PAGE_SIZE.")
+            raise errors.CountInvalid()
+
+        if not (count >= 0 and p_min >= 0):
+            LOGGER.debug("Invalid paging parameter.")
+            raise errors.InvalidPagingQuery()
+
+        if p_max is not None:
+            if p_max < 0:
+                LOGGER.debug("Invalid paging parameter.")
+                raise errors.InvalidPagingQuery()
+
+        return count, p_min, p_max
 
     @staticmethod
     def _wrap_response(request, data=None, metadata=None, status=200):
