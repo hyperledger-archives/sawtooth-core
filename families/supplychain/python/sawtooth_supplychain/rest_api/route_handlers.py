@@ -103,7 +103,6 @@ class RouteHandler(object):
         name = "%" + name + "%"  # Add pattern matching to search string
         query_tuple = ()
 
-
         if p_max is not None:
             query = ("SELECT identifier, name FROM agent WHERE name like %s "
                      "AND id >= %s AND id <= %s ORDER BY id limit %s")
@@ -114,22 +113,6 @@ class RouteHandler(object):
             query_tuple += (name, p_min, count)
 
         try:
-            # async with aiopg.create_pool(self._db_cnx) as pool:
-            #     async with pool.acquire() as conn:
-            #         async with conn.cursor() as cur:
-            #
-            #             # Execute the query
-            #             try:
-            #                 await cur.execute(query, query_tuple)
-            #             except:
-            #                 LOGGER.debug("Could not execute query: %s", query)
-            #                 raise errors.UnknownDatabaseError()
-            #
-            #             # Fetch the rows
-            #             rows = []
-            #             async for row in cur:
-            #                 rows.append(row)
-
             rows = await db_query(self._db_cnx, query, query_tuple)
 
         except psycopg2.OperationalError as e:
@@ -164,21 +147,6 @@ class RouteHandler(object):
         query_tuple = (agent_id,)
 
         try:
-            # async with aiopg.create_pool(self._db_cnx) as pool:
-            #     async with pool.acquire() as conn:
-            #         async with conn.cursor() as cur:
-            #
-            #             # Execute the query
-            #             try:
-            #                 await cur.execute(query, query_tuple)
-            #             except:
-            #                 LOGGER.debug("Could not execute query: %s", query)
-            #                 raise errors.UnknownDatabaseError()
-            #
-            #             # Fetch the rows
-            #             rows = []
-            #             async for row in cur:
-            #                 rows.append(row)
             rows = await db_query(self._db_cnx, query, query_tuple)
         except psycopg2.OperationalError as e:
             LOGGER.debug("Could not connect to database.")
@@ -254,21 +222,6 @@ class RouteHandler(object):
             query_tuple += (p_min, count)
 
         try:
-            # async with aiopg.create_pool(self._db_cnx) as pool:
-            #     async with pool.acquire() as conn:
-            #         async with conn.cursor() as cur:
-            #
-            #             # Execute the query
-            #             try:
-            #                 await cur.execute(query, query_tuple)
-            #             except:
-            #                 LOGGER.debug("Could not execute query: %s", query)
-            #                 raise errors.UnknownDatabaseError()
-            #
-            #             # Fetch the rows
-            #             rows = []
-            #             async for row in cur:
-            #                 rows.append(row)
             rows = await db_query(self._db_cnx, query, query_tuple)
         except psycopg2.OperationalError as e:
             LOGGER.debug("Could not connect to database.")

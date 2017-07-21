@@ -28,7 +28,6 @@ from sawtooth_sdk.client.log import init_console_logging
 from sawtooth_sdk.client.log import log_configuration
 from sawtooth_sdk.client.config import get_log_config
 from sawtooth_sdk.client.config import get_log_dir
-from sawtooth_rest_api.messaging import Connection
 from sawtooth_supplychain.rest_api.config import load_default_rest_api_config
 from sawtooth_supplychain.rest_api.config import load_toml_rest_api_config
 from sawtooth_supplychain.rest_api.config import merge_rest_api_config
@@ -106,7 +105,6 @@ def main():
     loop = ZMQEventLoop()
     asyncio.set_event_loop(loop)
 
-    connection = None
     try:
         opts = parse_args(sys.argv[1:])
         opts_config = RestApiConfig(
@@ -140,6 +138,3 @@ def main():
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
-    finally:
-        if connection is not None:
-            connection.close()
