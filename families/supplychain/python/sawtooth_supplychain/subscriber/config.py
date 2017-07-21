@@ -18,6 +18,7 @@ import logging
 import os
 import toml
 
+from sawtooth_sdk.client.config import get_config_dir
 from sawtooth_supplychain.subscriber.exceptions import \
     SubscriberConfigurationError
 
@@ -28,7 +29,9 @@ LOGGER = logging.getLogger(__name__)
 def load_default_subscriber_config():
     return SubscriberConfig(
         connect='tcp://localhost:4004',
-        database='dbname=supplychain host=localhost port=5432')
+        database_name='supplychain',
+        database_host='localhost',
+        database_port=5432)
 
 
 def load_toml_subscriber_config(filename):
@@ -64,9 +67,22 @@ def load_toml_subscriber_config(filename):
             'Invalid keys in subscriber config: {}'.format(
                 ', '.join(sorted(list(invalid_keys)))))
 
+    port = None
+    port_str = toml_config.get('database_port', None)
+    if port_str is not None:
+        try:
+            port = port_str
+        except ValueError:
+            raise SubscriberConfigurationError(
+                '"database_port" must be valid port number')
+
     return SubscriberConfig(
         connect=toml_config.get('connect', None),
-        database=toml_config.get('database', None)
+        database_name=toml_config.get('database_name', None),
+        database_host=toml_config.get('database_host', None),
+        database_port=port,
+        database_user=toml_config.get('database_user', None),
+        database_password=toml_config.get('database_password', None)
     )
 
 
@@ -76,44 +92,109 @@ def merge_subscriber_configs(configs):
     arguments, first to last.
     """
     connect = None
-    database = None
+    database_name = None
+    database_host = None
+    database_port = None
+    database_user = None
+    database_password = None
 
     for config in reversed(configs):
         if config.connect is not None:
             connect = config.connect
 
-        if config.database is not None:
-            database = config.database
+        if config.database_name is not None:
+            database_name = config.database_name
+
+        if config.database_host is not None:
+            database_host = config.database_host
+
+        if config.database_port is not None:
+            database_port = config.database_port
+
+        if config.database_user is not None:
+            database_user = config.database_user
+
+        if config.database_password is not None:
+            database_password = config.database_password
 
     return SubscriberConfig(
         connect=connect,
-        database=database)
+        database_name=database_name,
+        database_host=database_host,
+        database_port=database_port,
+        database_user=database_user,
+        database_password=database_password)
+
+
+def load_subscriber_config(first_config):
+    """Loads the config from the config file and merges it with the given
+    configuration.
+    """
+    default_config = load_default_subscriber_config()
+    config_dir = get_config_dir()
+    conf_file = os.path.join(config_dir, 'supplychain_sds.toml')
+
+    toml_config = load_toml_subscriber_config(conf_file)
+    return merge_subscriber_configs(
+        configs=[first_config, toml_config, default_config])
 
 
 class SubscriberConfig:
-    def __init__(self, connect=None, database=None):
+    def __init__(self, connect=None, database_name=None,
+                 database_host=None, database_port=None,
+                 database_user=None, database_password=None):
         self._connect = connect
-        self._database = database
+        self._database_name = database_name
+        self._database_host = database_host
+        self._database_port = database_port
+        self._database_user = database_user
+        self._database_password = database_password
 
     @property
     def connect(self):
         return self._connect
 
     @property
-    def database(self):
-        return self._database
+    def database_name(self):
+        return self._database_name
+
+    @property
+    def database_host(self):
+        return self._database_host
+
+    @property
+    def database_port(self):
+        return self._database_port
+
+    @property
+    def database_user(self):
+        return self._database_user
+
+    @property
+    def database_password(self):
+        return self._database_password
 
     def __repr__(self):
         return \
-            "{}(connect={}, database={})".format(
+            ("{}(connect={}, database_name={}, "
+             "database_host={}, database_port={}, "
+             "database_user={}, database_password={})").format(
                 self.__class__.__name__,
                 repr(self._connect),
-                repr(self._database))
+                repr(self._database_name),
+                repr(self._database_host),
+                repr(self._database_port),
+                repr(self._database_user),
+                repr(self._database_password))
 
     def to_dict(self):
         return collections.OrderedDict([
             ('connect', self._connect),
-            ('database', self._database)
+            ('database_name', self._database_name),
+            ('database_host', self._database_host),
+            ('database_port', self._database_port),
+            ('database_user', self._database_user),
+            ('database_password', self._database_password)
         ])
 
     def to_toml_string(self):
