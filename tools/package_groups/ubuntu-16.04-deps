@@ -4,6 +4,7 @@ libjson0-dev
 libzmq3-dev
 python3-pip
 python3-nose2
+python3-aiopg
 python3-cbor
 python3-colorlog
 python3-lmdb
