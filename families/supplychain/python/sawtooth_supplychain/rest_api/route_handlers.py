@@ -501,9 +501,15 @@ class RouteHandler(object):
     def _make_dict(fields, rows):
         """
         Convert returned data in the form of lists from DB to dicts,
-        and insert the fields as keys.
-        """
+        and insert the fields as keys. Also trims the type and
+        status columns, which may be returned from the database with
+        extra whitespace.
 
+        Args:
+            fields: the keys use for each column
+            rows: the list of records
+        Returns: a list of dicts
+        """
         data = []
 
         for row in rows:
@@ -526,8 +532,18 @@ class RouteHandler(object):
 
     @staticmethod
     def _check_paging_params(count, p_min, p_max):
-        """Check paging params to make sure they are integers and
-        that they are not out of range.
+        """Transforms paging parameters into integers and
+        checks to make sure that they are not out of range.
+
+        Args:
+            count: the number of records to return
+            p_min: first record to return
+            p_max: last record to return
+
+        Returns:
+            count: the number of records to return
+            p_min: first record to return
+            p_max: last record to return
         """
         try:
             count = int(count)
@@ -538,16 +554,14 @@ class RouteHandler(object):
             LOGGER.debug("Non-integer paging parameter.")
             raise errors.InvalidPagingQuery()
 
-        if int(count) > DEFAULT_PAGE_SIZE:
-            LOGGER.debug("Count parameter is greater than DEFAULT_PAGE_SIZE.")
-            raise errors.CountInvalid()
+        if count > DEFAULT_PAGE_SIZE:
+            count = DEFAULT_PAGE_SIZE
 
         if not (count >= 0 and p_min >= 0):
             LOGGER.debug("Invalid paging parameter.")
             raise errors.InvalidPagingQuery()
 
-        if p_max is not None:
-            if p_max < 0:
+        if p_max is not None and p_max < 0:
                 LOGGER.debug("Invalid paging parameter.")
                 raise errors.InvalidPagingQuery()
 
