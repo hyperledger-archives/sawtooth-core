@@ -108,13 +108,13 @@ def main():
     try:
         opts = parse_args(sys.argv[1:])
         opts_config = RestApiConfig(
-            bind=opts.bind,
-            db_cnx=opts.db_cnx)
+            bind=opts.bind)
         rest_api_config = load_rest_api_config(opts_config)
         # Adding parameters for db connection
         db_cnx = opts.db_cnx
 
-        log_config = get_log_config(filename="supply_chain_rest_api_log_config.toml")
+        log_config = get_log_config(filename=
+                                    "supply_chain_rest_api_log_config.toml")
         if log_config is not None:
             log_configuration(log_config=log_config)
         else:

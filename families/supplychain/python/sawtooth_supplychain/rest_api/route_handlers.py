@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 # Supply Chain REST API
 
 import logging
 import json
+import re
 from concurrent.futures import ThreadPoolExecutor
 import psycopg2
 import aiopg
@@ -39,7 +40,7 @@ async def db_query(db_cnx, query, query_tuple):
                     try:
                         await cur.execute(query, query_tuple)
                     except:
-                        LOGGER.debug("Could not execute query: %s", query)
+                        LOGGER.exception("Could not execute query: %s", query)
                         raise errors.UnknownDatabaseError()
 
                     # Fetch the rows
@@ -104,30 +105,45 @@ class RouteHandler(object):
         query_tuple = ()
 
         if p_max is not None:
-            query = ("SELECT identifier, name FROM agent WHERE name like %s "
+            query = ("SELECT identifier, name FROM agent WHERE name LIKE %s "
                      "AND id >= %s AND id <= %s ORDER BY id limit %s")
             query_tuple += (name, p_min, p_max, count)
         else:
-            query = ("SELECT identifier, name FROM agent WHERE name like %s "
+            query = ("SELECT identifier, name FROM agent WHERE name LIKE %s "
                      "AND id >= %s ORDER BY id limit %s")
             query_tuple += (name, p_min, count)
 
         try:
             rows = await db_query(self._db_cnx, query, query_tuple)
 
-        except psycopg2.OperationalError as e:
+        except psycopg2.OperationalError:
             LOGGER.debug("Could not connect to database.")
             raise errors.DatabaseConnectionError
 
         fields = ('identifier', 'name')
         data = self._make_dict(fields, rows)
 
-        response = self._wrap_response(
-            request,
-            data=data,
-            metadata="")
+        # Retrieve the max index possible for paging
+        query = "SELECT COUNT(*) FROM agent;"
+        query_tuple = ()
+        rows = await db_query(self._db_cnx, query, query_tuple)
+        max_index = rows[0][0]
 
-        return response
+        # Retrieve the number of records without paging
+        query_no_paging = ("SELECT id, identifier, name FROM agent "
+                           "WHERE name LIKE %s")
+        query_tuple_no_paging = (name,)
+        rows = await db_query(self._db_cnx, query_no_paging,
+                              query_tuple_no_paging)
+        total_count = len(rows)
+
+        return self._wrap_paginated_response(
+            request=request,
+            data=data,
+            count=count,
+            min_pos=p_min,
+            max_index=max_index,
+            total_count=total_count)
 
     async def fetch_agent(self, request):
         """Fetches a specific agent, by identifier.
@@ -148,12 +164,12 @@ class RouteHandler(object):
 
         try:
             rows = await db_query(self._db_cnx, query, query_tuple)
-        except psycopg2.OperationalError as e:
-            LOGGER.debug("Could not connect to database.")
+        except psycopg2.OperationalError:
+            LOGGER.exception("Could not connect to database.")
             raise errors.DatabaseConnectionError
 
         if len(rows) > 1:
-            LOGGER.debug("Too many rows returned.")
+            LOGGER.exception("Too many rows returned.")
             errors.UnknownDatabaseError()
 
         elif len(rows) == 1:
@@ -212,6 +228,9 @@ class RouteHandler(object):
             query += " AND status_enum.name = %s"
             query_tuple += (status,)
 
+        query_no_paging = query
+        query_tuple_no_paging = query_tuple
+
         if p_max is not None:
             query += (" AND application.id >= %s AND application.id <= %s "
                       "ORDER BY application.id limit %s")
@@ -223,18 +242,32 @@ class RouteHandler(object):
 
         try:
             rows = await db_query(self._db_cnx, query, query_tuple)
-        except psycopg2.OperationalError as e:
-            LOGGER.debug("Could not connect to database.")
+        except psycopg2.OperationalError:
+            LOGGER.exception("Could not connect to database.")
             raise errors.DatabaseConnectionError
 
         # Return the data
         fields = ('identifier', 'applicant', 'type', 'status', 'terms')
         data = self._make_dict(fields, rows)
 
-        return self._wrap_response(
-            request,
+        # Retrieve the max index possible for paging
+        query = "SELECT COUNT(*) FROM application;"
+        query_tuple = ()
+        rows = await db_query(self._db_cnx, query, query_tuple)
+        max_index = rows[0][0]
+
+        # Retrieve the number of records without paging
+        rows = await db_query(self._db_cnx, query_no_paging,
+                              query_tuple_no_paging)
+        total_count = len(rows)
+
+        return self._wrap_paginated_response(
+            request=request,
             data=data,
-            metadata="")
+            count=count,
+            min_pos=p_min,
+            max_index=max_index,
+            total_count=total_count)
 
     async def list_records(self, request):
         """Fetches the data for the current set of Records
@@ -268,6 +301,9 @@ class RouteHandler(object):
         identifier = "%" + identifier + "%"
         query_tuple = (identifier,)
 
+        query_no_paging = query
+        query_tuple_no_paging = query_tuple
+
         if p_max is not None:
             query += " AND id >= %s AND id <= %s ORDER BY id limit %s"
             query_tuple += (p_min, p_max, count)
@@ -283,7 +319,8 @@ class RouteHandler(object):
             owners = []
             for row in rows:
                 record_id = row[0]
-                query = ("SELECT agent_identifier, start_time FROM record_agent "
+                query = ("SELECT agent_identifier, start_time "
+                         "FROM record_agent "
                          "INNER JOIN type_enum ON record_agent.agent_type = "
                          "type_enum.id WHERE record_agent.record_id = %s "
                          "AND type_enum.name='OWNER';")
@@ -300,13 +337,15 @@ class RouteHandler(object):
             custodians = []
             for row in rows:
                 record_id = row[0]
-                query = ("SELECT agent_identifier, start_time FROM record_agent "
+                query = ("SELECT agent_identifier, start_time "
+                         "FROM record_agent "
                          "INNER JOIN type_enum ON record_agent.agent_type = "
                          "type_enum.id WHERE record_agent.record_id = %s "
                          "AND type_enum.name='CUSTODIAN';")
 
                 query_tuple = (record_id,)
-                custodian_rows = await db_query(self._db_cnx, query, query_tuple)
+                custodian_rows = await db_query(self._db_cnx, query,
+                                                query_tuple)
 
                 fields = ('agent_identifier', 'start_time')
                 custodian_data = self._make_dict(fields, custodian_rows)
@@ -322,13 +361,27 @@ class RouteHandler(object):
                 d['custodians'] = custodians[i]
                 d.pop('id', None)
 
-            return self._wrap_response(
-                request,
-                data=main_data,
-                metadata="")
+            # Retrieve the max index possible for paging
+            query = "SELECT COUNT(*) FROM record;"
+            query_tuple = ()
+            rows = await db_query(self._db_cnx, query, query_tuple)
+            max_index = rows[0][0]
 
-        except psycopg2.OperationalError as e:
-            LOGGER.debug("Could not connect to database.")
+            # Retrieve the number of records without paging
+            rows = await db_query(self._db_cnx, query_no_paging,
+                                  query_tuple_no_paging)
+            total_count = len(rows)
+
+            return self._wrap_paginated_response(
+                request=request,
+                data=main_data,
+                count=count,
+                min_pos=p_min,
+                max_index=max_index,
+                total_count=total_count)
+
+        except psycopg2.OperationalError:
+            LOGGER.exception("Could not connect to database.")
             raise errors.DatabaseConnectionError
 
     async def fetch_record(self, request):
@@ -357,7 +410,7 @@ class RouteHandler(object):
             # Only one record should be returned
             if len(rows) > 1:
 
-                LOGGER.debug("Too many rows returned in query.")
+                LOGGER.exception("Too many rows returned in query.")
                 raise errors.UnknownDatabaseError
 
             elif len(rows) == 1:
@@ -383,7 +436,7 @@ class RouteHandler(object):
                 owner_data = self._make_dict(fields, owner_rows)
                 owners.append(owner_data)
 
-                #Get the custodians for the record
+                # Get the custodians for the record
                 custodians = []
                 query = ("SELECT agent_identifier, start_time "
                          "FROM record_agent INNER JOIN type_enum "
@@ -392,7 +445,8 @@ class RouteHandler(object):
                          "AND type_enum.name='CUSTODIAN';")
 
                 query_tuple = (record_id,)
-                custodian_rows = await db_query(self._db_cnx, query, query_tuple)
+                custodian_rows = await db_query(self._db_cnx, query,
+                                                query_tuple)
 
                 fields = ('agent_identifier', 'start_time')
                 custodian_data = self._make_dict(fields, custodian_rows)
@@ -415,8 +469,8 @@ class RouteHandler(object):
             else:
                 raise errors.RecordNotFound()
 
-        except psycopg2.OperationalError as e:
-            LOGGER.debug("Could not connect to database.")
+        except psycopg2.OperationalError:
+            LOGGER.exception("Could not connect to database.")
             raise errors.DatabaseConnectionError
 
     async def fetch_applications(self, request):
@@ -470,6 +524,9 @@ class RouteHandler(object):
             query += " AND status_enum.name = %s"
             query_tuple += (status,)
 
+        query_no_paging = query
+        query_tuple_no_paging = query_tuple
+
         if p_max is not None:
             query += (" AND application.id >= %s "
                       "AND application.id <= %s "
@@ -484,18 +541,31 @@ class RouteHandler(object):
         try:
             rows = await db_query(self._db_cnx, query, query_tuple)
 
-        except psycopg2.OperationalError as e:
-            LOGGER.debug("Could not connect to database.")
+        except psycopg2.OperationalError:
+            LOGGER.exception("Could not connect to database.")
             raise errors.DatabaseConnectionError
 
         fields = ('identifier', 'applicant', 'type', 'status', 'terms')
         data = self._make_dict(fields, rows)
 
-        return self._wrap_response(
-            request,
+        # Retrieve the max index possible for paging
+        query = "SELECT COUNT(*) FROM application;"
+        query_tuple = ()
+        rows = await db_query(self._db_cnx, query, query_tuple)
+        max_index = rows[0][0]
+
+        # Retrieve the number of records without paging
+        rows = await db_query(self._db_cnx, query_no_paging,
+                              query_tuple_no_paging)
+        total_count = len(rows)
+
+        return self._wrap_paginated_response(
+            request=request,
             data=data,
-            metadata=""
-        )
+            count=count,
+            min_pos=p_min,
+            max_index=max_index,
+            total_count=total_count)
 
     @staticmethod
     def _make_dict(fields, rows):
@@ -517,6 +587,8 @@ class RouteHandler(object):
             for i, f in enumerate(fields):
                 if f in ['type', 'status']:
                     record[f] = row[i].strip()
+                elif f in ['id']:
+                    pass
                 else:
                     record[f] = row[i]
             data.append(record)
@@ -588,3 +660,97 @@ class RouteHandler(object):
                 indent=2,
                 separators=(',', ': '),
                 sort_keys=True))
+
+    @classmethod
+    def _wrap_paginated_response(cls, request, data, count,
+                                 min_pos, max_index, total_count):
+        paging = {'total_count': total_count, 'start_index': min_pos}
+
+        # Builds paging urls specific to this response
+        def build_pg_url(min_pos=None, max_pos=None):
+            return cls._build_url(request, count=count,
+                                  min=min_pos, max=max_pos)
+
+        # Build paging urls
+        start = min_pos
+        if start + count < max_index and total_count > len(data):
+            paging['next'] = build_pg_url(start + count)
+        if start - count >= 0:
+            paging['previous'] = build_pg_url(start - count)
+
+        # paging = paging_info
+        metadata = {'paging': paging}
+        return cls._wrap_response(
+            request,
+            data=data,
+            metadata=metadata
+        )
+
+    @classmethod
+    def _build_url(cls, request, path=None, **changes):
+        """Builds a response URL by overriding the original queries with
+        specified change queries. Change queries set to None will not be used.
+        Setting a change query to False will remove it even if there is an
+        original query with a value.
+        """
+        changes = {k: v for k, v in changes.items() if v is not None}
+        queries = {**request.url.query, **changes}
+        queries = {k: v for k, v in queries.items() if v is not False}
+        query_strings = []
+
+        def add_query(key):
+            query_strings.append('{}={}'.format(key, queries[key])
+                                 if queries[key] != '' else key)
+
+        def del_query(key):
+            queries.pop(key, None)
+
+        if 'min' in changes:
+            add_query('min')
+        elif 'max' in changes:
+            add_query('max')
+        elif 'min' in queries:
+            add_query('min')
+        elif 'max' in queries:
+            add_query('max')
+
+        del_query('min')
+        del_query('max')
+
+        if 'count' in queries:
+            add_query('count')
+            del_query('count')
+
+        for key in sorted(queries):
+            add_query(key)
+
+        scheme = cls._get_forwarded(request, 'proto') or request.url.scheme
+        host = cls._get_forwarded(request, 'host') or request.host
+        forwarded_path = cls._get_forwarded(request, 'path')
+        path = path if path is not None else request.path
+        query = '?' + '&'.join(query_strings) if query_strings else ''
+
+        url = '{}://{}{}{}{}'.format(scheme, host, forwarded_path, path, query)
+        return url
+
+    @staticmethod
+    def _get_forwarded(request, key):
+        """Gets a forwarded value from the `Forwarded` header if present, or
+        the equivalent `X-Forwarded-` header if not. If neither is present,
+        returns an empty string.
+        """
+        forwarded = request.headers.get('Forwarded', '')
+        match = re.search(
+            r'(?<={}=).+?(?=[\s,;]|$)'.format(key),
+            forwarded,
+            re.IGNORECASE)
+
+        if match is not None:
+            header = match.group(0)
+
+            if header[0] == '"' and header[-1] == '"':
+                return header[1:-1]
+
+            return header
+
+        return request.headers.get('X-Forwarded-{}'.format(key.title()), '')
