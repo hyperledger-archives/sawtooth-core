@@ -21,7 +21,6 @@ import logging
 import asyncio
 import argparse
 from aiohttp import web
-from zmq.asyncio import ZMQEventLoop
 
 from sawtooth_sdk.client.config import get_config_dir
 from sawtooth_sdk.client.log import init_console_logging
@@ -102,8 +101,6 @@ def load_rest_api_config(first_config):
 
 
 def main():
-    loop = ZMQEventLoop()
-    asyncio.set_event_loop(loop)
 
     try:
         opts = parse_args(sys.argv[1:])
@@ -113,8 +110,8 @@ def main():
         # Adding parameters for db connection
         db_cnx = opts.db_cnx
 
-        log_config = get_log_config(filename=
-                                    "supply_chain_rest_api_log_config.toml")
+        log_config = get_log_config(
+            filename="supply_chain_rest_api_log_config.toml")
         if log_config is not None:
             log_configuration(log_config=log_config)
         else:

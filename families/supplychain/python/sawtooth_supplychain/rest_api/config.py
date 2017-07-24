@@ -50,7 +50,7 @@ def load_toml_rest_api_config(filename):
     Args:
         filename: the config file to load
     Returns:
-        config: A configuration with following values:
+        A configuration with following values:
         * bind
         * connect
         * timeout
@@ -156,24 +156,3 @@ class RestApiConfig:
                 repr(self._connect),
                 repr(self._timeout),
                 repr(self._db_cnx))
-
-    def to_dict(self):
-        """Returns a dict of the config values.
-        Args:
-            None
-        Returns:
-            An ordered dict of key/value pairs:
-            * bind
-            * connect
-            * timeout
-            * db_cnx
-        """
-        return collections.OrderedDict([
-            ('bind', self._bind),
-            ('connect', self._connect),
-            ('timeout', self._timeout),
-            ('db_cnx', self._db_cnx)
-        ])
-
-    def to_toml_string(self):
-        return str(toml.dumps(self.to_dict())).strip().split('\n')

@@ -67,7 +67,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     python3-nose2 \
     python3-pip \
     python3-protobuf=3.2.0-1 \
-    python-psycopg2 \
+    python3-psycopg2 \
     python3-pycares=2.1.1-1 \
     python3-pytest-runner=2.6.2-1 \
     python3-pytest=2.9.0-1 \

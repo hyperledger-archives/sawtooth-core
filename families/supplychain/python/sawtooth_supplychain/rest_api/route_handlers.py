@@ -33,21 +33,21 @@ DEFAULT_PAGE_SIZE = 1000    # Reasonable default
 
 async def db_query(db_cnx, query, query_tuple):
     try:
-        async with aiopg.create_pool(db_cnx) as pool:
-            async with pool.acquire() as conn:
-                async with conn.cursor() as cur:
-                    # Execute the query
-                    try:
-                        await cur.execute(query, query_tuple)
-                    except:
-                        LOGGER.exception("Could not execute query: %s", query)
-                        raise errors.UnknownDatabaseError()
+        pool = await aiopg.create_pool(db_cnx)
+        async with pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                # Execute the query
+                try:
+                    await cur.execute(query, query_tuple)
+                except:
+                    LOGGER.exception("Could not execute query: %s", query)
+                    raise errors.UnknownDatabaseError()
 
-                    # Fetch the rows
-                    rows = []
-                    async for row in cur:
-                        rows.append(row)
-                    return rows
+                # Fetch the rows
+                rows = []
+                async for row in cur:
+                    rows.append(row)
+                return rows
 
     except psycopg2.OperationalError as e:
         raise e
@@ -117,7 +117,7 @@ class RouteHandler(object):
             rows = await db_query(self._db_cnx, query, query_tuple)
 
         except psycopg2.OperationalError:
-            LOGGER.debug("Could not connect to database.")
+            LOGGER.exception("Could not connect to database.")
             raise errors.DatabaseConnectionError
 
         fields = ('identifier', 'name')
@@ -634,8 +634,8 @@ class RouteHandler(object):
             raise errors.InvalidPagingQuery()
 
         if p_max is not None and p_max < 0:
-                LOGGER.debug("Invalid paging parameter.")
-                raise errors.InvalidPagingQuery()
+            LOGGER.debug("Invalid paging parameter.")
+            raise errors.InvalidPagingQuery()
 
         return count, p_min, p_max
 

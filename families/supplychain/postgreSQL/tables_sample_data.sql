@@ -29,35 +29,35 @@ CREATE TABLE agent(
 
 CREATE TABLE type_enum(
 	id                  integer primary key,
-	name                char(12), 		-- OWNER, CUSTODIAN
-	code                smallint		-- 0, 1
+	name                char(12),       -- OWNER, CUSTODIAN
+	code                smallint        -- 0, 1
 );
 
 
 CREATE TABLE status_enum(
 	id                  integer primary key,
-	name                char(12),		-- OPEN, CANCELED, REJECTED, ACCEPTED
-	code                smallint 		-- 0, 1, 2, 3		
+	name                char(12),       -- OPEN, CANCELED, REJECTED, ACCEPTED
+	code                smallint        -- 0, 1, 2, 3
 );
 
 CREATE TABLE record_agent(
 	id                  bigserial primary key,
-	record_id           bigserial references record(id),	-- Foreign key from record/id
-	agent_identifier    varchar(128),						-- This field is loosely coupled to agent/identifier
+	record_id           bigserial references record(id),    -- Foreign key from record/id
+	agent_identifier    varchar(128),                       -- This field is loosely coupled to agent/identifier
 	start_time          bigint,
-	agent_type          integer	 references type_enum(id)	-- Foreign key from type_enum/id
+	agent_type          integer references type_enum(id)    -- Foreign key from type_enum/id
 );
 
 
 CREATE TABLE application(
 	id                  bigserial primary key,
-	start_block_num     integer, 		-- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
-	end_block_num       integer, 		-- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
-	record_identifier   varchar(128),	-- Loosely coupled record/identifier
-	applicant           varchar(128),			-- Public key of the applicant
+	start_block_num     integer,                               -- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
+	end_block_num       integer,                               -- This field is populated in response to events from the State Delta Subscription service, but is loosely coupled to the block_history table.
+	record_identifier   varchar(128),                          -- Loosely coupled record/identifier
+	applicant           varchar(128),                          -- Public key of the applicant
 	creation_time       bigint,
-	type                integer references type_enum(id),		-- Foreign key from type_enum/id
-	status              integer references status_enum(id),		-- Foreign key from status_enum/id
+	type                integer references type_enum(id),      -- Foreign key from type_enum/id
+	status              integer references status_enum(id),    -- Foreign key from status_enum/id
 	terms               text
 );
 
@@ -100,7 +100,6 @@ INSERT INTO application VALUES(1, 1, NULL, 'TRACKING_NO_1', 'Joe Johnson', 14985
 INSERT INTO application VALUES(2, 2, NULL, 'TRACKING_NO_1', '111sdflkkajdkfadj1d22', 1498592882, 1, 2, 'COD');
 INSERT INTO application VALUES(3, 2, NULL, 'TRACKING_NO_3', '1110003F330D0D0D0DDD3', 1498592883, 2, 1, 'COD');
 INSERT INTO application VALUES(4, 2, NULL, 'TRACKING_NO_4', '1110003F330D0D0D0DDD3', 1498592884, 1, 3, 'COD');
-
 
 
 
