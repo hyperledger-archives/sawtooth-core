@@ -31,14 +31,27 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_PAGE_SIZE = 1000    # Reasonable default
 
 
-async def db_query(db_cnx, query, query_tuple):
+async def db_query(db_cnx, query, query_variables):
+    """Performs asynchronous query on PostgreSQL database, using
+    the query string and the query variables to insert into the
+    query string.
+
+    Args:
+        db_cnx (str): DB connection string
+        query (str): Query to execute
+        query_variables (tuple): Query variables to insert into query
+
+    Returns:
+        list: A list of rows. Each row is a list of columns/fields.
+
+    """
     try:
         pool = await aiopg.create_pool(db_cnx)
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 # Execute the query
                 try:
-                    await cur.execute(query, query_tuple)
+                    await cur.execute(query, query_variables)
                 except:
                     LOGGER.exception("Could not execute query: %s", query)
                     raise errors.UnknownDatabaseError()
@@ -49,8 +62,9 @@ async def db_query(db_cnx, query, query_tuple):
                     rows.append(row)
                 return rows
 
-    except psycopg2.OperationalError as e:
-        raise e
+    except psycopg2.OperationalError:
+        LOGGER.exception("Could not connect to database.")
+        raise errors.DatabaseConnectionError
 
 
 class RouteHandler(object):
@@ -66,9 +80,8 @@ class RouteHandler(object):
     instead.
 
     Args:
-        stream (:obj: messaging.stream.Stream):
-        timeout (int, optional): The time in seconds before the Api should
-            cancel a request and report that the validator is unavailable.
+        loop (:obj: asyncio.get_event_loop):
+        db_cnx (str): connection string for PostgreSQL database
     """
     def __init__(self, loop, db_cnx=None):
         loop.set_default_executor(ThreadPoolExecutor())
@@ -113,12 +126,7 @@ class RouteHandler(object):
                      "AND id >= %s ORDER BY id limit %s")
             query_tuple += (name, p_min, count)
 
-        try:
-            rows = await db_query(self._db_cnx, query, query_tuple)
-
-        except psycopg2.OperationalError:
-            LOGGER.exception("Could not connect to database.")
-            raise errors.DatabaseConnectionError
+        rows = await db_query(self._db_cnx, query, query_tuple)
 
         fields = ('identifier', 'name')
         data = self._make_dict(fields, rows)
@@ -162,15 +170,11 @@ class RouteHandler(object):
         query = "select identifier, name from agent where identifier = %s;"
         query_tuple = (agent_id,)
 
-        try:
-            rows = await db_query(self._db_cnx, query, query_tuple)
-        except psycopg2.OperationalError:
-            LOGGER.exception("Could not connect to database.")
-            raise errors.DatabaseConnectionError
+        rows = await db_query(self._db_cnx, query, query_tuple)
 
         if len(rows) > 1:
             LOGGER.exception("Too many rows returned.")
-            errors.UnknownDatabaseError()
+            raise errors.UnknownDatabaseError()
 
         elif len(rows) == 1:
             # Return the data
@@ -240,11 +244,7 @@ class RouteHandler(object):
                       "ORDER BY application.id limit %s")
             query_tuple += (p_min, count)
 
-        try:
-            rows = await db_query(self._db_cnx, query, query_tuple)
-        except psycopg2.OperationalError:
-            LOGGER.exception("Could not connect to database.")
-            raise errors.DatabaseConnectionError
+        rows = await db_query(self._db_cnx, query, query_tuple)
 
         # Return the data
         fields = ('identifier', 'applicant', 'type', 'status', 'terms')
@@ -312,77 +312,72 @@ class RouteHandler(object):
             query_tuple += (p_min, count)
 
         # Get a connection and cursor
-        try:
-            rows = await db_query(self._db_cnx, query, query_tuple)
+        rows = await db_query(self._db_cnx, query, query_tuple)
 
-            # Get the owners for each record
-            owners = []
-            for row in rows:
-                record_id = row[0]
-                query = ("SELECT agent_identifier, start_time "
-                         "FROM record_agent "
-                         "INNER JOIN type_enum ON record_agent.agent_type = "
-                         "type_enum.id WHERE record_agent.record_id = %s "
-                         "AND type_enum.name='OWNER';")
+        # Get the owners for each record
+        owners = []
+        for row in rows:
+            record_id = row[0]
+            query = ("SELECT agent_identifier, start_time "
+                     "FROM record_agent "
+                     "INNER JOIN type_enum ON record_agent.agent_type = "
+                     "type_enum.id WHERE record_agent.record_id = %s "
+                     "AND type_enum.name='OWNER';")
 
-                query_tuple = (record_id,)
-                owner_rows = await db_query(self._db_cnx, query, query_tuple)
+            query_tuple = (record_id,)
+            owner_rows = await db_query(self._db_cnx, query, query_tuple)
 
-                fields = ('agent_identifier', 'start_time')
-                owner_data = self._make_dict(fields, owner_rows)
+            fields = ('agent_identifier', 'start_time')
+            owner_data = self._make_dict(fields, owner_rows)
 
-                owners.append(owner_data)
+            owners.append(owner_data)
 
-            # Get the custodians for each record
-            custodians = []
-            for row in rows:
-                record_id = row[0]
-                query = ("SELECT agent_identifier, start_time "
-                         "FROM record_agent "
-                         "INNER JOIN type_enum ON record_agent.agent_type = "
-                         "type_enum.id WHERE record_agent.record_id = %s "
-                         "AND type_enum.name='CUSTODIAN';")
+        # Get the custodians for each record
+        custodians = []
+        for row in rows:
+            record_id = row[0]
+            query = ("SELECT agent_identifier, start_time "
+                     "FROM record_agent "
+                     "INNER JOIN type_enum ON record_agent.agent_type = "
+                     "type_enum.id WHERE record_agent.record_id = %s "
+                     "AND type_enum.name='CUSTODIAN';")
 
-                query_tuple = (record_id,)
-                custodian_rows = await db_query(self._db_cnx, query,
-                                                query_tuple)
+            query_tuple = (record_id,)
+            custodian_rows = await db_query(self._db_cnx, query,
+                                            query_tuple)
 
-                fields = ('agent_identifier', 'start_time')
-                custodian_data = self._make_dict(fields, custodian_rows)
+            fields = ('agent_identifier', 'start_time')
+            custodian_data = self._make_dict(fields, custodian_rows)
 
-                custodians.append(custodian_data)
+            custodians.append(custodian_data)
 
-            fields = ('id', 'identifier', 'creation_time', 'final')
-            main_data = self._make_dict(fields, rows)
+        fields = ('id', 'identifier', 'creation_time', 'final')
+        main_data = self._make_dict(fields, rows)
 
-            # Insert the owner and custodian data, remove id field
-            for i, d in enumerate(main_data):
-                d['owners'] = owners[i]
-                d['custodians'] = custodians[i]
-                d.pop('id', None)
+        # Insert the owner and custodian data, remove id field
+        for i, d in enumerate(main_data):
+            d['owners'] = owners[i]
+            d['custodians'] = custodians[i]
+            d.pop('id', None)
 
-            # Retrieve the max index possible for paging
-            query = "SELECT COUNT(*) FROM record;"
-            query_tuple = ()
-            rows = await db_query(self._db_cnx, query, query_tuple)
-            max_index = rows[0][0]
+        # Retrieve the max index possible for paging
+        query = "SELECT COUNT(*) FROM record;"
+        query_tuple = ()
+        rows = await db_query(self._db_cnx, query, query_tuple)
+        max_index = rows[0][0]
 
-            # Retrieve the number of records without paging
-            rows = await db_query(self._db_cnx, query_no_paging,
-                                  query_tuple_no_paging)
-            total_count = len(rows)
+        # Retrieve the number of records without paging
+        rows = await db_query(self._db_cnx, query_no_paging,
+                              query_tuple_no_paging)
+        total_count = len(rows)
 
-            return self._wrap_paginated_response(
-                request=request,
-                data=main_data,
-                count=count,
-                min_pos=p_min,
-                max_index=max_index,
-                total_count=total_count)
-
-        except psycopg2.OperationalError:
-            LOGGER.exception("Could not connect to database.")
-            raise errors.DatabaseConnectionError
+        return self._wrap_paginated_response(
+            request=request,
+            data=main_data,
+            count=count,
+            min_pos=p_min,
+            max_index=max_index,
+            total_count=total_count)
 
     async def fetch_record(self, request):
         """Fetches a specific record, by record_id.
@@ -404,74 +399,69 @@ class RouteHandler(object):
 
         query_tuple = (record_id,)
 
-        try:
-            rows = await db_query(self._db_cnx, query, query_tuple)
+        rows = await db_query(self._db_cnx, query, query_tuple)
 
-            # Only one record should be returned
-            if len(rows) > 1:
+        # Only one record should be returned
+        if len(rows) > 1:
 
-                LOGGER.exception("Too many rows returned in query.")
-                raise errors.UnknownDatabaseError
+            LOGGER.exception("Too many rows returned in query.")
+            raise errors.UnknownDatabaseError
 
-            elif len(rows) == 1:
+        elif len(rows) == 1:
 
-                # Return the data
-                fields = ('id', 'identifier', 'creation_time', 'final')
-                data = self._make_dict(fields, rows)
+            # Return the data
+            fields = ('id', 'identifier', 'creation_time', 'final')
+            data = self._make_dict(fields, rows)
 
-                # Get the owners for the record
-                owners = []
-                record_id = data[0]['id']
+            # Get the owners for the record
+            owners = []
+            record_id = data[0]['id']
 
-                query = ("SELECT agent_identifier, start_time "
-                         "FROM record_agent INNER JOIN type_enum "
-                         "ON record_agent.agent_type = type_enum.id "
-                         "WHERE record_agent.record_id = %s "
-                         "AND type_enum.name='OWNER';")
+            query = ("SELECT agent_identifier, start_time "
+                     "FROM record_agent INNER JOIN type_enum "
+                     "ON record_agent.agent_type = type_enum.id "
+                     "WHERE record_agent.record_id = %s "
+                     "AND type_enum.name='OWNER';")
 
-                query_tuple = (record_id,)
-                owner_rows = await db_query(self._db_cnx, query, query_tuple)
+            query_tuple = (record_id,)
+            owner_rows = await db_query(self._db_cnx, query, query_tuple)
 
-                fields = ('agent_identifier', 'start_time')
-                owner_data = self._make_dict(fields, owner_rows)
-                owners.append(owner_data)
+            fields = ('agent_identifier', 'start_time')
+            owner_data = self._make_dict(fields, owner_rows)
+            owners.append(owner_data)
 
-                # Get the custodians for the record
-                custodians = []
-                query = ("SELECT agent_identifier, start_time "
-                         "FROM record_agent INNER JOIN type_enum "
-                         "ON record_agent.agent_type = type_enum.id "
-                         "WHERE record_agent.record_id = %s "
-                         "AND type_enum.name='CUSTODIAN';")
+            # Get the custodians for the record
+            custodians = []
+            query = ("SELECT agent_identifier, start_time "
+                     "FROM record_agent INNER JOIN type_enum "
+                     "ON record_agent.agent_type = type_enum.id "
+                     "WHERE record_agent.record_id = %s "
+                     "AND type_enum.name='CUSTODIAN';")
 
-                query_tuple = (record_id,)
-                custodian_rows = await db_query(self._db_cnx, query,
-                                                query_tuple)
+            query_tuple = (record_id,)
+            custodian_rows = await db_query(self._db_cnx, query,
+                                            query_tuple)
 
-                fields = ('agent_identifier', 'start_time')
-                custodian_data = self._make_dict(fields, custodian_rows)
+            fields = ('agent_identifier', 'start_time')
+            custodian_data = self._make_dict(fields, custodian_rows)
 
-                custodians.append(custodian_data)
+            custodians.append(custodian_data)
 
-                # Insert the owner and custodian data, remove id field
-                for i, d in enumerate(data):
-                    d['owners'] = owners[i]
-                    d['custodians'] = custodians[i]
-                    d.pop('id', None)
+            # Insert the owner and custodian data, remove id field
+            for i, d in enumerate(data):
+                d['owners'] = owners[i]
+                d['custodians'] = custodians[i]
+                d.pop('id', None)
 
-                return_data = data.pop()
+            return_data = data.pop()
 
-                return self._wrap_response(
-                    request,
-                    data=return_data,
-                    metadata="")
+            return self._wrap_response(
+                request,
+                data=return_data,
+                metadata="")
 
-            else:
-                raise errors.RecordNotFound()
-
-        except psycopg2.OperationalError:
-            LOGGER.exception("Could not connect to database.")
-            raise errors.DatabaseConnectionError
+        else:
+            raise errors.RecordNotFound()
 
     async def fetch_applications(self, request):
         """Fetches a paginated list of Applications for a record. Applications
@@ -537,13 +527,7 @@ class RouteHandler(object):
                       "ORDER BY application.id limit %s")
             query_tuple += (p_min, count)
 
-        # Get a connection and cursor
-        try:
-            rows = await db_query(self._db_cnx, query, query_tuple)
-
-        except psycopg2.OperationalError:
-            LOGGER.exception("Could not connect to database.")
-            raise errors.DatabaseConnectionError
+        rows = await db_query(self._db_cnx, query, query_tuple)
 
         fields = ('identifier', 'applicant', 'type', 'status', 'terms')
         data = self._make_dict(fields, rows)
@@ -587,8 +571,6 @@ class RouteHandler(object):
             for i, f in enumerate(fields):
                 if f in ['type', 'status']:
                     record[f] = row[i].strip()
-                elif f in ['id']:
-                    pass
                 else:
                     record[f] = row[i]
             data.append(record)
