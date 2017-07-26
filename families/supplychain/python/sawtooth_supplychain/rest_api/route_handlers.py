@@ -46,21 +46,37 @@ async def db_query(db_cnx, query, query_variables):
 
     """
     try:
+        # Code below worked in previously. Odd
+        # pool = await aiopg.create_pool(db_cnx)
+        # async with pool.acquire() as conn:
+        #     async with conn.cursor() as cur:
+        #         # Execute the query
+        #         try:
+        #             await cur.execute(query, query_variables)
+        #         except:
+        #             LOGGER.exception("Could not execute query: %s", query)
+        #             raise errors.UnknownDatabaseError()
+        #
+        #         # Fetch the rows
+        #         rows = []
+        #         async for row in cur:
+        #             rows.append(row)
+        #         return rows
         pool = await aiopg.create_pool(db_cnx)
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                # Execute the query
-                try:
-                    await cur.execute(query, query_variables)
-                except:
-                    LOGGER.exception("Could not execute query: %s", query)
-                    raise errors.UnknownDatabaseError()
+        conn = await pool.acquire()
+        cur = await conn.cursor()
+        # Execute the query
+        try:
+            await cur.execute(query, query_variables)
+        except:
+            LOGGER.exception("Could not execute query: %s", query)
+            raise errors.UnknownDatabaseError()
 
-                # Fetch the rows
-                rows = []
-                async for row in cur:
-                    rows.append(row)
-                return rows
+        # Fetch the rows
+        rows = []
+        for row in cur:
+            rows.append(row)
+        return rows
 
     except psycopg2.OperationalError:
         LOGGER.exception("Could not connect to database.")
@@ -109,25 +125,41 @@ class RouteHandler(object):
         count = request.url.query.get('count', DEFAULT_PAGE_SIZE)
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
+        head = request.url.query.get('head', None)
 
         count, p_min, p_max = \
             RouteHandler._check_paging_params(count, p_min, p_max)
+        paging = p_min > 0 or p_max is not None
+
+        # If no head parameter, get current block
+        query = ("SELECT block_num FROM block ORDER BY block_id DESC LIMIT 1;")
+        rows = await db_query(self._db_cnx, query, ())
+        current_block = rows[0][0]
 
         # Create query
         name = "%" + name + "%"  # Add pattern matching to search string
-        query_tuple = ()
+        query_variables = ()
 
         if p_max is not None:
-            query = ("SELECT identifier, name FROM agent WHERE name LIKE %s "
-                     "AND id >= %s AND id <= %s ORDER BY id limit %s")
-            query_tuple += (name, p_min, p_max, count)
+            query = ("SELECT DISTINCT ON (identifier) identifier, name "
+                     "FROM agent WHERE %s >= start_block_num AND "
+                     "(%s <= end_block_num OR end_block_num IS NULL)"
+                     " AND name LIKE %s AND id >= %s AND id <= %s"
+                     "ORDER BY identifier, end_block_num "
+                     "DESC NULLS FIRST LIMIT %s")
+            query_variables += (current_block, current_block, name,
+                                p_min, p_max, count)
         else:
-            query = ("SELECT identifier, name FROM agent WHERE name LIKE %s "
-                     "AND id >= %s ORDER BY id limit %s")
-            query_tuple += (name, p_min, count)
+            query = ("SELECT DISTINCT ON (identifier) identifier, name "
+                     "FROM agent WHERE %s >= start_block_num AND "
+                     "(%s <= end_block_num OR end_block_num IS NULL)"
+                     " AND name LIKE %s AND id >= %s "
+                     "ORDER BY identifier, end_block_num "
+                     "DESC NULLS FIRST LIMIT %s")
+            query_variables += (current_block, current_block, name,
+                                p_min, count)
 
-        rows = await db_query(self._db_cnx, query, query_tuple)
-
+        rows = await db_query(self._db_cnx, query, query_variables)
         fields = ('identifier', 'name')
         data = self._make_dict(fields, rows)
 
@@ -135,15 +167,17 @@ class RouteHandler(object):
         query = "SELECT COUNT(*) FROM agent;"
         query_tuple = ()
         rows = await db_query(self._db_cnx, query, query_tuple)
-        max_index = rows[0][0]
+        max_index = rows[0][0]  # This is wrong!
 
         # Retrieve the number of records without paging
-        query_no_paging = ("SELECT id, identifier, name FROM agent "
-                           "WHERE name LIKE %s")
-        query_tuple_no_paging = (name,)
-        rows = await db_query(self._db_cnx, query_no_paging,
-                              query_tuple_no_paging)
-        total_count = len(rows)
+        query = ("SELECT COUNT(DISTINCT identifier)"
+                           "FROM agent WHERE %s >= start_block_num AND "
+                           "(%s <= end_block_num OR end_block_num IS NULL)"
+                           " AND name LIKE %s ")
+        query_variables = (current_block, current_block, name)
+        rows = await db_query(self._db_cnx, query, query_variables)
+        # total_count = len(rows)  # This is right
+        total_count = rows[0][0]
 
         return self._wrap_paginated_response(
             request=request,
