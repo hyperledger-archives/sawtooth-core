@@ -158,7 +158,7 @@ def main():
             log_configuration(log_config=log_config)
         else:
             log_dir = get_log_dir()
-            log_configuration(log_dir=log_dir, name="sawtooth_rest_api")
+            log_configuration(log_dir=log_dir, name="rest_api")
         init_console_logging(verbose_level=opts.verbose)
 
         try:
