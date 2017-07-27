@@ -29,9 +29,9 @@ import sawtooth_supplychain.rest_api.exceptions as errors
 DEFAULT_TIMEOUT = 300
 LOGGER = logging.getLogger(__name__)
 DEFAULT_PAGE_SIZE = 1000    # Reasonable default
+NO_ROWS_RETURNED = -1
 
-
-async def db_query(db_cnx, query, query_variables):
+async def db_query(db_cnx, query, query_variables=()):
     """Performs asynchronous query on PostgreSQL database, using
     the query string and the query variables to insert into the
     query string.
@@ -46,22 +46,6 @@ async def db_query(db_cnx, query, query_variables):
 
     """
     try:
-        # Code below worked in previously. Odd
-        # pool = await aiopg.create_pool(db_cnx)
-        # async with pool.acquire() as conn:
-        #     async with conn.cursor() as cur:
-        #         # Execute the query
-        #         try:
-        #             await cur.execute(query, query_variables)
-        #         except:
-        #             LOGGER.exception("Could not execute query: %s", query)
-        #             raise errors.UnknownDatabaseError()
-        #
-        #         # Fetch the rows
-        #         rows = []
-        #         async for row in cur:
-        #             rows.append(row)
-        #         return rows
         pool = await aiopg.create_pool(db_cnx)
         conn = await pool.acquire()
         cur = await conn.cursor()
@@ -75,12 +59,25 @@ async def db_query(db_cnx, query, query_variables):
         # Fetch the rows
         rows = []
         for row in cur:
-            rows.append(row)
+            rows.append(row)  # Await causes error here
         return rows
 
     except psycopg2.OperationalError:
         LOGGER.exception("Could not connect to database.")
         raise errors.DatabaseConnectionError
+
+async def get_current_block(db_cnx):
+    """Returns the current head block as stored by the block table.
+
+    Args:
+    db_cnx (str): The database connection string
+
+    Returns:
+        List of rows from query
+    """
+    query = ("SELECT block_num FROM block ORDER BY block_id DESC LIMIT 1;")
+    rows = await db_query(db_cnx, query)
+    return rows[0][0]
 
 
 class RouteHandler(object):
@@ -92,8 +89,7 @@ class RouteHandler(object):
     results are processed, and finally an aiohttp Response object is
     sent back to the client with JSON formatted data and metadata.
 
-    If something goes wrong, an aiohttp HTTP exception is raised or returned
-    instead.
+    If something goes wrong, an aiohttp HTTP exception is raised.
 
     Args:
         loop (:obj: asyncio.get_event_loop):
@@ -115,9 +111,12 @@ class RouteHandler(object):
                 - count: Number of items to return
                 - min: Id or index to start paging (inclusive)
                 - max: Id or index to end paging (inclusive)
+                - head: the block_num to use as head for the purpose of
+                        retrieving Agents
 
         Response:
             data: JSON array of Agents
+            paging: paging info and nav (e.g. next link )
         """
 
         # Get query parameters
@@ -129,55 +128,59 @@ class RouteHandler(object):
 
         count, p_min, p_max = \
             RouteHandler._check_paging_params(count, p_min, p_max)
-        paging = p_min > 0 or p_max is not None
 
-        # If no head parameter, get current block
-        query = ("SELECT block_num FROM block ORDER BY block_id DESC LIMIT 1;")
-        rows = await db_query(self._db_cnx, query, ())
-        current_block = rows[0][0]
+        if head is None:
+            head = await get_current_block(self._db_cnx)
 
         # Create query
         name = "%" + name + "%"  # Add pattern matching to search string
         query_variables = ()
 
         if p_max is not None:
-            query = ("SELECT DISTINCT ON (identifier) identifier, name "
+            query = ("SELECT id, identifier, name "
                      "FROM agent WHERE %s >= start_block_num AND "
                      "(%s <= end_block_num OR end_block_num IS NULL)"
                      " AND name LIKE %s AND id >= %s AND id <= %s"
-                     "ORDER BY identifier, end_block_num "
+                     "ORDER BY id, end_block_num "
                      "DESC NULLS FIRST LIMIT %s")
-            query_variables += (current_block, current_block, name,
+            query_variables += (head, head, name,
                                 p_min, p_max, count)
         else:
-            query = ("SELECT DISTINCT ON (identifier) identifier, name "
+            query = ("SELECT id, identifier, name "
                      "FROM agent WHERE %s >= start_block_num AND "
                      "(%s <= end_block_num OR end_block_num IS NULL)"
                      " AND name LIKE %s AND id >= %s "
-                     "ORDER BY identifier, end_block_num "
+                     "ORDER BY id, end_block_num "
                      "DESC NULLS FIRST LIMIT %s")
-            query_variables += (current_block, current_block, name,
+            query_variables += (head, head, name,
                                 p_min, count)
 
         rows = await db_query(self._db_cnx, query, query_variables)
-        fields = ('identifier', 'name')
+        fields = ('id', 'identifier', 'name')
         data = self._make_dict(fields, rows)
 
         # Retrieve the max index possible for paging
         query = "SELECT COUNT(*) FROM agent;"
-        query_tuple = ()
-        rows = await db_query(self._db_cnx, query, query_tuple)
-        max_index = rows[0][0]  # This is wrong!
+        rows = await db_query(self._db_cnx, query)
+        end_index = rows[0][0]
+
+        # Retrieve the largest id in the returned rows
+        num_records = len(data)
+        if num_records > 0:
+            max_index = max([row['id'] for row in data])
+        else:
+            max_index = NO_ROWS_RETURNED
 
         # Retrieve the number of records without paging
-        query = ("SELECT COUNT(DISTINCT identifier)"
-                           "FROM agent WHERE %s >= start_block_num AND "
-                           "(%s <= end_block_num OR end_block_num IS NULL)"
-                           " AND name LIKE %s ")
-        query_variables = (current_block, current_block, name)
+        query = ("SELECT COUNT(*) FROM agent "
+                 "WHERE %s >= start_block_num "
+                 "AND (%s <= end_block_num OR end_block_num IS NULL)"
+                 "AND name LIKE %s")
+        query_variables = (head, head, name)
         rows = await db_query(self._db_cnx, query, query_variables)
-        # total_count = len(rows)  # This is right
         total_count = rows[0][0]
+
+        data = self._remove_id_field(data)
 
         return self._wrap_paginated_response(
             request=request,
@@ -185,7 +188,9 @@ class RouteHandler(object):
             count=count,
             min_pos=p_min,
             max_index=max_index,
-            total_count=total_count)
+            total_count=total_count,
+            end_index=end_index,
+            head=head)
 
     async def fetch_agent(self, request):
         """Fetches a specific agent, by identifier.
@@ -193,16 +198,25 @@ class RouteHandler(object):
         Request:
             query:
                 - agent_id: the identifier of the agent to fetch
+                - head: the block_num to use as head for the purpose of
+                        retrieving the Agent
 
         Response:
             data: JSON response with Agent data
         """
 
         agent_id = request.match_info.get('agent_id', '')
+        head = request.url.query.get('head', None)
+
+        if head is None:
+            head = await get_current_block(self._db_cnx)
 
         # Create query
-        query = "select identifier, name from agent where identifier = %s;"
-        query_tuple = (agent_id,)
+        query = ("SELECT DISTINCT ON (identifier) id, identifier, name "
+                 "FROM agent WHERE %s >= start_block_num AND "
+                 "(%s <= end_block_num OR end_block_num IS NULL) "
+                 "AND identifier = %s;")
+        query_tuple = (head, head, agent_id)
 
         rows = await db_query(self._db_cnx, query, query_tuple)
 
@@ -212,13 +226,12 @@ class RouteHandler(object):
 
         elif len(rows) == 1:
             # Return the data
-            fields = ('identifier', 'name')
+            fields = ('id', 'identifier', 'name')
             data = self._make_dict(fields, rows).pop()
 
             return self._wrap_response(
                 request,
-                data=data,
-                metadata="")
+                data=data)
 
         else:
             raise errors.AgentNotFound()
@@ -233,6 +246,8 @@ class RouteHandler(object):
                 - count: Number of items to return
                 - min: Id or index to start paging (inclusive)
                 - max: Id or index to end paging (inclusive)
+                - head: the block_num to use as head for the purpose of
+                        retrieving Applications
 
         Response:
             data: JSON response with array of Applications
@@ -245,55 +260,70 @@ class RouteHandler(object):
         count = request.url.query.get('count', DEFAULT_PAGE_SIZE)
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
+        head = request.url.query.get('head', None)
 
         count, p_min, p_max = \
             RouteHandler._check_paging_params(count, p_min, p_max)
 
-        # Create query
-        query = ("SELECT application.record_identifier, application.applicant,"
-                 " type_enum.name, status_enum.name, application.terms "
-                 "FROM application, type_enum, status_enum "
-                 "WHERE application.type = type_enum.id "
-                 "AND application.status = status_enum.id")
+        if head is None:
+            head = await get_current_block(self._db_cnx)
 
-        query_tuple = ()
+        # Create query
+        query = ("SELECT a.id, a.record_identifier, a.applicant, t.name, "
+                 "s.name, a.terms FROM application a, type_enum t, "
+                 "status_enum s "
+                 "WHERE %s >= start_block_num AND "
+                 "(%s <= end_block_num OR end_block_num IS NULL)"
+                 "AND a.type = t.id AND a.status = s.id")
+
+        query_variables = (head, head)
 
         if applicant is not None:
-            query += " AND application.applicant = %s"
-            query_tuple += (applicant,)
+            query += " AND a.applicant = %s"
+            query_variables += (applicant,)
 
         if status is not None:
-            query += " AND status_enum.name = %s"
-            query_tuple += (status,)
+            query += " AND s.name = %s"
+            query_variables += (status,)
 
-        query_no_paging = query
-        query_tuple_no_paging = query_tuple
+        query_no_paging = query + (" ORDER BY a.id, end_block_num "
+                                   "DESC NULLS FIRST")
+        query_variables_no_paging = query_variables
 
         if p_max is not None:
-            query += (" AND application.id >= %s AND application.id <= %s "
-                      "ORDER BY application.id limit %s")
-            query_tuple += (p_min, p_max, count)
+            query += (" AND a.id >= %s AND a.id <= %s "
+                      "ORDER BY a.id, end_block_num DESC NULLS FIRST limit %s")
+            query_variables += (p_min, p_max, count)
         else:
-            query += (" AND application.id >= %s "
-                      "ORDER BY application.id limit %s")
-            query_tuple += (p_min, count)
+            query += (" AND a.id >= %s "
+                      "ORDER BY a.id, end_block_num DESC NULLS FIRST limit %s")
+            query_variables += (p_min, count)
 
-        rows = await db_query(self._db_cnx, query, query_tuple)
+        rows = await db_query(self._db_cnx, query, query_variables)
 
         # Return the data
-        fields = ('identifier', 'applicant', 'type', 'status', 'terms')
+        fields = ('id', 'identifier', 'applicant', 'type', 'status', 'terms')
         data = self._make_dict(fields, rows)
 
         # Retrieve the max index possible for paging
         query = "SELECT COUNT(*) FROM application;"
-        query_tuple = ()
-        rows = await db_query(self._db_cnx, query, query_tuple)
-        max_index = rows[0][0]
+        rows = await db_query(self._db_cnx, query)
+        end_index = rows[0][0]
+
+        # Retrieve the largest id in the returned rows
+        num_records = len(data)
+        if num_records > 0:
+            max_index = max([row['id'] for row in data])
+        else:
+            max_index = NO_ROWS_RETURNED
 
         # Retrieve the number of records without paging
+        # May want to construct a COUNT-based query for more efficiency
         rows = await db_query(self._db_cnx, query_no_paging,
-                              query_tuple_no_paging)
+                              query_variables_no_paging)
         total_count = len(rows)
+
+        data = self._remove_id_field(data)
 
         return self._wrap_paginated_response(
             request=request,
@@ -301,7 +331,9 @@ class RouteHandler(object):
             count=count,
             min_pos=p_min,
             max_index=max_index,
-            total_count=total_count)
+            total_count=total_count,
+            end_index=end_index,
+            head=head)
 
     async def list_records(self, request):
         """Fetches the data for the current set of Records
@@ -312,6 +344,8 @@ class RouteHandler(object):
                 - count: Number of itemst to return
                 - min: Id or index to start paging (inclusive)
                 - max: Id or index to end paging (inclusive)
+                - head: the block_num to use as head for the purpose of
+                        retrieving Records
 
         Response:
             data: JSON response with array of Records
@@ -323,30 +357,42 @@ class RouteHandler(object):
         count = request.url.query.get('count', DEFAULT_PAGE_SIZE)
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
+        head = request.url.query.get('head', None)
 
         count, p_min, p_max = \
             RouteHandler._check_paging_params(count, p_min, p_max)
+
+        if head is None:
+            head = await get_current_block(self._db_cnx)
 
         # Create query
         query = ("SELECT id, identifier, creation_time, finalized "
                  "FROM record WHERE identifier LIKE %s")
 
+        query = ("SELECT id, identifier, creation_time, finalized FROM record "
+                 "WHERE %s >= start_block_num AND "
+                 "(%s <= end_block_num OR end_block_num IS NULL) "
+                 "AND identifier LIKE %s")
+
         # Add pattern matching to search string
         identifier = "%" + identifier + "%"
-        query_tuple = (identifier,)
+        query_variables = (head, head, identifier)
 
-        query_no_paging = query
-        query_tuple_no_paging = query_tuple
+        query_no_paging = query + (" ORDER BY id, end_block_num "
+                                   "DESC NULLS FIRST")
+        query_variables_no_paging = query_variables
 
         if p_max is not None:
-            query += " AND id >= %s AND id <= %s ORDER BY id limit %s"
-            query_tuple += (p_min, p_max, count)
+            query += (" AND id >= %s AND id <= %s ORDER BY id, end_block_num "
+                      "DESC NULLS FIRST limit %s")
+            query_variables += (p_min, p_max, count)
         else:
-            query += " AND id >= %s ORDER BY id limit %s"
-            query_tuple += (p_min, count)
+            query += (" AND id >= %s ORDER BY id, end_block_num "
+                      "DESC NULLS FIRST limit %s")
+            query_variables += (p_min, count)
 
         # Get a connection and cursor
-        rows = await db_query(self._db_cnx, query, query_tuple)
+        rows = await db_query(self._db_cnx, query, query_variables)
 
         # Get the owners for each record
         owners = []
@@ -388,22 +434,30 @@ class RouteHandler(object):
         fields = ('id', 'identifier', 'creation_time', 'final')
         main_data = self._make_dict(fields, rows)
 
-        # Insert the owner and custodian data, remove id field
+        # Insert the owner and custodian data
         for i, d in enumerate(main_data):
             d['owners'] = owners[i]
             d['custodians'] = custodians[i]
-            d.pop('id', None)
 
         # Retrieve the max index possible for paging
         query = "SELECT COUNT(*) FROM record;"
         query_tuple = ()
         rows = await db_query(self._db_cnx, query, query_tuple)
-        max_index = rows[0][0]
+        end_index = rows[0][0]
+
+        # Retrieve the largest id in the returned rows
+        num_records = len(main_data)
+        if num_records > 0:
+            max_index = max([row['id'] for row in main_data])
+        else:
+            max_index = NO_ROWS_RETURNED
 
         # Retrieve the number of records without paging
         rows = await db_query(self._db_cnx, query_no_paging,
-                              query_tuple_no_paging)
+                              query_variables_no_paging)
         total_count = len(rows)
+
+        main_data = self._remove_id_field(main_data)
 
         return self._wrap_paginated_response(
             request=request,
@@ -411,7 +465,9 @@ class RouteHandler(object):
             count=count,
             min_pos=p_min,
             max_index=max_index,
-            total_count=total_count)
+            total_count=total_count,
+            end_index=end_index,
+            head=head)
 
     async def fetch_record(self, request):
         """Fetches a specific record, by record_id.
@@ -419,6 +475,8 @@ class RouteHandler(object):
         Request:
             query:
                 - record_id: the identifier of the agent to fetch.
+                - head: the block_num to use as head for the purpose of
+                        retrieving Records
 
         Response:
             data: JSON response with the record data.
@@ -426,23 +484,27 @@ class RouteHandler(object):
 
         # Query parameters
         record_id = request.match_info.get('record_id', '')
+        head = request.url.query.get('head', None)
 
-        # Create query
-        query = ("SELECT id, identifier, creation_time, finalized "
-                 "FROM record WHERE identifier = %s;")
+        if head is None:
+            head = await get_current_block(self._db_cnx)
 
-        query_tuple = (record_id,)
+        query = ("SELECT DISTINCT ON (identifier) id, identifier, "
+                 "creation_time, finalized FROM record "
+                 "WHERE  %s >= start_block_num AND "
+                 "(%s <= end_block_num OR end_block_num IS NULL) "
+                 "AND identifier = %s;")
 
-        rows = await db_query(self._db_cnx, query, query_tuple)
+        query_variables = (head, head, record_id)
+
+        rows = await db_query(self._db_cnx, query, query_variables)
 
         # Only one record should be returned
         if len(rows) > 1:
-
             LOGGER.exception("Too many rows returned in query.")
             raise errors.UnknownDatabaseError
 
         elif len(rows) == 1:
-
             # Return the data
             fields = ('id', 'identifier', 'creation_time', 'final')
             data = self._make_dict(fields, rows)
@@ -457,8 +519,8 @@ class RouteHandler(object):
                      "WHERE record_agent.record_id = %s "
                      "AND type_enum.name='OWNER';")
 
-            query_tuple = (record_id,)
-            owner_rows = await db_query(self._db_cnx, query, query_tuple)
+            query_variables = (record_id,)
+            owner_rows = await db_query(self._db_cnx, query, query_variables)
 
             fields = ('agent_identifier', 'start_time')
             owner_data = self._make_dict(fields, owner_rows)
@@ -472,9 +534,9 @@ class RouteHandler(object):
                      "WHERE record_agent.record_id = %s "
                      "AND type_enum.name='CUSTODIAN';")
 
-            query_tuple = (record_id,)
+            query_variables = (record_id,)
             custodian_rows = await db_query(self._db_cnx, query,
-                                            query_tuple)
+                                            query_variables)
 
             fields = ('agent_identifier', 'start_time')
             custodian_data = self._make_dict(fields, custodian_rows)
@@ -491,8 +553,7 @@ class RouteHandler(object):
 
             return self._wrap_response(
                 request,
-                data=return_data,
-                metadata="")
+                data=return_data)
 
         else:
             raise errors.RecordNotFound()
@@ -514,9 +575,12 @@ class RouteHandler(object):
                 - max: Id or index to end paging (inclusive)
                 - record_id (required): the record identifier, serial number
                     of natural identifier of the item being tracked.
+                - head: the block_num to use as head for the purpose of
+                        retrieving Records
 
         Response:
             data: JSON response with Record's data
+            paging: paging info and nav (e.g. next link )
         """
 
         # Get query parameters
@@ -526,56 +590,71 @@ class RouteHandler(object):
         count = request.url.query.get('count', DEFAULT_PAGE_SIZE)
         p_min = request.url.query.get('min', 0)
         p_max = request.url.query.get('max', None)
+        head = request.url.query.get('head', None)
 
         count, p_min, p_max = \
             RouteHandler._check_paging_params(count, p_min, p_max)
 
-        # Create query
-        query = ("SELECT record.identifier, application.applicant, "
-                 "type_enum.name, status_enum.name, application.terms "
-                 "FROM record, application, type_enum, status_enum "
-                 "WHERE record.identifier = application.record_identifier "
-                 "AND application.type = type_enum.id "
-                 "AND application.status=status_enum.id "
-                 "AND record.identifier = %s")
+        if head is None:
+            head = await get_current_block(self._db_cnx)
 
-        query_tuple = (record_id,)
+        # Create query
+        query = ("SELECT a.id, r.identifier, a.applicant, "
+                 "t.name, s.name, a.terms "
+                 "FROM record r, application a, type_enum t, status_enum s "
+                 "WHERE %s >= a.start_block_num AND "
+                 "(%s <= a.end_block_num OR a.end_block_num IS NULL) "
+                 "AND r.identifier = a.record_identifier "
+                 "AND a.type = t.id AND a.status = s.id AND r.identifier = %s")
+
+        query_variables = (head, head, record_id)
 
         if applicant is not None:
             query += " AND application.applicant = %s"
-            query_tuple += (applicant,)
+            query_variables += (applicant,)
         if status is not None:
             query += " AND status_enum.name = %s"
-            query_tuple += (status,)
+            query_variables += (status,)
 
-        query_no_paging = query
-        query_tuple_no_paging = query_tuple
+        query_no_paging = query + (" ORDER BY a.id, a.end_block_num "
+                                   "DESC NULLS FIRST")
+        query_variables_no_paging = query_variables
 
         if p_max is not None:
-            query += (" AND application.id >= %s "
-                      "AND application.id <= %s "
-                      "ORDER BY application.id limit %s")
-            query_tuple += (p_min, p_max, count)
+            query += (" AND a.id >= %s "
+                      "AND a.id <= %s "
+                      "ORDER BY a.id, a.end_block_num "
+                      "DESC NULLS FIRST limit %s")
+            query_variables += (p_min, p_max, count)
         else:
-            query += (" AND application.id >= %s "
-                      "ORDER BY application.id limit %s")
-            query_tuple += (p_min, count)
+            query += (" AND a.id >= %s "
+                      "ORDER BY a.id, a.end_block_num "
+                      "DESC NULLS FIRST limit %s")
+            query_variables += (p_min, count)
 
-        rows = await db_query(self._db_cnx, query, query_tuple)
+        rows = await db_query(self._db_cnx, query, query_variables)
 
-        fields = ('identifier', 'applicant', 'type', 'status', 'terms')
+        fields = ('id', 'identifier', 'applicant', 'type', 'status', 'terms')
         data = self._make_dict(fields, rows)
 
         # Retrieve the max index possible for paging
         query = "SELECT COUNT(*) FROM application;"
-        query_tuple = ()
-        rows = await db_query(self._db_cnx, query, query_tuple)
-        max_index = rows[0][0]
+        rows = await db_query(self._db_cnx, query)
+        end_index = rows[0][0]
+
+        # Retrieve the largest id in the returned rows
+        num_records = len(data)
+        if num_records > 0:
+            max_index = max([row['id'] for row in data])
+        else:
+            max_index = NO_ROWS_RETURNED
 
         # Retrieve the number of records without paging
         rows = await db_query(self._db_cnx, query_no_paging,
-                              query_tuple_no_paging)
+                              query_variables_no_paging)
         total_count = len(rows)
+
+        data = self._remove_id_field(data)
 
         return self._wrap_paginated_response(
             request=request,
@@ -583,7 +662,9 @@ class RouteHandler(object):
             count=count,
             min_pos=p_min,
             max_index=max_index,
-            total_count=total_count)
+            total_count=total_count,
+            end_index=end_index,
+            head=head)
 
     @staticmethod
     def _make_dict(fields, rows):
@@ -678,21 +759,24 @@ class RouteHandler(object):
                 sort_keys=True))
 
     @classmethod
-    def _wrap_paginated_response(cls, request, data, count,
-                                 min_pos, max_index, total_count):
+    def _wrap_paginated_response(cls, request, data, count, min_pos, max_index,
+                                 total_count, end_index, head):
+        """Builds the metadata for a pagingated response and wraps everying in
+        a JSON encoded web.Response
+        """
         paging = {'total_count': total_count, 'start_index': min_pos}
 
         # Builds paging urls specific to this response
-        def build_pg_url(min_pos=None, max_pos=None):
+        def build_pg_url(min_pos=None, max_pos=None, head=None):
             return cls._build_url(request, count=count,
-                                  min=min_pos, max=max_pos)
+                                  min=min_pos, max=max_pos, head=head)
 
         # Build paging urls
         start = min_pos
-        if start + count < max_index and total_count > len(data):
-            paging['next'] = build_pg_url(start + count)
+        if max_index > 0 and max_index < end_index:
+            paging['next'] = build_pg_url(start + count, head=head)
         if start - count >= 0:
-            paging['previous'] = build_pg_url(start - count)
+            paging['previous'] = build_pg_url(start - count, head=head)
 
         # paging = paging_info
         metadata = {'paging': paging}
@@ -770,3 +854,9 @@ class RouteHandler(object):
             return header
 
         return request.headers.get('X-Forwarded-{}'.format(key.title()), '')
+
+    @staticmethod
+    def _remove_id_field(data):
+        for row in data:
+            row.pop('id', None)
+        return data
