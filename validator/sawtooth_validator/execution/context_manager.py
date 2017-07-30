@@ -116,6 +116,12 @@ class StateContext(object):
             value = self._state[address].result()
         return value
 
+    def _get_if_deleted(self, address):
+        add = None
+        if self._contains_and_deleted(address=address):
+            add = address
+        return add
+
     def _get_if_not_set(self, address):
         value = None
         if self._contains_and_not_set(address):
@@ -167,6 +173,23 @@ class StateContext(object):
             results = []
             for add in addresses:
                 results.append(self._get_if_set(add))
+            return results
+
+    def get_if_deleted(self, addresses):
+        """Returns a list of addresses that have been deleted, or None if it
+        hasn't been deleted.
+
+        Args:
+            addresses (list of str): The addresses to check if deleted.
+
+        Returns:
+            (list of str): The addresses, if deleted, or None.
+        """
+
+        with self._lock:
+            results = []
+            for add in addresses:
+                results.append(self._get_if_deleted(add))
             return results
 
     def get_if_not_set(self, addresses):
@@ -479,7 +502,15 @@ class ContextManager(object):
             if not current_context.is_read_only():
                 current_context.make_read_only()
 
-            # First, check for addresses that have been set in the context,
+            # First, check for addresses that have been deleted.
+            deleted_addresses = current_context.get_if_deleted(reads)
+            for address in deleted_addresses:
+                if address is not None:
+                    address_values.append((address, None))
+
+            reads = list(set(reads) - set(deleted_addresses))
+
+            # Second, check for addresses that have been set in the context,
             # and remove those addresses from being asked about again. Here
             # any value of None means the address hasn't been set.
 

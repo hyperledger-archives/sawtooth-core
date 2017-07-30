@@ -1134,3 +1134,256 @@ class TestContextManager(unittest.TestCase):
             self.fail("squash of two contexts with a duplicate address")
         except Exception:
             pass
+
+    def test_simple_read_write_delete(self):
+        """Tests that after sets and deletes, subsequent contexts have the
+        correct value in the context for an address.
+
+                       i:a
+                       o:b
+                   +-->ctx_2a+
+                   |   s:b:2 |
+                   |         |
+              i:a  |         |    i:b        i:a,b,c
+              o:a  |         |    o:b,c      o:c
+        sh0+->ctx_1|         <--->ctx_3+---->ctx_4+------>sh1
+              s:a:1|         |    d:b,c      s:c:4
+                   |         |
+                   |   i:a   |
+                   |   o:c   |
+                   +-->ctx_2b+
+                       s:c:2
+
+        Notes:
+            1. From the diagram:
+                - ctx_1, with input 'a' and output 'a' will have 'a' set to
+                  b'1'.
+                - ctx_2a will have 'b' set to b'2'
+                - ctx_2b will have 'c' set to b'2'
+                - ctx_3 will delete both 'b' and 'c'
+                - ctx_4 will set 'c' to b'4'
+                - ctx_4 will be squashed along with it's base contexts into
+                  a new state hash.
+            2. Assertions
+                - Assert for every context that it has the correct state
+                  before the set or delete.
+        """
+
+        sh0 = self.context_manager.get_first_root()
+
+        ctx_1 = self.context_manager.create_context(
+            state_hash=sh0,
+            base_contexts=[],
+            inputs=[self._create_address('a')],
+            outputs=[self._create_address('a')])
+
+        self.assertEqual(self.context_manager.get(
+            ctx_1, [self._create_address('a')]),
+            [(self._create_address('a'), None)],
+            "ctx_1 has no value for 'a'")
+
+        self.context_manager.set(ctx_1, [{self._create_address('a'): b'1'}])
+
+        ctx_2a = self.context_manager.create_context(
+            state_hash=sh0,
+            base_contexts=[ctx_1],
+            inputs=[self._create_address('a')],
+            outputs=[self._create_address('b')])
+
+        self.assertEqual(self.context_manager.get(
+            ctx_2a, [self._create_address('a')]),
+            [(self._create_address('a'), b'1')],
+            "ctx_2a has the value b'1' for 'a'")
+
+        self.context_manager.set(ctx_2a, [{self._create_address('b'): b'2'}])
+
+        ctx_2b = self.context_manager.create_context(
+            state_hash=sh0,
+            base_contexts=[ctx_1],
+            inputs=[self._create_address('a')],
+            outputs=[self._create_address('c')])
+
+        self.assertEqual(self.context_manager.get(
+            ctx_2b, [self._create_address('a')]),
+            [(self._create_address('a'), b'1')],
+            "ctx_2b has the value b'1' for 'a'")
+
+        self.context_manager.set(ctx_2b, [{self._create_address('c'): b'2'}])
+
+        ctx_3 = self.context_manager.create_context(
+            state_hash=sh0,
+            base_contexts=[ctx_2b, ctx_2a],
+            inputs=[self._create_address('b')],
+            outputs=[self._create_address('b'), self._create_address('c')])
+
+        self.assertEqual(self.context_manager.get(
+            ctx_3, [self._create_address('b')]),
+            [(self._create_address('b'), b'2')],
+            "ctx_3 has the value b'2' for 'b'")
+
+        self.context_manager.delete(ctx_3, [self._create_address('b'),
+                                            self._create_address('c')])
+
+        ctx_4 = self.context_manager.create_context(
+            state_hash=sh0,
+            base_contexts=[ctx_3],
+            inputs=[self._create_address('a'),
+                    self._create_address('b'),
+                    self._create_address('c')],
+            outputs=[self._create_address('c')])
+
+        self.assertEqual(self.context_manager.get(
+            ctx_4, [self._create_address('a'),
+                    self._create_address('b'),
+                    self._create_address('c')]),
+            [(self._create_address('a'), b'1'),
+             (self._create_address('b'), None),
+             (self._create_address('c'), None)],
+            "ctx_4 has the correct values in state for 'a','b', 'c'")
+
+        self.context_manager.set(ctx_4, [{self._create_address('c'): b'4'}])
+
+        squash = self.context_manager.get_squash_handler()
+
+        sh1 = squash(
+            state_root=sh0,
+            context_ids=[ctx_4],
+            persist=True,
+            clean_up=True)
+
+        tree = MerkleDatabase(self.database_results)
+
+        sh1_assertion = tree.update({self._create_address('a'): b'1',
+                                     self._create_address('c'): b'4' })
+
+        self.assertEqual(sh1, sh1_assertion,
+                         "The context manager must "
+                         "calculate the correct state hash")
+
+    def test_complex_read_write_delete(self):
+        """Tests complex reads, writes, and deletes from contexts.
+
+                  i:a
+                  o:b                           i:a
+               +->ctx_1a+                       o:d
+               |  s:b   |                    +->ctx_3a+
+               |        |                    |  d:d   |
+               |  i:a   |             i:a    |        |    i:""
+               |  o:c   |             o:""   |        |    o:""
+        sh0+----->ctx_1b<--->sh1+---->ctx_2+-+        <--->ctx_4+->sh2
+               |  s:c   |             d:c    |  i:c   |
+               |  i:a   |             s:e    |  o:b   |
+               |  o:d   |                    +->ctx_3b+
+               +->ctx_1c+                       d:b
+                  s:d
+
+        Notes:
+            1. Aside from the initial state hash, there are two squashed
+               state hashes. There are sets in ctx_1* and then after a squash,
+               deletes of the same addresses.
+            2. Assertions are made for ctx_3b that 'c' is not in state, for
+               ctx_4 that 'b', 'c', and 'd' are not in state.
+        """
+
+        sh0 = self.first_state_hash
+        squash = self.context_manager.get_squash_handler()
+
+        ctx_1a = self.context_manager.create_context(
+            state_hash=sh0,
+            base_contexts=[],
+            inputs=[self._create_address('a')],
+            outputs=[self._create_address('b')])
+
+        ctx_1b = self.context_manager.create_context(
+            state_hash=sh0,
+            base_contexts=[],
+            inputs=[self._create_address('a')],
+            outputs=[self._create_address('c')])
+
+        ctx_1c = self.context_manager.create_context(
+            state_hash=sh0,
+            base_contexts=[],
+            inputs=[self._create_address('a')],
+            outputs=[self._create_address('d')])
+
+        self.context_manager.set(ctx_1a, [{self._create_address('b'): b'1'}])
+
+        self.context_manager.set(ctx_1b, [{self._create_address('c'): b'2'}])
+
+        self.context_manager.set(ctx_1c, [{self._create_address('d'): b'3'}])
+
+        sh1 = squash(state_root=sh0,
+                     context_ids=[ctx_1c, ctx_1b, ctx_1a],
+                     persist=True,
+                     clean_up=True)
+
+        ctx_2 = self.context_manager.create_context(
+            state_hash=sh1,
+            base_contexts=[],
+            inputs=[self._create_address('a')],
+            outputs=[""])
+
+        self.context_manager.delete(ctx_2, [self._create_address('c')])
+
+        self.context_manager.set(ctx_2, [{self._create_address('e'): b'2'}])
+
+        ctx_3a = self.context_manager.create_context(
+            state_hash=sh1,
+            base_contexts=[ctx_2],
+            inputs=[self._create_address('a')],
+            outputs=[self._create_address('d')])
+
+        self.context_manager.delete(ctx_3a, [self._create_address('d')])
+
+        ctx_3b = self.context_manager.create_context(
+            state_hash=sh1,
+            base_contexts=[ctx_2],
+            inputs=[self._create_address('c')],
+            outputs=[self._create_address('b')])
+
+        self.assertEqual(
+            self.context_manager.get(ctx_3b, [self._create_address('c')]),
+            [(self._create_address('c'), None)],
+            "Address 'c' has already been deleted from state.")
+
+        self.context_manager.delete(ctx_3b, [self._create_address('b')])
+
+        ctx_4 = self.context_manager.create_context(
+            state_hash=sh1,
+            base_contexts=[ctx_3b, ctx_3a],
+            inputs=[""],
+            outputs=[""])
+
+        self.assertEqual(
+            self.context_manager.get(ctx_4,[self._create_address('b'),
+                                            self._create_address('c'),
+                                            self._create_address('d')]),
+            [(self._create_address('b'), None),
+             (self._create_address('c'), None),
+             (self._create_address('d'), None)],
+            "Addresses 'b', 'c', and 'd' have been deleted from state.")
+
+        sh2 = squash(
+            state_root=sh1,
+            context_ids=[ctx_4],
+            persist=True,
+            clean_up=True)
+
+        tree = MerkleDatabase(self.database_results)
+
+        sh1_assertion = tree.update({self._create_address('b'): b'1',
+                                     self._create_address('c'): b'2',
+                                     self._create_address('d'): b'3'},
+                                    virtual=False)
+
+        self.assertEqual(sh1, sh1_assertion,
+                         "The middle state hash must be correct.")
+
+        tree.set_merkle_root(sh1)
+
+        sh2_assertion = tree.update(
+            {},
+            delete_items={self._create_address('b'): b'1',
+                          self._create_address('c'): b'2',
+                          self._create_address('d'): b'3'},
+            virtual=False)
