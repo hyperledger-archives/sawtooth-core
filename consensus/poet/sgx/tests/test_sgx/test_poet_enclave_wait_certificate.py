@@ -20,6 +20,7 @@ import shutil
 
 from unittest import TestCase
 from unittest import mock
+from unittest import skip
 
 from test_sgx.utils import random_name
 from test_sgx.utils import create_random_public_key_hash
@@ -76,6 +77,7 @@ class TestPoetEnclaveWaitCertificate(TestCase):
         wait_timer = self.get_wait_timer(addr)
         return poet.create_wait_certificate(wait_timer, block_hash)
 
+    @skip("Disabled. Out of sync with simulator and Timeout fails to fail.")
     def test_create(self):
         addr = random_name(34)
         poet.create_signup_info(
