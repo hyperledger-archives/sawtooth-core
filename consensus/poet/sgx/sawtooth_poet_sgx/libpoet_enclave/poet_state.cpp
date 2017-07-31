@@ -42,18 +42,14 @@ PoetState::PoetState(
     sgx_status_t ret = SGX_SUCCESS;
     sgx_sealed_data_t zeroData = { 0 };
 
+    // If the input state is empty create an empty state object
+    // There is no initial value for a monotonic counter id so leave it alone
+    // Otherwise unseal the state and check its validity
     if (!memcmp(&zeroData, inSealedState, sizeof(sgx_sealed_data_t))) {
         this->stateData.resize(sizeof(State));
         ZeroV(this->stateData);
         this->state = reinterpret_cast<State *>(&this->stateData[0]);
         this->state->stateVersion = this->VERSION;
-
-        ret = 
-            sgx_create_monotonic_counter(
-                &this->state->counterId,
-                &this->state->counterValue);
-        sp::ThrowSgxError(ret, "Failed to create monotonic counter.");
-
         this->state->currentWaitTimerSignatureIsValid = false;
         this->state->privateKeyIsValid = false;
         this->state->publicKeyIsValid = false;
@@ -74,40 +70,19 @@ PoetState::PoetState(
         sp::ThrowSgxError(ret, "Failed to unseal state data.");
         this->state = reinterpret_cast<State *>(&this->stateData[0]);
 
+        sp::ThrowIf<sp::ValueError>(
+            this->VERSION != this->state->stateVersion,
+            "Poet State version mismatch.");
+
         // check if we have a valid MC
         uint32_t value = 0;
         ret =
             sgx_read_monotonic_counter(
                 &this->state->counterId,
                 &value);
-        if (SGX_ERROR_MC_NOT_FOUND == ret) {
-            // This wait timer is no more, create another...
-            ZeroV(this->stateData);
-            this->state->stateVersion = this->VERSION;
-
-            ret =
-                sgx_create_monotonic_counter(
-                    &this->state->counterId,
-                    &this->state->counterValue);
-            sp::ThrowSgxError(ret, "Failed to create monotonic counter.");
-
-            this->state->currentWaitTimerSignatureIsValid = false;
-        }
+        sp::ThrowSgxError(
+            ret, "Sealed state has unreadable monotonic counter");
     }
-
-    // Now we have PoetState Object, either newly created or unsealed.
-    // Validate that it is valid
-
-    sp::ThrowIf<sp::ValueError>(
-        this->VERSION != this->state->stateVersion,
-        "Poet State version mismatch.");
-
-    uint32_t value = 0;
-    ret = sgx_read_monotonic_counter(&this->state->counterId, &value);
-    sp::ThrowSgxError(ret, "Failed to read monotonic counter.");
-    sp::ThrowIf<sp::ValueError>(
-        value != this->state->counterValue,
-        "Poet State Counter mismatch.");
 } // PoetState::PoetState
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -173,21 +148,26 @@ void PoetState::Reset()
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 uint32_t PoetState::IncrementCounter()
 {
-    uint32_t value;
+    uint32_t value = 0;
 
     sgx_status_t ret =
         sgx_increment_monotonic_counter(
             &this->state->counterId,
             &value);
     sp::ThrowSgxError(ret, "Failed to increment monotonic counter.");
-    this->state->counterValue = value;
     return value;
 } // PoetState::IncrementCounter
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 uint32_t PoetState::GetSequenceId()
 {
-    return this->state->counterValue;
+    uint32_t value = 0;
+    sgx_status_t ret = 
+        sgx_read_monotonic_counter(
+            &this->state->counterId,
+            &value);
+    sp::ThrowSgxError(ret, "Failed to read monotonic counter.");
+    return value;
 } // PoetState::GetSequenceId
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -259,6 +239,23 @@ void PoetState::SetKeyPair(
     this->SetPrivateKey(inPrivateKey);
     this->SetPublicKey(inPublicKey);
 } // PoetState::SetKeyPair
+
+void PoetState::SetCounterId(sgx_mc_uuid_t* inCounterId)
+{
+    uint32_t value = 0;
+    sp::ThrowIfNull(inCounterId, "Counter ID is NULL");
+
+    sgx_status_t ret =
+        sgx_read_monotonic_counter(
+            inCounterId,
+            &value);
+    sp::ThrowSgxError(ret, "Failed to read monotonic counter.");
+
+    memcpy(
+        &this->state->counterId,
+        inCounterId,
+        sizeof(this->state->counterId));
+} // PoetState::SetCounterId
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 const sgx_ec256_private_t* PoetState::GetPrivateKey()

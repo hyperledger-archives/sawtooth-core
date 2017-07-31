@@ -56,6 +56,7 @@ namespace sp = sawtooth::poet;
 typedef struct {
     sgx_ec256_private_t privateKey;
     sgx_ec256_public_t publicKey;
+    sgx_mc_uuid_t counterId;
 } ValidatorSignupData;
 
 static const std::string    NULL_IDENTIFIER = "0000000000000000";
@@ -392,6 +393,14 @@ poet_err_t ecall_CreateSignupData(
             ret,
             "Failed to create PoET public/private key pair");
 
+        // Create the monotonic counter bound to the keypair
+        uint32_t initialCounterValue = 0;
+        ret =
+            sgx_create_monotonic_counter(
+                &validatorSignupData.counterId,
+                &initialCounterValue);
+        sp::ThrowSgxError(ret, "Failed to create monotonic counter.");
+
         // Create the report data we want embedded in the enclave report.
         sgx_report_data_t reportData = { 0 };
         CreateSignupReportData(
@@ -431,10 +440,14 @@ poet_err_t ecall_CreateSignupData(
             &validatorSignupData.publicKey,
             sizeof(*outPoetPublicKey));
 
-        // Set the public/private key pair for the validator and seal
+        // Set the key pair and MCID for the validator
+        // Invalidate any active WaitTimer and seal
         state.SetKeyPair(
             &validatorSignupData.privateKey,
             &validatorSignupData.publicKey);
+        state.SetCounterId(
+            &validatorSignupData.counterId);
+        state.ClearCurrentWaitTimer();
         state.Seal(inOutSealedState, inSealedStateLength);
     } catch (sp::PoetError& e) {
         Log(
@@ -494,10 +507,14 @@ poet_err_t ecall_UnsealSignupData(
             &validatorSignupData.publicKey,
             sizeof(*outPoetPublicKey));
 
-        // Set the public/private key pair for the validator and seal
+        // Set the key pair and MCID for the validator
+        // Invalidate any active WaitTimer and seal
         state.SetKeyPair(
             &validatorSignupData.privateKey,
             &validatorSignupData.publicKey);
+        state.SetCounterId(
+            &validatorSignupData.counterId);
+        state.ClearCurrentWaitTimer();
         state.Seal(inOutSealedState, inSealedStateLength);
     } catch (sp::PoetError& e) {
         Log(
