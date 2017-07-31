@@ -52,6 +52,9 @@ public:
         const sgx_ec256_signature_t* inWaitTimerSignature
         );
     void ClearCurrentWaitTimer();
+    void SetCounterId(
+        sgx_mc_uuid_t* counterId
+        );
 
     // Methods for keeping track of the public/private key pair (i.e.,
     // signup data)
@@ -83,10 +86,9 @@ private:
     typedef struct _State
     {
         uint32_t stateVersion;
-        // The SGX monotonic counter ID being used by the enclave.
+        // The SGX monotonic counter ID bound to the active signup data.
+        // Used to enforce a single active wait timer.
         sgx_mc_uuid_t counterId;
-        // Current monotonic counter value -- used to prevent replay attacks.
-        uint32_t counterValue;
         // Indicates if the currentWaitTimerSignature is valid or not.
         bool currentWaitTimerSignatureIsValid;
         // This is the signature of the currently-valid wait timer.  Only valid
