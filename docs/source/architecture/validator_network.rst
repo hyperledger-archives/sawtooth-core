@@ -196,10 +196,11 @@ Network Layer Security
 
 0MQ includes a TLS [#f3]_ like certificate exchange mechanism and protocol
 encryption capability which is transparent to the socket implementation.
-Support for socket level encryption is currently implemented with hardcoded
-server keys, to avoid needing separate identities for each validator's server
-socket. This is appropriate for a public network. For each client, ephemeral
-certificates are generated on connect.
+Support for socket level encryption is currently implemented with
+server keys being read from the validator.toml config file. For each client,
+ephemeral certificates are generated on connect. If the server key pair is not
+configured, network communications between validators will not be authenticated
+or encrypted.
 
 .. rubric:: Footnotes
 
