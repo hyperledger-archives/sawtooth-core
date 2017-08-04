@@ -106,12 +106,8 @@ namespace sawtooth {
             if (this->enclaveId) {
                 // no power or busy retries here....
                 // we don't want to reinitialize just to shutdown.
-                sgx_status_t ret =
-                    ecall_Terminate(
-                        this->enclaveId,
-                        this->poetState.Data(),
-                        this->poetState.Length());
 
+                // TODO: Remove poetState reference
                 this->poetState.Clear();
                 sgx_destroy_enclave(this->enclaveId);
                 this->enclaveId = 0;
@@ -439,6 +435,32 @@ namespace sawtooth {
                 "Failed to unseal signup data");
             this->ThrowPoetError(poetRet);
         } // Enclave::UnsealSignupData
+
+        // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        void Enclave::ReleaseSignupData(
+            const buffer_t& inSealedSignupData
+            )
+        {
+            // Call down into the enclave to release the signup data
+            poet_err_t poetRet = POET_SUCCESS;
+            sgx_status_t ret =
+                this->CallSgx(
+                    [this,
+                     &poetRet,
+                     &inSealedSignupData] () {
+                    sgx_status_t ret =
+                        ecall_ReleaseSignupData(
+                            this->enclaveId,
+                            &poetRet,
+                            &inSealedSignupData[0],
+                            inSealedSignupData.size());
+                    return ConvertPoetErrorStatus(ret, poetRet);
+                });
+            ThrowSgxError(
+                ret,
+                "Failed to release signup data");
+            this->ThrowPoetError(poetRet);
+        } // Enclave::ReleaseSignupData
 
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         void Enclave::VerifySignupInfo(
