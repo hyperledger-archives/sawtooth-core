@@ -65,6 +65,10 @@ enclave {
             size_t inSealedSignupDataSize,
             [out] sgx_ec256_public_t* outPoetPublicKey
             );
+        public poet_err_t ecall_ReleaseSignupData(
+            [in, size=inSealedSignupDataSize] const uint8_t* inSealedSignupData,
+            size_t inSealedSignupDataSize
+            );
         public poet_err_t ecall_VerifySignupInfo(
             [in] const sgx_target_info_t*   inTargetInfo,
             [in, string] const char*        inOriginatorPublicKeyHash,
