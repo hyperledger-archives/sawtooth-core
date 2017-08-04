@@ -129,7 +129,7 @@ message Message {
     // content.
     MessageType message_type = 1;
 
-    // The identifier used to coorelate response messages to their related
+    // The identifier used to correlate response messages to their related
     // request messages.  correlation_id should be set to a random string
     // for messages which are not responses to previously sent messages.  For
     // response messages, correlation_id should be set to the same string as
