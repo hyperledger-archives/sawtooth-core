@@ -98,7 +98,7 @@ message Message {
         CLIENT_BATCH_STATUS_RESPONSE = 121;
         // Further messages from the stats client through the web api
 
-        // Temp message types until a discusion can be had about gossip msg
+        // Temp message types until a discussion can be had about gossip msg
         GOSSIP_MESSAGE = 200;
         GOSSIP_REGISTER = 201;
         GOSSIP_UNREGISTER = 202;
