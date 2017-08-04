@@ -37,7 +37,7 @@ def create_console_handler(verbose_level):
         "%(log_color)s[%(asctime)s.%(msecs)03d "
         "%(levelname)-8s %(module)s]%(reset)s "
         "%(white)s%(message)s",
-        datefmt="%H:%M:%S",
+        datefmt="%Y-%m-%d %H:%M:%S",
         reset=True,
         log_colors={
             'DEBUG': 'cyan',
