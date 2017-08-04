@@ -523,6 +523,39 @@ poet_err_t Poet_UnsealSignupData(
 } // Poet_UnsealSignupData
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+poet_err_t Poet_ReleaseSignupData(
+    const char* inSealedSignupData
+    )
+{
+    poet_err_t result = POET_SUCCESS;
+
+    try {
+        // validate params
+        sp::ThrowIfNull(
+            inSealedSignupData,
+            "NULL inSealedSignupData");
+
+        // Decode the sealed data before sending it down
+        std::vector<uint8_t> sealedSignupData;
+        sp::DecodeB64(sealedSignupData, inSealedSignupData);
+
+        // Have the enclave release the signup data
+        g_Enclave.ReleaseSignupData(sealedSignupData);
+    } catch (sp::PoetError& e) {
+        Poet_SetLastError(e.what());
+        result = e.error_code();
+    } catch (std::exception& e) {
+        Poet_SetLastError(e.what());
+        result = POET_ERR_UNKNOWN;
+    } catch (...) {
+        Poet_SetLastError("Unexpected exception");
+        result = POET_ERR_UNKNOWN;
+    }
+
+    return result;
+} // Poet_ReleaseSignupData
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t Poet_VerifySignupInfo(
     const char* inOriginatorPublicKeyHash,
     const char* inPoetPublicKey,
