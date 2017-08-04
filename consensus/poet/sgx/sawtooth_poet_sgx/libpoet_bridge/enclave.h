@@ -84,6 +84,9 @@ namespace sawtooth {
                 const buffer_t& inSealedSignupData,
                 sgx_ec256_public_t* outPoetPublicKey
                 );
+            void ReleaseSignupData(
+                const buffer_t& inSealedSignupData
+                );
             void VerifySignupInfo(
                 const std::string& inOriginatorPublicKeyHash,
                 const sgx_ec256_public_t* inPoetPublicKey,
