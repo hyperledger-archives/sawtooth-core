@@ -24,16 +24,7 @@ enclave {
 
     trusted {
         public poet_err_t ecall_Initialize(
-            [out] sgx_ra_context_t *p_context,
-            [in, out, size=inSealedStateLength] uint8_t* sealedState,
-            size_t inSealedStateLength
-            );
-        public void ecall_Terminate(
-            [in, out, size=inSealedStateLength] uint8_t* sealedState,
-            size_t inSealedStateLength
-        );
-        public poet_err_t ecall_GetSealedStateLength(
-            [out] size_t* outSealedStateLength
+            [out] sgx_ra_context_t *p_context
             );
 
         public poet_err_t ecall_CreateErsatzEnclaveReport(
@@ -48,8 +39,6 @@ enclave {
             [out] size_t* pSealedSignupDataSize
             );
         public poet_err_t ecall_CreateSignupData(
-            [in, out, size=inSealedStateLength] uint8_t* inOutSealedState,
-            size_t inSealedStateLength,
             [in] const sgx_target_info_t* inTargetInfo,
             [in, string] const char* inOriginatorPublicKeyHash,
             [out] sgx_ec256_public_t* outPoetPublicKey,
@@ -59,8 +48,6 @@ enclave {
             [out] sgx_ps_sec_prop_desc_t* outPseManifest
             );
         public poet_err_t ecall_UnsealSignupData(
-            [in, out, size=inSealedStateLength] uint8_t* inOutSealedState,
-            size_t inSealedStateLength,
             [in, size=inSealedSignupDataSize] const uint8_t* inSealedSignupData,
             size_t inSealedSignupDataSize,
             [out] sgx_ec256_public_t* outPoetPublicKey
@@ -77,8 +64,8 @@ enclave {
             [out] sgx_report_t*             outEnclaveReport
             );
         public poet_err_t ecall_CreateWaitTimer(
-            [in, out, size=inSealedStateLength] uint8_t* inOutSealedState,
-            size_t inSealedStateLength,
+            [in, size=inSealedSignupDataSize] const uint8_t* inSealedSignupData,
+            size_t inSealedSignupDataSize,
             [in, string] const char* inValidatorAddress,
             [in, string] const char* inPreviousCertificateId,
             double inRequestTime,
@@ -89,8 +76,8 @@ enclave {
             [out] sgx_ec256_signature_t* outTimerSignature
             );
         public poet_err_t ecall_CreateWaitCertificate( 
-            [in, out, size=inSealedStateLength] uint8_t* inOutSealedState,
-            size_t inSealedStateLength,
+            [in, size=inSealedSignupDataSize] const uint8_t* inSealedSignupData,
+            size_t inSealedSignupDataSize,
             [in, string] const char* inSerializedWaitTimer,
             [in] const sgx_ec256_signature_t* inWaitTimerSignature,
             [in, string] const char* inBlockHash,
@@ -99,8 +86,6 @@ enclave {
             [out] sgx_ec256_signature_t* outWaitCertificateSignature
             );
         public poet_err_t ecall_VerifyWaitCertificate(
-            [in, out, size=inSealedStateLength] uint8_t* inOutSealedState,
-            size_t inSealedStateLength,
             [in, string] const char* inSerializedWaitCertificate,
             [in] const sgx_ec256_signature_t* inWaitCertificateSignature,
             [in] const sgx_ec256_public_t* inPoetPublicKey
