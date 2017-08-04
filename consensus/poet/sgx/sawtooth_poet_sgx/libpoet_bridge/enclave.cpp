@@ -106,9 +106,6 @@ namespace sawtooth {
             if (this->enclaveId) {
                 // no power or busy retries here....
                 // we don't want to reinitialize just to shutdown.
-
-                // TODO: Remove poetState reference
-                this->poetState.Clear();
                 sgx_destroy_enclave(this->enclaveId);
                 this->enclaveId = 0;
             }
