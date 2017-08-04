@@ -535,6 +535,53 @@ poet_err_t ecall_UnsealSignupData(
 } // ecall_UnsealSignupData
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+poet_err_t ecall_ReleaseSignupData(
+    const uint8_t* inSealedSignupData,
+    size_t inSealedSignupDataSize
+    )
+{
+    poet_err_t result = POET_SUCCESS;
+
+    try {
+        // Unseal the data
+        ValidatorSignupData validatorSignupData;
+        uint32_t decryptedLength = sizeof(validatorSignupData);
+        sgx_status_t ret =
+            sgx_unseal_data(
+                reinterpret_cast<const sgx_sealed_data_t *>(
+                    inSealedSignupData),
+                nullptr,
+                0,
+                reinterpret_cast<uint8_t *>(&validatorSignupData),
+                &decryptedLength);
+        sp::ThrowSgxError(ret, "Failed to unseal signup data");
+
+        sp::ThrowIf<sp::ValueError>(
+            decryptedLength != sizeof(validatorSignupData),
+            "Sealed signup data didn't decrypt to expected length");
+
+        ret = sgx_destroy_monotonic_counter(
+            &validatorSignupData.counterId);
+        sp::ThrowSgxError(ret, "Failed to destroy monotonic counter.");
+    } catch (sp::PoetError& e) {
+        Log(
+            POET_LOG_ERROR,
+            "Error in poet enclave(ecall_ReleaseSignupData): %04X -- %s",
+            e.error_code(),
+            e.what());
+        ocall_SetErrorMessage(e.what());
+        result = e.error_code();
+    } catch (...) {
+        Log(
+            POET_LOG_ERROR,
+            "Unknown error in poet enclave(ecall_ReleaseSignupData)");
+        result = POET_ERR_UNKNOWN;
+    }
+
+    return result;
+} // ecall_ReleaseSignupData
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t ecall_VerifySignupInfo(
     const sgx_target_info_t* inTargetInfo,
     const char* inOriginatorPublicKeyHash,
