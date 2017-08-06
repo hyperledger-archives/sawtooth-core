@@ -87,41 +87,58 @@ class TestIasProxyClient(TestCase):
         poet.shutdown()
         shutil.rmtree(cls._temp_dir)
 
-    def get_wait_timer(self, addr=None):
+    def get_wait_timer(self, signup_info=None, addr=None):
         pid = random_name(poet.IDENTIFIER_LENGTH)
 
         if addr is None:
             addr = random_name(34)
 
+        if signup_info is None:
+            signup_info = poet.create_signup_info(
+                originator_public_key_hash=self._originator_public_key_hash,
+                nonce=poet.NULL_IDENTIFIER)
+
+        sealed_data = signup_info.sealed_signup_data
+
         # super short local mean to get small duration..
-        wait_timer = poet.create_wait_timer(addr, pid, 1)
+        wait_timer = poet.create_wait_timer(sealed_data, addr, pid, 1)
 
         while not wait_timer.has_expired():
             time.sleep(1)
 
         return wait_timer
 
-    def get_wait_cert(self, addr=None):
+    def get_wait_cert(self, signup_info=None, addr=None):
         block_hash = random_name(32)
-        wait_timer = self.get_wait_timer(addr=addr)
+        if signup_info is None:
+            signup_info = poet.create_signup_info(
+                originator_public_key_hash=self._originator_public_key_hash,
+                nonce=poet.NULL_IDENTIFIER)
+
+        sealed_data = signup_info.sealed_signup_data
+
+        wait_timer = self.get_wait_timer(signup_info=signup_info, addr=addr)
         return \
             poet.create_wait_certificate(
+                sealed_data,
                 wait_timer,
                 block_hash)
 
     def test_create(self):
         addr = random_name(34)
-        _ = \
-            poet.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=poet.NULL_IDENTIFIER)
-
+        signup_info = poet.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=poet.NULL_IDENTIFIER)
+        sealed_data = signup_info.sealed_signup_data
         block_hash = random_name(32)
 
-        # with expired timer -- positive case
-        wait_timer = self.get_wait_timer(addr=addr)
+        # the initial block does not need to wait, to accelerate
+        # validator launch
+        wait_timer = poet.create_wait_timer(
+            sealed_data, addr, poet.NULL_IDENTIFIER, 1)
         wait_cert = \
             poet.create_wait_certificate(
+                sealed_data,
                 wait_timer,
                 block_hash)
         self.assertEqual(wait_timer.duration, wait_cert.duration)
@@ -131,26 +148,13 @@ class TestIasProxyClient(TestCase):
         self.assertEqual(len(wait_cert.identifier()),
                          poet.IDENTIFIER_LENGTH)
 
-        # the initial block does not need to wait, to accelerate
-        # validator launch
-        wait_timer = poet.create_wait_timer(addr, poet.NULL_IDENTIFIER, 1)
-        wait_cert = \
-            poet.create_wait_certificate(
-                wait_timer,
-                block_hash)
-        self.assertEqual(wait_timer.duration, wait_cert.duration)
-        self.assertEqual(wait_timer.local_mean, wait_cert.local_mean)
-        self.assertEqual(wait_timer.previous_certificate_id,
-                         wait_cert.previous_certificate_id)
-
     def test_verify(self):
         addr = random_name(34)
-        signup_info = \
-            poet.create_signup_info(
-                originator_public_key_hash=self._originator_public_key_hash,
-                nonce=poet.NULL_IDENTIFIER)
+        signup_info = poet.create_signup_info(
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=poet.NULL_IDENTIFIER)
 
-        wait_cert = self.get_wait_cert(addr=addr)
+        wait_cert = self.get_wait_cert(signup_info=signup_info, addr=addr)
         poet.verify_wait_certificate(
             wait_cert,
             signup_info.poet_public_key)
@@ -184,10 +188,9 @@ class TestIasProxyClient(TestCase):
             poet.verify_wait_certificate(wait_cert, 3)
 
         # A different public key
-        other_signup_info = \
-            poet.create_signup_info(
-                originator_public_key_hash=create_random_public_key_hash(),
-                nonce=poet.NULL_IDENTIFIER)
+        other_signup_info = poet.create_signup_info(
+            originator_public_key_hash=create_random_public_key_hash(),
+            nonce=poet.NULL_IDENTIFIER)
 
         with self.assertRaises(ValueError):
             poet.verify_wait_certificate(
