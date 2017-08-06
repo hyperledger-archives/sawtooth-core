@@ -345,8 +345,6 @@ namespace sawtooth {
                         ecall_CreateSignupData(
                             this->enclaveId,
                             &poetRet,
-                            this->poetState.Data(),
-                            this->poetState.Length(),
                             &targetInfo,
                             inOriginatorPublicKeyHash.c_str(),
                             outPoetPublicKey,
@@ -420,8 +418,6 @@ namespace sawtooth {
                         ecall_UnsealSignupData(
                             this->enclaveId,
                             &poetRet,
-                            this->poetState.Data(),
-                            this->poetState.Length(),
                             &inSealedSignupData[0],
                             inSealedSignupData.size(),
                             outPoetPublicKey);
@@ -576,6 +572,7 @@ namespace sawtooth {
 
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         void Enclave::CreateWaitTimer(
+            const buffer_t& inSealedSignupData,
             const std::string& inValidatorAddress,
             const std::string& inPreviousCertificateId,
             double requestTime,
@@ -599,6 +596,7 @@ namespace sawtooth {
                 this->CallSgx(
                     [this,
                      &poetRet,
+                     &inSealedSignupData,
                      inValidatorAddress,
                      inPreviousCertificateId,
                      requestTime,
@@ -611,8 +609,8 @@ namespace sawtooth {
                         ecall_CreateWaitTimer(
                             this->enclaveId,
                             &poetRet,
-                            this->poetState.Data(),
-                            this->poetState.Length(),
+                            &inSealedSignupData[0],
+                            inSealedSignupData.size(),
                             inValidatorAddress.c_str(),
                             inPreviousCertificateId.c_str(),
                             requestTime,
@@ -625,12 +623,11 @@ namespace sawtooth {
                 });
             ThrowSgxError(ret, "Call to ecall_CreateWaitTimer failed");
             this->ThrowPoetError(poetRet);
-
-            this->poetState.Save();
         } // Enclave::CreateWaitTimer
 
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         void Enclave::CreateWaitCertificate(
+            const buffer_t& inSealedSignupData,
             const std::string& inSerializedWaitTimer,
             const sgx_ec256_signature_t* inWaitTimerSignature,
             const std::string& inBlockHash,
@@ -654,6 +651,7 @@ namespace sawtooth {
                 this->CallSgx(
                     [this,
                      &poetRet,
+                     &inSealedSignupData,
                      inSerializedWaitTimer,
                      inWaitTimerSignature,
                      inBlockHash,
@@ -664,8 +662,8 @@ namespace sawtooth {
                         ecall_CreateWaitCertificate(
                             this->enclaveId,
                             &poetRet,
-                            this->poetState.Data(),
-                            this->poetState.Length(),
+                            &inSealedSignupData[0],
+                            inSealedSignupData.size(),
                             inSerializedWaitTimer.c_str(),
                             inWaitTimerSignature,
                             inBlockHash.c_str(),
@@ -678,8 +676,6 @@ namespace sawtooth {
                 (ret,
                 "Call to ecall_CreateWaitCertificate failed");
             this->ThrowPoetError(poetRet);
-
-            this->poetState.Save();
         } // Enclave::CreateWaitCertificate
 
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -708,8 +704,6 @@ namespace sawtooth {
                         ecall_VerifyWaitCertificate(
                             this->enclaveId,
                             &poetRet,
-                            this->poetState.Data(),
-                            this->poetState.Length(),
                             inSerializedWaitCertificate.c_str(),
                             inWaitCertificateSignature,
                             inPoetPublicKey);
@@ -719,8 +713,6 @@ namespace sawtooth {
                 ret,
                 "Call to ecall_VerifyWaitCertificate failed");
             this->ThrowPoetError(poetRet);
-
-            this->poetState.Save();
         } // Enclave::VerifyWaitCertificate
 
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -766,9 +758,6 @@ namespace sawtooth {
                     );
                 ThrowSgxError(ret, "Unable to create enclave.");
 
-                // Reload the enclave's state
-                this->LoadState();
-
                 // Initialize the enclave
                 poet_err_t poetError = POET_SUCCESS;
                 Log(POET_LOG_INFO, "ecall_Initialize");
@@ -777,17 +766,13 @@ namespace sawtooth {
                             ecall_Initialize(
                                 this->enclaveId,
                                 &poetError,
-                                &this->raContext,
-                                this->poetState.Data(),
-                                this->poetState.Length());
-                        return
-                            ConvertPoetErrorStatus(ret, poetError);
+                                &this->raContext);
+                        return ConvertPoetErrorStatus(ret, poetError);
                     });
                 ThrowSgxError(
                     ret,
                     "Enclave call to ecall_Initialize failed");
                 this->ThrowPoetError(poetError);
-                this->poetState.Save();
 
                 // We need to figure out a priori the size of the sealed signup
                 // data so that caller knows the proper size for the buffer when
@@ -808,32 +793,6 @@ namespace sawtooth {
                 this->ThrowPoetError(poetError);
             }
         } // Enclave::LoadEnclave
-
-        // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        void Enclave::LoadState()
-        {
-            size_t sealedStateSize = 0;
-            poet_err_t poetError = POET_SUCCESS;
-            sgx_status_t ret =
-                this->CallSgx([this, &poetError, &sealedStateSize] () {
-                    sgx_status_t ret = ecall_GetSealedStateLength(
-                        this->enclaveId,
-                        &poetError,
-                        &sealedStateSize
-                        );
-                    return ConvertPoetErrorStatus(ret, poetError);
-                });
-            ThrowSgxError(
-                ret,
-                "Enclave call to ecall_GetSealedStateLength failed.");
-            this->ThrowPoetError(poetError);
-
-            std::string stateFile =
-                this->dataDirectory +
-                PATH_SEPARATOR +
-                std::string("poet_state");
-            this->poetState.Load(stateFile, sealedStateSize);
-        } // Enclave::LoadState
 
         // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         sgx_status_t Enclave::CallSgx(
