@@ -371,12 +371,14 @@ def create_signup_info(originator_public_key_hash, nonce):
     return signup_info_obj
 
 
-def create_wait_timer(validator_address,
+def create_wait_timer(sealed_signup_data,
+                      validator_address,
                       previous_certificate_id,
                       local_mean,
                       minimum_wait_time=1.0):
     return \
         _create_wait_timer(
+            sealed_signup_data,
             validator_address,
             previous_certificate_id,
             local_mean,
