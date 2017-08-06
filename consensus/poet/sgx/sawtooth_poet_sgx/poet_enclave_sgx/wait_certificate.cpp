@@ -23,6 +23,7 @@
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 WaitCertificate::WaitCertificate(
+    const std::string& sealedSignupData,
     const WaitTimer* waitTimer,
     const std::string& blockHash
     )
@@ -34,6 +35,7 @@ WaitCertificate::WaitCertificate(
 
      poet_err_t ret =
         Poet_CreateWaitCertificate(
+            sealedSignupData.c_str(),
             waitTimer->serialized.c_str(),
             waitTimer->signature.c_str(),
             blockHash.c_str(),
@@ -61,11 +63,12 @@ WaitCertificate::WaitCertificate(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 WaitCertificate* WaitCertificate::_CreateWaitCertificate(
+    const std::string& sealedSignupData,
     const WaitTimer* waitTimer,
     const std::string& blockHash
     )
 {
-    return new WaitCertificate(waitTimer, blockHash);
+    return new WaitCertificate(sealedSignupData, waitTimer, blockHash);
 } // WaitCertificate::_CreateWaitCertificate
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -168,6 +171,7 @@ void WaitCertificate::deserialize(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 WaitCertificate* create_wait_certificate(
+    const std::string& sealed_signup_data,
     const WaitTimer* wait_timer,
     const std::string& block_hash
     )
@@ -178,6 +182,7 @@ WaitCertificate* create_wait_certificate(
 
     return
         WaitCertificate::_CreateWaitCertificate(
+            sealed_signup_data,
             wait_timer,
             block_hash);
 } // create_wait_certificate
