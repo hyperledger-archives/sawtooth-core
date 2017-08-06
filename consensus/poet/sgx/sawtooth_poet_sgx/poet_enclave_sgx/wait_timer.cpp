@@ -23,6 +23,7 @@
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 WaitTimer::WaitTimer(
+    const std::string& sealedSignupData,
     const std::string& validatorAddress,
     const std::string& previousCertificateId,
     double localMean,
@@ -34,6 +35,7 @@ WaitTimer::WaitTimer(
 
     poet_err_t ret =
         Poet_CreateWaitTimer(
+            sealedSignupData.c_str(),
             validatorAddress.c_str(),
             previousCertificateId.c_str(),
             CurrentTime(),
@@ -63,6 +65,7 @@ WaitTimer::WaitTimer(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 WaitTimer* WaitTimer::_CreateWaitTimer(
+    const std::string& sealedSignupData,
     const std::string& validatorAddress,
     const std::string& previousCertificateId,
     double localMean,
@@ -71,6 +74,7 @@ WaitTimer* WaitTimer::_CreateWaitTimer(
 {
     return 
         new WaitTimer(
+            sealedSignupData,
             validatorAddress,
             previousCertificateId,
             localMean,
@@ -151,6 +155,7 @@ void WaitTimer::deserialize(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 WaitTimer* _create_wait_timer(
+    const std::string& sealed_signup_data,
     const std::string& validator_address,
     const std::string& previous_certificate_id,
     double local_mean,
@@ -159,6 +164,7 @@ WaitTimer* _create_wait_timer(
 {
     return
         WaitTimer::_CreateWaitTimer(
+            sealed_signup_data,
             validator_address,
             previous_certificate_id,
             local_mean,
