@@ -103,6 +103,7 @@ class WaitTimer
 {
 public:
     static WaitTimer* _CreateWaitTimer(
+        const std::string& sealedSignupData,
         const std::string& validatorAddress,
         const std::string& previousCertificateId,
         double localMean,
@@ -150,6 +151,7 @@ public:
 
 protected:
     WaitTimer(
+        const std::string& sealedSignupData,
         const std::string& validatorAddress,
         const std::string& previousCertificateId,
         double localMean,
@@ -162,6 +164,7 @@ protected:
 }; // class WaitTimer
 
 WaitTimer* _create_wait_timer(
+    const std::string& sealedSignupData,
     const std::string& validator_address,
     const std::string& previous_certificate_id,
     double local_mean,
@@ -177,6 +180,7 @@ class WaitCertificate
 {
  public:
     static WaitCertificate* _CreateWaitCertificate(
+        const std::string& sealedSignupData,
         const WaitTimer* waitTimer,
         const std::string& blockHash
         );
@@ -218,6 +222,7 @@ class WaitCertificate
 
 protected:
     WaitCertificate(
+        const std::string& sealedSignupData,
         const WaitTimer* waitTimer,
         const std::string& blockHash
         );
@@ -228,6 +233,7 @@ protected:
 }; // class WaitCertificate
 
 WaitCertificate* create_wait_certificate(
+    const std::string& sealedSignupData,
     const WaitTimer* wait_timer,
     const std::string& block_hash
     );

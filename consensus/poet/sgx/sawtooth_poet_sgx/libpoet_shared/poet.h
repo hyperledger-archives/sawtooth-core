@@ -330,6 +330,7 @@ extern "C" {
             parameter may be obtained by calling Poet_GetSignatureSize().
     */
     POET_FUNC poet_err_t Poet_CreateWaitCertificate(
+        const char* inSealedSignupData,
         const char* inSerializedWaitTimer,
         const char* inWaitTimerSignature,
         const char* inBlockHash,
