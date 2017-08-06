@@ -267,6 +267,9 @@ extern "C" {
         Generates a wait timer that later, upon expiration, can be used to
         create a wait certificate.
 
+        inSealedSignupData - A string representing the base 64 encoded sealed
+            signup data returned from a successful call to
+            PoET_CreateSignupData.
         inValidatorAddress - A string representing the validator address.
         inPreviousCertificateId - A string representing the ID of the previous
             wait certificate (i.e., the wait certificate from the block that
@@ -289,6 +292,7 @@ extern "C" {
             be obtained by calling Poet_GetSignatureSize().
     */
     POET_FUNC poet_err_t Poet_CreateWaitTimer(
+        const char* inSealedSignupData,
         const char* inValidatorAddress,
         const char* inPreviousCertificateId,
         double inRequestTime,
