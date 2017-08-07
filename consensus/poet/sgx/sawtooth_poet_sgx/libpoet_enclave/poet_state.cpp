@@ -198,7 +198,7 @@ void PoetState::SetCurrentWaitTimer(
     sp::ThrowIfNull(waitTimerSignature, "Wait timer signature is NULL");
 
     // Copy the wait timer signature and set the valid flag to indicate that
-    // there is a currently wait timer.
+    // there is currently a wait timer.
     memcpy(
         &this->state->currentWaitTimerSignature,
         waitTimerSignature,
