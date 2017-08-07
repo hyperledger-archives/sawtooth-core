@@ -115,12 +115,6 @@ class _PoetEnclaveSimulator(object):
     # the enclave is initialized
     _anti_sybil_id = None
 
-    # The PoET keys will remain unset until signup info is either created or
-    # unsealed
-    _poet_public_key = None
-    _poet_private_key = None
-    _active_wait_timer = None
-
     @classmethod
     def initialize(cls, config_dir, data_dir):
         # See if our configuration file exists.  If so, then we are going to
@@ -180,15 +174,17 @@ class _PoetEnclaveSimulator(object):
         with cls._lock:
             # First we need to create a public/private key pair for the PoET
             # enclave to use.
-            cls._poet_private_key = signing.generate_privkey()
-            cls._poet_public_key = \
-                signing.generate_pubkey(cls._poet_private_key)
-            cls._active_wait_timer = None
+            # Counter ID is a placeholder for a hardware counter in a TEE.
+            poet_private_key = signing.generate_privkey()
+            poet_public_key = \
+                signing.generate_pubkey(poet_private_key)
+            counter_id = None
 
             # Simulate sealing (encrypting) the signup data.
             signup_data = {
-                'poet_public_key': cls._poet_public_key,
-                'poet_private_key': cls._poet_private_key
+                'poet_private_key': poet_private_key,
+                'poet_public_key': poet_public_key,
+                'counter_id': counter_id
             }
             sealed_signup_data = \
                 base64.b64encode(
@@ -208,7 +204,7 @@ class _PoetEnclaveSimulator(object):
             hash_input = \
                 '{0}{1}'.format(
                     originator_public_key_hash.upper(),
-                    cls._poet_public_key.upper()).encode()
+                    poet_public_key.upper()).encode()
             report_data = hashlib.sha256(hash_input).digest()
             sgx_report_data = sgx_structs.SgxReportData(d=report_data)
             sgx_report_body = \
@@ -295,29 +291,29 @@ class _PoetEnclaveSimulator(object):
         # data we need
         signup_data = \
             json2dict(base64.b64decode(sealed_signup_data.encode()).decode())
-
-        with cls._lock:
-            cls._poet_public_key = str(signup_data.get('poet_public_key'))
-            cls._poet_private_key = str(signup_data.get('poet_private_key'))
-            cls._active_wait_timer = None
-
-            return signup_data.get('poet_public_key')
+        return signup_data.get('poet_public_key')
 
     @classmethod
     def create_wait_timer(cls,
+                          sealed_signup_data,
                           validator_address,
                           previous_certificate_id,
                           local_mean,
                           minimum_wait_time):
         with cls._lock:
-            # If we don't have a PoET private key, then the enclave has not
-            # been properly initialized (either by calling create_signup_info
-            # or unseal_signup_data)
-            if cls._poet_private_key is None:
+            # Extract keys from the 'sealed' signup data
+            signup_data = \
+                json2dict(
+                    base64.b64decode(sealed_signup_data.encode()).decode())
+            poet_private_key = signup_data['poet_private_key']
+
+            if poet_private_key is None:
                 raise \
                     ValueError(
-                        'Enclave must be initialized before attempting to '
-                        'create a wait timer')
+                        'Invalid signup data. No poet private key.')
+
+            # In a TEE implementation we would increment the HW counter here.
+            # We can't usefully simulate a HW counter though.
 
             # Create some value from the cert ID.  We are just going to use
             # the seal key to sign the cert ID.  We will then use the
@@ -343,23 +339,12 @@ class _PoetEnclaveSimulator(object):
             wait_timer.signature = \
                 signing.sign(
                     wait_timer.serialize(),
-                    cls._poet_private_key)
-
-            # Keep track of the active wait timer
-            cls._active_wait_timer = wait_timer
+                    poet_private_key)
 
             return wait_timer
 
     @classmethod
     def deserialize_wait_timer(cls, serialized_timer, signature):
-        with cls._lock:
-            # Verify the signature before trying to deserialize
-            if not signing.verify(
-                    serialized_timer,
-                    signature,
-                    cls._poet_public_key):
-                return None
-
         return \
             EnclaveWaitTimer.wait_timer_from_serialized(
                 serialized_timer=serialized_timer,
@@ -367,54 +352,59 @@ class _PoetEnclaveSimulator(object):
 
     @classmethod
     def create_wait_certificate(cls,
+                                sealed_signup_data,
                                 wait_timer,
                                 block_hash):
         with cls._lock:
-            # If we don't have a PoET private key, then the enclave has not
-            # been properly initialized (either by calling create_signup_info
-            # or unseal_signup_data)
-            if cls._poet_private_key is None:
+            # Extract keys from the 'sealed' signup data
+            if sealed_signup_data is None:
+                raise ValueError('Sealed Signup Data is None')
+            signup_data = \
+                json2dict(
+                    base64.b64decode(sealed_signup_data.encode()).decode())
+            poet_private_key = signup_data['poet_private_key']
+            poet_public_key = signup_data['poet_public_key']
+
+            if poet_private_key is None or poet_public_key is None:
                 raise \
                     ValueError(
-                        'Enclave must be initialized before attempting to '
-                        'create a wait certificate')
+                        'Invalid signup data. No poet key(s).')
 
             # Several criteria need to be met before we can create a wait
             # certificate:
-            # 1. We have an active timer
-            # 2. The caller's wait timer is the active wait timer.  We are not
-            #    going to rely the objects, being the same, but will compute
-            #    a signature over the object and verify that the signatures
-            #    are the same.
-            # 3. The active timer has expired
-            # 4. The active timer has not timed out
+            # 1. This signup data was used to sign this timer.
+            #    i.e. the key sealed / unsealed by the TEE signed this
+            #    wait timer.
+            # 2. This timer has expired
+            # 3. This timer has not timed out
+            #
+            # In a TEE implementation we would check HW counter agreement.
+            # We can't usefully simulate a HW counter though.
+            # i.e. wait_timer.counter_value == signup_data.counter.value
+
             #
             # Note - we make a concession for the genesis block (i.e., a wait
             # timer for which the previous certificate ID is the Null
             # identifier) in that we don't require the timer to have expired
             # and we don't worry about the timer having timed out.
-            if cls._active_wait_timer is None:
-                raise \
-                    ValueError(
-                        'There is not a current enclave active wait timer')
 
             if wait_timer is None or \
-                    cls._active_wait_timer.signature != \
-                    signing.sign(
+                    not signing.verify(
                         wait_timer.serialize(),
-                        cls._poet_private_key):
+                        wait_timer.signature,
+                        poet_public_key):
                 raise \
                     ValueError(
                         'Validator is not using the current wait timer')
 
             is_not_genesis_block = \
-                (cls._active_wait_timer.previous_certificate_id !=
+                (wait_timer.previous_certificate_id !=
                  NULL_BLOCK_IDENTIFIER)
 
             now = time.time()
             expire_time = \
-                cls._active_wait_timer.request_time + \
-                cls._active_wait_timer.duration
+                wait_timer.request_time + \
+                wait_timer.duration
 
             if is_not_genesis_block and now < expire_time:
                 raise \
@@ -423,8 +413,8 @@ class _PoetEnclaveSimulator(object):
                         'not expired')
 
             time_out_time = \
-                cls._active_wait_timer.request_time + \
-                cls._active_wait_timer.duration + \
+                wait_timer.request_time + \
+                wait_timer.duration + \
                 TIMER_TIMEOUT_PERIOD
 
             if is_not_genesis_block and time_out_time < now:
@@ -440,7 +430,7 @@ class _PoetEnclaveSimulator(object):
             # standards, but it is good enough for the simulator.
             random_string = \
                 dict2json({
-                    'wait_timer_signature': cls._active_wait_timer.signature,
+                    'wait_timer_signature': wait_timer.signature,
                     'now': datetime.datetime.utcnow().isoformat()
                 })
             nonce = hashlib.sha256(random_string.encode()).hexdigest()
@@ -449,17 +439,17 @@ class _PoetEnclaveSimulator(object):
             # provided and then sign the certificate with the PoET private key
             wait_certificate = \
                 EnclaveWaitCertificate.wait_certificate_with_wait_timer(
-                    wait_timer=cls._active_wait_timer,
+                    wait_timer=wait_timer,
                     nonce=nonce,
                     block_hash=block_hash)
             wait_certificate.signature = \
                 signing.sign(
                     wait_certificate.serialize(),
-                    cls._poet_private_key)
+                    poet_private_key)
 
-            # Now that we have created the certificate, we no longer have an
-            # active timer
-            cls._active_wait_timer = None
+            # In a TEE implementation we would increment the HW counter here
+            # to prevent replay.
+            # We can't usefully simulate a HW counter though.
 
             return wait_certificate
 
@@ -517,12 +507,14 @@ def unseal_signup_data(sealed_signup_data):
     return _PoetEnclaveSimulator.unseal_signup_data(sealed_signup_data)
 
 
-def create_wait_timer(validator_address,
+def create_wait_timer(sealed_signup_data,
+                      validator_address,
                       previous_certificate_id,
                       local_mean,
                       minimum_wait_time=1.0):
     return \
         _PoetEnclaveSimulator.create_wait_timer(
+            sealed_signup_data=sealed_signup_data,
             validator_address=validator_address,
             previous_certificate_id=previous_certificate_id,
             local_mean=local_mean,
@@ -536,9 +528,10 @@ def deserialize_wait_timer(serialized_timer, signature):
             signature=signature)
 
 
-def create_wait_certificate(wait_timer, block_hash):
+def create_wait_certificate(sealed_signup_data, wait_timer, block_hash):
     return \
         _PoetEnclaveSimulator.create_wait_certificate(
+            sealed_signup_data=sealed_signup_data,
             wait_timer=wait_timer,
             block_hash=block_hash)
 
