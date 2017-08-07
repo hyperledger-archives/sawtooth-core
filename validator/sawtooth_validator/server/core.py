@@ -20,7 +20,6 @@ import os
 import signal
 import time
 import threading
-import toml
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
@@ -164,17 +163,6 @@ class Validator(object):
                                      heartbeat=False,
                                      max_incoming_connections=20,
                                      monitor=True)
-
-        config_file = os.path.join(config_dir, "validator.toml")
-
-        validator_config = {}
-        if os.path.exists(config_file):
-            with open(config_file) as fd:
-                raw_config = fd.read()
-            validator_config = toml.loads(raw_config)
-
-        if scheduler_type is None:
-            scheduler_type = validator_config.get("scheduler", "serial")
 
         executor = TransactionExecutor(
             service=self._service,
