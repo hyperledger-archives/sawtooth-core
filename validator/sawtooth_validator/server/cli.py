@@ -294,7 +294,7 @@ def main(args=None):
                           path_config.data_dir,
                           path_config.config_dir,
                           identity_signing_key,
-                          opts.scheduler,
+                          validator_config.scheduler,
                           validator_config.network_public_key,
                           validator_config.network_private_key)
 
