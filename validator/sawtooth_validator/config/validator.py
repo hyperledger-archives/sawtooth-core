@@ -30,7 +30,8 @@ def load_default_validator_config():
         bind_network='tcp://127.0.0.1:8800',
         bind_component='tcp://127.0.0.1:4004',
         endpoint=None,
-        peering='static')
+        peering='static',
+        scheduler='serial')
 
 
 def load_toml_validator_config(filename):
@@ -56,7 +57,7 @@ def load_toml_validator_config(filename):
 
     invalid_keys = set(toml_config.keys()).difference(
         ['bind', 'endpoint', 'peering', 'seeds', 'peers', 'network_public_key',
-         'network_private_key'])
+         'network_private_key', 'scheduler'])
     if invalid_keys:
         raise LocalConfigurationError(
             "Invalid keys in validator config: "
@@ -86,7 +87,8 @@ def load_toml_validator_config(filename):
          seeds=toml_config.get("seeds", None),
          peers=toml_config.get("peers", None),
          network_public_key=network_public_key,
-         network_private_key=network_private_key
+         network_private_key=network_private_key,
+         scheduler=toml_config.get("scheduler", None)
     )
 
     return config
@@ -106,6 +108,7 @@ def merge_validator_config(configs):
     peers = None
     network_public_key = None
     network_private_key = None
+    scheduler = None
 
     for config in reversed(configs):
         if config.bind_network is not None:
@@ -124,6 +127,8 @@ def merge_validator_config(configs):
             network_public_key = config.network_public_key
         if config.network_private_key is not None:
             network_private_key = config.network_private_key
+        if config.scheduler is not None:
+            scheduler = config.scheduler
 
     return ValidatorConfig(
          bind_network=bind_network,
@@ -133,7 +138,8 @@ def merge_validator_config(configs):
          seeds=seeds,
          peers=peers,
          network_public_key=network_public_key,
-         network_private_key=network_private_key
+         network_private_key=network_private_key,
+         scheduler=scheduler
     )
 
 
@@ -141,7 +147,8 @@ class ValidatorConfig:
     def __init__(self, bind_network=None, bind_component=None,
                  endpoint=None, peering=None, seeds=None,
                  peers=None, network_public_key=None,
-                 network_private_key=None):
+                 network_private_key=None,
+                 scheduler=None):
 
         self._bind_network = bind_network
         self._bind_component = bind_component
@@ -151,6 +158,7 @@ class ValidatorConfig:
         self._peers = peers
         self._network_public_key = network_public_key
         self._network_private_key = network_private_key
+        self._scheduler = scheduler
 
     @property
     def bind_network(self):
@@ -184,11 +192,16 @@ class ValidatorConfig:
     def network_private_key(self):
         return self._network_private_key
 
+    @property
+    def scheduler(self):
+        return self._scheduler
+
     def __repr__(self):
         return \
             "{}(bind_network={}, bind_component={}, " \
             "endpoint={}, peering={}, seeds={}, peers={}, "\
-            "network_public_key={}, network_private_key={})".format(
+            "network_public_key={}, network_private_key={}, " \
+            "scheduler={})".format(
                 self.__class__.__name__,
                 repr(self._bind_network),
                 repr(self._bind_component),
@@ -197,7 +210,8 @@ class ValidatorConfig:
                 repr(self._seeds),
                 repr(self._peers),
                 repr(self._network_public_key),
-                repr(self._network_private_key))
+                repr(self._network_private_key),
+                repr(self._scheduler))
 
     def to_dict(self):
         return collections.OrderedDict([
@@ -208,7 +222,8 @@ class ValidatorConfig:
             ('seeds', self._seeds),
             ('peers', self._peers),
             ('network_public_key', self._network_public_key),
-            ('network_private_key', self._network_private_key)
+            ('network_private_key', self._network_private_key),
+            ('scheduler', self._scheduler)
         ])
 
     def to_toml_string(self):
