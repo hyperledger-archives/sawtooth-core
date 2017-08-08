@@ -20,3 +20,6 @@ authors = ["sawtooth"]
 
 [dependencies]
 protobuf="1.4.1"
+secp256k1 = "0.7.1"
+rust-crypto = "0.2.36"
+rust-base58 = "0.0.4"
