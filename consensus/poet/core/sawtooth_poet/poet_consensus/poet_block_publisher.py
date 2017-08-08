@@ -428,6 +428,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         # We need to create a wait timer for the block...this is what we
         # will check when we are asked if it is time to publish the block
+        poet_key_state = self._poet_key_state_store[active_poet_public_key]
+        sealed_signup_data = poet_key_state.sealed_signup_data
         previous_certificate_id = \
             utils.get_previous_certificate_id(
                 block_header=block_header,
@@ -436,6 +438,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         wait_timer = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=poet_enclave_module,
+                sealed_signup_data=sealed_signup_data,
                 validator_address=block_header.signer_pubkey,
                 previous_certificate_id=previous_certificate_id,
                 consensus_state=consensus_state,
@@ -522,10 +525,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         # We need to create a wait certificate for the block and then serialize
         # that into the block header consensus field.
+        active_key = self._poet_key_state_store.active_key
+        poet_key_state = self._poet_key_state_store[active_key]
+        sealed_signup_data = poet_key_state.sealed_signup_data
         try:
             wait_certificate = \
                 WaitCertificate.create_wait_certificate(
                     poet_enclave_module=poet_enclave_module,
+                    sealed_signup_data=sealed_signup_data,
                     wait_timer=self._wait_timer,
                     block_hash=block_hash)
             block_header.consensus = \

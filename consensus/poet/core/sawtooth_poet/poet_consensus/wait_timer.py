@@ -35,6 +35,7 @@ class WaitTimer(object):
     @classmethod
     def create_wait_timer(cls,
                           poet_enclave_module,
+                          sealed_signup_data,
                           validator_address,
                           previous_certificate_id,
                           consensus_state,
@@ -45,6 +46,8 @@ class WaitTimer(object):
         Args:
             poet_enclave_module (module): The module that implements the
                 underlying PoET enclave.
+            sealed_signup_data (str): Serialized blob of secret data
+                from create_signup_info. Used to authenticate with enclave.
             validator_address (str): A string representing the address of the
                 validator creating the wait timer.
             previous_certificate_id (str): The ID of the wait certificate for
@@ -60,6 +63,7 @@ class WaitTimer(object):
         # WaitTimer object
         enclave_timer = \
             poet_enclave_module.create_wait_timer(
+                sealed_signup_data,
                 validator_address,
                 previous_certificate_id,
                 consensus_state.compute_local_mean(
