@@ -96,6 +96,10 @@ message Message {
         CLIENT_BATCH_STATUS_REQUEST = 120;
         // A response with the batch statuses
         CLIENT_BATCH_STATUS_RESPONSE = 121;
+        // A request for one or more transaction receipts
+        CLIENT_RECEIPT_GET_REQUEST= 122;
+        // A response with the receipts
+        CLIENT_RECEIPT_GET_RESPONSE= 123;
         // Further messages from the stats client through the web api
 
         // Temp message types until a discussion can be had about gossip msg
