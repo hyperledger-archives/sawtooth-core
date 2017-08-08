@@ -28,6 +28,8 @@
 
 /core/sawtooth_core.egg-info/
 /families/settings/sawtooth_settings/protobuf/
+/families/smallbank/smallbank_go/src/protobuf/
+/families/smallbank/smallbank_go/bin/
 /families/supplychain/python/sawtooth_supplychain/protobuf
 /families/**/__pycache__/
 
