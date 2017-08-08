@@ -62,11 +62,12 @@ class TestWaitTimer(TestCase):
         self.consensus_state = ConsensusState()
 
     def test_create_before_create_signup_info(self):
-        # Make sure that trying to create a wait timer before signup
-        # information is provided causes an error
+        # Make sure that trying to create a wait timer without signup
+        # information causes an error
         with self.assertRaises(ValueError):
             wait_timer.WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data='',
                 validator_address='1060 W Addison Street',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.consensus_state,
@@ -101,6 +102,7 @@ class TestWaitTimer(TestCase):
         # the target wait time
         wt = wait_timer.WaitTimer.create_wait_timer(
             poet_enclave_module=mock_poet_enclave_simulator,
+            sealed_signup_data=signup_info.sealed_signup_data,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -121,21 +123,6 @@ class TestWaitTimer(TestCase):
         # Ensure that the enclave is set back to initial state
         self.poet_enclave_module = reload(poet_enclave)
 
-        # Make sure that trying to create a wait timer before signup
-        # information is provided causes an error
-        with self.assertRaises(ValueError):
-            wait_timer.WaitTimer.create_wait_timer(
-                poet_enclave_module=self.poet_enclave_module,
-                validator_address='1060 W Addison Street',
-                previous_certificate_id=NULL_BLOCK_IDENTIFIER,
-                consensus_state=self.consensus_state,
-                poet_settings_view=self.mock_poet_settings_view)
-
-        # Initialize the enclave with sealed signup data
-        SignupInfo.unseal_signup_data(
-            poet_enclave_module=self.poet_enclave_module,
-            sealed_signup_data=signup_info.sealed_signup_data)
-
         stake_in_the_sand = time.time()
 
         mock_poet_enclave_wait_timer.request_time = time.time()
@@ -144,6 +131,7 @@ class TestWaitTimer(TestCase):
         # the target wait time
         wt = wait_timer.WaitTimer.create_wait_timer(
             poet_enclave_module=mock_poet_enclave_simulator,
+            sealed_signup_data=signup_info.sealed_signup_data,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -163,7 +151,7 @@ class TestWaitTimer(TestCase):
 
     def test_has_expired(self):
         # Need to create signup information first
-        SignupInfo.create_signup_info(
+        signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
@@ -186,6 +174,7 @@ class TestWaitTimer(TestCase):
         # Verify that a timer doesn't expire before its creation time
         wt = wait_timer.WaitTimer.create_wait_timer(
             poet_enclave_module=mock_poet_enclave_simulator,
+            sealed_signup_data=signup_info.sealed_signup_data,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -196,6 +185,7 @@ class TestWaitTimer(TestCase):
         # not greater than actual elapsed time.
         wt = wait_timer.WaitTimer.create_wait_timer(
             poet_enclave_module=mock_poet_enclave_simulator,
+            sealed_signup_data=signup_info.sealed_signup_data,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -206,6 +196,7 @@ class TestWaitTimer(TestCase):
         # Tampering with the duration should not affect wait timer expiration
         wt = wait_timer.WaitTimer.create_wait_timer(
             poet_enclave_module=mock_poet_enclave_simulator,
+            sealed_signup_data=signup_info.sealed_signup_data,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
@@ -221,6 +212,7 @@ class TestWaitTimer(TestCase):
         # expiration
         wt = wait_timer.WaitTimer.create_wait_timer(
             poet_enclave_module=mock_poet_enclave_simulator,
+            sealed_signup_data=signup_info.sealed_signup_data,
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
