@@ -69,6 +69,10 @@ def main(args=None):
     protoc(proto_dir, "families/supplychain/python",
         "sawtooth_supplychain/protobuf")
 
+    # 5. Generate smallbank protos
+    proto_dir = JOIN(TOP_DIR, "families/smallbank/protos")
+    protoc(proto_dir, "families/smallbank", "smallbank_go/src/protobuf", "go")
+
     if "go" in args:
         proto_dir = JOIN(TOP_DIR, "families/burrow_evm/src/protos")
         protoc(proto_dir, "families/burrow_evm/src", "sawtooth_burrow_evm/protobuf", "go")
