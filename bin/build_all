@@ -90,6 +90,7 @@ then
         java
         javascript
         python
+        rust
 "
 fi
 
@@ -145,9 +146,11 @@ main() {
                 python)
                     build_python
                     ;;
-
+                rust)
+                    build_rust
+                    ;;
                 *)
-                    echo "Module '$language' not found."
+                    warn "Module '$language' not found."
                     ;;
             esac
         fi
@@ -258,6 +261,11 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
         docker_run sawtooth-dev-python
     }
+
+    build_rust() {
+        docker_build docker/sawtooth-dev-rust docker/ sawtooth-dev-rust
+        docker_run sawtooth-dev-rust
+    }
 fi
 
 if [[ $BUILD_MODE == $INSTALLED ]]
@@ -345,6 +353,11 @@ then
             $build_dir/ sawtooth-validator
     }
 
+    build_rust() {
+        cp $top_dir/docker/sawtooth-dev-rust $build_dir
+        docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-dev-rust
+        docker_run sawtooth-dev-rust
+    }
 fi
 
 main
