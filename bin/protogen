@@ -45,6 +45,7 @@ def main(args=None):
     protoc(proto_dir, "validator", "sawtooth_validator/protobuf")
     protoc(proto_dir, "rest_api", "sawtooth_rest_api/protobuf")
     protoc(proto_dir, "families/settings", "sawtooth_settings/protobuf")
+    protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
 
     if "javascript" in args:
         protoc(proto_dir, "sdk/javascript", "protobuf", "javascript")
@@ -68,6 +69,12 @@ def main(args=None):
     proto_dir = JOIN(TOP_DIR, "families/supplychain/protos")
     protoc(proto_dir, "families/supplychain/python",
         "sawtooth_supplychain/protobuf")
+
+    # 5. Generate identity protos
+    proto_dir = JOIN(TOP_DIR, "families/identity/protos")
+    protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
+    protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
+
 
     if "go" in args:
         proto_dir = JOIN(TOP_DIR, "families/burrow_evm/src/protos")
