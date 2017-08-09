@@ -2,24 +2,25 @@
 PoET 1.0 Specification
 **********************
 
-Introduction
-============
-
 The Proof-of-Elapsed-Time or PoET Consensus method offers a solution to the
 Byzantine Generals Problem that utilizes a “trusted execution environment” to
 improve on the efficiency of present solutions such as Proof-of-Work. The
 initial reference implementation of PoET released to Hyperledger was written for
 an abstract TEE to keep it flexible to any TEE implementation. This
 specification defines a concrete implementation for SGX. The following
-presentation assumes the use of Intel SGX as the trusted execution environment.
+presentation assumes the use of Intel® SGX as the trusted execution environment.
 
-At a high-level, PoET stochastically elects individual peers to execute requests
-at a given target rate. Individual peers sample an exponentially distributed
-random variable and wait for an amount of time dictated by the sample. The peer
-with the smallest sample wins the election. Cheating is prevented through the
-use of a trusted execution environment, identity verification and blacklisting
-based on asymmetric key cryptography, and an additional set of election
-policies.
+At a high-level, PoET stochastically elects peers to order and commit valid
+requests to a distributed database. Individual peers sample an exponentially
+distributed random variable and wait for an amount of time dictated by the
+sample. The peer with the smallest sample wins the election. Cheating is
+prevented through the use of a trusted execution environment, identity
+verification and blacklisting based on asymmetric key cryptography, and an
+additional set of election policies.
+
+The following specification describing how to implement the
+Proof-of-Elapsed-Time algorithm using Intel® SGX. For a higher-level description
+of PoET and SGX, see the :doc:`sgx_primer` and :doc:`poet_primer`.
 
 Definitions
 ===========
