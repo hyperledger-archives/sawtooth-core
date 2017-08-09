@@ -23,6 +23,7 @@ MODULE_LIST="
     rest_api
     poet
     settings
+    identity
     permission
     validator
     go_sdk
@@ -159,6 +160,9 @@ main() {
                 settings)
                     test_settings
                     ;;
+                identity)
+                    test_identity
+                    ;;
                 supplychain)
                     test_supplychain
                     ;;
@@ -247,6 +251,11 @@ test_settings() {
     copy_coverage .coverage.config
     run_docker_test test_config_smoke
     copy_coverage .coverage.test_config_smoke
+}
+
+test_identity() {
+  run_docker_test ./families/identity/tests/test_tp_identity.yaml
+  copy_coverage .coverage.permission
 }
 
 test_permission() {
