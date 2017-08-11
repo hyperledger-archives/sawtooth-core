@@ -284,11 +284,10 @@ class BlockValidator(object):
                         self._block_cache[
                             new_blkw.previous_block_id]
                 except KeyError:
-                    LOGGER.debug("Block rejected due missing" +
+                    LOGGER.debug("Block rejected due to missing" +
                                  " predecessor: %s", new_blkw)
                     for b in new_chain:
                         b.status = BlockStatus.Invalid
-                    self._done_cb(False, self._result)
                     raise BlockValidationAborted()
         elif new_blkw.block_num < cur_blkw.block_num:
             # current chain is longer
@@ -320,9 +319,16 @@ class BlockValidator(object):
                 self._done_cb(False, self._result)
                 raise BlockValidationAborted()
             new_chain.append(new_blkw)
-            new_blkw = \
-                self._block_cache[
-                    new_blkw.previous_block_id]
+            try:
+                new_blkw = \
+                    self._block_cache[
+                        new_blkw.previous_block_id]
+            except KeyError:
+                LOGGER.debug("Block rejected due to missing" +
+                             " predecessor: %s", new_blkw)
+                for b in new_chain:
+                    b.status = BlockStatus.Invalid
+                raise BlockValidationAborted()
 
             cur_chain.append(cur_blkw)
             cur_blkw = \
