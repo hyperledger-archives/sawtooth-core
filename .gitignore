@@ -94,3 +94,6 @@
 /validator/**/__pycache__/
 
 /sdk/cxx/build/
+
+/perf/sawtooth/sawtooth_workload/Cargo.lock
+/perf/sawtooth/sawtooth_workload/target/
