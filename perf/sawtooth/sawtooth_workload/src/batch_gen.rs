@@ -21,11 +21,13 @@ use std::error;
 use std::fmt;
 use std::io::Read;
 use std::io::Write;
+use std::marker::PhantomData;
 
 use sawtooth_sdk::messages::transaction::Transaction;
 use sawtooth_sdk::messages::batch::Batch;
 use sawtooth_sdk::messages::batch::BatchHeader;
 use self::protobuf::Message;
+use self::protobuf::MessageStatic;
 
 pub fn generate_signed_batches<'a>(reader: &'a mut Read, writer: &'a mut Write, max_batch_size: usize)
     -> Result<(), BatchingError>
@@ -46,37 +48,43 @@ pub fn generate_signed_batches<'a>(reader: &'a mut Read, writer: &'a mut Write, 
     Ok(())
 }
 
-struct TransactionSource<'a> {
+struct LengthDelimitedMessageSource<'a, T: 'a> {
     source: protobuf::CodedInputStream<'a>,
+    phantom: PhantomData<&'a T>,
 }
 
-impl<'a> TransactionSource<'a> {
+impl<'a, T> LengthDelimitedMessageSource<'a, T>
+    where T: Message + MessageStatic
+{
     pub fn new(source: &'a mut Read) -> Self {
         let source = protobuf::CodedInputStream::new(source);
-        TransactionSource {
+        LengthDelimitedMessageSource {
             source,
+            phantom: PhantomData,
         }
     }
 
-    pub fn next(&mut self, max_txns: usize)
-        -> Result<Vec<Transaction>, protobuf::ProtobufError>
+    pub fn next(&mut self, max_msgs: usize)
+        -> Result<Vec<T>, protobuf::ProtobufError>
     {
-        let mut results = Vec::with_capacity(max_txns);
-        for _ in 0..max_txns {
+        let mut results = Vec::with_capacity(max_msgs);
+        for _ in 0..max_msgs {
             if self.source.eof()? {
                 break;
             }
 
             // read the delimited length
-            let next_len = self.source.read_raw_varint32()?;
-            let buf =  self.source.read_raw_bytes(next_len)?;
+            let next_len = try!(self.source.read_raw_varint32());
+            let buf = try!(self.source.read_raw_bytes(next_len));
             
-            let txn = try!(protobuf::parse_from_bytes(&buf));
-            results.push(txn);
+            let msg = try!(protobuf::parse_from_bytes(&buf));
+            results.push(msg);
         }
         Ok(results)
     }
 }
+
+type TransactionSource<'a> = LengthDelimitedMessageSource<'a, Transaction>;
 
 #[derive(Debug)]
 pub enum BatchingError {
@@ -111,7 +119,7 @@ impl error::Error for BatchingError {
 }
 
 pub struct SignedBatchProducer<'a> {
-    transaction_source: TransactionSource<'a>,
+    transaction_source: LengthDelimitedMessageSource<'a, Transaction>,
     max_batch_size: usize,
 }
 
@@ -119,7 +127,7 @@ pub type BatchResult = Result<Option<Batch>, BatchingError>;
 
 impl<'a> SignedBatchProducer<'a> {
     pub fn new(source: &'a mut Read, max_batch_size: usize) -> Self {
-        let transaction_source = TransactionSource::new(source);
+        let transaction_source = LengthDelimitedMessageSource::new(source);
         SignedBatchProducer {
             transaction_source,
             max_batch_size,
@@ -153,20 +161,23 @@ impl<'a> SignedBatchProducer<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::LengthDelimitedMessageSource;
     use super::TransactionSource;
     use super::SignedBatchProducer;
     use std::io::{Cursor, Write};
     use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
-    use sawtooth_sdk::messages::batch::BatchHeader;
+    use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
     use super::protobuf;
     use super::protobuf::Message;
+
+    type BatchSource<'a> = LengthDelimitedMessageSource<'a, Batch>;
 
     #[test]
     fn empty_transaction_source() {
         let encoded_bytes: Vec<u8> = Vec::new();
         let mut source = Cursor::new(encoded_bytes);
 
-        let mut txn_stream = TransactionSource::new(&mut source);
+        let mut txn_stream: TransactionSource = LengthDelimitedMessageSource::new(&mut source);
         let txns = txn_stream.next(2).unwrap();
         assert_eq!(txns.len(), 0);
     }
@@ -181,7 +192,7 @@ mod tests {
 
         let mut source = Cursor::new(encoded_bytes);
 
-        let mut txn_stream = TransactionSource::new(&mut source);
+        let mut txn_stream: TransactionSource = LengthDelimitedMessageSource::new(&mut source);
 
         let mut txns = txn_stream.next(2).unwrap();
         assert_eq!(txns.len(), 2);
@@ -258,6 +269,38 @@ mod tests {
         // test exhaustion
         batch_result = producer.next().unwrap();
         assert_eq!(batch_result, None);
+    }
+
+    #[test]
+    fn generate_signed_batches() {
+        let mut encoded_bytes: Vec<u8> = Vec::new();
+
+        write_txn_with_sig("sig1", &mut encoded_bytes);
+        write_txn_with_sig("sig2", &mut encoded_bytes);
+        write_txn_with_sig("sig3", &mut encoded_bytes);
+
+        let mut source = Cursor::new(encoded_bytes);
+        let output_bytes: Vec<u8> = Vec::new();
+        let mut output = Cursor::new(output_bytes);
+
+        super::generate_signed_batches(&mut source, &mut output, 2)
+             .expect("Should have generated batches!");
+
+        // reset for reading
+        output.set_position(0);
+        let mut batch_source: BatchSource =
+            LengthDelimitedMessageSource::new(&mut output);
+
+        let batch = &(batch_source.next(1).unwrap())[0];
+        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        assert_eq!(batch_header.transaction_ids.len(), 2);
+        assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
+        assert_eq!(batch_header.transaction_ids[1], String::from("sig2"));
+
+        let batch = &(batch_source.next(1).unwrap())[0];
+        let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
+        assert_eq!(batch_header.transaction_ids.len(), 1);
+        assert_eq!(batch_header.transaction_ids[0], String::from("sig3"));
     }
 
     fn make_txn(sig: &str) -> Transaction {
