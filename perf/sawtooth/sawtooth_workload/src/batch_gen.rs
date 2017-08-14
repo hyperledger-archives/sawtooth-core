@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+//! Tools for generating signed batches from a stream of transactions
+
 extern crate protobuf;
 
 use std::error;
@@ -29,6 +31,11 @@ use sawtooth_sdk::messages::batch::BatchHeader;
 use self::protobuf::Message;
 use self::protobuf::MessageStatic;
 
+
+/// Generates signed batches from a stream of length-delimited transactions.
+/// Constrains the batches to `max_batch_size` number of transactions per
+/// batch.  The resulting batches are written in a length-delimited fashion to
+/// the given writer.
 pub fn generate_signed_batches<'a>(reader: &'a mut Read, writer: &'a mut Write, max_batch_size: usize)
     -> Result<(), BatchingError>
 {
@@ -48,6 +55,7 @@ pub fn generate_signed_batches<'a>(reader: &'a mut Read, writer: &'a mut Write, 
     Ok(())
 }
 
+/// Decodes Protocol Buffer messages from a length-delimited input reader.
 struct LengthDelimitedMessageSource<'a, T: 'a> {
     source: protobuf::CodedInputStream<'a>,
     phantom: PhantomData<&'a T>,
@@ -56,6 +64,7 @@ struct LengthDelimitedMessageSource<'a, T: 'a> {
 impl<'a, T> LengthDelimitedMessageSource<'a, T>
     where T: Message + MessageStatic
 {
+    /// Creates a new `LengthDelimitedMessageSource` from a given reader.
     pub fn new(source: &'a mut Read) -> Self {
         let source = protobuf::CodedInputStream::new(source);
         LengthDelimitedMessageSource {
@@ -64,6 +73,9 @@ impl<'a, T> LengthDelimitedMessageSource<'a, T>
         }
     }
 
+    /// Returns the next set of messages.
+    /// The vector of messages will contain up to `max_msgs` number of
+    /// messages.  An empty vector indicates that the source has been consumed.
     pub fn next(&mut self, max_msgs: usize)
         -> Result<Vec<T>, protobuf::ProtobufError>
     {
@@ -86,6 +98,7 @@ impl<'a, T> LengthDelimitedMessageSource<'a, T>
 
 type TransactionSource<'a> = LengthDelimitedMessageSource<'a, Transaction>;
 
+/// Errors that may occur during the generation of batches.
 #[derive(Debug)]
 pub enum BatchingError {
     MessageError(protobuf::ProtobufError),
@@ -118,14 +131,19 @@ impl error::Error for BatchingError {
     }
 }
 
+/// Produces signed batches from a length-delimited source of Transactions.
 pub struct SignedBatchProducer<'a> {
-    transaction_source: LengthDelimitedMessageSource<'a, Transaction>,
+    transaction_source: TransactionSource<'a>,
     max_batch_size: usize,
 }
 
+/// Resulting batch or error.
 pub type BatchResult = Result<Option<Batch>, BatchingError>;
 
 impl<'a> SignedBatchProducer<'a> {
+
+    /// Creates a new `SignedBatchProducer` with a given Transaction source and
+    /// a max number of transactions per batch.
     pub fn new(source: &'a mut Read, max_batch_size: usize) -> Self {
         let transaction_source = LengthDelimitedMessageSource::new(source);
         SignedBatchProducer {
@@ -134,6 +152,8 @@ impl<'a> SignedBatchProducer<'a> {
         }
     }
 
+    /// Gets the next BatchResult.
+    /// `Ok(None)` indicates that the underlying source has been consumed.
     pub fn next_batch(&mut self) -> BatchResult {
         let txns = match self.transaction_source.next(self.max_batch_size) {
             Ok(txns) => txns,
