@@ -34,7 +34,7 @@ pub fn generate_signed_batches<'a>(reader: &'a mut Read, writer: &'a mut Write, 
 {
     let mut producer = SignedBatchProducer::new(reader, max_batch_size);
     loop {
-        match producer.next() {
+        match producer.next_batch() {
             Ok(Some(batch)) => {
                 if let Err(err) = batch.write_length_delimited_to_writer(writer) {
                     return Err(BatchingError::MessageError(err));
@@ -134,7 +134,7 @@ impl<'a> SignedBatchProducer<'a> {
         }
     }
 
-    pub fn next(&mut self) -> BatchResult {
+    pub fn next_batch(&mut self) -> BatchResult {
         let txns = match self.transaction_source.next(self.max_batch_size) {
             Ok(txns) => txns,
             Err(err) => return Err(BatchingError::MessageError(err)),
@@ -208,7 +208,7 @@ mod tests {
         let mut source = Cursor::new(encoded_bytes);
 
         let mut producer = SignedBatchProducer::new(&mut source, 2);
-        let batch_result = producer.next().unwrap();
+        let batch_result = producer.next_batch().unwrap();
         
         assert_eq!(batch_result, None);
     }
@@ -221,7 +221,7 @@ mod tests {
         let mut source = Cursor::new(encoded_bytes);
 
         let mut producer = SignedBatchProducer::new(&mut source, 2);
-        let mut batch_result = producer.next().unwrap();
+        let mut batch_result = producer.next_batch().unwrap();
         assert!(batch_result.is_some());
 
         let batch = batch_result.unwrap();
@@ -231,7 +231,7 @@ mod tests {
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
 
         // test exhaustion
-        batch_result = producer.next().unwrap();
+        batch_result = producer.next_batch().unwrap();
         assert_eq!(batch_result, None);
     }
 
@@ -246,7 +246,7 @@ mod tests {
         let mut source = Cursor::new(encoded_bytes);
 
         let mut producer = SignedBatchProducer::new(&mut source, 2);
-        let mut batch_result = producer.next().unwrap();
+        let mut batch_result = producer.next_batch().unwrap();
         assert!(batch_result.is_some());
 
         let batch = batch_result.unwrap();
@@ -257,7 +257,7 @@ mod tests {
         assert_eq!(batch_header.transaction_ids[1], String::from("sig2"));
 
         // pull the next batch
-        batch_result = producer.next().unwrap();
+        batch_result = producer.next_batch().unwrap();
         assert!(batch_result.is_some());
 
         let batch = batch_result.unwrap();
@@ -267,7 +267,7 @@ mod tests {
         assert_eq!(batch_header.transaction_ids[0], String::from("sig3"));
 
         // test exhaustion
-        batch_result = producer.next().unwrap();
+        batch_result = producer.next_batch().unwrap();
         assert_eq!(batch_result, None);
     }
 
