@@ -324,6 +324,7 @@ test_python_sdk() {
 
 test_rust_sdk() {
     run_docker_test ./sdk/rust/unit_rust_sdk.yaml
+    run_docker_test ./perf/sawtooth/sawtooth_workload/unit_perf_workload.yaml
 }
 
 test_burrow_evm() {
