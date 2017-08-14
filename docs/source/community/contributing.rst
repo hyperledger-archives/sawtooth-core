@@ -62,6 +62,14 @@ Your pull request should be rebased against the current master branch. Please do
 not merge the current master branch in with your topic branch, nor use the
 Update Branch button provided by GitHub on the pull request page.
 
+**Commit Messages**
+
+Commit messages should follow common Git conventions, such as the imperative
+mood, separate subject lines, and a line-length of 72 characters. These rules
+are well documented by Chris Beam in
+`his blog post <https://chris.beams.io/posts/git-commit/#seven-rules>`_ on the
+subject.
+
 **Signed-off-by**
 
 Commits must include Signed-off-by in the commit message (``git commit -s``).
