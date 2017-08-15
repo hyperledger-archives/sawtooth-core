@@ -1,0 +1,8 @@
+[package]
+name = "sawtooth_workload"
+version = "0.1.0"
+
+[dependencies]
+sawtooth_sdk = { path = "../../../sdk/rust" }
+protobuf = "1.4.1"
+clap = "2.26.0"
