@@ -413,8 +413,6 @@ poet_err_t ecall_UnsealSignupData(
     try {
         sp::ThrowIfNull(outPoetPublicKey, "PoET public key pointer is NULL");
 
-        PseSession session;
-
         // Unseal the data
         ValidatorSignupData validatorSignupData;
         uint32_t decryptedLength = sizeof(validatorSignupData);
@@ -431,6 +429,12 @@ poet_err_t ecall_UnsealSignupData(
         sp::ThrowIf<sp::ValueError>(
             decryptedLength != sizeof(validatorSignupData),
             "Sealed signup data didn't decrypt to expected length");
+
+        // Maker sure the counter is still valid
+        uint32_t v = 0;
+        PseSession session;
+        ret = sgx_read_monotonic_counter(&validatorSignupData.counterId, &v);
+        sp::ThrowSgxError(ret, "Failed to unseal counter");
 
         // Give the caller a copy of the PoET public key
         memcpy(
@@ -481,6 +485,7 @@ poet_err_t ecall_ReleaseSignupData(
             decryptedLength != sizeof(validatorSignupData),
             "Sealed signup data didn't decrypt to expected length");
 
+        PseSession session;
         ret = sgx_destroy_monotonic_counter(
             &validatorSignupData.counterId);
         sp::ThrowSgxError(ret, "Failed to destroy monotonic counter.");

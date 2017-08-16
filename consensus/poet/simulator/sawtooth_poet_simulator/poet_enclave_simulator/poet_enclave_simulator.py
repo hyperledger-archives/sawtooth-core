@@ -294,6 +294,20 @@ class _PoetEnclaveSimulator(object):
         return signup_data.get('poet_public_key')
 
     @classmethod
+    def release_signup_data(cls, sealed_signup_data):
+        """
+
+        Args:
+            sealed_signup_data: Sealed signup data that was returned
+                previously in a EnclaveSignupInfo object from a call to
+                create_signup_info
+        """
+        # This is a standin method to release enclave resources associated
+        # with this signup. This is not currently relevant to the simulator
+        # but it must match the interface with the HW enclave.
+        pass
+
+    @classmethod
     def create_wait_timer(cls,
                           sealed_signup_data,
                           validator_address,

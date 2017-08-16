@@ -332,10 +332,19 @@ class PoetBlockPublisher(BlockPublisherInterface):
             self._poet_key_state_store.active_key = active_poet_public_key
 
         # Ensure that the enclave is using the appropriate keys
-        unsealed_poet_public_key = \
-            SignupInfo.unseal_signup_data(
-                poet_enclave_module=poet_enclave_module,
-                sealed_signup_data=poet_key_state.sealed_signup_data)
+        try:
+            unsealed_poet_public_key = \
+                SignupInfo.unseal_signup_data(
+                    poet_enclave_module=poet_enclave_module,
+                    sealed_signup_data=poet_key_state.sealed_signup_data)
+        except SystemError:
+            # Signup data is unuseable
+            LOGGER.error(
+                'Could not unseal signup data associated with PPK: %s..%s',
+                active_poet_public_key[:8],
+                active_poet_public_key[-8:])
+            self._poet_key_state_store.active_key = None
+            return False
 
         assert active_poet_public_key == unsealed_poet_public_key
 
@@ -400,6 +409,16 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     PoetKeyState(
                         sealed_signup_data=sealed_signup_data,
                         has_been_refreshed=True)
+
+                # Release enclave resources for this identity
+                # This signup will be invalid on all forks that use it,
+                # even if there is a rollback to a point it should be valid.
+                # A more sophisticated policy would be to release signups
+                # only at a block depth where finality probability
+                # is high.
+                SignupInfo.release_signup_data(
+                    poet_enclave_module=poet_enclave_module,
+                    sealed_signup_data=sealed_signup_data)
 
                 self._register_signup_information(
                     block_header=block_header,

@@ -43,7 +43,9 @@ public:
     static std::string UnsealSignupData(
         const std::string& sealedSignupData
         );
-
+    static void ReleaseSignupData(
+        const std::string& sealedSignupData
+        );
     // Signup data properties
     std::string poet_public_key;
     std::string pse_manifest;
@@ -61,6 +63,10 @@ _SignupData* _create_signup_data(
     );
 
 std::string unseal_signup_data(
+    const std::string& sealed_signup_data
+    );
+
+void release_signup_data(
     const std::string& sealed_signup_data
     );
 
