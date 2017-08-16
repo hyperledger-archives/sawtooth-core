@@ -1,16 +1,20 @@
 extern crate clap;
 extern crate sawtooth_sdk;
+extern crate protobuf;
 
 mod batch_gen;
 mod batch_submit;
+mod playlist;
+mod smallbank;
 
 use std::fs::File;
 use std::io;
-use std::io::prelude::*;
+use std::io::Write;
 use std::error::Error;
 
 use batch_gen::generate_signed_batches;
 use batch_submit::submit_signed_batches;
+use playlist::generate_smallbank_playlist;
 use clap::{App, ArgMatches, AppSettings, Arg, SubCommand};
 
 const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
@@ -64,11 +68,40 @@ fn main() {
                             .long("rate")
                             .value_name("RATE")
                             .help("The number of batches per second to submit to the target")))
+            .subcommand(SubCommand::with_name("playlist")
+                        .about("Generates a smallbank transaction playlist.\n \
+                        A playlist is a series of transactions, described in \
+                        YAML.  This command generates a playlist and writes it \
+                        to file or statndard out.")
+                        .arg(Arg::with_name("output")
+                             .short("o")
+                             .long("output")
+                             .value_name("FILE")
+                             .help("The target for the generated playlist"))
+                        .arg(Arg::with_name("random_seed")
+                             .short("S")
+                             .long("seed")
+                             .value_name("NUMBER")
+                             .help("A random seed, which will generate the same output"))
+                        .arg(Arg::with_name("accounts")
+                             .short("a")
+                             .long("accounts")
+                             .value_name("NUMBER")
+                             .required(true)
+                             .help("The number of unique accounts to generate"))
+                        .arg(Arg::with_name("transactions")
+                             .short("n")
+                             .long("transactions")
+                             .value_name("NUMBER")
+                             .required(true)
+                             .help("The number of transactions generate, in \
+                                   addition to the created accounts")))
             .get_matches();
 
     let result = match arg_matches.subcommand() {
         ("batch", Some(args)) => run_batch_command(args),
         ("submit", Some(args)) => run_submit_command(args),
+        ("playlist", Some(args)) => run_playlist_command(args),
         _ => panic!("Should have processed a subcommand or exited before here")
     };
 
@@ -81,8 +114,9 @@ fn main() {
     });
 }
 
-macro_rules! arg_error {
-    ($msg:expr) => (Err(Box::new(CliError::ArgumentError(String::from($msg)))));
+#[inline]
+fn arg_error (msg: &str) -> Result<(), Box<Error>> {
+    Err(Box::new(CliError::ArgumentError(String::from(msg))))
 }
 
 fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
@@ -94,7 +128,7 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         };
 
     if max_txns == 0 {
-        return arg_error!("max-batch-size must be a number greater than 0");
+        return arg_error("max-batch-size must be a number greater than 0");
     }
 
     let mut in_file = File::open(args.value_of("input").unwrap())?;
@@ -116,7 +150,7 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         };
 
     if rate == 0 {
-        return arg_error!("rate must be a number greater than 0");
+        return arg_error("rate must be a number greater than 0");
     }
 
     let target: String = match args.value_of("target")
@@ -127,7 +161,7 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         };
 
     if target == "" {
-        return arg_error!("target must be a valid http uri");
+        return arg_error("target must be a valid http uri");
     }
 
     let input: String = match args.value_of("input")
@@ -138,7 +172,7 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         };
 
     if input == "" {
-       return arg_error!("an input file must be specified");
+       return arg_error("an input file must be specified");
     }
 
     let mut in_file = File::open(args.value_of("input").unwrap())?;
@@ -152,6 +186,46 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     Ok(())
 }
 
+fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+    let num_accounts = match args.value_of("accounts").unwrap().parse() {
+        Ok(n) => n,
+        Err(_) => 0
+    };
+
+    if num_accounts == 0 {
+        return arg_error("'accounts' must be a number greater than 0");
+    }
+
+    let num_transactions = match args.value_of("transactions").unwrap().parse() {
+        Ok(n) => n,
+        Err(_) => 0
+    };
+
+    if num_transactions == 0 {
+        return arg_error("'transactions' must be a number greater than 0");
+    }
+
+    let random_seed = match args.value_of("random_seed") {
+        Some(seed) => match seed.parse::<i32>() {
+            Ok(n) => Some(n),
+            Err(_) => return arg_error("'seed' must be a valid number"),
+        },
+        None => None
+    };
+
+    let mut output_writer: Box<Write>  = match args.value_of("output") {
+        Some(file_name) => try!(File::create(file_name).map(Box::new)),
+        None => Box::new(std::io::stdout())
+    };
+
+    try!(generate_smallbank_playlist(
+        &mut *output_writer,
+        num_accounts,
+        num_transactions,
+        random_seed));
+
+    Ok(())
+}
 
 #[derive(Debug)]
 enum CliError {

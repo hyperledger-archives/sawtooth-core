@@ -95,5 +95,6 @@
 
 /sdk/cxx/build/
 
+/perf/sawtooth/sawtooth_workload/src/smallbank.rs
 /perf/sawtooth/sawtooth_workload/Cargo.lock
 /perf/sawtooth/sawtooth_workload/target/
