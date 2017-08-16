@@ -70,8 +70,8 @@ def main(args=None):
         "sawtooth_supplychain/protobuf")
 
     if "go" in args:
-        proto_dir = JOIN(TOP_DIR, "families/burrow_evm/src/protos")
-        protoc(proto_dir, "families/burrow_evm/src", "sawtooth_burrow_evm/protobuf", "go")
+        proto_dir = JOIN(TOP_DIR, "families/seth/src/protos")
+        protoc(proto_dir, "families/seth/src", "sawtooth_seth/protobuf", "go")
 
 
 def protoc(src_dir, base_dir, pkg, language="python"):

@@ -228,7 +228,7 @@ then
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-intkey-tp-go
-        docker_build docker/sawtooth-dev-go docker/ sawtooth-burrow-evm-tp
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-seth-tp
         docker_build docker/sawtooth-dev-go docker/ sawtooth-xo-tp-go
         docker_run sawtooth-dev-go
     }
@@ -278,8 +278,8 @@ then
         cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
         cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
             $build_dir
-        cp $top_dir/docker/sawtooth-int-burrow-evm-tp $build_dir
-        cp $top_dir/families/burrow_evm/bin/burrow-evm-tp \
+        cp $top_dir/docker/sawtooth-int-seth-tp $build_dir
+        cp $top_dir/families/seth/bin/seth-tp \
             $build_dir
         cp $top_dir/sdk/examples/xo_go/bin/xo-tp-go \
             $build_dir
@@ -287,8 +287,8 @@ then
 
         docker_build $build_dir/sawtooth-int-intkey-tp-go $build_dir/ \
             sawtooth-intkey-tp-go
-        docker_build $build_dir/sawtooth-int-burrow-evm-tp $build_dir/ \
-            sawtooth-burrow-evm-tp
+        docker_build $build_dir/sawtooth-int-seth-tp $build_dir/ \
+            sawtooth-seth-tp
         docker_build $build_dir/sawtooth-int-xo-tp-go $build_dir/ \
             sawtooth-xo-tp-go
     }

@@ -74,8 +74,8 @@
 /sdk/go/pkg/
 /sdk/go/src/golang.org/
 /sdk/go/src/gopkg.in/
-/families/burrow_evm/bin/
-/families/burrow_evm/src/sawtooth_burrow_evm/protobuf/
+/families/seth/bin/
+/families/seth/src/sawtooth_seth/protobuf/
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/

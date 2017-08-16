@@ -1,11 +1,11 @@
 #!/bin/bash
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-bin=$top_dir/families/burrow_evm/bin/seth
+bin=$top_dir/families/seth/bin/seth
 
 if [ -e $bin ]
 then
     $bin $*
 else
-    echo "Please build seth first with 'build_all -l go' or 'build_go'"
+    echo "Please build seth first with 'build_all -l go' or 'build_seth'"
 fi
