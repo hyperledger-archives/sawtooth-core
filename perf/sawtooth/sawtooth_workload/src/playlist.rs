@@ -96,15 +96,15 @@ pub fn generate_smallbank_playlist(output: &mut Write,
 /// signed with the given `PrivateKey` instance.
 pub fn process_smallbank_playlist(output: &mut Write,
                                   playlist_input: &mut Read,
+                                  signing_algorithm: &signing::Algorithm,
                                   signing_key: &signing::PrivateKey)
     -> Result<(), PlaylistError>
 {
     let payloads = try!(read_smallbank_playlist(playlist_input));
 
-    let signing_algoritm = signing::create_algorithm("secp256k1").unwrap();
-    let crypto_factory = signing::CryptoFactory::new(signing_algoritm.as_ref());
+    let crypto_factory = signing::CryptoFactory::new(signing_algorithm);
     let signer = crypto_factory.new_signer(signing_key);
-    let pub_key = try!(signing_algoritm.get_public_key(signing_key).map_err(PlaylistError::SigningError));
+    let pub_key = try!(signing_algorithm.get_public_key(signing_key).map_err(PlaylistError::SigningError));
     let pub_key_hex = pub_key.as_hex();
 
     let start = Instant::now();
