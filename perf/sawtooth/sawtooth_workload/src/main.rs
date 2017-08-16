@@ -19,6 +19,7 @@ use playlist::generate_smallbank_playlist;
 use playlist::process_smallbank_playlist;
 use clap::{App, ArgMatches, AppSettings, Arg, SubCommand};
 
+use sawtooth_sdk::signing;
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 
 const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
@@ -73,6 +74,12 @@ fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
              .value_name("FILE")
              .required(true)
              .help("The target for the signed batches"))
+        .arg(Arg::with_name("key")
+             .short("k")
+             .long("key")
+             .value_name("FILE")
+             .required(true)
+             .help("The signing key for the transactions"))
         .arg(Arg::with_name("max-batch-size")
              .short("n")
              .long("max-batch-size")
@@ -96,7 +103,17 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let mut in_file = File::open(args.value_of("input").unwrap())?;
     let mut out_file = File::create(args.value_of("output").unwrap())?;
 
-    if let Err(err) = generate_signed_batches(&mut in_file, &mut out_file, max_txns) {
+    let mut key_file = try!(File::open(args.value_of("key").unwrap()));
+
+    let mut buf = String::new();
+    try!(key_file.read_to_string(&mut buf));
+    buf.pop(); // remove the new line
+
+    let private_key = try!(Secp256k1PrivateKey::from_wif(&buf));
+    let algorithm = try!(signing::create_algorithm("secp256k1"));
+
+    if let Err(err) = generate_signed_batches(&mut in_file, &mut out_file,
+                                              max_txns, algorithm.as_ref(), &private_key) {
         return Err(Box::new(err));
     }
 
