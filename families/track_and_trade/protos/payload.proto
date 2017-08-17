@@ -1,0 +1,137 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+import "property.proto";
+import "proposal.proto";
+
+
+message TTPayload {
+  enum Action {
+    CREATE_AGENT = 0;
+    CREATE_RECORD = 1;
+    FINALIZE_RECORD = 2;
+    CREATE_RECORD_TYPE = 3;
+    UPDATE_PROPERTIES = 4;
+    CREATE_PROPOSAL = 5;
+    ANSWER_PROPOSAL = 6;
+    REVOKE_REPORTER = 7;
+  }
+
+  Action action = 1;
+
+  // Approximately when transaction was submitted, as a Unix UTC
+  // timestamp
+  uint64 timestamp = 2;
+
+  // The transaction handler will read from just one of these fields
+  // according to the Action.
+  CreateAgentAction create_agent = 3;
+  CreateRecordAction create_record = 4;
+  FinalizeRecordAction finalize_record = 5;
+  CreateRecordTypeAction create_record_type = 6;
+  UpdatePropertiesAction update_properties = 7;
+  CreateProposalAction create_proposal = 8;
+  AnswerProposalAction answer_proposal = 9;
+  RevokeReporterAction revoke_reporter = 10;
+}
+
+
+message CreateAgentAction {
+  // The human-readable name of the Agent. This does not need to be
+  // unique.
+  string name = 1;
+}
+
+
+message CreateRecordAction {
+  // The natural key of the Record
+  string record_id = 1;
+
+  // The name of the RecordType this Record belongs to
+  string record_type = 2;
+
+  repeated PropertyValue properties = 3;
+}
+
+
+message FinalizeRecordAction {
+  // The natural key of the Record
+  string record_id = 1;
+}
+
+
+message CreateRecordTypeAction {
+  string name = 1;
+
+  repeated PropertySchema properties = 2;
+}
+
+
+message UpdatePropertiesAction {
+  // The natural key of the Record
+  string record_id = 1;
+
+  repeated PropertyValue properties = 2;
+}
+
+
+message CreateProposalAction {
+  // The natural key of the Record
+  string record_id = 1;
+
+  // the public key of the Agent to whom the Proposal is sent
+  // (must be different from the Agent creating the Proposal)
+  string receiving_agent = 2;
+
+  Proposal.Role role = 3;
+
+  repeated string properties = 4;
+}
+
+
+message AnswerProposalAction {
+  enum Response {
+    ACCEPT = 0;
+    REJECT = 1;
+    CANCEL = 2;
+  }
+
+  // The natural key of the Record
+  string record_id = 1;
+
+  // The public key of the Agent to whom the proposal is sent
+  string receiving_agent = 2;
+
+  // The role being proposed (owner, custodian, or reporter)
+  Proposal.Role role = 3;
+
+  // The respose to the Proposal (accept, reject, or cancel)
+  Response response = 4;
+}
+
+
+message RevokeReporterAction {
+  // The natural key of the Record
+  string record_id = 1;
+
+  // The reporter's public key
+  string reporter_id = 2;
+
+  // The names of the Properties for which the reporter's
+  // authorization is revoked
+  repeated string properties = 3;
+}
