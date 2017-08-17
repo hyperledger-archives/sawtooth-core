@@ -63,7 +63,7 @@ class RestClient:
             dict: the json result data, as a dict
         """
 
-        return self._post('/batches', batch_list)
+        return self._post('/batches?wait', batch_list)
 
     def _get(self, path, **queries):
         code, json_result = self._submit_request(

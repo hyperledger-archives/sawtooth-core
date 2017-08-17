@@ -171,6 +171,7 @@ lint families/identity "$SINCE" || retval=1
 lint families/block_info "$SINCE" || retval=1
 lint families/supplychain/python "$SINCE" || retval=1
 lint families/track_and_trade/processor/sawtooth_track_and_trade/ "$SINCE" || retval=1
+lint families/track_and_trade/tests/sawtooth_tt_test "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
