@@ -76,10 +76,15 @@ def main(args=None):
     protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
     protoc(proto_dir, "cli", "sawtooth_cli/protobuf")
 
-    # 5. Generate block info protos
+    # 6. Generate block info protos
     proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
     protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
 
+    # 7. Generate Track and Trade protos
+    protoc(
+        JOIN(TOP_DIR, "families/track_and_trade/protos"),
+        "families/track_and_trade",
+        "sawtooth_track_and_trade/protobuf")
 
     if "go" in args:
         proto_dir = JOIN(TOP_DIR, "families/seth/src/protos")
