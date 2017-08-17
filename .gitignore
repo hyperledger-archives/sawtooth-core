@@ -27,14 +27,16 @@
 /consensus/poet/sgx/**/poet_enclave_wrap.cpp
 
 /core/sawtooth_core.egg-info/
-/families/settings/sawtooth_settings/protobuf/
-/families/supplychain/python/sawtooth_supplychain/protobuf
-/families/supplychain/python/build/
+
 /families/**/__pycache__/
-/families/track_and_trade/client/public/dist
-/families/track_and_trade/server/rethinkdb_data
+/families/settings/sawtooth_settings/protobuf/
 /families/identity/sawtooth_identity/protobuf
 /families/block_info/sawtooth_block_info/protobuf
+/families/supplychain/python/sawtooth_supplychain/protobuf
+/families/supplychain/python/build/
+/families/track_and_trade/sawtooth_track_and_trade/protobuf
+/families/track_and_trade/client/public/dist
+/families/track_and_trade/server/rethinkdb_data
 
 /coverage
 /coverage/html
