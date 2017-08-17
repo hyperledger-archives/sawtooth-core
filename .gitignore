@@ -79,6 +79,7 @@
 /families/burrow_evm/bin/
 /families/burrow_evm/src/sawtooth_burrow_evm/protobuf/
 /sdk/rust/target
+/sdk/rust/Cargo.lock
 /sdk/rust/src/messages/*.rs
 !/sdk/rust/src/messages/mod.rs
 
