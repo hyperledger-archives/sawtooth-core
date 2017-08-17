@@ -34,7 +34,7 @@
 /families/block_info/sawtooth_block_info/protobuf
 /families/supplychain/python/sawtooth_supplychain/protobuf
 /families/supplychain/python/build/
-/families/track_and_trade/sawtooth_track_and_trade/protobuf
+/families/track_and_trade/processor/sawtooth_track_and_trade/protobuf
 /families/track_and_trade/client/public/dist
 /families/track_and_trade/server/rethinkdb_data
 
