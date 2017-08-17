@@ -318,6 +318,8 @@ mod tests {
         assert_eq!(batch_header.transaction_ids.len(), 2);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
         assert_eq!(batch_header.transaction_ids[1], String::from("sig2"));
+        assert_eq!(batch.header_signature,
+                   String::from("signed by mock_algorithm"));
 
         // pull the next batch
         batch_result = producer.next_batch().unwrap();
