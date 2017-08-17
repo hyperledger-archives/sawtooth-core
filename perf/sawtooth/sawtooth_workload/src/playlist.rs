@@ -133,6 +133,7 @@ pub fn process_smallbank_playlist(output: &mut Write,
 
         txn_header.set_payload_sha512(bytes_to_hex_str(hash));
         txn_header.set_signer_pubkey(pub_key_hex.clone());
+        txn_header.set_batcher_pubkey(pub_key_hex.clone());
 
         let header_bytes = try!(txn_header.write_to_bytes().map_err(PlaylistError::MessageError));
 
