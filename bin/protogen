@@ -83,7 +83,7 @@ def main(args=None):
     # 7. Generate Track and Trade protos
     protoc(
         JOIN(TOP_DIR, "families/track_and_trade/protos"),
-        "families/track_and_trade",
+        "families/track_and_trade/processor",
         "sawtooth_track_and_trade/protobuf")
 
     if "go" in args:
