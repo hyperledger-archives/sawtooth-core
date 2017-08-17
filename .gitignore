@@ -29,6 +29,7 @@
 /core/sawtooth_core.egg-info/
 /families/settings/sawtooth_settings/protobuf/
 /families/supplychain/python/sawtooth_supplychain/protobuf
+/families/identity/sawtooth_identity/protobuf
 /families/**/__pycache__/
 
 /coverage
