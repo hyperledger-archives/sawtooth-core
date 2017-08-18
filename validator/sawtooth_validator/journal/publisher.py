@@ -303,7 +303,8 @@ class BlockPublisher(object):
                  chain_head,
                  identity_signing_key,
                  data_dir,
-                 config_dir):
+                 config_dir,
+                 permission_verifier):
         """
         Initialize the BlockPublisher object
 
@@ -343,6 +344,7 @@ class BlockPublisher(object):
             signing.generate_pubkey(self._identity_signing_key)
         self._data_dir = data_dir
         self._config_dir = config_dir
+        self._permission_verifier = permission_verifier
 
     @property
     def chain_head_lock(self):
@@ -411,11 +413,16 @@ class BlockPublisher(object):
         :return: None
         """
         with self._lock:
-            self._pending_batches.append(batch)
-            # if we are building a block then send schedule it for
-            # execution.
-            if self._candidate_block and self._candidate_block.can_add_batch:
-                self._candidate_block.add_batch(batch)
+            if self._permission_verifier.is_batch_signer_authorized(batch):
+                self._pending_batches.append(batch)
+                # if we are building a block then send schedule it for
+                # execution.
+                if self._candidate_block and \
+                        self._candidate_block.can_add_batch:
+                    self._candidate_block.add_batch(batch)
+            else:
+                LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
+                             batch.header_signature)
 
     def _rebuild_pending_batches(self, committed_batches, uncommitted_batches):
         """When the chain head is changed. This recomputes the list of pending

@@ -53,6 +53,7 @@ from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
 from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.settings_view import SettingsViewFactory
+from sawtooth_validator.state.identity_view import IdentityViewFactory
 from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaAddSubscriberHandler
@@ -65,6 +66,7 @@ from sawtooth_validator.state.state_delta_processor import \
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
+from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
 from sawtooth_validator.networking.interconnect import Interconnect
@@ -217,6 +219,14 @@ class Validator(object):
         block_sender = BroadcastBlockSender(completer, self._gossip)
         batch_sender = BroadcastBatchSender(completer, self._gossip)
         chain_id_manager = ChainIdManager(data_dir)
+
+        identity_view_factory = IdentityViewFactory(
+            StateViewFactory(merkle_db))
+
+        permission_verifier = PermissionVerifier(
+            identity_view_factory,
+            block_store.chain_head_state_root)
+
         # Create and configure journal
         self._journal = Journal(
             block_store=block_store,
@@ -230,6 +240,7 @@ class Validator(object):
             state_delta_processor=state_delta_processor,
             data_dir=data_dir,
             config_dir=config_dir,
+            permission_verifier=permission_verifier,
             check_publish_block_frequency=0.1,
             block_cache_purge_frequency=30,
             block_cache_keep_time=300,
@@ -432,9 +443,7 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             BatchListPermissionVerifier(
-                settings_view_factory=SettingsViewFactory(
-                    StateViewFactory(merkle_db)),
-                current_root_func=self._journal.get_current_root,
+                permission_verifier=permission_verifier
             ),
             sig_pool)
 

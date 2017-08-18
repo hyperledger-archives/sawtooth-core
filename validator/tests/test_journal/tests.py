@@ -48,6 +48,7 @@ from test_journal.mock import MockNetwork
 from test_journal.mock import MockStateViewFactory, CreateSetting
 from test_journal.mock import MockStateDeltaProcessor
 from test_journal.mock import MockTransactionExecutor
+from test_journal.mock import MockPermissionVerifier
 from test_journal.mock import SynchronousExecutor
 from test_journal.utils import wait_until
 
@@ -99,6 +100,7 @@ class TestBlockPublisher(unittest.TestCase):
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
         self.state_view_factory = MockStateViewFactory({})
+        self.permission_verifier = MockPermissionVerifier()
 
         self.publisher = BlockPublisher(
             transaction_executor=MockTransactionExecutor(),
@@ -110,7 +112,8 @@ class TestBlockPublisher(unittest.TestCase):
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
-            config_dir=None)
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
 
         self.init_chain_head = self.block_tree_manager.chain_head
 
@@ -263,7 +266,8 @@ class TestBlockPublisher(unittest.TestCase):
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
-            config_dir=None)
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
 
         self.receive_batches()
 
@@ -293,7 +297,8 @@ class TestBlockPublisher(unittest.TestCase):
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
-            config_dir=None)
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
 
         self.assert_no_block_published()
 
@@ -422,6 +427,7 @@ class TestBlockValidator(unittest.TestCase):
         self.root = self.block_tree_manager.chain_head
 
         self.block_validation_handler = self.BlockValidationHandler()
+        self.permission_verifier = MockPermissionVerifier()
 
     # fork based tests
     def test_fork_simple(self):
@@ -729,7 +735,8 @@ class TestBlockValidator(unittest.TestCase):
             squash_handler=None,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
-            config_dir=None)
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
 
     class BlockValidationHandler(object):
         def __init__(self):
@@ -763,6 +770,7 @@ class TestChainController(unittest.TestCase):
         self.chain_id_manager = MockChainIdManager()
         self._chain_head_lock = RLock()
         self.state_delta_processor = MockStateDeltaProcessor()
+        self.permission_verifier = MockPermissionVerifier()
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
@@ -783,7 +791,8 @@ class TestChainController(unittest.TestCase):
             state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
-            config_dir=None)
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -1075,6 +1084,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.chain_id_manager = MockChainIdManager()
         self.state_delta_processor = MockStateDeltaProcessor()
         self.chain_head_lock = RLock()
+        self.permission_verifier = MockPermissionVerifier()
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
@@ -1094,7 +1104,8 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
-            config_dir=None)
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 
@@ -1157,6 +1168,7 @@ class TestJournal(unittest.TestCase):
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
         self.state_delta_processor = MockStateDeltaProcessor()
+        self.permission_verifier = MockPermissionVerifier()
 
     def test_publish_block(self):
         """
@@ -1181,7 +1193,8 @@ class TestJournal(unittest.TestCase):
                 chain_id_manager=None,
                 state_delta_processor=self.state_delta_processor,
                 data_dir=None,
-                config_dir=None
+                config_dir=None,
+                permission_verifier=self.permission_verifier
             )
 
             self.gossip.on_batch_received = journal.on_batch_received
