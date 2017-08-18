@@ -475,8 +475,10 @@ fn make_smallbank_send_payment_txn(rng: &mut StdRng, num_accounts: usize)
 {
     let mut payload =
         smallbank::SmallbankTransactionPayload_SendPaymentTransactionData::new();
-    payload.set_source_customer_id(rng.gen_range(0, num_accounts as u32));
-    payload.set_dest_customer_id(rng.gen_range(0, num_accounts as u32));
+    let source_id = rng.gen_range(0, num_accounts as u32);
+    let dest_id = next_non_matching_in_range(rng, num_accounts as u32, source_id);
+    payload.set_source_customer_id(source_id);
+    payload.set_dest_customer_id(dest_id);
     payload.set_amount(rng.gen_range(10, 200));
 
     payload
@@ -487,10 +489,20 @@ fn make_smallbank_amalgamate_txn(rng: &mut StdRng, num_accounts: usize)
 {
     let mut payload =
         smallbank::SmallbankTransactionPayload_AmalgamateTransactionData::new();
-    payload.set_source_customer_id(rng.gen_range(0, num_accounts as u32));
-    payload.set_dest_customer_id(rng.gen_range(0, num_accounts as u32));
+    let source_id = rng.gen_range(0, num_accounts as u32);
+    let dest_id = next_non_matching_in_range(rng, num_accounts as u32, source_id);
+    payload.set_source_customer_id(source_id);
+    payload.set_dest_customer_id(dest_id);
 
     payload
+}
+
+fn next_non_matching_in_range(rng: &mut StdRng, max: u32, exclude: u32) -> u32 {
+    let mut selected = exclude;
+    while selected == exclude {
+        selected = rng.gen_range(0, max)
+    }
+    selected
 }
 
 #[derive(Debug)]
