@@ -264,8 +264,8 @@ fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         Err(_) => 0
     };
 
-    if num_accounts == 0 {
-        return arg_error("'accounts' must be a number greater than 0");
+    if num_accounts < 2 {
+        return arg_error("'accounts' must be a number greater than 2");
     }
 
     let num_transactions = match args.value_of("transactions").unwrap().parse() {
