@@ -13,22 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# In first window, run:
-#   $ cd sawtooth-core
-#   $ ./bin/build_all -l go -l python
-#   $ docker-compose -f docker/compose/sawtooth-seth.yaml up
-#
-# In second window, run:
-#   $ docker exec -it seth-client bash
-
-version: "3"
+version: "2.1"
 
 services:
 
   seth-tp:
-    image: sawtooth-seth-tp:latest
+    image: sawtooth-seth-tp:$ISOLATION_ID
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
@@ -37,48 +29,44 @@ services:
     stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-validator:latest
+    image: sawtooth-validator:$ISOLATION_ID
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
       - 8800
+    # start the validator with an empty genesis batch
     command: "bash -c \"\
-        sawtooth keygen --key-dir /project/sawtooth-core sawtooth && \
         sawtooth admin keygen && \
         sawtooth admin genesis && \
-        sawtooth-validator --endpoint tcp://validator:8800 -v \
+        sawtooth-validator -v \
+            --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
     \""
     stop_signal: SIGKILL
 
   rest-api:
-    image: sawtooth-rest-api:latest
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
       - 8080
     depends_on:
-     - validator
+      - validator
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
     stop_signal: SIGKILL
 
-  seth-client:
-    container_name: seth-client
-    image: sawtooth-dev-go:latest
+  seth-perm-test:
+    image: sawtooth-dev-go:$ISOLATION_ID
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 8080
     depends_on:
       - validator
       - rest-api
-    # Wait for rest_api
-    working_dir: "/project/sawtooth-core"
-    command: "bash -c \"seth init http://rest-api:8080 && \
-        cd /project/sawtooth-core && \
-        until [ -f sawtooth.priv ]; do sleep 1; done && \
-        tail -f /dev/null\""
+    working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
+    command: go test seth_perm_test.go
     stop_signal: SIGKILL

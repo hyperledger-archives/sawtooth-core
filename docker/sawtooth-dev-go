@@ -40,7 +40,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go:/project/sawtooth-core/sdk/examples/noop_go:/project/sawtooth-core/families/burrow_evm:/project/sawtooth-core/sdk/examples/xo_go
+ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go:/project/sawtooth-core/sdk/examples/noop_go:/project/sawtooth-core/families/seth:/project/sawtooth-core/sdk/examples/xo_go
 
 RUN mkdir /go \
  && go get -u \
@@ -68,4 +68,4 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin
 
 WORKDIR /
 
-CMD build_go && build_burrow_evm
+CMD build_go && build_seth

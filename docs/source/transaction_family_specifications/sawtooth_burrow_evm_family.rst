@@ -13,13 +13,13 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-****************************************************
-Sawtooth Burrow-EVM Transaction Family Specification
-****************************************************
+*************************************
+Seth Transaction Family Specification
+*************************************
 
 Overview
 =========
-The Sawtooth Burrow-EVM transaction family enables the creation and execution
+The Seth transaction family enables the creation and execution
 of smart contracts within the Hyperledger Sawtooth framework. It integrates the
 Hyperledger Burrow implementation of the Ethereum Virtual Machine (EVM) into
 the Hyperledger Sawtooth framework using the Sawtooth Go SDK.
@@ -75,7 +75,7 @@ State
 
 Accounts
 --------
-State associated with the Sawtooth Burrow-EVM Transaction Family shall consist
+State associated with the Seth Transaction Family shall consist
 of a set of accounts. Similar to Ethereum, two types of accounts shall be
 defined:
 
@@ -127,13 +127,13 @@ Addressing
 
 EVM Prefix
 ----------
-All data associated with the Sawtooth Burrow-EVM Transaction Family shall be
+All data associated with the Seth Transaction Family shall be
 stored under the prefix formed by taking the first 3 bytes of the SHA512 hash
-of the UTF-8 encoded string “burrow-evm”. This shall be referred to as the EVM
+of the UTF-8 encoded string “seth”. This shall be referred to as the EVM
 prefix.::
 
-    >>> hashlib.sha512('burrow-evm'.encode('utf-8')).hexdigest()[0:6]
-    'a84eda'
+    >>> hashlib.sha512('seth'.encode('utf-8')).hexdigest()[0:6]
+    'a68b06'
 
 Account Addresses
 -----------------
@@ -157,7 +157,7 @@ Transaction Payload
 ===================
 
 The transaction payload closely follows the structure as defined by the EVM
-yellow paper, section 4.3 (“The Transaction”). In the Sawtooth Burrow-EVM
+yellow paper, section 4.3 (“The Transaction”). In the Seth
 Transaction Family, the transaction payload shall be represented using the
 following protobuf message::
 
