@@ -265,5 +265,5 @@ class MockStateDeltaProcessor(object):
         self.block = block
 
 class MockPermissionVerifier(object):
-    def is_batch_signer_authorized(self, batch):
+    def is_batch_signer_authorized(self, batch, state_root=None):
         return True
