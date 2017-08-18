@@ -24,7 +24,6 @@ MODULE_LIST="
     poet
     settings
     identity
-    permission
     validator
     go_sdk
     java_sdk
@@ -166,9 +165,6 @@ main() {
                 supplychain)
                     test_supplychain
                     ;;
-                permission)
-                  test_permission
-                  ;;
                 validator)
                     test_validator
                     ;;
@@ -255,12 +251,7 @@ test_settings() {
 
 test_identity() {
   run_docker_test ./families/identity/tests/test_tp_identity.yaml
-  copy_coverage .coverage.permission
-}
-
-test_permission() {
-  run_docker_test test_permission
-  copy_coverage .coverage.permission
+  copy_coverage .coverage.identity
 }
 
 test_supplychain() {
