@@ -88,7 +88,8 @@ class BlockValidator(object):
                  squash_handler,
                  identity_signing_key,
                  data_dir,
-                 config_dir):
+                 config_dir,
+                 permission_verifier):
         """Initialize the BlockValidator
         Args:
              consensus_module: The consensus module that contains
@@ -134,6 +135,7 @@ class BlockValidator(object):
             'committed_batches': [],
             'uncommitted_batches': [],
         }
+        self._permission_verifier = permission_verifier
 
     def _get_previous_block_root_state_hash(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -220,6 +222,21 @@ class BlockValidator(object):
                 return False
         return True
 
+    def _validate_permissions(self, blkw):
+        """
+        Validate that all of the batch signers and transaction signer for the
+        batches in the block are permitted by the transactor permissioning
+        roles stored in state as of theprevious block. If a transactor is found
+        to not be permitted, the block is invalid.
+        """
+        if blkw.block_num != 0:
+            state_root = self._get_previous_block_root_state_hash(blkw)
+            for batch in blkw.batches:
+                if not self._permission_verifier.is_batch_signer_authorized(
+                        batch, state_root):
+                    return False
+        return True
+
     def validate_block(self, blkw):
         # pylint: disable=broad-except
         try:
@@ -229,6 +246,8 @@ class BlockValidator(object):
                 return False
             else:
                 valid = True
+
+                valid = self._validate_permissions(blkw)
 
                 consensus = self._consensus_module.\
                     BlockVerifier(block_cache=self._block_cache,
@@ -454,7 +473,8 @@ class ChainController(object):
                  state_delta_processor,
                  identity_signing_key,
                  data_dir,
-                 config_dir):
+                 config_dir,
+                 permission_verifier):
         """Initialize the ChainController
         Args:
              block_cache: The cache of all recent blocks and the processing
@@ -523,6 +543,7 @@ class ChainController(object):
             raise
 
         self._notify_on_chain_updated(self._chain_head)
+        self._permission_verifier = permission_verifier
 
     @property
     def chain_head(self):
@@ -549,7 +570,8 @@ class ChainController(object):
                 squash_handler=self._squash_handler,
                 identity_signing_key=self._identity_signing_key,
                 data_dir=self._data_dir,
-                config_dir=self._config_dir)
+                config_dir=self._config_dir,
+                permission_verifier=self._permission_verifier)
             self._blocks_processing[blkw.block.header_signature] = validator
             self._executor.submit(validator.run)
 
@@ -733,7 +755,8 @@ class ChainController(object):
                     squash_handler=self._squash_handler,
                     identity_signing_key=self._identity_signing_key,
                     data_dir=self._data_dir,
-                    config_dir=self._config_dir)
+                    config_dir=self._config_dir,
+                    permission_verifier=self._permission_verifier)
 
                 valid = validator.validate_block(block)
                 if valid:
