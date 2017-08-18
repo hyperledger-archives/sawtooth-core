@@ -29,10 +29,11 @@
 /core/sawtooth_core.egg-info/
 /families/settings/sawtooth_settings/protobuf/
 /families/supplychain/python/sawtooth_supplychain/protobuf
-/families/identity/sawtooth_identity/protobuf
+/families/supplychain/python/build/
 /families/**/__pycache__/
 /families/track_and_trade/client/public/dist
 /families/track_and_trade/server/rethinkdb_data
+/families/identity/sawtooth_identity/protobuf
 
 /coverage
 /coverage/html

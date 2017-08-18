@@ -19,80 +19,96 @@ import os
 import toml
 
 from sawtooth_sdk.client.config import get_config_dir
-from sawtooth_supplychain.subscriber.exceptions import \
-    SubscriberConfigurationError
+from sawtooth_supplychain.rest_api.exceptions import RestApiConfigurationError
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-def load_default_subscriber_config():
-    return SubscriberConfig(
-        connect='tcp://localhost:4004',
-        database_name='supplychain',
-        database_host='localhost',
-        database_port=5432)
-
-
-def load_toml_subscriber_config(filename):
-    """Returns a SubscriberConfig create by loading a TOML file from the
-    file system.
-
+def load_default_rest_api_config():
+    """Returns a default configuration for the Supply Chain REST API.
     Args:
-        filename (str): the name of the .toml file
+        None
 
     Returns:
-        (:obj:`SubscriberConfig`) - the subscriber configuration"""
+        (:obj:`RestApiConfig`) - the default REST API configuration
+    """
+    return RestApiConfig(
+        bind=['127.0.0.1:8000'],
+        database_name='supplychain',
+        database_host='localhost',
+        database_port='5432')
+
+
+def load_toml_rest_api_config(filename):
+    """Returns a RestApiConfig created by loading a TOML file from the
+    filesystem.
+
+    Args:
+        filename: the config file to load
+    Returns:
+        (:obj:`RestApiConfig`) - the REST API configuration
+    """
     if not os.path.exists(filename):
         LOGGER.info(
-            "Skipping loading from non-existent config file: %s",
+            "Skipping rest api loading from non-existent config file: %s",
             filename)
-        return SubscriberConfig()
+        return RestApiConfig()
 
-    LOGGER.info('Loading subscriber information from config: %s', filename)
+    LOGGER.info("Loading rest api information from config: %s", filename)
 
     try:
-        with open(filename) as config_file:
-            raw_config = config_file.read()
+        with open(filename) as fd:
+            raw_config = fd.read()
     except IOError as e:
-        raise SubscriberConfigurationError(
-            'Unable to load subscriber configuration file: {}'.format(str(e)))
+        raise RestApiConfigurationError(
+            "Unable to load rest api configuration file: {}".format(str(e)))
 
     toml_config = toml.loads(raw_config)
 
     invalid_keys = set(toml_config.keys()).difference(
-        ['connect', 'database_name', 'database_host', 'database_port',
-         'database_user', 'database_password'])
+        ['bind', 'database_name', 'database_host',
+         'database_port', 'database_user', 'database_password'])
     if invalid_keys:
-        raise SubscriberConfigurationError(
-            'Invalid keys in subscriber config: {}'.format(
-                ', '.join(sorted(list(invalid_keys)))))
+        raise RestApiConfigurationError(
+            "Invalid keys in rest api config: {}".format(
+                ", ".join(sorted(list(invalid_keys)))))
 
-    port = None
-    port_str = toml_config.get('database_port', None)
-    if port_str is not None:
-        try:
-            port = port_str
-        except ValueError:
-            raise SubscriberConfigurationError(
-                '"database_port" must be valid port number')
+    database_port = None
+    config_port_str = None
+    try:
+        config_port_str = toml_config.get('database_port', None)
+        if config_port_str:
+            database_port = int(config_port_str)
+    except ValueError:
+        raise RestApiConfigurationError(
+            'Invalid database_port in rest api config: {}'.format(
+                config_port_str))
 
-    return SubscriberConfig(
-        connect=toml_config.get('connect', None),
+    config = RestApiConfig(
+        bind=toml_config.get("bind", None),
         database_name=toml_config.get('database_name', None),
         database_host=toml_config.get('database_host', None),
-        database_port=port,
+        database_port=database_port,
         database_user=toml_config.get('database_user', None),
         database_password=toml_config.get('database_password', None)
     )
 
+    return config
 
-def merge_subscriber_configs(configs):
-    """Given a list of SubscriberConfig objects, returns a single
-    SubscriberConfig with the values merged.  Priority is in order of
-    arguments, first to last.
+
+def merge_rest_api_configs(configs):
     """
-    connect = None
+    Given a list of RestApiConfig objects, merges them into a single
+    RestApiConfig, giving priority in the order of the configs (first has
+    highest priority).
+
+    Args:
+        configs: a list of configs to merge
+    Returns:
+        (:obj:`RestApiConfig`) - the merged REST API configuration
+    """
+    bind = None
     database_name = None
     database_host = None
     database_port = None
@@ -100,8 +116,8 @@ def merge_subscriber_configs(configs):
     database_password = None
 
     for config in reversed(configs):
-        if config.connect is not None:
-            connect = config.connect
+        if config.bind is not None:
+            bind = config.bind
 
         if config.database_name is not None:
             database_name = config.database_name
@@ -118,8 +134,8 @@ def merge_subscriber_configs(configs):
         if config.database_password is not None:
             database_password = config.database_password
 
-    return SubscriberConfig(
-        connect=connect,
+    return RestApiConfig(
+        bind=bind,
         database_name=database_name,
         database_host=database_host,
         database_port=database_port,
@@ -127,24 +143,24 @@ def merge_subscriber_configs(configs):
         database_password=database_password)
 
 
-def load_subscriber_config(first_config):
+def load_rest_api_config(first_config):
     """Loads the config from the config file and merges it with the given
     configuration.
     """
-    default_config = load_default_subscriber_config()
+    default_config = load_default_rest_api_config()
     config_dir = get_config_dir()
-    conf_file = os.path.join(config_dir, 'supplychain_sds.toml')
+    conf_file = os.path.join(config_dir, 'supplychain_rest_api.toml')
 
-    toml_config = load_toml_subscriber_config(conf_file)
-    return merge_subscriber_configs(
+    toml_config = load_toml_rest_api_config(conf_file)
+    return merge_rest_api_configs(
         configs=[first_config, toml_config, default_config])
 
 
-class SubscriberConfig:
-    def __init__(self, connect=None, database_name=None,
+class RestApiConfig:
+    def __init__(self, bind=None, database_name=None,
                  database_host=None, database_port=None,
                  database_user=None, database_password=None):
-        self._connect = connect
+        self._bind = bind
         self._database_name = database_name
         self._database_host = database_host
         self._database_port = database_port
@@ -152,8 +168,8 @@ class SubscriberConfig:
         self._database_password = database_password
 
     @property
-    def connect(self):
-        return self._connect
+    def bind(self):
+        return self._bind
 
     @property
     def database_name(self):
@@ -177,11 +193,11 @@ class SubscriberConfig:
 
     def __repr__(self):
         return \
-            ("{}(connect={}, database_name={}, "
+            ("{}(bind={}, database_name={}, "
              "database_host={}, database_port={}, "
              "database_user={}, database_password={})").format(
                 self.__class__.__name__,
-                repr(self._connect),
+                repr(self._bind),
                 repr(self._database_name),
                 repr(self._database_host),
                 repr(self._database_port),
@@ -190,7 +206,7 @@ class SubscriberConfig:
 
     def to_dict(self):
         return collections.OrderedDict([
-            ('connect', self._connect),
+            ('bind', self._bind),
             ('database_name', self._database_name),
             ('database_host', self._database_host),
             ('database_port', self._database_port),
