@@ -25,13 +25,20 @@ import (
 )
 
 type RespBody struct {
-	Data  string
+	Data  interface{}
 	Link  string
 	Head  string
 	Error ErrorBody
 }
 
 func (r *RespBody) String() string {
+	if r.Data == nil {
+		return fmt.Sprintf(`
+Data:
+Link: %v
+Head: %v
+		`, r.Link, r.Head)
+	}
 	return fmt.Sprintf(`
 Data: %v
 Link: %v

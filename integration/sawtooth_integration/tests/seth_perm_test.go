@@ -50,7 +50,7 @@ func TestPermissions(t *testing.T) {
   // Create an External Account so we can change permissions. Since global
   // permissions have not been set yet, the account is created with all
   // permissions.
-  _, err := client.CreateExternalAccount(priv, nil, nil, nonce)
+  _, err := client.CreateExternalAccount(priv, nil, nil, nonce, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -60,7 +60,7 @@ func TestPermissions(t *testing.T) {
   // Now that we have an account, we can disable all global permissions
   globalPermsAddr := GlobalPermissionsAddress().Bytes()
   zeroPerms := &EvmPermissions{Perms: uint64(0), SetBit: uint64(ptypes.AllPermFlags)}
-  err = client.SetPermissions(priv, globalPermsAddr, zeroPerms, nonce)
+  err = client.SetPermissions(priv, globalPermsAddr, zeroPerms, nonce, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -81,7 +81,7 @@ func TestPermissions(t *testing.T) {
   }
 
   // Test that new accounts cannot be created without authorization
-  addr2, err := client.CreateExternalAccount(priv2, nil, nil, 0)
+  addr2, err := client.CreateExternalAccount(priv2, nil, nil, 0, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -99,7 +99,7 @@ func TestPermissions(t *testing.T) {
     Perms: uint64(ptypes.CreateContract | ptypes.Call),
     SetBit: uint64(ptypes.CreateContract | ptypes.Call),
   }
-  addr2, err = client.CreateExternalAccount(priv2, priv, perms2, nonce)
+  addr2, err = client.CreateExternalAccount(priv2, priv, perms2, nonce, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -118,7 +118,7 @@ func TestPermissions(t *testing.T) {
   err = client.SetPermissions(priv2, globalPermsAddr, &EvmPermissions{
     Perms: uint64(ptypes.AllPermFlags),
     SetBit: uint64(ptypes.AllPermFlags),
-  }, nonce2)
+  }, nonce2, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -132,7 +132,7 @@ func TestPermissions(t *testing.T) {
   }
 
   // Verify the account can deploy a contract
-  contractAddr, err := client.CreateContractAccount(priv2, init, nil, nonce2, 1000)
+  contractAddr, err := client.CreateContractAccount(priv2, init, nil, nonce2, 1000, 0)
   if err != nil {
    t.Error(err.Error())
   }
@@ -148,7 +148,7 @@ func TestPermissions(t *testing.T) {
 
   // Verify the account can call a contract
   cmd, _ := hex.DecodeString(SET_0_42)
-  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000)
+  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -167,7 +167,7 @@ func TestPermissions(t *testing.T) {
   }
 
   // Disable the accounts permissions
-  err = client.SetPermissions(priv, addr2, zeroPerms, nonce)
+  err = client.SetPermissions(priv, addr2, zeroPerms, nonce, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -175,7 +175,7 @@ func TestPermissions(t *testing.T) {
   time.Sleep(WAIT * time.Millisecond)
 
   // Verify the account can't deploy a contract
-  contractAddr2, err := client.CreateContractAccount(priv2, init, nil, nonce2, 1000)
+  contractAddr2, err := client.CreateContractAccount(priv2, init, nil, nonce2, 1000, 0)
   if err != nil {
    t.Error(err.Error())
   }
@@ -191,7 +191,7 @@ func TestPermissions(t *testing.T) {
 
   // Verify the account can't call a contract
   cmd, _ = hex.DecodeString(SET_0_42)
-  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000)
+  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, 0)
   if err != nil {
     t.Error(err.Error())
   }

@@ -22,8 +22,8 @@ import (
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
 	"path"
-	. "sawtooth_seth/common"
 	sdk "sawtooth_sdk/client"
+	. "sawtooth_seth/common"
 )
 
 type AccountList struct{}

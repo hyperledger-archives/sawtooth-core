@@ -21,15 +21,16 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
+	sdk "sawtooth_sdk/client"
 	"sawtooth_seth/client"
 	. "sawtooth_seth/protobuf/seth_pb2"
-	sdk "sawtooth_sdk/client"
 )
 
 type AccountCreate struct {
 	Moderator   string `short:"m" long:"moderator" description:"Alias of another account to be used to create the account"`
 	Permissions string `short:"p" long:"permissions" description:"Permissions for new account; see 'seth permissions -h' for more info"`
 	Nonce       uint64 `short:"n" long:"nonce" description:"Current nonce of moderator account" default:"0"`
+	Wait        int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed" default:"0" optional:"true" optional-value:"60"`
 	Positional  struct {
 		Alias string `positional-arg-name:"alias" required:"true" description:"Alias of the imported key associated with the account to be created"`
 	} `positional-args:"true"`
@@ -79,14 +80,24 @@ func (args *AccountCreate) Run(config *Config) error {
 		}
 	}
 
-	addr, err := client.CreateExternalAccount(priv, mod, perms, args.Nonce)
+	if args.Wait < 0 {
+		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
+	}
+
+	addr, err := client.CreateExternalAccount(priv, mod, perms, args.Nonce, args.Wait)
 	if err != nil {
 		return fmt.Errorf("Problem submitting account creation transaction: %v", err)
 	}
 
-	fmt.Printf(
-		"Transaction submitted to create account at %v\n", hex.EncodeToString(addr),
-	)
+	if args.Wait > 0 {
+		fmt.Printf(
+			"Account created at %v\n", hex.EncodeToString(addr),
+		)
+	} else {
+		fmt.Printf(
+			"Transaction submitted to create account at %v\n", hex.EncodeToString(addr),
+		)
+	}
 
 	return nil
 }

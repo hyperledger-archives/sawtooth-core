@@ -23,10 +23,10 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"net/http"
-	. "sawtooth_seth/common"
-	. "sawtooth_seth/protobuf/seth_pb2"
 	sdk "sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
+	. "sawtooth_seth/common"
+	. "sawtooth_seth/protobuf/seth_pb2"
 )
 
 var logger *logging.Logger = logging.Get()
@@ -59,7 +59,12 @@ func (c *Client) Get(address []byte) (*EvmEntry, error) {
 		return nil, err
 	}
 
-	buf, err := base64.StdEncoding.DecodeString(body.Data)
+	var data string
+	if body.Data != nil {
+		data = body.Data.(string)
+	}
+
+	buf, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +87,7 @@ func (c *Client) Get(address []byte) (*EvmEntry, error) {
 // account is created with the given permissions.
 //
 // Returns the address of the new account.
-func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermissions, nonce uint64) ([]byte, error) {
+func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermissions, nonce uint64, wait int) ([]byte, error) {
 	newAcctAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
@@ -122,7 +127,7 @@ func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermiss
 		Outputs:         addresses,
 	})
 
-	body, err := c.sendTxn(transaction, encoder)
+	body, err := c.sendTxn(transaction, encoder, wait)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +142,7 @@ func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermiss
 // permissions.
 //
 // Returns the address of the new account.
-func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermissions, nonce uint64, gas uint64) ([]byte, error) {
+func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermissions, nonce uint64, gas uint64, wait int) ([]byte, error) {
 	creatorAcctAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
@@ -170,7 +175,7 @@ func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermi
 		},
 	}
 
-	body, err := c.sendTxn(transaction, encoder)
+	body, err := c.sendTxn(transaction, encoder, wait)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +189,7 @@ func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermi
 // to the contract call.
 //
 // Returns the output from the EVM call.
-func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64) ([]byte, error) {
+func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wait int) ([]byte, error) {
 	fromAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
@@ -220,7 +225,7 @@ func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64) ([
 		},
 	}
 
-	body, err := c.sendTxn(transaction, encoder)
+	body, err := c.sendTxn(transaction, encoder, wait)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +237,7 @@ func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64) ([
 
 // SetPermissions updates the permissions of the account at the given address
 // using the account with the given private key.
-func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, nonce uint64) error {
+func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, nonce uint64, wait int) error {
 	if permissions == nil {
 		return fmt.Errorf("Permissions must not be nil when setting permissions")
 	}
@@ -270,7 +275,7 @@ func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, no
 		},
 	}
 
-	body, err := c.sendTxn(transaction, encoder)
+	body, err := c.sendTxn(transaction, encoder, wait)
 	if err != nil {
 		return err
 	}
@@ -279,7 +284,7 @@ func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, no
 	return nil
 }
 
-func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder) (*RespBody, error) {
+func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wait int) (*RespBody, error) {
 	payload, err := proto.Marshal(transaction)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't serialize transaction: %v", err)
@@ -291,10 +296,12 @@ func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder) (*R
 
 	buf := bytes.NewReader(b)
 
-	resp, err := http.Post(
-		c.Url+"/batches", "application/octet-stream", buf,
-	)
+	url := c.Url + "/batches"
+	if wait > 0 {
+		url += fmt.Sprintf("?wait=%v", wait)
+	}
 
+	resp, err := http.Post(url, "application/octet-stream", buf)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't send transaction: %v", err)
 	}
@@ -303,6 +310,25 @@ func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder) (*R
 	if err != nil {
 		return nil, err
 	}
+
+	if body.Data != nil {
+		data := body.Data.([]interface{})
+		status_map := data[0].(map[string]interface{})
+		status := status_map["status"].(string)
+
+		if status == "PENDING" {
+			return nil, fmt.Errorf("Transaction was submitted, but client timed out before it was committed.")
+		}
+
+		if status == "INVALID" {
+			return nil, fmt.Errorf("Invalid transaction.")
+		}
+
+		if status == "UNKNOWN" {
+			return nil, fmt.Errorf("Something went wrong. Try resubmitting the transaction.")
+		}
+	}
+
 	if body.Error.Code != 0 {
 		return nil, &body.Error
 	}

@@ -21,8 +21,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	"sawtooth_seth/client"
 	sdk "sawtooth_sdk/client"
+	"sawtooth_seth/client"
 )
 
 type PermissionsSet struct {
@@ -32,6 +32,7 @@ type PermissionsSet struct {
 	Address     string `short:"a" long:"address" required:"true" description:"Address of account whose permissions are being changed; 'global' may be used to refer to the zero address"`
 	Permissions string `short:"p" long:"permissions" required:"true" description:"New permissions for the account"`
 	Nonce       uint64 `short:"n" long:"nonce" description:"Current nonce of the moderator account" default:"1"`
+	Wait        int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed" default:"0" optional:"true" optional-value:"60"`
 }
 
 func (args *PermissionsSet) Name() string {
@@ -67,14 +68,24 @@ func (args *PermissionsSet) Run(config *Config) error {
 		return fmt.Errorf("Invalid permissions: %v", err)
 	}
 
-	err = client.SetPermissions(mod, addr, perms, args.Nonce)
+	if args.Wait < 0 {
+		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
+	}
+
+	err = client.SetPermissions(mod, addr, perms, args.Nonce, args.Wait)
 	if err != nil {
 		return fmt.Errorf("Problem submitting transaction to change permissions: %v", err)
 	}
 
-	fmt.Printf(
-		"Transaction submitted to change permissions of %v\n", hex.EncodeToString(addr),
-	)
+	if args.Wait > 0 {
+		fmt.Printf(
+			"Permissions changed of %v\n", hex.EncodeToString(addr),
+		)
+	} else {
+		fmt.Printf(
+			"Transaction submitted to change permissions of %v\n", hex.EncodeToString(addr),
+		)
+	}
 
 	return nil
 }
