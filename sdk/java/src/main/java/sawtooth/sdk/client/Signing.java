@@ -36,7 +36,7 @@ public class Signing {
   }
 
   public static String getPublicKey(ECKey privateKey) {
-    return privateKey.getPublicKeyAsHex();
+    return ECKey.fromPrivate(privateKey.getPrivKey(), true).getPublicKeyAsHex();
   }
 
   /**
