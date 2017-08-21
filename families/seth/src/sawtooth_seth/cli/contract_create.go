@@ -21,9 +21,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
+	sdk "sawtooth_sdk/client"
 	"sawtooth_seth/client"
 	. "sawtooth_seth/protobuf/seth_pb2"
-	sdk "sawtooth_sdk/client"
 )
 
 type ContractCreate struct {
@@ -34,6 +34,7 @@ type ContractCreate struct {
 	Permissions string `short:"p" long:"permissions" description:"Permissions for new account; see 'seth permissions -h' for more info"`
 	Gas         uint64 `short:"g" long:"gas" description:"Gas limit for contract creation" default:"0"`
 	Nonce       uint64 `short:"n" long:"nonce" description:"Current nonce of moderator account" default:"0"`
+	Wait        int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed" default:"0" optional:"true" optional-value:"60"`
 }
 
 func (args *ContractCreate) Name() string {
@@ -73,14 +74,24 @@ func (args *ContractCreate) Run(config *Config) error {
 		}
 	}
 
-	addr, err := client.CreateContractAccount(priv, init, perms, args.Nonce, args.Gas)
+	if args.Wait < 0 {
+		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
+	}
+
+	addr, err := client.CreateContractAccount(priv, init, perms, args.Nonce, args.Gas, args.Wait)
 	if err != nil {
 		return fmt.Errorf("Problem submitting account creation transaction: %v", err)
 	}
 
-	fmt.Printf(
-		"Transaction submitted to create contract at %v\n", hex.EncodeToString(addr),
-	)
+	if args.Wait > 0 {
+		fmt.Printf(
+			"Contract created at %v\n", hex.EncodeToString(addr),
+		)
+	} else {
+		fmt.Printf(
+			"Transaction submitted to create contract at %v\n", hex.EncodeToString(addr),
+		)
+	}
 
 	return nil
 }

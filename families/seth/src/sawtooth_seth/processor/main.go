@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"os"
-	seth "sawtooth_seth/processor/handler"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
+	seth "sawtooth_seth/processor/handler"
 	"syscall"
 )
 

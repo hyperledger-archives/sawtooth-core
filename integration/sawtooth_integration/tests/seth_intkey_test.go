@@ -41,7 +41,7 @@ func TestIntkey(t *testing.T) {
   nonce := uint64(0)
 
   // Create the EOA
-  _, err := client.CreateExternalAccount(priv, nil, nil, 0)
+  _, err := client.CreateExternalAccount(priv, nil, nil, 0, 0)
   if err != nil {
     t.Error(err.Error())
   }
@@ -49,7 +49,7 @@ func TestIntkey(t *testing.T) {
   time.Sleep(time.Second)
 
   // Create the Contract
-  contractAddr, err := client.CreateContractAccount(priv, init, nil, nonce, 1000)
+  contractAddr, err := client.CreateContractAccount(priv, init, nil, nonce, 1000, 5)
   if err != nil {
    t.Error(err.Error())
   }
@@ -65,7 +65,7 @@ func TestIntkey(t *testing.T) {
 
   for _, c := range cmds {
     cmd, _ := hex.DecodeString(c)
-    _, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000)
+    _, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000, 0)
     if err != nil {
       t.Error(err.Error())
     }
