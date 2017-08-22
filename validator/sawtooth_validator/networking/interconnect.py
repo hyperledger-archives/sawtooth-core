@@ -155,38 +155,50 @@ class _SendReceive(object):
         ping = PingRequest()
 
         while True:
-            if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
-                expired = [ident for ident in self._last_message_times
-                           if time.time() - self._last_message_times[ident] >
-                           self._heartbeat_interval]
-                for zmq_identity in expired:
-                    if self._is_connection_lost(
-                            self._last_message_times[zmq_identity]):
-                        LOGGER.debug("No response from %s in %s seconds"
-                                     " - removing connection.",
-                                     zmq_identity,
-                                     self._connection_timeout)
-                        self.remove_connected_identity(zmq_identity)
-                    else:
-                        message = validator_pb2.Message(
-                            correlation_id=_generate_id(),
-                            content=ping.SerializeToString(),
-                            message_type=validator_pb2.Message.NETWORK_PING)
-                        fut = future.Future(message.correlation_id,
-                                            message.content,
-                                            has_callback=False)
-                        self._futures.put(fut)
-                        yield from self._send_message(zmq_identity, message)
-            elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
-                if self._last_message_time:
-                    if self._is_connection_lost(self._last_message_time):
-                        LOGGER.debug("No response from %s in %s seconds"
-                                     " - removing connection.",
-                                     self._connection,
-                                     self._connection_timeout)
-                        self._ready.clear()
-                        yield from self._stop()
-            yield from asyncio.sleep(self._heartbeat_interval)
+            try:
+                if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
+                    expired = \
+                        [ident for ident in self._last_message_times
+                         if time.time() - self._last_message_times[ident] >
+                         self._heartbeat_interval]
+                    for zmq_identity in expired:
+                        if self._is_connection_lost(
+                                self._last_message_times[zmq_identity]):
+                            LOGGER.debug("No response from %s in %s seconds"
+                                         " - removing connection.",
+                                         zmq_identity,
+                                         self._connection_timeout)
+                            self.remove_connected_identity(zmq_identity)
+                        else:
+                            message = validator_pb2.Message(
+                                correlation_id=_generate_id(),
+                                content=ping.SerializeToString(),
+                                message_type=validator_pb2.Message.NETWORK_PING
+                            )
+                            fut = future.Future(message.correlation_id,
+                                                message.content,
+                                                has_callback=False)
+                            self._futures.put(fut)
+                            yield from self._send_message(zmq_identity,
+                                                          message)
+                elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
+                    if self._last_message_time:
+                        if self._is_connection_lost(self._last_message_time):
+                            LOGGER.debug("No response from %s in %s seconds"
+                                         " - removing connection.",
+                                         self._connection,
+                                         self._connection_timeout)
+                            self._ready.clear()
+                            yield from self._stop()
+                yield from asyncio.sleep(self._heartbeat_interval)
+            except CancelledError:
+                # The concurrent.futures.CancelledError is caught by asyncio
+                # when the Task associated with the coroutine is cancelled.
+                # The raise is required to stop this component.
+                raise
+            except Exception as e:  # pylint: disable=broad-except
+                LOGGER.exception(
+                    "An error occurred while sending heartbeat: %s", e)
 
     def remove_connected_identity(self, zmq_identity):
         if zmq_identity in self._last_message_times:
@@ -404,8 +416,17 @@ class _SendReceive(object):
     @asyncio.coroutine
     def _monitor_disconnects(self):
         while True:
-            yield from self._monitor_sock.recv_multipart()
-            self._check_connections()
+            try:
+                yield from self._monitor_sock.recv_multipart()
+                self._check_connections()
+            except CancelledError:
+                # The concurrent.futures.CancelledError is caught by asyncio
+                # when the Task associated with the coroutine is cancelled.
+                # The raise is required to stop this component.
+                raise
+            except Exception as e:  # pylint: disable=broad-except
+                LOGGER.exception(
+                    "An error occurred while sending heartbeat: %s", e)
 
     def set_check_connections(self, function):
         self._check_connections = function
