@@ -36,7 +36,8 @@ def get_default_path_config():
             config_dir=os.path.join(home_dir, 'etc'),
             log_dir=os.path.join(home_dir, 'logs'),
             data_dir=os.path.join(home_dir, 'data'),
-            key_dir=os.path.join(home_dir, 'keys'))
+            key_dir=os.path.join(home_dir, 'keys'),
+            policy_dir=os.path.join(home_dir, 'policy'))
 
     if os.name == 'nt':
         # Paths appropriate for Windows.
@@ -46,14 +47,16 @@ def get_default_path_config():
             config_dir=os.path.join(base_dir, 'conf'),
             log_dir=os.path.join(base_dir, 'logs'),
             data_dir=os.path.join(base_dir, 'data'),
-            key_dir=os.path.join(base_dir, 'conf', 'keys'))
+            key_dir=os.path.join(base_dir, 'conf', 'keys'),
+            policy_dir=os.path.join(base_dir, 'policy'))
 
     # Paths appropriate for modern Linux distributions.
     return PathConfig(
         config_dir='/etc/sawtooth',
         log_dir='/var/log/sawtooth',
         data_dir='/var/lib/sawtooth',
-        key_dir='/etc/sawtooth/keys')
+        key_dir='/etc/sawtooth/keys',
+        policy_dir='/etc/sawtooth/policy')
 
 
 def load_toml_path_config(filename):
@@ -78,7 +81,7 @@ def load_toml_path_config(filename):
     toml_config = toml.loads(raw_config)
 
     invalid_keys = set(toml_config.keys()).difference(
-        ['data_dir', 'key_dir', 'log_dir'])
+        ['data_dir', 'key_dir', 'log_dir', 'policy_dir'])
     if invalid_keys:
         raise LocalConfigurationError("Invalid keys in path config: {}".format(
             ", ".join(sorted(list(invalid_keys)))))
@@ -87,7 +90,8 @@ def load_toml_path_config(filename):
         config_dir=None,
         data_dir=toml_config.get('data_dir', None),
         key_dir=toml_config.get('key_dir', None),
-        log_dir=toml_config.get('log_dir', None)
+        log_dir=toml_config.get('log_dir', None),
+        policy_dir=toml_config.get('policy_dir', None)
     )
 
     return config
@@ -102,6 +106,7 @@ def merge_path_config(configs, config_dir_override):
     log_dir = None
     data_dir = None
     key_dir = None
+    policy_dir = None
 
     for config in reversed(configs):
         if config.config_dir is not None:
@@ -112,6 +117,8 @@ def merge_path_config(configs, config_dir_override):
             data_dir = config.data_dir
         if config.key_dir is not None:
             key_dir = config.key_dir
+        if config.policy_dir is not None:
+            policy_dir = config.policy_dir
 
     if config_dir_override is not None:
         config_dir = config_dir_override
@@ -120,7 +127,8 @@ def merge_path_config(configs, config_dir_override):
         config_dir=config_dir,
         log_dir=log_dir,
         data_dir=data_dir,
-        key_dir=key_dir)
+        key_dir=key_dir,
+        policy_dir=policy_dir)
 
 
 def load_path_config(config_dir=None):
@@ -139,12 +147,13 @@ def load_path_config(config_dir=None):
 
 class PathConfig:
     def __init__(self, config_dir=None, log_dir=None, data_dir=None,
-                 key_dir=None):
+                 key_dir=None, policy_dir=None):
 
         self._config_dir = config_dir
         self._log_dir = log_dir
         self._data_dir = data_dir
         self._key_dir = key_dir
+        self._policy_dir = policy_dir
 
     @property
     def config_dir(self):
@@ -162,21 +171,28 @@ class PathConfig:
     def key_dir(self):
         return self._key_dir
 
+    @property
+    def policy_dir(self):
+        return self._key_dir
+
     def __repr__(self):
         return \
-            "{}(config_dir={}, log_dir={}, data_dir={}, key_dir={})".format(
+            "{}(config_dir={}, log_dir={}, data_dir={}, key_dir={}," \
+            " policy_dir={})".format(
                 self.__class__.__name__,
                 repr(self._config_dir),
                 repr(self._log_dir),
                 repr(self._data_dir),
-                repr(self._key_dir))
+                repr(self._key_dir),
+                repr(self._policy_dir))
 
     def to_dict(self):
         return collections.OrderedDict([
             ('config_dir', self._config_dir),
             ('key_dir', self._key_dir),
             ('data_dir', self._data_dir),
-            ('log_dir', self._log_dir)
+            ('log_dir', self._log_dir),
+            ('policy_dir', self._policy_dir)
         ])
 
     def to_toml_string(self):
