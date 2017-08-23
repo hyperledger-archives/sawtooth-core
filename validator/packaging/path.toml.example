@@ -20,6 +20,7 @@
 #   key_dir   -  the directory path to use when loading key files
 #   data_dir  -  the directory path to store data files such as the block store
 #   log_dir   -  the directory path to write log files
+#   policy_dir - the directory path to store policies
 #
 # In addition, the default path examples below include the following path which
 # may not be modified using this file:
@@ -33,6 +34,7 @@
 #   key_dir  = SAWTOOTH_HOME/keys/
 #   data_dir = SAWTOOTH_HOME/data/
 #   log_dir  = SAWTOOTH_HOME/logs/
+#   policy_dir  = SAWTOOTH_HOME/policy/
 #
 # So, for example if SAWTOOTH_HOME is set to a value of /tmp/testing, then the
 # default for data_dir will be /tmp/testing/data/.
@@ -49,6 +51,8 @@
 #   key_dir  = base_dir\conf\keys\
 #   data_dir = base_dir\data\
 #   log_dir  = base_dir\logs\
+#   policy_dir  = base_dir\policy\
+
 #
 # For example, if Sawtooth Lake is installed in C:\sawtooth\, the validator
 # executable would be C:\sawtooth\bin\validator.exe and the data directory
@@ -61,3 +65,4 @@
 #   key_dir  = "/etc/sawtooth/keys"
 #   data_dir = "/var/lib/sawtooth"
 #   log_dir  = "/var/log/sawtooth"
+#   policy_dir  = "/etc/sawtooth/policy"
