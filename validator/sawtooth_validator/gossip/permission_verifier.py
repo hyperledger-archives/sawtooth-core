@@ -32,8 +32,10 @@ LOGGER = logging.getLogger(__name__)
 
 class PermissionVerifier(object):
 
-    def __init__(self, identity_view_factory, current_root_func):
+    def __init__(self, identity_view_factory, permissions, current_root_func):
         self._identity_view_factory = identity_view_factory
+        # Off-chain permissions to be enforced
+        self._permissions = permissions
         self._current_root_func = current_root_func
 
     def is_batch_signer_authorized(self, batch, state_root=None):
@@ -152,6 +154,93 @@ class PermissionVerifier(object):
                         return False
         return True
 
+    def check_off_chain_batch_roles(self, batch):
+        """ Check the batch signing key against the allowed off-chain
+            transactor permissions. The roles being checked are the following,
+            from first to last:
+                "transactor.batch_signer"
+                "transactor"
+
+            The first role that is set will be the one used to enforce if the
+            batch signer is allowed.
+
+            Args:
+                batch (Batch): The batch that is being verified.
+                state_root(string): The state root of the previous block. If
+                    this is None, the current state root hash will be
+                    retrieved.
+        """
+        if self._permissions is None:
+            return True
+        header = BatchHeader()
+        header.ParseFromString(batch.header)
+        policy = None
+        if "transactor.batch_signer" in self._permissions:
+            policy = self._permissions["transactor.batch_signer"]
+
+        elif "transactor" in self._permissions:
+            policy = self._permissions["transactor"]
+
+        allowed = True
+        if policy is not None:
+            allowed = self._allowed(header.signer_pubkey, policy)
+
+        if allowed:
+            return self.check_off_chain_transaction_roles(batch.transactions)
+
+        LOGGER.debug("Batch Signer: %s is not permitted by local"
+                     " configuration.", header.signer_pubkey)
+        return False
+
+    def check_off_chain_transaction_roles(self, transactions):
+        """ Check the transaction signing key against the allowed off-chain
+            transactor permissions. The roles being checked are the following,
+            from first to last:
+                "transactor.transaction_signer.<TP_Name>"
+                "transactor.transaction_signer"
+                "transactor"
+
+            The first role that is set will be the one used to enforce if the
+            transaction signer is allowed.
+
+            Args:
+                transactions (List of Transactions): The transactions that are
+                    being verified.
+                identity_view (IdentityView): The IdentityView that should be
+                    used to verify the transactions.
+        """
+        policy = None
+        if "transactor.transaction_signer" in self._permissions:
+            policy = self._permissions["transactor.transaction_signer"]
+
+        elif "transactor" in self._permissions:
+            policy = self._permissions["transactor"]
+
+        for transaction in transactions:
+            header = TransactionHeader()
+            header.ParseFromString(transaction.header)
+            family_role = "transactor.transaction_signer." + \
+                header.family_name
+            family_policy = None
+            if family_role in self._permissions:
+                family_policy = self._permissions[family_role]
+
+            if family_policy is not None:
+                if not self._allowed(header.signer_pubkey, family_policy):
+                    LOGGER.debug("Transaction Signer: %s is not permitted"
+                                 "by local configuration.",
+                                 header.signer_pubkey)
+                    return False
+
+            elif policy is not None:
+                if not self._allowed(header.signer_pubkey, policy):
+                    LOGGER.debug("Transaction Signer: %s is not permitted"
+                                 "by local configuration.",
+                                 header.signer_pubkey)
+                    return False
+
+        return True
+
     def _allowed(self, public_key, policy):
         for entry in policy.entries:
             if entry.type == Policy.PERMIT_KEY:
@@ -182,9 +271,14 @@ class BatchListPermissionVerifier(Handler):
         try:
             request = client_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)
+            if not all(self._verifier.check_off_chain_batch_roles(batch)
+                       for batch in request.batches):
+                return make_response(response_proto.INVALID_BATCH)
+
             if not all(self._verifier.is_batch_signer_authorized(batch)
                        for batch in request.batches):
                 return make_response(response_proto.INVALID_BATCH)
+
         except DecodeError:
             return make_response(response_proto.INTERNAL_ERROR)
 
