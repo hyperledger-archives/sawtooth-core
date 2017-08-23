@@ -93,9 +93,9 @@ class Validator(object):
 
     def __init__(self, bind_network, bind_component, endpoint,
                  peering, seeds_list, peer_list, data_dir, config_dir,
-                 identity_signing_key, scheduler_type,
-                 network_public_key=None,
-                 network_private_key=None):
+                 identity_signing_key, scheduler_type, permissions,
+                 network_public_key=None, network_private_key=None,
+                 ):
         """Constructs a validator instance.
 
         Args:
@@ -225,6 +225,7 @@ class Validator(object):
 
         permission_verifier = PermissionVerifier(
             identity_view_factory,
+            permissions,
             block_store.chain_head_state_root)
 
         # Create and configure journal
