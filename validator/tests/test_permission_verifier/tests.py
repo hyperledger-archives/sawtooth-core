@@ -27,6 +27,7 @@ from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from test_permission_verifier.mocks import  MockIdentityViewFactory
+from test_permission_verifier.mocks import make_policy
 
 
 class TestPermissionVerifier(unittest.TestCase):
@@ -34,9 +35,12 @@ class TestPermissionVerifier(unittest.TestCase):
         self.private_key = signing.generate_privkey()
         self.public_key = signing.generate_pubkey(self.private_key)
         self._identity_view_factory = MockIdentityViewFactory()
+        self.permissions = {}
         self.permission_verifier = \
-            PermissionVerifier(self._identity_view_factory,
-                               self._current_root_func)
+            PermissionVerifier(
+                identity_view_factory=self._identity_view_factory,
+                permissions=self.permissions,
+                current_root_func=self._current_root_func)
 
     def _current_root_func(self):
         return "0000000000000000000000"
@@ -215,4 +219,87 @@ class TestPermissionVerifier(unittest.TestCase):
             "policy1")
         batch = self._create_batches(1, 1)[0]
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
+        self.assertFalse(allowed)
+
+    def test_off_chain_permissions(self):
+        """
+        Test that if permissions are empty all signers are permitted.
+        """
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
+        self.assertTrue(allowed)
+
+    def test_off_chain_transactor(self):
+        """
+        Test that role:"transactor" is checked properly if in permissions.
+            1. Set policy to permit signing key. Batch should be allowed.
+            2. Set policy to permit some other key. Batch should be rejected.
+        """
+        policy = make_policy("policy1", ["PERMIT_KEY " + self.public_key])
+        self.permissions["transactor"] = policy
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
+        self.assertTrue(allowed)
+
+        policy = make_policy("policy1", ["PERMIT_KEY other"])
+        self.permissions["transactor"] = policy
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
+        self.assertFalse(allowed)
+
+    def test_off_chain_transactor_batch_signer(self):
+        """
+        Test that role:"transactor.batch_signer" is checked properly if in
+        permissions.
+            1. Set policy to permit signing key. Batch should be allowed.
+            2. Set policy to permit some other key. Batch should be rejected.
+        """
+        policy = make_policy("policy1", ["PERMIT_KEY " + self.public_key])
+        self.permissions["transactor.batch_signer"] = policy
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
+        self.assertTrue(allowed)
+
+        policy = make_policy("policy1", ["PERMIT_KEY other"])
+        self.permissions["transactor.batch_signer"] = policy
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
+        self.assertFalse(allowed)
+
+    def test_off_chain_transactor_transaction_signer(self):
+        """
+        Test that role:"transactor.transaction_signer" is checked properly if in
+        permissions.
+            1. Set policy to permit signing key. Batch should be allowed.
+            2. Set policy to permit some other key. Batch should be rejected.
+        """
+        policy = make_policy("policy1", ["PERMIT_KEY " + self.public_key])
+        self.permissions["transactor.transaction_signer"] = policy
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
+        self.assertTrue(allowed)
+
+        policy = make_policy("policy1", ["PERMIT_KEY other"])
+        self.permissions["transactor.transaction_signer"] = policy
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
+        self.assertFalse(allowed)
+
+    def test_off_chain_transactor_transaction_signer_family(self):
+        """
+        Test that role:"transactor.transaction_signer.intkey" is checked
+        properly if in permissions.
+            1. Set policy to permit signing key. Batch should be allowed.
+            2. Set policy to permit some other key. Batch should be rejected.
+        """
+        policy = make_policy("policy1", ["PERMIT_KEY " + self.public_key])
+        self.permissions["transactor.transaction_signer.intkey"] = policy
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
+        self.assertTrue(allowed)
+
+        policy = make_policy("policy1", ["PERMIT_KEY other"])
+        self.permissions["transactor.transaction_signer.intkey"] = policy
+        batch = self._create_batches(1, 1)[0]
+        allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
         self.assertFalse(allowed)

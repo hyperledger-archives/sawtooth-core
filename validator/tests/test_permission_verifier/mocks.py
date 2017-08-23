@@ -58,3 +58,19 @@ class MockIdentityView(object):
         if policy_name in self.policies:
             return self.policies[policy_name]
         return None
+
+
+def make_policy(name, rules):
+    entries = []
+    for rule in rules:
+        rule = rule.split(" ")
+        if rule[0] == "PERMIT_KEY":
+            entry = Policy.Entry(type=Policy.PERMIT_KEY,
+                                 key=rule[1])
+            entries.append(entry)
+        elif rule[0] == "DENY_KEY":
+            entry = Policy.Entry(type=Policy.DENY_KEY,
+                                 key=rule[1])
+            entries.append(entry)
+    policy = Policy(name=name, entries=entries)
+    return policy
