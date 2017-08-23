@@ -65,7 +65,7 @@ def load_toml_validator_config(filename):
             "{}".format(", ".join(sorted(list(invalid_keys)))))
     bind_network = None
     bind_component = None
-    for bind in toml_config.get("bind"):
+    for bind in toml_config.get("bind", []):
         if "network" in bind:
             bind_network = bind[bind.find(":")+1:]
         if "component" in bind:
