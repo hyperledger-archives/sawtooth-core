@@ -37,6 +37,7 @@ from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
+from sawtooth_cli.config import setting_key_to_address
 
 import sawtooth_signing as signing
 
@@ -50,6 +51,7 @@ _ADDRESS_PART_SIZE = 16
 _POLICY_PREFIX = "00"
 _ROLE_PREFIX = "01"
 _EMPTY_PART = hashlib.sha256("".encode()).hexdigest()[:_ADDRESS_PART_SIZE]
+_REQUIRED_INPUT = setting_key_to_address("sawtooth.identity.allowed_keys")
 
 
 def add_identity_parser(subparsers, parent_parser):
@@ -82,7 +84,7 @@ def add_identity_parser(subparsers, parent_parser):
     create_target_group.add_argument(
         '-o', '--output',
         type=str,
-        help='the name of the file to ouput the resulting batches')
+        help='the name of the file to output the resulting batches')
 
     create_target_group.add_argument(
         '--url',
@@ -138,7 +140,7 @@ def add_identity_parser(subparsers, parent_parser):
     create_target_group.add_argument(
         '-o', '--output',
         type=str,
-        help='the name of the file to ouput the resulting batches')
+        help='the name of the file to output the resulting batches')
 
     create_target_group.add_argument(
         '--url',
@@ -385,7 +387,7 @@ def _create_policy_txn(pubkey, signing_key, policy_name, rules):
         signer_pubkey=pubkey,
         family_name='sawtooth_identity',
         family_version='1.0',
-        inputs=[policy_address],
+        inputs=[_REQUIRED_INPUT, policy_address],
         outputs=[policy_address],
         dependencies=[],
         payload_encoding="application/protobuf",
@@ -418,7 +420,7 @@ def _create_role_txn(pubkey, signing_key, role_name, policy_name):
         signer_pubkey=pubkey,
         family_name='sawtooth_identity',
         family_version='1.0',
-        inputs=[policy_address, role_address],
+        inputs=[_REQUIRED_INPUT, policy_address, role_address],
         outputs=[role_address],
         dependencies=[],
         payload_encoding="application/protobuf",

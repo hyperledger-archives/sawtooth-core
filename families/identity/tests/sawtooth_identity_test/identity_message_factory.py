@@ -20,6 +20,7 @@ from sawtooth_identity.protobuf.identity_pb2 import Policy
 from sawtooth_identity.protobuf.identity_pb2 import PolicyList
 from sawtooth_identity.protobuf.identity_pb2 import Role
 from sawtooth_identity.protobuf.identity_pb2 import RoleList
+from sawtooth_identity.protobuf.setting_pb2 import Setting
 
 _MAX_KEY_PARTS = 4
 _FIRST_ADDRESS_PART_SIZE = 14
@@ -186,3 +187,21 @@ class IdentityMessageFactory(object):
     def create_set_role_response(self, name):
         addresses = [self._role_to_address(name)]
         return self._factory.create_set_response(addresses)
+
+    def create_get_setting_request(self, key):
+        addresses = [key]
+        return self._factory.create_get_request(addresses)
+
+    def create_get_setting_response(self, key, allowed):
+        if allowed:
+            entry = Setting.Entry(
+                key="sawtooth.identity.allowed_keys",
+                value=self.public_key)
+            data = Setting(entries=[entry]).SerializeToString()
+        else:
+            entry = Setting.Entry(
+                key="sawtooth.identity.allowed_keys",
+                value="")
+            data = Setting(entries=[entry]).SerializeToString()
+
+        return self._factory.create_get_response({key: data})
