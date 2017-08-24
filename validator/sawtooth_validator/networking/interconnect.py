@@ -21,7 +21,6 @@ import logging
 import queue
 import sys
 from threading import Event
-from threading import Lock
 from threading import Thread
 import time
 import uuid
@@ -116,7 +115,6 @@ class _SendReceive(object):
         self._socket = None
         self._auth = None
         self._ready = Event()
-        self._lock = Lock()
 
         # The last time a message was received over an outbound
         # socket we established.
