@@ -31,7 +31,6 @@ from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution import processor_iterator
 from sawtooth_validator.networking.future import FutureResult
 from sawtooth_validator.networking.future import FutureTimeoutError
-from sawtooth_validator.networking.interconnect import ThreadsafeDict
 
 
 LOGGER = logging.getLogger(__name__)
@@ -79,7 +78,7 @@ class TransactionExecutorThread(object):
         self._waiting_threadpool = waiting_threadpool
         self._done = False
         self._invalid_observers = invalid_observers
-        self._open_futures = ThreadsafeDict()
+        self._open_futures = {}
 
     def _future_done_callback(self, request, result):
         """

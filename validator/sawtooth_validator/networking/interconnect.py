@@ -79,7 +79,7 @@ class _SendReceive(object):
                 in the dispatcher for transmitting responses.
             futures (future.FutureCollection): A Map of correlation ids to
                 futures
-            connections (ThreadsafeDict): A dictionary that uses a
+            connections (dict): A dictionary that uses a
                 sha512 hash as the keys and either an OutboundConnection
                 or string identity as values.
             zmq_identity (bytes): Used to identify the dealer socket
@@ -124,10 +124,10 @@ class _SendReceive(object):
 
         # A map of zmq identities to last message received times
         # for inbound connections to our zmq.ROUTER socket.
-        self._last_message_times = ThreadsafeDict()
+        self._last_message_times = {}
 
         self._connections = connections
-        self._identities_to_connection_ids = ThreadsafeDict()
+        self._identities_to_connection_ids = {}
         self._monitor = monitor
 
         self._check_connections = None
@@ -519,8 +519,8 @@ class Interconnect(object):
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
         self._connection_timeout = connection_timeout
-        self._connections = ThreadsafeDict()
-        self.outbound_connections = ThreadsafeDict()
+        self._connections = {}
+        self.outbound_connections = {}
         self._max_incoming_connections = max_incoming_connections
 
         self._send_receive_thread = _SendReceive(
@@ -825,42 +825,3 @@ class OutboundConnection(object):
     def stop(self):
         self._send_receive_thread.shutdown()
         self._futures.stop()
-
-
-class ThreadsafeDict(object):
-
-    def __init__(self):
-        self._connections = {}
-        self._lock = Lock()
-
-    def __len__(self):
-        with self._lock:
-            return len(self._connections)
-
-    def __contains__(self, item):
-        with self._lock:
-            return item in self._connections
-
-    def __getitem__(self, item):
-        with self._lock:
-            return self._connections[item]
-
-    def __delitem__(self, key):
-        with self._lock:
-            del self._connections[key]
-
-    def get(self, item, default=None):
-        with self._lock:
-            return self._connections.get(item, default)
-
-    def __setitem__(self, key, value):
-        with self._lock:
-            self._connections[key] = value
-
-    def values(self):
-        with self._lock:
-            return list(self._connections.values())
-
-    def __iter__(self):
-        with self._lock:
-            return iter(list(self._connections))
