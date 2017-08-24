@@ -17,7 +17,6 @@ import enum
 from functools import partial
 import logging
 from threading import Condition
-from threading import Lock
 from threading import Thread
 import queue
 import uuid
@@ -186,12 +185,10 @@ class _HandlerManager(object):
         """
         self._executor = executor
         self._handler = handler
-        self._lock = Lock()
 
     def execute(self, connection_id, message):
-        with self._lock:
-            return self._executor.submit(
-                self._handler.handle, connection_id, message)
+        return self._executor.submit(
+            self._handler.handle, connection_id, message)
 
 
 class _ManagerCollection(object):
@@ -201,13 +198,11 @@ class _ManagerCollection(object):
     def __init__(self, handler_managers):
         self._chain = handler_managers
         self._index = 0
-        self._lock = Lock()
 
     def __next__(self):
-        with self._lock:
-            result = self._chain[self._index]
-            self._index += 1
-            return result
+        result = self._chain[self._index]
+        self._index += 1
+        return result
 
 
 class HandlerResult(object):
