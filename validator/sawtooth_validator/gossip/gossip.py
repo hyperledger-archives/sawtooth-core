@@ -433,7 +433,7 @@ class Topology(Thread):
 
                 self._gossip.unregister_peer(conn_id)
                 if conn_id in self._connection_statuses:
-                    del self.connections[conn_id]
+                    del self._connection_statuses[conn_id]
 
     def _refresh_connection_list(self):
         with self._condition:
