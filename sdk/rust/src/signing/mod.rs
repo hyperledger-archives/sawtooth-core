@@ -63,7 +63,7 @@ pub trait Algorithm {
 
 pub fn create_algorithm(name: &str) -> Result<Box<Algorithm>, Error> {
     match name {
-        "secp256k1" => Ok(Box::new(secp256k1::Secp256k1Algorithm{})),
+        "secp256k1" => Ok(Box::new(secp256k1::Secp256k1Algorithm::new())),
         _ => Err(Error::NoSuchAlgorithm(format!("no such algorithm: {}", name)))
     }
 }
