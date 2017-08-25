@@ -17,11 +17,17 @@
 'use strict'
 
 const express = require('express')
+const db = require('./db')
 
 const PORT = process.env.PORT || 3000
 const app = express()
 
 app.use('/fish', express.static('../client/public'))
+
+app.get('/tnt', (req, res) => {
+  db.queryState(state => state.filter({name: 'message'}))
+    .then(messages => res.send(JSON.stringify(messages[0].value)))
+})
 
 app.listen(PORT, () => {
   console.log(`Track and Trade Server listening on port ${PORT}`)

@@ -7,7 +7,8 @@
     "test": "tests"
   },
   "scripts": {
-    "start": "nodemon index.js",
+    "start": "rethinkdb & nodemon index.js",
+    "init": "rethinkdb & node ./scripts/bootstrap_database.js && kill $! || true",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,7 +22,8 @@
   },
   "homepage": "https://github.com/hyperledger/sawtooth-core#readme",
   "dependencies": {
-    "express": "^4.15.4"
+    "express": "^4.15.4",
+    "rethinkdb": "^2.3.3"
   },
   "devDependencies": {
     "nodemon": "^1.11.0"
