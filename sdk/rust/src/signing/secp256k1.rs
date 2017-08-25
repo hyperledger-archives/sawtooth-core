@@ -97,6 +97,15 @@ impl PublicKey for Secp256k1PublicKey {
 }
 
 pub struct Secp256k1Algorithm {
+    context: secp256k1::Secp256k1
+}
+
+impl Secp256k1Algorithm {
+    pub fn new() -> Self {
+        Secp256k1Algorithm{
+            context: secp256k1::Secp256k1::new()
+        }
+    }
 }
 
 impl Algorithm for Secp256k1Algorithm {
@@ -110,10 +119,9 @@ impl Algorithm for Secp256k1Algorithm {
         let mut hash: &mut [u8] = & mut [0; 32];
         sha.result(hash);
 
-        let context = secp256k1::Secp256k1::new();
-        let sk = secp256k1::key::SecretKey::from_slice(&context, key.as_slice())?;
-        let sig = context.sign(&secp256k1::Message::from_slice(hash)?, &sk)?;
-        let compact = sig.serialize_compact(&context);
+        let sk = secp256k1::key::SecretKey::from_slice(&self.context, key.as_slice())?;
+        let sig = self.context.sign(&secp256k1::Message::from_slice(hash)?, &sk)?;
+        let compact = sig.serialize_compact(&self.context);
         Ok(compact.iter()
                   .map(|b| format!("{:02x}", b))
                   .collect::<Vec<_>>()
@@ -126,11 +134,10 @@ impl Algorithm for Secp256k1Algorithm {
         let mut hash: &mut [u8] = & mut [0; 32];
         sha.result(hash);
 
-        let context = secp256k1::Secp256k1::new();
-        let result = context.verify(
+        let result = self.context.verify(
             &secp256k1::Message::from_slice(hash)?,
-            &secp256k1::Signature::from_compact(&context, &hex_str_to_bytes(&signature)?)?,
-            &secp256k1::key::PublicKey::from_slice(&context, key.as_slice())?);
+            &secp256k1::Signature::from_compact(&self.context, &hex_str_to_bytes(&signature)?)?,
+            &secp256k1::key::PublicKey::from_slice(&self.context, key.as_slice())?);
         match result {
             Ok(()) => Ok(true),
             Err(secp256k1::Error::IncorrectSignature) => Ok(false),
@@ -139,12 +146,11 @@ impl Algorithm for Secp256k1Algorithm {
     }
 
     fn get_public_key(&self, private_key: &PrivateKey) -> Result<Box<PublicKey>, Error> {
-        let context = secp256k1::Secp256k1::new();
-        let sk = secp256k1::key::SecretKey::from_slice(&context, private_key.as_slice())?;
+        let sk = secp256k1::key::SecretKey::from_slice(&self.context, private_key.as_slice())?;
         let result = Secp256k1PublicKey::from_hex(
             bytes_to_hex_str(
                 &secp256k1::key::PublicKey::from_secret_key(
-                    &context, &sk)?.serialize_vec(&context, true)).as_str());
+                    &self.context, &sk)?.serialize_vec(&self.context, true)).as_str());
         match result {
             Err(err) => Err(err),
             Ok(pk) => Ok(Box::new(pk))
