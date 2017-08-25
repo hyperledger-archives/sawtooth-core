@@ -32,6 +32,7 @@
 /families/identity/sawtooth_identity/protobuf
 /families/**/__pycache__/
 /families/track_and_trade/client/public/dist
+/families/track_and_trade/server/rethinkdb_data
 
 /coverage
 /coverage/html
