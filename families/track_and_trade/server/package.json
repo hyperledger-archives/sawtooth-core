@@ -1,0 +1,29 @@
+{
+  "name": "tnt_server",
+  "version": "0.0.0",
+  "description": "A database and API for the Track and Trade client app",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hyperledger/sawtooth-core.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/hyperledger/sawtooth-core/issues"
+  },
+  "homepage": "https://github.com/hyperledger/sawtooth-core#readme",
+  "dependencies": {
+    "express": "^4.15.4"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0"
+  }
+}

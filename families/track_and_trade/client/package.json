@@ -1,0 +1,22 @@
+{
+  "name": "fish_net",
+  "version": "0.0.0",
+  "description": "A Track and Trade client web app for trading fish",
+  "main": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hyperledger/sawtooth-core.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/hyperledger/sawtooth-core/issues"
+  },
+  "homepage": "https://github.com/hyperledger/sawtooth-core#readme",
+  "dependencies": {
+    "sawtooth-sdk": "^0.8.1"
+  }
+}
