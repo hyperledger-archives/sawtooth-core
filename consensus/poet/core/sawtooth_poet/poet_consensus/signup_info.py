@@ -126,6 +126,27 @@ class SignupInfo(object):
         """
         return poet_enclave_module.unseal_signup_data(sealed_signup_data)
 
+    @classmethod
+    def release_signup_data(cls,
+                            poet_enclave_module,
+                            sealed_signup_data):
+        """
+        Takes sealed data from a previous call to create_signup_info and
+        releases enclave resources invalidating this data for future use.
+
+        Args:
+            poet_enclave_module (module): The module that implements the
+                underlying PoET enclave.
+            sealed_signup_data: The sealed signup data that was previously
+                returned as part of the signup info returned from
+                create_signup_info.
+
+        Returns:
+            The encoded PoET public key corresponding to private key used by
+            PoET to sign wait certificates.
+        """
+        return poet_enclave_module.release_signup_data(sealed_signup_data)
+
     def __init__(self, enclave_signup_info):
         self.poet_public_key = enclave_signup_info.poet_public_key
         self.proof_data = enclave_signup_info.proof_data
