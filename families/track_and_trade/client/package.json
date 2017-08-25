@@ -18,9 +18,19 @@
   },
   "homepage": "https://github.com/hyperledger/sawtooth-core#readme",
   "dependencies": {
+    "bootstrap": "^4.0.0-beta",
+    "jquery": "^3.2.1",
+    "popper.js": "^1.12.3",
     "sawtooth-sdk": "^0.8.1"
   },
   "devDependencies": {
+    "autoprefixer": "^7.1.2",
+    "css-loader": "^0.28.5",
+    "node-sass": "^4.5.3",
+    "postcss-loader": "^2.0.6",
+    "precss": "^2.0.0",
+    "sass-loader": "^6.0.6",
+    "style-loader": "^0.18.2",
     "webpack": "^3.5.5"
   }
 }

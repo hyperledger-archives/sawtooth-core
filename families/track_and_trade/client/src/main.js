@@ -16,6 +16,10 @@
  */
 'use strict'
 
+// These requires inform webpack which styles to build
+require('bootstrap')
+require('../styles/main.scss')
+
 const { signer } = require('sawtooth-sdk/client')
 
 console.log(`Hello ${signer.makePrivateKey()}!`)
