@@ -4,6 +4,7 @@
   "description": "A Track and Trade client web app for trading fish",
   "main": "",
   "scripts": {
+    "webpack": "./node_modules/webpack/bin/webpack.js --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,5 +19,8 @@
   "homepage": "https://github.com/hyperledger/sawtooth-core#readme",
   "dependencies": {
     "sawtooth-sdk": "^0.8.1"
+  },
+  "devDependencies": {
+    "webpack": "^3.5.5"
   }
 }
