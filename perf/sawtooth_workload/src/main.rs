@@ -1,9 +1,8 @@
 extern crate clap;
+extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
 extern crate protobuf;
 
-mod batch_gen;
-mod batch_submit;
 mod playlist;
 mod smallbank;
 
@@ -18,6 +17,9 @@ use batch_submit::submit_signed_batches;
 use playlist::generate_smallbank_playlist;
 use playlist::process_smallbank_playlist;
 use clap::{App, ArgMatches, AppSettings, Arg, SubCommand};
+
+use sawtooth_perf::batch_gen;
+use sawtooth_perf::batch_submit;
 
 use sawtooth_sdk::signing;
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
