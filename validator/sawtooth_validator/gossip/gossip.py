@@ -348,45 +348,48 @@ class Topology(Thread):
 
     def run(self):
         while not self._stopped:
-            peers = self._gossip.get_peers()
-            if len(peers) < self._min_peers:
-                LOGGER.debug("Below minimum peer threshold. "
-                             "Doing topology search.")
-
-                self._reset_candidate_peer_endpoints()
-                self._refresh_peer_list(peers)
-                # Cleans out any old connections that have disconnected
-                self._refresh_connection_list()
-
+            try:
                 peers = self._gossip.get_peers()
+                if len(peers) < self._min_peers:
+                    LOGGER.debug("Below minimum peer threshold. "
+                                 "Doing topology search.")
 
-                self._get_peers_of_peers(peers)
-                self._get_peers_of_endpoints(peers,
-                                             self._initial_seed_endpoints)
+                    self._reset_candidate_peer_endpoints()
+                    self._refresh_peer_list(peers)
+                    # Cleans out any old connections that have disconnected
+                    self._refresh_connection_list()
 
-                # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
-                time.sleep(self._response_duration)
+                    peers = self._gossip.get_peers()
 
-                peered_endpoints = list(peers.values())
+                    self._get_peers_of_peers(peers)
+                    self._get_peers_of_endpoints(peers,
+                                                 self._initial_seed_endpoints)
 
-                with self._condition:
-                    unpeered_candidates = list(
-                        set(self._candidate_peer_endpoints) -
-                        set(peered_endpoints) -
-                        set([self._endpoint]))
+                    # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
+                    time.sleep(self._response_duration)
 
-                LOGGER.debug("Number of peers: %s",
-                             len(peers))
-                LOGGER.debug("Peers are: %s",
-                             list(peers.values()))
-                LOGGER.debug("Unpeered candidates are: %s",
-                             unpeered_candidates)
+                    peered_endpoints = list(peers.values())
 
-                if unpeered_candidates:
-                    self._attempt_to_peer_with_endpoint(
-                        random.choice(unpeered_candidates))
+                    with self._condition:
+                        unpeered_candidates = list(
+                            set(self._candidate_peer_endpoints) -
+                            set(peered_endpoints) -
+                            set([self._endpoint]))
 
-            time.sleep(self._check_frequency)
+                    LOGGER.debug("Number of peers: %s",
+                                 len(peers))
+                    LOGGER.debug("Peers are: %s",
+                                 list(peers.values()))
+                    LOGGER.debug("Unpeered candidates are: %s",
+                                 unpeered_candidates)
+
+                    if unpeered_candidates:
+                        self._attempt_to_peer_with_endpoint(
+                            random.choice(unpeered_candidates))
+
+                time.sleep(self._check_frequency)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception("Unhandled exception during peer refresh")
 
     def stop(self):
         self._stopped = True
