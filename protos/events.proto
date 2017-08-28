@@ -1,0 +1,35 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "events_pb2";
+
+message Event {
+  // Determines how to deserialize event_data, what pairs to expect in Meta, and
+  // is used to subscribe to a class of events.
+  string event_type = 1;
+  // Opaque data defined by the event_type.
+  bytes  event_data = 2;
+  message Meta {
+    string key = 1;
+    string value = 2;
+}
+  // Transparent data defined by the event_type. Events of a given type can be
+  // filtered by key­value pairs in meta_data when subscribing.
+  repeated Meta meta_data = 3;
+}
