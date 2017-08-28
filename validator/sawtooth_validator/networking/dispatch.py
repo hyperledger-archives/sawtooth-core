@@ -160,10 +160,13 @@ class Dispatcher(Thread):
 
     def run(self):
         while True:
-            msg_id = self._in_queue.get()
-            if msg_id == -1:
-                break
-            self._process(msg_id)
+            try:
+                msg_id = self._in_queue.get()
+                if msg_id == -1:
+                    break
+                self._process(msg_id)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception("Unhandled exception while dispatching")
 
     def stop(self):
         self._in_queue.put_nowait(-1)
