@@ -177,8 +177,9 @@ class _SendReceive(object):
                                                 message.content,
                                                 has_callback=False)
                             self._futures.put(fut)
-                            yield from self._send_message(zmq_identity,
-                                                          message)
+                            message_frame = [bytes(zmq_identity),
+                                             message.SerializeToString()]
+                            yield from self._send_message_frame(message_frame)
                 elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
                     if self._last_message_time:
                         if self._is_connection_lost(self._last_message_time):
@@ -275,18 +276,8 @@ class _SendReceive(object):
                                  "caused an error: %s", self._address, e)
 
     @asyncio.coroutine
-    def _send_message(self, identity, msg):
-        LOGGER.debug("%s sending %s to %s",
-                     self._connection,
-                     get_enum_name(msg.message_type),
-                     identity if identity else self._address)
-
-        if identity is None:
-            message_bundle = [msg.SerializeToString()]
-        else:
-            message_bundle = [bytes(identity),
-                              msg.SerializeToString()]
-        yield from self._socket.send_multipart(message_bundle)
+    def _send_message_frame(self, message_frame):
+        yield from self._socket.send_multipart(message_frame)
 
     def send_message(self, msg, connection_id=None):
         """
@@ -305,9 +296,20 @@ class _SendReceive(object):
 
         self._ready.wait()
 
+        LOGGER.debug("%s sending %s to %s",
+                     self._connection,
+                     get_enum_name(msg.message_type),
+                     zmq_identity if zmq_identity else self._address)
+
+        if zmq_identity is None:
+            message_bundle = [msg.SerializeToString()]
+        else:
+            message_bundle = [bytes(zmq_identity),
+                              msg.SerializeToString()]
+
         try:
             asyncio.run_coroutine_threadsafe(
-                self._send_message(zmq_identity, msg),
+                self._send_message_frame(message_bundle),
                 self._event_loop)
         except RuntimeError:
             # run_coroutine_threadsafe will throw a RuntimeError if
