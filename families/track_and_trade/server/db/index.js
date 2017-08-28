@@ -22,16 +22,19 @@ const HOST = process.env.DB_HOST || 'localhost'
 const PORT = process.env.DB_PORT || 28015
 const NAME = process.env.DB_NAME || 'tnt'
 
-// Connection to db for query methods
+// Connection to db for query methods, run connect before querying
 let connection = null
-r.connect({host: HOST, port: PORT, db: NAME})
-  .then(conn => {
-    connection = conn
-  })
-  .catch(err => {
-    console.log(`Unable to connect to "${NAME}" db at ${HOST}:${PORT}}!`)
-    console.log(err)
-  })
+
+const connect = () => {
+  r.connect({host: HOST, port: PORT, db: NAME})
+    .then(conn => {
+      connection = conn
+    })
+    .catch(err => {
+      console.log(`Unable to connect to "${NAME}" db at ${HOST}:${PORT}}!`)
+      console.log(err)
+    })
+}
 
 // Runs a specified query against a database table
 const queryTable = (table, query) => {
@@ -49,6 +52,7 @@ const queryUsers = query => queryTable('users', query)
 const queryState = query => queryTable('state', query)
 
 module.exports = {
+  connect,
   queryUsers,
   queryState
 }

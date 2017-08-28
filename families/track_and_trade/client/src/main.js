@@ -25,7 +25,7 @@ const { signer } = require('sawtooth-sdk/client')
 
 console.log(`Hello ${signer.makePrivateKey()}!`)
 
-m.request({method: 'GET', url: '/tnt'})
+m.request({method: 'GET', url: '/api'})
   .then(res => {
     return m.render(document.querySelector('#app'),
                     m('div.alert.alert-success', res))
