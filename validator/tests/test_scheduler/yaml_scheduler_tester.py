@@ -186,7 +186,10 @@ class SchedulerTester(object):
         while not scheduler.complete(block=False):
             stop = False
             while not stop:
-                txn_info = scheduler.next_transaction()
+                try:
+                    txn_info = scheduler.next_transaction()
+                except StopIteration:
+                    break
                 if txn_info is not None:
                     txns_to_process.append(txn_info)
                     LOGGER.debug("Transaction %s scheduled",
