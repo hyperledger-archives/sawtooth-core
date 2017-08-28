@@ -437,12 +437,16 @@ class _SendReceive(object):
             self._auth.stop()
 
     @asyncio.coroutine
+    def _stop_event_loop(self):
+        self._event_loop.stop()
+
+    @asyncio.coroutine
     def _stop(self):
         self._dispatcher.remove_send_message(self._connection)
         yield from self._stop_auth()
         for task in asyncio.Task.all_tasks(self._event_loop):
             task.cancel()
-        self._event_loop.stop()
+        asyncio.ensure_future(self._stop_event_loop())
 
     @asyncio.coroutine
     def _notify_started(self):
