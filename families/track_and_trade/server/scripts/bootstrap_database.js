@@ -32,7 +32,9 @@ r.connect({host: HOST, port: PORT})
       })
       .then(res => {
         console.log('Creating "users" table...')
-        return r.db(NAME).tableCreate('users').run(conn)
+        return r.db(NAME).tableCreate('users', {
+          primaryKey: 'username'
+        }).run(conn)
       })
       .then(res => {
         console.log('Creating and populating "state" table...')

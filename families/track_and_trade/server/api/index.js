@@ -17,9 +17,21 @@
 'use strict'
 
 const express = require('express')
+const bodyParser = require('body-parser')
 const db = require('../db')
+const users = require('./users')
 
 const router = express.Router()
+router.use(bodyParser.json({ type: 'application/json' }))
+
+// Passes a request's body to a function,
+// then sends back the promised result as JSON.
+// Will catch errors and send to Express middleware.
+const handle = func => (req, res, next) => {
+  func(req.body)
+    .then(result => res.json(result))
+    .catch(err => next(err))
+}
 
 // Send back a simple JSON error with an HTTP status code
 const errorHandler = (err, req, res, next) => {
@@ -35,6 +47,8 @@ router.get('/', (req, res) => {
   db.queryState(state => state.filter({name: 'message'}))
     .then(messages => res.json(messages[0].value))
 })
+
+router.post('/users', handle(users.create))
 
 router.use(errorHandler)
 

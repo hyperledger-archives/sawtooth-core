@@ -37,22 +37,32 @@ const connect = () => {
 }
 
 // Runs a specified query against a database table
-const queryTable = (table, query) => {
+const queryTable = (table, query, removeCursor = true) => {
   return query(r.table(table))
     .run(connection)
-    .then(cursor => cursor.toArray())
+    .then(cursor => removeCursor ? cursor.toArray() : cursor)
     .catch(err => {
       console.log(`Unable to query "${table}" table!`)
       console.log(err)
     })
 }
 
+const insertTable = (table, update) => {
+  return queryTable(table, t => t.insert(update), false)
+}
+
 const queryUsers = query => queryTable('users', query)
 
 const queryState = query => queryTable('state', query)
 
+const insertUsers = update => insertTable('users', update)
+
+const insertState = update => insertTable('state', update)
+
 module.exports = {
   connect,
   queryUsers,
-  queryState
+  queryState,
+  insertUsers,
+  insertState
 }
