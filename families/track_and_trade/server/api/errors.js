@@ -16,26 +16,29 @@
  */
 'use strict'
 
-const express = require('express')
-const db = require('../db')
-
-const router = express.Router()
-
-// Send back a simple JSON error with an HTTP status code
-const errorHandler = (err, req, res, next) => {
-  if (err) {
-    res.status(err.status || 500).json({ error: err.message })
-  } else {
-    next()
+class BadRequest extends Error {
+  constructor (message) {
+    super(message)
+    this.status = 400
   }
 }
 
-// Routes
-router.get('/', (req, res) => {
-  db.queryState(state => state.filter({name: 'message'}))
-    .then(messages => res.json(messages[0].value))
-})
+class NotFound extends Error {
+  constructor (message) {
+    super(message)
+    this.status = 404
+  }
+}
 
-router.use(errorHandler)
+class InternalServerError extends Error {
+  constructor (message) {
+    super(message)
+    this.status = 500
+  }
+}
 
-module.exports = router
+module.exports = {
+  BadRequest,
+  NotFound,
+  InternalServerError
+}
