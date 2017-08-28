@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import queue
+from collections import deque
 from threading import Condition
 
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
@@ -36,7 +36,7 @@ class SerialScheduler(Scheduler):
     schedulers - for tests related to performance, correctness, etc.
     """
     def __init__(self, squash_handler, first_state_hash, always_persist):
-        self._txn_queue = queue.Queue()
+        self._txn_queue = SimpleQueue()
         self._scheduled_transactions = []
         self._batch_statuses = {}
         self._txn_to_batch = {}
@@ -154,9 +154,20 @@ class SerialScheduler(Scheduler):
     def _dep_is_known(self, txn_id):
         return txn_id in self._txn_to_batch
 
-    def _dep_is_not_valid(self, txn_id):
-        dependency_result = self._get_batch_result(txn_id)
-        return not dependency_result.is_valid
+    def _in_invalid_batch(self, txn_id):
+        if self._txn_to_batch[txn_id] in self._batch_statuses:
+            dependency_result = self._get_batch_result(txn_id)
+            return not dependency_result.is_valid
+        return False
+
+    def _handle_fail_fast(self, txn):
+        self._set_batch_result(
+            txn.header_signature,
+            False,
+            None)
+
+        if txn.header_signature in self._last_in_batch:
+            self._previous_context_id = self._previous_valid_batch_c_id
 
     def next_transaction(self):
         with self._condition:
@@ -164,20 +175,27 @@ class SerialScheduler(Scheduler):
                 return None
 
             txn = None
-            try:
-                while txn is None:
-                    txn = self._txn_queue.get(block=False)
-                    # Handle this transaction being invalid based on a
-                    # dependency.
-                    if any(self._dep_is_known(d) and self._dep_is_not_valid(d)
-                            for d in self._get_dependencies(txn)):
-                        self._set_batch_result(
-                            txn.header_signature,
-                            False,
-                            None)
-                        txn = None
-            except queue.Empty:
-                return None
+            while txn is None:
+                try:
+                    txn = self._txn_queue.get()
+                except EmptyQueue:
+                    if self._final:
+                        raise StopIteration()
+                    return None
+                # Handle this transaction being invalid based on a
+                # dependency.
+                if any(self._dep_is_known(d) and self._in_invalid_batch(d)
+                        for d in self._get_dependencies(txn)):
+                    self._set_batch_result(
+                        txn.header_signature,
+                        False,
+                        None)
+                    txn = None
+                    continue
+                # Handle fail fast.
+                if self._in_invalid_batch(txn.header_signature):
+                    self._handle_fail_fast(txn)
+                    txn = None
 
             self._in_progress_transaction = txn.header_signature
             base_contexts = [] if self._previous_context_id is None \
@@ -275,3 +293,22 @@ class SerialScheduler(Scheduler):
     def is_cancelled(self):
         with self._condition:
             return self._cancelled
+
+
+class SimpleQueue(object):
+
+    def __init__(self):
+        self._queue = deque()
+
+    def get(self):
+        try:
+            return self._queue.popleft()
+        except IndexError:
+            raise EmptyQueue
+
+    def put(self, item):
+        self._queue.append(item)
+
+
+class EmptyQueue(Exception):
+    pass
