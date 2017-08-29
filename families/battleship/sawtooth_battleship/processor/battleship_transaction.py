@@ -15,90 +15,51 @@
 
 import logging
 import re
+import json
+import hashlib
 
-from journal import transaction, global_store_manager
-from journal.messages import transaction_message
-
-from sawtooth.exceptions import InvalidTransactionError
+from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_sdk.processor.exceptions import InvalidTransaction
+from sawtooth_sdk.processor.exceptions import InternalError
+from sawtooth_sdk.processor.state import StateEntry
 
 from sawtooth_battleship.battleship_board import hash_space
 
 LOGGER = logging.getLogger(__name__)
 
 
-def _register_transaction_types(journal):
-    """Registers the Battleship transaction types on the ledger.
+class BattleshipTransaction:
 
-    Args:
-        ledger (journal.journal_core.Journal): The ledger to register
-            the transaction type against.
-    """
-    journal.dispatcher.register_message_handler(
-        BattleshipTransactionMessage,
-        transaction_message.transaction_message_handler)
-    journal.add_transaction_store(BattleshipTransaction)
-
-
-class BattleshipTransactionMessage(transaction_message.TransactionMessage):
-    """Battleship transaction message represent Battleship transactions.
-
-    Attributes:
-        MessageType (str): The class name of the message.
-        Transaction (BattleshipTransaction): The transaction the
-            message is associated with.
-    """
-    MessageType = "/Battleship/Transaction"
-
-    def __init__(self, minfo=None):
-        if minfo is None:
-            minfo = {}
-
-        super(BattleshipTransactionMessage, self).__init__(minfo)
-
-        tinfo = minfo.get('Transaction', {})
-        self.Transaction = BattleshipTransaction(tinfo)
-
-
-class BattleshipTransaction(transaction.Transaction):
-    """A Transaction is a set of updates to be applied atomically
-    to a ledger.
-
-    It has a unique identifier and a signature to validate the source.
-
-    Attributes:
-        TransactionTypeName (str): The name of the Battleship
-            transaction type.
-        TransactionTypeStore (type): The type of transaction store.
-        MessageType (type): The object type of the message associated
-            with this transaction.
-    """
-    TransactionTypeName = '/BattleshipTransaction'
-    TransactionStoreType = global_store_manager.KeyValueStore
-    MessageType = BattleshipTransactionMessage
-
-    def __init__(self, minfo=None):
+    def __init__(self, name_prefix, transaction):
         """Constructor for the BattleshipTransaction class.
 
         Args:
-            minfo: Dictionary of values for transaction fields.
+            transaction: Dictionary of values for transaction fields.
         """
 
-        if minfo is None:
-            minfo = {}
+        header = TransactionHeader()
+        header.ParseFromString(transaction.header)
 
-        super(BattleshipTransaction, self).__init__(minfo)
+        try:
+            payload = json.loads(
+                transaction.payload.decode(), encoding="utf-8")
+        except ValueError:
+            raise InvalidTransaction("Invalid payload serialization")
 
-        LOGGER.debug("minfo: %s", repr(minfo))
-        self._name = minfo['Name'] if 'Name' in minfo else None
-        self._action = minfo['Action'] if 'Action' in minfo else None
-        self._board = minfo['Board'] if 'Board' in minfo else None
-        self._ships = minfo['Ships'] if 'Ships' in minfo else None
-        self._column = minfo['Column'] if 'Column' in minfo else None
-        self._row = minfo['Row'] if 'Row' in minfo else None
-        self._reveal_space = minfo['RevealSpace'] \
-            if 'RevealSpace' in minfo else None
-        self._reveal_nonce = minfo['RevealNonce'] \
-            if 'RevealNonce' in minfo else None
+        LOGGER.debug("payload recieved by battleship tp: %s", repr(payload))
+        self._signer_pubkey = header.signer_pubkey
+        self._name = payload['Name'] if 'Name' in payload else None
+        self._action = payload['Action'] if 'Action' in payload else None
+        self._board = payload['Board'] if 'Board' in payload else None
+        self._ships = payload['Ships'] if 'Ships' in payload else None
+        self._column = payload['Column'] if 'Column' in payload else None
+        self._row = payload['Row'] if 'Row' in payload else None
+        self._reveal_space = payload['RevealSpace'] \
+            if 'RevealSpace' in payload else None
+        self._reveal_nonce = payload['RevealNonce'] \
+            if 'RevealNonce' in payload else None
+        self._battleship_addr = \
+            _make_battleship_address(name_prefix, self._name)
 
         # self._column is valid (letter from A-J)
         self._acceptable_columns = set('ABCDEFGHIJ')
@@ -107,15 +68,11 @@ class BattleshipTransaction(transaction.Transaction):
         self._size = 10
 
     def __str__(self):
-        try:
-            oid = self.OriginatorID
-        except AssertionError:
-            oid = "unknown"
+        oid = "unknown" if not self._signer_pubkey else self._signer_pubkey
 
-        if self._action == "CREATE":
-            return "{} {} {}".format(oid, self._action, self._name)
-        else:
-            return "{} {}".format(oid, self._action)
+        return "{} {} {}".format(oid, self._action, self._name) \
+            if self._action == "CREATE" \
+            else "{} {}".format(oid, self._action)
 
     def check_valid(self, store):
         """Determines if the transaction is valid.
@@ -124,28 +81,24 @@ class BattleshipTransaction(transaction.Transaction):
             store (dict): Transaction store mapping.
         """
 
-        super(BattleshipTransaction, self).check_valid(store)
-
-        LOGGER.debug('checking %s', str(self))
-
         # Name (of the game) is always required
         if self._name is None or self._name == '':
-            raise InvalidTransactionError('name not set')
+            raise InvalidTransaction('name not set')
 
         # Action is always required
         if self._action is None or self._action == '':
-            raise InvalidTransactionError('action not set')
+            raise InvalidTransaction('action not set')
 
         # The remaining validity rules depend upon which action has
         # been specified.
 
         if self._action == 'CREATE':
             if self._name in store:
-                raise InvalidTransactionError('game already exists')
+                raise InvalidTransaction('game already exists')
 
             # Restrict game name letters and numbers.
             if not re.match("^[a-zA-Z0-9]*$", self._name):
-                raise InvalidTransactionError(
+                raise InvalidTransaction(
                     "Only letters a-z A-Z and numbers 0-9 are allowed in "
                     "the game name!")
 
@@ -153,79 +106,80 @@ class BattleshipTransaction(transaction.Transaction):
 
             # Check that self._name is in the store (to verify
             # that the game exists (see FIRE below).
-            state = store[self._name]['State']
-            LOGGER.info("state: %s", state)
             if self._name not in store:
-                raise InvalidTransactionError(
+                raise InvalidTransaction(
                     'Trying to join a game that does not exist')
-            elif state != "NEW":
+
+            state = store[self._name]['State']
+
+            if state != "NEW":
                 # Check that the game can be joined (the state is 'NEW')
-                raise InvalidTransactionError(
+                raise InvalidTransaction(
                     'The game cannot accept any new participant')
 
             # Check that the game board is the right size (10x10)
             if len(self._board) != self._size:
-                raise InvalidTransactionError('Game board is not valid size')
-            for row in xrange(0, self._size):
+                raise InvalidTransaction('Game board is not valid size')
+            for row in range(0, self._size):
                 if len(self._board[row]) != self._size:
-                    raise InvalidTransactionError(
+                    raise InvalidTransaction(
                         'Game board is not valid size')
 
             # Validate that self._board contains hash-like strings
-            for row in xrange(0, self._size):
-                for col in xrange(0, self._size):
+            for row in range(0, self._size):
+                for col in range(0, self._size):
                     # length of md5 hexdigest is 32 characters
                     if len(self._board[row][col]) != 32:
-                        raise InvalidTransactionError("invalid board hash")
+                        raise InvalidTransaction("invalid board hash")
 
         elif self._action == 'FIRE':
 
             if self._name not in store:
-                raise InvalidTransactionError('no such game')
+                raise InvalidTransaction('no such game')
 
             if self._column is None:
-                raise InvalidTransactionError("Column is required")
+                raise InvalidTransaction("Column is required")
 
             if self._row is None:
-                raise InvalidTransactionError("Row is required")
+                raise InvalidTransaction("Row is required")
 
             # Check that self._column is valid (letter from A-J)
             if not any((c in self._acceptable_columns) for c in self._column):
-                raise InvalidTransactionError(
+                raise InvalidTransaction(
                     'Acceptable columns letters are A to J')
 
             # Check that self._row is valid (number from 1-10)
             try:
                 row = int(self._row)
                 if (row < 1) or (row > 10):
-                    raise InvalidTransactionError(
+                    raise InvalidTransaction(
                         'Acceptable rows numbers are 1 to 10')
             except ValueError:
-                raise InvalidTransactionError(
+                raise InvalidTransaction(
                     'Acceptable rows numbers are 1 to 10')
 
             state = store[self._name]['State']
 
             if state in ['P1-WIN', 'P2-WIN']:
-                raise InvalidTransactionError('game complete')
+                raise InvalidTransaction('game complete')
 
             if state == 'NEW':
-                raise InvalidTransactionError(
+                raise InvalidTransaction(
                     "Game doesn't have enough players.")
 
             player = None
             if state == 'P1-NEXT':
                 player1_firing = True
                 player = store[self._name]['Player1']
-                if player != self.OriginatorID:
-                    raise InvalidTransactionError('invalid player 1')
+                if player != self._signer_pubkey:
+                    raise InvalidTransaction('invalid player 1')
             elif state == 'P2-NEXT':
                 player1_firing = False
                 player = store[self._name]['Player2']
-                if player != self.OriginatorID:
-                    raise InvalidTransactionError('invalid player 2')
+                if player != self._signer_pubkey:
+                    raise InvalidTransaction('invalid player 2')
             else:
-                raise InvalidTransactionError(
+                raise InvalidTransaction(
                     "invalid state: {}".format(state))
 
             # Check whether the board's column and row have already been
@@ -238,7 +192,7 @@ class BattleshipTransaction(transaction.Transaction):
             firing_row = int(self._row) - 1
             firing_column = ord(self._column) - ord('A')
             if target_board[firing_row][firing_column] != '?':
-                raise InvalidTransactionError(
+                raise InvalidTransaction(
                     "{} {} has already been fired upon".format(
                         self._column, self._row)
                 )
@@ -246,7 +200,7 @@ class BattleshipTransaction(transaction.Transaction):
             # Make sure a space is revealed if it isn't the first turn.
             if 'LastFireColumn' in store[self._name]:
                 if self._reveal_space is None or self._reveal_nonce is None:
-                    raise InvalidTransactionError(
+                    raise InvalidTransaction(
                         "Attempted to fire without revealing target")
 
                 if state == 'P1-NEXT':
@@ -259,27 +213,32 @@ class BattleshipTransaction(transaction.Transaction):
                 hashed_space = hash_space(self._reveal_space,
                                           self._reveal_nonce)
                 if store[self._name][hashed_board][row][col] != hashed_space:
-                    raise InvalidTransactionError(
+                    raise InvalidTransaction(
                         "Hash mismatch on reveal: {} != {}".format(
-                            hashed_board[row][col], hashed_space))
+                            store[self._name][hashed_board][row][col],
+                            hashed_space))
 
         else:
-            raise InvalidTransactionError(
+            raise InvalidTransaction(
                 'invalid action: {}'.format(self._action))
 
-    def apply(self, store):
+    def apply(self, state_store):
         """Applies all the updates in the transaction to the transaction
         store.
 
         Args:
-            store (dict): Transaction store mapping.
+            store: state_store
         """
-        LOGGER.debug('apply %s', str(self))
+
+        state = _get_state_data(self._battleship_addr, state_store)
+        LOGGER.debug('Applying changes to state\nCURRENT STATE:\n%s' % state)
+
+        self.check_valid(state)
 
         if self._action == 'CREATE':
-            store[self._name] = {'State': 'NEW', 'Ships': self._ships}
+            state[self._name] = {'State': 'NEW', 'Ships': self._ships}
         elif self._action == 'JOIN':
-            game = store[self._name].copy()
+            game = state[self._name].copy()
 
             # If this is the first JOIN, set HashedBoard1 and Player1 in the
             # store.  if this is the second JOIN, set HashedBoard2 and
@@ -289,19 +248,19 @@ class BattleshipTransaction(transaction.Transaction):
                 game['HashedBoard1'] = self._board
                 size = len(self._board)
                 game['TargetBoard1'] = [['?'] * size for _ in range(size)]
-                game['Player1'] = self.OriginatorID
+                game['Player1'] = self._signer_pubkey
             else:
                 game['HashedBoard2'] = self._board
                 size = len(self._board)
                 game['TargetBoard2'] = [['?'] * size for _ in range(size)]
-                game['Player2'] = self.OriginatorID
+                game['Player2'] = self._signer_pubkey
 
                 # Move to 'P1-NEXT' as both boards have been entered.
                 game["State"] = 'P1-NEXT'
 
-            store[self._name] = game
+            state[self._name] = game
         elif self._action == 'FIRE':
-            game = store[self._name].copy()
+            game = state[self._name].copy()
 
             # Reveal the previously targeted space
             if 'LastFireColumn' in game:
@@ -345,10 +304,12 @@ class BattleshipTransaction(transaction.Transaction):
             elif game['State'] == 'P2-NEXT':
                 game['State'] = 'P1-NEXT'
 
-            store[self._name] = game
+            state[self._name] = game
         else:
-            raise InvalidTransactionError(
-                "invalid state: {}".format(store[self._name].copy))
+            raise InvalidTransaction(
+                "invalid state: {}".format(state[self._name].copy))
+
+        _store_state_data(self._battleship_addr, state, state_store)
 
     def dump(self):
         """Returns a dict with attributes from the transaction object.
@@ -372,3 +333,37 @@ class BattleshipTransaction(transaction.Transaction):
                 result['RevealNonce'] = self._reveal_nonce
 
         return result
+
+
+def _make_battleship_address(namespace_prefix, name):
+    return namespace_prefix + \
+        hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
+
+
+def _get_state_data(game_address, state_store):
+    # Get data from address
+    state_entries = state_store.get([game_address])
+
+    # state_store.get() returns a list. If no data has been stored yet
+    # at the given address, it will be empty.
+    if state_entries:
+        try:
+            state_data = state_entries[0].data.decode()
+
+            return json.loads(state_data, encoding="utf-8")
+
+        except ValueError:
+            raise InternalError("Failed to deserialize game data.")
+
+    else:
+        return {}
+
+
+def _store_state_data(addr, new_state, state_store):
+    LOGGER.debug('Storing Upadated State....\nUPDATED STATE:\n%s' % new_state)
+    addresses = state_store.set([
+        StateEntry(address=addr, data=json.dumps(new_state).encode())
+    ])
+
+    if len(addresses) < 1:
+        raise InternalError("State Error")

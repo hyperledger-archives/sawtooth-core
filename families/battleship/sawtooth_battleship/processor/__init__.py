@@ -13,10 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-
-class BattleshipException(Exception):
-    pass
-
-
-class BoardLayoutException(BattleshipException):
-    pass
+__all__ = [
+    'main'
+]

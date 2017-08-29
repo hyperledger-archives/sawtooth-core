@@ -13,15 +13,9 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
-from sawtooth_battleship.txn_family import _register_transaction_types
-
 __all__ = [
-    'txn_family',
     'battleship_cli',
     'battleship_client',
-    'battleship_exceptions'
+    'battleship_exceptions',
+    'battleship_board'
 ]
-
-
-def register_transaction_types(journal):
-    _register_transaction_types(journal)

@@ -45,7 +45,6 @@ class State(object):
             results ((map): a map of address to StateEntry values, for the
             addresses that have a value
         """
-
         request = state_context_pb2.TpStateGetRequest(
             context_id=self._context_id,
             addresses=addresses)
