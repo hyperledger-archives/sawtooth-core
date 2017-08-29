@@ -55,7 +55,24 @@ const queryUsers = query => queryTable('users', query)
 
 const queryState = query => queryTable('state', query)
 
-const insertUsers = update => insertTable('users', update)
+const insertUsers = update => {
+  return insertTable('usernames', {username: update.username})
+    .then(results => {
+      if (results.errors || results.inserted === 0) {
+        return results
+      }
+      return insertTable('users', update)
+    })
+    .then(insertResults => {
+      if (insertResults.errors || insertResults.inserted === 0) {
+        return queryTable('usernames', names => {
+          return names.get(update.username).delete()
+        }, false)
+          .then(deleteResults => insertResults)
+      }
+      return insertResults
+    })
+}
 
 const insertState = update => insertTable('state', update)
 
