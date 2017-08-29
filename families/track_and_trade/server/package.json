@@ -9,7 +9,7 @@
   "scripts": {
     "start": "rethinkdb & nodemon index.js",
     "init": "rethinkdb & node ./scripts/bootstrap_database.js && kill $! || true",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "standard"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "rethinkdb": "^2.3.3"
   },
   "devDependencies": {
-    "nodemon": "^1.11.0"
+    "nodemon": "^1.11.0",
+    "standard": "^10.0.3"
   }
 }
