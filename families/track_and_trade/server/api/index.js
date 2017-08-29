@@ -16,9 +16,12 @@
  */
 'use strict'
 
+const _ = require('lodash')
 const express = require('express')
 const bodyParser = require('body-parser')
+
 const db = require('../db')
+const auth = require('./auth')
 const users = require('./users')
 
 const router = express.Router()
@@ -48,7 +51,11 @@ router.get('/', (req, res) => {
     .then(messages => res.json(messages[0].value))
 })
 
-router.post('/users', handle(users.create))
+router.post('/users', handle(body => {
+  return auth.hashPassword(body.password)
+    .then(hashed => users.create(_.assign({}, body, {password: hashed})))
+    .then(user => _.omit(user, 'password'))
+}))
 
 router.use(errorHandler)
 
