@@ -46,7 +46,7 @@ message StateDeltaEvent {
     // The block id associated with the changes.
     string block_id = 1;
     // The block number associated with the changes
-    int32 block_num = 2;
+    uint64 block_num = 2;
     // The state root hash which resulted from the changes.
     string state_root_hash = 3;
 
