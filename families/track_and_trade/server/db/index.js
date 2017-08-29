@@ -17,6 +17,7 @@
 'use strict'
 
 const r = require('rethinkdb')
+const _ = require('lodash')
 
 const HOST = process.env.DB_HOST || 'localhost'
 const PORT = process.env.DB_PORT || 28015
@@ -47,39 +48,28 @@ const queryTable = (table, query, removeCursor = true) => {
     })
 }
 
-const insertTable = (table, update) => {
-  return queryTable(table, t => t.insert(update), false)
-}
+// Inserts a document into a table, throwing an error on failure
+// Accepts an optional validator function, which should have an errors method
+const insertTable = (table, doc, validator = d => true) => {
+  if (!validator(doc)) {
+    const [ key, message ] = _.entries(validator.errors(doc))[0]
+    return Promise.reject(new Error(`Invalid Input: "${key}" - ${message}`))
+  }
 
-const queryUsers = query => queryTable('users', query)
-
-const queryState = query => queryTable('state', query)
-
-const insertUsers = update => {
-  return insertTable('usernames', {username: update.username})
+  return queryTable(table, t => t.insert(doc), false)
     .then(results => {
-      if (results.errors || results.inserted === 0) {
-        return results
+      if (results.errors) {
+        throw new Error(results.first_error)
       }
-      return insertTable('users', update)
-    })
-    .then(insertResults => {
-      if (insertResults.errors || insertResults.inserted === 0) {
-        return queryTable('usernames', names => {
-          return names.get(update.username).delete()
-        }, false)
-          .then(deleteResults => insertResults)
+      if (results.inserted === 0) {
+        throw new Error(`Unknown Error: Unable to insert to ${table}`)
       }
-      return insertResults
+      return results
     })
 }
-
-const insertState = update => insertTable('state', update)
 
 module.exports = {
   connect,
-  queryUsers,
-  queryState,
-  insertUsers,
-  insertState
+  queryTable,
+  insertTable
 }

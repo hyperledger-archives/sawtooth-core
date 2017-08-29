@@ -16,20 +16,16 @@
  */
 'use strict'
 
-const _ = require('lodash')
-const db = require('../db/users')
-const auth = require('./auth')
-const { BadRequest } = require('./errors')
+const schema = require('js-schema')
+const db = require('./')
 
-const create = user => {
-  return auth.hashPassword(user.password)
-    .then(hashed => {
-      return db.insert(_.assign({}, user, {password: hashed}))
-        .catch(err => { throw new BadRequest(err.message) })
-    })
-    .then(() => _.omit(user, 'password'))
-}
+const validator = schema({})
+
+const query = query => db.queryTable('state', query)
+
+const insert = update => db.insertTable('state', update, validator)
 
 module.exports = {
-  create
+  query,
+  insert
 }

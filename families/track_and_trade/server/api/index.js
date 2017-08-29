@@ -16,12 +16,9 @@
  */
 'use strict'
 
-const _ = require('lodash')
 const express = require('express')
 const bodyParser = require('body-parser')
-
-const db = require('../db')
-const auth = require('./auth')
+const state = require('../db/state')
 const users = require('./users')
 
 const router = express.Router()
@@ -47,15 +44,11 @@ const errorHandler = (err, req, res, next) => {
 
 // Routes
 router.get('/', (req, res) => {
-  db.queryState(state => state.filter({name: 'message'}))
+  state.query(state => state.filter({name: 'message'}))
     .then(messages => res.json(messages[0].value))
 })
 
-router.post('/users', handle(body => {
-  return auth.hashPassword(body.password)
-    .then(hashed => users.create(_.assign({}, body, {password: hashed})))
-    .then(user => _.omit(user, 'password'))
-}))
+router.post('/users', handle(users.create))
 
 router.use(errorHandler)
 
