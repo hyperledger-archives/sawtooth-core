@@ -224,7 +224,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         """Verifies requests for status that wait for commit work properly.
 
         Queries the default mock block store which will have no block with
-        the id 'awaited' until added by a separate thread.
+        the id 'b-new' until added by a separate thread.
 
         Expects to find:
             - less than 8 seconds to have passed (i.e. did not wait for timeout)
@@ -240,6 +240,25 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         response = self.make_request(
             batch_ids=['b-new'],
+            wait_for_commit=True,
+            timeout=10)
+
+        self.assertGreater(8, time() - start_time)
+        self.assertEqual(self.status.OK, response.status)
+        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
+
+    def test_batch_status_with_committed_wait(self):
+        """Verifies requests for status that wait for commit work properly,
+        when the batch is already committed.
+
+        Expects to find:
+            - less than 8 seconds to have passed (i.e. did not wait for timeout)
+            - a response status of OK
+            - a status of COMMITTED at key 'b-0' in batch_statuses
+        """
+        start_time = time()
+        response = self.make_request(
+            batch_ids=['b-0'],
             wait_for_commit=True,
             timeout=10)
 
