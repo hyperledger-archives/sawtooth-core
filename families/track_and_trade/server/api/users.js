@@ -16,6 +16,7 @@
  */
 'use strict'
 
+const _ = require('lodash')
 const schema = require('js-schema')
 const db = require('../db')
 const { BadRequest, InternalServerError } = require('./errors')
@@ -32,7 +33,7 @@ const isValidCreate = schema({
 const create = user => {
   if (!isValidCreate(user)) {
     const errors = isValidCreate.errors(user)
-    const firstKey = Object.keys(errors)[0]
+    const firstKey = _.keys(errors)[0]
     throw new BadRequest(`User Invalid: "${firstKey}" - ${errors[firstKey]}`)
   }
 

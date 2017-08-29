@@ -22,9 +22,11 @@
   },
   "homepage": "https://github.com/hyperledger/sawtooth-core#readme",
   "dependencies": {
+    "bcrypt": "^1.0.3",
     "body-parser": "^1.17.2",
     "express": "^4.15.4",
     "js-schema": "^1.0.1",
+    "lodash": "^4.17.4",
     "rethinkdb": "^2.3.3"
   },
   "devDependencies": {
