@@ -5,7 +5,7 @@
   "main": "",
   "scripts": {
     "webpack": "./node_modules/webpack/bin/webpack.js --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "standard src/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -31,6 +31,7 @@
     "postcss-loader": "^2.0.6",
     "precss": "^2.0.0",
     "sass-loader": "^6.0.6",
+    "standard": "^10.0.3",
     "style-loader": "^0.18.2",
     "webpack": "^3.5.5"
   }
