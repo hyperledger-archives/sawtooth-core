@@ -256,7 +256,7 @@ def _check_verification_report(verification_report, signature):
 
     if isv_enclave_quote_status.upper() != 'OK':
         raise ValueError(
-            'AVR enclave quote status is not %s'.format(
+            'AVR enclave quote status is not OK: {}'.format(
                 isv_enclave_quote_status))
 
     # 5. Includes an enclave quote.
@@ -275,7 +275,8 @@ def _check_verification_report(verification_report, signature):
 
     if pse_manifest_status.upper() != 'OK':
         raise ValueError(
-            'AVR PSE manifest status is not %s'.format(pse_manifest_status))
+            'AVR PSE manifest status is not OK: {}'.format(
+                pse_manifest_status))
 
     # 8. Includes a PSE manifest hash.
 
