@@ -19,7 +19,7 @@ import unittest
 import requests
 
 from sawtooth_ias_client.ias_client import IasClient
-from tests.unit import mock_ias_server
+from unit import mock_ias_server
 
 URL = "http://127.0.0.1:8080"
 
