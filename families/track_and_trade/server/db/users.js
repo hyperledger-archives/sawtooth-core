@@ -24,7 +24,7 @@ const validator = schema({
   password: String,
   email: /.+@.+\..+/,
   publicKey: String,
-  privateKey: String,
+  '?encryptedKey': String,
   '*': null
 })
 
