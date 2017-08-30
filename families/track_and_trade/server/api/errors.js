@@ -23,6 +23,13 @@ class BadRequest extends Error {
   }
 }
 
+class Unauthorized extends Error {
+  constructor (message) {
+    super(message)
+    this.status = 401
+  }
+}
+
 class NotFound extends Error {
   constructor (message) {
     super(message)
@@ -39,6 +46,7 @@ class InternalServerError extends Error {
 
 module.exports = {
   BadRequest,
+  Unauthorized,
   NotFound,
   InternalServerError
 }

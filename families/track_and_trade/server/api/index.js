@@ -18,7 +18,9 @@
 
 const express = require('express')
 const bodyParser = require('body-parser')
+
 const state = require('../db/state')
+const auth = require('./auth')
 const users = require('./users')
 
 const router = express.Router()
@@ -47,6 +49,8 @@ router.get('/', (req, res) => {
   state.query(state => state.filter({name: 'message'}))
     .then(messages => res.json(messages[0].value))
 })
+
+router.post('/authorization', handle(auth.authorize))
 
 router.post('/users', handle(users.create))
 

@@ -19,6 +19,9 @@
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
+const users = require('../db/users')
+const { BadRequest, Unauthorized } = require('./errors')
+
 const SALT_ROUNDS = 10
 let SECRET = process.env.SECRET
 if (SECRET === undefined) {
@@ -41,7 +44,34 @@ const createToken = payload => {
   })
 }
 
+// Checks an object with username and password keys.
+// Returns an auth token and the user's private key if it passes.
+const authorize = ({ username, password }) => {
+  if (!username || !password) {
+    const message = 'Authorization requires username and password'
+    return Promise.reject(new BadRequest(message))
+  }
+
+  return users.query(users => users.filter({ username }))
+    .then(matches => {
+      if (matches.length === 0) throw new Error()
+      const user = matches[0]
+
+      return bcrypt.compare(password, user.password)
+        .then(passValid => {
+          if (!passValid) throw new Error()
+          return createToken(user.publicKey)
+        })
+        .then(token => ({
+          authorization: token,
+          encryptedKey: user.encryptedKey
+        }))
+    })
+    .catch(() => { throw new Unauthorized('Authorization Failed') })
+}
+
 module.exports = {
   hashPassword,
-  createToken
+  createToken,
+  authorize
 }
