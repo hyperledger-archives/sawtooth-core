@@ -173,7 +173,7 @@ class PathConfig:
 
     @property
     def policy_dir(self):
-        return self._key_dir
+        return self._policy_dir
 
     def __repr__(self):
         return \
