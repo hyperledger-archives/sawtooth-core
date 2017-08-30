@@ -27,7 +27,11 @@ const create = user => {
       return db.insert(_.assign({}, user, {password: hashed}))
         .catch(err => { throw new BadRequest(err.message) })
     })
-    .then(() => _.omit(user, 'password'))
+    .then(() => auth.createToken(user.publicKey))
+    .then(token => ({
+      authorization: token,
+      encryptedKey: user.encryptedKey || null
+    }))
 }
 
 module.exports = {
