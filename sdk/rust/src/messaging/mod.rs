@@ -14,11 +14,5 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-
-extern crate protobuf;
-#[macro_use]
-extern crate log;
-
-pub mod messages;
-pub mod messaging;
-pub mod signing;
+pub mod stream;
+pub mod zmq_stream;

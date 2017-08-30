@@ -83,6 +83,7 @@
 /families/seth/bin/
 /families/seth/src/sawtooth_seth/protobuf/
 /sdk/rust/target
+/sdk/rust/Cargo.lock
 /sdk/rust/src/messages/*.rs
 !/sdk/rust/src/messages/mod.rs
 
