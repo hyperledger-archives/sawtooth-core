@@ -64,6 +64,8 @@ class TestPathConfig(unittest.TestCase):
                              "/tmp/no-such-sawtooth-home/data")
             self.assertEqual(config.log_dir,
                              "/tmp/no-such-sawtooth-home/logs")
+            self.assertEqual(config.policy_dir,
+                             "/tmp/no-such-sawtooth-home/policy")
         finally:
             os.environ.clear()
             os.environ.update(orig_environ)
@@ -94,6 +96,8 @@ class TestPathConfig(unittest.TestCase):
                 fd.write(os.linesep)
                 fd.write('log_dir = "/tmp/no-such-dir-from-config/logs"')
                 fd.write(os.linesep)
+                fd.write('policy_dir = "/tmp/no-such-dir-from-config/policy"')
+                fd.write(os.linesep)
 
             config = load_path_config()
             self.assertEqual(config.config_dir, config_dir)
@@ -103,6 +107,8 @@ class TestPathConfig(unittest.TestCase):
                              "/tmp/no-such-dir-from-config/data")
             self.assertEqual(config.log_dir,
                              "/tmp/no-such-dir-from-config/logs")
+            self.assertEqual(config.policy_dir,
+                             "/tmp/no-such-dir-from-config/policy")
         finally:
             os.environ.clear()
             os.environ.update(orig_environ)
