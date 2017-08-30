@@ -34,6 +34,8 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import Entry
 
 
@@ -239,5 +241,17 @@ class MessageFactory(object):
     def create_set_response(self, addresses):
         self._validate_addresses(addresses)
         return TpStateSetResponse(
+            addresses=addresses
+        )
+
+    def create_delete_request(self, addresses):
+        self._validate_addresses(addresses)
+        return TpStateDeleteRequest(
+            addresses=addresses
+        )
+
+    def create_delete_response(self, addresses):
+        self._validate_addresses(addresses)
+        return TpStateDeleteResponse(
             addresses=addresses
         )
