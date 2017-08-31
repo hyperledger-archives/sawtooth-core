@@ -14,16 +14,9 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with all the python3 Sawtooth Lake packages installed from
+#   Builds an image with the Sawtooth Identity TP package installed from
 #   the Sawtooth Lake Package Repository.
 #
-# Build:
-#   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-all -t sawtooth-all
-#
-# Run:
-#   $ cd sawtooth-core
-#   $ docker run sawtooth-all
 
 FROM ubuntu:xenial
 
@@ -33,25 +26,10 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
  && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
  && apt-get install -y -q \
-    curl \
-    python3-sawtooth-cli \
     python3-sawtooth-identity \
-    python3-sawtooth-intkey \
-    python3-sawtooth-manage \
-    python3-sawtooth-poet-common \
-    python3-sawtooth-poet-core \
-    python3-sawtooth-poet-families \
-    python3-sawtooth-poet-simulator \
-    python3-sawtooth-rest-api \
-    python3-sawtooth-sdk \
-    python3-sawtooth-settings \
-    python3-sawtooth-signing \
-    python3-sawtooth-validator \
-    python3-sawtooth-xo \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 4004/tcp
-EXPOSE 8080
 
-# Entrypoint is left up to user
+CMD ["identity-tp", "-vv"]

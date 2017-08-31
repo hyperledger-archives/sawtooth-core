@@ -334,8 +334,10 @@ then
         docker_build $build_dir/sawtooth-int-settings-tp \
             $build_dir/ sawtooth-settings-tp
 
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-identity-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-block-info-tp
+
+        docker_build $build_dir/sawtooth-int-identity-tp \
+            $build_dir/ sawtooth-identity-tp
 
         docker_build $build_dir/sawtooth-int-intkey-tp-python \
             $build_dir/ sawtooth-intkey-tp-python
