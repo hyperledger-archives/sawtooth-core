@@ -545,7 +545,7 @@ class Topology(Thread):
             self._network.send(validator_pb2.Message.NETWORK_DISCONNECT,
                                msg.SerializeToString(),
                                connection_id)
-            del self._connection[connection_id]
+            del self._connection_statuses[connection_id]
             self._network.remove_connection(connection_id)
         elif status == "peer":
             LOGGER.debug("Connection is a peer, do not close.")
