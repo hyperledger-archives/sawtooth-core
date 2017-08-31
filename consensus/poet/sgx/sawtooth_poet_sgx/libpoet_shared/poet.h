@@ -232,6 +232,17 @@ extern "C" {
         );
 
     /*
+        Release the hardware counter used by signup data.
+
+        inSealedSignupData - A string representing the base 64 encoded sealed
+            signup data returned from a successful call to
+            PoET_CreateSignupData.
+    */
+    POET_FUNC poet_err_t Poet_ReleaseSignupData(
+        const char* inSealedSignupData
+        );
+
+    /*
         Verifies that the signup information provided is valid (as least as far
         as this enclave is concerned).
 
@@ -256,6 +267,9 @@ extern "C" {
         Generates a wait timer that later, upon expiration, can be used to
         create a wait certificate.
 
+        inSealedSignupData - A string representing the base 64 encoded sealed
+            signup data returned from a successful call to
+            PoET_CreateSignupData.
         inValidatorAddress - A string representing the validator address.
         inPreviousCertificateId - A string representing the ID of the previous
             wait certificate (i.e., the wait certificate from the block that
@@ -278,6 +292,7 @@ extern "C" {
             be obtained by calling Poet_GetSignatureSize().
     */
     POET_FUNC poet_err_t Poet_CreateWaitTimer(
+        const char* inSealedSignupData,
         const char* inValidatorAddress,
         const char* inPreviousCertificateId,
         double inRequestTime,
@@ -315,6 +330,7 @@ extern "C" {
             parameter may be obtained by calling Poet_GetSignatureSize().
     */
     POET_FUNC poet_err_t Poet_CreateWaitCertificate(
+        const char* inSealedSignupData,
         const char* inSerializedWaitTimer,
         const char* inWaitTimerSignature,
         const char* inBlockHash,

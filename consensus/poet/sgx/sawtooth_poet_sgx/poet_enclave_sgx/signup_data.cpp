@@ -82,6 +82,18 @@ std::string _SignupData::UnsealSignupData(
 } // _SignupData::UnsealSignupData
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+void _SignupData::ReleaseSignupData(
+    const std::string& sealedSignupData
+    )
+{
+    // Unseal the signup data
+    poet_err_t result =
+        Poet_ReleaseSignupData(
+            sealedSignupData.c_str());
+    ThrowPoetError(result);
+} // _SignupData::UnsealSignupData
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 _SignupData* _create_signup_data(
     const std::string& originator_public_key_hash
     )
@@ -96,4 +108,12 @@ std::string unseal_signup_data(
     )
 {
     return _SignupData::UnsealSignupData(sealed_signup_data);
+} // _unseal_signup_data
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+void release_signup_data(
+    const std::string& sealed_signup_data
+    )
+{
+    _SignupData::ReleaseSignupData(sealed_signup_data);
 } // _unseal_signup_data

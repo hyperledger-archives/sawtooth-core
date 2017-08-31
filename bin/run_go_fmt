@@ -10,10 +10,10 @@ $top_dir/sdk/go/src/sawtooth_sdk/processor
 $top_dir/sdk/go/src/sawtooth_sdk/client
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey/handler
-$top_dir/families/burrow_evm/src/sawtooth_burrow_evm/processor
-$top_dir/families/burrow_evm/src/sawtooth_burrow_evm/processor/handler
-$top_dir/families/burrow_evm/src/sawtooth_burrow_evm/client
-$top_dir/families/burrow_evm/src/sawtooth_burrow_evm/cli
+$top_dir/families/seth/src/sawtooth_seth/processor
+$top_dir/families/seth/src/sawtooth_seth/processor/handler
+$top_dir/families/seth/src/sawtooth_seth/client
+$top_dir/families/seth/src/sawtooth_seth/cli
 "
 
 exitcode=0

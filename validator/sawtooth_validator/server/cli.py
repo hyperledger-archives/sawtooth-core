@@ -219,7 +219,6 @@ def main(args=None):
     # is intended to provide enough information to the user so they can correct
     # multiple errors before restarting the validator.
     init_errors = False
-
     try:
         identity_signing_key = load_identity_signing_key(
             key_dir=path_config.key_dir,
@@ -294,9 +293,11 @@ def main(args=None):
                           path_config.data_dir,
                           path_config.config_dir,
                           identity_signing_key,
-                          opts.scheduler,
+                          validator_config.scheduler,
+                          validator_config.permissions,
                           validator_config.network_public_key,
-                          validator_config.network_private_key)
+                          validator_config.network_private_key
+                          )
 
     # pylint: disable=broad-except
     try:

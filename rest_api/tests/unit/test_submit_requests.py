@@ -15,7 +15,7 @@
 
 import json
 from aiohttp.test_utils import unittest_run_loop
-from tests.unit.components import Mocks, BaseApiTest
+from components import Mocks, BaseApiTest
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf.client_pb2 import BatchStatus

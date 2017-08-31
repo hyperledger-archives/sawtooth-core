@@ -58,6 +58,7 @@ setup(
         "requests",
         "sawtooth-signing",
         "toml",
+        "PyYAML",
         "pyzmq",
         "netifaces"
     ],

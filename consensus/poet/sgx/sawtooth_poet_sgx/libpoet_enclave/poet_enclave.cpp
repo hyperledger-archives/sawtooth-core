@@ -44,7 +44,6 @@
 #include "poet.h"
 #include "error.h"
 #include "zero.h"
-#include "poet_state.h"
 #include "hex_string.h"
 #include "public_key_util.h"
 
@@ -56,6 +55,7 @@ namespace sp = sawtooth::poet;
 typedef struct {
     sgx_ec256_private_t privateKey;
     sgx_ec256_public_t publicKey;
+    sgx_mc_uuid_t counterId;
 } ValidatorSignupData;
 
 static const std::string    NULL_IDENTIFIER = "0000000000000000";
@@ -140,25 +140,15 @@ copy them into EPC memory.
 
 @param p_context Pointer to the location where the returned key
     context is to be copied.
-@param pSealedState The current sealed state of the enclave,
-        this can be loaded from disk for a previous run or a zeroed
-        buffer that will be initialized with a new state. This variable
-        will be filled with an updated valid state on successful exit of
-        the function.
-@param sealedStateLength The length in bytes of the pSealedState buffer.
 @return Any error returned during the initialization process.
 */
-poet_err_t ecall_Initialize(
-    sgx_ra_context_t *p_context,
-    uint8_t* pSealedState,
-    size_t  sealedStateLength
-    )
+poet_err_t ecall_Initialize(sgx_ra_context_t *p_context)
 {
     poet_err_t result = POET_SUCCESS;
 
     try {
+        // Test that we can access platform services
         PseSession session;
-        PoetState state(pSealedState, sealedStateLength);
 
         /* sgx initialization function where the ECDSA generated
         public key is passed as one of the parameters
@@ -166,8 +156,6 @@ poet_err_t ecall_Initialize(
         */
         sgx_status_t ret = sgx_ra_init(&g_sp_pub_key, true, p_context);
         sp::ThrowSgxError(ret, "Failed to initialize Remote Attestation.");
-
-        state.Seal(pSealedState, sealedStateLength);
     } catch (sp::PoetError& e) {
         Log(
             POET_LOG_ERROR,
@@ -183,46 +171,6 @@ poet_err_t ecall_Initialize(
 
     return result;
 } // ecall_Initialize
-
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-void ecall_Terminate(
-    uint8_t* pSealedState,
-    size_t  sealedStateLength)
-{
-    try {
-        PseSession session;
-        PoetState state(pSealedState, sealedStateLength);
-        state.Reset();
-        Zero(pSealedState, sealedStateLength);
-    } catch (...) {
-        Log(POET_LOG_ERROR, "Unknown error in poet enclave(ecall_Terminate)");
-    }
-} // ecall_Terminate
-
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-poet_err_t ecall_GetSealedStateLength(size_t* outSealedStateLength)
-{
-    poet_err_t result = POET_SUCCESS;
-
-    try {
-        *outSealedStateLength = PoetState::GetSealedLength();
-    } catch (sp::PoetError& e) {
-        Log(
-            POET_LOG_ERROR,
-            "Error in poet enclave(ecall_GetSealedStateSize): %04X -- %s",
-            e.error_code(),
-            e.what());
-        ocall_SetErrorMessage(e.what());
-        result = e.error_code();
-    } catch (...) {
-        Log(
-            POET_LOG_ERROR,
-            "Unknown error in poet enclave(ecall_GetSealedStateSize)");
-        result = POET_ERR_UNKNOWN;
-    }
-
-    return result;
-} // ecall_GetSealedStateLength
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t ecall_CreateErsatzEnclaveReport(
@@ -344,8 +292,6 @@ poet_err_t ecall_CalculateSealedSignupDataSize(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t ecall_CreateSignupData(
-    uint8_t* inOutSealedState,
-    size_t inSealedStateLength,
     const sgx_target_info_t* inTargetInfo,
     const char* inOriginatorPublicKeyHash,
     sgx_ec256_public_t* outPoetPublicKey,
@@ -373,7 +319,6 @@ poet_err_t ecall_CreateSignupData(
         sp::ThrowIfNull(outPseManifest, "PSE manifest pointer is NULL");
 
         PseSession session;
-        PoetState state(inOutSealedState, inSealedStateLength);
 
         // First we need to generate a PoET public/private key pair.  The ECC
         // state handle cleans itself up automatically.
@@ -391,6 +336,14 @@ poet_err_t ecall_CreateSignupData(
         sp::ThrowSgxError(
             ret,
             "Failed to create PoET public/private key pair");
+
+        // Create the monotonic counter bound to the keypair
+        uint32_t initialCounterValue = 0;
+        ret =
+            sgx_create_monotonic_counter(
+                &validatorSignupData.counterId,
+                &initialCounterValue);
+        sp::ThrowSgxError(ret, "Failed to create monotonic counter.");
 
         // Create the report data we want embedded in the enclave report.
         sgx_report_data_t reportData = { 0 };
@@ -430,12 +383,6 @@ poet_err_t ecall_CreateSignupData(
             outPoetPublicKey,
             &validatorSignupData.publicKey,
             sizeof(*outPoetPublicKey));
-
-        // Set the public/private key pair for the validator and seal
-        state.SetKeyPair(
-            &validatorSignupData.privateKey,
-            &validatorSignupData.publicKey);
-        state.Seal(inOutSealedState, inSealedStateLength);
     } catch (sp::PoetError& e) {
         Log(
             POET_LOG_ERROR,
@@ -456,8 +403,6 @@ poet_err_t ecall_CreateSignupData(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t ecall_UnsealSignupData(
-    uint8_t* inOutSealedState,
-    size_t inSealedStateLength,
     const uint8_t* inSealedSignupData,
     size_t inSealedSignupDataSize,
     sgx_ec256_public_t* outPoetPublicKey
@@ -467,9 +412,6 @@ poet_err_t ecall_UnsealSignupData(
 
     try {
         sp::ThrowIfNull(outPoetPublicKey, "PoET public key pointer is NULL");
-
-        PseSession session;
-        PoetState state(inOutSealedState, inSealedStateLength);
 
         // Unseal the data
         ValidatorSignupData validatorSignupData;
@@ -488,17 +430,17 @@ poet_err_t ecall_UnsealSignupData(
             decryptedLength != sizeof(validatorSignupData),
             "Sealed signup data didn't decrypt to expected length");
 
+        // Maker sure the counter is still valid
+        uint32_t v = 0;
+        PseSession session;
+        ret = sgx_read_monotonic_counter(&validatorSignupData.counterId, &v);
+        sp::ThrowSgxError(ret, "Failed to unseal counter");
+
         // Give the caller a copy of the PoET public key
         memcpy(
             outPoetPublicKey,
             &validatorSignupData.publicKey,
             sizeof(*outPoetPublicKey));
-
-        // Set the public/private key pair for the validator and seal
-        state.SetKeyPair(
-            &validatorSignupData.privateKey,
-            &validatorSignupData.publicKey);
-        state.Seal(inOutSealedState, inSealedStateLength);
     } catch (sp::PoetError& e) {
         Log(
             POET_LOG_ERROR,
@@ -516,6 +458,54 @@ poet_err_t ecall_UnsealSignupData(
 
     return result;
 } // ecall_UnsealSignupData
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+poet_err_t ecall_ReleaseSignupData(
+    const uint8_t* inSealedSignupData,
+    size_t inSealedSignupDataSize
+    )
+{
+    poet_err_t result = POET_SUCCESS;
+
+    try {
+        // Unseal the data
+        ValidatorSignupData validatorSignupData;
+        uint32_t decryptedLength = sizeof(validatorSignupData);
+        sgx_status_t ret =
+            sgx_unseal_data(
+                reinterpret_cast<const sgx_sealed_data_t *>(
+                    inSealedSignupData),
+                nullptr,
+                0,
+                reinterpret_cast<uint8_t *>(&validatorSignupData),
+                &decryptedLength);
+        sp::ThrowSgxError(ret, "Failed to unseal signup data");
+
+        sp::ThrowIf<sp::ValueError>(
+            decryptedLength != sizeof(validatorSignupData),
+            "Sealed signup data didn't decrypt to expected length");
+
+        PseSession session;
+        ret = sgx_destroy_monotonic_counter(
+            &validatorSignupData.counterId);
+        sp::ThrowSgxError(ret, "Failed to destroy monotonic counter.");
+    } catch (sp::PoetError& e) {
+        Log(
+            POET_LOG_ERROR,
+            "Error in poet enclave(ecall_ReleaseSignupData): %04X -- %s",
+            e.error_code(),
+            e.what());
+        ocall_SetErrorMessage(e.what());
+        result = e.error_code();
+    } catch (...) {
+        Log(
+            POET_LOG_ERROR,
+            "Unknown error in poet enclave(ecall_ReleaseSignupData)");
+        result = POET_ERR_UNKNOWN;
+    }
+
+    return result;
+} // ecall_ReleaseSignupData
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t ecall_VerifySignupInfo(
@@ -602,8 +592,8 @@ poet_err_t ecall_VerifySignupInfo(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t ecall_CreateWaitTimer(
-    uint8_t* inOutSealedState,
-    size_t inSealedStateLength,
+    const uint8_t* inSealedSignupData,
+    size_t inSealedSignupDataSize,
     const char* inValidatorAddress,
     const char* inPreviousCertificateId,
     double inRequestTime,
@@ -617,6 +607,9 @@ poet_err_t ecall_CreateWaitTimer(
     poet_err_t result = POET_SUCCESS;
 
     try {
+        sp::ThrowIfNull(
+            inSealedSignupData,
+            "Sealed Signup Data pointer is NULL");
         sp::ThrowIfNull(
             inValidatorAddress,
             "Validator address pointer is NULL");
@@ -633,12 +626,22 @@ poet_err_t ecall_CreateWaitTimer(
         std::string previousCertificateId(inPreviousCertificateId);
 
         PseSession session;
-        PoetState state(inOutSealedState, inSealedStateLength);
+        // Unseal the data
+        ValidatorSignupData validatorSignupData;
+        uint32_t decryptedLength = sizeof(validatorSignupData);
+        sgx_status_t ret =
+            sgx_unseal_data(
+                reinterpret_cast<const sgx_sealed_data_t *>(
+                    inSealedSignupData),
+                nullptr,
+                0,
+                reinterpret_cast<uint8_t *>(&validatorSignupData),
+                &decryptedLength);
+        sp::ThrowSgxError(ret, "Failed to unseal signup data");
 
-        // Verify that the validator has valid public/private key pair
-        sp::ThrowIf<sp::RuntimeError>(
-            !state.KeyPairIsValid(),
-            "PoET enclave does not have valid signup info");
+        sp::ThrowIf<sp::ValueError>(
+            decryptedLength != sizeof(validatorSignupData),
+            "Sealed signup data didn't decrypt to expected length");
 
         // Get the current sgx time (as a time basis)
         sgx_time_source_nonce_t timeSourceNonce;
@@ -652,7 +655,11 @@ poet_err_t ecall_CreateWaitTimer(
                 inMinimumWaitTime);
 
         // Get the sequence ID (prevent replay) for this timer
-        uint32_t sequenceId = state.IncrementCounter();
+        uint32_t sequenceId = 0;
+        ret = sgx_increment_monotonic_counter(
+            &validatorSignupData.counterId,
+            &sequenceId);
+        sp::ThrowSgxError(ret, "Failed to increment monotonic counter.");
 
         // Create serialized WaitTimer
         JsonValue waitTimerValue(json_value_init_object());
@@ -733,24 +740,18 @@ poet_err_t ecall_CreateWaitTimer(
         // will close automatically for us.
         Intel::SgxEcc256StateHandle eccStateHandle;
 
-        sgx_status_t ret = sgx_ecc256_open_context(&eccStateHandle);
+        ret = sgx_ecc256_open_context(&eccStateHandle);
         sp::ThrowSgxError(ret, "Failed to create ECC256 context");
 
         ret =
             sgx_ecdsa_sign(
                 reinterpret_cast<const uint8_t *>(outSerializedTimer),
                 static_cast<int32_t>(strlen(outSerializedTimer)),
-                const_cast<sgx_ec256_private_t *>(state.GetPrivateKey()),
+                const_cast<sgx_ec256_private_t *>(
+                    &validatorSignupData.privateKey),
                 outTimerSignature,
                 eccStateHandle);
         sp::ThrowSgxError(ret, "Failed to sign wait timer");
-
-        // Store the wait timer signature as the current wait timer so that
-        // when we create a wait certificate we can verify that the validator
-        // is not trying to use a wait timer to create multiple wait
-        // certificates.
-        state.SetCurrentWaitTimer(outTimerSignature);
-        state.Seal(inOutSealedState, inSealedStateLength);
     } catch (sp::PoetError& e) {
         Log(
             POET_LOG_ERROR,
@@ -771,8 +772,8 @@ poet_err_t ecall_CreateWaitTimer(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t ecall_CreateWaitCertificate(
-    uint8_t* inOutSealedState,
-    size_t inSealedStateLength,
+    const uint8_t* inSealedSignupData,
+    size_t inSealedSignupDataSize,
     const char* inSerializedWaitTimer,
     const sgx_ec256_signature_t* inWaitTimerSignature,
     const char* inBlockHash,
@@ -799,22 +800,32 @@ poet_err_t ecall_CreateWaitCertificate(
             "Certificate signature pointer is NULL");
 
         PseSession session;
-        PoetState state(inOutSealedState, inSealedStateLength);
+        // Unseal the data
+        ValidatorSignupData validatorSignupData;
+        uint32_t decryptedLength = sizeof(validatorSignupData);
+        sgx_status_t ret =
+            sgx_unseal_data(
+                reinterpret_cast<const sgx_sealed_data_t *>(
+                    inSealedSignupData),
+                nullptr,
+                0,
+                reinterpret_cast<uint8_t *>(&validatorSignupData),
+                &decryptedLength);
+        sp::ThrowSgxError(ret, "Failed to unseal signup data");
+
+        sp::ThrowIf<sp::ValueError>(
+            decryptedLength != sizeof(validatorSignupData),
+            "Sealed signup data didn't decrypt to expected length");
 
         // Deserialize the wait timer so we can use pieces of it that we need
         WaitTimer waitTimer = { 0 };
         ParseWaitTimer(inSerializedWaitTimer, waitTimer);
 
-        // Verify that the validator has valid public/private key pair
-        sp::ThrowIf<sp::RuntimeError>(
-            !state.KeyPairIsValid(),
-            "PoET enclave does not have valid signup info");
-
         // Verify the signature of the serialized wait timer. The handle will
         // close automatically for us.
         Intel::SgxEcc256StateHandle eccStateHandle;
 
-        sgx_status_t ret = sgx_ecc256_open_context(&eccStateHandle);
+        ret = sgx_ecc256_open_context(&eccStateHandle);
         sp::ThrowSgxError(ret, "Failed to create ECC256 context");
 
         uint8_t signatureCheckResult;
@@ -822,7 +833,7 @@ poet_err_t ecall_CreateWaitCertificate(
             sgx_ecdsa_verify(
                 reinterpret_cast<const uint8_t *>(inSerializedWaitTimer),
                 static_cast<uint32_t>(strlen(inSerializedWaitTimer)),
-                state.GetPublicKey(),
+                &validatorSignupData.publicKey,
                 const_cast<sgx_ec256_signature_t *>(inWaitTimerSignature),
                 &signatureCheckResult,
                 eccStateHandle);
@@ -832,13 +843,14 @@ poet_err_t ecall_CreateWaitCertificate(
             throw sp::ValueError("Wait timer signature is invalid");
         }
 
-        // Verify that the wait timer the validator is trying to use is
-        // the current wait timer.
-        state.VerifyCurrentWaitTimer(inWaitTimerSignature);
-
         // Verify that another wait timer has not been created after this
         // one and before the wait certificate has been requested.
-        uint32_t sequenceId = state.GetSequenceId();
+        uint32_t sequenceId = 0;
+        ret = sgx_read_monotonic_counter(
+            &validatorSignupData.counterId,
+            &sequenceId);
+        sp::ThrowSgxError(ret, "Failed to read monotonic counter.");
+
         if (sequenceId != waitTimer.SequenceId) {
             Log(
                 POET_LOG_ERROR,
@@ -1002,15 +1014,19 @@ poet_err_t ecall_CreateWaitCertificate(
             sgx_ecdsa_sign(
                 reinterpret_cast<const uint8_t *>(outSerializedWaitCertificate),
                 static_cast<int32_t>(strlen(outSerializedWaitCertificate)),
-                const_cast<sgx_ec256_private_t *>(state.GetPrivateKey()),
+                const_cast<sgx_ec256_private_t *>(
+                    &validatorSignupData.privateKey),
                 outWaitCertificateSignature,
                 eccStateHandle);
         sp::ThrowSgxError(ret, "Failed to sign wait certificate");
 
-        // Clear out the current wait timer so that the validator cannot try to
-        // use the timer provided to create another wait certificate.
-        state.ClearCurrentWaitTimer();
-        state.Seal(inOutSealedState, inSealedStateLength);
+        // Increment the counter to prevent creating another
+        // wait certificate from the same timer.
+        ret = sgx_increment_monotonic_counter(
+            &validatorSignupData.counterId,
+            &sequenceId);
+        sp::ThrowSgxError(ret, "Failed to increment monotonic counter.");
+
     } catch (sp::PoetError& e) {
         Log(
             POET_LOG_ERROR,
@@ -1031,8 +1047,6 @@ poet_err_t ecall_CreateWaitCertificate(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t ecall_VerifyWaitCertificate(
-    uint8_t* inOutSealedState,
-    size_t inSealedStateLength,
     const char* inSerializedWaitCertificate,
     const sgx_ec256_signature_t* inWaitCertificateSignature,
     const sgx_ec256_public_t* inPoetPublicKey

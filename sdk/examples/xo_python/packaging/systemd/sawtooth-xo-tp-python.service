@@ -1,0 +1,12 @@
+[Unit]
+Description=Sawtooth XO TP Python
+After=network.target
+
+[Service]
+User=sawtooth
+Group=sawtooth
+EnvironmentFile=-/etc/default/sawtooth-xo-tp-python
+ExecStart=/usr/bin/xo-tp-python $SAWTOOTH_XO_TP_PYTHON_ARGS
+
+[Install]
+WantedBy=multi-user.target

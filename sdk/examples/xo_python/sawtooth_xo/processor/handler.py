@@ -51,7 +51,7 @@ class XoTransactionHandler:
 
         # 2. Retrieve the game data from state storage
         board, state, player1, player2, game_list = \
-            _get_state_data(state_store, name)
+            _get_state_data(state_store, self._namespace_prefix, name)
 
         # 3. Validate the game data
         _validate_game_data(
@@ -76,7 +76,8 @@ class XoTransactionHandler:
 
         # 6. Put the game data back in state storage
         _store_state_data(
-            state_store, game_list, name,
+            state_store, game_list,
+            self._namespace_prefix, name,
             upd_board, upd_state,
             upd_player1, upd_player2)
 
@@ -147,13 +148,15 @@ def _validate_game_data(action, space, signer, board, state, player1, player2):
                 'Invalid Action: space {} already taken'.format(space))
 
 
-def _make_xo_address(name):
-    return '5b7349' + hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
+def _make_xo_address(namespace_prefix, name):
+    return namespace_prefix + \
+        hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
 
 
-def _get_state_data(state_store, name):
+def _get_state_data(state_store, namespace_prefix, name):
     # Get data from address
-    state_entries = state_store.get([_make_xo_address(name)])
+    state_entries = \
+        state_store.get([_make_xo_address(namespace_prefix, name)])
 
     # state_store.get() returns a list. If no data has been stored yet
     # at the given address, it will be empty.
@@ -182,7 +185,8 @@ def _get_state_data(state_store, name):
 
 
 def _store_state_data(
-        state_store, game_list, name,
+        state_store, game_list,
+        namespace_prefix, name,
         board, state, player1, player2):
 
     game_list[name] = board, state, player1, player2
@@ -194,7 +198,7 @@ def _store_state_data(
 
     addresses = state_store.set([
         StateEntry(
-            address=_make_xo_address(name),
+            address=_make_xo_address(namespace_prefix, name),
             data=state_data
         )
     ])

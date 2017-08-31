@@ -47,6 +47,7 @@ from test_journal.mock import MockBatchSender
 from test_journal.mock import MockBlockSender
 from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
+from test_journal.mock import MockPermissionVerifier
 
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -123,7 +124,8 @@ class BlockTreeManager(object):
             chain_head=chain_head,
             identity_signing_key=self.identity_signing_key,
             data_dir=None,
-            config_dir=None)
+            config_dir=None,
+            permission_verifier=MockPermissionVerifier())
 
     @property
     def chain_head(self):

@@ -22,7 +22,7 @@ Seth CLI
 Overview
 ========
 
-The seth command can be used to interact with the Sawtooth Burrow-EVM
+The seth command can be used to interact with the Seth
 transaction family. It provides functionality for loading and executing smart
 contracts, querying the data associated with a contract, and generating keys in
 the format used by the tool. The following section reproduces the CLI usage

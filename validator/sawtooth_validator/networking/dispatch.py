@@ -17,12 +17,10 @@ import enum
 from functools import partial
 import logging
 from threading import Condition
-from threading import Lock
 from threading import Thread
 import queue
 import uuid
 
-from sawtooth_validator.networking.interconnect import ThreadsafeDict
 from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf import validator_pb2
 
@@ -36,10 +34,10 @@ def _gen_message_id():
 class Dispatcher(Thread):
     def __init__(self):
         super().__init__(name='Dispatcher')
-        self._msg_type_handlers = ThreadsafeDict()
+        self._msg_type_handlers = {}
         self._in_queue = queue.Queue()
-        self._send_message = ThreadsafeDict()
-        self._message_information = ThreadsafeDict()
+        self._send_message = {}
+        self._message_information = {}
         self._condition = Condition()
 
     def add_send_message(self, connection, send_message):
@@ -162,10 +160,13 @@ class Dispatcher(Thread):
 
     def run(self):
         while True:
-            msg_id = self._in_queue.get()
-            if msg_id == -1:
-                break
-            self._process(msg_id)
+            try:
+                msg_id = self._in_queue.get()
+                if msg_id == -1:
+                    break
+                self._process(msg_id)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception("Unhandled exception while dispatching")
 
     def stop(self):
         self._in_queue.put_nowait(-1)
@@ -187,12 +188,10 @@ class _HandlerManager(object):
         """
         self._executor = executor
         self._handler = handler
-        self._lock = Lock()
 
     def execute(self, connection_id, message):
-        with self._lock:
-            return self._executor.submit(
-                self._handler.handle, connection_id, message)
+        return self._executor.submit(
+            self._handler.handle, connection_id, message)
 
 
 class _ManagerCollection(object):
@@ -202,13 +201,11 @@ class _ManagerCollection(object):
     def __init__(self, handler_managers):
         self._chain = handler_managers
         self._index = 0
-        self._lock = Lock()
 
     def __next__(self):
-        with self._lock:
-            result = self._chain[self._index]
-            self._index += 1
-            return result
+        result = self._chain[self._index]
+        self._index += 1
+        return result
 
 
 class HandlerResult(object):

@@ -64,6 +64,8 @@ class TestPathConfig(unittest.TestCase):
                              "/tmp/no-such-sawtooth-home/data")
             self.assertEqual(config.log_dir,
                              "/tmp/no-such-sawtooth-home/logs")
+            self.assertEqual(config.policy_dir,
+                             "/tmp/no-such-sawtooth-home/policy")
         finally:
             os.environ.clear()
             os.environ.update(orig_environ)
@@ -94,6 +96,8 @@ class TestPathConfig(unittest.TestCase):
                 fd.write(os.linesep)
                 fd.write('log_dir = "/tmp/no-such-dir-from-config/logs"')
                 fd.write(os.linesep)
+                fd.write('policy_dir = "/tmp/no-such-dir-from-config/policy"')
+                fd.write(os.linesep)
 
             config = load_path_config()
             self.assertEqual(config.config_dir, config_dir)
@@ -103,6 +107,8 @@ class TestPathConfig(unittest.TestCase):
                              "/tmp/no-such-dir-from-config/data")
             self.assertEqual(config.log_dir,
                              "/tmp/no-such-dir-from-config/logs")
+            self.assertEqual(config.policy_dir,
+                             "/tmp/no-such-dir-from-config/policy")
         finally:
             os.environ.clear()
             os.environ.update(orig_environ)
@@ -154,6 +160,7 @@ class TestValidatorConfig(unittest.TestCase):
         self.assertEquals(config.bind_component, "tcp://127.0.0.1:4004")
         self.assertEquals(config.endpoint, None)
         self.assertEquals(config.peering, "static")
+        self.assertEquals(config.scheduler, "serial")
 
     def test_validator_config_load_from_file(self):
         """Tests loading config settings from a TOML configuration file.
@@ -185,6 +192,8 @@ class TestValidatorConfig(unittest.TestCase):
                 fd.write('peers = ["tcp://peer:8801"]')
                 fd.write(os.linesep)
                 fd.write('seeds = ["tcp://peer:8802"]')
+                fd.write(os.linesep)
+                fd.write('scheduler = "serial"')
 
             config = load_toml_validator_config(filename)
             self.assertEqual(config.bind_network, "tcp://test:8800")
@@ -193,6 +202,7 @@ class TestValidatorConfig(unittest.TestCase):
             self.assertEqual(config.endpoint, "tcp://test:8800")
             self.assertEqual(config.peers, ["tcp://peer:8801"])
             self.assertEqual(config.seeds, ["tcp://peer:8802"])
+            self.assertEqual(config.scheduler, "serial")
         finally:
             os.environ.clear()
             os.environ.update(orig_environ)

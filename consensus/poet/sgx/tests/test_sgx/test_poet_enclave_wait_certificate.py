@@ -58,37 +58,39 @@ class TestPoetEnclaveWaitCertificate(TestCase):
         poet.shutdown()
         shutil.rmtree(cls._temp_dir)
 
-    def get_wait_timer(self, addr=None):
+    def get_wait_timer(self, sealed_data, addr=None):
         pid = random_name(poet.IDENTIFIER_LENGTH)
 
         if addr is None:
             addr = random_name(34)
 
         # super short local mean to get small duration..
-        wait_timer = poet.create_wait_timer(addr, pid, 1)
+        wait_timer = poet.create_wait_timer(sealed_data, addr, pid, 1)
 
         while not wait_timer.has_expired():
             time.sleep(1)
 
         return wait_timer
 
-    def get_wait_cert(self, addr=None):
+    def get_wait_cert(self, sealed_data, addr=None):
         block_hash = random_name(32)
-        wait_timer = self.get_wait_timer(addr)
-        return poet.create_wait_certificate(wait_timer, block_hash)
+        wait_timer = self.get_wait_timer(sealed_data, addr)
+        return poet.create_wait_certificate(
+            sealed_data, wait_timer, block_hash)
 
     @skip("Disabled. Out of sync with simulator and Timeout fails to fail.")
     def test_create(self):
         addr = random_name(34)
-        poet.create_signup_info(
+        signup_info = poet.create_signup_info(
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=poet.NULL_IDENTIFIER)
-
+        sealed_data = signup_info.sealed_signup_data
         block_hash = random_name(32)
 
         # with expired timer -- positive case
-        wait_timer = self.get_wait_timer(addr=addr)
-        wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
+        wait_timer = self.get_wait_timer(sealed_data, addr=addr)
+        wait_cert = poet.create_wait_certificate(
+            sealed_data, wait_timer, block_hash)
         self.assertEqual(wait_timer.duration, wait_cert.duration)
         self.assertEqual(wait_timer.local_mean, wait_cert.local_mean)
         self.assertNotEqual(wait_cert.nonce, '')
@@ -100,20 +102,22 @@ class TestPoetEnclaveWaitCertificate(TestCase):
         # We should not be able to create another wait certificate with the
         # same wait timer.
         with self.assertRaises(ValueError):
-            poet.create_wait_certificate(wait_timer, block_hash)
+            poet.create_wait_certificate(sealed_data, wait_timer, block_hash)
 
         # When we create a new wait timer, it should not be possible to use
         # another, otherwise valid, wait timer to create a wait certificate.
-        wait_timer = self.get_wait_timer(addr=addr)
-        poet.create_wait_timer(addr, poet.NULL_IDENTIFIER, 1)
+        wait_timer = self.get_wait_timer(sealed_data, addr=addr)
+        poet.create_wait_timer(sealed_data, addr, poet.NULL_IDENTIFIER, 1)
 
         with self.assertRaises(ValueError):
-            poet.create_wait_certificate(wait_timer, block_hash)
+            poet.create_wait_certificate(sealed_data, wait_timer, block_hash)
 
         # the initial block does not need to wait, to accelerate
         # validator launch
-        wait_timer = poet.create_wait_timer(addr, poet.NULL_IDENTIFIER, 1)
-        wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
+        wait_timer = poet.create_wait_timer(
+            sealed_data, addr, poet.NULL_IDENTIFIER, 1)
+        wait_cert = poet.create_wait_certificate(
+            sealed_data, wait_timer, block_hash)
         self.assertEqual(wait_timer.duration, wait_cert.duration)
         self.assertEqual(wait_timer.local_mean, wait_cert.local_mean)
         self.assertEqual(wait_timer.previous_certificate_id,
@@ -122,48 +126,50 @@ class TestPoetEnclaveWaitCertificate(TestCase):
         # with unexpired timer
         wait_timer = \
             poet.create_wait_timer(
-                addr,
-                random_name(poet.IDENTIFIER_LENGTH),
-                10)
+                sealed_data, addr, random_name(poet.IDENTIFIER_LENGTH), 10)
         with self.assertRaises(ValueError):
-            poet.create_wait_certificate(wait_timer, block_hash)
+            poet.create_wait_certificate(sealed_data, wait_timer, block_hash)
 
         # With timed out timer
-        wait_timer = self.get_wait_timer(addr=addr)
+        wait_timer = self.get_wait_timer(sealed_data, addr=addr)
         time.sleep(10)
         with self.assertRaises(ValueError):
-            wait_cert = poet.create_wait_certificate(wait_timer, block_hash)
+            wait_cert = poet.create_wait_certificate(
+                sealed_data, wait_timer, block_hash)
 
         # verify that new wait certificate gets a different nonce.  In reality
         # we should test a statistically significant number of wait
         # certificates to verify that each gets a unique nonce, but we have to
         # wait for wait timers to expire and we want the test to finish
         # sometime this century.
-        wait_timer = self.get_wait_timer(addr=addr)
-        wait_cert2 = poet.create_wait_certificate(wait_timer, block_hash)
+        wait_timer = self.get_wait_timer(sealed_data, addr=addr)
+        wait_cert2 = poet.create_wait_certificate(
+            sealed_data, wait_timer, block_hash)
         self.assertNotEqual(wait_cert.nonce, wait_cert2.nonce)
 
     def test_create_out_of_seq(self):
         addr = random_name(34)
-        poet.create_signup_info(
+        signup_info_obj = poet.create_signup_info(
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=poet.NULL_IDENTIFIER)
-
+        sealed_data = signup_info_obj.sealed_signup_data
         block_hash = random_name(32)
 
         # use expired wait timers out of order
-        wait_timer = self.get_wait_timer(addr)
-        _ = self.get_wait_timer(addr)
+        wait_timer = self.get_wait_timer(sealed_data, addr)
+        _ = self.get_wait_timer(sealed_data, addr)
         with self.assertRaises(ValueError):
-            _ = poet.create_wait_certificate(wait_timer, block_hash)
+            _ = poet.create_wait_certificate(
+                sealed_data, wait_timer, block_hash)
 
     def test_serialize(self):
         addr = random_name(34)
-        poet.create_signup_info(
+        signup_info = poet.create_signup_info(
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=poet.NULL_IDENTIFIER)
+        sealed_data = signup_info.sealed_signup_data
 
-        wait_cert = self.get_wait_cert(addr=addr)
+        wait_cert = self.get_wait_cert(sealed_data, addr=addr)
         serialized_wait_cert = wait_cert.serialize()
 
         wait_cert2 = poet.deserialize_wait_certificate(
@@ -214,8 +220,9 @@ class TestPoetEnclaveWaitCertificate(TestCase):
             poet.create_signup_info(
                 originator_public_key_hash=self._originator_public_key_hash,
                 nonce=poet.NULL_IDENTIFIER)
+        sealed_data = signup_info.sealed_signup_data
 
-        wait_cert = self.get_wait_cert(addr=addr)
+        wait_cert = self.get_wait_cert(sealed_data, addr=addr)
         poet.verify_wait_certificate(
             wait_cert,
             signup_info.poet_public_key)
