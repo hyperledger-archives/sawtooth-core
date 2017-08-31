@@ -61,7 +61,8 @@ def load_toml_subscriber_config(filename):
     toml_config = toml.loads(raw_config)
 
     invalid_keys = set(toml_config.keys()).difference(
-        ['connect', 'database'])
+        ['connect', 'database_name', 'database_host', 'database_port',
+         'database_user', 'database_password'])
     if invalid_keys:
         raise SubscriberConfigurationError(
             'Invalid keys in subscriber config: {}'.format(

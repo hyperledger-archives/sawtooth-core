@@ -38,8 +38,8 @@ ON block (block_num);
 CREATE_RECORD_STMTS = """
 CREATE TABLE IF NOT EXISTS record (
     id                  bigserial primary key,
-    start_block_num     integer,
-    end_block_num       integer,
+    start_block_num     bigint,
+    end_block_num       bigint,
     identifier          varchar(128),
     creation_time       bigint,
     finalize            boolean
@@ -52,8 +52,8 @@ CREATE INDEX IF NOT EXISTS record_identifier_block_num_idx
 CREATE_AGENT_STMTS = """
 CREATE TABLE IF NOT EXISTS agent(
     id               bigserial primary key,
-    start_block_num  integer,
-    end_block_num    integer,
+    start_block_num  bigint,
+    end_block_num    bigint,
     identifier       varchar(128),
     name             text
 );
@@ -103,8 +103,8 @@ CREATE TABLE IF NOT EXISTS record_agent(
 CREATE_APPLICATION_STMTS = """
 CREATE TABLE IF NOT EXISTS application(
     id                 bigserial primary key,
-    start_block_num    integer,
-    end_block_num      integer,
+    start_block_num    bigint,
+    end_block_num      bigint,
     record_identifier  varchar(128),
     applicant          varchar(128),
     creation_time      bigint,

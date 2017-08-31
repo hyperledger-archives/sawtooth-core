@@ -1,0 +1,36 @@
+{
+  "name": "tnt_server",
+  "version": "0.0.0",
+  "description": "A database and API for the Track and Trade client app",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "rethinkdb & nodemon index.js",
+    "init": "rethinkdb & node ./scripts/bootstrap_database.js && kill $! || true",
+    "test": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hyperledger/sawtooth-core.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/hyperledger/sawtooth-core/issues"
+  },
+  "homepage": "https://github.com/hyperledger/sawtooth-core#readme",
+  "dependencies": {
+    "bcrypt": "^1.0.3",
+    "body-parser": "^1.17.2",
+    "express": "^4.15.4",
+    "js-schema": "^1.0.1",
+    "lodash": "^4.17.4",
+    "rethinkdb": "^2.3.3"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0",
+    "standard": "^10.0.3"
+  }
+}

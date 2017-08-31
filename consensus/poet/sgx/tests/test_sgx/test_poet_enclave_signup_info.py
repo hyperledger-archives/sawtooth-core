@@ -99,3 +99,11 @@ class TestPoetEnclaveSignupInfo(TestCase):
         self.assertEqual(
             signup_info.poet_public_key,
             poet.unseal_signup_data(signup_info.sealed_signup_data))
+
+    def test_release_signup_data(self):
+        signup_info = self._create_signup_info()
+
+        poet.release_signup_data(signup_info.sealed_signup_data)
+
+        with self.assertRaises(SystemError):
+            poet.unseal_signup_data(signup_info.sealed_signup_data)

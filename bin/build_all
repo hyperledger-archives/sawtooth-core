@@ -231,7 +231,7 @@ then
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-intkey-tp-go
-        docker_build docker/sawtooth-dev-go docker/ sawtooth-burrow-evm-tp
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-seth-tp
         docker_build docker/sawtooth-dev-go docker/ sawtooth-xo-tp-go
         docker_run sawtooth-dev-go
     }
@@ -254,6 +254,7 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest-api
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-settings-tp
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-identity-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-supplychain-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
@@ -286,8 +287,8 @@ then
         cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
         cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
             $build_dir
-        cp $top_dir/docker/sawtooth-int-burrow-evm-tp $build_dir
-        cp $top_dir/families/burrow_evm/bin/burrow-evm-tp \
+        cp $top_dir/docker/sawtooth-int-seth-tp $build_dir
+        cp $top_dir/families/seth/bin/seth-tp \
             $build_dir
         cp $top_dir/sdk/examples/xo_go/bin/xo-tp-go \
             $build_dir
@@ -295,8 +296,8 @@ then
 
         docker_build $build_dir/sawtooth-int-intkey-tp-go $build_dir/ \
             sawtooth-intkey-tp-go
-        docker_build $build_dir/sawtooth-int-burrow-evm-tp $build_dir/ \
-            sawtooth-burrow-evm-tp
+        docker_build $build_dir/sawtooth-int-seth-tp $build_dir/ \
+            sawtooth-seth-tp
         docker_build $build_dir/sawtooth-int-xo-tp-go $build_dir/ \
             sawtooth-xo-tp-go
     }
@@ -339,6 +340,8 @@ then
 
         docker_build $build_dir/sawtooth-int-settings-tp \
             $build_dir/ sawtooth-settings-tp
+
+        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-identity-tp
 
         docker_build $build_dir/sawtooth-int-intkey-tp-python \
             $build_dir/ sawtooth-intkey-tp-python

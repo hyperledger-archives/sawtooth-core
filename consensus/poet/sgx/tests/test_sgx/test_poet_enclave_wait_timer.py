@@ -63,17 +63,19 @@ class TestPoetEnclaveWaitTimer(TestCase):
         with self.assertRaises(ValueError):
             addr = random_name(34)
             previous_cert_id = poet.NULL_IDENTIFIER
-            poet.create_wait_timer(addr, previous_cert_id, 100)
+            poet.create_wait_timer(None, addr, previous_cert_id, 100)
 
     def test_create(self):
         addr = random_name(34)
 
-        poet.create_signup_info(
+        signup_info = poet.create_signup_info(
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=poet.NULL_IDENTIFIER)
+        sealed_data = signup_info.sealed_signup_data
 
         previous_cert_id = poet.NULL_IDENTIFIER
-        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 100)
+        wait_timer = poet.create_wait_timer(
+            sealed_data, addr, previous_cert_id, 100)
         self.assertEqual(wait_timer.previous_certificate_id, previous_cert_id)
         self.assertEqual(wait_timer.local_mean, 100)
 
@@ -82,57 +84,59 @@ class TestPoetEnclaveWaitTimer(TestCase):
 
         # Invalid types for validator address
         with self.assertRaises(TypeError):
-            poet.create_wait_timer([], previous_cert_id, 100)
+            poet.create_wait_timer(sealed_data, [], previous_cert_id, 100)
         with self.assertRaises(TypeError):
-            poet.create_wait_timer({}, previous_cert_id, 100)
+            poet.create_wait_timer(sealed_data, {}, previous_cert_id, 100)
         with self.assertRaises(ValueError):
-            poet.create_wait_timer(None, previous_cert_id, 100)
+            poet.create_wait_timer(sealed_data, None, previous_cert_id, 100)
         with self.assertRaises(TypeError):
-            poet.create_wait_timer(8888, previous_cert_id, 100)
+            poet.create_wait_timer(sealed_data, 8888, previous_cert_id, 100)
 
         # Bad local means
         with self.assertRaises(ValueError):
-            poet.create_wait_timer(addr, previous_cert_id, -1)
+            poet.create_wait_timer(sealed_data, addr, previous_cert_id, -1)
         with self.assertRaises(ValueError):
-            poet.create_wait_timer(addr, previous_cert_id, 0)
+            poet.create_wait_timer(sealed_data, addr, previous_cert_id, 0)
         with self.assertRaises(TypeError):
-            poet.create_wait_timer(addr, previous_cert_id, [])
+            poet.create_wait_timer(sealed_data, addr, previous_cert_id, [])
         with self.assertRaises(TypeError):
-            poet.create_wait_timer(addr, previous_cert_id, None)
+            poet.create_wait_timer(sealed_data, addr, previous_cert_id, None)
         with self.assertRaises(TypeError):
-            poet.create_wait_timer(addr, previous_cert_id, "3")
+            poet.create_wait_timer(sealed_data, addr, previous_cert_id, "3")
 
         # Invalid types for previous certificate
         with self.assertRaises(TypeError):
-            poet.create_wait_timer(addr, [], 0)
+            poet.create_wait_timer(sealed_data, addr, [], 0)
         with self.assertRaises(TypeError):
-            poet.create_wait_timer(addr, {}, 0)
+            poet.create_wait_timer(sealed_data, addr, {}, 0)
         with self.assertRaises(ValueError):
-            poet.create_wait_timer(addr, None, 0)
+            poet.create_wait_timer(sealed_data, addr, None, 0)
         with self.assertRaises(TypeError):
-            poet.create_wait_timer(addr, 8888, 0)
+            poet.create_wait_timer(sealed_data, addr, 8888, 0)
 
         previous_cert_id = ""  # to short
         with self.assertRaises(ValueError):
-            poet.create_wait_timer(addr, previous_cert_id, 100)
+            poet.create_wait_timer(sealed_data, addr, previous_cert_id, 100)
 
         previous_cert_id = random_name(8)  # to short
         with self.assertRaises(ValueError):
-            poet.create_wait_timer(addr, previous_cert_id, 100)
+            poet.create_wait_timer(sealed_data, addr, previous_cert_id, 100)
 
         previous_cert_id = random_name(17)  # to long
         with self.assertRaises(ValueError):
-            poet.create_wait_timer(addr, previous_cert_id, 100)
+            poet.create_wait_timer(sealed_data, addr, previous_cert_id, 100)
 
     def test_is_expired(self):
         addr = random_name(34)
-        poet.create_signup_info(
+        signup_info = poet.create_signup_info(
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=poet.NULL_IDENTIFIER)
+        sealed_data = signup_info.sealed_signup_data
 
         previous_cert_id = poet.NULL_IDENTIFIER
         start = time.time()
-        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
+        wait_timer = poet.create_wait_timer(
+            sealed_data, addr, previous_cert_id, 5)
         while not wait_timer.has_expired():
             time.sleep(1)
         end = time.time()
@@ -144,12 +148,14 @@ class TestPoetEnclaveWaitTimer(TestCase):
 
     def test_serialize(self):
         addr = random_name(34)
-        poet.create_signup_info(
+        signup_info = poet.create_signup_info(
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=poet.NULL_IDENTIFIER)
+        sealed_data = signup_info.sealed_signup_data
 
         previous_cert_id = poet.NULL_IDENTIFIER
-        wait_timer = poet.create_wait_timer(addr, previous_cert_id, 5)
+        wait_timer = poet.create_wait_timer(
+            sealed_data, addr, previous_cert_id, 5)
         serialized_wait_timer = wait_timer.serialize()
 
         wait_timer2 = poet.deserialize_wait_timer(

@@ -90,3 +90,27 @@ class State(object):
             raise InvalidTransaction(
                 'Tried to set unauthorized address: {}'.format(addresses))
         return response.addresses
+
+    def delete(self, addresses, timeout=None):
+        """
+        delete an address in the validator's merkle state
+        Args:
+            entries (list): list of StateEntry
+            timeout: optional timeout, in seconds
+
+        Returns:
+            addresses (list): a list of addresses that were deleted
+
+        """
+        request = state_context_pb2.TpStateDeleteRequest(
+            context_id=self._context_id,
+            addresses=addresses).SerializeToString()
+        response = state_context_pb2.TpStateDeleteResponse()
+        response.ParseFromString(
+            self._stream.send(Message.TP_STATE_DEL_REQUEST,
+                              request).result(timeout).content)
+        if response.status == \
+                state_context_pb2.TpStateDeleteResponse.AUTHORIZATION_ERROR:
+            raise InvalidTransaction(
+                'Tried to delete unauthorized address: {}'.format(addresses))
+        return response.addresses

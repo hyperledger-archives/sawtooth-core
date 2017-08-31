@@ -43,7 +43,9 @@ public:
     static std::string UnsealSignupData(
         const std::string& sealedSignupData
         );
-
+    static void ReleaseSignupData(
+        const std::string& sealedSignupData
+        );
     // Signup data properties
     std::string poet_public_key;
     std::string pse_manifest;
@@ -61,6 +63,10 @@ _SignupData* _create_signup_data(
     );
 
 std::string unseal_signup_data(
+    const std::string& sealed_signup_data
+    );
+
+void release_signup_data(
     const std::string& sealed_signup_data
     );
 
@@ -103,6 +109,7 @@ class WaitTimer
 {
 public:
     static WaitTimer* _CreateWaitTimer(
+        const std::string& sealedSignupData,
         const std::string& validatorAddress,
         const std::string& previousCertificateId,
         double localMean,
@@ -150,6 +157,7 @@ public:
 
 protected:
     WaitTimer(
+        const std::string& sealedSignupData,
         const std::string& validatorAddress,
         const std::string& previousCertificateId,
         double localMean,
@@ -162,6 +170,7 @@ protected:
 }; // class WaitTimer
 
 WaitTimer* _create_wait_timer(
+    const std::string& sealedSignupData,
     const std::string& validator_address,
     const std::string& previous_certificate_id,
     double local_mean,
@@ -177,6 +186,7 @@ class WaitCertificate
 {
  public:
     static WaitCertificate* _CreateWaitCertificate(
+        const std::string& sealedSignupData,
         const WaitTimer* waitTimer,
         const std::string& blockHash
         );
@@ -218,6 +228,7 @@ class WaitCertificate
 
 protected:
     WaitCertificate(
+        const std::string& sealedSignupData,
         const WaitTimer* waitTimer,
         const std::string& blockHash
         );
@@ -228,6 +239,7 @@ protected:
 }; // class WaitCertificate
 
 WaitCertificate* create_wait_certificate(
+    const std::string& sealedSignupData,
     const WaitTimer* wait_timer,
     const std::string& block_hash
     );

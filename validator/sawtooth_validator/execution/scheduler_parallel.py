@@ -16,6 +16,7 @@
 from ast import literal_eval
 from threading import Condition
 from collections import deque
+from collections import OrderedDict
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
@@ -302,6 +303,8 @@ class ParallelScheduler(Scheduler):
         # Transaction results
         self._txn_results = {}
 
+        self._transactions = OrderedDict()
+
         self._cancelled = False
         self._final = False
 
@@ -338,6 +341,7 @@ class ParallelScheduler(Scheduler):
             self._batches_by_id[batch.header_signature] = batch
             for txn in batch.transactions:
                 self._batches_by_txn_id[txn.header_signature] = batch
+                self._transactions[txn.header_signature] = txn
 
             if state_hash is not None:
                 b_id = batch.header_signature
@@ -581,12 +585,12 @@ class ParallelScheduler(Scheduler):
     def _unscheduled_transactions(self):
         # shouldn't actually return txn if dependencies were
         # marked invalid.
-        txns = []
-        for batch in self._batches:
-            for txn in batch.transactions:
-                if txn.header_signature not in self._scheduled:
-                    txns.append(txn)
-        return txns
+        txns = self._transactions.copy()
+
+        for txn_header in self._scheduled:
+            txns.pop(txn_header, None)
+
+        return list(txns.values())
 
     def _has_predecessors(self, txn):
         for predecessor_id in self._txn_predecessors[txn.header_signature]:

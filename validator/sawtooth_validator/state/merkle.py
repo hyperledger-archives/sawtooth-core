@@ -169,29 +169,57 @@ class MerkleDatabase(object):
 
         return hash_key
 
-    def update(self, set_items, virtual=True):
+    def update(self, set_items, delete_items=None, virtual=True):
         """
 
         Args:
             set_items (dict): dict key, values where keys are addresses
+            delete_items (list): list of addresses
             virtual (boolean): True if not committing to disk
                                eg speculative root hash
         Returns:
             the state root after the operations
         """
         path_map = {}
-        batch = []
+        update_batch = []
         key_hash = None
 
         for set_address in set_items:
+            # the set items are added to the Path map second,
+            # since they may add children to paths
             path_map.update(self._get_path_by_addr(set_address,
                                                    return_empty=True))
             path_map[set_address]["v"] = self._encode(set_items[set_address])
 
+        if delete_items is not None:
+            for del_address in delete_items:
+                path_map.update(self._get_path_by_addr(del_address))
+
+            for del_address in delete_items:
+                del path_map[del_address]
+
+                path_branch = del_address[-TOKEN_SIZE:]
+                parent_address = del_address[:-TOKEN_SIZE]
+                while parent_address:
+                    pa_map = path_map[parent_address]
+                    del pa_map["c"][path_branch]
+                    if not pa_map["c"]:
+                        # empty node delete it.
+                        del path_map[parent_address]
+                    else:
+                        # found a node that is not empty no need to continue
+                        break
+                    path_branch = parent_address[-TOKEN_SIZE:]
+                    parent_address = parent_address[:-TOKEN_SIZE]
+
+                    if not parent_address:
+                        if not pa_map['c']:
+                            del path_map['']['c'][path_branch]
+
         # Rebuild the hashes to the new root
         for path in sorted(path_map, key=len, reverse=True):
             (key_hash, packed) = self._encode_and_hash(path_map[path])
-            batch.append((key_hash, packed))
+            update_batch.append((key_hash, packed))
             if path != '':
                 parent_address = path[:-TOKEN_SIZE]
                 path_branch = path[-TOKEN_SIZE:]
@@ -199,7 +227,7 @@ class MerkleDatabase(object):
 
         if not virtual:
             # Apply all new hash, value pairs to the database
-            self._database.set_batch(batch)
+            self._database.set_batch(update_batch)
         return key_hash
 
     def _set_by_addr(self, address, value):

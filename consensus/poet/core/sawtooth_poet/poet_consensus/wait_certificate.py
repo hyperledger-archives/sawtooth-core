@@ -56,6 +56,7 @@ class WaitCertificate(object):
     @classmethod
     def create_wait_certificate(cls,
                                 poet_enclave_module,
+                                sealed_signup_data,
                                 wait_timer,
                                 block_hash):
         """Creates a wait certificate in the enclave and then constructs
@@ -64,6 +65,8 @@ class WaitCertificate(object):
         Args:
             poet_enclave_module (module): The module that implements the
                 underlying PoET enclave.
+            sealed_signup_data (str): Serialized blob of secret data
+                from create_signup_info. Used to authenticate with enclave.
             wait_timer (WaitTimer): The wait timer for which the wait
                 certificate is being requested.
             block_hash (str): The hash of the block for which this
@@ -77,6 +80,7 @@ class WaitCertificate(object):
         try:
             enclave_certificate = \
                 poet_enclave_module.create_wait_certificate(
+                    sealed_signup_data,
                     wait_timer.enclave_wait_timer,
                     block_hash)
         except AttributeError as ex:

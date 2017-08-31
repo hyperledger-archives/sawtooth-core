@@ -23,14 +23,14 @@ MODULE_LIST="
     rest_api
     poet
     settings
-    permission
+    identity
     validator
     go_sdk
     java_sdk
     javascript_sdk
     python_sdk
     rust_sdk
-    burrow_evm
+    seth
     integration
 "
 
@@ -160,12 +160,12 @@ main() {
                 settings)
                     test_settings
                     ;;
+                identity)
+                    test_identity
+                    ;;
                 supplychain)
                     test_supplychain
                     ;;
-                permission)
-                  test_permission
-                  ;;
                 validator)
                     test_validator
                     ;;
@@ -190,8 +190,8 @@ main() {
                 deployment)
                     test_deployment
                     ;;
-                burrow_evm)
-                    test_burrow_evm
+                seth)
+                    test_seth
                     ;;
                 *)
                     echo "Module '$MODULE' not found."
@@ -253,9 +253,9 @@ test_settings() {
     copy_coverage .coverage.test_config_smoke
 }
 
-test_permission() {
-  run_docker_test test_permission
-  copy_coverage .coverage.permission
+test_identity() {
+  run_docker_test ./families/identity/tests/test_tp_identity.yaml
+  copy_coverage .coverage.identity
 }
 
 test_supplychain() {
@@ -327,10 +327,10 @@ test_rust_sdk() {
     run_docker_test ./perf/sawtooth_workload/unit_perf_workload.yaml
 }
 
-test_burrow_evm() {
-  run_docker_test ./families/burrow_evm/tests/unit_burrow_evm.yaml
-  run_docker_test burrow_evm_intkey_test
-  run_docker_test burrow_evm_perm_test
+test_seth() {
+  run_docker_test ./families/seth/tests/unit_seth.yaml
+  run_docker_test seth_intkey_test
+  run_docker_test seth_perm_test
 }
 
 test_integration() {

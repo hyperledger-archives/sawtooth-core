@@ -32,8 +32,7 @@ paths:
           type: string
           description: A partial name to filter Agents by
         - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min"
-        - $ref: "#/parameters/max"
+        - $ref: "#/parameters/page"
       responses:
         200:
           description: Successfully retrieved Agents
@@ -87,8 +86,7 @@ paths:
         - $ref: "#/parameters/applicant"
         - $ref: "#/parameters/status"
         - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min"
-        - $ref: "#/parameters/max"
+        - $ref: "#/parameters/page"
       responses:
         200:
           description: Successfully retrieved Applications
@@ -122,8 +120,7 @@ paths:
           type: string
           description: A partial identifier to filter Records by
         - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min"
-        - $ref: "#/parameters/max"
+        - $ref: "#/parameters/page"
       responses:
         200:
           description: Successfully retrieved Records
@@ -177,8 +174,7 @@ paths:
         - $ref: "#/parameters/applicant"
         - $ref: "#/parameters/status"
         - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min"
-        - $ref: "#/parameters/max"
+        - $ref: "#/parameters/page"
       responses:
         200:
           description: Successfully fetched Applications
@@ -234,16 +230,11 @@ parameters:
     type: integer
     default: 1000
     description: Number of items to return
-  min:
-    name: min
+  page:
+    name: page
     in: query
-    type: string
-    description: Id or index to start paging (inclusive)
-  max:
-    name: max
-    in: query
-    type: string
-    description: Id or index to end paging (inclusive)
+    type: integer
+    description: page number for the current page of items to return
   status:
     name: status
     in: query
@@ -265,18 +256,12 @@ parameters:
 definitions:
   Paging:
     properties:
-      start_index:
-        type: integer
-        example: 1000
       total_count:
         type: integer
         example: 54321
-      previous:
-        type: string
-        example: https://api.sawtooth.com/agents?min=0&count=1000
       next:
         type: string
-        example: https://api.sawtooth.com/agents?min=2000&count=1000
+        example: https://api.sawtooth.com/agents?page=2&count=1000
   Error:
     properties:
       code:

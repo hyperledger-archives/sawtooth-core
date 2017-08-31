@@ -84,6 +84,9 @@ namespace sawtooth {
                 const buffer_t& inSealedSignupData,
                 sgx_ec256_public_t* outPoetPublicKey
                 );
+            void ReleaseSignupData(
+                const buffer_t& inSealedSignupData
+                );
             void VerifySignupInfo(
                 const std::string& inOriginatorPublicKeyHash,
                 const sgx_ec256_public_t* inPoetPublicKey,
@@ -93,6 +96,7 @@ namespace sawtooth {
                 );
 
             void CreateWaitTimer(
+                const buffer_t& inSealedSignupData,
                 const std::string& inValidatorAddress,
                 const std::string& inPreviousCertificateId,
                 double requestTime,
@@ -104,6 +108,7 @@ namespace sawtooth {
                 );
 
             void CreateWaitCertificate(
+                const buffer_t& inSealedSignupData,
                 const std::string& inSerializedWaitTimer,
                 const sgx_ec256_signature_t* inWaitTimerSignature,
                 const std::string& inBlockHash,
@@ -122,7 +127,6 @@ namespace sawtooth {
                 poet_err_t err
                 );
             void LoadEnclave();
-            void LoadState();
             sgx_status_t CallSgx(
                 std::function<sgx_status_t (void)> sgxCall, 
                 int retries = 5, 
@@ -141,8 +145,6 @@ namespace sawtooth {
             std::string signatureRevocationList;
             sgx_spid_t spid;
             std::string dataDirectory;
-
-            SealedData poetState;
         }; // class Enclave
 
     } // namespace poet
