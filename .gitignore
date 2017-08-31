@@ -37,6 +37,10 @@
 /families/track_and_trade/processor/sawtooth_track_and_trade/protobuf
 /families/track_and_trade/client/public/dist
 /families/track_and_trade/server/rethinkdb_data
+/families/block_info/sawtooth_block_info/protobuf
+/families/track_and_trade/**/node_modules
+/families/track_and_trade/**/package-lock.json
+/families/identity/sawtooth_identity/protobuf
 
 /coverage
 /coverage/html
@@ -60,12 +64,15 @@
 /sdk/python/sawtooth_sdk/protobuf/
 /sdk/python/**/__pycache__/
 /sdk/javascript/node_modules
+/sdk/javascript/package-lock.json
 /sdk/javascript/protobuf/protobuf_bundle.json
 /sdk/examples/xo_python/**/__pycache__/
 /sdk/examples/xo_javascript/node_modules/
+/sdk/examples/xo_javascript/package-lock.json
 /sdk/examples/intkey_python/**/__pycache__/
 /sdk/examples/supplychain/python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
+/sdk/examples/intkey_javascript/package-lock.json
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
 /sdk/examples/intkey_java/target/
 /sdk/examples/noop_python/**/__pycache__/
