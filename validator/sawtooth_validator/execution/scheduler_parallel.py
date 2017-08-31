@@ -575,9 +575,6 @@ class ParallelScheduler(Scheduler):
 
                 self._txn_results[txn_signature] = txn_result
 
-            # mark all transactions which depend explicitly upon this one as
-            # invalid as well
-
             self._condition.notify_all()
 
     def _unscheduled_transactions(self):
@@ -692,7 +689,12 @@ class ParallelScheduler(Scheduler):
             next_txn = None
             for txn in self._unscheduled_transactions():
                 if not self._has_predecessors(txn) and \
-                        not self._is_outstanding(txn):
+                        not self._is_outstanding(txn) and \
+                        not self._dependency_not_processed(txn):
+                    if self._txn_failed_by_dep(txn):
+                        self._txn_results[txn.header_signature] = \
+                            TransactionExecutionResult(False, None, None)
+                        continue
                     next_txn = txn
                     break
 
@@ -707,6 +709,32 @@ class ParallelScheduler(Scheduler):
                 self._scheduled_txn_info[next_txn.header_signature] = info
                 return info
             return None
+
+    def _dependency_not_processed(self, txn):
+        header = TransactionHeader()
+        header.ParseFromString(txn.header)
+        if any(not self._all_in_batch_have_results(d)
+               for d in list(header.dependencies)):
+            return True
+        return False
+
+    def _txn_failed_by_dep(self, txn):
+        header = TransactionHeader()
+        header.ParseFromString(txn.header)
+        if any(self._any_in_batch_are_invalid(d)
+               for d in list(header.dependencies)):
+            return True
+        return False
+
+    def _all_in_batch_have_results(self, txn_id):
+        batch = self._batches_by_txn_id[txn_id]
+        return all(t.header_signature in self._txn_results
+                   for t in list(batch.transactions))
+
+    def _any_in_batch_are_invalid(self, txn_id):
+        batch = self._batches_by_txn_id[txn_id]
+        return any(not self._txn_results[t.header_signature].is_valid
+                   for t in list(batch.transactions))
 
     def available(self):
         with self._condition:
