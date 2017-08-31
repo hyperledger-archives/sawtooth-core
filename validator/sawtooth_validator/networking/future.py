@@ -13,10 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from threading import Condition
 from threading import RLock
 import time
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class FutureResult(object):
@@ -72,7 +76,11 @@ class Future(object):
         if self._has_callback:
             if self._callback_func is None:
                 self._condition.wait()
-            self._callback_func(self._request, self._result)
+            try:
+                self._callback_func(self._request, self._result)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception('An unhandled error occurred while running '
+                                 'future callback')
 
     def add_callback(self, callback_func):
         """Add a callback to be executed on set_result.
