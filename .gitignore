@@ -29,6 +29,7 @@
 /core/sawtooth_core.egg-info/
 /families/settings/sawtooth_settings/protobuf/
 /families/supplychain/python/sawtooth_supplychain/protobuf
+/families/private_utxo/python/sawtooth_private_utxo/protobuf
 /families/supplychain/python/build/
 /families/**/__pycache__/
 /families/track_and_trade/client/public/dist
