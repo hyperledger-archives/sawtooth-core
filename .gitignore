@@ -34,6 +34,7 @@
 /families/track_and_trade/client/public/dist
 /families/track_and_trade/server/rethinkdb_data
 /families/identity/sawtooth_identity/protobuf
+/families/block_info/sawtooth_block_info/protobuf
 
 /coverage
 /coverage/html
