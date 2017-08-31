@@ -15,6 +15,7 @@
 import os
 import sys
 import toml
+import yaml
 
 
 def get_config_dir():
@@ -82,12 +83,16 @@ def _get_log_config(filename=None):
         log_config (dict): The dictionary to pass to logging.config.dictConfig
     """
     if filename is not None:
+
         conf_file = os.path.join(get_config_dir(), filename)
-    if os.path.exists(conf_file):
-        with open(conf_file) as fd:
-            raw_config = fd.read()
-        log_config = toml.loads(raw_config)
-        return log_config
+        if os.path.exists(conf_file):
+            with open(conf_file) as fd:
+                raw_config = fd.read()
+            if filename.endswith(".yaml"):
+                log_config = yaml.safe_load(raw_config)
+            else:
+                log_config = toml.loads(raw_config)
+            return log_config
     return None
 
 

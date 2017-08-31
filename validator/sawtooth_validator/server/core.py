@@ -20,7 +20,6 @@ import os
 import signal
 import time
 import threading
-import toml
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
@@ -54,6 +53,7 @@ from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
 from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.settings_view import SettingsViewFactory
+from sawtooth_validator.state.identity_view import IdentityViewFactory
 from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaAddSubscriberHandler
@@ -66,6 +66,7 @@ from sawtooth_validator.state.state_delta_processor import \
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
+from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
 from sawtooth_validator.networking.interconnect import Interconnect
@@ -92,9 +93,9 @@ class Validator(object):
 
     def __init__(self, bind_network, bind_component, endpoint,
                  peering, seeds_list, peer_list, data_dir, config_dir,
-                 identity_signing_key, scheduler_type,
-                 network_public_key=None,
-                 network_private_key=None):
+                 identity_signing_key, scheduler_type, permissions,
+                 network_public_key=None, network_private_key=None,
+                 ):
         """Constructs a validator instance.
 
         Args:
@@ -165,17 +166,6 @@ class Validator(object):
                                      max_incoming_connections=20,
                                      monitor=True)
 
-        config_file = os.path.join(config_dir, "validator.toml")
-
-        validator_config = {}
-        if os.path.exists(config_file):
-            with open(config_file) as fd:
-                raw_config = fd.read()
-            validator_config = toml.loads(raw_config)
-
-        if scheduler_type is None:
-            scheduler_type = validator_config.get("scheduler", "serial")
-
         executor = TransactionExecutor(
             service=self._service,
             context_manager=context_manager,
@@ -229,6 +219,15 @@ class Validator(object):
         block_sender = BroadcastBlockSender(completer, self._gossip)
         batch_sender = BroadcastBatchSender(completer, self._gossip)
         chain_id_manager = ChainIdManager(data_dir)
+
+        identity_view_factory = IdentityViewFactory(
+            StateViewFactory(merkle_db))
+
+        permission_verifier = PermissionVerifier(
+            identity_view_factory,
+            permissions,
+            block_store.chain_head_state_root)
+
         # Create and configure journal
         self._journal = Journal(
             block_store=block_store,
@@ -242,6 +241,7 @@ class Validator(object):
             state_delta_processor=state_delta_processor,
             data_dir=data_dir,
             config_dir=config_dir,
+            permission_verifier=permission_verifier,
             check_publish_block_frequency=0.1,
             block_cache_purge_frequency=30,
             block_cache_keep_time=300,
@@ -265,6 +265,11 @@ class Validator(object):
 
         completer.set_on_batch_received(self._journal.on_batch_received)
         completer.set_on_block_received(self._journal.on_block_received)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_STATE_DEL_REQUEST,
+            tp_state_handlers.TpStateDeleteHandler(context_manager),
+            thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.TP_STATE_GET_REQUEST,
@@ -439,9 +444,7 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             BatchListPermissionVerifier(
-                settings_view_factory=SettingsViewFactory(
-                    StateViewFactory(merkle_db)),
-                current_root_func=self._journal.get_current_root,
+                permission_verifier=permission_verifier
             ),
             sig_pool)
 

@@ -16,6 +16,7 @@
 from collections import namedtuple
 from concurrent.futures import CancelledError
 import logging
+import math
 import time
 
 import psycopg2
@@ -49,6 +50,8 @@ LOGGER = logging.getLogger(__name__)
 AGENT_NAMESPACE = Addressing.agent_namespace()
 APPLICATION_NAMESPACE = Addressing.application_namespace()
 RECORD_NAMESPACE = Addressing.record_namespace()
+
+MAX_BLOCK_NUMBER = int(math.pow(2, 63)) - 1
 
 
 class Subscriber:
@@ -271,14 +274,19 @@ class Subscriber:
 
         for agent in agent_container.entries:
             cur.execute('UPDATE agent SET end_block_num = %s '
-                        'WHERE end_block_num IS NULL AND identifier = %s',
-                        [block_num, agent.identifier])
+                        'WHERE end_block_num = %s AND identifier = %s',
+                        [block_num, MAX_BLOCK_NUMBER, agent.identifier])
 
             if agent_state_change.type == StateChange.SET:
                 cur.execute(
-                    'INSERT INTO agent (start_block_num, identifier, name) '
-                    'VALUES (%s, %s, %s)',
-                    [block_num, agent.identifier, agent.name])
+                    'INSERT INTO agent '
+                    '(start_block_num, end_block_num, '
+                    ' identifier, name) '
+                    'VALUES (%s, %s, %s, %s)',
+                    [block_num,
+                     MAX_BLOCK_NUMBER,
+                     agent.identifier,
+                     agent.name])
 
     @staticmethod
     def _apply_application_change(cur, block_num, application_state_change):
@@ -289,19 +297,22 @@ class Subscriber:
         # mark all the existing ones for the record as the previous block
         if application_container.entries:
             cur.execute('UPDATE application SET end_block_num = %s '
-                        'WHERE end_block_num IS NULL AND '
+                        'WHERE end_block_num = %s AND '
                         'record_identifier = %s',
                         [block_num,
+                         MAX_BLOCK_NUMBER,
                          application_container.entries[0].record_identifier])
 
         for application in application_container.entries:
             if application_state_change.type == StateChange.SET:
                 cur.execute(
                     'INSERT INTO application '
-                    '(start_block_num, record_identifier, applicant,'
+                    '(start_block_num, end_block_num,'
+                    ' record_identifier, applicant,'
                     ' creation_time, type, status, terms) '
-                    'VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                    'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
                     [block_num,
+                     MAX_BLOCK_NUMBER,
                      application.record_identifier,
                      application.applicant,
                      application.creation_time,
@@ -316,18 +327,19 @@ class Subscriber:
 
         for record in record_container.entries:
             cur.execute('UPDATE record SET end_block_num = %s '
-                        'WHERE end_block_num IS NULL AND identifier = %s',
-                        [block_num, record.identifier])
+                        'WHERE end_block_num = %s AND identifier = %s',
+                        [block_num, MAX_BLOCK_NUMBER, record.identifier])
 
             if record_state_change.type == StateChange.SET:
                 cur.execute(
                     'INSERT INTO record '
-                    '(id, start_block_num,'
+                    '(id, start_block_num, end_block_num,'
                     ' identifier, '
                     ' creation_time, '
                     ' finalize) '
-                    'VALUES (DEFAULT, %s, %s, %s, %s) RETURNING id',
+                    'VALUES (DEFAULT, %s,  %s, %s, %s, %s) RETURNING id',
                     [block_num,
+                     MAX_BLOCK_NUMBER,
                      record.identifier,
                      record.creation_time,
                      record.final])

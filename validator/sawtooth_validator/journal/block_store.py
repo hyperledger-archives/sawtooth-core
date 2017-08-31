@@ -23,6 +23,7 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 CHAIN_HEAD_KEY = "chain_head_id"
 
@@ -110,6 +111,15 @@ class BlockStore(MutableMapping):
         if self._block_store[CHAIN_HEAD_KEY] in self._block_store:
             return self._get_block(self._block_store[CHAIN_HEAD_KEY])
         return None
+
+    def chain_head_state_root(self):
+        """
+        Return the state hash of the head block of the current chain.
+        """
+        chain_head = self.chain_head
+        if chain_head is not None:
+            return chain_head.state_root_hash
+        return INIT_ROOT_KEY
 
     @property
     def store(self):

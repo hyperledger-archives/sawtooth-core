@@ -34,6 +34,7 @@ setup(name='sawtooth-cli',
           'sawtooth-signing',
           'toml',
           'PyYAML',
+          'requests'
           ],
       entry_points={
           'console_scripts': [

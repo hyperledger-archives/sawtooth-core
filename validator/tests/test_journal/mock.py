@@ -263,3 +263,7 @@ class MockStateDeltaProcessor(object):
 
     def publish_deltas(self, block):
         self.block = block
+
+class MockPermissionVerifier(object):
+    def is_batch_signer_authorized(self, batch, state_root=None):
+        return True

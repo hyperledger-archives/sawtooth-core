@@ -72,12 +72,13 @@ class TestWaitCertificate(TestCase):
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data='',
                 wait_timer=None,
                 block_hash="Reader's Digest")
 
     def test_create_before_create_wait_timer(self):
         # Need to create signup information
-        SignupInfo.create_signup_info(
+        signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
@@ -87,12 +88,13 @@ class TestWaitCertificate(TestCase):
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=None,
                 block_hash="Reader's Digest")
 
     def test_create_before_wait_timer_expires(self):
         # Need to create signup information
-        SignupInfo.create_signup_info(
+        signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
@@ -102,6 +104,7 @@ class TestWaitCertificate(TestCase):
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.mock_consensus_state,
@@ -109,12 +112,14 @@ class TestWaitCertificate(TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=wc.identifier,
                 consensus_state=self.mock_consensus_state,
@@ -123,13 +128,14 @@ class TestWaitCertificate(TestCase):
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
     @skip("Disabled until poet integration -- too slow!!!!!")
     def test_create_after_wait_timer_timed_out(self):
         # Need to create signup information
-        SignupInfo.create_signup_info(
+        signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
@@ -139,6 +145,7 @@ class TestWaitCertificate(TestCase):
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.mock_consensus_state,
@@ -146,12 +153,14 @@ class TestWaitCertificate(TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=wc.identifier,
                 consensus_state=self.mock_consensus_state,
@@ -164,49 +173,60 @@ class TestWaitCertificate(TestCase):
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
-    def test_create_with_wrong_wait_timer(self):
+    def test_create_with_wrong_signup_data(self):
         # Need to create signup information
-        SignupInfo.create_signup_info(
+        signup_info = SignupInfo.create_signup_info(
+            poet_enclave_module=self.poet_enclave_module,
+            originator_public_key_hash=self._originator_public_key_hash,
+            nonce=NULL_BLOCK_IDENTIFIER)
+
+        signup_info2 = SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
 
         # Create two timers and try to create the wait certificate with the
         # first one, which should fail as it is not the current wait timer
-        invalid_wt = \
+        wt1 = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.mock_consensus_state,
                 poet_settings_view=self.mock_poet_settings_view)
-        valid_wt = \
+        wt2 = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info2.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.mock_consensus_state,
                 poet_settings_view=self.mock_poet_settings_view)
 
-        # Verify that we cannot create a wait certificate with the old wait
-        # timer, but we can with the new one
+        # Verify that we cannot create a wait certificate using the first
+        # wait timer with the second signup data
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
-                wait_timer=invalid_wt,
+                sealed_signup_data=signup_info2.sealed_signup_data,
+                wait_timer=wt1,
                 block_hash="Reader's Digest")
 
         WaitCertificate.create_wait_certificate(
             poet_enclave_module=self.poet_enclave_module,
-            wait_timer=valid_wt,
+            sealed_signup_data=signup_info2.sealed_signup_data,
+            wait_timer=wt2,
             block_hash="Reader's Digest")
 
+    @skip("Simulator doesn't provide replay protection")
     def test_create_with_reused_wait_timer(self):
         # Need to create signup information
-        SignupInfo.create_signup_info(
+        signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=self.poet_enclave_module,
             originator_public_key_hash=self._originator_public_key_hash,
             nonce=NULL_BLOCK_IDENTIFIER)
@@ -216,6 +236,7 @@ class TestWaitCertificate(TestCase):
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.mock_consensus_state,
@@ -223,6 +244,7 @@ class TestWaitCertificate(TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -233,11 +255,13 @@ class TestWaitCertificate(TestCase):
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=consumed_wt,
                 block_hash="Reader's Digest")
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=wc.identifier,
                 consensus_state=self.mock_consensus_state,
@@ -245,6 +269,7 @@ class TestWaitCertificate(TestCase):
         with self.assertRaises(ValueError):
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=self.poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=consumed_wt,
                 block_hash="Reader's Digest")
 
@@ -255,6 +280,7 @@ class TestWaitCertificate(TestCase):
 
         WaitCertificate.create_wait_certificate(
             poet_enclave_module=self.poet_enclave_module,
+            sealed_signup_data=signup_info.sealed_signup_data,
             wait_timer=wt,
             block_hash="Reader's Digest")
 
@@ -268,7 +294,8 @@ class TestWaitCertificate(TestCase):
 
         # create mock_poet_enclave_wait_timer
         mock_poet_enclave_wait_timer = \
-            mock.Mock(validator_address='1060 W Addison Street',
+            mock.Mock(sealed_signup_data=signup_info.sealed_signup_data,
+                      validator_address='1060 W Addison Street',
                       duration=1.0,
                       previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                       local_mean=5.0,
@@ -278,7 +305,8 @@ class TestWaitCertificate(TestCase):
 
         # create mock_poet_enclave_wait_certificate
         mock_poet_enclave_wait_certificate = \
-            mock.Mock(duration=1.0,
+            mock.Mock(sealed_signup_data=signup_info.sealed_signup_data,
+                      duration=1.0,
                       previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                       local_mean=5.0,
                       request_time=time.time(),
@@ -318,6 +346,7 @@ class TestWaitCertificate(TestCase):
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=mock_poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.mock_consensus_state,
@@ -328,6 +357,7 @@ class TestWaitCertificate(TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=mock_poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 
@@ -365,6 +395,7 @@ class TestWaitCertificate(TestCase):
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=mock_poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=wc.identifier,
                 consensus_state=self.mock_consensus_state,
@@ -375,6 +406,7 @@ class TestWaitCertificate(TestCase):
         another_wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=mock_poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=wt,
                 block_hash="Pepto Bismol")
 
@@ -434,6 +466,7 @@ class TestWaitCertificate(TestCase):
         wt = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=mock_poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 validator_address='1660 Pennsylvania Avenue NW',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.mock_consensus_state,
@@ -443,6 +476,7 @@ class TestWaitCertificate(TestCase):
         wc = \
             WaitCertificate.create_wait_certificate(
                 poet_enclave_module=mock_poet_enclave_module,
+                sealed_signup_data=signup_info.sealed_signup_data,
                 wait_timer=wt,
                 block_hash="Reader's Digest")
 

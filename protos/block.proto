@@ -22,7 +22,7 @@ import "batch.proto";
 
 message BlockHeader {
     // Block number in the chain
-    int32 block_num = 1;
+    uint64 block_num = 1;
 
     // The header_signature of the previous block that was added to the chain.
     string previous_block_id = 2;

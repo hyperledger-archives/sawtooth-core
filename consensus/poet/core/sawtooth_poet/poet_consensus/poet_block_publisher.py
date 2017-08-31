@@ -332,10 +332,19 @@ class PoetBlockPublisher(BlockPublisherInterface):
             self._poet_key_state_store.active_key = active_poet_public_key
 
         # Ensure that the enclave is using the appropriate keys
-        unsealed_poet_public_key = \
-            SignupInfo.unseal_signup_data(
-                poet_enclave_module=poet_enclave_module,
-                sealed_signup_data=poet_key_state.sealed_signup_data)
+        try:
+            unsealed_poet_public_key = \
+                SignupInfo.unseal_signup_data(
+                    poet_enclave_module=poet_enclave_module,
+                    sealed_signup_data=poet_key_state.sealed_signup_data)
+        except SystemError:
+            # Signup data is unuseable
+            LOGGER.error(
+                'Could not unseal signup data associated with PPK: %s..%s',
+                active_poet_public_key[:8],
+                active_poet_public_key[-8:])
+            self._poet_key_state_store.active_key = None
+            return False
 
         assert active_poet_public_key == unsealed_poet_public_key
 
@@ -401,6 +410,16 @@ class PoetBlockPublisher(BlockPublisherInterface):
                         sealed_signup_data=sealed_signup_data,
                         has_been_refreshed=True)
 
+                # Release enclave resources for this identity
+                # This signup will be invalid on all forks that use it,
+                # even if there is a rollback to a point it should be valid.
+                # A more sophisticated policy would be to release signups
+                # only at a block depth where finality probability
+                # is high.
+                SignupInfo.release_signup_data(
+                    poet_enclave_module=poet_enclave_module,
+                    sealed_signup_data=sealed_signup_data)
+
                 self._register_signup_information(
                     block_header=block_header,
                     poet_enclave_module=poet_enclave_module)
@@ -428,6 +447,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         # We need to create a wait timer for the block...this is what we
         # will check when we are asked if it is time to publish the block
+        poet_key_state = self._poet_key_state_store[active_poet_public_key]
+        sealed_signup_data = poet_key_state.sealed_signup_data
         previous_certificate_id = \
             utils.get_previous_certificate_id(
                 block_header=block_header,
@@ -436,6 +457,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         wait_timer = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=poet_enclave_module,
+                sealed_signup_data=sealed_signup_data,
                 validator_address=block_header.signer_pubkey,
                 previous_certificate_id=previous_certificate_id,
                 consensus_state=consensus_state,
@@ -522,10 +544,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         # We need to create a wait certificate for the block and then serialize
         # that into the block header consensus field.
+        active_key = self._poet_key_state_store.active_key
+        poet_key_state = self._poet_key_state_store[active_key]
+        sealed_signup_data = poet_key_state.sealed_signup_data
         try:
             wait_certificate = \
                 WaitCertificate.create_wait_certificate(
                     poet_enclave_module=poet_enclave_module,
+                    sealed_signup_data=sealed_signup_data,
                     wait_timer=self._wait_timer,
                     block_hash=block_hash)
             block_header.consensus = \

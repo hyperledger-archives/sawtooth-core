@@ -611,3 +611,7 @@ def _key_to_address(key):
     key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
 
     return SETTINGS_NAMESPACE + ''.join(_short_hash(x) for x in key_parts)
+
+
+def setting_key_to_address(key):
+    return _key_to_address(key)

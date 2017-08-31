@@ -33,6 +33,7 @@ directories="
     consensus/poet/simulator/tests
     core
     families/settings/tests
+    families/supplychain/python/build
     integration
     rest_api/build
     rest_api/tests

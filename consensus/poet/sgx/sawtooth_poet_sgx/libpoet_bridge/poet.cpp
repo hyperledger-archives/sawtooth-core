@@ -523,6 +523,39 @@ poet_err_t Poet_UnsealSignupData(
 } // Poet_UnsealSignupData
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+poet_err_t Poet_ReleaseSignupData(
+    const char* inSealedSignupData
+    )
+{
+    poet_err_t result = POET_SUCCESS;
+
+    try {
+        // validate params
+        sp::ThrowIfNull(
+            inSealedSignupData,
+            "NULL inSealedSignupData");
+
+        // Decode the sealed data before sending it down
+        std::vector<uint8_t> sealedSignupData;
+        sp::DecodeB64(sealedSignupData, inSealedSignupData);
+
+        // Have the enclave release the signup data
+        g_Enclave.ReleaseSignupData(sealedSignupData);
+    } catch (sp::PoetError& e) {
+        Poet_SetLastError(e.what());
+        result = e.error_code();
+    } catch (std::exception& e) {
+        Poet_SetLastError(e.what());
+        result = POET_ERR_UNKNOWN;
+    } catch (...) {
+        Poet_SetLastError("Unexpected exception");
+        result = POET_ERR_UNKNOWN;
+    }
+
+    return result;
+} // Poet_ReleaseSignupData
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t Poet_VerifySignupInfo(
     const char* inOriginatorPublicKeyHash,
     const char* inPoetPublicKey,
@@ -578,6 +611,7 @@ poet_err_t Poet_VerifySignupInfo(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t Poet_CreateWaitTimer(
+    const char* inSealedSignupData,
     const char* inValidatorAddress,
     const char* inPreviousCertificateId,
     double inRequestTime,
@@ -593,6 +627,7 @@ poet_err_t Poet_CreateWaitTimer(
 
     try {
         // validate params
+        sp::ThrowIfNull(inSealedSignupData, "NULL SealedSignupData");
         sp::ThrowIfNull(inValidatorAddress, "NULL ValidatorAddress");
         sp::ThrowIfNull(inPreviousCertificateId, "NULL inPreviousCertificateId");
         sp::ThrowIfNull(outSerializedWaitTimer, "NULL outSerializedWaitTimer");
@@ -627,8 +662,13 @@ poet_err_t Poet_CreateWaitTimer(
         Zero(outSerializedWaitTimer, inSerializedTimerLength);
         Zero(outWaitTimerSignature, inWaitTimerSignatureLength);
 
+        // Decode the sealed data before sending it down
+        std::vector<uint8_t> sealedSignupData;
+        sp::DecodeB64(sealedSignupData, inSealedSignupData);
+
         sgx_ec256_signature_t waitTimerSignature = { 0 };
         g_Enclave.CreateWaitTimer(
+            sealedSignupData,
             inValidatorAddress,
             inPreviousCertificateId,
             inRequestTime,
@@ -659,6 +699,7 @@ poet_err_t Poet_CreateWaitTimer(
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 poet_err_t Poet_CreateWaitCertificate(
+    const char* inSealedSignupData,
     const char* inSerializedWaitTimer,
     const char* inWaitTimerSignature,
     const char* inBlockHash,
@@ -671,6 +712,7 @@ poet_err_t Poet_CreateWaitCertificate(
     poet_err_t ret = POET_SUCCESS;
     try {
         // validate params
+        sp::ThrowIfNull(inSealedSignupData, "NULL SealedSignupData");
         sp::ThrowIfNull(inSerializedWaitTimer, "NULL inSerializedWaitTimer");
         sp::ThrowIfNull(inWaitTimerSignature, "NULL inWaitTimerSignature");
         sp::ThrowIfNull(inBlockHash, "NULL inBlockHash");
@@ -692,6 +734,10 @@ poet_err_t Poet_CreateWaitCertificate(
         Zero(outSerializedWaitCertificate, inSerializedWaitCertificateLength);
         Zero(outWaitCertificateSignature, inWaitCertificateSignatureLength);
 
+        // Decode the sealed data before sending it down
+        std::vector<uint8_t> sealedSignupData;
+        sp::DecodeB64(sealedSignupData, inSealedSignupData);
+
         sgx_ec256_signature_t waitTimerSignature;
         sgx_ec256_signature_t waitCertificateSignature;
 
@@ -700,6 +746,7 @@ poet_err_t Poet_CreateWaitCertificate(
         Poet_DecodeSignature(&waitTimerSignature, inWaitTimerSignature);
 
         g_Enclave.CreateWaitCertificate(
+            sealedSignupData,
             inSerializedWaitTimer,
             &waitTimerSignature,
             inBlockHash,

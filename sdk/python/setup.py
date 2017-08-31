@@ -52,4 +52,5 @@ setup(name='sawtooth-sdk',
           "protobuf",
           "pyzmq",
           "toml",
+          "PyYAML",
       ])
