@@ -33,6 +33,8 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
 
+INTKEY_PREFIX = '1cf126'
+
 class TestIntkeySmoke(unittest.TestCase):
 
     @classmethod
@@ -133,7 +135,7 @@ def _get_data():
     return data
 
 def _get_state():
-    response = _query_rest_api('/state')
+    response = _query_rest_api('/state?address={}'.format(INTKEY_PREFIX))
     return response['data']
 
 def _query_rest_api(suffix='', data=None, headers={}):
