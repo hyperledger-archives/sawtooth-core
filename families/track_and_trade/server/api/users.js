@@ -34,6 +34,20 @@ const create = user => {
     }))
 }
 
+const update = (changes, { authedKey }) => {
+  return Promise.resolve()
+    .then(() => {
+      if (changes.password) {
+        return auth.hashPassword(changes.password)
+          .then(hashed => _.set(changes, 'password', hashed))
+      }
+      return changes
+    })
+    .then(finalChanges => db.update(authedKey, finalChanges))
+    .then(updated => _.omit(updated, 'password'))
+}
+
 module.exports = {
-  create
+  create,
+  update
 }
