@@ -22,9 +22,16 @@ const bodyParser = require('body-parser')
 const state = require('../db/state')
 const auth = require('./auth')
 const users = require('./users')
+const { Unauthorized } = require('./errors')
 
 const router = express.Router()
 router.use(bodyParser.json({ type: 'application/json' }))
+
+// Adds an object to the request for storing internally generated parameters
+const initInternalParams = (req, res, next) => {
+  req.internal = {}
+  next()
+}
 
 // Passes a request's body to a function,
 // then sends back the promised result as JSON.
@@ -33,6 +40,27 @@ const handle = func => (req, res, next) => {
   func(req.body)
     .then(result => res.json(result))
     .catch(err => next(err))
+}
+
+// Check the Authorization header if present.
+// Saves the encoded public key to the request object.
+const authHandler = (req, res, next) => {
+  req.internal.authedKey = null
+  const token = req.headers.authorization
+  if (!token) return next()
+
+  auth.verifyToken(token)
+    .then(publicKey => {
+      req.internal.authedKey = publicKey
+      next()
+    })
+    .catch(() => next())
+}
+
+// Route-specific middleware, throws error if not authorized
+const restrict = (req, res, next) => {
+  if (req.internal.authedKey) return next()
+  next(new Unauthorized('This route requires a valid Authorization header'))
 }
 
 // Send back a simple JSON error with an HTTP status code
@@ -44,7 +72,10 @@ const errorHandler = (err, req, res, next) => {
   }
 }
 
-// Routes
+// Setup routes and custom middleware
+router.use(initInternalParams)
+router.use(authHandler)
+
 router.get('/', (req, res) => {
   state.query(state => state.filter({name: 'message'}))
     .then(messages => res.json(messages[0].value))

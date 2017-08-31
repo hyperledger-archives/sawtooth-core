@@ -44,6 +44,17 @@ const createToken = payload => {
   })
 }
 
+// Verifies a token is valid as promised.
+// Sends back the decoded payload, or throws an error if invalid.
+const verifyToken = token => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, SECRET, (err, payload) => {
+      if (err) reject(err)
+      else resolve(payload)
+    })
+  })
+}
+
 // Checks an object with username and password keys.
 // Returns an auth token and the user's private key if it passes.
 const authorize = ({ username, password }) => {
@@ -73,5 +84,6 @@ const authorize = ({ username, password }) => {
 module.exports = {
   hashPassword,
   createToken,
+  verifyToken,
   authorize
 }
