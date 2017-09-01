@@ -28,7 +28,7 @@ const NAME = process.env.DB_NAME || 'tnt'
 let connection = null
 
 const connect = () => {
-  r.connect({host: HOST, port: PORT, db: NAME})
+  return r.connect({host: HOST, port: PORT, db: NAME})
     .then(conn => {
       connection = conn
     })
