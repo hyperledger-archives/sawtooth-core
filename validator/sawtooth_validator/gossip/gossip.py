@@ -575,11 +575,14 @@ class Topology(Thread):
         self._connection_statuses[connection_id] = "temp"
         get_peers_request = GetPeersRequest()
 
+        def callback(request, result):
+            # request, result are ignored, but required by the callback
+            self._remove_temporary_connection(connection_id)
+
         self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
                            get_peers_request.SerializeToString(),
                            connection_id,
-                           callback=partial(self._remove_temporary_connection,
-                                            connection_id))
+                           callback=callback)
 
     def _connect_failure_topology_callback(self, connection_id):
         LOGGER.debug("Connection to %s failed for topology request",
