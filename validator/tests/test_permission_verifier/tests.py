@@ -303,3 +303,49 @@ class TestPermissionVerifier(unittest.TestCase):
         batch = self._create_batches(1, 1)[0]
         allowed = self.permission_verifier.check_off_chain_batch_roles(batch)
         self.assertFalse(allowed)
+
+    def test_network(self):
+        """
+        Test that if no roles are set and no default policy is set,
+        permit all is used.
+        """
+        allowed = self.permission_verifier.check_network_role(self.public_key)
+        self.assertTrue(allowed)
+
+    def test_network_default(self):
+        """
+        Test that if no roles are set, the default policy is used.
+            1. Set default policy to permit all. Public key should be allowed.
+            2. Set default policy to deny all. Public key should be rejected.
+        """
+        self._identity_view_factory.add_policy("default", ["PERMIT_KEY *"])
+        allowed = self.permission_verifier.check_network_role(self.public_key)
+        self.assertTrue(allowed)
+
+        self._identity_view_factory.add_policy("default", ["DENY_KEY *"])
+        allowed = self.permission_verifier.check_network_role(self.public_key)
+        self.assertFalse(allowed)
+
+    def test_network_role(self):
+        """
+        Test that role:"network" is checked properly.
+            1. Set policy to permit signing key. Public key should be allowed.
+            2. Set policy to permit some other key. Public key should be
+                rejected.
+        """
+        self._identity_view_factory.add_policy(
+            "policy1", ["PERMIT_KEY " + self.public_key])
+
+        self._identity_view_factory.add_role(
+                "network",
+                "policy1")
+
+        allowed = self.permission_verifier.check_network_role(self.public_key)
+        self.assertTrue(allowed)
+
+        self._identity_view_factory.add_policy("policy2", ["PERMIT_KEY other"])
+        self._identity_view_factory.add_role(
+                "network",
+                "policy2")
+        allowed = self.permission_verifier.check_network_role(self.public_key)
+        self.assertFalse(allowed)

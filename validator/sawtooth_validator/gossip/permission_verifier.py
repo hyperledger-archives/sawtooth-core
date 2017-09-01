@@ -21,6 +21,10 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.validator_pb2 import Message
 from sawtooth_validator.protobuf.identity_pb2 import Policy
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationViolation
+from sawtooth_validator.protobuf.authorization_pb2 import RoleType
+from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
@@ -241,6 +245,43 @@ class PermissionVerifier(object):
 
         return True
 
+    def check_network_role(self, public_key):
+        """ Check the public key of a node on the network to see if they are
+            permitted to participate. The roles being checked are the
+            following, from first to last:
+                "network"
+                "default"
+
+            The first role that is set will be the one used to enforce if the
+            node is allowed.
+
+            Args:
+                public_key (string): The public key belonging to a node on the
+                    network
+        """
+        state_root = self._current_root_func()
+        if state_root == INIT_ROOT_KEY:
+            LOGGER.debug("Chain head is not set yet. Permit all.")
+            return True
+
+        identity_view = \
+            self._identity_view_factory.create_identity_view(state_root)
+
+        role = identity_view.get_role("network")
+
+        if role is None:
+            policy_name = "default"
+        else:
+            policy_name = role.policy_name
+        policy = identity_view.get_policy(policy_name)
+        if policy is not None:
+            if not self._allowed(public_key, policy):
+                LOGGER.debug(
+                    "Node is not permitted: %s.",
+                    public_key)
+                return False
+        return True
+
     def _allowed(self, public_key, policy):
         for entry in policy.entries:
             if entry.type == Policy.PERMIT_KEY:
@@ -283,3 +324,42 @@ class BatchListPermissionVerifier(Handler):
             return make_response(response_proto.INTERNAL_ERROR)
 
         return HandlerResult(status=HandlerStatus.PASS)
+
+
+class NetworkPermissionHandler(Handler):
+    def __init__(self, network, permission_verifier, gossip):
+        self._network = network
+        self._permission_verifier = permission_verifier
+        self._gossip = gossip
+
+    def handle(self, connection_id, message_content):
+        # check to see if there is a public key
+        public_key = self._network.connection_id_to_public_key(connection_id)
+
+        if public_key is None:
+            LOGGER.debug("No public key found, %s is not permitted. "
+                         "Close connection.", connection_id)
+            violation = AuthorizationViolation(
+                violation=RoleType.Value("NETWORK"))
+            self._gossip.unregister_peer(connection_id)
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=violation,
+                message_type=validator_pb2.Message.AUTHORIZATION_VIOLATION)
+
+        # check public key against network/default role
+        permitted = self._permission_verifier.check_network_role(public_key)
+
+        if not permitted:
+            LOGGER.debug("Public key not permitted, %s is not permitted",
+                         connection_id)
+            self._gossip.unregister_peer(connection_id)
+            violation = AuthorizationViolation(
+                violation=RoleType.Value("NETWORK"))
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=violation,
+                message_type=validator_pb2.Message.AUTHORIZATION_VIOLATION)
+
+        # if allowed pass message
+        return HandlerResult(HandlerStatus.PASS)
