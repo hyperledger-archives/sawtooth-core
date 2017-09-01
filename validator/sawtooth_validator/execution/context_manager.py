@@ -499,8 +499,6 @@ class ContextManager(object):
                 # There aren't any more contexts known about.
                 break
             current_context = self._contexts[current_c_id]
-            if not current_context.is_read_only():
-                current_context.make_read_only()
 
             # First, check for addresses that have been deleted.
             deleted_addresses = current_context.get_if_deleted(reads)
@@ -920,10 +918,18 @@ class _ContextFuture(object):
         """
 
         if self._read_only:
+            if not from_tree:
+                LOGGER.warning("Tried to set address %s on a"
+                               " read-only context.",
+                               self.address)
             return
 
         with self._condition:
             if self._read_only:
+                if not from_tree:
+                    LOGGER.warning("Tried to set address %s on a"
+                                   " read-only context.",
+                                   self.address)
                 return
             if from_tree:
                 # If the result has not been set in the context, overwrite the
