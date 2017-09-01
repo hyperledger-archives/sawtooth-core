@@ -143,6 +143,7 @@
     addresses_to_set:
       - c:sha :
     name: densmore
+    valid: False
 - # ------------------ Batch 8
   -
     inputs:
@@ -164,3 +165,80 @@
       - d:sha :
     dependencies:
       - densmore
+- # ---------------- Batch 10
+  -
+    inputs:
+      - d:sha
+      - h:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    dependencies:
+      - krieger
+- #------------------- Batch 11
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    valid: False
+- # ---------------------- Batch 12
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+    name: helm
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - y:sha
+    addresses_to_set:
+      - y:sha :
+    valid: False
+- #----------------------- Batch 13
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - u:sha
+    addresses_to_set:
+      - u:sha :
+    dependencies:
+      - helm
+- # ---------------------- Batch 14
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - u:sha
+    addresses_to_set:
+      - u:sha :
+

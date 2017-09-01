@@ -72,7 +72,6 @@ class TestSchedulers(unittest.TestCase):
                                       always_persist=False)
         return context_manager, scheduler
 
-    @unittest.skip("Waiting for STL-499")
     def test_parallel_dependencies(self):
         """Tests that transactions dependent on other transactions will fail
         their batch, if the dependency fails

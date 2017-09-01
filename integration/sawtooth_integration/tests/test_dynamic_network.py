@@ -45,7 +45,7 @@ class TestDynamicNetwork(unittest.TestCase):
         self._run_dynamic_network_test(**{
             'processors': NodeController.intkey_config_registry,
             'peering': NodeController.peer_to_preceding_only,
-            'schedulers': NodeController.all_serial,
+            'schedulers': NodeController.even_parallel_odd_serial,
             'rounds': 3,
             'start_nodes_per_round': 2,
             'stop_nodes_per_round': 0,
@@ -84,7 +84,7 @@ class TestDynamicNetwork(unittest.TestCase):
             self,
             processors=NodeController.intkey_config_registry,
             peering=NodeController.peer_to_preceding_only,
-            schedulers=NodeController.all_serial,
+            schedulers=NodeController.even_parallel_odd_serial,
             rounds=2,
             start_nodes_per_round=3,
             stop_nodes_per_round=1,
