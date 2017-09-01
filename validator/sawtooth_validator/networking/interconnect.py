@@ -37,9 +37,11 @@ from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking import future
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
-from sawtooth_validator.protobuf.network_pb2 import ConnectMessage
-from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
-
+from sawtooth_validator.protobuf.authorization_pb2 import ConnectionRequest
+from sawtooth_validator.protobuf.authorization_pb2 import ConnectionResponse
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationTrustRequest
+from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,8 +53,18 @@ class ConnectionType(Enum):
     ZMQ_IDENTITY = 2
 
 
+class ConnectionStatus(Enum):
+    CONNECTED = 1
+    CONNECTION_REQUEST = 2
+
+
+class AuthorizationType(Enum):
+    TRUST = 1
+
+
 ConnectionInfo = namedtuple('ConnectionInfo',
-                            ['connection_type', 'connection', 'uri'])
+                            ['connection_type', 'connection', 'uri',
+                             'status', 'public_key'])
 
 
 def _generate_id():
@@ -218,6 +230,8 @@ class _SendReceive(object):
             self._connections[connection_id] = \
                 ConnectionInfo(ConnectionType.ZMQ_IDENTITY,
                                zmq_identity,
+                               None,
+                               None,
                                None)
 
     @asyncio.coroutine
@@ -556,7 +570,10 @@ class Interconnect(object):
                  connection_timeout=60,
                  max_incoming_connections=100,
                  monitor=False,
-                 max_future_callback_workers=10):
+                 max_future_callback_workers=10,
+                 roles=None,
+                 authorize=False,
+                 pub_key=None):
         """
         Constructor for Interconnect.
 
@@ -589,6 +606,15 @@ class Interconnect(object):
         self._connections = {}
         self.outbound_connections = {}
         self._max_incoming_connections = max_incoming_connections
+        self._roles = {}
+        # if roles are None, default to AuthorizationType.TRUST
+        if roles is None:
+            self._roles["network"] = AuthorizationType.TRUST
+        else:
+            self._roles = roles
+
+        self._authorize = authorize
+        self._pub_key = pub_key
 
         self._send_receive_thread = _SendReceive(
             "ServerThread",
@@ -604,6 +630,32 @@ class Interconnect(object):
             monitor=monitor)
 
         self._thread = None
+
+    @property
+    def roles(self):
+        return self._roles
+
+    @property
+    def endpoint(self):
+        return self._endpoint
+
+    def connection_id_to_public_key(self, connection_id):
+        """
+        Get stored public key for a connection.
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            return connection_info.public_key
+        return None
+
+    def get_connection_status(self, connection_id):
+        """
+        Get status of the connection during Role enforcement.
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            return connection_info.status
+        return None
 
     def set_check_connections(self, function):
         self._send_receive_thread.set_check_connections(function)
@@ -652,7 +704,7 @@ class Interconnect(object):
 
         self._add_connection(conn, uri)
 
-        connect_message = ConnectMessage(endpoint=self._public_endpoint)
+        connect_message = ConnectionRequest(endpoint=self._public_endpoint)
         conn.send(validator_pb2.Message.NETWORK_CONNECT,
                   connect_message.SerializeToString(),
                   callback=partial(self._connect_callback,
@@ -662,25 +714,74 @@ class Interconnect(object):
 
         return conn
 
+    def send_connect_request(self, connection_id):
+        """
+        Send ConnectionRequest to an inbound connection. This allows
+        the validator to be authorized by the incomin connection.
+        """
+        connect_message = ConnectionRequest(endpoint=self._public_endpoint)
+        self.send(validator_pb2.Message.NETWORK_CONNECT,
+                  connect_message.SerializeToString(),
+                  connection_id,
+                  callback=partial(self._inbound_connection_request_callback,
+                                   connection=connection_id
+                                   ))
+
     def _connect_callback(self, request, result,
                           connection=None,
                           success_callback=None,
                           failure_callback=None):
-        ack = NetworkAcknowledgement()
-        ack.ParseFromString(result.content)
+        connection_response = ConnectionResponse()
+        connection_response.ParseFromString(result.content)
 
-        if ack.status == ack.ERROR:
+        if connection_response.status == connection_response.ERROR:
             LOGGER.debug("Received an error response to the NETWORK_CONNECT "
                          "we sent. Removing connection: %s",
                          connection.connection_id)
             self.remove_connection(connection.connection_id)
             if failure_callback:
                 failure_callback(connection_id=connection.connection_id)
-        elif ack.status == ack.OK:
+        elif connection_response.status == connection_response.OK:
+
             LOGGER.debug("Connection to %s was acknowledged",
                          connection.connection_id)
+            if self._authorize:
+                auth_trust_request = AuthorizationTrustRequest(
+                    roles=[RoleType.Value("NETWORK")],
+                    public_key=self._pub_key)
+                connection.send(
+                    validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
+                    auth_trust_request.SerializeToString(),
+                    callback=partial(self._authorization_callback,
+                                     connection=connection,
+                                     success_callback=success_callback,
+                                     failure_callback=failure_callback))
+            else:
+                if success_callback:
+                    success_callback(connection_id=connection.connection_id)
+
+    def _inbound_connection_request_callback(self, request, result,
+                                             connection=None):
+        auth_trust_request = AuthorizationTrustRequest(
+            roles=[RoleType.Value("NETWORK")],
+            public_key=self._pub_key)
+        self.send(
+            validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
+            auth_trust_request.SerializeToString(),
+            connection,
+            )
+
+    def _authorization_callback(self, request, result,
+                                connection=None,
+                                success_callback=None,
+                                failure_callback=None):
+        if result.message_type == \
+                validator_pb2.Message.AUTHORIZATION_TRUST_RESPONSE:
             if success_callback:
-                success_callback(connection_id=connection.connection_id)
+                success_callback(connection.connection_id)
+        else:
+            if failure_callback:
+                failure_callback(connection.connection_id)
 
     def send(self, message_type, data, connection_id, callback=None):
         """
@@ -756,7 +857,7 @@ class Interconnect(object):
         """Adds the endpoint to the connection definition. When the
         connection is created by the send/receive thread, we do not
         yet have the endpoint of the remote node. That is not known
-        until we process the incoming ConnectMessage.
+        until we process the incoming ConnectRequest.
 
         Args:
             connection_id (str): The identifier for the connection.
@@ -768,12 +869,64 @@ class Interconnect(object):
             self._connections[connection_id] = \
                 ConnectionInfo(connection_info.connection_type,
                                connection_info.connection,
-                               endpoint)
+                               endpoint,
+                               connection_info.status,
+                               connection_info.public_key)
         else:
             LOGGER.debug("Could not update the endpoint %s for "
                          "connection_id %s. The connection does not "
                          "exist.",
                          endpoint,
+                         connection_id)
+
+    def update_connection_public_key(self, connection_id, public_key):
+        """Adds the public_key to the connection definition.
+
+        Args:
+            connection_id (str): The identifier for the connection.
+            public_key (str): The public key used to enforce permissions on
+                connections.
+
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            self._connections[connection_id] = \
+                ConnectionInfo(connection_info.connection_type,
+                               connection_info.connection,
+                               connection_info.uri,
+                               connection_info.status,
+                               public_key)
+        else:
+            LOGGER.debug("Could not update the public key %s for "
+                         "connection_id %s. The connection does not "
+                         "exist.",
+                         public_key,
+                         connection_id)
+
+    def update_connection_status(self, connection_id, status):
+        """Adds a status to the connection definition. This allows the handlers
+        to ensure that the connection is following the steps in order for
+        authorization enforement.
+
+        Args:
+            connection_id (str): The identifier for the connection.
+            status (ConnectionStatus): An enum value for the stage of
+                authortization the connection is at.
+
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            self._connections[connection_id] = \
+                ConnectionInfo(connection_info.connection_type,
+                               connection_info.connection,
+                               connection_info.uri,
+                               status,
+                               connection_info.public_key)
+        else:
+            LOGGER.debug("Could not update the status to %s for "
+                         "connection_id %s. The connection does not "
+                         "exist.",
+                         status,
                          connection_id)
 
     def _add_connection(self, connection, uri=None):
@@ -782,7 +935,9 @@ class Interconnect(object):
             self._connections[connection_id] = \
                 ConnectionInfo(ConnectionType.OUTBOUND_CONNECTION,
                                connection,
-                               uri)
+                               uri,
+                               None,
+                               None)
 
     def remove_connection(self, connection_id):
         LOGGER.debug("Removing connection: %s", connection_id)
@@ -841,6 +996,13 @@ class Interconnect(object):
 
     def has_connection(self, connection_id):
         if connection_id in self._connections:
+            return True
+        return False
+
+    def is_outbound_connection(self, connection_id):
+        connection_info = self._connections[connection_id]
+        if connection_info.connection_type == \
+                ConnectionType.OUTBOUND_CONNECTION:
             return True
         return False
 

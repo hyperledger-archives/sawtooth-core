@@ -21,6 +21,8 @@ import signal
 import time
 import threading
 
+import sawtooth_signing as signing
+
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.genesis import GenesisController
@@ -84,6 +86,10 @@ from sawtooth_validator.gossip.gossip_handlers import GetPeersResponseHandler
 from sawtooth_validator.networking.handlers import PingHandler
 from sawtooth_validator.networking.handlers import ConnectHandler
 from sawtooth_validator.networking.handlers import DisconnectHandler
+from sawtooth_validator.networking.handlers import \
+    AuthorizationTrustRequestHandler
+from sawtooth_validator.networking.handlers import \
+    AuthorizationViolationHandler
 
 
 LOGGER = logging.getLogger(__name__)
@@ -205,7 +211,9 @@ class Validator(object):
             public_endpoint=endpoint,
             connection_timeout=30,
             max_incoming_connections=100,
-            max_future_callback_workers=10)
+            max_future_callback_workers=10,
+            authorize=True,
+            pub_key=signing.generate_pubkey(identity_signing_key))
 
         self._gossip = Gossip(self._network,
                               endpoint=endpoint,
@@ -307,6 +315,18 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.NETWORK_DISCONNECT,
             DisconnectHandler(network=self._network),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.AUTHORIZATION_VIOLATION,
+            AuthorizationViolationHandler(network=self._network),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
+            AuthorizationTrustRequestHandler(
+                network=self._network,
+                permission_verifier=permission_verifier),
             network_thread_pool)
 
         # Set up gossip handlers
