@@ -71,6 +71,8 @@ from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
+from sawtooth_validator.gossip.permission_verifier import \
+    NetworkPermissionHandler
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
@@ -332,12 +334,39 @@ class Validator(object):
         # Set up gossip handlers
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
             GetPeersRequestHandler(gossip=self._gossip),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
             GetPeersResponseHandler(gossip=self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_REGISTER,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
@@ -356,19 +385,29 @@ class Validator(object):
             GossipMessageHandler(),
             network_thread_pool)
 
-        # GOSSIP_MESSAGE 2) Verifies signature
+        # GOSSIP_MESSAGE 2) Verify Network Permissions
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        # GOSSIP_MESSAGE 3) Verifies signature
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             signature_verifier.GossipMessageSignatureVerifier(),
             sig_pool)
 
-        # GOSSIP_MESSAGE 3) Verifies batch structure
+        # GOSSIP_MESSAGE 4) Verifies batch structure
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             structure_verifier.GossipHandlerStructureVerifier(),
             network_thread_pool)
 
-        # GOSSIP_MESSAGE 4) Determines if we should broadcast the
+        # GOSSIP_MESSAGE 5) Determines if we should broadcast the
         # message to our peers. It is important that this occur prior
         # to the sending of the message to the completer, as this step
         # relies on whether the  gossip message has previously been
@@ -381,11 +420,20 @@ class Validator(object):
                 completer=completer),
             network_thread_pool)
 
-        # GOSSIP_MESSAGE 5) Send message to completer
+        # GOSSIP_MESSAGE 6) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             CompleterGossipHandler(
                 completer),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
@@ -399,19 +447,29 @@ class Validator(object):
             GossipBlockResponseHandler(),
             network_thread_pool)
 
-        # GOSSIP_BLOCK_RESPONSE 2) Verifies signature
+        # GOSSIP_MESSAGE 2) Verify Network Permissions
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        # GOSSIP_BLOCK_RESPONSE 3) Verifies signature
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             signature_verifier.GossipBlockResponseSignatureVerifier(),
             sig_pool)
 
-        # GOSSIP_BLOCK_RESPONSE 3) Check batch structure
+        # GOSSIP_BLOCK_RESPONSE 4) Check batch structure
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             structure_verifier.GossipBlockResponseStructureVerifier(),
             network_thread_pool)
 
-        # GOSSIP_BLOCK_RESPONSE 4) Send message to completer
+        # GOSSIP_BLOCK_RESPONSE 5) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             CompleterGossipBlockResponseHandler(
@@ -425,12 +483,39 @@ class Validator(object):
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
             BatchByBatchIdResponderHandler(responder, self._gossip),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
             BatchByTransactionIdResponderHandler(responder, self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         # GOSSIP_BATCH_RESPONSE 1) Sends ack to the sender
