@@ -463,11 +463,9 @@ class ParallelScheduler(Scheduler):
             # of BatchExecutionResults, as in the SerialScheduler
             batch = self._batches_by_id[batch_signature]
 
-            for txn in batch.transactions:
-                txn_result = self._txn_results[txn.header_signature]
-                if not txn_result.is_valid:
-                    return BatchExecutionResult(
-                        is_valid=False, state_hash=None)
+            if not self._is_valid_batch(batch):
+                return BatchExecutionResult(is_valid=False, state_hash=None)
+
             state_hash = None
             if self._is_explicit_request_for_state_root(batch_signature):
                 contexts = self._get_contexts_for_squash(batch_signature)
