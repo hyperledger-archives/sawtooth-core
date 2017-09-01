@@ -127,6 +127,12 @@ message Message {
         STATE_DELTA_EVENT = 404;
         STATE_DELTA_GET_EVENTS_REQUEST = 405;
         STATE_DELTA_GET_EVENTS_RESPONSE = 406;
+
+        // Message types for Authorization Types
+        AUTHORIZATION_CONNECTION_RESPONSE = 600;
+        AUTHORIZATION_VIOLATION = 601;
+        AUTHORIZATION_TRUST_REQUEST = 602;
+        AUTHORIZATION_TRUST_RESPONSE = 603;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the
