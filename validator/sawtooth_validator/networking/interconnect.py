@@ -43,6 +43,8 @@ from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 
 LOGGER = logging.getLogger(__name__)
 
+# pylint: disable=too-many-lines
+
 
 class ConnectionType(Enum):
     OUTBOUND_CONNECTION = 1
@@ -317,6 +319,55 @@ class _SendReceive(object):
             # the eventloop is closed. This occurs on shutdown.
             pass
 
+    @asyncio.coroutine
+    def _send_last_message(self, identity, msg):
+        LOGGER.debug("%s sending %s to %s",
+                     self._connection,
+                     get_enum_name(msg.message_type),
+                     identity if identity else self._address)
+
+        if identity is None:
+            message_bundle = [msg.SerializeToString()]
+        else:
+            message_bundle = [bytes(identity),
+                              msg.SerializeToString()]
+
+        yield from self._socket.send_multipart(message_bundle)
+        if identity is None:
+            self.shutdown()
+        else:
+            self.remove_connected_identity(identity)
+
+    def send_last_message(self, msg, connection_id=None):
+        """
+        Should be used instead of send_message, when you want to close the
+        connection once the message is sent.
+
+        :param msg: protobuf validator_pb2.Message
+        """
+        zmq_identity = None
+        if connection_id is not None and self._connections is not None:
+            if connection_id in self._connections:
+                connection_info = self._connections.get(connection_id)
+                if connection_info.connection_type == \
+                        ConnectionType.ZMQ_IDENTITY:
+                    zmq_identity = connection_info.connection
+                    del self._connections[connection_id]
+            else:
+                LOGGER.debug("Can't send to %s, not in self._connections",
+                             connection_id)
+
+        self._ready.wait()
+
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self._send_last_message(zmq_identity, msg),
+                self._event_loop)
+        except RuntimeError:
+            # run_coroutine_threadsafe will throw a RuntimeError if
+            # the eventloop is closed. This occurs on shutdown.
+            pass
+
     def setup(self, socket_type, complete_or_error_queue):
         """Setup the asyncio event loop.
 
@@ -380,6 +431,9 @@ class _SendReceive(object):
 
             self._dispatcher.add_send_message(self._connection,
                                               self.send_message)
+            self._dispatcher.add_send_last_message(self._connection,
+                                                   self.send_last_message)
+
             asyncio.ensure_future(self._receive_message(),
                                   loop=self._event_loop)
             if self._monitor:
@@ -444,6 +498,7 @@ class _SendReceive(object):
     @asyncio.coroutine
     def _stop(self):
         self._dispatcher.remove_send_message(self._connection)
+        self._dispatcher.remove_send_last_message(self._connection)
         yield from self._stop_auth()
         for task in asyncio.Task.all_tasks(self._event_loop):
             task.cancel()
@@ -455,6 +510,7 @@ class _SendReceive(object):
 
     def shutdown(self):
         self._dispatcher.remove_send_message(self._connection)
+        self._dispatcher.remove_send_last_message(self._connection)
         if self._event_loop is None:
             return
         if self._event_loop.is_closed():
@@ -743,6 +799,46 @@ class Interconnect(object):
                 self._send_receive_thread.remove_connected_identity(
                     connection_info.connection)
 
+    def send_last_message(self, message_type, data,
+                          connection_id, callback=None):
+        """
+        Send a message of message_type and close the connection.
+        :param connection_id: the identity for the connection to send to
+        :param message_type: validator_pb2.Message.* enum value
+        :param data: bytes serialized protobuf
+        :return: future.Future
+        """
+        if connection_id not in self._connections:
+            raise ValueError("Unknown connection id: %s",
+                             connection_id)
+        connection_info = self._connections.get(connection_id)
+        if connection_info.connection_type == \
+                ConnectionType.ZMQ_IDENTITY:
+            message = validator_pb2.Message(
+                correlation_id=_generate_id(),
+                content=data,
+                message_type=message_type)
+
+            fut = future.Future(message.correlation_id, message.content,
+                                has_callback=True if callback is not None
+                                else False)
+
+            if callback is not None:
+                fut.add_callback(callback)
+
+            self._futures.put(fut)
+
+            self._send_receive_thread.send_last_message(
+                msg=message,
+                connection_id=connection_id)
+            return fut
+        else:
+            del self._connections[connection_id]
+            return connection_info.connection.send_last_message(
+                message_type,
+                data,
+                callback=callback)
+
     def has_connection(self, connection_id):
         if connection_id in self._connections:
             return True
@@ -823,6 +919,35 @@ class OutboundConnection(object):
         self._futures.put(fut)
 
         self._send_receive_thread.send_message(message)
+        return fut
+
+    def send_last_message(self, message_type, data, callback=None):
+        """Sends a message of message_type and then close the connection.
+
+        Args:
+            message_type (validator_pb2.Message): enum value
+            data (bytes): serialized protobuf
+            callback (function): a callback function to call when a
+                response to this message is received
+
+        Returns:
+            future.Future
+        """
+        message = validator_pb2.Message(
+            correlation_id=_generate_id(),
+            content=data,
+            message_type=message_type)
+
+        fut = future.Future(message.correlation_id, message.content,
+                            has_callback=True if callback is not None
+                            else False)
+
+        if callback is not None:
+            fut.add_callback(callback)
+
+        self._futures.put(fut)
+
+        self._send_receive_thread.send_last_message(message)
         return fut
 
     def start(self):
