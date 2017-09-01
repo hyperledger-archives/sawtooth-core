@@ -189,7 +189,7 @@ func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermi
 // to the contract call.
 //
 // Returns the output from the EVM call.
-func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wait int) ([]byte, error) {
+func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wait int, chaining_enabled bool) ([]byte, error) {
 	fromAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
@@ -200,11 +200,15 @@ func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wa
 		return nil, err
 	}
 
-	addresses := []string{
-		fromAddr.ToStateAddr().String(),
-		toAddr.ToStateAddr().String(),
-		// For checking global permissions
-		GlobalPermissionsAddress().ToStateAddr().String(),
+	var addresses []string
+	if chaining_enabled {
+		addresses = append(addresses, PREFIX)
+	} else {
+		addresses = append(addresses,
+			fromAddr.ToStateAddr().String(),
+			toAddr.ToStateAddr().String(),
+			// For checking global permissions
+			GlobalPermissionsAddress().ToStateAddr().String())
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
