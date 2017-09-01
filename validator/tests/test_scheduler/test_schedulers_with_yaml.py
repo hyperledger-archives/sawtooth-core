@@ -357,7 +357,6 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='heterogeneous_workload.yaml')
 
-    @unittest.skip("Waiting for STL-499")
     def test_parallel_dependencies(self):
         """Tests the parallel scheduler against the
         test_scheduler/data/dependencies.yaml file.
@@ -373,7 +372,6 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='dependencies.yaml')
 
-    @unittest.skip("Waiting for STL-499")
     def test_parallel_lifo_dependencies(self):
         """Tests the parallel scheduler against the
         test_scheduler/data/dependencies.yaml file.
