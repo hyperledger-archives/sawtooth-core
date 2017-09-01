@@ -1033,6 +1033,57 @@ class TestContextManager(unittest.TestCase):
                                          "manager calculated merkle hashes "
                                          "are the same")
 
+    def test_wildcarded_inputs_outputs(self):
+        """Tests the context manager with wildcarded inputs and outputs.
+
+        Notes:
+            1. Create a context with a wildcarded input and output and
+               another non-wildcarded input and output.
+            2. Get an address under the wildcard and set to both the non-wildcarded
+               address and an address under the wildcard.
+            3. Squash the context and compare to a manually generated state
+               hash.
+        """
+
+        # 1
+        namespaces = [
+            self._create_address('a')[:8],
+            self._create_address('b')
+        ]
+
+        ctx_1 = self.context_manager.create_context(
+            inputs=namespaces,
+            outputs=namespaces,
+            base_contexts=[],
+            state_hash=self.first_state_hash)
+
+        # 2
+        self.context_manager.get(
+            context_id=ctx_1,
+            address_list=[self._create_address('a')])
+
+        self.context_manager.set(
+            context_id=ctx_1,
+            address_value_list=[{self._create_address('a'): b'1',
+                                 self._create_address('b'): b'2'}])
+
+        # 3
+        squash = self.context_manager.get_squash_handler()
+
+        tree = MerkleDatabase(self.database_results)
+        tree.set_merkle_root(self.first_state_hash)
+
+        calculated_state_root = tree.update(
+            set_items={self._create_address('a'): b'1',
+                       self._create_address('b'): b'2'})
+
+        state_root = squash(state_root=self.first_state_hash,
+                            context_ids=[ctx_1],
+                            persist=True,
+                            clean_up=True)
+
+        self.assertEqual(state_root, calculated_state_root)
+
     @unittest.skip("Necessary to catch scheduler bugs--Depth-first search")
     def test_check_for_bad_combination(self):
         """Tests that the context manager will raise
