@@ -39,9 +39,3 @@ export GOPATH=/go:$top_dir/sdk/go:$top_dir/sdk/examples/noop_go
 cd $top_dir/sdk/examples/noop_go/src/sawtooth_noop
 mkdir -p $top_dir/sdk/examples/noop_go/bin
 go build -o $top_dir/sdk/examples/noop_go/bin/noop-tp-go
-
-echo -e "\033[0;32m--- Building smallbank-tp-go ---\n\033[0m"
-export GOPATH=/go:$top_dir/sdk/go:$top_dir/families/smallbank/smallbank_go
-cd $top_dir/families/smallbank/smallbank_go/src/sawtooth_smallbank
-mkdir -p $top_dir/families/smallbank/smallbank_go/bin
-go build -o $top_dir/families/smallbank/smallbank_go/bin/smallbank-tp-go

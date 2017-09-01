@@ -233,6 +233,7 @@ then
         docker_build docker/sawtooth-dev-go docker/ sawtooth-intkey-tp-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-seth-tp
         docker_build docker/sawtooth-dev-go docker/ sawtooth-xo-tp-go
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-smallbank-tp-go
         docker_run sawtooth-dev-go
     }
 
@@ -285,12 +286,15 @@ then
         mkdir -p $build_dir
         cp $top_dir/docker/sawtooth-int-intkey-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
+        cp $top_dir/docker/sawtooth-int-smallbank-tp-go $build_dir
         cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
             $build_dir
         cp $top_dir/docker/sawtooth-int-seth-tp $build_dir
         cp $top_dir/families/seth/bin/seth-tp \
             $build_dir
         cp $top_dir/sdk/examples/xo_go/bin/xo-tp-go \
+            $build_dir
+        cp $top_dir/families/smallbank/smallbank_go/bin/smallbank-tp-go \
             $build_dir
         ls $build_dir
 
@@ -300,6 +304,8 @@ then
             sawtooth-seth-tp
         docker_build $build_dir/sawtooth-int-xo-tp-go $build_dir/ \
             sawtooth-xo-tp-go
+        docker_build $build_dir/sawtooth-int-smallbank-tp-go $build_dir/ \
+            sawtooth-smallbank-tp-go
     }
 
     build_java() {
