@@ -148,7 +148,7 @@ func TestPermissions(t *testing.T) {
 
   // Verify the account can call a contract
   cmd, _ := hex.DecodeString(SET_0_42)
-  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, 0)
+  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, 0, false)
   if err != nil {
     t.Error(err.Error())
   }
@@ -191,7 +191,7 @@ func TestPermissions(t *testing.T) {
 
   // Verify the account can't call a contract
   cmd, _ = hex.DecodeString(SET_0_42)
-  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, 0)
+  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, 0, false)
   if err != nil {
     t.Error(err.Error())
   }

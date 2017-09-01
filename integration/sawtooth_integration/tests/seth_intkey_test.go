@@ -65,7 +65,7 @@ func TestIntkey(t *testing.T) {
 
   for _, c := range cmds {
     cmd, _ := hex.DecodeString(c)
-    _, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000, 0)
+    _, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000, 0, false)
     if err != nil {
       t.Error(err.Error())
     }
