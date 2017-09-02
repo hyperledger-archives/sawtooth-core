@@ -47,7 +47,7 @@ services:
       - 4004
       - 8800
     command: "bash -c \"\
-        sawtooth keygen --key-dir /project/sawtooth-core sawtooth && \
+        if [ ! -f sawtooth.priv ]; then sawtooth keygen --key-dir /project/sawtooth-core sawtooth; fi && \
         sawtooth admin keygen && \
         sawtooth admin genesis && \
         sawtooth-validator --endpoint tcp://validator:8800 -v \
