@@ -50,6 +50,7 @@ from test_journal.mock import MockStateDeltaProcessor
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import MockPermissionVerifier
 from test_journal.mock import SynchronousExecutor
+from test_journal.mock import MockBatchInjectorFactory
 from test_journal.utils import wait_until
 
 from test_journal import mock_consensus
@@ -330,6 +331,33 @@ class TestBlockPublisher(unittest.TestCase):
         self.publish_block()
         self.assert_no_block_published() # block should be empty after batch
         # with duplicate transaction is dropped.
+
+    def test_batch_injection_start_block(self):
+        '''
+        Test that the batch is injected at the beginning of the block.
+        '''
+
+        injected_batch = self.make_batch()
+
+        self.publisher = BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            data_dir=None,
+            config_dir=None,
+            permission_verifier=self.permission_verifier,
+            batch_injector_factory=MockBatchInjectorFactory(injected_batch))
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.assert_batch_in_block(injected_batch)
 
     # assertions
     def assert_block_published(self):
