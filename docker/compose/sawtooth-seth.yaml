@@ -43,6 +43,9 @@ services:
     expose:
       - 4004
       - 8800
+    ports:
+      - 4004
+      - 8800
     command: "bash -c \"\
         sawtooth keygen --key-dir /project/sawtooth-core sawtooth && \
         sawtooth admin keygen && \
@@ -59,6 +62,8 @@ services:
       - ../../:/project/sawtooth-core
     expose:
       - 4004
+      - 8080
+    ports:
       - 8080
     depends_on:
      - validator
