@@ -16,9 +16,11 @@
  */
 'use strict'
 
+const _ = require('lodash')
 const { Stream } = require('sawtooth-sdk/messaging/stream')
 const { Message } = require('sawtooth-sdk/protobuf')
-const db = require('../db/state')
+const blocks = require('../db/blocks')
+const state = require('../db/state')
 
 // Until processor is built, server will listen for IntKey deltas
 const cbor = require('cbor')
@@ -36,8 +38,9 @@ const StateDeltaEvent = root.lookup('StateDeltaEvent')
 
 const handleDeltaEvent = content => {
   const event = StateDeltaEvent.decode(content)
+  blocks.insert(_.pick(event, 'blockNum', 'blockId', 'stateRootHash'))
   const changes = event.stateChanges.map(change => cbor.decode(change.value))
-  if (changes.length !== 0) db.insert(changes)
+  if (changes.length !== 0) state.insert(changes)
 }
 
 const subscribe = () => {
