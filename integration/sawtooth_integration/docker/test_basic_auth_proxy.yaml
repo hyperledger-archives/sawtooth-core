@@ -35,10 +35,12 @@ services:
     expose:
       - 4004
       - 8800
-    # start the validator with an empty genesis batch
     command: "bash -c \"\
         sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawtooth config genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawtooth admin genesis config-genesis.batch && \
         sawtooth-validator -v \
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
