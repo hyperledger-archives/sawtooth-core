@@ -129,6 +129,7 @@ class Journal(object):
                  block_cache_purge_frequency=30,
                  block_cache_keep_time=300,
                  batch_observers=None,
+                 chain_observers=None,
                  block_cache=None):
         """
         Creates a Journal instance.
@@ -153,9 +154,11 @@ class Journal(object):
             check_publish_block_frequency(float): delay in seconds between
                 checks if a block should be claimed.
             block_cache_purge_frequency (float): delay in seconds between
-            purges of the BlockCache.
+                purges of the BlockCache.
             block_cache_keep_time (float): time in seconds to hold unaccess
-            blocks in the BlockCache.
+                blocks in the BlockCache.
+            chain_observers (list of :obj:`ChainObserver`): Objects to notify
+                on chain updates.
             block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
                 place of an internally created instance. Defaults to None.
         """
@@ -188,6 +191,8 @@ class Journal(object):
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
+        self._chain_observers = [] if chain_observers is None \
+            else chain_observers
 
     def _init_subprocesses(self):
         self._block_publisher = BlockPublisher(
@@ -222,7 +227,8 @@ class Journal(object):
             identity_signing_key=self._identity_signing_key,
             data_dir=self._data_dir,
             config_dir=self._config_dir,
-            permission_verifier=self._permission_verifier
+            permission_verifier=self._permission_verifier,
+            chain_observers=self._chain_observers,
         )
         self._chain_thread = self._ChainThread(
             chain_controller=self._chain_controller,

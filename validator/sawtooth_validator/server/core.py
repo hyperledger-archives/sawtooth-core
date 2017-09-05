@@ -245,7 +245,8 @@ class Validator(object):
             check_publish_block_frequency=0.1,
             block_cache_purge_frequency=30,
             block_cache_keep_time=300,
-            batch_observers=[batch_tracker]
+            batch_observers=[batch_tracker],
+            chain_observers=[],
         )
 
         self._genesis_controller = GenesisController(
