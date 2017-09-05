@@ -15,6 +15,7 @@
 
 import asyncio
 from concurrent.futures import CancelledError
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import hashlib
 import logging
@@ -498,7 +499,8 @@ class Interconnect(object):
                  public_endpoint=None,
                  connection_timeout=60,
                  max_incoming_connections=100,
-                 monitor=False):
+                 monitor=False,
+                 max_future_callback_workers=10):
         """
         Constructor for Interconnect.
 
@@ -512,10 +514,15 @@ class Interconnect(object):
                 server_public_key used by the server socket to sign
                 messages are part of the zmq auth handshake.
             heartbeat (bool): Whether or not to send ping messages.
+            max_future_callback_workers (int): max number of workers for future
+                callbacks, defaults to 10
         """
         self._endpoint = endpoint
         self._public_endpoint = public_endpoint
-        self._futures = future.FutureCollection()
+        self._future_callback_threadpool = ThreadPoolExecutor(
+            max_workers=max_future_callback_workers)
+        self._futures = future.FutureCollection(
+            resolving_threadpool=self._future_callback_threadpool)
         self._dispatcher = dispatcher
         self._zmq_identity = zmq_identity
         self._secured = secured
@@ -580,6 +587,7 @@ class Interconnect(object):
             secured=self._secured,
             server_public_key=self._server_public_key,
             server_private_key=self._server_private_key,
+            future_callback_threadpool=self._future_callback_threadpool,
             heartbeat=True,
             connection_timeout=self._connection_timeout)
 
@@ -669,7 +677,7 @@ class Interconnect(object):
 
     def stop(self):
         self._send_receive_thread.shutdown()
-        self._futures.stop()
+        self._future_callback_threadpool.shutdown(wait=True)
         for conn in self.outbound_connections.values():
             conn.stop()
 
@@ -750,9 +758,11 @@ class OutboundConnection(object):
                  secured,
                  server_public_key,
                  server_private_key,
+                 future_callback_threadpool,
                  heartbeat=True,
                  connection_timeout=60):
-        self._futures = future.FutureCollection()
+        self._futures = future.FutureCollection(
+            resolving_threadpool=future_callback_threadpool)
         self._zmq_identity = zmq_identity
         self._endpoint = endpoint
         self._dispatcher = dispatcher
@@ -828,4 +838,3 @@ class OutboundConnection(object):
 
     def stop(self):
         self._send_receive_thread.shutdown()
-        self._futures.stop()

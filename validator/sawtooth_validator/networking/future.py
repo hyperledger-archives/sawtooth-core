@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from threading import Condition
 from threading import RLock
 import time
@@ -107,20 +106,10 @@ class FutureCollectionKeyError(Exception):
 
 
 class FutureCollection(object):
-    def __init__(self, max_workers=4):
+    def __init__(self, resolving_threadpool=None):
         self._futures = {}
         self._lock = RLock()
-        self._resolving_threadpool = ThreadPoolExecutor(
-            max_workers=max_workers)
-
-    def stop(self):
-        """Shutdown the threadpool used for running callbacks and wait for
-        all the callbacks to finish running.
-
-        Returns:
-            None
-        """
-        self._resolving_threadpool.shutdown(wait=True)
+        self._resolving_threadpool = resolving_threadpool
 
     def put(self, future):
         self._futures[future.correlation_id] = future
@@ -131,6 +120,8 @@ class FutureCollection(object):
             future.set_result(result)
             if self._resolving_threadpool is not None:
                 self._resolving_threadpool.submit(future.run_callback)
+            else:
+                future.run_callback()
 
     def get(self, correlation_id):
         try:
