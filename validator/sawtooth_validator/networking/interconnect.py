@@ -190,7 +190,7 @@ class _SendReceive(object):
                             )
                             fut = future.Future(message.correlation_id,
                                                 message.content,
-                                                has_callback=False)
+                                                )
                             self._futures.put(fut)
                             message_frame = [bytes(zmq_identity),
                                              message.SerializeToString()]
@@ -803,22 +803,18 @@ class Interconnect(object):
                 message_type=message_type)
 
             fut = future.Future(message.correlation_id, message.content,
-                                has_callback=True if callback is not None
-                                else False)
-
-            if callback is not None:
-                fut.add_callback(callback)
+                                callback)
 
             self._futures.put(fut)
 
             self._send_receive_thread.send_message(msg=message,
                                                    connection_id=connection_id)
             return fut
-        else:
-            return connection_info.connection.send(
-                message_type,
-                data,
-                callback=callback)
+
+        return connection_info.connection.send(
+            message_type,
+            data,
+            callback=callback)
 
     def start(self):
         complete_or_error_queue = queue.Queue()
@@ -975,11 +971,7 @@ class Interconnect(object):
                 message_type=message_type)
 
             fut = future.Future(message.correlation_id, message.content,
-                                has_callback=True if callback is not None
-                                else False)
-
-            if callback is not None:
-                fut.add_callback(callback)
+                                callback)
 
             self._futures.put(fut)
 
@@ -987,12 +979,12 @@ class Interconnect(object):
                 msg=message,
                 connection_id=connection_id)
             return fut
-        else:
-            del self._connections[connection_id]
-            return connection_info.connection.send_last_message(
-                message_type,
-                data,
-                callback=callback)
+
+        del self._connections[connection_id]
+        return connection_info.connection.send_last_message(
+            message_type,
+            data,
+            callback=callback)
 
     def has_connection(self, connection_id):
         if connection_id in self._connections:
@@ -1072,11 +1064,7 @@ class OutboundConnection(object):
             message_type=message_type)
 
         fut = future.Future(message.correlation_id, message.content,
-                            has_callback=True if callback is not None
-                            else False)
-
-        if callback is not None:
-            fut.add_callback(callback)
+                            callback)
 
         self._futures.put(fut)
 
@@ -1101,11 +1089,7 @@ class OutboundConnection(object):
             message_type=message_type)
 
         fut = future.Future(message.correlation_id, message.content,
-                            has_callback=True if callback is not None
-                            else False)
-
-        if callback is not None:
-            fut.add_callback(callback)
+                            callback)
 
         self._futures.put(fut)
 
