@@ -164,7 +164,8 @@ class Validator(object):
                                      secured=False,
                                      heartbeat=False,
                                      max_incoming_connections=20,
-                                     monitor=True)
+                                     monitor=True,
+                                     max_future_callback_workers=10)
 
         executor = TransactionExecutor(
             service=self._service,
@@ -203,7 +204,8 @@ class Validator(object):
             heartbeat=True,
             public_endpoint=endpoint,
             connection_timeout=30,
-            max_incoming_connections=100)
+            max_incoming_connections=100,
+            max_future_callback_workers=10)
 
         self._gossip = Gossip(self._network,
                               endpoint=endpoint,
