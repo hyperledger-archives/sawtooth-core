@@ -25,18 +25,18 @@ import (
 	"sawtooth_sdk/protobuf/validator_pb2"
 )
 
-// State provides an abstract interface for getting and setting validator
-// state. All validator interactions by a handler should be through a State
-// instance. Currently, the State class is NOT thread-safe and State classes
+// Context provides an abstract interface for getting and setting validator
+// state. All validator interactions by a handler should be through a Context
+// instance. Currently, the Context class is NOT thread-safe and Context classes
 // may not share the same messaging.Connection object.
-type State struct {
+type Context struct {
 	connection messaging.Connection
 	contextId  string
 }
 
-// Construct a new state cobject given an initialized Stream and Context ID.
-func NewState(connection messaging.Connection, contextId string) *State {
-	return &State{
+// Construct a new context object given an initialized Stream and Context ID.
+func NewContext(connection messaging.Connection, contextId string) *Context {
+	return &Context{
 		connection: connection,
 		contextId:  contextId,
 	}
@@ -46,7 +46,7 @@ func NewState(connection messaging.Connection, contextId string) *State {
 // given slice. A string->[]byte map is returned. If an address is not set,
 // it will not exist in the map.
 //
-//     results, err := state.Get(addresses)
+//     results, err := context.Get(addresses)
 //     if err != nil {
 //         fmt.Println("Error getting data!")
 //     }
@@ -55,7 +55,7 @@ func NewState(connection messaging.Connection, contextId string) *State {
 //         fmt.Prinln("No data stored at address!")
 //     }
 //
-func (self *State) Get(addresses []string) (map[string][]byte, error) {
+func (self *Context) Get(addresses []string) (map[string][]byte, error) {
 	// Construct the message
 	request := &state_context_pb2.TpStateGetRequest{
 		ContextId: self.contextId,
@@ -122,7 +122,7 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 // value. A slice of addresses set is returned or an error if there was a
 // problem setting the addresses. For example:
 //
-//     responses, err := state.Set(dataMap)
+//     responses, err := context.Set(dataMap)
 //     if err != nil {
 //         fmt.Println("Error setting addresses!")
 //     }
@@ -131,7 +131,7 @@ func (self *State) Get(addresses []string) (map[string][]byte, error) {
 //         fmt.Prinln("Address was not set!")
 //     }
 //
-func (self *State) Set(pairs map[string][]byte) ([]string, error) {
+func (self *Context) Set(pairs map[string][]byte) ([]string, error) {
 	// Construct the message
 	entries := make([]*state_context_pb2.Entry, 0, len(pairs))
 	for address, data := range pairs {

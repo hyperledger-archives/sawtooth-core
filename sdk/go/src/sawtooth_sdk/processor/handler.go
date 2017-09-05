@@ -22,7 +22,7 @@
 // 2. A high-level, general purpose, multi-threaded TransactionProcessor that
 // any number of handlers can be added to.
 //
-// 3. A State class used to abstract getting and setting addresses in global
+// 3. A Context class used to abstract getting and setting addresses in global
 // validator state.
 package processor
 
@@ -65,6 +65,6 @@ type TransactionHandler interface {
 	// transaction family is defined. The method will be called by the
 	// transaction processor upon receiving a TpProcessRequest that the handler
 	// understands and will pass in the TpProcessRequest and an initialized
-	// instance of the State type.
-	Apply(*processor_pb2.TpProcessRequest, *State) error
+	// instance of the Context type.
+	Apply(*processor_pb2.TpProcessRequest, *Context) error
 }

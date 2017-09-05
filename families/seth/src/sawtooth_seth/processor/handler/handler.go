@@ -54,7 +54,7 @@ func (self *BurrowEVMHandler) Namespaces() []string {
 	return []string{PREFIX}
 }
 
-func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.State) error {
+func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.Context) error {
 
 	// Unpack and validate transaction
 	wrapper, err := unpackPayload(request.GetPayload())
