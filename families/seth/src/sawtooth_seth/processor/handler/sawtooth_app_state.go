@@ -35,7 +35,7 @@ type SawtoothAppState struct {
 	mgr *StateManager
 }
 
-func NewSawtoothAppState(state *processor.State) *SawtoothAppState {
+func NewSawtoothAppState(state *processor.Context) *SawtoothAppState {
 	return &SawtoothAppState{
 		mgr: NewStateManager(state),
 	}

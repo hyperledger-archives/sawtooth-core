@@ -29,10 +29,10 @@ import (
 
 // StateManager simplifies accessing EVM related data stored in state
 type StateManager struct {
-	state *processor.State
+	state *processor.Context
 }
 
-func NewStateManager(state *processor.State) *StateManager {
+func NewStateManager(state *processor.Context) *StateManager {
 	return &StateManager{
 		state: state,
 	}
