@@ -19,12 +19,16 @@
 const express = require('express')
 const db = require('./db')
 const blockchain = require('./blockchain')
+const protos = require('./blockchain/protos')
 const api = require('./api')
 
 const PORT = process.env.PORT || 3000
 const app = express()
 
-db.connect()
+Promise.all([
+  db.connect(),
+  protos.compile()
+])
   .then(() => {
     blockchain.subscribe()
 
