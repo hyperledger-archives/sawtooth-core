@@ -167,7 +167,7 @@ class BlockInfoTransactionHandler(object):
                         next_block.previous_block_id,
                         prev_block.header_signature))
 
-            if next_block.timestamp <= prev_block.timestamp:
+            if next_block.timestamp < prev_block.timestamp:
                 raise InvalidTransaction(
                     "Timestamp must be greater than previous block's."
                     " Got {}, expected >{}".format(

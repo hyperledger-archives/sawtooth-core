@@ -23,6 +23,8 @@ import time
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.batch_injector import \
+    DefaultBatchInjectorFactory
 
 
 LOGGER = logging.getLogger(__name__)
@@ -190,6 +192,11 @@ class Journal(object):
         self._permission_verifier = permission_verifier
 
     def _init_subprocesses(self):
+        batch_injector_factory = DefaultBatchInjectorFactory(
+            block_store=self._block_store,
+            state_view_factory=self._state_view_factory,
+            signing_key=self._identity_signing_key,
+        )
         self._block_publisher = BlockPublisher(
             transaction_executor=self._transaction_executor,
             block_cache=self._block_cache,
@@ -201,7 +208,8 @@ class Journal(object):
             identity_signing_key=self._identity_signing_key,
             data_dir=self._data_dir,
             config_dir=self._config_dir,
-            permission_verifier=self._permission_verifier
+            permission_verifier=self._permission_verifier,
+            batch_injector_factory=batch_injector_factory,
         )
         self._publisher_thread = self._PublisherThread(
             block_publisher=self._block_publisher,

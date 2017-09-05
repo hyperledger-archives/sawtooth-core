@@ -77,6 +77,8 @@ services:
     expose:
       - 4004
       - 8800
+    ports:
+      - 4004
     command: "bash -c \"\
         sawtooth admin keygen && \
         sawtooth admin genesis && \
@@ -92,6 +94,8 @@ services:
       - ../../:/project/sawtooth-core
     expose:
       - 4004
+      - 8080
+    ports:
       - 8080
     depends_on:
      - validator

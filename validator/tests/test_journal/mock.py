@@ -19,6 +19,8 @@ from sawtooth_validator.execution.scheduler import BatchExecutionResult
 
 from sawtooth_validator.journal.batch_sender import BatchSender
 from sawtooth_validator.journal.block_sender import BlockSender
+from sawtooth_validator.journal.batch_injector import BatchInjectorFactory
+from sawtooth_validator.journal.batch_injector import BatchInjector
 
 from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
@@ -267,3 +269,19 @@ class MockStateDeltaProcessor(object):
 class MockPermissionVerifier(object):
     def is_batch_signer_authorized(self, batch, state_root=None):
         return True
+
+
+class MockBatchInjectorFactory(BatchInjectorFactory):
+    def __init__(self, batch):
+        self._batch = batch
+
+    def create_injectors(self, previous_block_id):
+        return [MockBatchInjector(self._batch)]
+
+
+class MockBatchInjector(BatchInjector):
+    def __init__(self, batch):
+        self._batch = batch
+
+    def block_start(self, previous_block_id):
+        return [self._batch]

@@ -13,33 +13,36 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# In first window, run:
-#   $ cd sawtooth-core
-#   $ ./bin/build_all -l go -l python
-#   $ docker-compose -f docker/compose/sawtooth-seth.yaml up
-#
-# In second window, run:
-#   $ docker exec -it seth-client bash
-
-version: "3"
+version: "2.1"
 
 services:
 
-  seth-tp:
-    image: sawtooth-seth-tp:latest
+  settings-tp:
+    image: sawtooth-settings-tp:$ISOLATION_ID
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
       - validator
-    command: seth-tp -vv tcp://validator:4004
+    command: settings-tp -vv tcp://validator:4004
+    stop_signal: SIGKILL
+
+  intkey-tp-python:
+    image: sawtooth-intkey-tp-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: intkey-tp-python -vv tcp://validator:4004
     stop_signal: SIGKILL
 
   block-info-tp:
     image: sawtooth-block-info-tp:latest
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
     depends_on:
@@ -47,28 +50,15 @@ services:
     command: block-info-tp -vv tcp://validator:4004
     stop_signal: SIGKILL
 
-  settings-tp:
-    image: sawtooth-settings-tp:latest
-    volumes:
-      - ../../:/project/sawtooth-core
-    expose:
-      - 4004
-    depends_on:
-      - validator
-    entrypoint: settings-tp -vv tcp://validator:4004
-
   validator:
-    image: sawtooth-validator:latest
+    image: sawtooth-validator:$ISOLATION_ID
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
       - 8800
-    ports:
-      - 4004
-      - 8800
+    # start the validator with an empty genesis batch
     command: "bash -c \"\
-        if [ ! -f sawtooth.priv ]; then sawtooth keygen --key-dir /project/sawtooth-core sawtooth; fi && \
         sawtooth admin keygen && \
         sawtooth config genesis \
           -k /etc/sawtooth/keys/validator.priv \
@@ -88,33 +78,35 @@ services:
     stop_signal: SIGKILL
 
   rest-api:
-    image: sawtooth-rest-api:latest
+    image: sawtooth-rest-api:$ISOLATION_ID
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
       - 8080
-    ports:
-      - 8080
     depends_on:
-     - validator
+      - validator
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
     stop_signal: SIGKILL
 
-  seth-client:
-    container_name: seth-client
-    image: sawtooth-dev-go:latest
+  test-block-info-injector:
+    image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
-      - ../../:/project/sawtooth-core
+      - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 8080
     depends_on:
       - validator
       - rest-api
-    # Wait for rest_api
-    working_dir: "/project/sawtooth-core"
-    command: "bash -c \"seth init http://rest-api:8080 && \
-        cd /project/sawtooth-core && \
-        until [ -f sawtooth.priv ]; do sleep 1; done && \
-        tail -f /dev/null\""
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -v
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_block_info_injector.TestBlockInfoInjector
     stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/sdk/examples/intkey_python:\
+        /project/sawtooth-core/families/block_info:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing"
