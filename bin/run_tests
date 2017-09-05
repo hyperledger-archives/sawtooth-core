@@ -194,7 +194,7 @@ main() {
                     test_seth
                     ;;
                 *)
-                    echo "Module '$MODULE' not found."
+                    echo "Module '$module' not found."
                     ;;
             esac
         fi
