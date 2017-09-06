@@ -816,11 +816,11 @@ class TestChainController(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=self.permission_verifier)
+            permission_verifier=self.permission_verifier,
+            chain_observers=[self.state_delta_processor])
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -1129,11 +1129,11 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=self.permission_verifier)
+            permission_verifier=self.permission_verifier,
+            chain_observers=[self.state_delta_processor])
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 
@@ -1208,6 +1208,7 @@ class TestJournal(unittest.TestCase):
         # gossip layer.
 
         btm = BlockTreeManager()
+        journal = None
         try:
             journal = Journal(
                 block_store=btm.block_store,
@@ -1219,11 +1220,10 @@ class TestJournal(unittest.TestCase):
                 squash_handler=None,
                 identity_signing_key=btm.identity_signing_key,
                 chain_id_manager=None,
-                state_delta_processor=self.state_delta_processor,
                 data_dir=None,
                 config_dir=None,
-                permission_verifier=self.permission_verifier
-            )
+                permission_verifier=self.permission_verifier,
+                chain_observers=[self.state_delta_processor])
 
             self.gossip.on_batch_received = journal.on_batch_received
             self.gossip.on_block_received = journal.on_block_received

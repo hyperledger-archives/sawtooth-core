@@ -263,7 +263,7 @@ class MockStateDeltaProcessor(object):
     def __init__(self):
         self.block = None
 
-    def publish_deltas(self, block):
+    def chain_update(self, block, receipts):
         self.block = block
 
 class MockPermissionVerifier(object):

@@ -123,7 +123,6 @@ class Journal(object):
                  squash_handler,
                  identity_signing_key,
                  chain_id_manager,
-                 state_delta_processor,
                  data_dir,
                  config_dir,
                  permission_verifier,
@@ -131,6 +130,7 @@ class Journal(object):
                  block_cache_purge_frequency=30,
                  block_cache_keep_time=300,
                  batch_observers=None,
+                 chain_observers=None,
                  block_cache=None):
         """
         Creates a Journal instance.
@@ -148,16 +148,16 @@ class Journal(object):
             identity_signing_key (str): Private key for signing blocks
             chain_id_manager (:obj:`ChainIdManager`) The ChainIdManager
                 instance.
-            state_delta_processor (:obj:`StateDeltaProcessor`): The state
-                delta processor.
             data_dir (str): directory for data storage.
             config_dir (str): directory for configuration.
             check_publish_block_frequency(float): delay in seconds between
                 checks if a block should be claimed.
             block_cache_purge_frequency (float): delay in seconds between
-            purges of the BlockCache.
+                purges of the BlockCache.
             block_cache_keep_time (float): time in seconds to hold unaccess
-            blocks in the BlockCache.
+                blocks in the BlockCache.
+            chain_observers (list of :obj:`ChainObserver`): Objects to notify
+                on chain updates.
             block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
                 place of an internally created instance. Defaults to None.
         """
@@ -186,10 +186,11 @@ class Journal(object):
         self._block_queue = queue.Queue()
         self._chain_thread = None
         self._chain_id_manager = chain_id_manager
-        self._state_delta_processor = state_delta_processor
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
+        self._chain_observers = [] if chain_observers is None \
+            else chain_observers
 
     def _init_subprocesses(self):
         batch_injector_factory = DefaultBatchInjectorFactory(
@@ -226,11 +227,11 @@ class Journal(object):
             on_chain_updated=self._block_publisher.on_chain_updated,
             squash_handler=self._squash_handler,
             chain_id_manager=self._chain_id_manager,
-            state_delta_processor=self._state_delta_processor,
             identity_signing_key=self._identity_signing_key,
             data_dir=self._data_dir,
             config_dir=self._config_dir,
-            permission_verifier=self._permission_verifier
+            permission_verifier=self._permission_verifier,
+            chain_observers=self._chain_observers,
         )
         self._chain_thread = self._ChainThread(
             chain_controller=self._chain_controller,
