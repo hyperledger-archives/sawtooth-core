@@ -18,6 +18,8 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 option go_package = "state_context_pb2";
 
+import "events.proto";
+
 // An entry in the State
 message Entry {
     string address = 1;
@@ -68,10 +70,43 @@ message TpStateDeleteRequest {
 // A response form the contextmanager/validator with the addresses that were deleted
 message TpStateDeleteResponse {
     enum Status {
-      OK = 0;
-      AUTHORIZATION_ERROR = 1;
+        OK = 0;
+        AUTHORIZATION_ERROR = 1;
     }
 
     repeated string addresses = 1;
+    Status status = 2;
+}
+
+// The request from the transaction processor to the validator append data
+// to a transaction receipt
+message TpAddReceiptDataRequest {
+    // The context id that references a context in the contextmanager
+    string context_id = 1;
+    string data_type = 2;
+    bytes data = 3;
+}
+
+// The response from the validator to the transaction processor to verify that
+// data has been appended to a transaction receipt
+message TpAddReceiptDataResponse {
+    enum Status {
+        OK = 0;
+        ERROR = 1;
+    }
+
+    Status status = 2;
+}
+
+message TpAddEventRequest {
+    string context_id = 1;
+    Event event = 2;
+}
+
+message TpAddEventResponse {
+    enum Status {
+      OK = 0;
+      ERROR = 1;
+    }
     Status status = 2;
 }
