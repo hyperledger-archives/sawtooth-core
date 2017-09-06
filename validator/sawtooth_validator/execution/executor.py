@@ -121,6 +121,12 @@ class TransactionExecutorThread(object):
                     response.extended_data)
 
     def execute_thread(self):
+        try:
+            self._execute_schedule()
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception("Unhandled exception while executing schedule")
+
+    def _execute_schedule(self):
         for txn_info in self._scheduler:
             txn = txn_info.txn
             header = transaction_pb2.TransactionHeader()
@@ -348,21 +354,25 @@ class TransactionExecutor(object):
     def _check_connections(self):
         # This is not ideal, because it locks up the current thread while
         # waiting for the results.
-        with self._lock:
-            futures = {}
-            for connection_id in self.processors.get_all_processors():
-                fut = self._service.send(
-                    validator_pb2.Message.TP_PING,
-                    processor_pb2.TpPing().SerializeToString(),
-                    connection_id=connection_id)
-                futures[fut] = connection_id
-            for fut in futures:
-                try:
-                    fut.result(timeout=10)
-                except FutureTimeoutError:
-                    LOGGER.info("%s did not respond to the TpPing, removing "
-                                "transaction processor.", futures[fut])
-                    self._remove_broken_connection(futures[fut])
+        try:
+            with self._lock:
+                futures = {}
+                for connection_id in self.processors.get_all_processors():
+                    fut = self._service.send(
+                        validator_pb2.Message.TP_PING,
+                        processor_pb2.TpPing().SerializeToString(),
+                        connection_id=connection_id)
+                    futures[fut] = connection_id
+                for fut in futures:
+                    try:
+                        fut.result(timeout=10)
+                    except FutureTimeoutError:
+                        LOGGER.info(
+                            "%s did not respond to the TpPing, removing "
+                            "transaction processor.", futures[fut])
+                        self._remove_broken_connection(futures[fut])
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception('Unhandled exception while checking connections')
 
     def _remove_broken_connection(self, connection_id):
         for t in self._alive_threads:
@@ -433,6 +443,12 @@ class _Waiter(object):
         self._in_queue.put_nowait(content)
 
     def run_in_threadpool(self):
+        try:
+            self._wait_for_processors()
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception("Unhandled exception while waiting")
+
+    def _wait_for_processors(self):
         LOGGER.info('Waiting for transaction processor (%s, %s, %s)',
                     self._processor_type.name,
                     self._processor_type.version,
