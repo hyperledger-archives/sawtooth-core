@@ -45,5 +45,5 @@ class BattleshipTransactionHandler:
 
         battleship_transaction = \
             BattleshipTransaction(self._namespace_prefix, transaction)
-            
+
         battleship_transaction.apply(state_store)

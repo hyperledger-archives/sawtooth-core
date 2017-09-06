@@ -227,12 +227,10 @@ class BattleshipTransaction:
         store.
 
         Args:
-            store: state_store
-        """
-        LOGGER.debug('in apply')
-        
+            store: state_store"""
+
         state = _get_state_data(self._battleship_addr, state_store)
-        LOGGER.debug('Applying changes to state\nCURRENT STATE:\n%s' % state)
+        LOGGER.debug('Applying changes to state\nCURRENT STATE:\n%s', state)
 
         self.check_valid(state)
 
@@ -361,7 +359,7 @@ def _get_state_data(game_address, state_store):
 
 
 def _store_state_data(addr, new_state, state_store):
-    LOGGER.debug('Storing Upadated State....\nUPDATED STATE:\n%s' % new_state)
+    LOGGER.debug('Storing Upadated State....\nUPDATED STATE:\n%s', new_state)
     addresses = state_store.set([
         StateEntry(address=addr, data=json.dumps(new_state).encode())
     ])
