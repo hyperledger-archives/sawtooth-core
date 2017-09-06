@@ -21,12 +21,15 @@ const express = require('express')
 const bodyParser = require('body-parser')
 
 const state = require('../db/state')
+const blockchain = require('../blockchain/')
 const auth = require('./auth')
+
 const users = require('./users')
 const { Unauthorized } = require('./errors')
 
 const router = express.Router()
 router.use(bodyParser.json({ type: 'application/json' }))
+router.use(bodyParser.raw({ type: 'application/octet-stream' }))
 
 // Logs basic request information to the console
 const logRequest = (req, res, next) => {
@@ -99,6 +102,8 @@ router.get('/', (req, res) => {
   state.query(state => state.filter({name: 'message'}))
     .then(messages => res.json(messages[0].value))
 })
+
+router.post('/transactions', handleBody(blockchain.submit))
 
 router.post('/authorization', handleBody(auth.authorize))
 
