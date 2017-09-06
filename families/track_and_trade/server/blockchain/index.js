@@ -16,12 +16,9 @@
  */
 'use strict'
 
-const _ = require('lodash')
 const { Stream } = require('sawtooth-sdk/messaging/stream')
 const { Message } = require('sawtooth-sdk/protobuf')
-const blocks = require('../db/blocks')
-const state = require('../db/state')
-const protos = require('./protos')
+const deltas = require('./deltas')
 
 const PREFIX = '1c1108'
 const VALIDATOR_URL = process.env.VALIDATOR_URL || 'tcp://localhost:4004'
@@ -35,75 +32,12 @@ const StateDeltaSubscribeRequest = root.lookup('StateDeltaSubscribeRequest')
 const StateDeltaSubscribeResponse = root.lookup('StateDeltaSubscribeResponse')
 const StateDeltaEvent = root.lookup('StateDeltaEvent')
 
-const getProtoName = address => {
-  const typePrefix = address.slice(6, 8)
-  if (typePrefix === 'ea') {
-    if (address.slice(-4) === '0000') return 'Property'
-    else return 'PropertyPage'
-  }
-
-  const names = {
-    ae: 'Agent',
-    aa: 'Proposal',
-    ec: 'Record',
-    ee: 'RecordType'
-  }
-  if (names[typePrefix]) return names[typePrefix]
-
-  throw new Error(`Blockchain Error: No Protobuf for prefix "${typePrefix}"`)
-}
-
-const getObjectifier = address => {
-  const name = getProtoName(address)
-  return stateInstance => {
-    const obj = protos[name].toObject(stateInstance, {
-      enums: String,  // use string names for enums
-      longs: Number,  // convert int64 to Number, limiting precision to 2^53
-      defaults: true  // use default for falsey values
-    })
-    if (name === 'PropertyPage') {
-      obj.pageNum = parseInt(address.slice(-4), 16)
-    }
-    return obj
-  }
-}
-
-const getAdder = address => {
-  const addState = state[`add${getProtoName(address)}`]
-  const toObject = getObjectifier(address)
-  return (stateInstance, blockNum) => {
-    addState(toObject(stateInstance), blockNum)
-  }
-}
-
-const getEntries = ({ address, value }) => {
-  return protos[`${getProtoName(address)}Container`]
-    .decode(value)
-    .entries
-}
-
-const handleDeltaEvent = content => {
-  const event = StateDeltaEvent.decode(content)
-  return Promise.all(event.stateChanges.map(change => {
-    const addState = getAdder(change.address)
-    return Promise.all(getEntries(change).map(entry => {
-      return addState(entry, event.blockNum)
-    }))
-  }))
-    .then(() => {
-      return blocks.insert(
-        _.pick(event, 'blockNum', 'blockId', 'stateRootHash')
-      )
-    })
-    .then(() => event)
-}
-
 const subscribe = () => {
   stream.connect(() => {
     // Set up onReceive handlers
     stream.onReceive(msg => {
       if (msg.messageType === Message.MessageType.STATE_DELTA_EVENT) {
-        handleDeltaEvent(msg.content)
+        deltas.handle(StateDeltaEvent.decode(msg.content))
       } else {
         console.error('Received message of unknown type:', msg.messageType)
       }
