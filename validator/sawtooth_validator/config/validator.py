@@ -166,7 +166,7 @@ def parse_permissions(permissions):
             rules = []
             if os.path.exists(policy_path):
                 with open(policy_path) as policy_file:
-                    rules = policy_file.readlines()
+                    rules = policy_file.read().splitlines()
                 entries = []
                 for rule in rules:
                     rule = rule.split(" ")
