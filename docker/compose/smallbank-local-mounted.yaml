@@ -36,8 +36,8 @@ services:
     command: smallbank-tp-go -vv tcp://validator:4004
 
   validator:
-    image: sawtooth-validator:latest
-    container_name: sawtooth-validator-default
+    image: sawtooth-validator-mounted:latest
+    container_name: sawtooth-validator-mounted
     volumes:
       - ../../:/project/sawtooth-core
     expose:
@@ -47,6 +47,7 @@ services:
       - "4004:4004"
       - "8800:8800"
     command: "bash -c \"\
+        (telegraf &) && \
         sawtooth admin keygen && \
         sawtooth keygen && \
         sawtooth config genesis && \
@@ -69,3 +70,19 @@ services:
     depends_on:
      - validator
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+
+  influxdb:
+    image: sawtooth-stats-influxdb:latest
+    container_name: sawtooth-stats-influxdb-default
+    ports:
+      - "8086:8086"
+    stop_signal: SIGKILL
+
+  grafana:
+    image: sawtooth-stats-grafana:latest
+    container_name: sawtooth-stats-grafana-default
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../:/project/sawtooth-core
+    stop_signal: SIGKILL

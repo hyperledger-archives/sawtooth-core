@@ -267,6 +267,7 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
+        docker_build $top_dir/docker/sawtooth-validator-mounted docker/ sawtooth-validator-mounted
         docker_run sawtooth-dev-python
     }
 
