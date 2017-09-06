@@ -180,7 +180,7 @@ def _create_record(payload, signer, timestamp, state):
 
     # Make sure the provided properties have the right type
     for provided_name in provided_properties:
-        required_type = required_properties[provided_name].data_type
+        required_type = type_schemata[provided_name].data_type
         provided_type = provided_properties[provided_name].data_type
         if required_type != provided_type:
             raise InvalidTransaction(
