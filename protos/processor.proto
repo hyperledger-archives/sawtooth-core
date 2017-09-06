@@ -18,7 +18,6 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 option go_package = "processor_pb2";
 
-
 // The registration request from the transaction processor to the
 // validator/executor
 message TpRegisterRequest {
@@ -102,6 +101,7 @@ message TpProcessResponse {
     // data that will be propagated back to the transaction submitter.
     bytes extended_data = 3;
 }
+
 
 message TpPing {
 }
