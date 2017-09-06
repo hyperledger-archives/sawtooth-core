@@ -23,10 +23,26 @@ require('../styles/main.scss')
 const m = require('mithril')
 const { signer } = require('sawtooth-sdk/client')
 
-console.log(`Hello ${signer.makePrivateKey()}!`)
+const AppState = require('./app_state')
+const FishForm = require('./fish_form')
 
-m.request({method: 'GET', url: '/api'})
-  .then(res => {
-    return m.render(document.querySelector('#app'),
-                    m('div.alert.alert-success', res))
+let privateKey = signer.makePrivateKey()
+console.log(`Hello ${privateKey}!`)
+AppState.signingKey = privateKey
+
+let Home = {
+  view () {
+    return m('.container',
+             m('.alert.alert-success', privateKey.substring(0, 8)),
+             m("a[href='/create']", {oncreate: m.route.link}, 'Create Fish'))
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  m.route(document.querySelector('#app'), '/', {
+    '/': Home,
+    '/create': {
+      render: () => m(FishForm, {signingKey: AppState.signingKey})
+    }
   })
+})
