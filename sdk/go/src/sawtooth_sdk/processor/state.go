@@ -42,7 +42,7 @@ func NewContext(connection messaging.Connection, contextId string) *Context {
 	}
 }
 
-// Get queries the validator state for data at each of the addresses in the
+// GetState queries the validator state for data at each of the addresses in the
 // given slice. A string->[]byte map is returned. If an address is not set,
 // it will not exist in the map.
 //
@@ -55,7 +55,7 @@ func NewContext(connection messaging.Connection, contextId string) *Context {
 //         fmt.Prinln("No data stored at address!")
 //     }
 //
-func (self *Context) Get(addresses []string) (map[string][]byte, error) {
+func (self *Context) GetState(addresses []string) (map[string][]byte, error) {
 	// Construct the message
 	request := &state_context_pb2.TpStateGetRequest{
 		ContextId: self.contextId,
@@ -118,7 +118,7 @@ func (self *Context) Get(addresses []string) (map[string][]byte, error) {
 	return results, nil
 }
 
-// Set requests that each address in the validator state be set to the given
+// SetState requests that each address in the validator state be set to the given
 // value. A slice of addresses set is returned or an error if there was a
 // problem setting the addresses. For example:
 //
@@ -131,7 +131,7 @@ func (self *Context) Get(addresses []string) (map[string][]byte, error) {
 //         fmt.Prinln("Address was not set!")
 //     }
 //
-func (self *Context) Set(pairs map[string][]byte) ([]string, error) {
+func (self *Context) SetState(pairs map[string][]byte) ([]string, error) {
 	// Construct the message
 	entries := make([]*state_context_pb2.Entry, 0, len(pairs))
 	for address, data := range pairs {
@@ -193,4 +193,12 @@ func (self *Context) Set(pairs map[string][]byte) ([]string, error) {
 	}
 
 	return response.GetAddresses(), nil
+}
+
+func (self *Context) Get(addresses []string) (map[string][]byte, error) {
+	return self.GetState(addresses)
+}
+
+func (self *Context) Set(pairs map[string][]byte) ([]string, error) {
+	return self.SetState(pairs)
 }
