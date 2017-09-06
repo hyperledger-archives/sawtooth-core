@@ -21,10 +21,9 @@ const { Stream } = require('sawtooth-sdk/messaging/stream')
 const { Message } = require('sawtooth-sdk/protobuf')
 const blocks = require('../db/blocks')
 const state = require('../db/state')
+const protos = require('./protos')
 
-// Until processor is built, server will listen for IntKey deltas
-const cbor = require('cbor')
-const PREFIX = '1cf126'
+const PREFIX = '1c1108'
 const VALIDATOR_URL = process.env.VALIDATOR_URL || 'tcp://localhost:4004'
 const stream = new Stream(VALIDATOR_URL)
 
@@ -36,11 +35,66 @@ const StateDeltaSubscribeRequest = root.lookup('StateDeltaSubscribeRequest')
 const StateDeltaSubscribeResponse = root.lookup('StateDeltaSubscribeResponse')
 const StateDeltaEvent = root.lookup('StateDeltaEvent')
 
+const getProtoName = address => {
+  const typePrefix = address.slice(6, 8)
+  if (typePrefix === 'ea') {
+    if (address.slice(-4) === '0000') return 'Property'
+    else return 'PropertyPage'
+  }
+
+  const names = {
+    ae: 'Agent',
+    aa: 'Property',
+    ec: 'Record',
+    ee: 'RecordType'
+  }
+  if (names[typePrefix]) return names[typePrefix]
+
+  throw new Error(`Blockchain Error: No Protobuf for prefix "${typePrefix}"`)
+}
+
+const getObjectifier = address => {
+  const name = getProtoName(address)
+  return stateInstance => {
+    const obj = protos[name].toObject(stateInstance, {
+      enums: String,
+      longs: Number
+    })
+    if (name === 'PropertyPage') {
+      obj.pageNum = parseInt(address.slice(-4), 16)
+    }
+    return obj
+  }
+}
+
+const getAdder = address => {
+  const addState = state[`add${getProtoName(address)}`]
+  const toObject = getObjectifier(address)
+  return (stateInstance, blockNum) => {
+    addState(toObject(stateInstance), blockNum)
+  }
+}
+
+const getEntries = ({ address, value }) => {
+  return protos[`${getProtoName(address)}Container`]
+    .decode(value)
+    .entries
+}
+
 const handleDeltaEvent = content => {
   const event = StateDeltaEvent.decode(content)
-  blocks.insert(_.pick(event, 'blockNum', 'blockId', 'stateRootHash'))
-  const changes = event.stateChanges.map(change => cbor.decode(change.value))
-  if (changes.length !== 0) state.insert(changes)
+  return Promise.all(event.stateChanges.map(change => {
+    const addState = getAdder(change.address)
+    return Promise.all(getEntries(change).map(entry => {
+      return addState(entry, event.blockNum)
+    }))
+  }))
+    .then(() => {
+      return blocks.insert(
+        _.pick(event, 'blockNum', 'blockId', 'stateRootHash')
+      )
+    })
+    .then(() => event)
 }
 
 const subscribe = () => {
