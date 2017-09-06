@@ -207,6 +207,12 @@ docker_build() {
 
 build_external() {
     docker_build docker/apache-basic_auth_proxy docker/ apache-basic_auth_proxy
+    docker_build stat_collection/docker/grafana/sawtooth-stats-grafana \
+        stat_collection/docker/grafana \
+        sawtooth-stats-grafana
+    docker_build stat_collection/docker/influxdb/sawtooth-stats-influxdb \
+        stat_collection/docker/influxdb \
+        sawtooth-stats-influxdb
 }
 
 build_debs() {
