@@ -16,9 +16,11 @@
  */
 'use strict'
 
+const _ = require('lodash')
 const { Stream } = require('sawtooth-sdk/messaging/stream')
 const { Message } = require('sawtooth-sdk/protobuf')
 const deltas = require('./deltas')
+const batcher = require('./batcher')
 
 const PREFIX = '1c1108'
 const VALIDATOR_URL = process.env.VALIDATOR_URL || 'tcp://localhost:4004'
@@ -31,6 +33,8 @@ const root = protobuf.Root.fromJSON(pbJson)
 const StateDeltaSubscribeRequest = root.lookup('StateDeltaSubscribeRequest')
 const StateDeltaSubscribeResponse = root.lookup('StateDeltaSubscribeResponse')
 const StateDeltaEvent = root.lookup('StateDeltaEvent')
+const ClientBatchSubmitRequest = root.lookup('ClientBatchSubmitRequest')
+const ClientBatchSubmitResponse = root.lookup('ClientBatchSubmitResponse')
 
 const subscribe = () => {
   stream.connect(() => {
@@ -59,6 +63,25 @@ const subscribe = () => {
   })
 }
 
+const submit = txnBytes => {
+  const batches = [batcher.batch(txnBytes)]
+
+  return stream.send(
+    Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
+    ClientBatchSubmitRequest.encode({ batches }).finish()
+  )
+  .then(response => ClientBatchSubmitResponse.decode(response))
+  .then(decoded => {
+    const status = _.findKey(ClientBatchSubmitResponse.Status,
+                                 val => val === decoded.status)
+    if (status !== 'OK') {
+      throw new Error(`Batch submission failed with status '${status}'`)
+    }
+    return { status }
+  })
+}
+
 module.exports = {
-  subscribe
+  subscribe,
+  submit
 }
