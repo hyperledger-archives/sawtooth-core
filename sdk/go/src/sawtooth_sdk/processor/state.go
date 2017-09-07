@@ -30,12 +30,12 @@ import (
 // instance. Currently, the State class is NOT thread-safe and State classes
 // may not share the same messaging.Connection object.
 type State struct {
-	connection *messaging.Connection
+	connection messaging.Connection
 	contextId  string
 }
 
 // Construct a new state cobject given an initialized Stream and Context ID.
-func NewState(connection *messaging.Connection, contextId string) *State {
+func NewState(connection messaging.Connection, contextId string) *State {
 	return &State{
 		connection: connection,
 		contextId:  contextId,
