@@ -63,6 +63,7 @@ save_usage seth permissions set
 
 save_usage poet
 save_usage poet genesis
+save_usage poet enclave
 
 save_usage intkey
 save_usage intkey generate
