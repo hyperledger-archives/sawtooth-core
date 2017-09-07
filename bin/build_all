@@ -207,6 +207,12 @@ docker_build() {
 
 build_external() {
     docker_build docker/apache-basic_auth_proxy docker/ apache-basic_auth_proxy
+    docker_build stat_collection/docker/grafana/sawtooth-stats-grafana \
+        stat_collection/docker/grafana \
+        sawtooth-stats-grafana
+    docker_build stat_collection/docker/influxdb/sawtooth-stats-influxdb \
+        stat_collection/docker/influxdb \
+        sawtooth-stats-influxdb
 }
 
 build_debs() {
@@ -261,6 +267,7 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
+        docker_build $top_dir/docker/sawtooth-validator-mounted docker/ sawtooth-validator-mounted
         docker_run sawtooth-dev-python
     }
 

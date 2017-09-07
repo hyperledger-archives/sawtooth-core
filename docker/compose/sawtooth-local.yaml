@@ -19,70 +19,88 @@ services:
 
   settings-tp:
     image: sawtooth-settings-tp:latest
+    container_name: sawtooth-settings-tp-local
     volumes:
       - ../../:/project/sawtooth-core
-    container_name: sawtooth-settings-tp-default
+    expose:
+      - 4004
     depends_on:
       - validator
     command: settings-tp -vv tcp://validator:4004
+    stop_signal: SIGKILL
 
-  smallbank-tp-go:
-    image: sawtooth-smallbank-tp-go:latest
-    container_name: sawtooth-smallbank-tp-go-default
+  intkey-tp-python:
+    image: sawtooth-intkey-tp-python:latest
+    container_name: sawtooth-intkey-tp-python-local
     volumes:
       - ../../:/project/sawtooth-core
+    expose:
+      - 4004
     depends_on:
       - validator
-    command: smallbank-tp-go -vv tcp://validator:4004
+    command: intkey-tp-python -vv tcp://validator:4004
+    stop_signal: SIGKILL
+
+  xo-tp-python:
+    image: sawtooth-xo-tp-python:latest
+    container_name: sawtooth-xo-tp-python-local
+    volumes:
+      - ../../:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: xo-tp-python -vv tcp://validator:4004
+    stop_signal: SIGKILL
 
   validator:
-    image: sawtooth-validator-mounted:latest
-    container_name: sawtooth-validator-mounted
+    image: sawtooth-validator:latest
+    container_name: sawtooth-validator-local
     volumes:
       - ../../:/project/sawtooth-core
     expose:
       - 4004
       - 8800
-    ports:
-      - "4004:4004"
-      - "8800:8800"
+    # start the validator with an empty genesis batch
     command: "bash -c \"\
-        (telegraf &) && \
         sawtooth admin keygen && \
-        sawtooth keygen && \
-        sawtooth config genesis && \
-        sawtooth admin genesis config-genesis.batch && \
+        sawtooth admin genesis && \
         sawtooth-validator -vv \
-          --endpoint tcp://validator:8800 \
-          --bind component:tcp://eth0:4004 \
-          --bind network:tcp://eth0:8800 \
-        \""
+            --endpoint tcp://validator:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+    \""
+    stop_signal: SIGKILL
 
   rest-api:
     image: sawtooth-rest-api:latest
-    container_name: sawtooth-rest-api-default
+    container_name: sawtooth-rest-api-local
+    volumes:
+      - ../../:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8080
+    depends_on:
+      - validator
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    stop_signal: SIGKILL
+
+  client:
+    image: sawtooth-dev-python:latest
+    container_name: sawtooth-client-local
     volumes:
       - ../../:/project/sawtooth-core
     expose:
       - 8080
-    ports:
-      - "8080:8080"
+      - 4004
     depends_on:
-     - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+      - rest-api
+    entrypoint: "bash -c \"\
+        sawtooth keygen && \
+        tail -f /dev/null \
+        \""
 
-  influxdb:
-    image: sawtooth-stats-influxdb:latest
-    container_name: sawtooth-stats-influxdb-default
-    ports:
-      - "8086:8086"
-    stop_signal: SIGKILL
-
-  grafana:
-    image: sawtooth-stats-grafana:latest
-    container_name: sawtooth-stats-grafana-default
-    ports:
-      - "3000:3000"
-    volumes:
-      - ../../:/project/sawtooth-core
-    stop_signal: SIGKILL
+networks:
+  default:
+    external:
+      name: sawtooth_stats
