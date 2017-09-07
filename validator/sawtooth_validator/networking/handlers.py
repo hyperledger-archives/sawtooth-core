@@ -157,9 +157,10 @@ class PingHandler(Handler):
 
 class AuthorizationTrustRequestHandler(Handler):
 
-    def __init__(self, network, permission_verifier):
+    def __init__(self, network, permission_verifier, gossip):
         self._network = network
         self._permission_verifier = permission_verifier
+        self._gossip = gossip
 
     def handle(self, connection_id, message_content):
         """
@@ -210,10 +211,16 @@ class AuthorizationTrustRequestHandler(Handler):
 
         self._network.update_connection_public_key(connection_id,
                                                    request.public_key)
-        # Need to send ConnectionRequest to authorize ourself with the
-        # connection if they initialized the connection
-        if not self._network.is_outbound_connection(connection_id):
-            self._network.send_connect_request(connection_id)
+
+        if RoleType.Value("NETWORK") in request.roles:
+            # Need to send ConnectionRequest to authorize ourself with the
+            # connection if they initialized the connection
+            if not self._network.is_outbound_connection(connection_id):
+                self._network.send_connect_request(connection_id)
+            else:
+                # If this is an outbound connection, authorization is complete
+                # for both connections and peering can begin.
+                self._gossip.connect_success(connection_id)
 
         auth_trust_response = AuthorizationTrustResponse(
             roles=[RoleType.Value("NETWORK")])
@@ -228,8 +235,9 @@ class AuthorizationTrustRequestHandler(Handler):
 
 
 class AuthorizationViolationHandler(Handler):
-    def __init__(self, network):
+    def __init__(self, network, gossip):
         self._network = network
+        self._gossip = gossip
 
     def handle(self, connection_id, message_content):
         """
@@ -240,5 +248,8 @@ class AuthorizationViolationHandler(Handler):
         LOGGER.warning("Received AuthorizationViolation from %s",
                        connection_id)
         # Close the connection
+        endpoint = self._network.connection_id_to_endpoint(connection_id)
         self._network.remove_connection(connection_id)
+        #
+        self._gossip.remove_temp_endpoint(endpoint)
         return HandlerResult(HandlerStatus.DROP)

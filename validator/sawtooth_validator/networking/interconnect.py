@@ -648,6 +648,15 @@ class Interconnect(object):
             return connection_info.public_key
         return None
 
+    def connection_id_to_endpoint(self, connection_id):
+        """
+        Get stored public key for a connection.
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            return connection_info.uri
+        return None
+
     def get_connection_status(self, connection_id):
         """
         Get status of the connection during Role enforcement.
@@ -709,8 +718,7 @@ class Interconnect(object):
                   connect_message.SerializeToString(),
                   callback=partial(self._connect_callback,
                                    connection=conn,
-                                   success_callback=success_callback,
-                                   failure_callback=failure_callback))
+                                   ))
 
         return conn
 
@@ -728,9 +736,7 @@ class Interconnect(object):
                                    ))
 
     def _connect_callback(self, request, result,
-                          connection=None,
-                          success_callback=None,
-                          failure_callback=None):
+                          connection=None):
         connection_response = ConnectionResponse()
         connection_response.ParseFromString(result.content)
 
@@ -739,8 +745,6 @@ class Interconnect(object):
                          "we sent. Removing connection: %s",
                          connection.connection_id)
             self.remove_connection(connection.connection_id)
-            if failure_callback:
-                failure_callback(connection_id=connection.connection_id)
         elif connection_response.status == connection_response.OK:
 
             LOGGER.debug("Connection to %s was acknowledged",
@@ -752,13 +756,7 @@ class Interconnect(object):
                 connection.send(
                     validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
                     auth_trust_request.SerializeToString(),
-                    callback=partial(self._authorization_callback,
-                                     connection=connection,
-                                     success_callback=success_callback,
-                                     failure_callback=failure_callback))
-            else:
-                if success_callback:
-                    success_callback(connection_id=connection.connection_id)
+                    )
 
     def _inbound_connection_request_callback(self, request, result,
                                              connection=None):
@@ -770,18 +768,6 @@ class Interconnect(object):
             auth_trust_request.SerializeToString(),
             connection,
             )
-
-    def _authorization_callback(self, request, result,
-                                connection=None,
-                                success_callback=None,
-                                failure_callback=None):
-        if result.message_type == \
-                validator_pb2.Message.AUTHORIZATION_TRUST_RESPONSE:
-            if success_callback:
-                success_callback(connection.connection_id)
-        else:
-            if failure_callback:
-                failure_callback(connection.connection_id)
 
     def send(self, message_type, data, connection_id, callback=None):
         """
