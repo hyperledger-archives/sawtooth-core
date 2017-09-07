@@ -32,8 +32,9 @@ def _gen_message_id():
 
 
 class Dispatcher(Thread):
-    def __init__(self):
+    def __init__(self, timeout=10):
         super().__init__(name='Dispatcher')
+        self._timeout = timeout
         self._msg_type_handlers = {}
         self._in_queue = queue.Queue()
         self._send_message = {}
@@ -147,20 +148,26 @@ class Dispatcher(Thread):
             del self._message_information[message_id]
 
     def _determine_next(self, message_id, future):
-        if future.result().status == HandlerStatus.DROP:
+        try:
+            res = future.result(timeout=self._timeout)
+        except TimeoutError:
+            LOGGER.exception("Dispatcher timeout waiting on handler result.")
+            raise
+
+        if res.status == HandlerStatus.DROP:
             del self._message_information[message_id]
 
-        elif future.result().status == HandlerStatus.PASS:
+        elif res.status == HandlerStatus.PASS:
             self._process(message_id)
 
-        elif future.result().status == HandlerStatus.RETURN_AND_PASS:
+        elif res.status == HandlerStatus.RETURN_AND_PASS:
             connection, connection_id, \
                 original_message, _ = self._message_information[message_id]
 
             message = validator_pb2.Message(
-                content=future.result().message_out.SerializeToString(),
+                content=res.message_out.SerializeToString(),
                 correlation_id=original_message.correlation_id,
-                message_type=future.result().message_type)
+                message_type=res.message_type)
             try:
                 self._send_message[connection](msg=message,
                                                connection_id=connection_id)
@@ -171,16 +178,16 @@ class Dispatcher(Thread):
                             connection)
             self._process(message_id)
 
-        elif future.result().status == HandlerStatus.RETURN:
+        elif res.status == HandlerStatus.RETURN:
             connection, connection_id,  \
                 original_message, _ = self._message_information[message_id]
 
             del self._message_information[message_id]
 
             message = validator_pb2.Message(
-                content=future.result().message_out.SerializeToString(),
+                content=res.message_out.SerializeToString(),
                 correlation_id=original_message.correlation_id,
-                message_type=future.result().message_type)
+                message_type=res.message_type)
             try:
                 self._send_message[connection](msg=message,
                                                connection_id=connection_id)
@@ -190,16 +197,16 @@ class Dispatcher(Thread):
                             get_enum_name(message.message_type), connection_id,
                             connection)
 
-        elif future.result().status == HandlerStatus.RETURN_AND_CLOSE:
+        elif res.status == HandlerStatus.RETURN_AND_CLOSE:
             connection, connection_id,  \
                 original_message, _ = self._message_information[message_id]
 
             del self._message_information[message_id]
 
             message = validator_pb2.Message(
-                content=future.result().message_out.SerializeToString(),
+                content=res.message_out.SerializeToString(),
                 correlation_id=original_message.correlation_id,
-                message_type=future.result().message_type)
+                message_type=res.message_type)
             try:
                 self._send_last_message[connection](
                     msg=message,
