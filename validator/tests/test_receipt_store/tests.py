@@ -57,8 +57,8 @@ class ReceiptStoreTest(unittest.TestCase):
                     type=StateChange.SET))
                 events.append(Event(
                     event_type="test",
-                    event_data=byte,
-                    meta_data=[Event.Meta(key=string, value=string)]))
+                    data=byte,
+                    attributes=[Event.Attribute(key=string, value=string)]))
                 data.append(TransactionReceipt.Data(
                     data_type="test",
                     data=byte))
