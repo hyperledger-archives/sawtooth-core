@@ -135,3 +135,52 @@ class TpStateDeleteHandler(Handler):
             HandlerStatus.RETURN,
             response,
             validator_pb2.Message.TP_STATE_DEL_RESPONSE)
+
+
+class TpAddReceiptDataHandler(Handler):
+    def __init__(self, context_manager):
+        """
+
+        Args:
+            context_manager (sawtooth_validator.context_manager.
+            ContextManager):
+        """
+        self._context_manager = context_manager
+
+    def handle(self, connection_id, message_content):
+        add_receipt_data_request = state_context_pb2.TpAddReceiptDataRequest()
+        add_receipt_data_request.ParseFromString(message_content)
+
+        LOGGER.debug("ADD RECEIPT DATA: %s", message_content)
+        ack = state_context_pb2.TpAddReceiptDataResponse()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.TP_ADD_RECEIPT_DATA_RESPONSE)
+
+
+class TpAddEventHandler(Handler):
+    def __init__(self, context_manager):
+        """
+
+        Args:
+            context_manager (sawtooth_validator.context_manager.
+            ContextManager):
+        """
+        self._context_manager = context_manager
+
+    def handle(self, connection_id, message_content):
+        add_event_request = state_context_pb2.TpAddEventRequest()
+        add_event_request.ParseFromString(message_content)
+
+        LOGGER.debug("ADD EVENT: %s", message_content)
+
+        ack = state_context_pb2.TpAddEventResponse()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            status=HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.TP_ADD_EVENT_RESPONSE)

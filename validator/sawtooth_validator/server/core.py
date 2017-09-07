@@ -287,6 +287,16 @@ class Validator(object):
         completer.set_on_block_received(self._journal.on_block_received)
 
         self._dispatcher.add_handler(
+            validator_pb2.Message.TP_ADD_RECEIPT_DATA_REQUEST,
+            tp_state_handlers.TpAddReceiptDataHandler(context_manager),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_ADD_EVENT_REQUEST,
+            tp_state_handlers.TpAddEventHandler(context_manager),
+            thread_pool)
+
+        self._dispatcher.add_handler(
             validator_pb2.Message.TP_STATE_DEL_REQUEST,
             tp_state_handlers.TpStateDeleteHandler(context_manager),
             thread_pool)
