@@ -321,14 +321,17 @@ class Validator(object):
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.AUTHORIZATION_VIOLATION,
-            AuthorizationViolationHandler(network=self._network),
+            AuthorizationViolationHandler(
+                network=self._network,
+                gossip=self._gossip),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
             AuthorizationTrustRequestHandler(
                 network=self._network,
-                permission_verifier=permission_verifier),
+                permission_verifier=permission_verifier,
+                gossip=self._gossip),
             network_thread_pool)
 
         # Set up gossip handlers
