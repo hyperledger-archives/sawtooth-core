@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"sawtooth_sdk/messaging"
+	"sawtooth_sdk/protobuf/events_pb2"
 	"sawtooth_sdk/protobuf/state_context_pb2"
 	"sawtooth_sdk/protobuf/validator_pb2"
 )
@@ -32,6 +33,11 @@ import (
 type Context struct {
 	connection messaging.Connection
 	contextId  string
+}
+
+type Attribute struct {
+	Key   string
+	Value string
 }
 
 // Construct a new context object given an initialized Stream and Context ID.
@@ -201,4 +207,120 @@ func (self *Context) Get(addresses []string) (map[string][]byte, error) {
 
 func (self *Context) Set(pairs map[string][]byte) ([]string, error) {
 	return self.SetState(pairs)
+}
+
+func (self *Context) AddReceiptData(data_type string, data []byte) error {
+	// Append the data to the transaction receipt and set the type
+	request := &state_context_pb2.TpAddReceiptDataRequest{
+		ContextId: self.contextId,
+		DataType:  data_type,
+		Data:      data,
+	}
+	bytes, err := proto.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal: %v", err)
+	}
+
+	// Send the message and get the response
+	corrId, err := self.connection.SendNewMsg(
+		validator_pb2.Message_TP_ADD_RECEIPT_DATA_REQUEST, bytes,
+	)
+	if err != nil {
+		return fmt.Errorf("Failed to add receipt data: %v", err)
+	}
+
+	_, msg, err := self.connection.RecvMsgWithId(corrId)
+	if err != nil {
+		return fmt.Errorf("Failed to receive TpAddReciptDataResponse: %v", err)
+	}
+	if msg.GetCorrelationId() != corrId {
+		return fmt.Errorf(
+			"Expected message with correlation id %v but got %v",
+			corrId, msg.GetCorrelationId(),
+		)
+	}
+
+	if msg.GetMessageType() != validator_pb2.Message_TP_ADD_RECEIPT_DATA_RESPONSE {
+		return fmt.Errorf(
+			"Expected TP_ADD_RECEIPT_DATA_RESPONSE but got %v", msg.GetMessageType(),
+		)
+	}
+
+	// Parse the result
+	response := &state_context_pb2.TpAddReceiptDataResponse{}
+	err = proto.Unmarshal(msg.Content, response)
+	if err != nil {
+		return fmt.Errorf("Failed to unmarshal TpAddReceiptDataResponse: %v", err)
+	}
+
+	// Use a switch in case new Status values are added
+	switch response.GetStatus() {
+	case state_context_pb2.TpAddReceiptDataResponse_ERROR:
+		return fmt.Errorf("Failed to add receipt data")
+	}
+
+	return nil
+}
+
+func (self *Context) AddEvent(event_type string, attributes []Attribute, event_data []byte) error {
+	event_attributes := make([]*events_pb2.Event_Attribute, 0, len(attributes))
+	for _, attribute := range attributes {
+		event_attributes = append(event_attributes, &events_pb2.Event_Attribute{attribute.Key, attribute.Value})
+	}
+
+	event := &events_pb2.Event{
+		EventType:  event_type,
+		Attributes: event_attributes,
+		Data:       event_data,
+	}
+
+	// Construct message
+	request := &state_context_pb2.TpAddEventRequest{
+		ContextId: self.contextId,
+		Event:     event,
+	}
+	bytes, err := proto.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal: %v", err)
+	}
+
+	// Send the message and get the response
+	corrId, err := self.connection.SendNewMsg(
+		validator_pb2.Message_TP_ADD_EVENT_REQUEST, bytes,
+	)
+	if err != nil {
+		return fmt.Errorf("Failed to add event: %v", err)
+	}
+
+	_, msg, err := self.connection.RecvMsgWithId(corrId)
+	if err != nil {
+		return fmt.Errorf("Failed to receive TpAddEventResponse: %v", err)
+	}
+	if msg.GetCorrelationId() != corrId {
+		return fmt.Errorf(
+			"Expected message with correlation id %v but got %v",
+			corrId, msg.GetCorrelationId(),
+		)
+	}
+
+	if msg.GetMessageType() != validator_pb2.Message_TP_ADD_EVENT_RESPONSE {
+		return fmt.Errorf(
+			"Expected TP_ADD_EVENT_RESPONSE but got %v", msg.GetMessageType(),
+		)
+	}
+
+	// Parse the result
+	response := &state_context_pb2.TpAddEventResponse{}
+	err = proto.Unmarshal(msg.Content, response)
+	if err != nil {
+		return fmt.Errorf("Failed to unmarshal TpAddEventResponse: %v", err)
+	}
+
+	// Use a switch in case new Status values are added
+	switch response.GetStatus() {
+	case state_context_pb2.TpAddEventResponse_ERROR:
+		return fmt.Errorf("Failed to add event")
+	}
+
+	return nil
 }
