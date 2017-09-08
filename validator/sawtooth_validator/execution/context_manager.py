@@ -47,7 +47,7 @@ class SquashException(Exception):
 _SHUTDOWN_SENTINEL = -1
 
 
-class StateContext(object):
+class ExecutionContext(object):
     """A thread-safe data structure holding address-_ContextFuture pairs and
     the addresses that can be written to and read from.
     """
@@ -78,6 +78,9 @@ class StateContext(object):
         self.base_contexts = base_context_ids
 
         self._id = uuid.uuid4().hex
+
+        self._execution_data = []
+        self._execution_events = []
 
     @property
     def session_id(self):
@@ -367,6 +370,22 @@ class StateContext(object):
         if not any(address.startswith(ns) for ns in self._read_list):
             raise AuthorizationException(address=address)
 
+    def add_execution_data(self, data_type, data):
+        with self._lock:
+            self._execution_data.append((data_type, data))
+
+    def get_execution_data(self):
+        with self._lock:
+            return self._execution_data.copy()
+
+    def add_execution_event(self, event):
+        with self._lock:
+            self._execution_events.append(event)
+
+    def get_execution_events(self):
+        with self._lock:
+            return self._execution_events.copy()
+
 
 class ContextManager(object):
 
@@ -415,7 +434,7 @@ class ContextManager(object):
         return self._namespace_regex.match(namespace) is not None
 
     def create_context(self, state_hash, base_contexts, inputs, outputs):
-        """Create a StateContext to run a transaction against.
+        """Create a ExecutionContext to run a transaction against.
 
         Args:
             state_hash: (str): Merkle root to base state on.
@@ -444,7 +463,7 @@ class ContextManager(object):
             base_contexts=base_contexts,
             addresses_to_find=addresses_to_find)
 
-        context = StateContext(
+        context = ExecutionContext(
             state_hash=state_hash,
             read_list=inputs,
             write_list=outputs,
@@ -750,6 +769,53 @@ class ContextManager(object):
     def stop(self):
         self._address_queue.put_nowait(_SHUTDOWN_SENTINEL)
         self._inflated_addresses.put_nowait(_SHUTDOWN_SENTINEL)
+
+    def add_execution_data(self, context_id, data_type, data):
+        """Within a context, append data to the execution result.
+
+        Args:
+            context_id (str): the context id returned by create_context
+            data_type (str): type of data to append
+            data (bytes): data to append
+
+        Returns:
+            (bool): True if the operation is successful, False if
+                the context_id doesn't reference a known context.
+        """
+        if context_id not in self._contexts:
+            LOGGER.warning("Context_id not in contexts, %s", context_id)
+            return False
+
+        context = self._contexts.get(context_id)
+        context.add_execution_data(data_type, data)
+        return True
+
+    def add_execution_event(self, context_id, event):
+        """Within a context, append data to the execution result.
+
+        Args:
+            context_id (str): the context id returned by create_context
+            data_type (str): type of data to append
+            data (bytes): data to append
+
+        Returns:
+            (bool): True if the operation is successful, False if
+                the context_id doesn't reference a known context.
+        """
+        if context_id not in self._contexts:
+            LOGGER.warning("Context_id not in contexts, %s", context_id)
+            return False
+
+        context = self._contexts.get(context_id)
+        context.add_execution_event(event)
+        return True
+
+    def get_execution_results(self, context_id):
+        context = self._contexts.get(context_id)
+        return (context.get_all_if_set().copy(),
+                context.get_all_if_deleted().copy(),
+                context.get_execution_events().copy(),
+                context.get_execution_data().copy())
 
 
 class _ContextReader(Thread):
