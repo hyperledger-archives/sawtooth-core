@@ -453,3 +453,281 @@
     addresses_to_set:
       - y:sha :
     valid: False
+- #----------------------------- Batch 22
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - a:sha :
+      - b:sha :
+      - c:sha :
+      - d:sha :
+    name: helm
+  -
+    inputs:
+      - d:sha
+      - h:sha
+    outputs:
+      - a:sha
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    valid: False
+- #------------------------------- Batch 23
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+    valid: False
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    valid: False
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    dependencies:
+      - helm
+- #------------------------------- Batch 24
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_set:
+      - e:sha :
+    valid: False
+  -
+    inputs:
+      - f:sha
+    outputs:
+      - f:sha
+    addresses_to_set:
+      - f:sha :
+    name: danko
+  -
+    inputs:
+      - g:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+    valid: False
+- #------------------------------- Batch 25
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - h:sha
+    addresses_to_set:
+      - h:sha :
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+      - b:sha
+    addresses_to_set:
+      - a:sha :
+      - b:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+    dependencies:
+      - danko
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    valid: False
+- #------------------------------- Batch 26
+  -
+    inputs:
+      - f:sha
+    outputs:
+      - f:sha
+    addresses_to_set:
+      - f:sha :
+    dependencies:
+      - helm
+  -
+    inputs:
+      - g:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - h:sha:20
+    addresses_to_set:
+      - h:sha :
+    valid: False
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+    name: robertson
+- # ----------------------------- Batch 27
+  -
+    inputs:
+      - j:sha
+    outputs:
+      - j:sha
+    addresses_to_set:
+      - j:sha :
+    valid: False
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+    dependencies:
+      - robertson
+  - inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+  -
+    inputs:
+      - z:sha
+    outputs:
+      - z:sha
+    addresses_to_set:
+      - z:sha :
+- # ------------------------------ Batch 28
+  -
+    inputs:
+      - t:sha
+    outputs:
+      - t:sha
+    addresses_to_set:
+      - t:sha :
+    valid: False
+  -
+    inputs:
+      - w:sha:20
+    outputs:
+      - w:sha:10
+    addresses_to_set:
+      - w:sha :
+- # ------------------------------ Batch 29
+  -
+    inputs:
+      - m:sha
+    outputs:
+      - m:sha
+    addresses_to_set:
+      - m:sha :
+    dependencies:
+      - robertson
+    name: hudson
+  -
+    inputs:
+      - n:sha
+    outputs:
+      - n:sha
+    addresses_to_set:
+      - n:sha :
+- # ---------------------------------- Batch 30
+  -
+    inputs:
+      - g:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+  -
+    inputs:
+      - c:sha
+    outputs:
+      - c:sha
+    addresses_to_set:
+      - c:sha :
+    name: manuel
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - r:sha :
+      - e:sha :
+      - u:sha :
+      - i:sha :
+- # --------------------------------------- Batch 31
+  -
+    inputs:
+      - r:sha
+    outputs:
+      - r:sha
+    addresses_to_set:
+      - r:sha :
+  -
+    inputs:
+      - i:sha
+    outputs:
+      - i:sha
+    addresses_to_set:
+      - i:sha :
+    dependencies:
+      - manuel
+      - hudson
+- # ---------------------------------------- Batch 32
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    dependencies:
+      - manuel
+    name: weider
+    valid: False
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - y:sha
+    addresses_to_set:
+      - y:sha :
+- # ------------------------------------- Batch 33
+ -
+  inputs:
+    - o:sha
+  outputs:
+    - o:sha
+  addresses_to_set:
+    - o:sha :
+  dependencies:
+    - weider
