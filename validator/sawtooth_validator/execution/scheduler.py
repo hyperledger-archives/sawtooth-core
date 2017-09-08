@@ -52,8 +52,24 @@ class Scheduler(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def get_transaction_execution_results(self, batch_signature):
+        """Get all TransactionExecutionResults for a batch. If the batch isn't
+        finished or is invalid, returns None.
+
+        Args:
+            batch_signature (str): The signature of the batch, which must match
+                the header_signature field of the Batch.
+
+        Returns:
+            list of :obj:`TransactionExecutionResult`: The results of all
+                transactions executed in the batch.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def set_transaction_execution_result(
-            self, txn_signature, is_valid, context_id):
+            self, txn_signature, is_valid, context_id, state_changes, events,
+            data, error_message, error_data):
         """Set the status of an executed transaction.
 
         Called by the executor after a transaction has been processed.
@@ -220,6 +236,51 @@ class BatchExecutionResult(object):
     def __init__(self, is_valid, state_hash):
         self.is_valid = is_valid
         self.state_hash = state_hash
+
+
+class TxnExecutionResult:
+    """The resulting execution data from running the transaction through the
+    executor.
+
+    Attributes:
+        signature (str): The header signature of the transaction.
+        is_valid (bool): True if the transaction is valid, False otherwise.
+        context_id (str): The context id against which the transaction was run.
+        state_hash (str): The state hash against which the transaction was run.
+        state_changes (list of :obj:`state_delta_pb2.StateChange`): The state
+            changes that were a result of applying this transaction.
+        events (list of :obj:`events_pb2.Event`): The events that were returned
+            while executing this transaction.
+        data (list of (str, bytes)): Opaque data that was returned while
+            executing this transaction.
+        error_message (str): An error message that was returned while executing
+            this transaction.
+        error_data (bytes): Error data that was returned while executing this
+            transaction.
+    """
+    def __init__(self, signature, is_valid, context_id=None, state_hash=None,
+                 state_changes=None, events=None, data=None, error_message="",
+                 error_data=b""):
+
+        if is_valid and context_id is None:
+            raise ValueError(
+                "There must be a context_id for valid transactions")
+        if not is_valid and context_id is not None:
+            raise ValueError(
+                "context_id must be None for invalid transactions")
+        if not is_valid and state_hash is not None:
+            raise ValueError(
+                "state_hash must be None for invalid transactions")
+
+        self.signature = signature
+        self.is_valid = is_valid
+        self.context_id = context_id
+        self.state_hash = state_hash
+        self.state_changes = state_changes if state_changes is not None else []
+        self.events = events if events is not None else []
+        self.data = data if data is not None else []
+        self.error_message = error_message
+        self.error_data = error_data
 
 
 class TxnInformation(object):

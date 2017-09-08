@@ -220,12 +220,13 @@ class TestSchedulers(unittest.TestCase):
 
         # 3.
         for i, batch_info in enumerate(
-                [(batch_1.header_signature, False),
-                 (batch_2.header_signature, False),
-                 (batch_3.header_signature, True),
-                 (batch_4.header_signature, False),
-                 (batch_5.header_signature, True)]):
-            batch_id, validity = batch_info
+                [(batch_1, False),
+                 (batch_2, False),
+                 (batch_3, True),
+                 (batch_4, False),
+                 (batch_5, True)]):
+            batch, validity = batch_info[0], batch_info[1]
+            batch_id = batch.header_signature
             result = scheduler.get_batch_execution_result(batch_id)
             self.assertEqual(
                 result.is_valid,
@@ -234,6 +235,14 @@ class TestSchedulers(unittest.TestCase):
                     i + 1,
                     'valid' if result.is_valid else 'invalid',
                     'valid' if validity else 'invalid'))
+            txn_results = scheduler.get_transaction_execution_results(batch_id)
+            # Check that a result was returned for every transaction
+            result_txn_ids = [result.signature for result in txn_results]
+            batch_txn_ids = [txn.header_signature
+                             for txn in batch.transactions]
+            self.assertEqual(result_txn_ids, batch_txn_ids)
+            if validity:
+                self.assertTrue(all(txn.is_valid for txn in txn_results))
 
     def test_serial_fail_fast(self):
         """Tests that transactions that are already determined to be in an
