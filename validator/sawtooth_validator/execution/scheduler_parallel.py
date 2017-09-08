@@ -21,6 +21,7 @@ from collections import OrderedDict
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
+from sawtooth_validator.execution.scheduler import TxnExecutionResult
 from sawtooth_validator.execution.scheduler import TxnInformation
 from sawtooth_validator.execution.scheduler import Scheduler
 from sawtooth_validator.execution.scheduler import SchedulerIterator
@@ -248,23 +249,6 @@ class PredecessorTree:
         return predecessors
 
 
-class TransactionExecutionResult:
-    def __init__(self, is_valid, context_id=None, state_hash=None):
-        if is_valid and context_id is None:
-            raise ValueError(
-                "There must be a context_id for valid transactions")
-        if not is_valid and context_id is not None:
-            raise ValueError(
-                "context_id must be None for invalid transactions")
-        if not is_valid and state_hash is not None:
-            raise ValueError(
-                "state_hash must be None for invalid transactions")
-
-        self.is_valid = is_valid
-        self.context_id = context_id
-        self.state_hash = state_hash
-
-
 class ParallelScheduler(Scheduler):
     def __init__(self, squash_handler, first_state_hash, always_persist):
         self._squash = squash_handler
@@ -459,7 +443,7 @@ class ParallelScheduler(Scheduler):
     def get_batch_execution_result(self, batch_signature):
         with self._condition:
             # This method calculates the BatchExecutionResult on the fly,
-            # where only the TransactionExecutionResults are cached, instead
+            # where only the TxnExecutionResults are cached, instead
             # of BatchExecutionResults, as in the SerialScheduler
             batch = self._batches_by_id[batch_signature]
 
@@ -490,6 +474,19 @@ class ParallelScheduler(Scheduler):
                                           persist=self._always_persist,
                                           clean_up=True)
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
+
+    def get_transaction_execution_results(self, batch_signature):
+        with self._condition:
+            batch = self._batches_by_id.get(batch_signature)
+            if batch is None:
+                return None
+
+            results = []
+            for txn in batch.transactions:
+                result = self._txn_results.get(txn.header_signature)
+                if result is not None:
+                    results.append(result)
+            return results
 
     def _is_predecessor_of_possible_successor(self,
                                               txn_id,
@@ -557,7 +554,8 @@ class ParallelScheduler(Scheduler):
         return False
 
     def set_transaction_execution_result(
-            self, txn_signature, is_valid, context_id):
+            self, txn_signature, is_valid, context_id, state_changes=None,
+            events=None, data=None, error_message="", error_data=b""):
         with self._condition:
             if txn_signature not in self._scheduled:
                 raise SchedulerError("transaction not scheduled: {}".format(
@@ -568,12 +566,16 @@ class ParallelScheduler(Scheduler):
             is_rescheduled = self._reschedule_if_outstanding(txn_signature)
 
             if not is_rescheduled:
-                txn_result = TransactionExecutionResult(
+                self._txn_results[txn_signature] = TxnExecutionResult(
+                    signature=txn_signature,
                     is_valid=is_valid,
                     context_id=context_id if is_valid else None,
-                    state_hash=self._first_state_hash if is_valid else None)
-
-                self._txn_results[txn_signature] = txn_result
+                    state_hash=self._first_state_hash if is_valid else None,
+                    state_changes=state_changes,
+                    events=events,
+                    data=data,
+                    error_message=error_message,
+                    error_data=error_data)
 
             self._condition.notify_all()
 
@@ -693,7 +695,11 @@ class ParallelScheduler(Scheduler):
                         not self._dependency_not_processed(txn):
                     if self._txn_failed_by_dep(txn):
                         self._txn_results[txn.header_signature] = \
-                            TransactionExecutionResult(False, None, None)
+                            TxnExecutionResult(
+                                signature=txn.header_signature,
+                                is_valid=False,
+                                context_id=None,
+                                state_hash=None)
                         continue
                     next_txn = txn
                     break
