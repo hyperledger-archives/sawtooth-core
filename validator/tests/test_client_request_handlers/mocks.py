@@ -21,7 +21,6 @@ from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_store import BlockStore
-from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchTracker
