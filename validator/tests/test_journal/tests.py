@@ -1266,7 +1266,7 @@ class TestJournal(unittest.TestCase):
 
 class TestTimedCache(unittest.TestCase):
     def test_cache(self):
-        bc = TimedCache(keep_time=1)
+        bc = TimedCache(keep_time=1, purge_frequency=0)
 
         with self.assertRaises(KeyError):
             bc["test"]
@@ -1286,7 +1286,7 @@ class TestTimedCache(unittest.TestCase):
         # use an invasive technique so that we don't have to sleep for
         # the item to expire
 
-        bc = TimedCache(keep_time=1)
+        bc = TimedCache(keep_time=1, purge_frequency=0)
 
         bc["test"] = "value"
         bc["test2"] = "value2"
@@ -1294,14 +1294,14 @@ class TestTimedCache(unittest.TestCase):
 
         # test that expired item i
         bc.cache["test"].timestamp = bc.cache["test"].timestamp - 2
-        bc.purge_expired()
+        bc["test2"] = "value2"  # set value to activate purge
         self.assertEqual(len(bc), 1)
         self.assertFalse("test" in bc)
         self.assertTrue("test2" in bc)
 
     def test_access_update(self):
 
-        bc = TimedCache(keep_time=1)
+        bc = TimedCache(keep_time=1, purge_frequency=0)
 
         bc["test"] = "value"
         bc["test2"] = "value2"
@@ -1310,7 +1310,7 @@ class TestTimedCache(unittest.TestCase):
         bc["test"] = "value"
         bc.cache["test"].timestamp = bc.cache["test"].timestamp - 2
         bc["test"]  # access to update timestamp
-        bc.purge_expired()
+        bc["test2"] = "value2"  # set value to activate purge
         self.assertEqual(len(bc), 2)
         self.assertTrue("test" in bc)
         self.assertTrue("test2" in bc)
