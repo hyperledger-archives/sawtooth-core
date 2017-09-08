@@ -58,7 +58,7 @@ def load_toml_validator_config(filename):
     toml_config = toml.loads(raw_config)
     invalid_keys = set(toml_config.keys()).difference(
         ['bind', 'endpoint', 'peering', 'seeds', 'peers', 'network_public_key',
-         'network_private_key', 'scheduler', 'permissions'])
+         'network_private_key', 'scheduler', 'permissions', 'roles'])
     if invalid_keys:
         raise LocalConfigurationError(
             "Invalid keys in validator config: "
@@ -90,7 +90,8 @@ def load_toml_validator_config(filename):
          network_public_key=network_public_key,
          network_private_key=network_private_key,
          scheduler=toml_config.get("scheduler", None),
-         permissions=parse_permissions(toml_config.get("permissions", None))
+         permissions=parse_permissions(toml_config.get("permissions", None)),
+         roles=toml_config.get("roles", None)
     )
 
     return config
@@ -112,6 +113,7 @@ def merge_validator_config(configs):
     network_private_key = None
     scheduler = None
     permissions = None
+    roles = None
 
     for config in reversed(configs):
         if config.bind_network is not None:
@@ -134,6 +136,8 @@ def merge_validator_config(configs):
             scheduler = config.scheduler
         if config.permissions is not None or config.permissions == {}:
             permissions = config.permissions
+        if config.roles is not None:
+            roles = config.roles
 
     return ValidatorConfig(
          bind_network=bind_network,
@@ -145,7 +149,8 @@ def merge_validator_config(configs):
          network_public_key=network_public_key,
          network_private_key=network_private_key,
          scheduler=scheduler,
-         permissions=permissions
+         permissions=permissions,
+         roles=roles
     )
 
 
@@ -189,8 +194,8 @@ class ValidatorConfig:
     def __init__(self, bind_network=None, bind_component=None,
                  endpoint=None, peering=None, seeds=None,
                  peers=None, network_public_key=None,
-                 network_private_key=None,
-                 scheduler=None, permissions=None):
+                 network_private_key=None, scheduler=None, permissions=None,
+                 roles=None):
 
         self._bind_network = bind_network
         self._bind_component = bind_component
@@ -202,6 +207,7 @@ class ValidatorConfig:
         self._network_private_key = network_private_key
         self._scheduler = scheduler
         self._permissions = permissions
+        self._roles = roles
 
     @property
     def bind_network(self):
@@ -243,12 +249,16 @@ class ValidatorConfig:
     def permissions(self):
         return self._permissions
 
+    @property
+    def roles(self):
+        return self._roles
+
     def __repr__(self):
         return \
             "{}(bind_network={}, bind_component={}, " \
             "endpoint={}, peering={}, seeds={}, peers={}, "\
             "network_public_key={}, network_private_key={}, " \
-            "scheduler={}, permissions={})".format(
+            "scheduler={}, permissions={}, roles={})".format(
                 self.__class__.__name__,
                 repr(self._bind_network),
                 repr(self._bind_component),
@@ -259,7 +269,8 @@ class ValidatorConfig:
                 repr(self._network_public_key),
                 repr(self._network_private_key),
                 repr(self._scheduler),
-                repr(self._permissions))
+                repr(self._permissions),
+                repr(self._roles))
 
     def to_dict(self):
         return collections.OrderedDict([
@@ -273,6 +284,7 @@ class ValidatorConfig:
             ('network_private_key', self._network_private_key),
             ('scheduler', self._scheduler),
             ('permissions', self._permissions),
+            ('roles', self._roles)
         ])
 
     def to_toml_string(self):

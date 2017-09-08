@@ -94,6 +94,10 @@ def parse_args(args):
     parser.add_argument('--scheduler',
                         choices=['serial', 'parallel'],
                         help='The type of scheduler to be used.')
+    parser.add_argument('--network-auth',
+                        choices=['trust', 'challenge'],
+                        help='The type of authorization required to join the '
+                             'validator network.')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -182,7 +186,9 @@ def create_validator_config(opts):
         peering=opts.peering,
         seeds=opts.seeds,
         peers=opts.peers,
-        scheduler=opts.scheduler)
+        scheduler=opts.scheduler,
+        roles=opts.network_auth
+        )
 
 
 def main(args=None):
@@ -200,6 +206,9 @@ def main(args=None):
         opts.seeds = _split_comma_append_args(opts.seeds)
 
     init_console_logging(verbose_level=verbose_level)
+
+    if opts.network_auth:
+        opts.network_auth = {"network": opts.network_auth}
 
     try:
         path_config = load_path_config(config_dir=opts.config_dir)
@@ -297,7 +306,8 @@ def main(args=None):
                           validator_config.scheduler,
                           validator_config.permissions,
                           validator_config.network_public_key,
-                          validator_config.network_private_key
+                          validator_config.network_private_key,
+                          validator_config.roles
                           )
 
     # pylint: disable=broad-except
