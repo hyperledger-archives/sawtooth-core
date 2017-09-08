@@ -181,7 +181,8 @@ def create_validator_config(opts):
         endpoint=opts.endpoint,
         peering=opts.peering,
         seeds=opts.seeds,
-        peers=opts.peers)
+        peers=opts.peers,
+        scheduler=opts.scheduler)
 
 
 def main(args=None):
