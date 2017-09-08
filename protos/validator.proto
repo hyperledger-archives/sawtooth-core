@@ -139,6 +139,10 @@ message Message {
         AUTHORIZATION_VIOLATION = 601;
         AUTHORIZATION_TRUST_REQUEST = 602;
         AUTHORIZATION_TRUST_RESPONSE = 603;
+        AUTHORIZATION_CHALLENGE_REQUEST = 604;
+        AUTHORIZATION_CHALLENGE_RESPONSE = 605;
+        AUTHORIZATION_CHALLENGE_SUBMIT = 606;
+        AUTHORIZATION_CHALLENGE_RESULT = 607;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the
