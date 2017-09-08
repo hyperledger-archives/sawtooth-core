@@ -23,6 +23,7 @@ import queue
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf import state_delta_pb2
 
 from sawtooth_validator.execution.context_manager import \
     CreateContextException
@@ -95,8 +96,28 @@ class TransactionExecutorThread(object):
             del self._open_futures[result.connection_id][req.signature]
 
         if response.status == processor_pb2.TpProcessResponse.OK:
+            state_sets, state_deletes, events, data = \
+                self._context_manager.get_execution_results(req.context_id)
+
+            state_changes = [
+                state_delta_pb2.StateChange(
+                    address=addr, value=value,
+                    type=state_delta_pb2.StateChange.SET)
+                for addr, value in state_sets.items()
+            ] + [
+                state_delta_pb2.StateChange(
+                    address=addr, type=state_delta_pb2.StateChange.DELETE)
+                for addr in state_deletes
+            ]
+
             self._scheduler.set_transaction_execution_result(
-                req.signature, True, req.context_id)
+                txn_signature=req.signature,
+                is_valid=True,
+                context_id=req.context_id,
+                state_changes=state_changes,
+                events=events,
+                data=data)
+
         elif response.status == processor_pb2.TpProcessResponse.INTERNAL_ERROR:
             header = transaction_pb2.TransactionHeader()
             header.ParseFromString(req.header)
@@ -112,8 +133,14 @@ class TransactionExecutorThread(object):
         else:
             self._context_manager.delete_contexts(
                 context_id_list=[req.context_id])
+
             self._scheduler.set_transaction_execution_result(
-                req.signature, False, req.context_id)
+                txn_signature=req.signature,
+                is_valid=False,
+                context_id=req.context_id,
+                error_message=response.message,
+                error_data=response.extended_data)
+
             for observer in self._invalid_observers:
                 observer.notify_txn_invalid(
                     req.signature,
