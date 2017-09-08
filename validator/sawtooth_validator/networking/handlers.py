@@ -13,6 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import logging
+import os
+
+import sawtooth_signing as signing
 
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -27,6 +30,12 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationTrustResponse
 from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeResponse
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeSubmit
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeResult
+from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationViolation
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
@@ -35,6 +44,7 @@ from sawtooth_validator.protobuf.network_pb2 import PingRequest
 
 
 LOGGER = logging.getLogger(__name__)
+PAYLOAD_LENGTH = 64
 
 
 class ConnectHandler(Handler):
@@ -74,6 +84,11 @@ class ConnectHandler(Handler):
             role_type = ConnectionResponse.RoleEntry(
                 role=RoleType.Value("NETWORK"),
                 auth_type=ConnectionResponse.TRUST)
+            connection_response = ConnectionResponse(roles=[role_type])
+        elif auth_type == AuthorizationType.CHALLENGE:
+            role_type = ConnectionResponse.RoleEntry(
+                role=RoleType.Value("NETWORK"),
+                auth_type=ConnectionResponse.CHALLENGE)
             connection_response = ConnectionResponse(roles=[role_type])
         else:
             LOGGER.warning("Network role is set to an unsupported"
@@ -177,7 +192,7 @@ class AuthorizationTrustRequestHandler(Handler):
         """
         if self._network.get_connection_status(connection_id) != \
                 ConnectionStatus.CONNECTION_REQUEST:
-            LOGGER.debug("Connection has previous message was not a"
+            LOGGER.debug("Connection's previous message was not a"
                          " ConnectionRequest, Remove connection to %s",
                          connection_id)
             violation = AuthorizationViolation(
@@ -224,14 +239,155 @@ class AuthorizationTrustRequestHandler(Handler):
 
         auth_trust_response = AuthorizationTrustResponse(
             roles=[RoleType.Value("NETWORK")])
+
+        LOGGER.debug("Connection: %s is approved", connection_id)
+
+        self._network.update_connection_status(
+            connection_id,
+            ConnectionStatus.CONNECTED)
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=auth_trust_response,
+            message_type=validator_pb2.Message.AUTHORIZATION_TRUST_RESPONSE)
+
+
+class AuthorizationChallengeRequestHandler(Handler):
+    def __init__(self, network):
+        self._network = network
+
+    def handle(self, connection_id, message_content):
+        """
+        If the connection wants to take on a role that requires a challenge to
+        be signed, it will request the challenge by sending an
+        AuthorizationChallengeRequest to the validator it wishes to connect to.
+        The validator will send back a random payload that must be signed.
+        If the connection has not sent a ConnectionRequest or the connection
+        has already recieved an AuthorizationChallengeResponse, an
+        AuthorizationViolation will be returned and the connection will be
+        closed.
+        """
+        if self._network.get_connection_status(connection_id) != \
+                ConnectionStatus.CONNECTION_REQUEST:
+            LOGGER.debug("Connection's previous message was not a"
+                         " ConnectionRequest, Remove connection to %s",
+                         connection_id)
+            violation = AuthorizationViolation(
+                violation=RoleType.Value("NETWORK"))
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=violation,
+                message_type=validator_pb2.Message
+                .AUTHORIZATION_VIOLATION)
+
+        random_payload = os.urandom(PAYLOAD_LENGTH)
+        auth_challenge_response = AuthorizationChallengeResponse(
+            payload=random_payload)
+
+        self._network.update_connection_status(
+            connection_id,
+            ConnectionStatus.AUTH_CHALLENGE_REQUEST)
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=auth_challenge_response,
+            message_type=validator_pb2.Message.
+            AUTHORIZATION_CHALLENGE_RESPONSE)
+
+
+class AuthorizationChallengeSubmitHandler(Handler):
+    def __init__(self, network, permission_verifier, gossip):
+        self._network = network
+        self._permission_verifier = permission_verifier
+        self._gossip = gossip
+
+    def handle(self, connection_id, message_content):
+        """
+        When the validator receives an AuthorizationChallengeSubmit message, it
+        will verify the public key against the signature. If the public key is
+        verified, the requested roles will be checked against the stored roles
+        to see if the public key is included in the policy. If the node’s
+        response is accepted, the node’s public key will be stored and the
+        requester may start sending messages for the approved roles.
+
+        If the requester wanted a role that is either not available on the
+        endpoint, the requester does not have access to one of the roles
+        requested, or the previous message was not an
+        AuthorizationChallengeRequest, the challenge will be rejected and the
+        connection will be closed.
+        """
+        if self._network.get_connection_status(connection_id) != \
+                ConnectionStatus.AUTH_CHALLENGE_REQUEST:
+            LOGGER.debug("Connection's previous message was not a"
+                         " AuthorizationChallengeRequest, Remove connection to"
+                         "%s",
+                         connection_id)
+            violation = AuthorizationViolation(
+                violation=RoleType.Value("NETWORK"))
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=violation,
+                message_type=validator_pb2.Message
+                .AUTHORIZATION_VIOLATION)
+
+        auth_challenge_submit = AuthorizationChallengeSubmit()
+        auth_challenge_submit.ParseFromString(message_content)
+
+        if not signing.verify(auth_challenge_submit.payload,
+                              auth_challenge_submit.signature,
+                              auth_challenge_submit.public_key):
+            LOGGER.warning("Signature was not able to be verifed. Remove "
+                           "connection to %s", connection_id)
+            violation = AuthorizationViolation(
+                violation=RoleType.Value("NETWORK"))
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=violation,
+                message_type=validator_pb2.Message
+                .AUTHORIZATION_VIOLATION)
+
+        roles = self._network.roles
+        for role in auth_challenge_submit.roles:
+            if role == RoleType.Value("NETWORK") or role == \
+                    RoleType.Value("ALL"):
+                permitted = False
+                if "network" in roles:
+                    permitted = self._permission_verifier.check_network_role(
+                        auth_challenge_submit.public_key)
+                if not permitted:
+                    violation = AuthorizationViolation(
+                        violation=RoleType.Value("NETWORK"))
+                    return HandlerResult(
+                        HandlerStatus.RETURN_AND_CLOSE,
+                        message_out=violation,
+                        message_type=validator_pb2.Message
+                        .AUTHORIZATION_VIOLATION)
+        self._network.update_connection_public_key(
+            connection_id,
+            auth_challenge_submit.public_key)
+
+        if RoleType.Value("NETWORK") in auth_challenge_submit.roles:
+            # Need to send ConnectionRequest to authorize ourself with the
+            # connection if they initialized the connection
+            if not self._network.is_outbound_connection(connection_id):
+                self._network.send_connect_request(connection_id)
+            else:
+                # If this is an outbound connection, authorization is complete
+                # for both connections and peering/topology build out can
+                # begin.
+                self._gossip.connect_success(connection_id)
+
+        auth_challenge_result = AuthorizationChallengeResult(
+            roles=[RoleType.Value("NETWORK")])
+
         LOGGER.debug("Connection: %s is approved", connection_id)
         self._network.update_connection_status(
             connection_id,
             ConnectionStatus.CONNECTED)
         return HandlerResult(
             HandlerStatus.RETURN,
-            message_out=auth_trust_response,
-            message_type=validator_pb2.Message.AUTHORIZATION_TRUST_RESPONSE)
+            message_out=auth_challenge_result,
+            message_type=validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESULT)
 
 
 class AuthorizationViolationHandler(Handler):

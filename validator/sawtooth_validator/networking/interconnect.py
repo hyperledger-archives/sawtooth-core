@@ -33,6 +33,8 @@ import zmq.auth
 from zmq.auth.asyncio import AsyncioAuthenticator
 import zmq.asyncio
 
+import sawtooth_signing as signing
+
 from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking import future
@@ -41,6 +43,12 @@ from sawtooth_validator.protobuf.authorization_pb2 import ConnectionRequest
 from sawtooth_validator.protobuf.authorization_pb2 import ConnectionResponse
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationTrustRequest
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeRequest
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeResponse
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 
 LOGGER = logging.getLogger(__name__)
@@ -56,10 +64,12 @@ class ConnectionType(Enum):
 class ConnectionStatus(Enum):
     CONNECTED = 1
     CONNECTION_REQUEST = 2
+    AUTH_CHALLENGE_REQUEST = 3
 
 
 class AuthorizationType(Enum):
     TRUST = 1
+    CHALLENGE = 2
 
 
 ConnectionInfo = namedtuple('ConnectionInfo',
@@ -573,7 +583,9 @@ class Interconnect(object):
                  max_future_callback_workers=10,
                  roles=None,
                  authorize=False,
-                 pub_key=None):
+                 public_key=None,
+                 priv_key=None
+                 ):
         """
         Constructor for Interconnect.
 
@@ -611,10 +623,16 @@ class Interconnect(object):
         if roles is None:
             self._roles["network"] = AuthorizationType.TRUST
         else:
-            self._roles = roles
+            self._roles = {}
+            for role in roles:
+                if roles[role] == "challenge":
+                    self._roles[role] = AuthorizationType.CHALLENGE
+                else:
+                    self._roles[role] = AuthorizationType.TRUST
 
         self._authorize = authorize
-        self._pub_key = pub_key
+        self._public_key = public_key
+        self._priv_key = priv_key
 
         self._send_receive_thread = _SendReceive(
             "ServerThread",
@@ -682,18 +700,12 @@ class Interconnect(object):
                      self._max_incoming_connections)
         return self._max_incoming_connections >= len(self._connections)
 
-    def add_outbound_connection(self, uri,
-                                success_callback=None,
-                                failure_callback=None):
+    def add_outbound_connection(self, uri):
         """Adds an outbound connection to the network.
 
         Args:
             uri (str): The zmq-style (e.g. tcp://hostname:port) uri
                 to attempt to connect to.
-            success_callback (function): The function to call upon
-                connection success.
-            failure_callback (function): The function to call upon
-                connection failure.
         """
         LOGGER.debug("Adding connection to %s", uri)
         conn = OutboundConnection(
@@ -725,7 +737,7 @@ class Interconnect(object):
     def send_connect_request(self, connection_id):
         """
         Send ConnectionRequest to an inbound connection. This allows
-        the validator to be authorized by the incomin connection.
+        the validator to be authorized by the incoming connection.
         """
         connect_message = ConnectionRequest(endpoint=self._public_endpoint)
         self.send(validator_pb2.Message.NETWORK_CONNECT,
@@ -750,23 +762,116 @@ class Interconnect(object):
             LOGGER.debug("Connection to %s was acknowledged",
                          connection.connection_id)
             if self._authorize:
-                auth_trust_request = AuthorizationTrustRequest(
-                    roles=[RoleType.Value("NETWORK")],
-                    public_key=self._pub_key)
-                connection.send(
-                    validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
-                    auth_trust_request.SerializeToString(),
-                    )
+                # Send correct Authorization Request for network role
+                auth_type = {"trust": [], "challenge": []}
+                for role_entry in connection_response.roles:
+                    if role_entry.auth_type == connection_response.TRUST:
+                        auth_type["trust"].append(role_entry.role)
+                    elif role_entry.auth_type == connection_response.CHALLENGE:
+                        auth_type["challenge"].append(role_entry.role)
+
+                if auth_type["trust"]:
+                    auth_trust_request = AuthorizationTrustRequest(
+                        roles=auth_type["trust"],
+                        public_key=self._public_key)
+                    connection.send(
+                        validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
+                        auth_trust_request.SerializeToString()
+                        )
+
+                if auth_type["challenge"]:
+                    auth_challenge_request = AuthorizationChallengeRequest()
+                    connection.send(
+                        validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
+                        auth_challenge_request.SerializeToString(),
+                        callback=partial(
+                            self._challenge_authorization_callback,
+                            connection=connection))
 
     def _inbound_connection_request_callback(self, request, result,
                                              connection=None):
-        auth_trust_request = AuthorizationTrustRequest(
-            roles=[RoleType.Value("NETWORK")],
-            public_key=self._pub_key)
+        connection_response = ConnectionResponse()
+        connection_response.ParseFromString(result.content)
+        if connection_response.status == connection_response.ERROR:
+            LOGGER.debug("Received an error response to the NETWORK_CONNECT "
+                         "we sent. Removing connection: %s",
+                         connection.connection_id)
+            self.remove_connection(connection.connection_id)
+
+        # Send correct Authorization Request for network role
+        auth_type = {"trust": [], "challenge": []}
+        for role_entry in connection_response.roles:
+            if role_entry.auth_type == connection_response.TRUST:
+                auth_type["trust"].append(role_entry.role)
+            elif role_entry.auth_type == connection_response.CHALLENGE:
+                auth_type["challenge"].append(role_entry.role)
+
+        if auth_type["trust"]:
+            auth_trust_request = AuthorizationTrustRequest(
+                roles=[RoleType.Value("NETWORK")],
+                public_key=self._public_key)
+            self.send(
+                validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
+                auth_trust_request.SerializeToString(),
+                connection
+                )
+
+        if auth_type["challenge"]:
+            auth_challenge_request = AuthorizationChallengeRequest()
+            self.send(
+                validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
+                auth_challenge_request.SerializeToString(),
+                connection,
+                callback=partial(
+                    self._inbound_challenge_authorization_callback,
+                    connection=connection)
+                )
+
+    def _challenge_authorization_callback(self, request, result,
+                                          connection=None,
+                                          ):
+        if result.message_type != \
+                validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESPONSE:
+            LOGGER.debug("Unable to complete Challenge Authorization.")
+            return
+
+        auth_challenge_response = AuthorizationChallengeResponse()
+        auth_challenge_response.ParseFromString(result.content)
+        payload = auth_challenge_response.payload
+        signature = signing.sign(payload, self._priv_key)
+
+        auth_challenge_submit = AuthorizationChallengeSubmit(
+            public_key=self._public_key,
+            payload=payload,
+            signature=signature,
+            roles=[RoleType.Value("NETWORK")])
+
+        connection.send(
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
+            auth_challenge_submit.SerializeToString())
+
+    def _inbound_challenge_authorization_callback(self, request, result,
+                                                  connection=None):
+        if result.message_type != \
+                validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESPONSE:
+            LOGGER.debug("Unable to complete Challenge Authorization.")
+            return
+
+        auth_challenge_response = AuthorizationChallengeResponse()
+        auth_challenge_response.ParseFromString(result.content)
+        payload = auth_challenge_response.payload
+        signature = signing.sign(payload, self._priv_key)
+
+        auth_challenge_submit = AuthorizationChallengeSubmit(
+            public_key=self._public_key,
+            payload=payload,
+            signature=signature,
+            roles=[RoleType.Value("NETWORK")])
+
         self.send(
-            validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
-            auth_trust_request.SerializeToString(),
-            connection,
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
+            auth_challenge_submit.SerializeToString(),
+            connection
             )
 
     def send(self, message_type, data, connection_id, callback=None):
