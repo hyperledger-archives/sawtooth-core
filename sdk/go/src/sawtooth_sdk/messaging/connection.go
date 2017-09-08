@@ -52,9 +52,23 @@ func LoadMsg(data []byte) (msg *validator_pb2.Message, err error) {
 	return
 }
 
+type Connection interface {
+	SendData(id string, data []byte) error
+	SendNewMsg(t validator_pb2.Message_MessageType, c []byte) (corrId string, err error)
+	SendNewMsgTo(id string, t validator_pb2.Message_MessageType, c []byte) (corrId string, err error)
+	SendMsg(t validator_pb2.Message_MessageType, c []byte, corrId string) error
+	SendMsgTo(id string, t validator_pb2.Message_MessageType, c []byte, corrId string) error
+	RecvData() (string, []byte, error)
+	RecvMsg() (string, *validator_pb2.Message, error)
+	RecvMsgWithId(corrId string) (string, *validator_pb2.Message, error)
+	Close()
+	Socket() *zmq.Socket
+	Identity() string
+}
+
 // Connection wraps a ZMQ DEALER socket or ROUTER socket and provides some
 // utility methods for sending and receiving messages.
-type Connection struct {
+type ZmqConnection struct {
 	identity string
 	uri      string
 	socket   *zmq.Socket
@@ -68,7 +82,7 @@ type storedMsg struct {
 
 // NewConnection establishes a new connection using the given ZMQ context and
 // socket type to the given URI.
-func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*Connection, error) {
+func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*ZmqConnection, error) {
 	socket, err := context.NewSocket(t)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create ZMQ socket: %v", err)
@@ -88,7 +102,7 @@ func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*Connection, e
 		return nil, fmt.Errorf("Failed to connect to %v: %v", uri, err)
 	}
 
-	return &Connection{
+	return &ZmqConnection{
 		identity: identity,
 		uri:      uri,
 		socket:   socket,
@@ -100,7 +114,7 @@ func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*Connection, e
 //
 // If id is not "", the id is included as the first part of the message. This
 // is useful for passing messages to a ROUTER socket so it can route them.
-func (self *Connection) SendData(id string, data []byte) error {
+func (self *ZmqConnection) SendData(id string, data []byte) error {
 	if id != "" {
 		_, err := self.socket.SendMessage(id, [][]byte{data})
 		if err != nil {
@@ -117,26 +131,26 @@ func (self *Connection) SendData(id string, data []byte) error {
 
 // SendNewMsg creates a new validator message, assigns a new correlation id,
 // serializes it, and sends it. It returns the correlation id created.
-func (self *Connection) SendNewMsg(t validator_pb2.Message_MessageType, c []byte) (corrId string, err error) {
+func (self *ZmqConnection) SendNewMsg(t validator_pb2.Message_MessageType, c []byte) (corrId string, err error) {
 	return self.SendNewMsgTo("", t, c)
 }
 
 // SendNewMsgTo sends a new message validator message with the given id sent as
 // the first part of the message. This is required when sending to a ROUTER
 // socket, so it knows where to route the message.
-func (self *Connection) SendNewMsgTo(id string, t validator_pb2.Message_MessageType, c []byte) (corrId string, err error) {
+func (self *ZmqConnection) SendNewMsgTo(id string, t validator_pb2.Message_MessageType, c []byte) (corrId string, err error) {
 	corrId = GenerateId()
 	return corrId, self.SendMsgTo(id, t, c, corrId)
 }
 
 // Send a message with the given correlation id
-func (self *Connection) SendMsg(t validator_pb2.Message_MessageType, c []byte, corrId string) error {
+func (self *ZmqConnection) SendMsg(t validator_pb2.Message_MessageType, c []byte, corrId string) error {
 	return self.SendMsgTo("", t, c, corrId)
 }
 
 // Send a message with the given correlation id and the prepends the id like
 // SendNewMsgTo()
-func (self *Connection) SendMsgTo(id string, t validator_pb2.Message_MessageType, c []byte, corrId string) error {
+func (self *ZmqConnection) SendMsgTo(id string, t validator_pb2.Message_MessageType, c []byte, corrId string) error {
 	data, err := DumpMsg(t, c, corrId)
 	if err != nil {
 		return err
@@ -146,9 +160,9 @@ func (self *Connection) SendMsgTo(id string, t validator_pb2.Message_MessageType
 }
 
 // RecvData receives a ZMQ message from the wrapped socket and returns the
-// identity of the sender and the data sent. If Connection does not wrap a
+// identity of the sender and the data sent. If ZmqConnection does not wrap a
 // ROUTER socket, the identity returned will be "".
-func (self *Connection) RecvData() (string, []byte, error) {
+func (self *ZmqConnection) RecvData() (string, []byte, error) {
 	msg, err := self.socket.RecvMessage(0)
 
 	if err != nil {
@@ -170,9 +184,9 @@ func (self *Connection) RecvData() (string, []byte, error) {
 }
 
 // RecvMsg receives a new validator message and returns it deserialized. If
-// Connection wraps a ROUTER socket, id will be the identity of the sender.
+// ZmqConnection wraps a ROUTER socket, id will be the identity of the sender.
 // Otherwise, id will be "".
-func (self *Connection) RecvMsg() (string, *validator_pb2.Message, error) {
+func (self *ZmqConnection) RecvMsg() (string, *validator_pb2.Message, error) {
 	for corrId, stored := range self.incoming {
 		delete(self.incoming, corrId)
 		return stored.Id, stored.Msg, nil
@@ -191,7 +205,7 @@ func (self *Connection) RecvMsg() (string, *validator_pb2.Message, error) {
 // RecvMsgWithId receives validator messages until a message with the given
 // correlation id is found and returns this message. Any messages received that
 // do not match the id are saved for subsequent receives.
-func (self *Connection) RecvMsgWithId(corrId string) (string, *validator_pb2.Message, error) {
+func (self *ZmqConnection) RecvMsgWithId(corrId string) (string, *validator_pb2.Message, error) {
 	// If the message is already stored, just return it
 	stored, exists := self.incoming[corrId]
 	if exists {
@@ -217,16 +231,16 @@ func (self *Connection) RecvMsgWithId(corrId string) (string, *validator_pb2.Mes
 }
 
 // Close closes the wrapped socket. This should be called with defer() after opening the socket.
-func (self *Connection) Close() {
+func (self *ZmqConnection) Close() {
 	self.socket.Close()
 }
 
 // Socket returns the wrapped socket.
-func (self *Connection) Socket() *zmq.Socket {
+func (self *ZmqConnection) Socket() *zmq.Socket {
 	return self.socket
 }
 
 // Identity returns the identity assigned to the wrapped socket.
-func (self *Connection) Identity() string {
+func (self *ZmqConnection) Identity() string {
 	return self.identity
 }
