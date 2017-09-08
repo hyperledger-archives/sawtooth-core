@@ -267,7 +267,7 @@ class ParallelScheduler(Scheduler):
 
         # Transactions that must be replayed but the prior result hasn't
         # been returned yet.
-        self._outstanding = []
+        self._outstanding = set()
 
         # A dict of transaction id to TxnInformation objects, containing all
         # transactions present in self._scheduled.
@@ -543,13 +543,13 @@ class ParallelScheduler(Scheduler):
                         del self._txn_results[poss_successor]
                         self._scheduled.remove(poss_successor)
                     else:
-                        self._outstanding.append(poss_successor)
+                        self._outstanding.add(poss_successor)
                     seen.append(poss_successor)
 
     def _reschedule_if_outstanding(self, txn_signature):
         if txn_signature in self._outstanding:
             self._scheduled.remove(txn_signature)
-            self._outstanding.remove(txn_signature)
+            self._outstanding.discard(txn_signature)
             return True
         return False
 
@@ -694,6 +694,11 @@ class ParallelScheduler(Scheduler):
                         not self._is_outstanding(txn) and \
                         not self._dependency_not_processed(txn):
                     if self._txn_failed_by_dep(txn):
+                        self._scheduled.append(txn.header_signature)
+                        self._scheduled_txn_info[txn.header_signature] = \
+                            TxnInformation(txn=txn,
+                                           state_hash=self._first_state_hash,
+                                           base_context_ids=[])
                         self._txn_results[txn.header_signature] = \
                             TxnExecutionResult(
                                 signature=txn.header_signature,
