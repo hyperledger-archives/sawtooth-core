@@ -91,6 +91,10 @@ from sawtooth_validator.networking.handlers import DisconnectHandler
 from sawtooth_validator.networking.handlers import \
     AuthorizationTrustRequestHandler
 from sawtooth_validator.networking.handlers import \
+    AuthorizationChallengeRequestHandler
+from sawtooth_validator.networking.handlers import \
+    AuthorizationChallengeSubmitHandler
+from sawtooth_validator.networking.handlers import \
     AuthorizationViolationHandler
 
 from sawtooth_validator.server.events.broadcaster import EventBroadcaster
@@ -110,6 +114,7 @@ class Validator(object):
                  peering, seeds_list, peer_list, data_dir, config_dir,
                  identity_signing_key, scheduler_type, permissions,
                  network_public_key=None, network_private_key=None,
+                 roles=None
                  ):
         """Constructs a validator instance.
 
@@ -223,7 +228,9 @@ class Validator(object):
             max_incoming_connections=100,
             max_future_callback_workers=10,
             authorize=True,
-            pub_key=signing.generate_pubkey(identity_signing_key))
+            public_key=signing.generate_pubkey(identity_signing_key),
+            priv_key=identity_signing_key,
+            roles=roles)
 
         self._gossip = Gossip(self._network,
                               endpoint=endpoint,
@@ -337,6 +344,20 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
             AuthorizationTrustRequestHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
+            AuthorizationChallengeRequestHandler(
+                network=self._network),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
+            AuthorizationChallengeSubmitHandler(
                 network=self._network,
                 permission_verifier=permission_verifier,
                 gossip=self._gossip),
