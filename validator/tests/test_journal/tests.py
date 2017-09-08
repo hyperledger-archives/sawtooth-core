@@ -31,8 +31,16 @@ from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.timed_cache import TimedCache
+from sawtooth_validator.journal.block_event_extractor \
+    import BlockEventExtractor
+
+from sawtooth_validator.server.events.subscription import EventSubscription
 
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf.events_pb2 import Event
+from sawtooth_validator.protobuf.events_pb2 import EventList
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 
@@ -1426,3 +1434,28 @@ class TestChainCommitState(unittest.TestCase):
         """
         self.assertFalse(self.commit_state.has_batch("missing"))
         self.assertFalse(self.commit_state.has_transaction("missing"))
+
+class TestBlockEventExtractor(unittest.TestCase):
+    def test_block_event_extractor(self):
+        """Test that a block_commit event is generated correctly."""
+        block_header = BlockHeader(
+            block_num=85,
+            state_root_hash="0987654321fedcba",
+            previous_block_id="0000000000000000")
+        block = BlockWrapper(Block(
+            header_signature="abcdef1234567890",
+            header=block_header.SerializeToString()))
+        extractor = BlockEventExtractor(block)
+        events = extractor.extract([EventSubscription(
+            event_type="block_commit")])
+        self.assertEqual(events, [
+            Event(
+                event_type="block_commit",
+                attributes=[
+                    Event.Attribute(key="block_id",value="abcdef1234567890"),
+                    Event.Attribute(key="block_num", value="85"),
+                    Event.Attribute(
+                        key="state_root_hash", value="0987654321fedcba"),
+                    Event.Attribute(
+                        key="previous_block_id",
+                        value="0000000000000000")])])

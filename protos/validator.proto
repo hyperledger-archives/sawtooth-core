@@ -100,7 +100,13 @@ message Message {
         CLIENT_RECEIPT_GET_REQUEST= 122;
         // A response with the receipts
         CLIENT_RECEIPT_GET_RESPONSE= 123;
-        // Further messages from the stats client through the web api
+
+        // Message types for events
+        CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;
+        CLIENT_EVENTS_SUBSCRIBE_RESPONSE = 501;
+        CLIENT_EVENTS_UNSUBSCRIBE_REQUEST = 502;
+        CLIENT_EVENTS_UNSUBSCRIBE_RESPONSE = 503;
+        CLIENT_EVENTS = 504;
 
         // Temp message types until a discussion can be had about gossip msg
         GOSSIP_MESSAGE = 200;

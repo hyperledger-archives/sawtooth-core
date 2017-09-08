@@ -93,6 +93,13 @@ from sawtooth_validator.networking.handlers import \
 from sawtooth_validator.networking.handlers import \
     AuthorizationViolationHandler
 
+from sawtooth_validator.server.events.broadcaster import EventBroadcaster
+from sawtooth_validator.server.events.handlers \
+    import ClientEventsSubscribeHandler
+from sawtooth_validator.server.events.handlers \
+    import ClientEventsSubscribeValidationHandler
+from sawtooth_validator.server.events.handlers \
+    import ClientEventsUnsubscribeHandler
 
 LOGGER = logging.getLogger(__name__)
 
@@ -189,6 +196,7 @@ class Validator(object):
         state_delta_processor = StateDeltaProcessor(self._service,
                                                     state_delta_store,
                                                     block_store)
+        event_broadcaster = EventBroadcaster(self._service)
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
@@ -257,7 +265,7 @@ class Validator(object):
             block_cache_purge_frequency=30,
             block_cache_keep_time=300,
             batch_observers=[batch_tracker],
-            chain_observers=[state_delta_processor],
+            chain_observers=[state_delta_processor, event_broadcaster],
         )
 
         self._genesis_controller = GenesisController(
@@ -651,6 +659,21 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.STATE_DELTA_GET_EVENTS_REQUEST,
             StateDeltaGetEventsHandler(block_store, state_delta_store),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
+            ClientEventsSubscribeValidationHandler(event_broadcaster),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
+            ClientEventsSubscribeHandler(event_broadcaster),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
+            ClientEventsUnsubscribeHandler(event_broadcaster),
             thread_pool)
 
     def start(self):
