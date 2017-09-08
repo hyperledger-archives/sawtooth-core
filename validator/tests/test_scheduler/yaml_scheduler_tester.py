@@ -260,6 +260,101 @@ class SchedulerTester(object):
 
         return batch_results, transactions_to_assert_state
 
+    def run_scheduler_alternating(self, scheduler, context_manager,
+                                  validation_state_hash=None,
+                                  txns_executed_fifo=True):
+        batches = deque()
+        batches.extend(self._batches)
+
+        txns_to_process = deque()
+
+        txn_context_by_txn_id = self._compute_transaction_execution_context()
+
+        transactions_to_assert_state = {}
+        while not scheduler.complete(block=False):
+            stop = False
+            while not stop:
+                try:
+                    txn_info = scheduler.next_transaction()
+                except StopIteration:
+                    stop = True
+
+                if txn_info is not None:
+                    txns_to_process.append(txn_info)
+                    LOGGER.debug("Transaction %s scheduled",
+                                 txn_info.txn.header_signature[:16])
+                else:
+                    stop = True
+
+            try:
+                scheduler.add_batch(batches.popleft())
+            except IndexError:
+                scheduler.finalize()
+
+            try:
+                if txns_executed_fifo:
+                    t_info = txns_to_process.popleft()
+                else:
+                    t_info = txns_to_process.pop()
+            except IndexError:
+                # No new txn was returned from next_transaction so
+                # check again if complete.
+                continue
+
+            inputs, outputs = self._get_inputs_outputs(t_info.txn)
+
+            c_id = context_manager.create_context(
+                state_hash=t_info.state_hash,
+                base_contexts=t_info.base_context_ids,
+                inputs=inputs,
+                outputs=outputs)
+
+            t_id = t_info.txn.header_signature
+
+            if t_id in txn_context_by_txn_id:
+                state_up_to_now = txn_context_by_txn_id[t_id].state
+                txn_context = txn_context_by_txn_id[t_id]
+                inputs, _ = self._get_inputs_outputs(txn_context.txn)
+                addresses = [input for input in inputs if len(input) == 70]
+                state_found = context_manager.get(
+                    context_id=c_id,
+                    address_list=addresses)
+
+                LOGGER.debug("Transaction Id %s, Batch %s, Txn %s, "
+                             "Context_id %s, Base Contexts %s",
+                             t_id[:16],
+                             txn_context.batch_num,
+                             txn_context.txn_num,
+                             c_id,
+                             t_info.base_context_ids)
+
+                state_to_assert = [(add, state_up_to_now.get(add))
+                                   for add, _ in state_found]
+                transactions_to_assert_state[t_id] = (txn_context,
+                                                      state_found,
+                                                      state_to_assert)
+
+            validity_of_transaction, address_values = self._txn_execution[
+                t_info.txn.header_signature]
+
+            context_manager.set(
+                context_id=c_id,
+                address_value_list=address_values)
+            LOGGER.debug("Transaction %s is %s",
+                         t_id[:16],
+                         'valid' if validity_of_transaction else 'invalid')
+            scheduler.set_transaction_execution_result(
+                txn_signature=t_info.txn.header_signature,
+                is_valid=validity_of_transaction,
+                context_id=c_id)
+
+        batch_ids = [b.header_signature for b in self._batches]
+        batch_results = [
+            (b_id, scheduler.get_batch_execution_result(b_id))
+            for b_id in batch_ids]
+
+        return batch_results, transactions_to_assert_state
+
     def compute_state_hashes_wo_scheduler(self):
         """Creates a state hash from the state updates from each txn in a
         valid batch.
