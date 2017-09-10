@@ -807,5 +807,6 @@ class ChainController(object):
             ])
             receipt.state_changes.extend(result.state_changes)
             receipt.events.extend(result.events)
+            receipt.transaction_id = result.signature
             receipts.append(receipt)
         return receipts
