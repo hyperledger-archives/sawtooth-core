@@ -28,6 +28,12 @@ const { Unauthorized } = require('./errors')
 const router = express.Router()
 router.use(bodyParser.json({ type: 'application/json' }))
 
+// Logs basic request information to the console
+const logRequest = (req, res, next) => {
+  console.log(`Received ${req.method} request for ${req.url} from ${req.ip}`)
+  next()
+}
+
 // Adds an object to the request for storing internally generated parameters
 const initInternalParams = (req, res, next) => {
   req.internal = {}
@@ -85,6 +91,7 @@ const errorHandler = (err, req, res, next) => {
 }
 
 // Setup routes and custom middleware
+router.use(logRequest)
 router.use(initInternalParams)
 router.use(authHandler)
 
