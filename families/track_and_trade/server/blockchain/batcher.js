@@ -16,7 +16,8 @@
  */
 'use strict'
 
-const { BatchEncoder } = require('sawtooth-sdk')
+const { signer, BatchEncoder } = require('sawtooth-sdk')
+const { TransactionHeader, TransactionList } = require('sawtooth-sdk/protobuf')
 
 let PRIVATE_KEY = process.env.PRIVATE_KEY
 if (PRIVATE_KEY === undefined) {
@@ -26,8 +27,20 @@ if (PRIVATE_KEY === undefined) {
 }
 
 const batcher = new BatchEncoder(PRIVATE_KEY)
+const publicKey = signer.getPublicKey(PRIVATE_KEY)
 
-const batch = txnList => batcher.create(txnList)
+const batch = txnList => {
+  const txns = TransactionList.decode(txnList).transactions
+  const headers = txns.map(txn => TransactionHeader.decode(txn.header))
+
+  headers.forEach(header => {
+    if (header.batcherPubkey !== publicKey) {
+      throw new Error(`Transactions must set batcherPubkey to '${publicKey}'`)
+    }
+  })
+
+  return batcher.create(txns)
+}
 
 module.exports = {
   batch
