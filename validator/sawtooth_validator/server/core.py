@@ -102,6 +102,8 @@ from sawtooth_validator.server.events.handlers \
     import ClientEventsUnsubscribeHandler
 
 from sawtooth_validator.journal.receipt_store import TransactionReceiptStore
+from sawtooth_validator.journal.receipt_store \
+    import ClientReceiptGetRequestHandler
 
 LOGGER = logging.getLogger(__name__)
 
@@ -654,6 +656,11 @@ class Validator(object):
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_RECEIPT_GET_REQUEST,
+            ClientReceiptGetRequestHandler(receipt_store),
+            thread_pool)
 
         # State Delta Subscription Handlers
         self._dispatcher.add_handler(
