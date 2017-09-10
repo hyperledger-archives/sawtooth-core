@@ -428,10 +428,11 @@ class SchedulerTester(object):
 
     def _dependencies_are_valid(self, dependencies, previous_batch_results):
         for dep in dependencies:
-            batch_id = self._batch_id_by_txn_id[dep]
-            dep_result = previous_batch_results[batch_id]
-            if not dep_result.is_valid:
-                return False
+            if dep in self._batch_id_by_txn_id:
+                batch_id = self._batch_id_by_txn_id[dep]
+                dep_result = previous_batch_results[batch_id]
+                if not dep_result.is_valid:
+                    return False
         return True
 
     def _process_txns(self, batch, previous_batch_results, priv_key, pub_key):

@@ -725,7 +725,8 @@ class ParallelScheduler(Scheduler):
         header = TransactionHeader()
         header.ParseFromString(txn.header)
         if any(not self._all_in_batch_have_results(d)
-               for d in list(header.dependencies)):
+               for d in list(header.dependencies)
+               if d in self._batches_by_txn_id):
             return True
         return False
 
@@ -733,7 +734,8 @@ class ParallelScheduler(Scheduler):
         header = TransactionHeader()
         header.ParseFromString(txn.header)
         if any(self._any_in_batch_are_invalid(d)
-               for d in list(header.dependencies)):
+               for d in list(header.dependencies)
+               if d in self._batches_by_txn_id):
             return True
         return False
 
