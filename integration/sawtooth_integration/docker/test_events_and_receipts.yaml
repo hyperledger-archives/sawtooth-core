@@ -68,7 +68,7 @@ services:
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
     stop_signal: SIGKILL
 
-  test-event-broadcaster:
+  test-events-and-receipts:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
@@ -81,7 +81,7 @@ services:
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
         -v
         -s /project/sawtooth-core/integration/sawtooth_integration/tests
-        test_event_broadcaster.TestEventBroadcaster
+        test_events_and_receipts.TestEventsAndReceipts
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\

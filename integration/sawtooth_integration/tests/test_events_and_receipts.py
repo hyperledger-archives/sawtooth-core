@@ -22,17 +22,23 @@ import urllib.error
 import base64
 import sys
 
+import cbor
+
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+from sawtooth_intkey.processor.handler import make_intkey_address
 from sawtooth_sdk.messaging.stream import Stream
 
 from sawtooth_validator.protobuf import events_pb2
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf import batch_pb2
+from sawtooth_validator.protobuf import txn_receipt_pb2
+from sawtooth_validator.protobuf import state_delta_pb2
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
 
-class TestEventBroadcaster(unittest.TestCase):
+class TestEventsAndReceipts(unittest.TestCase):
     def test_subscribe_and_unsubscribe(self):
         """Tests that a client can subscribe and unsubscribe from events."""
         response = self._subscribe()
@@ -58,6 +64,27 @@ class TestEventBroadcaster(unittest.TestCase):
             self.assertEqual(len(events), 1)
             self.assert_block_commit_event(events[0], i)
 
+        self._unsubscribe()
+
+    def test_receipt_stored(self):
+        """Tests that receipts are stored successfully when a block is
+        committed."""
+        self._subscribe()
+        n = self.batch_submitter.submit_next_batch()
+        response = self._get_receipt(n)
+        receipts = self.assert_receipt_get_response(response)
+        state_change = receipts[0].state_changes[0]
+        self.assertEqual(
+            state_change.type,
+            state_delta_pb2.StateChange.SET)
+        self.assertEqual(
+            state_change.value,
+            cbor.dumps({str(n): 0}))
+        self.assertEqual(
+            state_change.address,
+            make_intkey_address(str(n)))
+        self._unsubscribe()
+
     @classmethod
     def setUpClass(cls):
         cls.batch_submitter = BatchSubmitter()
@@ -69,6 +96,16 @@ class TestEventBroadcaster(unittest.TestCase):
     def tearDown(self):
         if self.stream is not None:
             self.stream.close()
+
+    def _get_receipt(self, n):
+        txn_id = \
+            self.batch_submitter.batches[n].transactions[0].header_signature
+        request = txn_receipt_pb2.ClientReceiptGetRequest(
+            transaction_ids=[txn_id])
+        response = self.stream.send(
+            validator_pb2.Message.CLIENT_RECEIPT_GET_REQUEST,
+            request.SerializeToString()).result()
+        return response
 
     def _subscribe(self, subscriptions=None):
         if subscriptions is None:
@@ -104,6 +141,19 @@ class TestEventBroadcaster(unittest.TestCase):
             if attribute.key == "block_num":
                 self.assertEqual(attribute.value, str(block_num))
 
+    def assert_receipt_get_response(self, msg):
+        self.assertEqual(
+            msg.message_type,
+            validator_pb2.Message.CLIENT_RECEIPT_GET_RESPONSE)
+
+        receipt_response = txn_receipt_pb2.ClientReceiptGetResponse()
+        receipt_response.ParseFromString(msg.content)
+
+        self.assertEqual(
+            receipt_response.status,
+            txn_receipt_pb2.ClientReceiptGetResponse.OK)
+
+        return receipt_response.receipts
 
     def assert_subscribe_response(self, msg):
         self.assertEqual(
@@ -131,7 +181,7 @@ class TestEventBroadcaster(unittest.TestCase):
 
 class BatchSubmitter:
     def __init__(self):
-        self.n = 0
+        self.batches = []
         self.imf = IntkeyMessageFactory()
 
     def _post_batch(self, batch):
@@ -149,7 +199,10 @@ class BatchSubmitter:
         return self.imf.create_batch([('set', str(n), 0)])
 
     def submit_next_batch(self):
-        batch = self.make_batch(self.n)
-        self.n += 1
-        self._post_batch(batch)
+        batch_list_bytes = self.make_batch(len(self.batches))
+        batch_list = batch_pb2.BatchList()
+        batch_list.ParseFromString(batch_list_bytes)
+        self.batches.append(batch_list.batches[0])
+        self._post_batch(batch_list_bytes)
         time.sleep(0.5)
+        return len(self.batches) - 1
