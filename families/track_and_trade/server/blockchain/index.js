@@ -54,21 +54,23 @@ const subscribe = () => {
     )
       .then(response => StateDeltaSubscribeResponse.decode(response))
       .then(decoded => {
-        if (decoded.status !== StateDeltaSubscribeResponse.Status.OK) {
-          console.error('Failed to subscribe to blockchain, with status:',
-                        decoded.status)
+        const status = _.findKey(StateDeltaSubscribeResponse.Status,
+                                 val => val === decoded.status)
+        if (status !== 'OK') {
+          throw new Error(`Validator responded with status "${status}"`)
         }
       })
-      .catch(err => console.error('Failed to subscribe to blockchain:', err))
+      .catch(err => console.error('Failed to subscribe to blockchain:',
+                                  err.message))
   })
 }
 
 const submit = txnBytes => {
-  const batches = [batcher.batch(txnBytes)]
+  const batch = batcher.batch(txnBytes)
 
   return stream.send(
     Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
-    ClientBatchSubmitRequest.encode({ batches }).finish()
+    ClientBatchSubmitRequest.encode({ batches: [batch] }).finish()
   )
   .then(response => ClientBatchSubmitResponse.decode(response))
   .then(decoded => {
@@ -77,7 +79,7 @@ const submit = txnBytes => {
     if (status !== 'OK') {
       throw new Error(`Batch submission failed with status '${status}'`)
     }
-    return { status }
+    return { batch: batch.headerSignature }
   })
 }
 
