@@ -387,6 +387,53 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='dependencies.yaml')
 
+    def test_deletes(self):
+        """Tests the schedulers against the
+        test_scheduler/data/deletes_test.yaml file.
+
+        Notes:
+            This yaml file has complex batches with failures and transactions
+            with deletes from the context manager.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='deletes_test.yaml')
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='deletes_test.yaml',
+            lifo=True)
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually_alt(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='deletes_test.yaml')
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually_alt(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='deletes_test.yaml',
+            lifo=True)
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='deletes_test.yaml')
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually_alt(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='deletes_test.yaml')
+
     def _single_block_files_individually_alt(self,
                                              scheduler,
                                              context_manager,
