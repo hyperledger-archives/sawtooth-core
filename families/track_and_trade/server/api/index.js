@@ -103,7 +103,7 @@ router.get('/', (req, res) => {
     .then(messages => res.json(messages[0].value))
 })
 
-router.post('/transactions', handleBody(blockchain.submit))
+router.post('/transactions', restrict, handleBody(blockchain.submit))
 
 router.post('/authorization', handleBody(auth.authorize))
 
