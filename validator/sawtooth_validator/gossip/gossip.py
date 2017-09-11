@@ -384,6 +384,7 @@ class Topology(Thread):
     def run(self):
         while not self._stopped:
             try:
+                self._refresh_peer_list(self._gossip.get_peers())
                 peers = self._gossip.get_peers()
                 if len(peers) < self._min_peers:
                     LOGGER.debug("Below minimum peer threshold. "
