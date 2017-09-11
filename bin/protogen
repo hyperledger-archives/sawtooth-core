@@ -56,7 +56,7 @@ def main(args=None):
     if "rust" in args:
         protoc(proto_dir, "sdk/rust", "src/messages", "rust")
         protoc(JOIN(TOP_DIR, "families/smallbank/protos"),
-               "perf/sawtooth_workload",
+               "perf/smallbank_workload",
                "src/",
                "rust")
 
