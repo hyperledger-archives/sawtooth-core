@@ -16,7 +16,6 @@
 from ast import literal_eval
 from threading import Condition
 from collections import deque
-from collections import OrderedDict
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
@@ -287,7 +286,8 @@ class ParallelScheduler(Scheduler):
         # Transaction results
         self._txn_results = {}
 
-        self._transactions = OrderedDict()
+        self._txns_available = []
+        self._transactions = {}
 
         self._cancelled = False
         self._final = False
@@ -325,6 +325,7 @@ class ParallelScheduler(Scheduler):
             self._batches_by_id[batch.header_signature] = batch
             for txn in batch.transactions:
                 self._batches_by_txn_id[txn.header_signature] = batch
+                self._txns_available.append(txn)
                 self._transactions[txn.header_signature] = txn
 
             if state_hash is not None:
@@ -542,12 +543,16 @@ class ParallelScheduler(Scheduler):
                     if self._txn_has_result(poss_successor):
                         del self._txn_results[poss_successor]
                         self._scheduled.remove(poss_successor)
+                        self._txns_available.append(
+                            self._transactions[poss_successor])
                     else:
                         self._outstanding.add(poss_successor)
                     seen.append(poss_successor)
 
     def _reschedule_if_outstanding(self, txn_signature):
         if txn_signature in self._outstanding:
+            self._txns_available.append(
+                self._transactions[txn_signature])
             self._scheduled.remove(txn_signature)
             self._outstanding.discard(txn_signature)
             return True
@@ -580,14 +585,8 @@ class ParallelScheduler(Scheduler):
             self._condition.notify_all()
 
     def _unscheduled_transactions(self):
-        # shouldn't actually return txn if dependencies were
-        # marked invalid.
-        txns = self._transactions.copy()
 
-        for txn_header in self._scheduled:
-            txns.pop(txn_header, None)
-
-        return list(txns.values())
+        return self._txns_available.copy()
 
     def _has_predecessors(self, txn):
         for predecessor_id in self._txn_predecessors[txn.header_signature]:
@@ -702,6 +701,7 @@ class ParallelScheduler(Scheduler):
                         not self._dependency_not_processed(txn):
                     if self._txn_failed_by_dep(txn):
                         self._scheduled.append(txn.header_signature)
+                        self._txns_available.remove(txn)
                         self._scheduled_txn_info[txn.header_signature] = \
                             TxnInformation(txn=txn,
                                            state_hash=self._first_state_hash,
@@ -724,6 +724,7 @@ class ParallelScheduler(Scheduler):
                     state_hash=self._first_state_hash,
                     base_context_ids=bases)
                 self._scheduled.append(next_txn.header_signature)
+                self._txns_available.remove(next_txn)
                 self._scheduled_txn_info[next_txn.header_signature] = info
                 return info
             return None
