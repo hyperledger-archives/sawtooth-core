@@ -81,10 +81,6 @@ func (self *Context) GetState(addresses []string) (map[string][]byte, error) {
 	}
 
 	_, msg, err := self.connection.RecvMsgWithId(corrId)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to received TpStateGetResponse: %v", err)
-	}
-
 	if msg.GetCorrelationId() != corrId {
 		return nil, fmt.Errorf(
 			"Expected message with correlation id %v but got %v",
@@ -165,9 +161,6 @@ func (self *Context) SetState(pairs map[string][]byte) ([]string, error) {
 	}
 
 	_, msg, err := self.connection.RecvMsgWithId(corrId)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to receive TpStateSetResponse: %v", err)
-	}
 	if msg.GetCorrelationId() != corrId {
 		return nil, fmt.Errorf(
 			"Expected message with correlation id %v but got %v",
@@ -230,9 +223,6 @@ func (self *Context) AddReceiptData(data_type string, data []byte) error {
 	}
 
 	_, msg, err := self.connection.RecvMsgWithId(corrId)
-	if err != nil {
-		return fmt.Errorf("Failed to receive TpAddReciptDataResponse: %v", err)
-	}
 	if msg.GetCorrelationId() != corrId {
 		return fmt.Errorf(
 			"Expected message with correlation id %v but got %v",
@@ -293,9 +283,6 @@ func (self *Context) AddEvent(event_type string, attributes []Attribute, event_d
 	}
 
 	_, msg, err := self.connection.RecvMsgWithId(corrId)
-	if err != nil {
-		return fmt.Errorf("Failed to receive TpAddEventResponse: %v", err)
-	}
 	if msg.GetCorrelationId() != corrId {
 		return fmt.Errorf(
 			"Expected message with correlation id %v but got %v",
