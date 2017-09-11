@@ -20,8 +20,10 @@ from sawtooth_validator.protobuf.events_pb2 import EventList
 from sawtooth_validator.protobuf import validator_pb2
 
 from sawtooth_validator.journal.chain import ChainObserver
-from sawtooth_validator.journal.block_event_extractor \
+from sawtooth_validator.journal.event_extractors \
     import BlockEventExtractor
+from sawtooth_validator.journal.event_extractors \
+    import ReceiptEventExtractor
 
 LOGGER = logging.getLogger(__name__)
 
@@ -69,6 +71,7 @@ class EventBroadcaster(ChainObserver):
     def chain_update(self, block, receipts):
         extractors = [
             BlockEventExtractor(block),
+            ReceiptEventExtractor(receipts),
         ]
 
         subscriptions = []

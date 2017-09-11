@@ -37,7 +37,7 @@ from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_event_extractor \
+from sawtooth_validator.journal.event_extractors \
     import BlockEventExtractor
 
 

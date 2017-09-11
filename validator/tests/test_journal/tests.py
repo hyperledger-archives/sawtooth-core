@@ -31,16 +31,23 @@ from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.timed_cache import TimedCache
-from sawtooth_validator.journal.block_event_extractor \
+from sawtooth_validator.journal.event_extractors \
     import BlockEventExtractor
+from sawtooth_validator.journal.event_extractors \
+    import ReceiptEventExtractor
 
 from sawtooth_validator.server.events.subscription import EventSubscription
+from sawtooth_validator.server.events.subscription import EventFilterType
+from sawtooth_validator.server.events.subscription import EventFilterFactory
 
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventList
+from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaSet
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 
@@ -1459,3 +1466,74 @@ class TestBlockEventExtractor(unittest.TestCase):
                     Event.Attribute(
                         key="previous_block_id",
                         value="0000000000000000")])])
+
+class TestReceiptEventExtractor(unittest.TestCase):
+    def test_tf_events(self):
+        """Test that tf events are generated correctly."""
+        gen_data = [
+            ["test1", "test2"],
+            ["test3"],
+            ["test4", "test5", "test6"],
+        ]
+        event_sets = [
+            [
+                Event(event_type=event_type)
+                for event_type in events
+            ] for events in gen_data
+        ]
+        receipts = [
+            TransactionReceipt(events=events)
+            for events in event_sets
+        ]
+        extractor = ReceiptEventExtractor(receipts)
+
+        events = extractor.extract([])
+        self.assertEqual([], events)
+
+        events = extractor.extract([
+            EventSubscription(event_type="test1"),
+            EventSubscription(event_type="test5"),
+        ])
+        self.assertEqual(events, [event_sets[0][0], event_sets[2][1]])
+
+    def test_state_delta_events(self):
+        """Test that state_delta events are generated correctly."""
+        gen_data = [
+            [("a", b"a", StateChange.SET), ("b", b"b", StateChange.DELETE)],
+            [("a", b"a", StateChange.DELETE), ("d", b"d", StateChange.SET)],
+            [("e", b"e", StateChange.SET)],
+        ]
+        change_sets = [
+            [
+                StateChange(address=address, value=value, type=change_type)
+                for address, value, change_type in state_changes
+            ] for state_changes in gen_data
+        ]
+        receipts = [
+            TransactionReceipt(state_changes=state_changes)
+            for state_changes in change_sets
+        ]
+        extractor = ReceiptEventExtractor(receipts)
+
+        factory = EventFilterFactory()
+        events = extractor.extract([
+            EventSubscription(
+                event_type="state_delta",
+                filters=[factory.create("address", "a")]),
+            EventSubscription(
+                event_type="state_delta",
+                filters=[factory.create(
+                    "address", "[ce]", EventFilterType.regex_any)],
+            )
+        ])
+        self.assertEqual(events, [Event(
+            event_type="state_delta",
+            attributes=[
+                Event.Attribute(key="address", value=address)
+                for address in ["e", "d", "a", "b"]
+            ],
+            data=StateDeltaSet(state_changes=[
+                change_sets[2][0], change_sets[1][1],
+                change_sets[1][0], change_sets[0][1],
+            ]).SerializeToString(),
+        )])
