@@ -200,7 +200,7 @@ def create_nonces(board_size):
 
 
 def hash_space(space, nonce):
-    m = hashlib.md5()
+    m = hashlib.sha512()
     m.update(nonce.encode())
     m.update(space.encode())
     return m.hexdigest()

@@ -128,8 +128,8 @@ class BattleshipTransaction:
             # Validate that self._board contains hash-like strings
             for row in range(0, self._size):
                 for col in range(0, self._size):
-                    # length of md5 hexdigest is 32 characters
-                    if len(self._board[row][col]) != 32:
+                    # length of sha512 hexdigest is 32 characters
+                    if len(self._board[row][col]) != 128:
                         raise InvalidTransaction("invalid board hash")
 
         elif self._action == 'FIRE':
