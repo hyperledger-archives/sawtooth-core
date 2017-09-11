@@ -51,7 +51,7 @@ func TestPermissions(t *testing.T) {
   // permissions.
   _, err := client.CreateExternalAccount(priv, nil, nil, nonce, WAIT)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   nonce += 1
 
@@ -60,18 +60,18 @@ func TestPermissions(t *testing.T) {
   zeroPerms := &EvmPermissions{Perms: uint64(0), SetBit: uint64(ptypes.AllPermFlags)}
   err = client.SetPermissions(priv, globalPermsAddr, zeroPerms, nonce, WAIT)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   nonce += 1
 
   // Check that global permissions were set
   globalPermsEntry, err := client.Get(globalPermsAddr)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   setPerms := globalPermsEntry.GetAccount().GetPermissions()
   if setPerms.Perms != uint64(0) || setPerms.SetBit != uint64(ptypes.AllPermFlags) {
-    t.Errorf(
+    t.Fatalf(
       "Global permissions not set correctly. Should be (0, ALL) but got (%v, %v)",
       setPerms.Perms, setPerms.SetBit,
     )
@@ -90,16 +90,16 @@ func TestPermissions(t *testing.T) {
   }
   addr2, err = client.CreateExternalAccount(priv2, priv, perms2, nonce, WAIT)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   nonce2 := uint64(1)
   nonce += 1
   entry, err := client.Get(addr2)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   if entry == nil {
-    t.Error("Failed to create new account.")
+    t.Fatal("Failed to create new account.")
   }
 
   // Verify the account can't change permissions
@@ -108,54 +108,54 @@ func TestPermissions(t *testing.T) {
     SetBit: uint64(ptypes.AllPermFlags),
   }, nonce2, 0)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   globalPermsEntry, err = client.Get(globalPermsAddr)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   setPerms = globalPermsEntry.GetAccount().GetPermissions()
   if setPerms.Perms != uint64(0) || setPerms.SetBit != uint64(ptypes.AllPermFlags) {
-    t.Errorf("Permissions changed but changing permissions is disabled.")
+    t.Fatalf("Permissions changed but changing permissions is disabled.")
   }
 
   // Verify the account can deploy a contract
   contractAddr, err := client.CreateContractAccount(priv2, init, nil, nonce2, 1000, WAIT)
   if err != nil {
-   t.Error(err.Error())
+   t.Fatal(err.Error())
   }
   nonce2 += 1
   contractEntry, err := client.Get(contractAddr)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   if contractEntry == nil {
-    t.Error("Failed to deploy contract.")
+    t.Fatal("Failed to deploy contract.")
   }
 
   // Verify the account can call a contract
   cmd, _ := hex.DecodeString(SET_0_42)
   _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, WAIT, false)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   nonce2 += 1
   contractEntry, err = client.Get(contractAddr)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
 
   key := "ad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5"
   val := "000000000000000000000000000000000000000000000000000000000000002a"
   pair := contractEntry.GetStorage()[0]
   if hex.EncodeToString(pair.GetKey()) != key || hex.EncodeToString(pair.GetValue()) != val {
-    t.Error("Failed to call contract.")
+    t.Fatal("Failed to call contract.")
   }
 
   // Disable the accounts permissions
   err = client.SetPermissions(priv, addr2, zeroPerms, nonce, WAIT)
   if err != nil {
-    t.Error(err.Error())
+    t.Fatal(err.Error())
   }
   nonce += 1
 
