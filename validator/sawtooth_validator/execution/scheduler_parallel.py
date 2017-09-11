@@ -593,6 +593,13 @@ class ParallelScheduler(Scheduler):
         for predecessor_id in self._txn_predecessors[txn.header_signature]:
             if predecessor_id not in self._txn_results:
                 return True
+            # Since get_initial_state_for_transaction gets context ids not
+            # just from predecessors but also in the case of an enclosing
+            # writer failing, predecessors of that predecessor, this extra
+            # check is needed.
+            for pre_pred_id in self._txn_predecessors[predecessor_id]:
+                if pre_pred_id not in self._txn_results:
+                    return True
 
         return False
 
