@@ -19,7 +19,6 @@ package tests
 
 import (
   "encoding/hex"
-  "time"
   "testing"
   "sawtooth_seth/client"
   sdk "sawtooth_sdk/client"
@@ -34,6 +33,7 @@ const (
   INC_19    = "812600df0000000000000000000000000000000000000000000000000000000000000013"
   DEC_0     = "c20efb900000000000000000000000000000000000000000000000000000000000000000"
   GET_0     = "9507d39a0000000000000000000000000000000000000000000000000000000000000000"
+  WAIT      = 300
 )
 
 func TestIntkey(t *testing.T) {
@@ -43,20 +43,18 @@ func TestIntkey(t *testing.T) {
   nonce := uint64(0)
 
   // Create the EOA
-  _, err := client.CreateExternalAccount(priv, nil, nil, 0, 0)
+  _, err := client.CreateExternalAccount(priv, nil, nil, 0, WAIT)
   if err != nil {
     t.Error(err.Error())
   }
   nonce += 1
-  time.Sleep(time.Second)
 
   // Create the Contract
-  contractAddr, err := client.CreateContractAccount(priv, init, nil, nonce, 1000, 5)
+  contractAddr, err := client.CreateContractAccount(priv, init, nil, nonce, 1000, WAIT)
   if err != nil {
    t.Error(err.Error())
   }
   nonce += 1
-  time.Sleep(time.Second)
 
   cmds := []string{
     SET_0_42,
@@ -67,14 +65,12 @@ func TestIntkey(t *testing.T) {
 
   for _, c := range cmds {
     cmd, _ := hex.DecodeString(c)
-    _, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000, 0, false)
+    _, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000, WAIT, false)
     if err != nil {
       t.Error(err.Error())
     }
     nonce += 1
   }
-
-  time.Sleep(3 * time.Second)
 
   entry, err := client.Get(contractAddr)
   if err != nil {
