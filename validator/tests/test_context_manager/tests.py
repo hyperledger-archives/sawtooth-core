@@ -24,6 +24,7 @@ from sawtooth_validator.execution import context_manager
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.events_pb2 import Event
 
 
 TestAddresses = namedtuple('TestAddresses',
@@ -182,6 +183,40 @@ class TestContextManager(unittest.TestCase):
             writes=io_w + _o_w
         )
         return addresses
+
+    def test_execution_results(self):
+        """Tests that get_execution_results returns the correct values."""
+        addr1 = self._create_address()
+        addr2 = self._create_address()
+        context_id = self.context_manager.create_context(
+            state_hash=self.context_manager.get_first_root(),
+            base_contexts=[],
+            inputs=[addr1, addr2],
+            outputs=[addr1, addr2])
+
+        sets = {addr1: b'1'}
+        events = [Event(
+            event_type=teststr,
+            attributes=[Event.Attribute(key=teststr, value=teststr)],
+            data=teststr.encode()) for teststr in ("test1", "test2")]
+        deletes = {addr2: None}
+        data = [(teststr, teststr.encode()) for teststr in ("test1", "test2")]
+
+        self.context_manager.set(context_id, [sets])
+        for event in events:
+            self.context_manager.add_execution_event(context_id, event)
+
+        self.context_manager.delete(context_id, deletes)
+        for datum in data:
+            self.context_manager.add_execution_data(
+                context_id, datum[0], datum[1])
+
+
+        results = self.context_manager.get_execution_results(context_id)
+        self.assertEqual(sets, results[0])
+        self.assertEqual(deletes, results[1])
+        self.assertEqual(events, results[2])
+        self.assertEqual(data, results[3])
 
     def test_address_enforcement(self):
         """Tests that the ContextManager enforces address characteristics.

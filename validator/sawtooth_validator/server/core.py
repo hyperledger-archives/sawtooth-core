@@ -105,6 +105,10 @@ from sawtooth_validator.server.events.handlers \
 from sawtooth_validator.server.events.handlers \
     import ClientEventsUnsubscribeHandler
 
+from sawtooth_validator.journal.receipt_store import TransactionReceiptStore
+from sawtooth_validator.journal.receipt_store \
+    import ClientReceiptGetRequestHandler
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -153,7 +157,13 @@ class Validator(object):
         LOGGER.debug('state delta store file is %s', delta_db_filename)
         state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
 
+        receipt_db_filename = os.path.join(
+            data_dir, 'txn_receipts-{}.lmdb'.format(bind_network[-2:]))
+        LOGGER.debug('txn receipt store file is %s', receipt_db_filename)
+        receipt_db = LMDBNoLockDatabase(receipt_db_filename, 'c')
+
         state_delta_store = StateDeltaStore(state_delta_db)
+        receipt_store = TransactionReceiptStore(receipt_db)
 
         context_manager = ContextManager(merkle_db, state_delta_store)
         self._context_manager = context_manager
@@ -272,7 +282,11 @@ class Validator(object):
             block_cache_purge_frequency=30,
             block_cache_keep_time=300,
             batch_observers=[batch_tracker],
-            chain_observers=[state_delta_processor, event_broadcaster],
+            chain_observers=[
+                state_delta_processor,
+                event_broadcaster,
+                receipt_store,
+            ],
         )
 
         self._genesis_controller = GenesisController(
@@ -663,6 +677,11 @@ class Validator(object):
             validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_RECEIPT_GET_REQUEST,
+            ClientReceiptGetRequestHandler(receipt_store),
+            thread_pool)
 
         # State Delta Subscription Handlers
         self._dispatcher.add_handler(

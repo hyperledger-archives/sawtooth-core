@@ -23,8 +23,10 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.protobuf import validator_pb2
 
+from sawtooth_validator.journal.chain import ChainObserver
 
-class TransactionReceiptStore:
+
+class TransactionReceiptStore(ChainObserver):
     """A TransactionReceiptStore persists TransactionReceipt records to a
     provided database implementation.
     """
@@ -70,6 +72,10 @@ class TransactionReceiptStore:
         txn_receipt = TransactionReceipt()
         txn_receipt.ParseFromString(txn_receipt_bytes)
         return txn_receipt
+
+    def chain_update(self, block, receipts):
+        for receipt in receipts:
+            self.put(receipt.transaction_id, receipt)
 
 
 class ClientReceiptGetRequestHandler(Handler):

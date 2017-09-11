@@ -105,7 +105,7 @@ class MockScheduler(Scheduler):
             state_hash='0'*70)
 
     def get_transaction_execution_results(self, batch_signature):
-        raise NotImplementedError()
+        return []
 
     def set_transaction_execution_result(
             self, txn_signature, is_valid, context_id):

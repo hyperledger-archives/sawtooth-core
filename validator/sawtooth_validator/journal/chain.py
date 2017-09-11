@@ -28,6 +28,7 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
@@ -137,6 +138,7 @@ class BlockValidator(object):
             'cur_chain': [],
             'committed_batches': [],
             'uncommitted_batches': [],
+            'execution_results': [],
         }
         self._permission_verifier = permission_verifier
 
@@ -212,10 +214,14 @@ class BlockValidator(object):
             state_hash = None
 
             for batch in blkw.batches:
-                result = scheduler.get_batch_execution_result(
+                batch_result = scheduler.get_batch_execution_result(
                     batch.header_signature)
-                if result is not None and result.is_valid:
-                    state_hash = result.state_hash
+                if batch_result is not None and batch_result.is_valid:
+                    txn_results = \
+                        scheduler.get_transaction_execution_results(
+                            batch.header_signature)
+                    self._result["execution_results"].extend(txn_results)
+                    state_hash = batch_result.state_hash
                 else:
                     return False
             if blkw.state_root_hash != state_hash:
@@ -461,7 +467,12 @@ class BlockValidator(object):
 class ChainObserver(object, metaclass=ABCMeta):
     @abstractmethod
     def chain_update(self, block, receipts):
-        """This method is called by the ChainController on block boundaries."""
+        """This method is called by the ChainController on block boundaries.
+
+        Args:
+            block (:obj:`BlockWrapper`): The block that was just committed.
+            receipts (dict of {str: receipt}): Map of transaction signatures to
+                transaction receipts for all transactions in the block."""
         raise NotImplementedError()
 
 
@@ -659,9 +670,10 @@ class ChainController(object):
                         [block.identifier[:8] for block in descendant_blocks])
                     self._submit_blocks_for_verification(descendant_blocks)
 
+                    receipts = self._make_receipts(result["execution_results"])
                     # Update all chain observers
                     for observer in self._chain_observers:
-                        observer.chain_update(new_block, [])
+                        observer.chain_update(new_block, receipts)
 
                 # If the block was determine to be invalid.
                 elif new_block.status == BlockStatus.Invalid:
@@ -783,3 +795,18 @@ class ChainController(object):
         else:
             LOGGER.warning("Cannot set initial chain head, this is not a "
                            "genesis block: %s", block)
+
+    def _make_receipts(self, results):
+        receipts = []
+        for result in results:
+            receipt = TransactionReceipt()
+            receipt.data.extend([
+                TransactionReceipt.Data(
+                    data_type=data_type, data=data)
+                for data_type, data in result.data
+            ])
+            receipt.state_changes.extend(result.state_changes)
+            receipt.events.extend(result.events)
+            receipt.transaction_id = result.signature
+            receipts.append(receipt)
+        return receipts
