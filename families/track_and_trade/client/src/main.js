@@ -25,16 +25,23 @@ const { signer } = require('sawtooth-sdk/client')
 
 const AppState = require('./app_state')
 const FishForm = require('./fish_form')
+const LoginForm = require('./views/login_form')
+const SignupForm = require('./views/signup_form')
 
-let privateKey = signer.makePrivateKey()
-console.log(`Hello ${privateKey}!`)
-AppState.signingKey = privateKey
+AppState.signingKey = signer.makePrivateKey()
 
-let Home = {
+const Home = {
   view () {
-    return m('.container',
-             m('.alert.alert-success', privateKey.substring(0, 8)),
-             m("a[href='/create']", {oncreate: m.route.link}, 'Create Fish'))
+    return m('.container', [
+      m('h1', 'FishNet'),
+      m('.page-list',
+        m('h3', 'Pages'),
+        m('ul',
+          m('li',
+            m('a[href="/create"]',
+              { oncreate: m.route.link },
+              'Create Fish'))))
+    ])
   }
 }
 
