@@ -29,13 +29,16 @@ if (PRIVATE_KEY === undefined) {
 const batcher = new BatchEncoder(PRIVATE_KEY)
 const publicKey = signer.getPublicKey(PRIVATE_KEY)
 
-const batch = txnList => {
+const batch = (txnList, expectedSigner) => {
   const txns = TransactionList.decode(txnList).transactions
   const headers = txns.map(txn => TransactionHeader.decode(txn.header))
 
   headers.forEach(header => {
     if (header.batcherPubkey !== publicKey) {
       throw new Error(`Transactions must set batcherPubkey to '${publicKey}'`)
+    }
+    if (header.signerPubkey !== expectedSigner) {
+      throw new Error('Authorized user must have the same key as the signer')
     }
   })
 
