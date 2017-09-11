@@ -1468,8 +1468,10 @@ class TestContextManager(unittest.TestCase):
         tree.set_merkle_root(sh1)
 
         sh2_assertion = tree.update(
-            {},
-            delete_items={self._create_address('b'): b'1',
-                          self._create_address('c'): b'2',
-                          self._create_address('d'): b'3'},
+            {self._create_address('e'): b'2'},
+            delete_items=[self._create_address('b'),
+                          self._create_address('c'),
+                          self._create_address('d')],
             virtual=False)
+        self.assertEqual(sh2, sh2_assertion,
+                         "The final state hash must be correct")
