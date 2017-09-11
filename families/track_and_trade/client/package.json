@@ -4,7 +4,8 @@
   "description": "A Track and Trade client web app for trading fish",
   "main": "",
   "scripts": {
-    "webpack": "./node_modules/webpack/bin/webpack.js --watch",
+    "watch": "webpack-dev-server --env development --hot",
+    "build": "webpack --env production",
     "test": "standard src/**/*.js"
   },
   "repository": {
@@ -33,6 +34,7 @@
     "sass-loader": "^6.0.6",
     "standard": "^10.0.3",
     "style-loader": "^0.18.2",
-    "webpack": "^3.5.5"
+    "webpack": "^3.5.5",
+    "webpack-dev-server": "^2.7.1"
   }
 }
