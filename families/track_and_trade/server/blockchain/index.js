@@ -57,8 +57,9 @@ const getObjectifier = address => {
   const name = getProtoName(address)
   return stateInstance => {
     const obj = protos[name].toObject(stateInstance, {
-      enums: String,
-      longs: Number
+      enums: String,  // use string names for enums
+      longs: Number,  // convert int64 to Number, limiting precision to 2^53
+      defaults: true  // use default for falsey values
     })
     if (name === 'PropertyPage') {
       obj.pageNum = parseInt(address.slice(-4), 16)
