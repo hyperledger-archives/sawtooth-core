@@ -23,6 +23,7 @@ import (
   "testing"
   "sawtooth_seth/client"
   sdk "sawtooth_sdk/client"
+  "burrow/word256"
 )
 
 const (
@@ -32,6 +33,7 @@ const (
   SET_19_84 = "1ab06ee500000000000000000000000000000000000000000000000000000000000000130000000000000000000000000000000000000000000000000000000000000054"
   INC_19    = "812600df0000000000000000000000000000000000000000000000000000000000000013"
   DEC_0     = "c20efb900000000000000000000000000000000000000000000000000000000000000000"
+  GET_0     = "9507d39a0000000000000000000000000000000000000000000000000000000000000000"
 )
 
 func TestIntkey(t *testing.T) {
@@ -102,4 +104,15 @@ func TestIntkey(t *testing.T) {
     }
   }
 
+  // Get the value stored at key 0
+  cmd, _ := hex.DecodeString(GET_0)
+  txn_id, err := client.MessageCall(priv, contractAddr, cmd, nonce, 1000, 300, false)
+  receipt, err := client.GetReceipt(txn_id)
+  if err != nil {
+    t.Fatal(err)
+  }
+  value := word256.Uint64FromWord256(word256.RightPadWord256(receipt.ReturnValue))
+  if value != 41 {
+    t.Fatalf("Contract returned incorrect value: %v", value)
+  }
 }
