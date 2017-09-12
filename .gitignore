@@ -82,6 +82,9 @@
 /sdk/go/src/gopkg.in/
 /families/seth/bin/
 /families/seth/src/sawtooth_seth/protobuf/
+/families/seth/rpc/Cargo.lock
+/families/seth/rpc/target/
+/sdk/rust/Cargo.lock
 /sdk/rust/target
 /sdk/rust/Cargo.lock
 /sdk/rust/src/messages/*.rs
