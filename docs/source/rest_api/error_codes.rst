@@ -171,3 +171,20 @@ Error Codes and Descriptions
    * - 75
      - State Not Found
      - There is no state data at the address specified.
+   * - 80
+     - Transaction Receipt Not Found
+     - There is no transaction receipt for the transaction id specified in the
+       receipt store.
+   * - 81
+     - Wrong Content Type
+     - Requests for transaction receipts sent as a POST must have a
+       'Content-Type' header of 'application/json'.
+   * - 82
+     - Bad Receipts Request
+     - Requests for transaction receipts sent as a POST must have a JSON
+       formatted body with an array of at least one id string.
+   * - 83
+     - Id Query Invalid or Missing
+     - Requests for transaction receipts sent as a GET request must have an 'id'
+       query parameter with a comma-separated list of at least one transaction
+       id.
