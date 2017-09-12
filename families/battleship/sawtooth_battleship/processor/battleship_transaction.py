@@ -229,7 +229,8 @@ class BattleshipTransaction:
         Args:
             store: state_store
         """
-
+        LOGGER.debug('in apply')
+        
         state = _get_state_data(self._battleship_addr, state_store)
         LOGGER.debug('Applying changes to state\nCURRENT STATE:\n%s' % state)
 
