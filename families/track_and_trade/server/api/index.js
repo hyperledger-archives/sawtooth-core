@@ -21,6 +21,7 @@ const express = require('express')
 const bodyParser = require('body-parser')
 
 const state = require('../db/state')
+const agents = require('../db/agents')
 const auth = require('./auth')
 const users = require('./users')
 const { Unauthorized } = require('./errors')
@@ -87,6 +88,8 @@ const errorHandler = (err, req, res, next) => {
 // Setup routes and custom middleware
 router.use(initInternalParams)
 router.use(authHandler)
+
+router.get('/agents', handle(agents.getAgents))
 
 router.get('/', (req, res) => {
   state.query(state => state.filter({name: 'message'}))
