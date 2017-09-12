@@ -434,6 +434,53 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='deletes_test.yaml')
 
+    def test_complex_dependency_failures(self):
+        """Tests the schedulers against the
+        test_scheduler/data/complex_dependency_failures.yaml file.
+
+        Notes:
+            This yaml file has complex batches with failures and transactions
+            with deletes from the context manager.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_dependency_failures.yaml')
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_dependency_failures.yaml',
+            lifo=True)
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually_alt(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_dependency_failures.yaml')
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually_alt(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_dependency_failures.yaml',
+            lifo=True)
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_dependency_failures.yaml')
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually_alt(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='complex_dependency_failures.yaml')
+
     def _single_block_files_individually_alt(self,
                                              scheduler,
                                              context_manager,
