@@ -29,7 +29,7 @@ else:
     log_dir = "/var/log/sawtooth"
 
 data_files = [
-    (conf_dir, ['packaging/path.toml.example', 'packaging/log_config.toml.example']),
+    (conf_dir, ['packaging/path.toml.example', 'packaging/log_config.toml.example', 'packaging/validator.toml.example']),
     (os.path.join(conf_dir, "keys"), []),
     (data_dir, []),
     (log_dir, []),
