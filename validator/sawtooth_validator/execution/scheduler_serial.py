@@ -194,7 +194,9 @@ class SerialScheduler(Scheduler):
             txn.header_signature,
             False,
             None)
+        self._check_change_last_good_context_id(txn)
 
+    def _check_change_last_good_context_id(self, txn):
         if txn.header_signature in self._last_in_batch:
             self._previous_context_id = self._previous_valid_batch_c_id
 
@@ -219,6 +221,7 @@ class SerialScheduler(Scheduler):
                         txn.header_signature,
                         False,
                         None)
+                    self._check_change_last_good_context_id(txn=txn)
                     txn = None
                     continue
                 # Handle fail fast.
