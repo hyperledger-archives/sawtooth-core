@@ -19,6 +19,7 @@ import random
 from threading import Thread
 from threading import Condition
 from functools import partial
+from collections import namedtuple
 from enum import Enum
 
 from sawtooth_validator.protobuf.network_pb2 import DisconnectMessage
@@ -49,6 +50,13 @@ class EndpointStatus(Enum):
     PEERING = 1
     # Endpoint will be used to request peers
     TOPOLOGY = 2
+
+EndpointInfo = namedtuple('EndpointInfo',
+                          ['status', 'time', "retry_threshold"])
+
+
+INITIAL_RETRY_FREQUENCY = 5
+MAXIMUM_RETRY_FREQUENCY = 300
 
 
 class Gossip(object):
@@ -376,7 +384,10 @@ class Topology(Thread):
         for endpoint in self._initial_peer_endpoints:
             LOGGER.debug("attempting to peer with %s", endpoint)
             self._network.add_outbound_connection(endpoint)
-            self._temp_endpoints[endpoint] = EndpointStatus.PEERING
+            self._temp_endpoints[endpoint] = EndpointInfo(
+                EndpointStatus.PEERING,
+                time.time(),
+                INITIAL_RETRY_FREQUENCY)
 
         if self._peering_mode == 'dynamic':
             super().start()
@@ -393,6 +404,7 @@ class Topology(Thread):
                     self._refresh_peer_list(peers)
                     # Cleans out any old connections that have disconnected
                     self._refresh_connection_list()
+                    self._check_temp_endpoints()
 
                     peers = self._gossip.get_peers()
 
@@ -464,6 +476,32 @@ class Topology(Thread):
         if endpoint in self._temp_endpoints:
             del self._temp_endpoints[endpoint]
 
+    def _check_temp_endpoints(self):
+        for endpoint in self._temp_endpoints:
+            endpoint_info = self._temp_endpoints[endpoint]
+            if (time.time() - endpoint_info.time) > \
+                    endpoint_info.retry_threshold:
+                LOGGER.debug("Endpoint has not completed authorization in %s "
+                             "sections: %s",
+                             endpoint_info.retry_threshold,
+                             endpoint)
+                try:
+                    # If the connection exists remove it before retrying to
+                    # authorize. If the connection does not exist, a KeyError
+                    # will be thrown.
+                    conn_id = \
+                        self._network.get_connection_id_by_endpoint(endpoint)
+                    self._network.remove_connection(conn_id)
+                except KeyError:
+                    pass
+
+                self._network.add_outbound_connection(endpoint)
+                self._temp_endpoints[endpoint] = EndpointInfo(
+                    endpoint_info.status,
+                    time.time(),
+                    min(endpoint_info.retry_threshold * 2,
+                        MAXIMUM_RETRY_FREQUENCY))
+
     def _refresh_peer_list(self, peers):
         for conn_id in peers:
             try:
@@ -501,26 +539,37 @@ class Topology(Thread):
         get_peers_request = GetPeersRequest()
 
         for endpoint in endpoints:
+            conn_id = None
             try:
-                if endpoint in self._temp_endpoints:
-                    LOGGER.debug("Endpoint is not ready to be asked about "
-                                 "peers: %s", endpoint)
-                else:
-                    conn_id = self._network.get_connection_id_by_endpoint(
-                        endpoint)
-                    if conn_id in peers:
-                        # connected and peered - we've already sent
-                        continue
-                    else:
-                        # connected but not peered
-                        self._network.send(
-                            validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
-                            get_peers_request.SerializeToString(),
-                            conn_id)
-            except KeyError:
-                self._network.add_outbound_connection(
+                conn_id = self._network.get_connection_id_by_endpoint(
                     endpoint)
-                self._temp_endpoints[endpoint] = EndpointStatus.TOPOLOGY
+
+            except KeyError:
+                # If the connection does not exist, send a connection request
+                if endpoint in self._temp_endpoints:
+                    del self._temp_endpoints[endpoint]
+
+                self._network.add_outbound_connection(endpoint)
+                self._temp_endpoints[endpoint] = EndpointInfo(
+                    EndpointStatus.TOPOLOGY,
+                    time.time(),
+                    INITIAL_RETRY_FREQUENCY)
+
+            # If the connection does exist, request peers.
+            if conn_id is not None:
+                if conn_id in peers:
+                    # connected and peered - we've already sent peer request
+                    continue
+                else:
+                    # connected but not peered
+                    if endpoint in self._temp_endpoints:
+                        # Endpoint is not yet authorized, do not request peers
+                        continue
+
+                    self._network.send(
+                        validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                        get_peers_request.SerializeToString(),
+                        conn_id)
 
     def _attempt_to_peer_with_endpoint(self, endpoint):
         LOGGER.debug("Attempting to connect/peer with %s", endpoint)
@@ -546,7 +595,10 @@ class Topology(Thread):
             # if the connection uri wasn't found in the network's
             # connections, it raises a KeyError and we need to add
             # a new outbound connection
-            self._temp_endpoints[endpoint] = EndpointStatus.PEERING
+            self._temp_endpoints[endpoint] = EndpointInfo(
+                EndpointStatus.PEERING,
+                time.time(),
+                INITIAL_RETRY_FREQUENCY)
             self._network.add_outbound_connection(endpoint)
 
     def _reset_candidate_peer_endpoints(self):
@@ -594,19 +646,25 @@ class Topology(Thread):
     def connect_success(self, connection_id):
         """
         Check to see if the successful connection is meant to be peered with.
-        If not, it should be used to get the peers from the connection.
+        If not, it should be used to get the peers from the endpoint.
         """
         endpoint = self._network.connection_id_to_endpoint(connection_id)
-        if self._temp_endpoints.get(endpoint) == EndpointStatus.PEERING:
+        endpoint_info = self._temp_endpoints.get(endpoint)
+
+        LOGGER.debug("Endpoint has completed authorization: %s", endpoint)
+        if endpoint_info is None:
+            LOGGER.debug("Received unknown endpoint: %s", endpoint)
+
+        elif endpoint_info.status == EndpointStatus.PEERING:
             self._connect_success_peering(connection_id)
             del self._temp_endpoints[endpoint]
 
-        elif self._temp_endpoints.get(endpoint) == EndpointStatus.TOPOLOGY:
+        elif endpoint_info.status == EndpointStatus.TOPOLOGY:
             self._connect_success_topology(connection_id)
             del self._temp_endpoints[endpoint]
 
         else:
-            LOGGER.debug("Received unknown endpoint: %s.", endpoint)
+            LOGGER.debug("Endpoint has unknown status: %s", endpoint)
             if endpoint in self._temp_endpoints:
                 del self._temp_endpoints[endpoint]
 
