@@ -124,6 +124,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
         verbose_level = args.verbose
     setup_loggers(verbose_level=verbose_level)
 
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
     if args.command == 'generate':
         do_generate(args)
     elif args.command == 'populate':
