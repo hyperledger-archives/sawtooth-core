@@ -197,8 +197,9 @@ class Gossip(object):
                 self._topology.set_connection_status(connection_id,
                                                      PeerStatus.TEMP)
             else:
-                LOGGER.debug("Attempt to unregister connection_id %s failed: "
-                             "connection_id was not registered")
+                LOGGER.debug("Connection unregister failed as connection "
+                             "was not registered: %s",
+                             connection_id)
 
     def broadcast_block(self, block, exclude=None):
         gossip_message = GossipMessage(
@@ -640,9 +641,12 @@ class Topology(Thread):
             del self._connection_statuses[connection_id]
             self._network.remove_connection(connection_id)
         elif status == PeerStatus.PEER:
-            LOGGER.debug("Connection is a peer, do not close.")
+            LOGGER.debug("Connection close request for peer ignored: %s",
+                         connection_id)
         elif status is None:
-            LOGGER.debug("Connection is not found")
+            LOGGER.debug("Connection close request for unknown connection "
+                         "ignored: %s",
+                         connection_id)
 
     def connect_success(self, connection_id):
         """
