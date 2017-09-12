@@ -3,6 +3,9 @@ extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
 extern crate protobuf;
 
+mod playlist;
+mod smallbank;
+
 use std::fs::File;
 use std::io;
 use std::io::Write;
@@ -11,6 +14,8 @@ use std::error::Error;
 
 use batch_gen::generate_signed_batches;
 use batch_submit::submit_signed_batches;
+use playlist::generate_smallbank_playlist;
+use playlist::process_smallbank_playlist;
 use clap::{App, ArgMatches, AppSettings, Arg, SubCommand};
 
 use sawtooth_perf::batch_gen;
@@ -29,11 +34,13 @@ fn main() {
             .setting(AppSettings::SubcommandRequiredElseHelp)
             .subcommand(create_batch_subcommand_args())
             .subcommand(create_submit_subcommand_args())
+            .subcommand(create_playlist_subcommand_args())
             .get_matches();
 
     let result = match arg_matches.subcommand() {
         ("batch", Some(args)) => run_batch_command(args),
         ("submit", Some(args)) => run_submit_command(args),
+        ("playlist", Some(args)) => run_playlist_command(args),
         _ => panic!("Should have processed a subcommand or exited before here")
     };
 
@@ -179,6 +186,140 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     if let Err(err) = submit_signed_batches(&mut in_file, target, rate) {
         return Err(Box::new(err));
     }
+
+    Ok(())
+}
+
+fn create_playlist_subcommand_args<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name("playlist")
+        .subcommand(create_playlist_create_subcommand_args())
+        .subcommand(create_playlist_process_subcommand_args())
+}
+
+fn create_playlist_create_subcommand_args<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name("create")
+        .about("Generates a smallbank transaction playlist.\n \
+                A playlist is a series of transactions, described in \
+                YAML.  This command generates a playlist and writes it \
+                to file or statndard out.")
+        .arg(Arg::with_name("output")
+             .short("o")
+             .long("output")
+             .value_name("FILE")
+             .help("The target for the generated playlist"))
+        .arg(Arg::with_name("random_seed")
+             .short("S")
+             .long("seed")
+             .value_name("NUMBER")
+             .help("A random seed, which will generate the same output"))
+        .arg(Arg::with_name("accounts")
+             .short("a")
+             .long("accounts")
+             .value_name("NUMBER")
+             .required(true)
+             .help("The number of unique accounts to generate"))
+        .arg(Arg::with_name("transactions")
+             .short("n")
+             .long("transactions")
+             .value_name("NUMBER")
+             .required(true)
+             .help("The number of transactions generate, in \
+                    addition to the created accounts"))
+}
+
+fn create_playlist_process_subcommand_args<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name("process")
+        .about("Processes a smallbank transaction playlist.\n \
+                A playlist is a series of transactions, described in \
+                YAML.  This command processes a playlist, converting it into \
+                transactions and writes it to file or statndard out.")
+        .arg(Arg::with_name("input")
+             .short("i")
+             .long("input")
+             .value_name("FILE")
+             .required(true)
+             .help("The source of the input playlist yaml"))
+        .arg(Arg::with_name("key")
+             .short("k")
+             .long("key")
+             .value_name("FILE")
+             .required(true)
+             .help("The signing key for the transactions"))
+        .arg(Arg::with_name("output")
+             .short("o")
+             .long("output")
+             .value_name("FILE")
+             .help("The target for the generated transactions"))
+}
+
+fn run_playlist_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+    match args.subcommand() {
+        ("create", Some(args)) => run_playlist_create_command(args),
+        ("process", Some(args)) => run_playlist_process_command(args),
+        _ => panic!("Should have processed a subcommand or exited before here")
+    }
+}
+
+fn run_playlist_create_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+    let num_accounts = match args.value_of("accounts").unwrap().parse() {
+        Ok(n) => n,
+        Err(_) => 0
+    };
+
+    if num_accounts < 2 {
+        return arg_error("'accounts' must be a number greater than 2");
+    }
+
+    let num_transactions = match args.value_of("transactions").unwrap().parse() {
+        Ok(n) => n,
+        Err(_) => 0
+    };
+
+    if num_transactions == 0 {
+        return arg_error("'transactions' must be a number greater than 0");
+    }
+
+    let random_seed = match args.value_of("random_seed") {
+        Some(seed) => match seed.parse::<i32>() {
+            Ok(n) => Some(n),
+            Err(_) => return arg_error("'seed' must be a valid number"),
+        },
+        None => None
+    };
+
+    let mut output_writer: Box<Write>  = match args.value_of("output") {
+        Some(file_name) => try!(File::create(file_name).map(Box::new)),
+        None => Box::new(std::io::stdout())
+    };
+
+    try!(generate_smallbank_playlist(
+        &mut *output_writer,
+        num_accounts,
+        num_transactions,
+        random_seed));
+
+    Ok(())
+}
+
+fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+    let mut in_file = try!(File::open(args.value_of("input").unwrap()));
+
+    let mut output_writer: Box<Write>  = match args.value_of("output") {
+        Some(file_name) => try!(File::create(file_name).map(Box::new)),
+        None => Box::new(std::io::stdout())
+    };
+
+    let mut key_file = try!(File::open(args.value_of("key").unwrap()));
+
+    let mut buf = String::new();
+    try!(key_file.read_to_string(&mut buf));
+    buf.pop(); // remove the new line
+
+    let algorithm = try!(signing::create_algorithm("secp256k1"));
+    let private_key = try!(Secp256k1PrivateKey::from_wif(&buf));
+
+    try!(process_smallbank_playlist(&mut output_writer, &mut in_file,
+                                    algorithm.as_ref(), &private_key));
 
     Ok(())
 }

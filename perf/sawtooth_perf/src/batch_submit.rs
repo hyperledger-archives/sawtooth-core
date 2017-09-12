@@ -31,7 +31,6 @@ use std::time;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::marker::PhantomData;
 
 use self::tokio_core::reactor::Core;
 use self::hyper::Method;
@@ -42,8 +41,8 @@ use self::futures::Future;
 use sawtooth_sdk::messages::batch::Batch;
 use sawtooth_sdk::messages::batch::BatchList;
 use self::protobuf::Message;
-use self::protobuf::MessageStatic;
 
+use source::LengthDelimitedMessageSource;
 
 /// Populates a channel from a stream of length-delimited batches.
 /// Starts one workload submitter of the appropriate type (http, zmq)
@@ -144,47 +143,6 @@ pub fn http_submitter(target: String, rate: u64, receiver: Arc<Mutex<mpsc::Recei
             },
             None => break
         }
-    }
-}
-
-/// Decodes Protocol Buffer messages from a length-delimited input reader.
-struct LengthDelimitedMessageSource<'a, T: 'a> {
-    source: protobuf::CodedInputStream<'a>,
-    phantom: PhantomData<&'a T>,
-}
-
-impl<'a, T> LengthDelimitedMessageSource<'a, T>
-    where T: Message + MessageStatic
-{
-    /// Creates a new `LengthDelimitedMessageSource` from a given reader.
-    pub fn new(source: &'a mut Read) -> Self {
-        let source = protobuf::CodedInputStream::new(source);
-        LengthDelimitedMessageSource {
-            source,
-            phantom: PhantomData,
-        }
-    }
-
-    /// Returns the next set of messages.
-    /// The vector of messages will contain up to `max_msgs` number of
-    /// messages.  An empty vector indicates that the source has been consumed.
-    pub fn next(&mut self, max_msgs: usize)
-        -> Result<Vec<T>, protobuf::ProtobufError>
-    {
-        let mut results = Vec::with_capacity(max_msgs);
-        for _ in 0..max_msgs {
-            if self.source.eof()? {
-                break;
-            }
-
-            // read the delimited length
-            let next_len = try!(self.source.read_raw_varint32());
-            let buf = try!(self.source.read_raw_bytes(next_len));
-
-            let msg = try!(protobuf::parse_from_bytes(&buf));
-            results.push(msg);
-        }
-        Ok(results)
     }
 }
 
