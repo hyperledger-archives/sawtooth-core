@@ -78,7 +78,7 @@ key.
 Asset Type Addresses
 ++++++++++++++++++++
 
-AssetTypes are stored in the address type namespace: '4251e9', which is derived
+AssetTypes are stored in the address type namespace: '87f09c', which is derived
 by hex encoding the first 3 bytes of the sha512 hash of the string
 'private_utxo.asset_types'.
 
@@ -87,7 +87,7 @@ by hex encoding the first 3 bytes of the sha512 hash of the string
     >>> asset_namespace = hashlib.sha512("private_utxo.asset_types".encode())\
     ... .hexdigest()[0:6]
     >>> asset_namespace
-    '4251e9'
+    '87f09c'
 
 AssetType addresses are derived from the contents of the create transaction.
 The name, issuer's hex encoded public key, and the nonce are concatenated and
@@ -122,7 +122,6 @@ encoded and the first 64 bytes of the result are taken as the address.
 
     >>> address = hashlib.sha512(public_key.encode()).hexdigest()[0:64]
 
-.. _utxo_addresses:
 
 UTXO Addresses
 ++++++++++++++
@@ -243,44 +242,10 @@ Transaction Payload
 All Private UTXO transactions are wrapped in a payload object that allows for
 the items to be dispatched to the correct handling logic.
 
-.. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
-    :language: protobuf
-    :lines: 19-36
-
-Issue Asset
------------
 
 .. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
     :language: protobuf
-    :lines: 37-43
-
-Transfer Asset
---------------
-
-.. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
-    :language: protobuf
-    :lines: 44-50
-
-Convert To UTXO
----------------
-
-.. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
-    :language: protobuf
-    :lines: 51-57
-
-Convert From UTXO
------------------
-
-.. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
-    :language: protobuf
-    :lines: 59-63
-
-Transfer UTXO
--------------
-
-.. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
-    :language: protobuf
-    :lines: 64-70
+    :lines: 22-
 
 
 Execution
