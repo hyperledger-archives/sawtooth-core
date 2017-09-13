@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import json
 import logging
 import unittest
 
@@ -31,12 +32,12 @@ from sawtooth_track_and_trade.protobuf.payload_pb2 import AnswerProposalAction
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
-
-REST_API = 'rest-api:8080'
-URL = 'http://' + REST_API
-
-
 NARRATION = False
+
+
+REST_API = 'rest-api:8081'
+URL = 'http://' + REST_API
+SERVER_URL = 'http://tt-server:3000'
 
 
 class TTClient(RestClient):
@@ -101,6 +102,12 @@ class TTClient(RestClient):
         return self._post_tt_transaction(
             self.factory.make_empty_payload(
                 self.public_key))
+
+    def get_agents(self):
+        return self._submit_request(url=SERVER_URL + '/api/agents')[1]
+
+    def get_records(self):
+        return self._submit_request(url=SERVER_URL + '/api/records')[1]
 
 
 class TestTrackAndTrade(unittest.TestCase):
@@ -473,6 +480,13 @@ class TestTrackAndTrade(unittest.TestCase):
                 receiving_agent=sun.public_key,
             ))
 
+        self.assert_invalid(
+            jin.create_proposal(
+                record_id='fish-456',
+                role=Proposal.CUSTODIAN,
+                receiving_agent=sun.public_key,
+            ))
+
         self.assert_valid(
             sun.answer_proposal(
                 record_id='fish-456',
@@ -490,3 +504,51 @@ class TestTrackAndTrade(unittest.TestCase):
             jin.update_properties(
                 'fish-456',
                 {'temperature': 2}))
+
+        ###
+
+        agents_endpoint = jin.get_agents()
+
+        log_json(agents_endpoint)
+
+        agents_assertion = [
+            [
+                agent['name'],
+                agent['owns'],
+                agent['custodian'],
+            ]
+            for agent in
+            sorted(
+                agents_endpoint,
+                key=lambda agent: agent['name']
+            )
+        ]
+
+        self.assertEqual(
+            agents_assertion,
+            [
+                [
+                    'Jin Kwon',
+                    [],
+                    [],
+                ],
+                [
+                    'Sun Kwon',
+                    ['fish-456'],
+                    ['fish-456'],
+                ],
+                [
+                    'sensor-stark',
+                    [],
+                    [],
+                ],
+            ]
+        )
+
+
+def log_json(msg):
+    LOGGER.debug(
+        json.dumps(
+            msg,
+            indent=4,
+            sort_keys=True))

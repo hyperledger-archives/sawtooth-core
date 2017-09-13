@@ -26,6 +26,28 @@ services:
     command: track-and-trade-tp -vv tcp://validator:4004
     stop_signal: SIGKILL
 
+  rethinkdb:
+    image: rethinkdb
+    expose:
+      - 8080
+      - 28015
+
+  tt-server:
+    image: track-and-trade-server:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 8080
+      - 3000
+    depends_on:
+      - rethinkdb
+    command: "bash -c \" \
+        set -x && \
+        cd /project/sawtooth-core/families/track_and_trade/server && \
+        DB_HOST=rethinkdb node ./scripts/bootstrap_database.js && \
+        VALIDATOR_URL=tcp://validator:4004 DB_HOST=rethinkdb node index.js
+    \""
+
   settings-tp:
     image: sawtooth-settings-tp:$ISOLATION_ID
     volumes:
@@ -42,6 +64,8 @@ services:
     expose:
       - 4004
       - 8800
+    depends_on:
+      - tt-server
     command: "bash -c \"\
         sawtooth admin keygen && \
         sawtooth config genesis \
@@ -72,11 +96,17 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 8080
-    command: nose2-3
+      - 8081
+    depends_on:
+      - tt-server
+    command: "bash -c \" \
+        sleep 10 && \
+        nose2-3
         -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
         -v
         -s /project/sawtooth-core/integration/sawtooth_integration/tests
         test_track_and_trade.TestTrackAndTrade
+    \""
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\

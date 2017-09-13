@@ -204,6 +204,7 @@ docker_build() {
 
 build_external() {
     docker_build docker/apache-basic_auth_proxy docker/ apache-basic_auth_proxy
+    docker_build docker/track-and-trade-server docker/ track-and-trade-server
 }
 
 build_debs() {
