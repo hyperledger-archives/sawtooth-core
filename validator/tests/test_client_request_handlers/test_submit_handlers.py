@@ -73,6 +73,7 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
         def delayed_add():
             sleep(1)
             self._store.add_block('new')
+            self._tracker.chain_update(None, [])
         Thread(target=delayed_add).start()
 
         response = self.make_request(
@@ -236,6 +237,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         def delayed_add():
             sleep(1)
             self._store.add_block('new')
+            self._tracker.chain_update(None, [])
         Thread(target=delayed_add).start()
 
         response = self.make_request(

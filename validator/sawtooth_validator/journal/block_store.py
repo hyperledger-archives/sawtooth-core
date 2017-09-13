@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import abc
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 
@@ -34,9 +33,8 @@ class BlockStore(MutableMapping):
     objects are correctly wrapped and unwrapped as they are stored and
     retrieved.
     """
-    def __init__(self, block_db, update_observers=None):
+    def __init__(self, block_db):
         self._block_store = block_db
-        self._update_obs = [] if update_observers is None else update_observers
 
     def __setitem__(self, key, value):
         if key != value.identifier:
@@ -44,8 +42,6 @@ class BlockStore(MutableMapping):
                            format(key, value.identifier))
         add_ops = self._build_add_block_ops(value)
         self._block_store.set_batch(add_ops)
-        for observer in self._update_obs:
-            observer.notify_store_updated()
 
     def __getitem__(self, key):
         return self._get_block(key)
@@ -93,13 +89,6 @@ class BlockStore(MutableMapping):
         add_pairs.append((CHAIN_HEAD_KEY, new_chain[0].identifier))
 
         self._block_store.set_batch(add_pairs, del_keys)
-        for observer in self._update_obs:
-            observer.notify_store_updated()
-
-    def add_update_observer(self, observer):
-        """Adds a new BlocksCommittedObserver to commit observers.
-        """
-        self._update_obs.append(observer)
 
     @property
     def chain_head(self):
@@ -278,18 +267,6 @@ class BlockStore(MutableMapping):
         for txn in batch.transactions:
             if txn.header_signature == transaction_id:
                 return txn
-
-
-class StoreUpdateObserver(metaclass=abc.ABCMeta):
-    """An interface class for components wishing to be notified when the block
-    store is being updated.
-    """
-    @abc.abstractmethod
-    def notify_store_updated(self):
-        """This method will be called when the blockchain is being updated.
-        """
-        raise NotImplementedError('StoreUpdatedObservers must have a '
-                                  '"notify_store_updated" method')
 
 
 class _BlockPredecessorIterator(object):

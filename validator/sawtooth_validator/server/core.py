@@ -178,7 +178,6 @@ class Validator(object):
         block_store = BlockStore(block_db)
 
         batch_tracker = BatchTracker(block_store)
-        block_store.add_update_observer(batch_tracker)
 
         # setup network
         self._dispatcher = Dispatcher()
@@ -286,6 +285,7 @@ class Validator(object):
                 state_delta_processor,
                 event_broadcaster,
                 receipt_store,
+                batch_tracker,
             ],
         )
 
