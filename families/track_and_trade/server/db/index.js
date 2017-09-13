@@ -28,13 +28,13 @@ const NAME = process.env.DB_NAME || 'tnt'
 let connection = null
 
 const connect = () => {
-  r.connect({host: HOST, port: PORT, db: NAME})
+  return r.connect({host: HOST, port: PORT, db: NAME})
     .then(conn => {
       connection = conn
     })
     .catch(err => {
-      console.log(`Unable to connect to "${NAME}" db at ${HOST}:${PORT}}!`)
-      console.log(err)
+      console.error(`Unable to connect to "${NAME}" db at ${HOST}:${PORT}}!`)
+      console.error(err.message)
     })
 }
 
@@ -44,8 +44,8 @@ const queryTable = (table, query, removeCursor = true) => {
     .run(connection)
     .then(cursor => removeCursor ? cursor.toArray() : cursor)
     .catch(err => {
-      console.log(`Unable to query "${table}" table!`)
-      console.log(err)
+      console.error(`Unable to query "${table}" table!`)
+      console.error(err.message)
     })
 }
 
@@ -53,6 +53,9 @@ const queryTable = (table, query, removeCursor = true) => {
 const modifyTable = (table, query) => {
   return queryTable(table, query, false)
     .then(results => {
+      if (!results) {
+        throw new Error(`Unknown error while attempting to modify "${table}"`)
+      }
       if (results.errors > 0) {
         throw new Error(results.first_error)
       }

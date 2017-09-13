@@ -14,29 +14,12 @@
  * limitations under the License.
  * ----------------------------------------------------------------------------
  */
-'use strict'
 
-const express = require('express')
-const db = require('./db')
-const blockchain = require('./blockchain')
-const protos = require('./blockchain/protos')
-const api = require('./api')
+const submitRecord = (signingKey, record, reporterProposals) => {
+  console.log('Generating txn from ', record, 'with', reporterProposals)
+  return Promise.resolve(true)
+}
 
-const PORT = process.env.PORT || 3000
-const app = express()
-
-Promise.all([
-  db.connect(),
-  protos.compile()
-])
-  .then(() => {
-    blockchain.subscribe()
-
-    app.use('/fish', express.static('../client/public'))
-    app.use('/api', api)
-
-    app.listen(PORT, () => {
-      console.log(`Track and Trade Server listening on port ${PORT}`)
-    })
-  })
-  .catch(err => console.error(err.message))
+module.exports = {
+  submitRecord
+}

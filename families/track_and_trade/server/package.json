@@ -28,7 +28,9 @@
     "js-schema": "^1.0.1",
     "jsonwebtoken": "^7.4.3",
     "lodash": "^4.17.4",
-    "rethinkdb": "^2.3.3"
+    "protobufjs": "^6.8.0",
+    "rethinkdb": "^2.3.3",
+    "sawtooth-sdk": "^0.8.2"
   },
   "devDependencies": {
     "nodemon": "^1.11.0",
