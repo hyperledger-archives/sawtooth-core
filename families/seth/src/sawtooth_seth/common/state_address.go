@@ -50,6 +50,15 @@ func NewStateAddrFromString(s string) (sa StateAddr, err error) {
 	return NewStateAddrFromBytes(bytes)
 }
 
+func NewBlockInfoAddr(n int64) (StateAddr, error) {
+	s := fmt.Sprintf("%x", n)
+	bytes, err := hex.DecodeString(s)
+	if err != nil {
+		return "", fmt.Errorf("Unable to get block info address")
+	}
+	bytes = word256.LeftPadBytes(bytes, 31)
+	return StateAddr(BLOCK_INFO_NAMESPACE + hex.EncodeToString(bytes)), nil
+}
 
 func (sa StateAddr) String() string {
 	return string(sa)
