@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_sdk.protobuf import state_context_pb2
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
@@ -45,7 +44,6 @@ class State(object):
             results ((map): a map of address to StateEntry values, for the
             addresses that have a value
         """
-
         request = state_context_pb2.TpStateGetRequest(
             context_id=self._context_id,
             addresses=addresses)

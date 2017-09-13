@@ -11,14 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-
-class BattleshipException(Exception):
-    def __init__(self, msg):
-        super(BattleshipException, self).__init__(msg)
-
-
-class BoardLayoutException(BattleshipException):
-    def __init__(self, msg):
-        super(BoardLayoutException, self).__init__(msg)
+__all__ = [
+    'battleship_cli',
+    'battleship_client',
+    'battleship_exceptions',
+    'battleship_board'
+]

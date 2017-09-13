@@ -18,7 +18,7 @@
 from __future__ import print_function
 
 import argparse
-import ConfigParser
+import configparser
 import getpass
 import json
 import logging
@@ -28,9 +28,7 @@ import sys
 
 from colorlog import ColoredFormatter
 
-import sawtooth_signing as signing
-from sawtooth.exceptions import ClientException
-from sawtooth.exceptions import InvalidTransactionError
+import sawtooth_signing.secp256k1_signer as signing
 
 from sawtooth_battleship.battleship_board import BoardLayout
 from sawtooth_battleship.battleship_board import create_nonces
@@ -87,9 +85,10 @@ def add_create_parser(subparsers, parent_parser):
 
     parser.add_argument(
         '--wait',
-        action='store_true',
-        default=False,
-        help='wait for this commit before exiting')
+        nargs='?',
+        const=sys.maxsize,
+        type=int,
+        help='wait for game to commit, set an integer to specify a timeout')
 
 
 def add_fire_parser(subparsers, parent_parser):
@@ -112,9 +111,10 @@ def add_fire_parser(subparsers, parent_parser):
 
     parser.add_argument(
         '--wait',
-        action='store_true',
-        default=False,
-        help='wait for this commit before exiting')
+        nargs='?',
+        const=sys.maxsize,
+        type=int,
+        help='wait for game to commit, set an integer to specify a timeout')
 
 
 def add_join_parser(subparsers, parent_parser):
@@ -127,9 +127,10 @@ def add_join_parser(subparsers, parent_parser):
 
     parser.add_argument(
         '--wait',
-        action='store_true',
-        default=False,
-        help='wait for this commit before exiting')
+        nargs='?',
+        const=sys.maxsize,
+        type=int,
+        help='wait for game to commit, set an integer to specify a timeout')
 
 
 def add_init_parser(subparsers, parent_parser):
@@ -139,6 +140,11 @@ def add_init_parser(subparsers, parent_parser):
         '--username',
         type=str,
         help='the name of the player')
+
+    parser.add_argument(
+        '--url',
+        type=str,
+        help='the url of the REST API')
 
 
 def add_list_parser(subparsers, parent_parser):
@@ -210,28 +216,28 @@ def do_create(args, config):
     url = config.get('DEFAULT', 'url')
     key_file = config.get('DEFAULT', 'key_file')
 
-    client = BattleshipClient(base_url=url, keyfile=key_file)
+    client = BattleshipClient(base_url=url, keyfile=key_file, wait=args.wait)
     client.create(name=name, ships=ships)
-
-    if args.wait:
-        client.wait_for_commit()
 
 
 def do_init(args, config):
-    username = config.get('DEFAULT', 'username')
-    if args.username is not None:
-        username = args.username
+    username = args.username \
+        if args.username else config.get('DEFAULT', 'username')
+    url = args.url if args.url else config.get('DEFAULT', 'url')
 
     config.set('DEFAULT', 'username', username)
-    print("set username: {}".format(username))
+    config.set('DEFAULT', 'url', url)
+
+    print("set username: %s" % username)
+    print("set url: %s" % url)
 
     save_config(config)
 
     priv_filename = config.get('DEFAULT', 'key_file')
     if priv_filename.endswith(".priv"):
-        addr_filename = priv_filename[0:-len(".priv")] + ".addr"
+        pubkey_filename = priv_filename[0:-len(".priv")] + ".pub"
     else:
-        addr_filename = priv_filename + ".addr"
+        pubkey_filename = priv_filename + ".pub"
 
     if not os.path.exists(priv_filename):
         try:
@@ -240,18 +246,17 @@ def do_init(args, config):
 
             privkey = signing.generate_privkey()
             pubkey = signing.generate_pubkey(privkey)
-            addr = signing.generate_identifier(pubkey)
 
             with open(priv_filename, "w") as priv_fd:
                 print("writing file: {}".format(priv_filename))
                 priv_fd.write(privkey)
                 priv_fd.write("\n")
 
-            with open(addr_filename, "w") as addr_fd:
-                print("writing file: {}".format(addr_filename))
-                addr_fd.write(addr)
-                addr_fd.write("\n")
-        except IOError, ioe:
+            with open(pubkey_filename, "w") as pubkey_fd:
+                print("writing file: {}".format(pubkey_filename))
+                pubkey_fd.write(pubkey)
+                pubkey_fd.write("\n")
+        except IOError as ioe:
             raise BattleshipException("IOError: {}".format(str(ioe)))
 
 
@@ -269,8 +274,8 @@ def do_fire(args, config):
         raise BattleshipException(
             "no such game in local database: {}".format(name))
 
-    client = BattleshipClient(base_url=url, keyfile=key_file)
-    state = client.get_all_store_objects()
+    client = BattleshipClient(base_url=url, keyfile=key_file, wait=args.wait)
+    state = client.list_games()
 
     if name not in state:
         raise BattleshipException(
@@ -290,14 +295,14 @@ def do_fire(args, config):
         reveal_space = layout.render()[last_row][last_col]
         reveal_nonce = nonces[last_row][last_col]
 
-    client.fire(name=name,
-                column=column,
-                row=row,
-                reveal_space=reveal_space,
-                reveal_nonce=reveal_nonce)
+    response = client.fire(
+        name=name,
+        column=column,
+        row=row,
+        reveal_space=reveal_space,
+        reveal_nonce=reveal_nonce)
 
-    if args.wait:
-        client.wait_for_commit()
+    print(response)
 
 
 def do_join(args, config):
@@ -309,7 +314,7 @@ def do_join(args, config):
     data = load_data(config)
 
     client_for_state = BattleshipClient(base_url=url, keyfile=key_file)
-    state = client_for_state.get_all_store_objects()
+    state = client_for_state.list_games()
     if name not in state:
         raise BattleshipException(
             "No such game: {}".format(name)
@@ -344,11 +349,8 @@ def do_join(args, config):
 
     hashed_board = layout.render_hashed(nonces)
 
-    client = BattleshipClient(base_url=url, keyfile=key_file)
+    client = BattleshipClient(base_url=url, keyfile=key_file, wait=args.wait)
     client.join(name=name, board=hashed_board)
-
-    if args.wait:
-        client.wait_for_commit()
 
 
 def do_list(args, config):
@@ -356,11 +358,14 @@ def do_list(args, config):
     key_file = config.get('DEFAULT', 'key_file')
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
-    state = client.get_all_store_objects()
+    state = client.list_games()
 
     fmt = "%-15s %-15.15s %-15.15s %s"
     print(fmt % ('GAME', 'PLAYER 1', 'PLAYER 2', 'STATE'))
-    for name in state:
+
+    keys = list(state.keys())
+    keys.sort()
+    for name in keys:
         if 'Player1' in state[name]:
             player1 = state[name]['Player1']
         else:
@@ -382,7 +387,7 @@ def do_show(args, config):
     data = load_data(config)
 
     client = BattleshipClient(base_url=url, keyfile=key_file)
-    state = client.get_all_store_objects()
+    state = client.list_games()
 
     if name not in state:
         raise BattleshipException('no such game: {}'.format(name))
@@ -402,18 +407,18 @@ def do_show(args, config):
     print("PLAYER 2  : {}".format(player2))
     print("STATE     : {}".format(game_state))
 
-    # figure out the proper user's target board, given the addr
+    # figure out the proper user's target board, given the pubkey
     priv_filename = config.get('DEFAULT', 'key_file')
     if priv_filename.endswith(".priv"):
-        addr_filename = priv_filename[0:-len(".priv")] + ".addr"
+        pubkey_filename = priv_filename[0:-len(".priv")] + ".pub"
     else:
-        addr_filename = priv_filename + ".addr"
-    addr_file = file(addr_filename, mode='r')
-    addr = addr_file.readline().rstrip('\n')
+        pubkey_filename = priv_filename + ".pub"
+    pubkey_file = open(pubkey_filename, mode='r')
+    pubkey = pubkey_file.readline().rstrip('\n')
 
-    if 'Player1' in game and addr == game['Player1']:
+    if 'Player1' in game and pubkey == game['Player1']:
         target_board_name = 'TargetBoard1'
-    elif 'Player2' in game and addr == game['Player2']:
+    elif 'Player2' in game and pubkey == game['Player2']:
         target_board_name = 'TargetBoard2'
     else:
         raise BattleshipException("Player hasn't joined game.")
@@ -469,11 +474,11 @@ def print_board(board, size, is_target_board=True,
                 pending_on_target_board=False, last_fire=None):
     print(''.join(["-"] * (size * 3 + 3)))
     print("  ", end=' ')
-    for i in xrange(0, size):
+    for i in range(0, size):
         print(" {}".format(chr(ord('A') + i)), end=' ')
     print()
 
-    for row_idx, row in enumerate(xrange(0, size)):
+    for row_idx, row in enumerate(range(0, size)):
         print("%2d" % (row + 1), end=' ')
         for col_idx, space in enumerate(board[row]):
             if is_target_board:
@@ -509,11 +514,11 @@ def do_genstats(args, config):
     # Create a board which contains a count of the number of time
     # a space was used.
     count_board = [[0] * size for i in range(size)]
-    for i in xrange(0, count):
+    for i in range(0, count):
         layout = BoardLayout.generate(size=size, ships=ships)
         board = layout.render()
-        for row in xrange(0, size):
-            for col in xrange(0, size):
+        for row in range(0, size):
+            for col in range(0, size):
                 if board[row][col] != '-':
                     count_board[row][col] += 1
 
@@ -522,11 +527,11 @@ def do_genstats(args, config):
 
     # Print the board of percentages.
     print("  ", end=' ')
-    for i in xrange(0, size):
+    for i in range(0, size):
         print("  {}".format(chr(ord('A') + i)), end=' ')
     print()
 
-    for row in xrange(0, size):
+    for row in range(0, size):
         print("%2d" % (row + 1), end=' ')
         for space in count_board[row]:
             print("%3.0f" % (float(space) / float(count) * 100,), end=' ')
@@ -543,8 +548,8 @@ def load_config():
     config_file = os.path.join(home, ".sawtooth", "battleship.cfg")
     key_dir = os.path.join(home, ".sawtooth", "keys")
 
-    config = ConfigParser.SafeConfigParser()
-    config.set('DEFAULT', 'url', 'http://localhost:8800')
+    config = configparser.SafeConfigParser()
+    config.set('DEFAULT', 'url', 'http://127.0.0.1:8080')
     config.set('DEFAULT', 'key_dir', key_dir)
     config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.priv')
     config.set('DEFAULT', 'username', real_user)
@@ -625,16 +630,10 @@ def main_wrapper():
     except BattleshipException as e:
         print("Error: {}".format(e), file=sys.stderr)
         sys.exit(1)
-    except InvalidTransactionError as e:
-        print("Error: {}".format(e), file=sys.stderr)
-        sys.exit(1)
-    except ClientException as e:
-        print("Error: {}".format(e), file=sys.stderr)
-        sys.exit(1)
     except KeyboardInterrupt:
         pass
     except SystemExit as e:
         raise e
-    except:
+    except BaseException:
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
