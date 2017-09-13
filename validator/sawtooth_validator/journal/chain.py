@@ -344,7 +344,6 @@ class BlockValidator(object):
                             cur_blkw, new_blkw)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                self._done_cb(False, self._result)
                 raise BlockValidationAborted()
             new_chain.append(new_blkw)
             try:
