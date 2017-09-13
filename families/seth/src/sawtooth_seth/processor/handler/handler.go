@@ -28,6 +28,7 @@ import (
 	"sawtooth_sdk/protobuf/processor_pb2"
 	"sawtooth_sdk/protobuf/transaction_pb2"
 	. "sawtooth_seth/common"
+	. "sawtooth_seth/protobuf/block_info_pb2"
 	. "sawtooth_seth/protobuf/seth_pb2"
 )
 
@@ -136,15 +137,12 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, con
 
 func callVm(sas *SawtoothAppState, sender, receiver *evm.Account,
 	code, input []byte, gas uint64) ([]byte, uint64, error) {
-
 	// Create EVM
-	params := evm.Params{
-		BlockHeight: 0,
-		BlockHash:   Zero256,
-		BlockTime:   0,
-		GasLimit:    GAS_LIMIT,
+	params, err := getParams(sas.mgr.state)
+	if err != nil {
+		return nil, 0, fmt.Errorf("Block Info Error: %v", err)
 	}
-	vm := evm.NewVM(sas, params, Zero256, nil)
+	vm := evm.NewVM(sas, *params, Zero256, nil)
 
 	// Convert the gas to a signed int to be compatible with the burrow EVM
 	startGas := int64(gas)
@@ -193,4 +191,90 @@ func unpackHeader(headerBytes []byte) (*transaction_pb2.TransactionHeader, error
 	}
 
 	return header, nil
+}
+
+func getParams(context *processor.Context) (*evm.Params, error) {
+	blockInfoConfig, err := getBlockInfoConfig(context)
+	if err != nil {
+		logger.Debugf(
+			"Block info not available. BLOCKHASH, TIMESTAMP, and BLOCKHEIGHT instructions will result in failure")
+		return &evm.Params{
+			BlockHeight: 0,
+			BlockHash:   Zero256,
+			BlockTime:   0,
+			GasLimit:    GAS_LIMIT,
+		}, nil
+	}
+
+	blockInfo, err := getBlockInfo(context, int64(blockInfoConfig.GetLatestBlock()))
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get block info: %v", err.Error())
+	}
+
+	hash, err := StringToWord256(blockInfo.GetHeaderSignature())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get block info: %v", err.Error())
+	}
+
+	return &evm.Params{
+		BlockHeight: int64(blockInfo.GetBlockNum()),
+		BlockHash:   hash,
+		BlockTime:   int64(blockInfo.GetTimestamp()),
+		GasLimit:    GAS_LIMIT,
+	}, nil
+}
+
+func getBlockInfoConfig(context *processor.Context) (*BlockInfoConfig, error) {
+	// Retrieve block info config from global state
+	entries, err := context.Get([]string{CONFIG_ADDRESS})
+	if err != nil {
+		return nil, err
+	}
+	entryData, exists := entries[CONFIG_ADDRESS]
+	if !exists {
+		return nil, fmt.Errorf("BlockInfo entry does not exist")
+	}
+
+	// Deserialize the entry
+	entry := &BlockInfoConfig{}
+	err = proto.Unmarshal(entryData, entry)
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
+
+func getBlockInfo(context *processor.Context, blockNumber int64) (*BlockInfo, error) {
+	// Create block info address
+	blockInfoAddr, err := NewBlockInfoAddr(blockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get block info address: %v", err.Error())
+	}
+	// Retrieve block info from global state
+	entries, err := context.Get([]string{blockInfoAddr.String()})
+	if err != nil {
+		return nil, err
+	}
+	entryData, exists := entries[blockInfoAddr.String()]
+	if !exists {
+		return nil, fmt.Errorf("BlockInfo entry does not exist")
+	}
+
+	// Deserialize the entry
+	entry := &BlockInfo{}
+	err = proto.Unmarshal(entryData, entry)
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
+
+func StringToWord256(s string) (Word256, error) {
+	bytes, err := hex.DecodeString(s)
+	if err != nil {
+		return Zero256, fmt.Errorf("Couldn't decode string")
+	}
+	return RightPadWord256(bytes), nil
 }
