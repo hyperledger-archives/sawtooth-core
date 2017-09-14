@@ -40,7 +40,11 @@ const Home = {
           m('li',
             m('a[href="/create"]',
               { oncreate: m.route.link },
-              'Create Fish'))))
+              'Create Fish')),
+          m('li',
+            m('a[href="/signup"]',
+              { oncreate: m.route.link },
+              'Signup Agent'))))
     ])
   }
 }
@@ -50,6 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
     '/': Home,
     '/create': {
       render: () => m(FishForm, {signingKey: AppState.signingKey})
+    },
+    '/signup': {
+      render: () => m(SignupForm, AppState)
     }
   })
 })
