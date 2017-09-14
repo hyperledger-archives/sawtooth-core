@@ -61,6 +61,21 @@ class TestAuthorizationHandlers(unittest.TestCase):
             handler_status.message_type,
             validator_pb2.Message.AUTHORIZATION_CONNECTION_RESPONSE)
 
+    def test_connect_bad_endpoint(self):
+        """
+        Test the ConnectHandler correctly responds to a ConnectionRequest.
+        """
+        connect_message = ConnectionRequest(endpoint="tcp://0.0.0.0:8800")
+        roles = {"network": AuthorizationType.TRUST}
+        network = MockNetwork(roles)
+        handler = ConnectHandler(network)
+        handler_status = handler.handle("connection_id",
+                                        connect_message.SerializeToString())
+        self.assertEqual(handler_status.status, HandlerStatus.RETURN_AND_CLOSE)
+        self.assertEqual(
+            handler_status.message_type,
+            validator_pb2.Message.AUTHORIZATION_CONNECTION_RESPONSE)
+
     def test_connect_bad_role_type(self):
         """
         Test the ConnectHandler closes the connection if the role has an
