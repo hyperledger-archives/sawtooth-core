@@ -44,7 +44,11 @@ const Home = {
           m('li',
             m('a[href="/signup"]',
               { oncreate: m.route.link },
-              'Signup Agent'))))
+              'Signup Agent')),
+          m('li',
+            m('a[href="/login"]',
+              { oncreate: m.route.link },
+              'Login Agent'))))
     ])
   }
 }
@@ -57,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     '/signup': {
       render: () => m(SignupForm, AppState)
+    },
+    '/login': {
+      render: () => m(LoginForm, AppState)
     }
   })
 })
