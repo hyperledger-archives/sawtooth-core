@@ -16,7 +16,7 @@
 import logging
 import hashlib
 
-from sawtooth_sdk.processor.state import StateEntry
+from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
