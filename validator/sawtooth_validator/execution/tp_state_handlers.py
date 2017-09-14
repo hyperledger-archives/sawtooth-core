@@ -151,9 +151,16 @@ class TpAddReceiptDataHandler(Handler):
         add_receipt_data_request = state_context_pb2.TpAddReceiptDataRequest()
         add_receipt_data_request.ParseFromString(message_content)
 
-        LOGGER.debug("ADD RECEIPT DATA: %s", message_content)
+        success = self._context_manager.add_execution_data(
+            add_receipt_data_request.context_id,
+            add_receipt_data_request.data_type,
+            add_receipt_data_request.data)
+
         ack = state_context_pb2.TpAddReceiptDataResponse()
-        ack.status = ack.OK
+        if success:
+            ack.status = ack.OK
+        else:
+            ack.status = ack.ERROR
 
         return HandlerResult(
             status=HandlerStatus.RETURN,
@@ -175,10 +182,15 @@ class TpAddEventHandler(Handler):
         add_event_request = state_context_pb2.TpAddEventRequest()
         add_event_request.ParseFromString(message_content)
 
-        LOGGER.debug("ADD EVENT: %s", message_content)
+        success = self._context_manager.add_execution_event(
+            add_event_request.context_id,
+            add_event_request.event)
 
         ack = state_context_pb2.TpAddEventResponse()
-        ack.status = ack.OK
+        if success:
+            ack.status = ack.OK
+        else:
+            ack.status = ack.ERROR
 
         return HandlerResult(
             status=HandlerStatus.RETURN,

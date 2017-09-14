@@ -84,3 +84,43 @@ func ParseBodyData(buf []byte) (*RespBody, error) {
 	err := json.Unmarshal(buf, body)
 	return body, err
 }
+
+type ReceiptRespBody struct {
+	Data  []TransactionReceipt
+	Link  string
+	Head  string
+	Error ErrorBody
+}
+type TransactionReceipt struct {
+	TransactionId string
+	StateChanges  []struct {
+		Value   string
+		Type    string
+		Address string
+	}
+	Events []interface{}
+	Data   []struct {
+		Data     string
+		DataType string
+	}
+}
+
+func ParseReceiptBody(resp *http.Response) (*ReceiptRespBody, error) {
+	defer resp.Body.Close()
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(buf) == 0 {
+		return nil, fmt.Errorf("No receipts.")
+	}
+
+	return ParseReceiptBodyData(buf)
+
+}
+func ParseReceiptBodyData(buf []byte) (*ReceiptRespBody, error) {
+	body := &ReceiptRespBody{}
+	err := json.Unmarshal(buf, body)
+	return body, err
+}

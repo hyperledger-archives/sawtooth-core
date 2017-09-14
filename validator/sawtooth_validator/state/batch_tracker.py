@@ -16,13 +16,17 @@
 import abc
 from threading import RLock
 from sawtooth_validator.journal.timed_cache import TimedCache
-from sawtooth_validator.journal.block_store import StoreUpdateObserver
+from sawtooth_validator.journal.chain import ChainObserver
 from sawtooth_validator.execution.executor import InvalidTransactionObserver
 from sawtooth_validator.journal.journal import PendingBatchObserver
 from sawtooth_validator.protobuf.client_pb2 import BatchStatus
 
 
-class BatchTracker(StoreUpdateObserver,
+# By default invalid batch info will be kept for one hour
+CACHE_KEEP_TIME = 3600
+
+
+class BatchTracker(ChainObserver,
                    InvalidTransactionObserver,
                    PendingBatchObserver):
     """Tracks batch statuses for this local validator, allowing interested
@@ -51,7 +55,7 @@ class BatchTracker(StoreUpdateObserver,
         self._lock = RLock()
         self._observers = {}
 
-    def notify_store_updated(self):
+    def chain_update(self, block, receipts):
         """Removes batches from the pending cache if found in the block store,
         and notifies any observers.
         """
