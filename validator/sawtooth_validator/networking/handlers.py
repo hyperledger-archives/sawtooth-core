@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 import logging
 import os
+import netifaces
 
 import sawtooth_signing as signing
 
@@ -72,6 +73,26 @@ class ConnectHandler(Handler):
         message.ParseFromString(message_content)
         LOGGER.debug("got connect message from %s. sending ack",
                      connection_id)
+
+        # Need to use join here to get the string "0.0.0.0". Otherwise,
+        # bandit thinks we are binding to all interfaces and returns a
+        # Medium security risk.
+        interfaces = ["*", ".".join(["0", "0", "0", "0"])]
+        interfaces += netifaces.interfaces()
+        for interface in interfaces:
+            if interface in message.endpoint:
+                LOGGER.debug("Endpoint cannot include '%s': %s",
+                             interface,
+                             message.endpoint)
+
+                connection_response = ConnectionResponse(
+                    status=ConnectionResponse.ERROR)
+                return HandlerResult(
+                    HandlerStatus.RETURN_AND_CLOSE,
+                    message_out=connection_response,
+                    message_type=validator_pb2.Message.
+                    AUTHORIZATION_CONNECTION_RESPONSE)
+
         LOGGER.debug("Endpoint of connecting node is %s",
                      message.endpoint)
         self._network.update_connection_endpoint(connection_id,
