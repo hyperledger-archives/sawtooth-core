@@ -24,7 +24,7 @@ class StateEntry(object):
         self.data = data
 
 
-class State(object):
+class Context(object):
     """
     Attributes:
         _stream (sawtooth.client.stream.Stream): client grpc communication
