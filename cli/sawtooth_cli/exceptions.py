@@ -16,3 +16,7 @@
 
 class CliException(Exception):
     pass
+
+
+class RestClientException(Exception):
+    pass
