@@ -566,7 +566,6 @@ class TestSchedulers(unittest.TestCase):
         context_manager, scheduler = self._setup_serial_scheduler()
         self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
-    @unittest.skip("STL-486 Parallel-fail fast")
     def test_parallel_add_valid_batch_invalid_batch(self):
         """Tests the squash function. That the correct state hash is found
         at the end of valid and invalid batches, similar to block publishing.
@@ -1092,8 +1091,13 @@ class TestParallelScheduler(unittest.TestCase):
             self.assertEqual(scheduled_txn_info, next(iterable2))
             self.assertIsNotNone(scheduled_txn_info)
             self.assertEqual(txn.payload, scheduled_txn_info.txn.payload)
+            c_id = self.context_manager.create_context(
+                self.first_state_root,
+                base_contexts=scheduled_txn_info.base_context_ids,
+                inputs=[],
+                outputs=[])
             self.scheduler.set_transaction_execution_result(
-                txn.header_signature, False, None)
+                txn.header_signature, True, c_id)
 
         self.scheduler.finalize()
         self.assertTrue(self.scheduler.complete(block=False))
