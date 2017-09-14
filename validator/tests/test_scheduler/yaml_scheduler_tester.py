@@ -443,8 +443,9 @@ class SchedulerTester(object):
             batch_is_valid = self._batch_results[batch_id].is_valid
 
 
-            transaction_contexts.update(partial_batch_transaction_contexts)
+
             if batch_is_valid:
+                transaction_contexts.update(partial_batch_transaction_contexts)
                 state_up_to_now.update(partial_batch_state_up_to_now)
 
         return transaction_contexts
