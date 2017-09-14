@@ -48,8 +48,8 @@ class TestDynamicNetwork(unittest.TestCase):
             'rounds': 3,
             'start_nodes_per_round': 2,
             'stop_nodes_per_round': 0,
-            'batches': 5,
-            'time_between_batches': 1,
+            'batches': 3,
+            'time_between_batches': 0,
             'poet_kwargs': {
                 'minimum_wait_time': 1.0,
                 'initial_wait_time': 100.0,
