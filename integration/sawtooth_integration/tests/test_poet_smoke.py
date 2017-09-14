@@ -34,7 +34,7 @@ CATCH_UP_TIME = 30
 TRY_AGAIN_TIME = 60
 
 BATCH_COUNT = 20
-WAIT = 300
+WAIT = 120
 
 class TestPoetSmoke(unittest.TestCase):
     def setUp(self):

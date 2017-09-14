@@ -24,7 +24,7 @@ from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
-WAIT = 300
+WAIT = 120
 
 
 class TestDynamicNetwork(unittest.TestCase):
