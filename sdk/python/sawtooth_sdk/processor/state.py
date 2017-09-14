@@ -34,7 +34,7 @@ class State(object):
         self._stream = stream
         self._context_id = context_id
 
-    def get(self, addresses, timeout=None):
+    def get_state(self, addresses, timeout=None):
         """
         Get the value at a given list of address in the validator's merkle
         state.
@@ -62,7 +62,7 @@ class State(object):
                    for e in entries if len(e.data) != 0]
         return results
 
-    def set(self, entries, timeout=None):
+    def set_state(self, entries, timeout=None):
         """
         set an address to a value in the validator's merkle state
         Args:
@@ -90,7 +90,7 @@ class State(object):
                 'Tried to set unauthorized address: {}'.format(addresses))
         return response.addresses
 
-    def delete(self, addresses, timeout=None):
+    def delete_state(self, addresses, timeout=None):
         """
         delete an address in the validator's merkle state
         Args:
