@@ -363,3 +363,52 @@ class NetworkPermissionHandler(Handler):
 
         # if allowed pass message
         return HandlerResult(HandlerStatus.PASS)
+
+
+class IdentityCache():
+    def __init__(self, identity_view_factory, current_root_func):
+        self._identity_view_factory = identity_view_factory
+        self._identity_view = None
+        self._current_root_func = current_root_func
+        self._cache = {}
+
+    def __len__(self):
+        return len(self._cache)
+
+    def __contains__(self, item):
+        return item in self._cache
+
+    def __getitem__(self, item):
+        return self._cache.get(item)
+
+    def __iter__(self):
+        return iter(self._cache)
+
+    def get_role(self, item, state_root):
+        value = self._cache.get(item)
+        if value is None:
+            if self._identity_view is None:
+                self.update_view(state_root)
+            value = self._identity_view.get_role(item)
+            self._cache[item] = value
+        return value
+
+    def get_policy(self, item, state_root):
+        value = self._cache.get(item)
+        if value is None:
+            if self._identity_view is None:
+                self.update_view(state_root)
+            value = self._identity_view.get_policy(item)
+            self._cache[item] = value
+        return value
+
+    def forked(self):
+        self._cache = {}
+
+    def invalidate(self, item):
+        if item in self._cache:
+            del self._cache[item]
+
+    def update_view(self, state_root):
+        self._identity_view = \
+            self._identity_view_factory.create_identity_view(state_root)
