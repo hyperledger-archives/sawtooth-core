@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-import time
 import logging
 import operator # used by verifier
 # -- used by rest_api callers --
@@ -32,7 +31,7 @@ from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
-
+WAIT = 300
 INTKEY_PREFIX = '1cf126'
 
 class TestIntkeySmoke(unittest.TestCase):
@@ -91,9 +90,6 @@ class TestIntkeySmoke(unittest.TestCase):
         batch = IntkeyMessageFactory().create_batch(batch)
         LOGGER.info('Posting batch')
         _post_batch(batch)
-
-        time.sleep(10)
-
         self.verify_state_after_n_updates(how_many_updates)
 
     def verify_state_after_n_updates(self, num):
@@ -124,7 +120,9 @@ class TestIntkeySmoke(unittest.TestCase):
 
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
-    response = _query_rest_api('/batches', data=batch, headers=headers)
+    response = _query_rest_api(
+        '/batches?wait={}'.format(WAIT),
+        data=batch, headers=headers)
     return response
 
 def _get_data():
