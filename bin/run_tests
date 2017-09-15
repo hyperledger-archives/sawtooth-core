@@ -314,6 +314,8 @@ test_javascript_sdk() {
 }
 
 test_python_sdk() {
+    run_docker_test ./sdk/python/tests/unit_python_sdk.yaml
+    copy_coverage .coverage.test_python_sdk
     run_docker_test ./sdk/examples/intkey_python/tests/test_tp_intkey_python.yaml
     copy_coverage .coverage.test_tp_intkey_python
     run_docker_test ./sdk/examples/xo_python/tests/test_tp_xo_python.yaml
