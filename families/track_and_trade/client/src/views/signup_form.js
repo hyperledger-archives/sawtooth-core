@@ -19,8 +19,21 @@
 const m = require('mithril')
 const _ = require('lodash')
 
-const api = require('../services/api')
 const forms = require('../components/forms')
+const api = require('../services/api')
+const transactions = require('../services/transactions')
+const payloads = require('../services/payloads')
+
+const userSubmitter = state => e => {
+  e.preventDefault()
+  const keys = transactions.makePrivateKey(state.password)
+  const user = _.assign(keys, _.omit(state, 'name'))
+  const agent = payloads.createAgent(_.pick(state, 'name'))
+
+  api.post('users', user)
+    .then(res => api.setAuth(res.authorization))
+    .then(() => transactions.submit(agent))
+}
 
 /**
  * The Form for authorizing an existing user.
@@ -30,13 +43,7 @@ const SignupForm = {
     const setter = forms.stateSetter(vnode.state)
 
     return m('.signup-form.container', [
-      m('form', {
-        onsubmit: (e) => {
-          e.preventDefault()
-          api.post('users', _.assign(vnode.state, {publicKey: '' + Date.now()}))
-            .then(res => api.setAuth(res.authorization))
-        }
-      },
+      m('form', { onsubmit: userSubmitter(vnode.state) },
       m('legend', 'Create Agent'),
       forms.textInput(setter('name'), 'Name'),
       forms.emailInput(setter('email'), 'Email'),

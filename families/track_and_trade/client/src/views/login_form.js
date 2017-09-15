@@ -19,6 +19,7 @@
 const m = require('mithril')
 
 const api = require('../services/api')
+const transactions = require('../services/transactions')
 const forms = require('../components/forms')
 
 /**
@@ -33,7 +34,11 @@ const LoginForm = {
         onsubmit: (e) => {
           e.preventDefault()
           api.post('authorization', vnode.state)
-            .then(res => api.setAuth(res.authorization))
+            .then(res => {
+              api.setAuth(res.authorization)
+              transactions.setPrivateKey(vnode.state.password,
+                                         res.encryptedKey)
+            })
         }
       },
       m('legend', 'Login Agent'),
