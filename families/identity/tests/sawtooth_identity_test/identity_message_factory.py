@@ -205,3 +205,11 @@ class IdentityMessageFactory(object):
             data = Setting(entries=[entry]).SerializeToString()
 
         return self._factory.create_get_response({key: data})
+
+    def create_add_event_request(self, key):
+        return self._factory.create_add_event_request(
+            "identity_update",
+            [("updated", key)])
+
+    def create_add_event_response(self):
+        return self._factory.create_add_event_response()
