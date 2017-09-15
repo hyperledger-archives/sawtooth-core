@@ -26,6 +26,8 @@ from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
+from sawtooth_validator.gossip.permission_verifier import IdentityCache
+from sawtooth_validator.gossip.identity_observer import IdentityObserver
 from test_permission_verifier.mocks import  MockIdentityViewFactory
 from test_permission_verifier.mocks import make_policy
 
@@ -36,11 +38,14 @@ class TestPermissionVerifier(unittest.TestCase):
         self.public_key = signing.generate_pubkey(self.private_key)
         self._identity_view_factory = MockIdentityViewFactory()
         self.permissions = {}
+        self._identity_cache = IdentityCache(
+            self._identity_view_factory,
+            self._current_root_func)
         self.permission_verifier = \
             PermissionVerifier(
-                identity_view_factory=self._identity_view_factory,
                 permissions=self.permissions,
-                current_root_func=self._current_root_func)
+                current_root_func=self._current_root_func,
+                identity_cache=self._identity_cache)
 
     def _current_root_func(self):
         return "0000000000000000000000"
@@ -131,6 +136,7 @@ class TestPermissionVerifier(unittest.TestCase):
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
         self.assertTrue(allowed)
 
+        self._identity_cache.forked()
         self._identity_view_factory.add_policy("default", ["DENY_KEY *"])
         batch = self._create_batches(1, 1)[0]
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
@@ -149,6 +155,7 @@ class TestPermissionVerifier(unittest.TestCase):
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
         self.assertTrue(allowed)
 
+        self._identity_cache.forked()
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY other"])
         self._identity_view_factory.add_role("transactor", "policy1")
         batch = self._create_batches(1, 1)[0]
@@ -169,6 +176,7 @@ class TestPermissionVerifier(unittest.TestCase):
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
         self.assertTrue(allowed)
 
+        self._identity_cache.forked()
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY other"])
         self._identity_view_factory.add_role("transactor.batch_signer",
                                              "policy1")
@@ -190,6 +198,7 @@ class TestPermissionVerifier(unittest.TestCase):
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
         self.assertTrue(allowed)
 
+        self._identity_cache.forked()
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY other"])
         self._identity_view_factory.add_role("transactor.transaction_signer",
                                              "policy1")
@@ -213,6 +222,7 @@ class TestPermissionVerifier(unittest.TestCase):
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
         self.assertTrue(allowed)
 
+        self._identity_cache.forked()
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY other"])
         self._identity_view_factory.add_role(
             "transactor.transaction_signer.intkey",
@@ -322,6 +332,7 @@ class TestPermissionVerifier(unittest.TestCase):
         allowed = self.permission_verifier.check_network_role(self.public_key)
         self.assertTrue(allowed)
 
+        self._identity_cache.forked()
         self._identity_view_factory.add_policy("default", ["DENY_KEY *"])
         allowed = self.permission_verifier.check_network_role(self.public_key)
         self.assertFalse(allowed)
