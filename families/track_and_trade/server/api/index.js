@@ -26,6 +26,7 @@ const { Unauthorized } = require('./errors')
 const agents = require('../db/agents')
 const state = require('../db/state')
 const blockchain = require('../blockchain/')
+const batcher = require('../blockchain/batcher')
 
 const router = express.Router()
 
@@ -48,6 +49,31 @@ const handle = func => handlePromisedResponse(req => {
 const handleBody = func => handlePromisedResponse(req => {
   return func(req.body, _.assign({}, req.query, req.params, req.internal))
 })
+
+// Parses the endpoints from an Express router
+const getEndpoints = router => {
+  return _.chain(router.stack)
+    .filter(layer => layer.route)
+    .map(({ route }) => {
+      return _.chain(route.stack)
+        .reduceRight((layers, layer) => {
+          if (layer.name === 'restrict') {
+            _.nth(layers, -1).restricted = true
+          } else {
+            layers.push({
+              path: route.path,
+              method: layer.method.toUpperCase(),
+              restricted: false
+            })
+          }
+          return layers
+        }, [])
+        .reverse()
+        .value()
+    })
+    .flatten()
+    .value()
+}
 
 /*
  * Custom Middleware
@@ -110,6 +136,14 @@ router.get('/agents', handle(agents.list))
 
 router.post('/authorization', handleBody(auth.authorize))
 
+router.get('/info', handle(() => {
+  return Promise.resolve()
+    .then(() => ({
+      pubkey: batcher.getPublicKey(),
+      endpoints: endpointInfo
+    }))
+}))
+
 router.post('/transactions', restrict, handleBody(blockchain.submit))
 
 router.route('/users')
@@ -125,5 +159,6 @@ router.patch('/users/:publicKey', restrict, handleBody((body, params) => {
 }))
 
 router.use(errorHandler)
+const endpointInfo = getEndpoints(router)
 
 module.exports = router

@@ -32,6 +32,8 @@ if (!PRIVATE_KEY) {
   publicKey = signer.getPublicKey(PRIVATE_KEY)
 }
 
+const getPublicKey = () => publicKey
+
 const batch = (txnList, expectedSigner) => {
   if (!PRIVATE_KEY) {
     throw new Error(`Server has no signing key, and cannot batch transacitons`)
@@ -53,5 +55,6 @@ const batch = (txnList, expectedSigner) => {
 }
 
 module.exports = {
+  getPublicKey,
   batch
 }
