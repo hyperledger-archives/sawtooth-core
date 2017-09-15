@@ -62,6 +62,14 @@ message Message {
         TP_PING = 13;
         // Response from transaction processor to tell the validator it received the ping
         TP_PING_RESPONSE = 14;
+        // Message to append data to a transaction receipt
+        TP_ADD_RECEIPT_DATA_REQUEST = 15;
+        // Response from validator to tell transaction processor that data has been appended
+        TP_ADD_RECEIPT_DATA_RESPONSE = 16;
+        // Message to add event
+        TP_ADD_EVENT_REQUEST = 17;
+        // Response from validator to tell transaction processor that event has been created
+        TP_ADD_EVENT_RESPONSE = 18;
 
         // Submission of a batchlist from the web api or another client to the validator
         CLIENT_BATCH_SUBMIT_REQUEST = 100;
@@ -100,7 +108,13 @@ message Message {
         CLIENT_RECEIPT_GET_REQUEST= 122;
         // A response with the receipts
         CLIENT_RECEIPT_GET_RESPONSE= 123;
-        // Further messages from the stats client through the web api
+
+        // Message types for events
+        CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;
+        CLIENT_EVENTS_SUBSCRIBE_RESPONSE = 501;
+        CLIENT_EVENTS_UNSUBSCRIBE_REQUEST = 502;
+        CLIENT_EVENTS_UNSUBSCRIBE_RESPONSE = 503;
+        CLIENT_EVENTS = 504;
 
         // Temp message types until a discussion can be had about gossip msg
         GOSSIP_MESSAGE = 200;
@@ -127,6 +141,16 @@ message Message {
         STATE_DELTA_EVENT = 404;
         STATE_DELTA_GET_EVENTS_REQUEST = 405;
         STATE_DELTA_GET_EVENTS_RESPONSE = 406;
+
+        // Message types for Authorization Types
+        AUTHORIZATION_CONNECTION_RESPONSE = 600;
+        AUTHORIZATION_VIOLATION = 601;
+        AUTHORIZATION_TRUST_REQUEST = 602;
+        AUTHORIZATION_TRUST_RESPONSE = 603;
+        AUTHORIZATION_CHALLENGE_REQUEST = 604;
+        AUTHORIZATION_CHALLENGE_RESPONSE = 605;
+        AUTHORIZATION_CHALLENGE_SUBMIT = 606;
+        AUTHORIZATION_CHALLENGE_RESULT = 607;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the

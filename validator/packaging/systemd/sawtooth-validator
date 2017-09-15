@@ -1,1 +1,1 @@
-SAWTOOTH_VALIDATOR_ARGS=--endpoint tcp://localhost:8800 --bind component:tcp://127.0.0.1:4004 --bind network:tcp://eth0:8800
+#SAWTOOTH_VALIDATOR_ARGS=

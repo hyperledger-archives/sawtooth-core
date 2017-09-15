@@ -45,7 +45,7 @@ class BoardLayout(object):
         # Check validity by rendering the board into a string
         try:
             self.render()
-        except BoardLayoutException, e:
+        except BoardLayoutException as e:
             self.ship_positions = self.ship_positions[:-1]
             raise e
 
@@ -66,7 +66,7 @@ class BoardLayout(object):
             text = position.text
 
             if orientation == 'horizontal':
-                for i in xrange(0, len(text)):
+                for i in range(0, len(text)):
                     if board[row][col + i] != '-':
                         raise BoardLayoutException(
                             "can not place ship at {}{}, space "
@@ -76,7 +76,7 @@ class BoardLayout(object):
                                 board[row][col]))
                     board[row][col + i] = text[i]
             elif orientation == 'vertical':
-                for i in xrange(0, len(text)):
+                for i in range(0, len(text)):
                     if board[row + i][col] != '-':
                         raise BoardLayoutException(
                             "can not place ship at {}{}, space "
@@ -94,8 +94,8 @@ class BoardLayout(object):
         hashed_board = [[None] * self.size for _ in range(self.size)]
         clear_board = self.render()
 
-        for row in xrange(0, self.size):
-            for col in xrange(0, self.size):
+        for row in range(0, self.size):
+            for col in range(0, self.size):
                 hashed_board[row][col] = hash_space(
                     clear_board[row][col], nonces[row][col])
 
@@ -122,7 +122,7 @@ class BoardLayout(object):
         remaining = list(ships)
         layout = BoardLayout(size)
 
-        while len(remaining) > 0:
+        while remaining:
             ship = remaining[0]
             remaining.remove(ship)
 
@@ -192,15 +192,15 @@ class ShipPosition(object):
 
 def create_nonces(board_size):
     nonces = [[None] * board_size for _ in range(board_size)]
-    for row in xrange(0, board_size):
-        for col in xrange(0, board_size):
+    for row in range(0, board_size):
+        for col in range(0, board_size):
             nonces[row][col] = ''.join(
-                [random.choice(string.ascii_letters) for _ in xrange(0, 10)])
+                [random.choice(string.ascii_letters) for _ in range(0, 10)])
     return nonces
 
 
 def hash_space(space, nonce):
-    m = hashlib.md5()
-    m.update(space)
-    m.update(nonce)
+    m = hashlib.sha512()
+    m.update(nonce.encode())
+    m.update(space.encode())
     return m.hexdigest()

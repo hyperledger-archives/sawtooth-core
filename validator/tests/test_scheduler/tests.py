@@ -15,6 +15,7 @@
 
 import unittest
 from unittest.mock import Mock
+from collections import deque
 import hashlib
 import threading
 import time
@@ -219,12 +220,13 @@ class TestSchedulers(unittest.TestCase):
 
         # 3.
         for i, batch_info in enumerate(
-                [(batch_1.header_signature, False),
-                 (batch_2.header_signature, False),
-                 (batch_3.header_signature, True),
-                 (batch_4.header_signature, False),
-                 (batch_5.header_signature, True)]):
-            batch_id, validity = batch_info
+                [(batch_1, False),
+                 (batch_2, False),
+                 (batch_3, True),
+                 (batch_4, False),
+                 (batch_5, True)]):
+            batch, validity = batch_info[0], batch_info[1]
+            batch_id = batch.header_signature
             result = scheduler.get_batch_execution_result(batch_id)
             self.assertEqual(
                 result.is_valid,
@@ -233,6 +235,98 @@ class TestSchedulers(unittest.TestCase):
                     i + 1,
                     'valid' if result.is_valid else 'invalid',
                     'valid' if validity else 'invalid'))
+            txn_results = scheduler.get_transaction_execution_results(batch_id)
+            # Check that a result was returned for every transaction
+            result_txn_ids = [result.signature for result in txn_results]
+            batch_txn_ids = [txn.header_signature
+                             for txn in batch.transactions]
+            self.assertEqual(result_txn_ids, batch_txn_ids)
+            if validity:
+                self.assertTrue(all(txn.is_valid for txn in txn_results))
+
+    def test_serial_fail_fast(self):
+        """Tests that transactions that are already determined to be in an
+        invalid batch due to a prior transaction being invalid, won't run.
+        """
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._fail_fast(scheduler)
+
+    def _fail_fast(self, scheduler):
+        """Tests that transactions that are already determined to be in an
+        invalid batch due to a prior transaction being invalid, won't run.
+          x
+        [ A B ] [ C D ]
+                  B
+        Notes:
+             1. Create an invalid transaction, txn A, and put it in a batch
+                with txn B. Create a transaction, txn C, that depends on txn B
+                and put it in a batch with txn D.
+
+             2. Add the batches to the scheduler and call finalize.
+
+             3. Assert that only txn A is run.
+        """
+
+        private_key = signing.generate_privkey()
+        public_key = signing.generate_pubkey(private_key)
+
+        transaction_validity = {}
+
+        txn_a, _ = create_transaction(
+            payload='A'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        transaction_validity[txn_a.header_signature] = False
+
+        txn_b, _ = create_transaction(
+            payload='B'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        batch_1 = create_batch(transactions=[txn_a, txn_b],
+                               private_key=private_key,
+                               public_key=public_key)
+
+        txn_c, _ = create_transaction(
+            payload='C'.encode(),
+            private_key=private_key,
+            public_key=public_key,
+            dependencies=[txn_b.header_signature])
+
+        txn_d, _ = create_transaction(
+            payload='D'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        batch_2 = create_batch(
+            transactions=[txn_c, txn_d],
+            private_key=private_key,
+            public_key=public_key)
+
+        scheduler.add_batch(batch_1)
+        scheduler.add_batch(batch_2)
+        scheduler.finalize()
+
+        scheduler_iter = iter(scheduler)
+        while not scheduler.complete(block=False):
+            try:
+                txn_from_scheduler = next(scheduler_iter)
+            except StopIteration:
+                break
+            txn_id = txn_from_scheduler.txn.header_signature
+
+            self.assertEqual(txn_id,
+                             txn_a.header_signature,
+                             "Only Transaction A is run, not txn {}"
+                             "".format(txn_from_scheduler.txn.payload))
+
+            validity = transaction_validity[txn_id]
+            scheduler.set_transaction_execution_result(
+                txn_signature=txn_id,
+                is_valid=validity,
+                context_id=None)
 
     def test_serial_completion_on_finalize(self):
         """Tests that iteration will stop when finalized is called on an
@@ -472,6 +566,7 @@ class TestSchedulers(unittest.TestCase):
         context_manager, scheduler = self._setup_serial_scheduler()
         self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
+    @unittest.skip("STL-486 Parallel-fail fast")
     def test_parallel_add_valid_batch_invalid_batch(self):
         """Tests the squash function. That the correct state hash is found
         at the end of valid and invalid batches, similar to block publishing.
@@ -523,7 +618,10 @@ class TestSchedulers(unittest.TestCase):
         sched1 = iter(scheduler)
         invalid_payload = hashlib.sha512('invalid'.encode()).hexdigest()
         while not scheduler.complete(block=False):
-            txn_info = next(sched1)
+            try:
+                txn_info = next(sched1)
+            except StopIteration:
+                break
             txn_header = transaction_pb2.TransactionHeader()
             txn_header.ParseFromString(txn_info.txn.header)
             inputs_or_outputs = list(txn_header.inputs)
@@ -552,7 +650,6 @@ class TestSchedulers(unittest.TestCase):
         address_b = _get_address_from_txn(txn_info_b)
 
         txn_infoInvalid = next(sched2)
-        txn_info_c = next(sched2)
 
         txn_info_d = next(sched2)
         address_d = _get_address_from_txn(txn_info_d)
@@ -759,8 +856,13 @@ class TestSerialScheduler(unittest.TestCase):
             self.assertEqual(scheduled_txn_info, next(iterable2))
             self.assertIsNotNone(scheduled_txn_info)
             self.assertEqual(txn.payload, scheduled_txn_info.txn.payload)
+            c_id = self.context_manager.create_context(
+                self.first_state_root,
+                base_contexts=scheduled_txn_info.base_context_ids,
+                inputs=[],
+                outputs=[])
             self.scheduler.set_transaction_execution_result(
-                txn.header_signature, False, None)
+                txn.header_signature, True, c_id)
 
         with self.assertRaises(StopIteration):
             next(iterable1)
@@ -805,8 +907,14 @@ class TestSerialScheduler(unittest.TestCase):
         for txn in txns:
             scheduled_txn_info = next(iterable1)
             self.assertFalse(self.scheduler.complete(block=False))
+
+            c_id = self.context_manager.create_context(
+                self.first_state_root,
+                base_contexts=scheduled_txn_info.base_context_ids,
+                inputs=[],
+                outputs=[])
             self.scheduler.set_transaction_execution_result(
-                txn.header_signature, False, None)
+                txn.header_signature, True, c_id)
 
         self.assertTrue(self.scheduler.complete(block=False))
 
@@ -856,11 +964,16 @@ class TestSerialScheduler(unittest.TestCase):
         self.assertEqual('a', scheduled_txn_info.txn.payload.decode())
 
         self.assertIsNone(self.scheduler.next_transaction())
+        c_id = self.context_manager.create_context(
+            self.first_state_root,
+            base_contexts=scheduled_txn_info.base_context_ids,
+            inputs=[],
+            outputs=[])
 
         self.scheduler.set_transaction_execution_result(
             scheduled_txn_info.txn.header_signature,
-            is_valid=False,
-            context_id=None)
+            is_valid=True,
+            context_id=c_id)
 
         scheduled_txn_info = self.scheduler.next_transaction()
         self.assertIsNotNone(scheduled_txn_info)

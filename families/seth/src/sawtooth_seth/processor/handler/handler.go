@@ -31,7 +31,14 @@ import (
 	. "sawtooth_seth/protobuf/seth_pb2"
 )
 
-type TransactionHandler func(*SethTransaction, *EvmAddr, *SawtoothAppState) error
+type HandlerResult struct {
+	GasUsed     uint64
+	ReturnValue []byte
+	NewAccount  *evm.Account
+	Error       error
+}
+
+type TransactionHandler func(*SethTransaction, *EvmAddr, *SawtoothAppState) HandlerResult
 
 var logger *logging.Logger = logging.Get()
 
@@ -54,7 +61,7 @@ func (self *BurrowEVMHandler) Namespaces() []string {
 	return []string{PREFIX}
 }
 
-func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.State) error {
+func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
 
 	// Unpack and validate transaction
 	wrapper, err := unpackPayload(request.GetPayload())
@@ -92,16 +99,43 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, sta
 	}
 
 	// Construct new state manager
-	sapps := NewSawtoothAppState(state)
+	sapps := NewSawtoothAppState(context)
 
 	// Call the handler
-	return handler(wrapper, sender, sapps)
+	result := handler(wrapper, sender, sapps)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var contractAddress []byte
+	if result.NewAccount != nil {
+		contractAddress = result.NewAccount.Address.Bytes()
+	}
+	receipt := &SethTransactionReceipt{
+		ContractAddress: contractAddress,
+		GasUsed:         result.GasUsed,
+		ReturnValue:     result.ReturnValue,
+	}
+	bytes, err := proto.Marshal(receipt)
+	if err != nil {
+		return &processor.InternalError{Msg: fmt.Sprintf(
+			"Couldn't marshal receipt: %v", err,
+		)}
+	}
+	err = context.AddReceiptData("seth_receipt", bytes)
+	if err != nil {
+		return &processor.InternalError{Msg: fmt.Sprintf(
+			"Couldn't set receipt data: %v", err,
+		)}
+	}
+
+	return nil
 }
 
 // -- utilities --
 
 func callVm(sas *SawtoothAppState, sender, receiver *evm.Account,
-	code, input []byte, gas uint64) ([]byte, error) {
+	code, input []byte, gas uint64) ([]byte, uint64, error) {
 
 	// Create EVM
 	params := evm.Params{
@@ -113,17 +147,18 @@ func callVm(sas *SawtoothAppState, sender, receiver *evm.Account,
 	vm := evm.NewVM(sas, params, Zero256, nil)
 
 	// Convert the gas to a signed int to be compatible with the burrow EVM
-	sGas := int64(gas)
+	startGas := int64(gas)
+	endGas := int64(gas)
 
 	if receiver == nil {
 		receiver = sender
 	}
 
-	output, err := vm.Call(sender, receiver, code, input, 0, &sGas)
+	output, err := vm.Call(sender, receiver, code, input, 0, &endGas)
 	if err != nil {
-		return nil, fmt.Errorf("EVM Error: %v", err)
+		return nil, 0, fmt.Errorf("EVM Error: %v", err)
 	}
-	return output, nil
+	return output, uint64(startGas - endGas), nil
 }
 
 func unpackPayload(payload []byte) (*SethTransaction, error) {

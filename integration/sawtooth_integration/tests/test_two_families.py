@@ -36,6 +36,7 @@ LOGGER.setLevel(logging.INFO)
 
 INTKEY_PREFIX = '1cf126'
 XO_PREFIX = '5b7349'
+WAIT = 300
 
 class TestTwoFamilies(unittest.TestCase):
 
@@ -142,7 +143,10 @@ def _send_intkey_cmd(txns):
 
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
-    response = _query_rest_api('/batches', data=batch, headers=headers)
+    response = _query_rest_api(
+        '/batches?wait={}'.format(WAIT),
+        data=batch,
+        headers=headers)
     return response
 
 def _get_intkey_data():
@@ -182,12 +186,12 @@ def _query_rest_api(suffix='', data=None, headers={}):
 class XoTestVerifier:
     def __init__(self):
         self.xo_cmds = (
-            'xo create game',
-            'xo take game 5',
-            'xo take game 5',
-            'xo take game 9',
-            'xo create game',
-            'xo take game 4',
+            'xo create game --wait {}'.format(WAIT),
+            'xo take game 5 --wait {}'.format(WAIT),
+            'xo take game 5 --wait {}'.format(WAIT),
+            'xo take game 9 --wait {}'.format(WAIT),
+            'xo create game --wait {}'.format(WAIT),
+            'xo take game 4 --wait {}'.format(WAIT),
         )
 
     def state_after_n_updates(self, num):

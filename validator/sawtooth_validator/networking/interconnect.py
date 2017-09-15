@@ -33,15 +33,27 @@ import zmq.auth
 from zmq.auth.asyncio import AsyncioAuthenticator
 import zmq.asyncio
 
+import sawtooth_signing as signing
+
 from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking import future
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
-from sawtooth_validator.protobuf.network_pb2 import ConnectMessage
-from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
-
+from sawtooth_validator.protobuf.authorization_pb2 import ConnectionRequest
+from sawtooth_validator.protobuf.authorization_pb2 import ConnectionResponse
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationTrustRequest
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeRequest
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeResponse
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationChallengeSubmit
+from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 
 LOGGER = logging.getLogger(__name__)
+
+# pylint: disable=too-many-lines
 
 
 class ConnectionType(Enum):
@@ -49,8 +61,20 @@ class ConnectionType(Enum):
     ZMQ_IDENTITY = 2
 
 
+class ConnectionStatus(Enum):
+    CONNECTED = 1
+    CONNECTION_REQUEST = 2
+    AUTH_CHALLENGE_REQUEST = 3
+
+
+class AuthorizationType(Enum):
+    TRUST = 1
+    CHALLENGE = 2
+
+
 ConnectionInfo = namedtuple('ConnectionInfo',
-                            ['connection_type', 'connection', 'uri'])
+                            ['connection_type', 'connection', 'uri',
+                             'status', 'public_key'])
 
 
 def _generate_id():
@@ -176,7 +200,7 @@ class _SendReceive(object):
                             )
                             fut = future.Future(message.correlation_id,
                                                 message.content,
-                                                has_callback=False)
+                                                )
                             self._futures.put(fut)
                             message_frame = [bytes(zmq_identity),
                                              message.SerializeToString()]
@@ -216,6 +240,8 @@ class _SendReceive(object):
             self._connections[connection_id] = \
                 ConnectionInfo(ConnectionType.ZMQ_IDENTITY,
                                zmq_identity,
+                               None,
+                               None,
                                None)
 
     @asyncio.coroutine
@@ -317,6 +343,55 @@ class _SendReceive(object):
             # the eventloop is closed. This occurs on shutdown.
             pass
 
+    @asyncio.coroutine
+    def _send_last_message(self, identity, msg):
+        LOGGER.debug("%s sending %s to %s",
+                     self._connection,
+                     get_enum_name(msg.message_type),
+                     identity if identity else self._address)
+
+        if identity is None:
+            message_bundle = [msg.SerializeToString()]
+        else:
+            message_bundle = [bytes(identity),
+                              msg.SerializeToString()]
+
+        yield from self._socket.send_multipart(message_bundle)
+        if identity is None:
+            self.shutdown()
+        else:
+            self.remove_connected_identity(identity)
+
+    def send_last_message(self, msg, connection_id=None):
+        """
+        Should be used instead of send_message, when you want to close the
+        connection once the message is sent.
+
+        :param msg: protobuf validator_pb2.Message
+        """
+        zmq_identity = None
+        if connection_id is not None and self._connections is not None:
+            if connection_id in self._connections:
+                connection_info = self._connections.get(connection_id)
+                if connection_info.connection_type == \
+                        ConnectionType.ZMQ_IDENTITY:
+                    zmq_identity = connection_info.connection
+                    del self._connections[connection_id]
+            else:
+                LOGGER.debug("Can't send to %s, not in self._connections",
+                             connection_id)
+
+        self._ready.wait()
+
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self._send_last_message(zmq_identity, msg),
+                self._event_loop)
+        except RuntimeError:
+            # run_coroutine_threadsafe will throw a RuntimeError if
+            # the eventloop is closed. This occurs on shutdown.
+            pass
+
     def setup(self, socket_type, complete_or_error_queue):
         """Setup the asyncio event loop.
 
@@ -380,6 +455,9 @@ class _SendReceive(object):
 
             self._dispatcher.add_send_message(self._connection,
                                               self.send_message)
+            self._dispatcher.add_send_last_message(self._connection,
+                                                   self.send_last_message)
+
             asyncio.ensure_future(self._receive_message(),
                                   loop=self._event_loop)
             if self._monitor:
@@ -444,6 +522,7 @@ class _SendReceive(object):
     @asyncio.coroutine
     def _stop(self):
         self._dispatcher.remove_send_message(self._connection)
+        self._dispatcher.remove_send_last_message(self._connection)
         yield from self._stop_auth()
         for task in asyncio.Task.all_tasks(self._event_loop):
             task.cancel()
@@ -455,6 +534,7 @@ class _SendReceive(object):
 
     def shutdown(self):
         self._dispatcher.remove_send_message(self._connection)
+        self._dispatcher.remove_send_last_message(self._connection)
         if self._event_loop is None:
             return
         if self._event_loop.is_closed():
@@ -500,7 +580,12 @@ class Interconnect(object):
                  connection_timeout=60,
                  max_incoming_connections=100,
                  monitor=False,
-                 max_future_callback_workers=10):
+                 max_future_callback_workers=10,
+                 roles=None,
+                 authorize=False,
+                 public_key=None,
+                 priv_key=None
+                 ):
         """
         Constructor for Interconnect.
 
@@ -533,6 +618,21 @@ class Interconnect(object):
         self._connections = {}
         self.outbound_connections = {}
         self._max_incoming_connections = max_incoming_connections
+        self._roles = {}
+        # if roles are None, default to AuthorizationType.TRUST
+        if roles is None:
+            self._roles["network"] = AuthorizationType.TRUST
+        else:
+            self._roles = {}
+            for role in roles:
+                if roles[role] == "challenge":
+                    self._roles[role] = AuthorizationType.CHALLENGE
+                else:
+                    self._roles[role] = AuthorizationType.TRUST
+
+        self._authorize = authorize
+        self._public_key = public_key
+        self._priv_key = priv_key
 
         self._send_receive_thread = _SendReceive(
             "ServerThread",
@@ -548,6 +648,41 @@ class Interconnect(object):
             monitor=monitor)
 
         self._thread = None
+
+    @property
+    def roles(self):
+        return self._roles
+
+    @property
+    def endpoint(self):
+        return self._endpoint
+
+    def connection_id_to_public_key(self, connection_id):
+        """
+        Get stored public key for a connection.
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            return connection_info.public_key
+        return None
+
+    def connection_id_to_endpoint(self, connection_id):
+        """
+        Get stored public key for a connection.
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            return connection_info.uri
+        return None
+
+    def get_connection_status(self, connection_id):
+        """
+        Get status of the connection during Role enforcement.
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            return connection_info.status
+        return None
 
     def set_check_connections(self, function):
         self._send_receive_thread.set_check_connections(function)
@@ -565,18 +700,12 @@ class Interconnect(object):
                      self._max_incoming_connections)
         return self._max_incoming_connections >= len(self._connections)
 
-    def add_outbound_connection(self, uri,
-                                success_callback=None,
-                                failure_callback=None):
+    def add_outbound_connection(self, uri):
         """Adds an outbound connection to the network.
 
         Args:
             uri (str): The zmq-style (e.g. tcp://hostname:port) uri
                 to attempt to connect to.
-            success_callback (function): The function to call upon
-                connection success.
-            failure_callback (function): The function to call upon
-                connection failure.
         """
         LOGGER.debug("Adding connection to %s", uri)
         conn = OutboundConnection(
@@ -596,35 +725,154 @@ class Interconnect(object):
 
         self._add_connection(conn, uri)
 
-        connect_message = ConnectMessage(endpoint=self._public_endpoint)
+        connect_message = ConnectionRequest(endpoint=self._public_endpoint)
         conn.send(validator_pb2.Message.NETWORK_CONNECT,
                   connect_message.SerializeToString(),
                   callback=partial(self._connect_callback,
                                    connection=conn,
-                                   success_callback=success_callback,
-                                   failure_callback=failure_callback))
+                                   ))
 
         return conn
 
-    def _connect_callback(self, request, result,
-                          connection=None,
-                          success_callback=None,
-                          failure_callback=None):
-        ack = NetworkAcknowledgement()
-        ack.ParseFromString(result.content)
+    def send_connect_request(self, connection_id):
+        """
+        Send ConnectionRequest to an inbound connection. This allows
+        the validator to be authorized by the incoming connection.
+        """
+        connect_message = ConnectionRequest(endpoint=self._public_endpoint)
+        self.send(validator_pb2.Message.NETWORK_CONNECT,
+                  connect_message.SerializeToString(),
+                  connection_id,
+                  callback=partial(self._inbound_connection_request_callback,
+                                   connection=connection_id
+                                   ))
 
-        if ack.status == ack.ERROR:
+    def _connect_callback(self, request, result,
+                          connection=None):
+        connection_response = ConnectionResponse()
+        connection_response.ParseFromString(result.content)
+
+        if connection_response.status == connection_response.ERROR:
             LOGGER.debug("Received an error response to the NETWORK_CONNECT "
                          "we sent. Removing connection: %s",
                          connection.connection_id)
             self.remove_connection(connection.connection_id)
-            if failure_callback:
-                failure_callback(connection_id=connection.connection_id)
-        elif ack.status == ack.OK:
+        elif connection_response.status == connection_response.OK:
+
             LOGGER.debug("Connection to %s was acknowledged",
                          connection.connection_id)
-            if success_callback:
-                success_callback(connection_id=connection.connection_id)
+            if self._authorize:
+                # Send correct Authorization Request for network role
+                auth_type = {"trust": [], "challenge": []}
+                for role_entry in connection_response.roles:
+                    if role_entry.auth_type == connection_response.TRUST:
+                        auth_type["trust"].append(role_entry.role)
+                    elif role_entry.auth_type == connection_response.CHALLENGE:
+                        auth_type["challenge"].append(role_entry.role)
+
+                if auth_type["trust"]:
+                    auth_trust_request = AuthorizationTrustRequest(
+                        roles=auth_type["trust"],
+                        public_key=self._public_key)
+                    connection.send(
+                        validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
+                        auth_trust_request.SerializeToString()
+                        )
+
+                if auth_type["challenge"]:
+                    auth_challenge_request = AuthorizationChallengeRequest()
+                    connection.send(
+                        validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
+                        auth_challenge_request.SerializeToString(),
+                        callback=partial(
+                            self._challenge_authorization_callback,
+                            connection=connection))
+
+    def _inbound_connection_request_callback(self, request, result,
+                                             connection=None):
+        connection_response = ConnectionResponse()
+        connection_response.ParseFromString(result.content)
+        if connection_response.status == connection_response.ERROR:
+            LOGGER.debug("Received an error response to the NETWORK_CONNECT "
+                         "we sent. Removing connection: %s",
+                         connection.connection_id)
+            self.remove_connection(connection.connection_id)
+
+        # Send correct Authorization Request for network role
+        auth_type = {"trust": [], "challenge": []}
+        for role_entry in connection_response.roles:
+            if role_entry.auth_type == connection_response.TRUST:
+                auth_type["trust"].append(role_entry.role)
+            elif role_entry.auth_type == connection_response.CHALLENGE:
+                auth_type["challenge"].append(role_entry.role)
+
+        if auth_type["trust"]:
+            auth_trust_request = AuthorizationTrustRequest(
+                roles=[RoleType.Value("NETWORK")],
+                public_key=self._public_key)
+            self.send(
+                validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
+                auth_trust_request.SerializeToString(),
+                connection
+                )
+
+        if auth_type["challenge"]:
+            auth_challenge_request = AuthorizationChallengeRequest()
+            self.send(
+                validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
+                auth_challenge_request.SerializeToString(),
+                connection,
+                callback=partial(
+                    self._inbound_challenge_authorization_callback,
+                    connection=connection)
+                )
+
+    def _challenge_authorization_callback(self, request, result,
+                                          connection=None,
+                                          ):
+        if result.message_type != \
+                validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESPONSE:
+            LOGGER.debug("Unable to complete Challenge Authorization.")
+            return
+
+        auth_challenge_response = AuthorizationChallengeResponse()
+        auth_challenge_response.ParseFromString(result.content)
+        payload = auth_challenge_response.payload
+        signature = signing.sign(payload, self._priv_key)
+
+        auth_challenge_submit = AuthorizationChallengeSubmit(
+            public_key=self._public_key,
+            payload=payload,
+            signature=signature,
+            roles=[RoleType.Value("NETWORK")])
+
+        connection.send(
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
+            auth_challenge_submit.SerializeToString())
+
+    def _inbound_challenge_authorization_callback(self, request, result,
+                                                  connection=None):
+        if result.message_type != \
+                validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESPONSE:
+            LOGGER.debug("Unable to complete Challenge Authorization.")
+            return
+
+        auth_challenge_response = AuthorizationChallengeResponse()
+        auth_challenge_response.ParseFromString(result.content)
+        payload = auth_challenge_response.payload
+        signature = signing.sign(payload, self._priv_key)
+
+        auth_challenge_submit = AuthorizationChallengeSubmit(
+            public_key=self._public_key,
+            payload=payload,
+            signature=signature,
+            roles=[RoleType.Value("NETWORK")])
+
+        self.send(
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
+            auth_challenge_submit.SerializeToString(),
+            connection
+            )
 
     def send(self, message_type, data, connection_id, callback=None):
         """
@@ -646,22 +894,18 @@ class Interconnect(object):
                 message_type=message_type)
 
             fut = future.Future(message.correlation_id, message.content,
-                                has_callback=True if callback is not None
-                                else False)
-
-            if callback is not None:
-                fut.add_callback(callback)
+                                callback)
 
             self._futures.put(fut)
 
             self._send_receive_thread.send_message(msg=message,
                                                    connection_id=connection_id)
             return fut
-        else:
-            return connection_info.connection.send(
-                message_type,
-                data,
-                callback=callback)
+
+        return connection_info.connection.send(
+            message_type,
+            data,
+            callback=callback)
 
     def start(self):
         complete_or_error_queue = queue.Queue()
@@ -677,9 +921,9 @@ class Interconnect(object):
 
     def stop(self):
         self._send_receive_thread.shutdown()
-        self._future_callback_threadpool.shutdown(wait=True)
         for conn in self.outbound_connections.values():
             conn.stop()
+        self._future_callback_threadpool.shutdown(wait=True)
 
     def get_connection_id_by_endpoint(self, endpoint):
         """Returns the connection id associated with a publically
@@ -700,7 +944,7 @@ class Interconnect(object):
         """Adds the endpoint to the connection definition. When the
         connection is created by the send/receive thread, we do not
         yet have the endpoint of the remote node. That is not known
-        until we process the incoming ConnectMessage.
+        until we process the incoming ConnectRequest.
 
         Args:
             connection_id (str): The identifier for the connection.
@@ -712,12 +956,64 @@ class Interconnect(object):
             self._connections[connection_id] = \
                 ConnectionInfo(connection_info.connection_type,
                                connection_info.connection,
-                               endpoint)
+                               endpoint,
+                               connection_info.status,
+                               connection_info.public_key)
         else:
             LOGGER.debug("Could not update the endpoint %s for "
                          "connection_id %s. The connection does not "
                          "exist.",
                          endpoint,
+                         connection_id)
+
+    def update_connection_public_key(self, connection_id, public_key):
+        """Adds the public_key to the connection definition.
+
+        Args:
+            connection_id (str): The identifier for the connection.
+            public_key (str): The public key used to enforce permissions on
+                connections.
+
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            self._connections[connection_id] = \
+                ConnectionInfo(connection_info.connection_type,
+                               connection_info.connection,
+                               connection_info.uri,
+                               connection_info.status,
+                               public_key)
+        else:
+            LOGGER.debug("Could not update the public key %s for "
+                         "connection_id %s. The connection does not "
+                         "exist.",
+                         public_key,
+                         connection_id)
+
+    def update_connection_status(self, connection_id, status):
+        """Adds a status to the connection definition. This allows the handlers
+        to ensure that the connection is following the steps in order for
+        authorization enforement.
+
+        Args:
+            connection_id (str): The identifier for the connection.
+            status (ConnectionStatus): An enum value for the stage of
+                authortization the connection is at.
+
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            self._connections[connection_id] = \
+                ConnectionInfo(connection_info.connection_type,
+                               connection_info.connection,
+                               connection_info.uri,
+                               status,
+                               connection_info.public_key)
+        else:
+            LOGGER.debug("Could not update the status to %s for "
+                         "connection_id %s. The connection does not "
+                         "exist.",
+                         status,
                          connection_id)
 
     def _add_connection(self, connection, uri=None):
@@ -726,7 +1022,9 @@ class Interconnect(object):
             self._connections[connection_id] = \
                 ConnectionInfo(ConnectionType.OUTBOUND_CONNECTION,
                                connection,
-                               uri)
+                               uri,
+                               None,
+                               None)
 
     def remove_connection(self, connection_id):
         LOGGER.debug("Removing connection: %s", connection_id)
@@ -743,8 +1041,51 @@ class Interconnect(object):
                 self._send_receive_thread.remove_connected_identity(
                     connection_info.connection)
 
+    def send_last_message(self, message_type, data,
+                          connection_id, callback=None):
+        """
+        Send a message of message_type and close the connection.
+        :param connection_id: the identity for the connection to send to
+        :param message_type: validator_pb2.Message.* enum value
+        :param data: bytes serialized protobuf
+        :return: future.Future
+        """
+        if connection_id not in self._connections:
+            raise ValueError("Unknown connection id: %s",
+                             connection_id)
+        connection_info = self._connections.get(connection_id)
+        if connection_info.connection_type == \
+                ConnectionType.ZMQ_IDENTITY:
+            message = validator_pb2.Message(
+                correlation_id=_generate_id(),
+                content=data,
+                message_type=message_type)
+
+            fut = future.Future(message.correlation_id, message.content,
+                                callback)
+
+            self._futures.put(fut)
+
+            self._send_receive_thread.send_last_message(
+                msg=message,
+                connection_id=connection_id)
+            return fut
+
+        del self._connections[connection_id]
+        return connection_info.connection.send_last_message(
+            message_type,
+            data,
+            callback=callback)
+
     def has_connection(self, connection_id):
         if connection_id in self._connections:
+            return True
+        return False
+
+    def is_outbound_connection(self, connection_id):
+        connection_info = self._connections[connection_id]
+        if connection_info.connection_type == \
+                ConnectionType.OUTBOUND_CONNECTION:
             return True
         return False
 
@@ -814,15 +1155,36 @@ class OutboundConnection(object):
             message_type=message_type)
 
         fut = future.Future(message.correlation_id, message.content,
-                            has_callback=True if callback is not None
-                            else False)
-
-        if callback is not None:
-            fut.add_callback(callback)
+                            callback)
 
         self._futures.put(fut)
 
         self._send_receive_thread.send_message(message)
+        return fut
+
+    def send_last_message(self, message_type, data, callback=None):
+        """Sends a message of message_type and then close the connection.
+
+        Args:
+            message_type (validator_pb2.Message): enum value
+            data (bytes): serialized protobuf
+            callback (function): a callback function to call when a
+                response to this message is received
+
+        Returns:
+            future.Future
+        """
+        message = validator_pb2.Message(
+            correlation_id=_generate_id(),
+            content=data,
+            message_type=message_type)
+
+        fut = future.Future(message.correlation_id, message.content,
+                            callback)
+
+        self._futures.put(fut)
+
+        self._send_receive_thread.send_last_message(message)
         return fut
 
     def start(self):

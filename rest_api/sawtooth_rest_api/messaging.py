@@ -151,7 +151,7 @@ class _Sender:
         try:
             await self._socket.send_multipart([message.SerializeToString()])
         except asyncio.CancelledError:
-            return None
+            raise
 
         return await self._msg_router.await_reply(correlation_id,
                                                   timeout=timeout)

@@ -23,6 +23,7 @@ import queue
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf import state_delta_pb2
 
 from sawtooth_validator.execution.context_manager import \
     CreateContextException
@@ -95,8 +96,28 @@ class TransactionExecutorThread(object):
             del self._open_futures[result.connection_id][req.signature]
 
         if response.status == processor_pb2.TpProcessResponse.OK:
+            state_sets, state_deletes, events, data = \
+                self._context_manager.get_execution_results(req.context_id)
+
+            state_changes = [
+                state_delta_pb2.StateChange(
+                    address=addr, value=value,
+                    type=state_delta_pb2.StateChange.SET)
+                for addr, value in state_sets.items()
+            ] + [
+                state_delta_pb2.StateChange(
+                    address=addr, type=state_delta_pb2.StateChange.DELETE)
+                for addr in state_deletes
+            ]
+
             self._scheduler.set_transaction_execution_result(
-                req.signature, True, req.context_id)
+                txn_signature=req.signature,
+                is_valid=True,
+                context_id=req.context_id,
+                state_changes=state_changes,
+                events=events,
+                data=data)
+
         elif response.status == processor_pb2.TpProcessResponse.INTERNAL_ERROR:
             header = transaction_pb2.TransactionHeader()
             header.ParseFromString(req.header)
@@ -112,8 +133,14 @@ class TransactionExecutorThread(object):
         else:
             self._context_manager.delete_contexts(
                 context_id_list=[req.context_id])
+
             self._scheduler.set_transaction_execution_result(
-                req.signature, False, req.context_id)
+                txn_signature=req.signature,
+                is_valid=False,
+                context_id=req.context_id,
+                error_message=response.message,
+                error_data=response.extended_data)
+
             for observer in self._invalid_observers:
                 observer.notify_txn_invalid(
                     req.signature,
@@ -121,6 +148,12 @@ class TransactionExecutorThread(object):
                     response.extended_data)
 
     def execute_thread(self):
+        try:
+            self._execute_schedule()
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception("Unhandled exception while executing schedule")
+
+    def _execute_schedule(self):
         for txn_info in self._scheduler:
             txn = txn_info.txn
             header = transaction_pb2.TransactionHeader()
@@ -348,21 +381,25 @@ class TransactionExecutor(object):
     def _check_connections(self):
         # This is not ideal, because it locks up the current thread while
         # waiting for the results.
-        with self._lock:
-            futures = {}
-            for connection_id in self.processors.get_all_processors():
-                fut = self._service.send(
-                    validator_pb2.Message.TP_PING,
-                    processor_pb2.TpPing().SerializeToString(),
-                    connection_id=connection_id)
-                futures[fut] = connection_id
-            for fut in futures:
-                try:
-                    fut.result(timeout=10)
-                except FutureTimeoutError:
-                    LOGGER.info("%s did not respond to the TpPing, removing "
-                                "transaction processor.", futures[fut])
-                    self._remove_broken_connection(futures[fut])
+        try:
+            with self._lock:
+                futures = {}
+                for connection_id in self.processors.get_all_processors():
+                    fut = self._service.send(
+                        validator_pb2.Message.TP_PING,
+                        processor_pb2.TpPing().SerializeToString(),
+                        connection_id=connection_id)
+                    futures[fut] = connection_id
+                for fut in futures:
+                    try:
+                        fut.result(timeout=10)
+                    except FutureTimeoutError:
+                        LOGGER.info(
+                            "%s did not respond to the TpPing, removing "
+                            "transaction processor.", futures[fut])
+                        self._remove_broken_connection(futures[fut])
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception('Unhandled exception while checking connections')
 
     def _remove_broken_connection(self, connection_id):
         for t in self._alive_threads:
@@ -433,6 +470,12 @@ class _Waiter(object):
         self._in_queue.put_nowait(content)
 
     def run_in_threadpool(self):
+        try:
+            self._wait_for_processors()
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception("Unhandled exception while waiting")
+
+    def _wait_for_processors(self):
         LOGGER.info('Waiting for transaction processor (%s, %s, %s)',
                     self._processor_type.name,
                     self._processor_type.version,

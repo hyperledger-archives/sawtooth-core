@@ -195,7 +195,7 @@ None
 
 Family
 ------
-- family_name: "sawtooth_validator"
+- family_name: "sawtooth_validator_registry"
 - family_version: "1.0"
 
 

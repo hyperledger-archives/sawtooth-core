@@ -64,12 +64,12 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 			break
 		}
 
-		// Construct a new State instance for the handler
+		// Construct a new Context instance for the handler
 		contextId := request.GetContextId()
-		state := NewState(connection, contextId)
+		context := NewContext(connection, contextId)
 
 		// Run the handler
-		err = handler.Apply(request, state)
+		err = handler.Apply(request, context)
 
 		// Process the handler response
 		response := &processor_pb2.TpProcessResponse{}

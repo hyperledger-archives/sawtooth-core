@@ -16,7 +16,7 @@
 import abc
 from threading import RLock
 from sawtooth_validator.journal.timed_cache import TimedCache
-from sawtooth_validator.journal.block_store import StoreUpdateObserver
+from sawtooth_validator.journal.chain import ChainObserver
 from sawtooth_validator.execution.executor import InvalidTransactionObserver
 from sawtooth_validator.journal.journal import PendingBatchObserver
 from sawtooth_validator.protobuf.client_pb2 import BatchStatus
@@ -26,7 +26,7 @@ from sawtooth_validator.protobuf.client_pb2 import BatchStatus
 CACHE_KEEP_TIME = 3600
 
 
-class BatchTracker(StoreUpdateObserver,
+class BatchTracker(ChainObserver,
                    InvalidTransactionObserver,
                    PendingBatchObserver):
     """Tracks batch statuses for this local validator, allowing interested
@@ -40,17 +40,22 @@ class BatchTracker(StoreUpdateObserver,
 
     Args:
         block_store (BlockStore): For querying if a batch is committed
+        cache_keep_time (float): Time in seconds to keep values in TimedCaches
+        cache_purge_frequency (float): Time between purging the TimedCaches
     """
-    def __init__(self, block_store):
+    def __init__(self,
+                 block_store,
+                 cache_keep_time=600,
+                 cache_purge_frequency=30):
         self._block_store = block_store
-        self._batch_info = TimedCache(keep_time=CACHE_KEEP_TIME)
-        self._invalid = TimedCache(keep_time=CACHE_KEEP_TIME)
+        self._batch_info = TimedCache(cache_keep_time, cache_purge_frequency)
+        self._invalid = TimedCache(cache_keep_time, cache_purge_frequency)
         self._pending = set()
 
         self._lock = RLock()
         self._observers = {}
 
-    def notify_store_updated(self):
+    def chain_update(self, block, receipts):
         """Removes batches from the pending cache if found in the block store,
         and notifies any observers.
         """

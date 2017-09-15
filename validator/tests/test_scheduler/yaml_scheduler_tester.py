@@ -104,17 +104,19 @@ class SchedulerTester(object):
             - ....
           addresses_to_set: list of dict. Optional.
             - string <address>: Optional bytes <value>
+          addresses_to_delete: list of str. Optional
+            - string <address>
           valid: boolean. Optional. Defaults to True
           dependencies: list of string. Optional. Defaults to empty list.
             - ..... string. No default. If a dependency is the
-                            same string as an 'id' for another txn, that txn's
+                            same string as a 'name' for another txn, that txn's
                             signature will be used for the actual Transaction's
-                            dependency. If the string is not an 'id' of another
+                            dependency. If the string is not an 'name' of another
                             txn, if it is longer than 20 characters it will be
                             used as if is is the actual
                             Transaction.header_signature for the dependency.
                             If not, it will be disregarded.
-         id: string. Optional. No default."""
+          name: string. Optional. No default."""
 
     def __init__(self, file_name):
         """
@@ -186,7 +188,10 @@ class SchedulerTester(object):
         while not scheduler.complete(block=False):
             stop = False
             while not stop:
-                txn_info = scheduler.next_transaction()
+                try:
+                    txn_info = scheduler.next_transaction()
+                except StopIteration:
+                    break
                 if txn_info is not None:
                     txns_to_process.append(txn_info)
                     LOGGER.debug("Transaction %s scheduled",
@@ -236,18 +241,120 @@ class SchedulerTester(object):
                                                       state_found,
                                                       state_to_assert)
 
-            validity_of_transaction, address_values = self._txn_execution[
+            validity, address_values, deletes = self._txn_execution[
                 t_info.txn.header_signature]
 
             context_manager.set(
                 context_id=c_id,
                 address_value_list=address_values)
+
+            context_manager.delete(
+                context_id=c_id,
+                address_list=deletes)
             LOGGER.debug("Transaction %s is %s",
                          t_id[:16],
-                         'valid' if validity_of_transaction else 'invalid')
+                         'valid' if validity else 'invalid')
             scheduler.set_transaction_execution_result(
                 txn_signature=t_info.txn.header_signature,
-                is_valid=validity_of_transaction,
+                is_valid=validity,
+                context_id=c_id)
+
+        batch_ids = [b.header_signature for b in self._batches]
+        batch_results = [
+            (b_id, scheduler.get_batch_execution_result(b_id))
+            for b_id in batch_ids]
+
+        return batch_results, transactions_to_assert_state
+
+    def run_scheduler_alternating(self, scheduler, context_manager,
+                                  validation_state_hash=None,
+                                  txns_executed_fifo=True):
+        batches = deque()
+        batches.extend(self._batches)
+
+        txns_to_process = deque()
+
+        txn_context_by_txn_id = self._compute_transaction_execution_context()
+
+        transactions_to_assert_state = {}
+        while not scheduler.complete(block=False):
+            stop = False
+            while not stop:
+                try:
+                    txn_info = scheduler.next_transaction()
+                except StopIteration:
+                    stop = True
+
+                if txn_info is not None:
+                    txns_to_process.append(txn_info)
+                    LOGGER.debug("Transaction %s scheduled",
+                                 txn_info.txn.header_signature[:16])
+                else:
+                    stop = True
+
+            try:
+                scheduler.add_batch(batches.popleft())
+            except IndexError:
+                scheduler.finalize()
+
+            try:
+                if txns_executed_fifo:
+                    t_info = txns_to_process.popleft()
+                else:
+                    t_info = txns_to_process.pop()
+            except IndexError:
+                # No new txn was returned from next_transaction so
+                # check again if complete.
+                continue
+
+            inputs, outputs = self._get_inputs_outputs(t_info.txn)
+
+            c_id = context_manager.create_context(
+                state_hash=t_info.state_hash,
+                base_contexts=t_info.base_context_ids,
+                inputs=inputs,
+                outputs=outputs)
+
+            t_id = t_info.txn.header_signature
+
+            if t_id in txn_context_by_txn_id:
+                state_up_to_now = txn_context_by_txn_id[t_id].state
+                txn_context = txn_context_by_txn_id[t_id]
+                inputs, _ = self._get_inputs_outputs(txn_context.txn)
+                addresses = [input for input in inputs if len(input) == 70]
+                state_found = context_manager.get(
+                    context_id=c_id,
+                    address_list=addresses)
+
+                LOGGER.debug("Transaction Id %s, Batch %s, Txn %s, "
+                             "Context_id %s, Base Contexts %s",
+                             t_id[:16],
+                             txn_context.batch_num,
+                             txn_context.txn_num,
+                             c_id,
+                             t_info.base_context_ids)
+
+                state_to_assert = [(add, state_up_to_now.get(add))
+                                   for add, _ in state_found]
+                transactions_to_assert_state[t_id] = (txn_context,
+                                                      state_found,
+                                                      state_to_assert)
+
+            validity, address_values, deletes = self._txn_execution[
+                t_info.txn.header_signature]
+
+            context_manager.set(
+                context_id=c_id,
+                address_value_list=address_values)
+            context_manager.delete(
+                context_id=c_id,
+                address_list=deletes)
+            LOGGER.debug("Transaction %s is %s",
+                         t_id[:16],
+                         'valid' if validity else 'invalid')
+            scheduler.set_transaction_execution_result(
+                txn_signature=t_info.txn.header_signature,
+                is_valid=validity,
                 context_id=c_id)
 
         batch_ids = [b.header_signature for b in self._batches]
@@ -275,13 +382,19 @@ class SchedulerTester(object):
             if result.is_valid:
                 for txn in batch.transactions:
                     txn_id = txn.header_signature
-                    _, address_values = self._txn_execution[txn_id]
+                    _, address_values, deletes = self._txn_execution[txn_id]
                     batch_updates = {}
                     for pair in address_values:
                         batch_updates.update({a: pair[a] for a in pair.keys()})
+
                     # since this is entirely serial, any overwrite
                     # of an address is expected and desirable.
                     updates.update(batch_updates)
+
+                    for address in deletes:
+                        if address in updates:
+                            del updates[address]
+
             # This handles yaml files that have state roots in them
             if result.state_hash is not None:
                 s_h = tree.update(set_items=updates, virtual=False)
@@ -311,7 +424,7 @@ class SchedulerTester(object):
             partial_batch_state_up_to_now = state_up_to_now.copy()
             for txn_num, txn in enumerate(batch.transactions):
                 t_id = txn.header_signature
-                is_valid, address_values = self._txn_execution[t_id]
+                is_valid, address_values, deletes = self._txn_execution[t_id]
                 partial_batch_transaction_contexts[t_id] = \
                         TransactionExecutionContext(
                             txn=txn,
@@ -321,6 +434,9 @@ class SchedulerTester(object):
 
                 for item in address_values:
                     partial_batch_state_up_to_now.update(item)
+                for address in deletes:
+                    if address in partial_batch_state_up_to_now:
+                        partial_batch_state_up_to_now[address] = None
                 if not is_valid:
                     break
             batch_id = batch.header_signature
@@ -425,10 +541,11 @@ class SchedulerTester(object):
 
     def _dependencies_are_valid(self, dependencies, previous_batch_results):
         for dep in dependencies:
-            batch_id = self._batch_id_by_txn_id[dep]
-            dep_result = previous_batch_results[batch_id]
-            if not dep_result.is_valid:
-                return False
+            if dep in self._batch_id_by_txn_id:
+                batch_id = self._batch_id_by_txn_id[dep]
+                dep_result = previous_batch_results[batch_id]
+                if not dep_result.is_valid:
+                    return False
         return True
 
     def _process_txns(self, batch, previous_batch_results, priv_key, pub_key):
@@ -439,6 +556,7 @@ class SchedulerTester(object):
         for transaction in batch:
             is_valid = True
             addresses_to_set = []
+            addresses_to_delete = []
             inputs = transaction['inputs']
             outputs = transaction['outputs']
             inputs_real = [self._address(a) for a in inputs]
@@ -449,6 +567,11 @@ class SchedulerTester(object):
                         d[a])
                         for a in d}
                     for d in transaction['addresses_to_set']
+                ]
+            if self._contains_and_not_none('addresses_to_delete', transaction):
+                addresses_to_delete = [
+                    self._address(a, require_full=True)
+                    for a in transaction['addresses_to_delete']
                 ]
 
             if self._contains_and_not_none('dependencies', transaction):
@@ -487,7 +610,9 @@ class SchedulerTester(object):
             if self._contains_and_not_none('name', transaction):
                 referenced_txns[transaction['name']] = txn.header_signature
 
-            execution[txn.header_signature] = (is_valid, addresses_to_set)
+            execution[txn.header_signature] = (is_valid,
+                                               addresses_to_set,
+                                               addresses_to_delete)
             txns.append(txn)
 
         self._txn_execution.update(execution)

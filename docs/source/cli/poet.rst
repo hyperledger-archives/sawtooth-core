@@ -32,3 +32,10 @@ poet genesis
 .. literalinclude:: output/poet_genesis_usage.out
    :language: console
    :linenos:
+
+poet enclave
+============
+
+.. literalinclude:: output/poet_enclave_usage.out
+   :language: console
+   :linenos:

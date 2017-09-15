@@ -21,6 +21,8 @@ import signal
 import time
 import threading
 
+import sawtooth_signing as signing
+
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.genesis import GenesisController
@@ -69,6 +71,8 @@ from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
+from sawtooth_validator.gossip.permission_verifier import \
+    NetworkPermissionHandler
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
@@ -84,7 +88,26 @@ from sawtooth_validator.gossip.gossip_handlers import GetPeersResponseHandler
 from sawtooth_validator.networking.handlers import PingHandler
 from sawtooth_validator.networking.handlers import ConnectHandler
 from sawtooth_validator.networking.handlers import DisconnectHandler
+from sawtooth_validator.networking.handlers import \
+    AuthorizationTrustRequestHandler
+from sawtooth_validator.networking.handlers import \
+    AuthorizationChallengeRequestHandler
+from sawtooth_validator.networking.handlers import \
+    AuthorizationChallengeSubmitHandler
+from sawtooth_validator.networking.handlers import \
+    AuthorizationViolationHandler
 
+from sawtooth_validator.server.events.broadcaster import EventBroadcaster
+from sawtooth_validator.server.events.handlers \
+    import ClientEventsSubscribeHandler
+from sawtooth_validator.server.events.handlers \
+    import ClientEventsSubscribeValidationHandler
+from sawtooth_validator.server.events.handlers \
+    import ClientEventsUnsubscribeHandler
+
+from sawtooth_validator.journal.receipt_store import TransactionReceiptStore
+from sawtooth_validator.journal.receipt_store \
+    import ClientReceiptGetRequestHandler
 
 LOGGER = logging.getLogger(__name__)
 
@@ -95,6 +118,7 @@ class Validator(object):
                  peering, seeds_list, peer_list, data_dir, config_dir,
                  identity_signing_key, scheduler_type, permissions,
                  network_public_key=None, network_private_key=None,
+                 roles=None
                  ):
         """Constructs a validator instance.
 
@@ -133,7 +157,13 @@ class Validator(object):
         LOGGER.debug('state delta store file is %s', delta_db_filename)
         state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
 
+        receipt_db_filename = os.path.join(
+            data_dir, 'txn_receipts-{}.lmdb'.format(bind_network[-2:]))
+        LOGGER.debug('txn receipt store file is %s', receipt_db_filename)
+        receipt_db = LMDBNoLockDatabase(receipt_db_filename, 'c')
+
         state_delta_store = StateDeltaStore(state_delta_db)
+        receipt_store = TransactionReceiptStore(receipt_db)
 
         context_manager = ContextManager(merkle_db, state_delta_store)
         self._context_manager = context_manager
@@ -148,7 +178,6 @@ class Validator(object):
         block_store = BlockStore(block_db)
 
         batch_tracker = BatchTracker(block_store)
-        block_store.add_update_observer(batch_tracker)
 
         # setup network
         self._dispatcher = Dispatcher()
@@ -181,6 +210,7 @@ class Validator(object):
         state_delta_processor = StateDeltaProcessor(self._service,
                                                     state_delta_store,
                                                     block_store)
+        event_broadcaster = EventBroadcaster(self._service)
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
@@ -205,7 +235,11 @@ class Validator(object):
             public_endpoint=endpoint,
             connection_timeout=30,
             max_incoming_connections=100,
-            max_future_callback_workers=10)
+            max_future_callback_workers=10,
+            authorize=True,
+            public_key=signing.generate_pubkey(identity_signing_key),
+            priv_key=identity_signing_key,
+            roles=roles)
 
         self._gossip = Gossip(self._network,
                               endpoint=endpoint,
@@ -247,7 +281,12 @@ class Validator(object):
             block_cache_purge_frequency=30,
             block_cache_keep_time=300,
             batch_observers=[batch_tracker],
-            chain_observers=[state_delta_processor],
+            chain_observers=[
+                state_delta_processor,
+                event_broadcaster,
+                receipt_store,
+                batch_tracker,
+            ],
         )
 
         self._genesis_controller = GenesisController(
@@ -267,6 +306,16 @@ class Validator(object):
 
         completer.set_on_batch_received(self._journal.on_batch_received)
         completer.set_on_block_received(self._journal.on_block_received)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_ADD_RECEIPT_DATA_REQUEST,
+            tp_state_handlers.TpAddReceiptDataHandler(context_manager),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.TP_ADD_EVENT_REQUEST,
+            tp_state_handlers.TpAddEventHandler(context_manager),
+            thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.TP_STATE_DEL_REQUEST,
@@ -309,7 +358,45 @@ class Validator(object):
             DisconnectHandler(network=self._network),
             network_thread_pool)
 
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.AUTHORIZATION_VIOLATION,
+            AuthorizationViolationHandler(
+                network=self._network,
+                gossip=self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
+            AuthorizationTrustRequestHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
+            AuthorizationChallengeRequestHandler(
+                network=self._network),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
+            AuthorizationChallengeSubmitHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip),
+            network_thread_pool)
+
         # Set up gossip handlers
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
             GetPeersRequestHandler(gossip=self._gossip),
@@ -317,7 +404,25 @@ class Validator(object):
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
             GetPeersResponseHandler(gossip=self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_REGISTER,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
@@ -336,19 +441,29 @@ class Validator(object):
             GossipMessageHandler(),
             network_thread_pool)
 
-        # GOSSIP_MESSAGE 2) Verifies signature
+        # GOSSIP_MESSAGE 2) Verify Network Permissions
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        # GOSSIP_MESSAGE 3) Verifies signature
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             signature_verifier.GossipMessageSignatureVerifier(),
             sig_pool)
 
-        # GOSSIP_MESSAGE 3) Verifies batch structure
+        # GOSSIP_MESSAGE 4) Verifies batch structure
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             structure_verifier.GossipHandlerStructureVerifier(),
             network_thread_pool)
 
-        # GOSSIP_MESSAGE 4) Determines if we should broadcast the
+        # GOSSIP_MESSAGE 5) Determines if we should broadcast the
         # message to our peers. It is important that this occur prior
         # to the sending of the message to the completer, as this step
         # relies on whether the  gossip message has previously been
@@ -361,11 +476,20 @@ class Validator(object):
                 completer=completer),
             network_thread_pool)
 
-        # GOSSIP_MESSAGE 5) Send message to completer
+        # GOSSIP_MESSAGE 6) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             CompleterGossipHandler(
                 completer),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
@@ -379,19 +503,29 @@ class Validator(object):
             GossipBlockResponseHandler(),
             network_thread_pool)
 
-        # GOSSIP_BLOCK_RESPONSE 2) Verifies signature
+        # GOSSIP_MESSAGE 2) Verify Network Permissions
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        # GOSSIP_BLOCK_RESPONSE 3) Verifies signature
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             signature_verifier.GossipBlockResponseSignatureVerifier(),
             sig_pool)
 
-        # GOSSIP_BLOCK_RESPONSE 3) Check batch structure
+        # GOSSIP_BLOCK_RESPONSE 4) Check batch structure
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             structure_verifier.GossipBlockResponseStructureVerifier(),
             network_thread_pool)
 
-        # GOSSIP_BLOCK_RESPONSE 4) Send message to completer
+        # GOSSIP_BLOCK_RESPONSE 5) Send message to completer
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
             CompleterGossipBlockResponseHandler(
@@ -405,12 +539,39 @@ class Validator(object):
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
             BatchByBatchIdResponderHandler(responder, self._gossip),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
             BatchByTransactionIdResponderHandler(responder, self._gossip),
+            network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+            NetworkPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         # GOSSIP_BATCH_RESPONSE 1) Sends ack to the sender
@@ -527,6 +688,11 @@ class Validator(object):
             client_handlers.StateCurrentRequest(
                 self._journal.get_current_root), thread_pool)
 
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_RECEIPT_GET_REQUEST,
+            ClientReceiptGetRequestHandler(receipt_store),
+            thread_pool)
+
         # State Delta Subscription Handlers
         self._dispatcher.add_handler(
             validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
@@ -546,6 +712,21 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.STATE_DELTA_GET_EVENTS_REQUEST,
             StateDeltaGetEventsHandler(block_store, state_delta_store),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
+            ClientEventsSubscribeValidationHandler(event_broadcaster),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
+            ClientEventsSubscribeHandler(event_broadcaster),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
+            ClientEventsUnsubscribeHandler(event_broadcaster),
             thread_pool)
 
     def start(self):

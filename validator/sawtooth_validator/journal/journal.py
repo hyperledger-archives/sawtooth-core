@@ -39,19 +39,15 @@ class Journal(object):
     This object provides the threading and event queue for the processors.
     """
     class _ChainThread(Thread):
-        def __init__(self, chain_controller, block_queue, block_cache,
-                     block_cache_purge_frequency):
+        def __init__(self, chain_controller, block_queue, block_cache):
             Thread.__init__(self, name='_ChainThread')
             self._chain_controller = chain_controller
             self._block_queue = block_queue
             self._block_cache = block_cache
-            self._block_cache_purge_frequency = block_cache_purge_frequency
             self._exit = False
 
         def run(self):
             try:
-                block_cache_purge_time = time.time() + \
-                    self._block_cache_purge_frequency
                 while True:
                     try:
                         block = self._block_queue.get(timeout=1)
@@ -59,11 +55,6 @@ class Journal(object):
                     except queue.Empty:
                         pass  # this exception only happens if the
                         # wait on an empty queue after it times out.
-
-                    if block_cache_purge_time < time.time():
-                        self._block_cache.purge_expired()
-                        block_cache_purge_time = time.time() + \
-                            self._block_cache_purge_frequency
 
                     if self._exit:
                         return
@@ -164,9 +155,9 @@ class Journal(object):
         self._block_store = block_store
         self._block_cache = block_cache
         if self._block_cache is None:
-            self._block_cache = BlockCache(
-                self._block_store, keep_time=block_cache_keep_time)
-        self._block_cache_purge_frequency = block_cache_purge_frequency
+            self._block_cache = BlockCache(self._block_store,
+                                           block_cache_keep_time,
+                                           block_cache_purge_frequency)
         self._state_view_factory = state_view_factory
 
         self._transaction_executor = transaction_executor
@@ -236,9 +227,7 @@ class Journal(object):
         self._chain_thread = self._ChainThread(
             chain_controller=self._chain_controller,
             block_queue=self._block_queue,
-            block_cache=self._block_cache,
-            block_cache_purge_frequency=self._block_cache_purge_frequency
-        )
+            block_cache=self._block_cache)
 
     # FXM: this is an inaccurate name.
     def get_current_root(self):
