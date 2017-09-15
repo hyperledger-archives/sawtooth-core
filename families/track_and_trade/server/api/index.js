@@ -21,28 +21,13 @@ const express = require('express')
 const bodyParser = require('body-parser')
 
 const auth = require('./auth')
-const blockchain = require('../blockchain/')
 const users = require('./users')
 const { Unauthorized } = require('./errors')
 const agents = require('../db/agents')
 const state = require('../db/state')
-
+const blockchain = require('../blockchain/')
 
 const router = express.Router()
-router.use(bodyParser.json({ type: 'application/json' }))
-router.use(bodyParser.raw({ type: 'application/octet-stream' }))
-
-// Logs basic request information to the console
-const logRequest = (req, res, next) => {
-  console.log(`Received ${req.method} request for ${req.url} from ${req.ip}`)
-  next()
-}
-
-// Adds an object to the request for storing internally generated parameters
-const initInternalParams = (req, res, next) => {
-  req.internal = {}
-  next()
-}
 
 // Passes a request to a function, then sends back the promised result as JSON.
 // Will catch errors and send on to any error handling middleware.
@@ -63,6 +48,22 @@ const handle = func => handlePromisedResponse(req => {
 const handleBody = func => handlePromisedResponse(req => {
   return func(req.body, _.assign({}, req.query, req.params, req.internal))
 })
+
+/*
+ * Custom Middleware
+ */
+
+// Logs basic request information to the console
+const logRequest = (req, res, next) => {
+  console.log(`Received ${req.method} request for ${req.url} from ${req.ip}`)
+  next()
+}
+
+// Adds an object to the request for storing internally generated parameters
+const initInternalParams = (req, res, next) => {
+  req.internal = {}
+  next()
+}
 
 // Check the Authorization header if present.
 // Saves the encoded public key to the request object.
@@ -94,21 +95,26 @@ const errorHandler = (err, req, res, next) => {
   }
 }
 
-// Setup routes and custom middleware
+/*
+ * Route and Middleware Setup
+ */
+
+router.use(bodyParser.json({ type: 'application/json' }))
+router.use(bodyParser.raw({ type: 'application/octet-stream' }))
+
 router.use(logRequest)
 router.use(initInternalParams)
 router.use(authHandler)
 
 router.get('/agents', handle(agents.list))
 
-router.get('/', (req, res) => {
-  state.query(state => state.filter({name: 'message'}))
-    .then(messages => res.json(messages[0].value))
-})
+router.post('/authorization', handleBody(auth.authorize))
 
 router.post('/transactions', restrict, handleBody(blockchain.submit))
 
-router.post('/authorization', handleBody(auth.authorize))
+router.route('/users')
+  .post(handleBody(users.create))
+  .patch(restrict, handleBody(users.update))
 
 // This route is redundant, but matches RESTful expectations
 router.patch('/users/:publicKey', restrict, handleBody((body, params) => {
@@ -117,10 +123,6 @@ router.patch('/users/:publicKey', restrict, handleBody((body, params) => {
   }
   return users.update(body, params)
 }))
-
-router.route('/users')
-  .post(handleBody(users.create))
-  .patch(restrict, handleBody(users.update))
 
 router.use(errorHandler)
 

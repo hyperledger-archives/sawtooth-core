@@ -104,16 +104,6 @@ r.connect({host: HOST, port: PORT})
         ]).run(conn)
       })
       .then(() => {
-        console.log('Creating and populating "state" table...')
-        return r.db(NAME).tableCreate('state').run(conn)
-      })
-      .then(() => {
-        return r.db(NAME).table('state').insert({
-          name: 'message',
-          value: 'Hello Track and Trade!'
-        }).run(conn)
-      })
-      .then(() => {
         console.log('Bootstrapping complete, closing connection.')
         return conn.close()
       })
