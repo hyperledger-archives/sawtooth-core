@@ -16,8 +16,8 @@
 import unittest
 from unittest.mock import Mock
 
-from sawtooth_sdk.processor.state import State
-from sawtooth_sdk.processor.state import StateEntry
+from sawtooth_sdk.processor.context import Context
+from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.messaging.future import Future
 from sawtooth_sdk.messaging.future import FutureResult
 
@@ -36,11 +36,11 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventResponse
 from sawtooth_sdk.protobuf.events_pb2 import Event
 
 
-class StateTest(unittest.TestCase):
+class ContextTest(unittest.TestCase):
     def setUp(self):
         self.context_id = "test"
         self.mock_stream = Mock()
-        self.state = State(self.mock_stream, self.context_id)
+        self.context = Context(self.mock_stream, self.context_id)
         self.addresses = ["a", "b", "c"]
         self.data = [addr.encode() for addr in self.addresses]
 
@@ -66,7 +66,7 @@ class StateTest(unittest.TestCase):
                 status=TpStateGetResponse.OK,
                 entries=self._make_entries()).SerializeToString())
 
-        self.state.get(self.addresses)
+        self.context.get_state(self.addresses)
 
         self.mock_stream.send.assert_called_with(
             Message.TP_STATE_GET_REQUEST,
@@ -82,7 +82,7 @@ class StateTest(unittest.TestCase):
                 status=TpStateSetResponse.OK,
                 addresses=self.addresses).SerializeToString())
 
-        self.state.set(self._make_entries(protobuf=False))
+        self.context.set_state(self._make_entries(protobuf=False))
 
         self.mock_stream.send.assert_called_with(
             Message.TP_STATE_SET_REQUEST,
@@ -98,7 +98,7 @@ class StateTest(unittest.TestCase):
                 status=TpStateDeleteResponse.OK,
                 addresses=self.addresses).SerializeToString())
 
-        self.state.delete(self.addresses)
+        self.context.delete_state(self.addresses)
 
         self.mock_stream.send.assert_called_with(
             Message.TP_STATE_DEL_REQUEST,
@@ -113,7 +113,7 @@ class StateTest(unittest.TestCase):
             content=TpAddReceiptDataResponse(
                 status=TpAddReceiptDataResponse.OK).SerializeToString())
 
-        self.state.add_receipt_data("test", b"test")
+        self.context.add_receipt_data("test", b"test")
 
         self.mock_stream.send.assert_called_with(
             Message.TP_ADD_RECEIPT_DATA_REQUEST,
@@ -129,7 +129,7 @@ class StateTest(unittest.TestCase):
             content=TpAddEventResponse(
                 status=TpAddEventResponse.OK).SerializeToString())
 
-        self.state.add_event("test", [("test", "test")], b"test")
+        self.context.add_event("test", [("test", "test")], b"test")
 
         self.mock_stream.send.assert_called_with(
             Message.TP_ADD_EVENT_REQUEST,
