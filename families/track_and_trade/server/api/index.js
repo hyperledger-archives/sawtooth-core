@@ -50,6 +50,7 @@ const handleBody = func => handlePromisedResponse(req => {
   return func(req.body, _.assign({}, req.query, req.params, req.internal))
 })
 
+<<<<<<< da00243c847749021c620795fdd511f9a2cdb1b0
 // Parses the endpoints from an Express router
 const getEndpoints = router => {
   return _.chain(router.stack)
