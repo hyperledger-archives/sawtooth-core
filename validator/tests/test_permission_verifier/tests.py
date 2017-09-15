@@ -25,6 +25,9 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.events_pb2 import Event
+from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import IdentityCache
 from sawtooth_validator.gossip.identity_observer import IdentityObserver
@@ -354,9 +357,209 @@ class TestPermissionVerifier(unittest.TestCase):
         allowed = self.permission_verifier.check_network_role(self.public_key)
         self.assertTrue(allowed)
 
+        self._identity_cache.forked()
         self._identity_view_factory.add_policy("policy2", ["PERMIT_KEY other"])
         self._identity_view_factory.add_role(
                 "network",
                 "policy2")
         allowed = self.permission_verifier.check_network_role(self.public_key)
         self.assertFalse(allowed)
+
+
+class TestIdentityObserver(unittest.TestCase):
+    def setUp(self):
+        self._identity_view_factory = MockIdentityViewFactory()
+        self._identity_cache = IdentityCache(
+            self._identity_view_factory,
+            self._current_root_func)
+        self._identity_obsever = IdentityObserver(
+            to_update=self._identity_cache.invalidate,
+            forked=self._identity_cache.forked
+        )
+
+        # Make sure IdentityCache has populated roles and policy
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
+        self._identity_view_factory.add_role(
+                "network",
+                "policy1")
+        self._identity_cache.get_role("network", "state_root")
+        self._identity_cache.get_policy("policy1", "state_root")
+
+    def _current_root_func(self):
+        return "0000000000000000000000"
+
+    def create_block(self, previous_block_id="0000000000000000"):
+        block_header = BlockHeader(
+            block_num=85,
+            state_root_hash="0987654321fedcba",
+            previous_block_id=previous_block_id)
+        block = BlockWrapper(Block(
+            header_signature="abcdef1234567890",
+            header=block_header.SerializeToString()))
+        return block
+
+    def test_chain_update(self):
+        """
+        Test that if there is no fork and only one value is udpated, only
+        that value is in validated in the catch.
+        """
+        # Set up cache so it does not fork
+        block1 = self.create_block()
+        self._identity_obsever.chain_update(block1, [])
+        self._identity_cache.get_role("network", "state_root")
+        self._identity_cache.get_policy("policy1", "state_root")
+        self.assertNotEqual(self._identity_cache["network"], None)
+        self.assertNotEqual(self._identity_cache["policy1"], None)
+
+        # Add next block and event that says network was updated.
+        block2 = self.create_block("abcdef1234567890")
+        event = Event(event_type="identity_update",
+                      attributes=[Event.Attribute(key="updated",
+                                                  value="network")])
+        receipts = TransactionReceipt(events=[event])
+        self._identity_obsever.chain_update(block2, [receipts])
+        # Check that only "network" was invalidated
+        self.assertEquals(self._identity_cache["network"], None)
+        self.assertNotEqual(self._identity_cache["policy1"], None)
+
+        # check that the correct values can be fetched from state.
+        identity_view = \
+            self._identity_view_factory.create_identity_view("state_root")
+
+        self.assertEquals(
+            self._identity_cache.get_role("network", "state_root"),
+            identity_view.get_role("network"))
+
+        self.assertEquals(
+            self._identity_cache.get_policy("policy1", "state_root"),
+            identity_view.get_policy("policy1"))
+
+    def test_fork(self):
+        """
+        Test that if there is a fork, all values in the cache will be
+        invalidated and fetched from state.
+        """
+        block = self.create_block()
+        self._identity_obsever.chain_update(block, [])
+        # Check that all items are invalid
+        for key in self._identity_cache:
+            self.assertEquals(self._identity_cache[key], None)
+
+        # Check that the items can be fetched from state.
+        identity_view = \
+            self._identity_view_factory.create_identity_view("state_root")
+
+        self.assertEquals(
+            self._identity_cache.get_role("network", "state_root"),
+            identity_view.get_role("network"))
+
+        self.assertEquals(
+            self._identity_cache.get_policy("policy1", "state_root"),
+            identity_view.get_policy("policy1"))
+
+
+class TestIdentityCache(unittest.TestCase):
+    def setUp(self):
+        self._identity_view_factory = MockIdentityViewFactory()
+        self._identity_cache = IdentityCache(
+            self._identity_view_factory,
+            self._current_root_func)
+
+    def _current_root_func(self):
+        return "0000000000000000000000"
+
+    def test_get_role(self):
+        """
+        Test that a role can be fetched from the state.
+        """
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
+        self._identity_view_factory.add_role(
+                "network",
+                "policy1")
+        self.assertIsNone(self._identity_cache["network"])
+
+        identity_view = \
+            self._identity_view_factory.create_identity_view("state_root")
+        self.assertEquals(
+            self._identity_cache.get_role("network", "state_root"),
+            identity_view.get_role("network"))
+
+    def test_get_policy(self):
+        """
+        Test that a policy can be fetched from the state.
+        """
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
+        self._identity_view_factory.add_role(
+                "network",
+                "policy1")
+        self.assertIsNone(self._identity_cache["policy1"])
+
+        identity_view = \
+            self._identity_view_factory.create_identity_view("state_root")
+        self.assertEquals(
+            self._identity_cache.get_policy("policy1", "state_root"),
+            identity_view.get_policy("policy1"))
+
+    def test_role_invalidate(self):
+        """
+        Test that a role can be invalidated.
+        """
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
+        self._identity_view_factory.add_role(
+                "network",
+                "policy1")
+        self._identity_cache.invalidate("network")
+        self.assertEquals(self._identity_cache["network"], None)
+
+        identity_view = \
+            self._identity_view_factory.create_identity_view("state_root")
+        self.assertEquals(
+            self._identity_cache.get_role("network", "state_root"),
+            identity_view.get_role("network"))
+
+    def test_policy_invalidate(self):
+        """
+        Test that a policy can be invalidated.
+        """
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
+        self._identity_view_factory.add_role(
+                "network",
+                "policy1")
+        self._identity_cache.invalidate("policy1")
+        self.assertEqual(self._identity_cache["policy1"], None)
+
+        identity_view = \
+            self._identity_view_factory.create_identity_view("state_root")
+        self.assertEquals(
+            self._identity_cache.get_policy("policy1", "state_root"),
+            identity_view.get_policy("policy1"))
+
+    def test_forked(self):
+        """
+        Test that forked() invalidates all items in the cache, and they can
+        be fetched from state.
+        """
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
+        self._identity_view_factory.add_role(
+                "network",
+                "policy1")
+
+        identity_view = \
+            self._identity_view_factory.create_identity_view("state_root")
+
+        self._identity_cache.get_policy("policy1", "state_root")
+        self._identity_cache.get_role("network", "state_root")
+
+        self.assertEquals(len(self._identity_cache), 2)
+        self._identity_cache.forked()
+
+        self.assertEquals(self._identity_cache["network"], None)
+        self.assertEquals(self._identity_cache["policy1"], None)
+
+        self.assertEquals(
+            self._identity_cache.get_policy("policy1", "state_root"),
+            identity_view.get_policy("policy1"))
+
+        self.assertEquals(
+            self._identity_cache.get_role("network", "state_root"),
+            identity_view.get_role("network"))
