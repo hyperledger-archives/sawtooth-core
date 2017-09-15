@@ -75,7 +75,7 @@ const submit = (txnBytes, { authedKey }) => {
   .then(response => ClientBatchSubmitResponse.decode(response))
   .then(decoded => {
     const status = _.findKey(ClientBatchSubmitResponse.Status,
-                                 val => val === decoded.status)
+                             val => val === decoded.status)
     if (status !== 'OK') {
       throw new Error(`Batch submission failed with status '${status}'`)
     }
