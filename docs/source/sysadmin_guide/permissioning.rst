@@ -1,9 +1,13 @@
-************************
+*************
+Permissioning
+*************
+
 Transactor Permissioning
-************************
+========================
 
 Overview
-========
+--------
+
 A running protected network needs a mechanism for limiting which transactors
 are allowed to submit batches and transactions to the validators. There are
 two different methods for defining the transactors a validator will accept.
@@ -31,7 +35,7 @@ or a transaction signer that is being included in a block. For this reason, the
 allowed transactor roles will also need to be checked on block validation.
 
 Off-Chain Transactor Permissioning
-==================================
+----------------------------------
 Validators can be locally configured by creating a validator.toml file and
 placing it in the config directory. Adding configuration for transactor
 permissioning to the configuration shall be done in the following format:
@@ -64,7 +68,7 @@ Policy file:
 
 
 On-Chain Transactor Permissioning
-=================================
+---------------------------------
 The Identity Namespace stores roles as key-value pairs, where the key is a role
 name and the value is a policy. All roles that limit who is allowed to sign
 transactions and batches should start with transactor as a prefix.
@@ -91,39 +95,13 @@ Once your signer key is stored in the setting, the identity cli can be used to
 set and update roles and policies. Make sure that the identity transaction
 processor and the the rest api are running.
 
-.. code-block:: console
+.. literalinclude:: ../cli/output/sawtooth_identity_policy_create_usage.out
+  :language: console
+  :linenos:
 
-  $ sawtooth identity policy create -h
-  usage: sawtooth identity policy create [-h] [-k KEY] [-o OUTPUT | --url URL]
-                                         name rule [rule ...]
-
-  positional arguments:
-    name                  The name of the new policy
-    rule                  Each rule should be in the following format
-                          "PERMIT_KEY <key>" or "DENY_KEY <key>". Multiple
-                          "rule" arguments can be added.
-
-  optional arguments:
-    -h, --help            show this help message and exit
-    -k KEY, --key KEY     the signing key for the resulting batches
-    -o OUTPUT, --output OUTPUT
-                          the name of the file to output the resulting batches
-    --url URL             the URL of a validator's REST API
-
-  $ sawtooth identity role create -h
-  usage: sawtooth identity role create [-h] [-k KEY] [-o OUTPUT | --url URL]
-                                       name policy
-
-  positional arguments:
-    name                  The name of the role
-    policy                the name of the policy the role will be restricted to.
-
-  optional arguments:
-    -h, --help            show this help message and exit
-    -k KEY, --key KEY     the signing key for the resulting batches
-    -o OUTPUT, --output OUTPUT
-                          the name of the file to output the resulting batches
-    --url URL             the URL of a validator's REST API
+.. literalinclude:: ../cli/output/sawtooth_identity_role_create_usage.out
+  :language: console
+  :linenos:
 
 For example, running the following will create a policy that permits all
 and is named policy_1:
@@ -155,7 +133,7 @@ To see the role in state, run the following command:
     transactor: policy_1
 
 Transactor Roles
-================
+----------------
 The following are the identity roles that are used to control which transactors
 are allowed to sign transactions and batches on the system.
 
@@ -185,3 +163,89 @@ transactor.transaction_signer.{tp_name}:
 transactor.batch_signer:
   If a batch is received that is signed by a transactor who is not permitted by
   the policy, that batch will be dropped.
+
+Validator Key Permissioning
+===========================
+
+Overview
+--------
+
+One of the permissioning requirements is that the validator network be able to
+limit the nodes that are able to connect to it. The permissioning rules
+determine the roles a connection is able to play on the network. The roles
+control the types of messages that can be sent and received over a given
+connection. The entities acting in the different roles will be referred to as
+requesters below.
+
+Validators are able to determine whether messages delivered to them should
+be handled or dropped based on a set of role and identities stored within the
+Identity namespace. Each requester will be identified by the public key derived
+from the their identity signing key. Permission verifiers examine incoming
+messages against the policy and the current configuration and either permit,
+drop, or respond with an error. In certain cases, the connection will be
+forcibly closed -- for example: if a node is not allowed to connect to the
+validator network.
+
+This on-chain approach allows the whole network to change its policies at the
+same time while the network is live, instead of relying on a startup
+configuration.
+
+Configuring Authorization
+-------------------------
+The Identity namespace stores roles as key-value pairs, where the key is a role
+name and the value is a policy. Validator network permissioning roles use
+the following pattern:
+
+.. code-block:: none
+
+  network[.SUB_ROLE] = POLICY_NAME
+
+where network is the name of the role to be used for validator network
+permissioning. POLICY_NAME refers to the name of a policy that is set in the
+Identity namespace. The policy defines the public keys that are allowed to
+participate in that role. The policy is made up of PERMIT_KEY and DENY_KEY
+rules and is evaluated in order. If the public key is denied, the connection
+will be rejected. For more information, please look at the
+:doc:`Identity Transaction Family <../transaction_family_specifications/identity_transaction_family>`.
+
+Like above, run the following command to set the role for network to permit all:
+
+.. code-block:: console
+
+    $ sawtooth identity role create network policy_1
+
+To see the role in state, run the following command:
+
+.. code-block:: console
+
+    $ sawtooth identity role list
+    network: policy_1
+
+Network Roles
+-------------
+The following is the suggested high-level role for on-chain validator network
+permissioning.
+
+network
+  If a validator receives a peer request from a node whose public key is not
+  permitted by the policy, the message will be dropped, an
+  AuthorizationViolation will be returned, and the connection will be closed.
+
+This role is checked by the permission verifier when the following
+messages are received:
+
+- GossipMessage
+- GetPeersRequest
+- PeerRegisterRequest
+- PeerUnregisterRequest
+- GossipBlockRequest
+- GossipBlockResponse
+- GossipBatchByBatchIdRequest
+- GossipBatchByTransactionIdRequest
+- GossipBatchResponse
+- GossipPeersRequest
+- GossipPeersResponse
+
+In the future, sub-roles can be added to further restrict access to specific
+functions of the role. For example network.gossip could control who is allowed
+to send gossip messages.
