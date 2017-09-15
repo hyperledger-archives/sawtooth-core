@@ -85,7 +85,6 @@ class TestTwoFamilies(unittest.TestCase):
         for intkey_cmd, xo_cmd in commands:
             _send_intkey_cmd(intkey_cmd)
             _send_xo_cmd(xo_cmd)
-            time.sleep(1)
 
             if intkey_cmd == self.intkey_verifier.valid_txns:
                 how_many_updates += 1
