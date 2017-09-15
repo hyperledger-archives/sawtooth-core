@@ -20,10 +20,6 @@ const _ = require('lodash')
 const r = require('rethinkdb')
 const db = require('./')
 
-const query = query => db.queryTable('state', query)
-
-const insert = update => db.insertTable('state', update)
-
 const addBlockState = (tableName, indexName, indexValue, doc, blockNum) => {
   return db.modifyTable(tableName, table => {
     return table
@@ -92,8 +88,6 @@ const addProposal = (proposal, blockNum) => {
 }
 
 module.exports = {
-  query,
-  insert,
   addAgent,
   addRecord,
   addRecordType,
