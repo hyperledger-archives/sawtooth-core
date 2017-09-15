@@ -1,0 +1,33 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+  unit-private-utxo-python:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    command: nose2-3 -v
+        --log-level debug
+        -c /project/sawtooth-core/families/private_utxo/python/nose2.cfg
+        -s /project/sawtooth-core/families/private_utxo/python/tests
+        test_private_utxo_cli
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/families/private_utxo/python:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing"

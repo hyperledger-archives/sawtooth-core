@@ -23,6 +23,12 @@ class StateEntry(object):
         self.address = address
         self.data = data
 
+    def __str__(self):
+        return "{}: {}".format(self.address, self.data)
+
+    def __repr__(self):
+        return "{}: {}".format(self.address, self.data)
+
 
 class State(object):
     """

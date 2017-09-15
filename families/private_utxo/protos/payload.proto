@@ -15,6 +15,8 @@
 
 syntax = "proto3";
 
+import "utxo_document.proto";
+
 // Private UTXO Transaction Payload
 message PrivateUtxoPayload {
     // The action indicates data is contained within this payload
@@ -22,48 +24,52 @@ message PrivateUtxoPayload {
         ISSUE_ASSET = 0;
         TRANSFER_ASSET = 1;
         CONVERT_TO_UTXO = 2;
-        CONVERT_FROM_ASSET = 3;
-        UTXO_TRANSFER = 4;
+        CONVERT_FROM_UTXO = 3;
+        TRANSFER_UTXO = 4;
+    }
+
+    // Payload for Asset issuance
+    message IssueAssetPayload {
+        string name = 1; // The name of the asset
+        int64 amount = 2; // The amount of the asset to issue
+        string nonce = 3; // A random value to ensure AssetType uniqueness
+    }
+
+    // Payload for transfering Assets
+    message TransferAssetPayload {
+        string recipient = 1; // The public key of the recepient
+        string asset_type = 2; // The address of the AssetType to transfer
+        int64 amount = 3; // the amount to send to the recipient
+    }
+
+    // Payload to converting on chain asset holdings to UTXO
+    message ConvertToUtxoPayload {
+        string asset_type = 1; // The address of the AssetType to transfer
+        int64 amount = 2; // The amount of the asset to to convert
+        string nonce = 3;  // A random value to ensure UTXO uniqueness
+        string output_utxo = 4; // The utxo expected to be generated
+    }
+
+    // Payload to convert UTXO to an on ledger asset
+    message ConvertFromUtxoPayload {
+        UtxoDocument document = 1; // the UtxoDocument being converted
+    }
+
+    // Transfer UTXO ownership off ledger
+    message TransferUtxoPayload {
+        repeated string inputs = 1; // the UTXO to be consumed
+        repeated string outputs = 2; // the UTXO to be produced
+        string attestation = 3; // the Attestation Verification Report signed by
+        // IAS
     }
 
     // The action of this payload
     Action action = 1;
 
-    // The content of this payload
-    bytes data = 2;
-}
-
-// Payload for Asset issuance
-message IssueAssetPayload {
-    string name = 1; // The name of the asset
-    int64 amount = 2; // The amount of the asset to issue
-    string nonce = 3; // A random value to ensure AssetType uniqueness
-}
-
-// Payload for transfering Assets
-message TransferAssetPayload {
-    string recipient = 1; // The public key of the recepient
-    string asset_type = 2; // The address of the AssetType to transfer
-    int64 amount = 3; // the amount to send to the recipient
-}
-
-// Payload to converting on chain asset holdings to UTXO
-message ConvertToUtxoPayload {
-    string asset_type = 1; // The address of the AssetType to transfer
-    int64 amount = 2; // The amount of the asset to to convert
-    string nonce = 3;  // A random value to ensure AssetType uniqueness
-    string output_utxo = 4; // The UTXO address of the resulting UtxoDocument
-}
-
-// Payload to convert UTXO to an on ledger asset
-message ConvertFromUtxoPayload {
-    string document = 1; // the UtxoDocument being converted
-}
-
-// Transfer UTXO ownership off ledger
-message UtxoTransferPayload {
-    repeated string inputs = 1; // the UTXO to be consumed
-    repeated string outputs = 2; // the UTXO to be produced
-    string attestation = 3; // the Attestation Verification Report signed by
-    // IAS
+    // The payload for this action
+    IssueAssetPayload issue_asset = 2;
+    TransferAssetPayload transfer_asset = 3;
+    ConvertToUtxoPayload convert_to_utxo = 4;
+    ConvertFromUtxoPayload convert_from_utxo = 5;
+    TransferUtxoPayload transfer_utxo = 6;
 }

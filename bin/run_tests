@@ -157,6 +157,9 @@ main() {
                 ias)
                     test_ias
                     ;;
+                private_utxo)
+                    test_private_utxo
+                    ;;
                 settings)
                     test_settings
                     ;;
@@ -246,11 +249,13 @@ test_ias() {
     copy_coverage .coverage.ias
 }
 
-test_settings() {
-    run_docker_test ./families/settings/tests/test_tp_settings.yaml
+test_private_utxo() {
+    run_docker_test ./families/private_utxo/python/tests/unit_private_utxo_python.yaml
     copy_coverage .coverage.config
-    run_docker_test test_config_smoke
-    copy_coverage .coverage.test_config_smoke
+    run_docker_test ./families/private_utxo/python/tests/test_tp_private_utxo_python.yaml
+    copy_coverage .coverage.config
+    run_docker_test ./families/private_utxo/python/tests/int_private_utxo_python.yaml
+    copy_coverage .coverage.config
 }
 
 test_identity() {
@@ -261,6 +266,13 @@ test_identity() {
 test_block_info() {
   run_docker_test ./families/block_info/tests/test_tp_block_info.yaml
   copy_coverage .coverage.block_info
+}
+
+test_settings() {
+    run_docker_test ./families/settings/tests/test_tp_settings.yaml
+    copy_coverage .coverage.config
+    run_docker_test test_config_smoke
+    copy_coverage .coverage.test_config_smoke
 }
 
 test_supplychain() {

@@ -1,0 +1,98 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "3"
+
+services:
+
+  private-utxo-tp:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: private-utxo-tp -vv tcp://validator:4004
+    stop_signal: SIGKILL
+
+  settings-tp:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    entrypoint: settings-tp -vv tcp://validator:4004
+
+  validator:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8800
+    ports:
+      - 4004
+      - 8800
+    command: "bash -c \"\
+        if [ ! -f sawtooth.priv ]; then sawtooth keygen --key-dir /project/sawtooth-core sawtooth; fi && \
+        sawtooth admin keygen && \
+        sawtooth config genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawtooth admin genesis \
+          config-genesis.batch && \
+        sawtooth-validator --endpoint tcp://validator:8800 -vvvv \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+    \""
+
+    stop_signal: SIGKILL
+
+  rest-api:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8080
+    ports:
+      - 8080
+    depends_on:
+     - validator
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    stop_signal: SIGKILL
+
+  integration-private-utxo-python:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    command: nose2-3 -v
+        --log-level debug
+        -c /project/sawtooth-core/families/private_utxo/python/nose2.cfg
+        -s /project/sawtooth-core/families/private_utxo/python/tests
+        test_private_utxo_integration
+    stop_signal: SIGKILL
+    depends_on:
+     - validator
+     - private-utxo-tp
+     - rest-api
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/families/private_utxo/python:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing"
