@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 import logging
 import os
+import time
 import netifaces
 
 import sawtooth_signing as signing
@@ -42,6 +43,7 @@ from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 from sawtooth_validator.protobuf.network_pb2 import DisconnectMessage
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
+from sawtooth_validator.journal.timed_cache import TimedCache
 
 
 LOGGER = logging.getLogger(__name__)
@@ -177,13 +179,45 @@ class DisconnectHandler(Handler):
 
 
 class PingHandler(Handler):
+    def __init__(self, network, allowed_frequency=10):
+        self._network = network
+        self._last_message = TimedCache()
+        self._allowed_frequency = allowed_frequency
 
     def handle(self, connection_id, message_content):
+
         request = PingRequest()
         request.ParseFromString(message_content)
 
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
+        if self._network.get_connection_status(connection_id) == \
+                ConnectionStatus.CONNECTED:
+
+            if connection_id in self._last_message:
+                del self._last_message[connection_id]
+
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK)
+
+        if connection_id in self._last_message:
+            if time.time() - self._last_message[connection_id] < \
+                    self._allowed_frequency:
+                LOGGER.debug("Too many Pings in %s seconds before"
+                             "authorization is complete: %s",
+                             self._allowed_frequency,
+                             connection_id)
+                violation = AuthorizationViolation(
+                    violation=RoleType.Value("NETWORK"))
+
+                return HandlerResult(
+                    HandlerStatus.RETURN_AND_CLOSE,
+                    message_out=violation,
+                    message_type=validator_pb2.Message.AUTHORIZATION_VIOLATION)
+
+        self._last_message[connection_id] = time.time()
 
         return HandlerResult(
             HandlerStatus.RETURN,
