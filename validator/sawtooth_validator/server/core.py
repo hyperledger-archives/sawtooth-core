@@ -69,6 +69,8 @@ from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
+from sawtooth_validator.gossip.permission_verifier import IdentityCache
+from sawtooth_validator.gossip.identity_observer import IdentityObserver
 from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import \
@@ -259,10 +261,17 @@ class Validator(object):
         identity_view_factory = IdentityViewFactory(
             StateViewFactory(merkle_db))
 
+        id_cache = IdentityCache(identity_view_factory,
+                                 block_store.chain_head_state_root)
+
         permission_verifier = PermissionVerifier(
-            identity_view_factory,
             permissions,
-            block_store.chain_head_state_root)
+            block_store.chain_head_state_root,
+            id_cache)
+
+        identity_observer = IdentityObserver(
+            to_update=id_cache.invalidate,
+            forked=id_cache.forked)
 
         # Create and configure journal
         self._journal = Journal(
@@ -286,6 +295,7 @@ class Validator(object):
                 event_broadcaster,
                 receipt_store,
                 batch_tracker,
+                identity_observer
             ],
         )
 
