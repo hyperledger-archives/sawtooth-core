@@ -45,22 +45,46 @@ const clearAuth = () => {
   return token
 }
 
+// Adds Authorization header and prepends API path to url
+const baseRequest = opts => {
+  const Authorization = getAuth()
+  const authHeader = Authorization ? { Authorization } : {}
+  opts.headers = _.assign(opts.headers, authHeader)
+  opts.url = `../api/${opts.url}`
+  return m.request(opts)
+}
+
 /**
  * Submits a request to an api endpoint with an auth header if present
  */
 const request = (method, endpoint, data) => {
-  const Authorization = getAuth()
-  return m.request({
+  return baseRequest({
     method,
-    url: `../api/${endpoint}`,
-    headers: Authorization ? { Authorization } : {},
+    url: endpoint,
     data
   })
 }
 
+/**
+ * Method specific versions of request
+ */
 const get = _.partial(request, 'GET')
 const post = _.partial(request, 'POST')
 const patch = _.partial(request, 'PATCH')
+
+/**
+ * Method for posting a binary file to the API
+ */
+const postBinary = (endpoint, data) => {
+  return baseRequest({
+    method: 'POST',
+    url: endpoint,
+    headers: { 'Content-Type': 'application/octet-stream' },
+    // prevent Mithril from trying to JSON stringify the body
+    serialize: x => x,
+    data
+  })
+}
 
 module.exports = {
   getAuth,
@@ -69,5 +93,6 @@ module.exports = {
   request,
   get,
   post,
-  patch
+  patch,
+  postBinary
 }
