@@ -4,8 +4,9 @@
   "description": "A Track and Trade client web app for trading fish",
   "main": "",
   "scripts": {
-    "watch": "webpack-dev-server --env development --hot",
-    "build": "webpack --env production",
+    "compile_protos": "node scripts/compile_protos.js > src/protos.json",
+    "watch": "npm run compile_protos && webpack-dev-server --env development --hot",
+    "build": "npm run compile_protos && webpack --env production",
     "test": "standard src/**/*.js"
   },
   "repository": {
