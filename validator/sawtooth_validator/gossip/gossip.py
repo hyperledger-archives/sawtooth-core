@@ -483,7 +483,7 @@ class Topology(Thread):
             if (time.time() - endpoint_info.time) > \
                     endpoint_info.retry_threshold:
                 LOGGER.debug("Endpoint has not completed authorization in %s "
-                             "sections: %s",
+                             "seconds: %s",
                              endpoint_info.retry_threshold,
                              endpoint)
                 try:
