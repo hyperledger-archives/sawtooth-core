@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import json
 import logging
 import unittest
 
@@ -43,6 +44,9 @@ class TTClient(RestClient):
     def __init__(self, url=URL):
         self.factory = TrackAndTradeMessageFactory()
         self.public_key = self.factory.public_key
+
+        self.auth_token = None
+
         super().__init__(
             url=url,
             namespace=addressing.NAMESPACE)
@@ -101,6 +105,25 @@ class TTClient(RestClient):
         return self._post_tt_transaction(
             self.factory.make_empty_payload(
                 self.public_key))
+
+    def get_agents(self):
+        return self._submit_request(url=SERVER_URL + '/api/agents')[1]
+
+    def post_user(self, username, password, email):
+        response = self._submit_request(
+            url=SERVER_URL + '/api/users',
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            data=json.dumps({
+                'username': username,
+                'password': password,
+                'email': email,
+                'publicKey': self.public_key,
+            }),
+        )
+
+        if self.auth_token is None:
+            self.auth_token = response['authorization']
 
 
 class TestTrackAndTrade(unittest.TestCase):
@@ -497,3 +520,51 @@ class TestTrackAndTrade(unittest.TestCase):
             jin.update_properties(
                 'fish-456',
                 {'temperature': 2}))
+
+        ###
+
+        agents_endpoint = jin.get_agents()
+
+        log_json(agents_endpoint)
+
+        agents_assertion = [
+            [
+                agent['name'],
+                agent['owns'],
+                agent['custodian'],
+            ]
+            for agent in
+            sorted(
+                agents_endpoint,
+                key=lambda agent: agent['name']
+            )
+        ]
+
+        self.assertEqual(
+            agents_assertion,
+            [
+                [
+                    'Jin Kwon',
+                    [],
+                    [],
+                ],
+                [
+                    'Sun Kwon',
+                    ['fish-456'],
+                    ['fish-456'],
+                ],
+                [
+                    'sensor-stark',
+                    [],
+                    [],
+                ],
+            ]
+        )
+
+
+def log_json(msg):
+    LOGGER.debug(
+        json.dumps(
+            msg,
+            indent=4,
+            sort_keys=True))
