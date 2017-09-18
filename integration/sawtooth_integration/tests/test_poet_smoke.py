@@ -81,14 +81,16 @@ class TestPoetSmoke(unittest.TestCase):
 
     # if the validators aren't in consensus, wait and try again
     def assert_consensus(self):
-        time_out = time.time() + WAIT
+        start_time = time.time()
 
-        while time.time() < time_out:
+        while time.time() < start_time + WAIT:
             try:
                 self._assert_consensus()
                 return
             except AssertionError:
-                LOGGER.info('Blocks not yet in concesus')
+                LOGGER.info(
+                        'Blocks not yet in consensus after %d seconds' %
+                        time.time() - start_time)
 
         raise AssertionError(
                 'Validators were not in consensus after %d seconds' % WAIT)
