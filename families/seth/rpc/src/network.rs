@@ -18,14 +18,20 @@
 use jsonrpc_core::{Params, Value, Error};
 
 use sawtooth_sdk::messaging::zmq_stream::ZmqMessageSender;
-use super::error;
 
+const SAWTOOTH_NET_VERSION: &str = "19";
+
+// Version refers to the particular network this JSON-RPC client is connected to
 pub fn version(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
     Ok(Value::String(String::from(SAWTOOTH_NET_VERSION)))
 }
+
+// Since this is only for HTTP right now, there won't be any connected peers
 pub fn peer_count(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
-    Err(error::not_implemented())
+    Ok(Value::String(format!("{:x}", 0)))
 }
+
+// Return whether we are listening for connections, which is always true
 pub fn listening(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
-    Err(error::not_implemented())
+    Ok(Value::Bool(true))
 }
