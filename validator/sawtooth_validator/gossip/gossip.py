@@ -17,7 +17,7 @@ import copy
 import time
 import random
 from threading import Thread
-from threading import Condition
+from threading import Lock
 from functools import partial
 from collections import namedtuple
 from enum import Enum
@@ -104,7 +104,7 @@ class Gossip(object):
                 topology update checks.
         """
         self._peering_mode = peering_mode
-        self._condition = Condition()
+        self._lock = Lock()
         self._network = network
         self._endpoint = endpoint
         self._initial_seed_endpoints = initial_seed_endpoints \
@@ -126,7 +126,7 @@ class Gossip(object):
             connection_id (str): A unique identifier which identifies an
                 connection on the network server socket.
         """
-        with self._condition:
+        with self._lock:
             # Needs to actually be the list of advertised endpoints of
             # our peers
             peer_endpoints = list(self._peers.values())
@@ -154,7 +154,7 @@ class Gossip(object):
     def get_peers(self):
         """Returns a copy of the gossip peers.
         """
-        with self._condition:
+        with self._lock:
             return copy.copy(self._peers)
 
     def register_peer(self, connection_id, endpoint):
@@ -166,7 +166,7 @@ class Gossip(object):
             endpoint (str): The publically reachable endpoint of the new
                 peer
         """
-        with self._condition:
+        with self._lock:
             if len(self._peers) < self._maximum_peer_connectivity:
                 self._peers[connection_id] = endpoint
                 self._topology.set_connection_status(connection_id,
@@ -188,7 +188,7 @@ class Gossip(object):
             connection_id (str): A unique identifier which identifies an
                 connection on the network server socket.
         """
-        with self._condition:
+        with self._lock:
             if connection_id in self._peers:
                 del self._peers[connection_id]
                 LOGGER.debug("Removed connection_id %s, "
@@ -269,7 +269,7 @@ class Gossip(object):
             exclude: A list of connection_ids that should be excluded from this
                 broadcast.
         """
-        with self._condition:
+        with self._lock:
             if exclude is None:
                 exclude = []
             for connection_id in self._peers.copy():
@@ -361,7 +361,7 @@ class Topology(Thread):
             check_frequency (int): How often to attempt dynamic connectivity.
         """
         super().__init__(name="Topology")
-        self._condition = Condition()
+        self._lock = Lock()
         self._stopped = False
         self._peers = []
         self._gossip = gossip
@@ -419,7 +419,7 @@ class Topology(Thread):
 
                     peered_endpoints = list(peers.values())
 
-                    with self._condition:
+                    with self._lock:
                         unpeered_candidates = list(
                             set(self._candidate_peer_endpoints) -
                             set(peered_endpoints) -
@@ -466,7 +466,7 @@ class Topology(Thread):
             peer_endpoints ([str]): A list of public uri's which the
                 validator can attempt to peer with.
         """
-        with self._condition:
+        with self._lock:
             for endpoint in peer_endpoints:
                 if endpoint not in self._candidate_peer_endpoints:
                     self._candidate_peer_endpoints.append(endpoint)
@@ -475,34 +475,37 @@ class Topology(Thread):
         self._connection_statuses[connection_id] = status
 
     def remove_temp_endpoint(self, endpoint):
-        if endpoint in self._temp_endpoints:
-            del self._temp_endpoints[endpoint]
+        with self._lock:
+            if endpoint in self._temp_endpoints:
+                del self._temp_endpoints[endpoint]
 
     def _check_temp_endpoints(self):
-        for endpoint in self._temp_endpoints:
-            endpoint_info = self._temp_endpoints[endpoint]
-            if (time.time() - endpoint_info.time) > \
-                    endpoint_info.retry_threshold:
-                LOGGER.debug("Endpoint has not completed authorization in %s "
-                             "seconds: %s",
-                             endpoint_info.retry_threshold,
-                             endpoint)
-                try:
-                    # If the connection exists remove it before retrying to
-                    # authorize. If the connection does not exist, a KeyError
-                    # will be thrown.
-                    conn_id = \
-                        self._network.get_connection_id_by_endpoint(endpoint)
-                    self._network.remove_connection(conn_id)
-                except KeyError:
-                    pass
+        with self._lock:
+            for endpoint in self._temp_endpoints:
+                endpoint_info = self._temp_endpoints[endpoint]
+                if (time.time() - endpoint_info.time) > \
+                        endpoint_info.retry_threshold:
+                    LOGGER.debug("Endpoint has not completed authorization in "
+                                 "%s seconds: %s",
+                                 endpoint_info.retry_threshold,
+                                 endpoint)
+                    try:
+                        # If the connection exists remove it before retrying to
+                        # authorize. If the connection does not exist, a
+                        # KeyError will be thrown.
+                        conn_id = \
+                            self._network.get_connection_id_by_endpoint(
+                                endpoint)
+                        self._network.remove_connection(conn_id)
+                    except KeyError:
+                        pass
 
-                self._network.add_outbound_connection(endpoint)
-                self._temp_endpoints[endpoint] = EndpointInfo(
-                    endpoint_info.status,
-                    time.time(),
-                    min(endpoint_info.retry_threshold * 2,
-                        MAXIMUM_RETRY_FREQUENCY))
+                    self._network.add_outbound_connection(endpoint)
+                    self._temp_endpoints[endpoint] = EndpointInfo(
+                        endpoint_info.status,
+                        time.time(),
+                        min(endpoint_info.retry_threshold * 2,
+                            MAXIMUM_RETRY_FREQUENCY))
 
     def _refresh_peer_list(self, peers):
         for conn_id in peers:
@@ -519,7 +522,7 @@ class Topology(Thread):
                     del self._connection_statuses[conn_id]
 
     def _refresh_connection_list(self):
-        with self._condition:
+        with self._lock:
             closed_connections = []
             for connection_id in self._connection_statuses:
                 if not self._network.has_connection(connection_id):
@@ -548,8 +551,9 @@ class Topology(Thread):
 
             except KeyError:
                 # If the connection does not exist, send a connection request
-                if endpoint in self._temp_endpoints:
-                    del self._temp_endpoints[endpoint]
+                with self._lock:
+                    if endpoint in self._temp_endpoints:
+                        del self._temp_endpoints[endpoint]
 
                 self._network.add_outbound_connection(endpoint)
                 self._temp_endpoints[endpoint] = EndpointInfo(
@@ -604,11 +608,11 @@ class Topology(Thread):
             self._network.add_outbound_connection(endpoint)
 
     def _reset_candidate_peer_endpoints(self):
-        with self._condition:
+        with self._lock:
             self._candidate_peer_endpoints = []
 
     def _peer_callback(self, request, result, connection_id, endpoint=None):
-        with self._condition:
+        with self._lock:
             ack = NetworkAcknowledgement()
             ack.ParseFromString(result.content)
 
@@ -670,8 +674,9 @@ class Topology(Thread):
 
         else:
             LOGGER.debug("Endpoint has unknown status: %s", endpoint)
-            if endpoint in self._temp_endpoints:
-                del self._temp_endpoints[endpoint]
+            with self._lock:
+                if endpoint in self._temp_endpoints:
+                    del self._temp_endpoints[endpoint]
 
     def _connect_success_peering(self, connection_id):
         LOGGER.debug("Connection to %s succeeded", connection_id)
