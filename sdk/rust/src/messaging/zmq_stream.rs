@@ -104,21 +104,6 @@ impl ZmqMessageSender {
     }
 }
 
-impl Drop for ZmqMessageSender {
-    fn drop(&mut self) {
-        if let Some(ref sender) = self.outbound_sender.take() {
-            // send the shutdown signal
-            match sender.send(None) {
-                Err(_) => {
-                    warn!("Unable to properly shutdown SendReceiveStream.");
-                    ()
-                }
-                _ => ()
-            }
-        }
-    }
-}
-
 
 impl MessageSender for ZmqMessageSender {
     fn send(&mut self, destination: Message_MessageType, correlation_id: &str,
