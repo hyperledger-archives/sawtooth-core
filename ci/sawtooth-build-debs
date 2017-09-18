@@ -69,7 +69,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     python3-lmdb=0.92-1 \
     python3-multidict=2.1.4-1 \
     python3-netifaces=0.10.4-0.1build2 \
-    python3-protobuf=3.2.0-1 \
+    python3-protobuf=3.2.0-0~maarten0 \
     python3-pycares=2.1.1-1 \
     python3-pytest-runner=2.6.2-1 \
     python3-pytest=2.9.0-1 \
