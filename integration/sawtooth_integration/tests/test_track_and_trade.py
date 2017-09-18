@@ -31,12 +31,12 @@ from sawtooth_track_and_trade.protobuf.payload_pb2 import AnswerProposalAction
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
-
-REST_API = 'rest-api:8080'
-URL = 'http://' + REST_API
-
-
 NARRATION = False
+
+
+REST_API = 'rest-api:8081'
+URL = 'http://' + REST_API
+SERVER_URL = 'http://tnt-server:3000'
 
 
 class TTClient(RestClient):
@@ -467,6 +467,13 @@ class TestTrackAndTrade(unittest.TestCase):
             ''')
 
         self.assert_valid(
+            jin.create_proposal(
+                record_id='fish-456',
+                role=Proposal.CUSTODIAN,
+                receiving_agent=sun.public_key,
+            ))
+
+        self.assert_invalid(
             jin.create_proposal(
                 record_id='fish-456',
                 role=Proposal.CUSTODIAN,
