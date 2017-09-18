@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 import abc
 import enum
-from functools import partial
 import logging
 from threading import Condition
 from threading import Thread
@@ -142,7 +141,15 @@ class Dispatcher(Thread):
         try:
             handler_manager = next(collection)
             future = handler_manager.execute(connection_id, message.content)
-            future.add_done_callback(partial(self._determine_next, message_id))
+
+            def do_next(future):
+                try:
+                    self._determine_next(message_id, future)
+                except Exception:  # pylint: disable=broad-except
+                    LOGGER.exception(
+                        "Unhandled exception while determining next")
+
+            future.add_done_callback(do_next)
         except IndexError:
             # IndexError is raised if done with handlers
             del self._message_information[message_id]
