@@ -59,7 +59,8 @@
       - f:sha
     addresses_to_set:
       - f:sha :
-    valid: False
+    valid: False # Duplicate invalid txn in a batch exercises the
+                 # txn replay process.
 - #---------------------------- Batch 2
   -
     inputs:
@@ -114,7 +115,8 @@
       - c:sha :
       - e:sha :
       - d:sha :
-    valid: False
+    valid: False  # Second writer at the "" namespace with both being in
+                  # invalid batches exercises the state finding process.
   -
     inputs:
       - g:sha
@@ -169,9 +171,9 @@
     inputs:
       - a:sha
     outputs:
-      - a:sha
-    addresses_to_set:
-      - a:sha :
+      - a:sha                   # Valid batch that reads and writes to the
+    addresses_to_set:           # same addresses as Batch 2 with multiple
+      - a:sha :                 # failures in between.
   -
     inputs:
       - c:sha
@@ -203,7 +205,7 @@
     addresses_to_set:
       - n:sha :
     dependencies:
-      - born
+      - born         # Dependency on a txn from an invalid batch
   -
     inputs:
       - f:sha
@@ -231,7 +233,7 @@
       - b:sha :
     dependencies:
       - born
-    name: poincare
+    name: poincare         # Dependency on a txn from an invalid batch
   -
     inputs:
       - h:sha
@@ -239,15 +241,18 @@
       - h:sha
     addresses_to_delete:
       - h:sha
-    valid: False
+    valid: False          # Second invalid txn in a batch. This txn was
+                          # invalidated by set_transaction_execution_result
+                          # whereas the prior one was invalidated by
+                          # dependency.
 - #------------------------ Batch 11
   -
     inputs:
       - t:sha
     outputs:
       - ""
-    addresses_to_set:
-      - z:sha :
+    addresses_to_set:     # Writer at the "" namespace in an invalid batch
+      - z:sha :           # exercises the state finding process
       - y:sha :
       - x:sha :
       - w:sha :
@@ -277,8 +282,8 @@
     addresses_to_set:
       - m:sha :
     dependencies:
-      - poincare
-    name: shannon
+      - poincare             # Chain of dependencies on a txn from an invalid
+    name: shannon            # batch. born <--- poincare <----- shannon
 - #-------------------------- Batch 13
   -
     inputs:
@@ -310,7 +315,7 @@
     addresses_to_set:
       - e:sha :
     dependencies:
-      - shannon
+      - shannon                    # Invalid batch
   -
     inputs:
       - u:sha
@@ -338,7 +343,7 @@
       - c:sha
     outputs:
       - c:sha
-    addresses_to_set:
+    addresses_to_set:           # Invalid batch
       - c:sha :
   -
     inputs:
@@ -366,7 +371,7 @@
       - a:sha :
   -
     inputs:
-      - q:sha
+      - q:sha                # Invalid batch
     outputs:
       - q:sha
     addresses_to_set:
@@ -378,13 +383,13 @@
     inputs:
       - c:sha
     outputs:
-      - c:sha
-    addresses_to_set:
+      - c:sha            # Predecessor in batch 9 with multiple failures
+    addresses_to_set:    # in between
       - c:sha :
   -
-    inputs:
+    inputs:               # Many invalid predecessors
       - d:sha
-    outputs:
+    outputs:              # Valid batch
       - d:sha
     addresses_to_set:
       - d:sha :
@@ -399,7 +404,7 @@
   -
     inputs:
       - v:sha
-    outputs:
+    outputs:                   # Invalid batch
       - v:sha
     addresses_to_set:
       - v:sha :
@@ -424,7 +429,7 @@
   -
     inputs:
       - c:sha
-    outputs:
+    outputs:                   # Invalid batch
       - c:sha:10
     addresses_to_set:
       - c:sha :
@@ -447,7 +452,7 @@
       - c:sha :
       - d:sha :
       - m:sha :
-      - n:sha :
+      - n:sha :                # Invalid batch
       - o:sha :
   -
     inputs:
@@ -470,7 +475,7 @@
     inputs:
       - ""
     outputs:
-      - ""
+      - ""                    # Invalid batch
     addresses_to_set:
       - m:sha :
       - l:sha :
@@ -488,7 +493,7 @@
       - a:sha :
       - b:sha :
       - c:sha :
-      - d:sha :
+      - d:sha :                # Invalid batch
     dependencies:
       - shannon
 - # ------------------- Batch 23
@@ -537,8 +542,8 @@
     outputs:
       - b:b:sha
     addresses_to_delete:
-      - b:b:sha
-    valid: False
+      - b:b:sha                 # Invalid batch with 2 txns that make it
+    valid: False                # it invalid.
   -
     inputs:
       - e:a:sha
