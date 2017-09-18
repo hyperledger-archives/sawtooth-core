@@ -219,7 +219,7 @@ class Dispatcher(Thread):
                     msg=message,
                     connection_id=connection_id)
             except KeyError:
-                LOGGER.info("Can't send message %s back to "
+                LOGGER.info("Can't send last message %s back to "
                             "%s because connection %s not in dispatcher",
                             get_enum_name(message.message_type), connection_id,
                             connection)
