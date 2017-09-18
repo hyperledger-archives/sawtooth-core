@@ -93,6 +93,13 @@ def add_identity_parser(subparsers, parent_parser):
         default='http://localhost:8080')
 
     create_parser.add_argument(
+        '--wait',
+        type=int,
+        default=15,
+        help="time to wait for the policy to commit when "
+             "submitting to the rest api.")
+
+    create_parser.add_argument(
         'name',
         type=str,
         help='The name of the new policy')
@@ -135,6 +142,13 @@ def add_identity_parser(subparsers, parent_parser):
         '-k', '--key',
         type=str,
         help='the signing key for the resulting batches')
+
+    create_parser.add_argument(
+        '--wait',
+        type=int,
+        default=15,
+        help='time to wait for a role to commit when submitting to '
+             'the rest api.')
 
     create_target_group = create_parser.add_mutually_exclusive_group()
     create_target_group.add_argument(
@@ -217,6 +231,29 @@ def _do_identity_policy_create(args):
     elif args.url is not None:
         rest_client = RestClient(args.url)
         rest_client.send_batches(batch_list)
+        if args.wait and args.wait > 0:
+            batch_id = batch.header_signature
+            wait_time = 0
+            start_time = time.time()
+
+            while wait_time < args.wait:
+                statuses = rest_client.get_statuses(
+                    [batch_id],
+                    args.wait - int(wait_time))
+                wait_time = time.time() - start_time
+                if statuses[0]['status'] == 'COMMITTED':
+                    print(
+                        'Policy committed in {:.6} sec'.format(wait_time))
+                    return
+
+                # Wait a moment so as not to hammer the Rest Api
+                time.sleep(0.2)
+
+            print('Wait timed out! Policy was not committed...')
+            print('{:128.128}  {}'.format(
+                batch_id,
+                statuses[0]['status']))
+            exit(1)
     else:
         raise AssertionError('No target for create set.')
 
@@ -310,6 +347,30 @@ def _do_identity_role_create(args):
     elif args.url is not None:
         rest_client = RestClient(args.url)
         rest_client.send_batches(batch_list)
+        if args.wait and args.wait > 0:
+            batch_id = batch.header_signature
+            wait_time = 0
+            start_time = time.time()
+
+            while wait_time < args.wait:
+                statuses = rest_client.get_statuses(
+                    [batch_id],
+                    args.wait - int(wait_time))
+                wait_time = time.time() - start_time
+
+                if statuses[0]['status'] == 'COMMITTED':
+                    print(
+                        'Role committed in {:.6} sec'.format(wait_time))
+                    return
+
+                # Wait a moment so as not to hammer the Rest Api
+                time.sleep(0.2)
+
+            print('Wait timed out! Role was not committed...')
+            print('{:128.128}  {}'.format(
+                batch_id,
+                statuses[0]['status']))
+            exit(1)
     else:
         raise AssertionError('No target for create set.')
 
