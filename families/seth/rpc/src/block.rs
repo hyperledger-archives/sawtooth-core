@@ -16,13 +16,80 @@
  */
 
 use jsonrpc_core::{Params, Value, Error};
+use protobuf;
+use uuid;
 
-use sawtooth_sdk::messaging::zmq_stream::ZmqMessageSender;
-use super::error;
+use error;
 
+use sawtooth_sdk::messaging::zmq_stream::*;
+use sawtooth_sdk::messaging::stream::*;
+
+use sawtooth_sdk::messages::client::{
+    ClientBlockListRequest, ClientBlockListResponse, PagingControls,
+};
+use sawtooth_sdk::messages::block::BlockHeader;
+use sawtooth_sdk::messages::validator::Message_MessageType;
+
+// Return the block number of the current chain head, in hex, as a string
 pub fn block_number(_params: Params, mut sender: ZmqMessageSender) -> Result<Value, Error> {
-    Err(error::not_implemented())
+    let mut paging = PagingControls::new();
+    paging.set_count(1);
+    let mut request = ClientBlockListRequest::new();
+    request.set_paging(paging);
+
+    let request_bytes = match protobuf::Message::write_to_bytes(&request) {
+        Ok(b) => b,
+        Err(error) => {
+            println!("ERROR serializing request: {:?}", error);
+            return Err(Error::internal_error());
+        },
+    };
+
+    let correlation_id = match uuid::Uuid::new(uuid::UuidVersion::Random) {
+        Some(cid) => cid.to_string(),
+        None => {
+            println!("Error generating UUID");
+            return Err(Error::internal_error());
+        },
+    };
+
+    let mut future = match sender.send(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST,
+                                       &correlation_id, &request_bytes) {
+        Ok(f) => f,
+        Err(error) => {
+            println!("Error unwrapping future: {:?}", error);
+            return Err(Error::internal_error());
+        },
+    };
+
+    let message = match future.get() {
+        Ok(m) => m,
+        Err(error) => {
+            println!("Error getting future: {:?}", error);
+            return Err(Error::internal_error());
+        },
+    };
+
+    let response: ClientBlockListResponse = match protobuf::parse_from_bytes(&message.content) {
+        Ok(r) => r,
+        Err(error) => {
+            println!("Error parsing response: {:?}", error);
+            return Err(Error::internal_error());
+        },
+    };
+
+    let block = &response.blocks[0];
+    let block_header: BlockHeader = match protobuf::parse_from_bytes(&block.header) {
+        Ok(r) => r,
+        Err(error) => {
+            println!("Error parsing block header: {:?}", error);
+            return Err(Error::internal_error());
+        }
+    };
+
+    Ok(Value::String(format!("{:#x}", block_header.block_num).into()))
 }
+
 pub fn get_block_by_hash(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
     Err(error::not_implemented())
 }
