@@ -20,12 +20,13 @@ const _ = require('lodash')
 const express = require('express')
 const bodyParser = require('body-parser')
 
-const state = require('../db/state')
-const blockchain = require('../blockchain/')
 const auth = require('./auth')
-
+const blockchain = require('../blockchain/')
 const users = require('./users')
 const { Unauthorized } = require('./errors')
+const agents = require('../db/agents')
+const state = require('../db/state')
+
 
 const router = express.Router()
 router.use(bodyParser.json({ type: 'application/json' }))
@@ -97,6 +98,8 @@ const errorHandler = (err, req, res, next) => {
 router.use(logRequest)
 router.use(initInternalParams)
 router.use(authHandler)
+
+router.get('/agents', handle(agents.list))
 
 router.get('/', (req, res) => {
   state.query(state => state.filter({name: 'message'}))
