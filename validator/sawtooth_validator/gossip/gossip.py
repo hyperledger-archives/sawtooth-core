@@ -668,7 +668,7 @@ class Topology(Thread):
             LOGGER.debug("Received unknown endpoint: %s", endpoint)
 
         elif endpoint_info.status == EndpointStatus.PEERING:
-            self._connect_success_peering(connection_id)
+            self._connect_success_peering(connection_id, endpoint)
             del self._temp_endpoints[endpoint]
 
         elif endpoint_info.status == EndpointStatus.TOPOLOGY:
@@ -681,14 +681,13 @@ class Topology(Thread):
                 if endpoint in self._temp_endpoints:
                     del self._temp_endpoints[endpoint]
 
-    def _connect_success_peering(self, connection_id):
+    def _connect_success_peering(self, connection_id, endpoint):
         LOGGER.debug("Connection to %s succeeded", connection_id)
 
         register_request = PeerRegisterRequest(
             endpoint=self._endpoint)
         self._connection_statuses[connection_id] = PeerStatus.TEMP
 
-        endpoint = self._network.connection_id_to_endpoint(connection_id)
         self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
                            register_request.SerializeToString(),
                            connection_id,
