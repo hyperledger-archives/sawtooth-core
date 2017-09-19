@@ -81,8 +81,8 @@ fn main() {
     server.wait();
 }
 
-fn get_method_list() -> Vec<(String, RequestHandler)> {
-    let mut methods: Vec<(String, RequestHandler)> = Vec::new();
+fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
+    let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
 
     methods.push((String::from("eth_getBalance"), account::get_balance));
     methods.push((String::from("eth_getStorageAt"), account::get_storage_at));

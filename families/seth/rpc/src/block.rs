@@ -21,7 +21,6 @@ use uuid;
 
 use error;
 
-use sawtooth_sdk::messaging::zmq_stream::*;
 use sawtooth_sdk::messaging::stream::*;
 
 use sawtooth_sdk::messages::client::{
@@ -31,7 +30,7 @@ use sawtooth_sdk::messages::block::BlockHeader;
 use sawtooth_sdk::messages::validator::Message_MessageType;
 
 // Return the block number of the current chain head, in hex, as a string
-pub fn block_number(_params: Params, mut sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn block_number<T>(_params: Params, mut sender: T) -> Result<Value, Error> where T: MessageSender {
     let mut paging = PagingControls::new();
     paging.set_count(1);
     let mut request = ClientBlockListRequest::new();
@@ -90,9 +89,9 @@ pub fn block_number(_params: Params, mut sender: ZmqMessageSender) -> Result<Val
     Ok(Value::String(format!("{:#x}", block_header.block_num).into()))
 }
 
-pub fn get_block_by_hash(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn get_block_by_hash<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_block_by_number(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn get_block_by_number<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }

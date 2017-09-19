@@ -17,24 +17,24 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use sawtooth_sdk::messaging::zmq_stream::ZmqMessageSender;
+use sawtooth_sdk::messaging::stream::MessageSender;
 use super::error;
 
-pub fn get_balance(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn get_balance<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_storage_at(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn get_storage_at<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_code(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn get_code<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn sign(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn sign<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn call(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn call<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn accounts(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn accounts<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }

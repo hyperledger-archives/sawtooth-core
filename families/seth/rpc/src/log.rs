@@ -17,27 +17,27 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use sawtooth_sdk::messaging::zmq_stream::ZmqMessageSender;
+use sawtooth_sdk::messaging::stream::MessageSender;
 use super::error;
 
-pub fn new_filter(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn new_filter<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn new_block_filter(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn new_block_filter<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn new_pending_transaction_filter(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn new_pending_transaction_filter<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn uninstall_filter(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn uninstall_filter<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_filter_changes(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn get_filter_changes<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_filter_logs(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn get_filter_logs<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_logs(_params: Params, mut _sender: ZmqMessageSender) -> Result<Value, Error> {
+pub fn get_logs<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
