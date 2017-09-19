@@ -50,9 +50,24 @@ const actionMap = ACTIONS.reduce((map, enumName) => {
 // Compile Protobufs
 const root = protobuf.Root.fromJSON(protoJson)
 const TTPayload = root.lookup('TTPayload')
-_.each(actionMap, ({ name }, key) => {
-  actionMap[key].proto = root.lookup(name)
+const PropertyValue = root.lookup('PropertyValue')
+const PropertySchema = root.lookup('PropertySchema')
+const Proposal = root.lookup('Proposal')
+_.map(actionMap, action => {
+  return _.set(action, 'proto', root.lookup(action.name))
 })
+
+// Create data xforms on an action by action basis
+const propertiesXformer = xform => data => {
+  return _.set(data, 'properties', data.properties.map(xform))
+}
+const valueXform = propertiesXformer(prop => PropertyValue.create(prop))
+const schemaXform = propertiesXformer(prop => PropertySchema.create(prop))
+
+_.map(actionMap, action => _.set(action, 'xform', x => x))
+actionMap.createRecord.xform = valueXform
+actionMap.createRecordType.xform = schemaXform
+actionMap.updateProperties.xform = valueXform
 
 /**
  * Encodes a new TTPayload with the specified action
@@ -66,7 +81,7 @@ const encode = (actionKey, actionData) => {
   return TTPayload.encode({
     action: TTPayload.Action[action.enum],
     timestamp: Math.floor(Date.now() / 1000),
-    [actionKey]: action.proto.create(actionData)
+    [actionKey]: action.proto.create(action.xform(actionData))
   }).finish()
 }
 
