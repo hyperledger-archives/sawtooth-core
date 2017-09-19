@@ -27,9 +27,27 @@ const create = user => {
       return db.insert(_.assign({}, user, {password: hashed}))
         .catch(err => { throw new BadRequest(err.message) })
     })
-    .then(() => _.omit(user, 'password'))
+    .then(() => auth.createToken(user.publicKey))
+    .then(token => ({
+      authorization: token,
+      encryptedKey: user.encryptedKey || null
+    }))
+}
+
+const update = (changes, { authedKey }) => {
+  return Promise.resolve()
+    .then(() => {
+      if (changes.password) {
+        return auth.hashPassword(changes.password)
+          .then(hashed => _.set(changes, 'password', hashed))
+      }
+      return changes
+    })
+    .then(finalChanges => db.update(authedKey, finalChanges))
+    .then(updated => _.omit(updated, 'password'))
 }
 
 module.exports = {
-  create
+  create,
+  update
 }

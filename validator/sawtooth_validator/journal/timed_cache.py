@@ -23,6 +23,10 @@ class TimedCache(MutableMapping):
     A dict like interface to access blocks. Stores BlockState objects.
 
     Accesses are Thread safe.
+
+    Args:
+        keep_time (float): How long in seconds to hold a value for
+        purge_frequency (float): How often to look for old values to purge
     """
     class CachedValue(object):
         def __init__(self, value):
@@ -36,15 +40,19 @@ class TimedCache(MutableMapping):
             """
             self.timestamp = time.time()
 
-    def __init__(self, keep_time=10):
+    def __init__(self, keep_time=30, purge_frequency=30):
         super(TimedCache, self).__init__()
         self._lock = RLock()
         self._cache = {}
-        self._keep_time = keep_time  # time in seconds before purging blocks
-        # from cache.
+        self._keep_time = keep_time
+        self._purge_frequency = purge_frequency
+        self._next_purge_time = time.time() + purge_frequency
 
     def __setitem__(self, key, value):
         with self._lock:
+            if time.time() > self._next_purge_time:
+                self._purge_expired()
+                self._next_purge_time = time.time() + self._purge_frequency
             self._cache[key] = self.CachedValue(value)
 
     def __getitem__(self, key):
@@ -80,14 +88,17 @@ class TimedCache(MutableMapping):
     def keep_time(self):
         return self._keep_time
 
-    def purge_expired(self):
+    @property
+    def purge_frequency(self):
+        return self._purge_frequency
+
+    def _purge_expired(self):
         """
         Remove all expired entries from the cache.
         """
-        with self._lock:
-            time_horizon = time.time() - self._keep_time
-            new_cache = {}
-            for (k, v) in self._cache.items():
-                if v.timestamp > time_horizon:
-                    new_cache[k] = v
-            self._cache = new_cache
+        time_horizon = time.time() - self._keep_time
+        new_cache = {}
+        for (k, v) in self._cache.items():
+            if v.timestamp > time_horizon:
+                new_cache[k] = v
+        self._cache = new_cache

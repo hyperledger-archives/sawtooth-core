@@ -640,8 +640,29 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			logger.Debugf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
 
 		case BLOCKHASH: // 0x40
-			stack.Push(Zero256)
-			logger.Debugf(" => 0x%X (NOT SUPPORTED)\n", stack.Peek().Bytes())
+			blockNumber := Int64FromWord256(stack.Pop())
+
+			if blockNumber > vm.params.BlockHeight {
+				logger.Debugf(" => attempted to get blockhash of a non-existent block")
+				return nil, ErrInvalidContract
+			}
+			if vm.params.BlockHeight - blockNumber > 256 {
+				logger.Debugf(" => attempted to get blockhash of a block outside of allowed range")
+				return nil, ErrInvalidContract
+			}
+			if (blockNumber == vm.params.BlockHeight) {
+				if vm.params.BlockHash.Compare(Zero256) != 0 {
+					logger.Debugf(" => attempted to get blockhash of invalid block")
+					return nil, ErrInvalidContract
+				}
+				stack.Push(vm.params.BlockHash)
+			} else {
+				hash, err := vm.appState.GetBlockHash(blockNumber)
+				if err != nil {
+					return nil, firstErr(err, ErrInvalidContract)
+				}
+				stack.Push(hash)
+			}
 
 		case COINBASE: // 0x41
 			stack.Push(Zero256)

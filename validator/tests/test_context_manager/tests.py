@@ -24,6 +24,7 @@ from sawtooth_validator.execution import context_manager
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.events_pb2 import Event
 
 
 TestAddresses = namedtuple('TestAddresses',
@@ -182,6 +183,40 @@ class TestContextManager(unittest.TestCase):
             writes=io_w + _o_w
         )
         return addresses
+
+    def test_execution_results(self):
+        """Tests that get_execution_results returns the correct values."""
+        addr1 = self._create_address()
+        addr2 = self._create_address()
+        context_id = self.context_manager.create_context(
+            state_hash=self.context_manager.get_first_root(),
+            base_contexts=[],
+            inputs=[addr1, addr2],
+            outputs=[addr1, addr2])
+
+        sets = {addr1: b'1'}
+        events = [Event(
+            event_type=teststr,
+            attributes=[Event.Attribute(key=teststr, value=teststr)],
+            data=teststr.encode()) for teststr in ("test1", "test2")]
+        deletes = {addr2: None}
+        data = [(teststr, teststr.encode()) for teststr in ("test1", "test2")]
+
+        self.context_manager.set(context_id, [sets])
+        for event in events:
+            self.context_manager.add_execution_event(context_id, event)
+
+        self.context_manager.delete(context_id, deletes)
+        for datum in data:
+            self.context_manager.add_execution_data(
+                context_id, datum[0], datum[1])
+
+
+        results = self.context_manager.get_execution_results(context_id)
+        self.assertEqual(sets, results[0])
+        self.assertEqual(deletes, results[1])
+        self.assertEqual(events, results[2])
+        self.assertEqual(data, results[3])
 
     def test_address_enforcement(self):
         """Tests that the ContextManager enforces address characteristics.
@@ -1033,6 +1068,57 @@ class TestContextManager(unittest.TestCase):
                                          "manager calculated merkle hashes "
                                          "are the same")
 
+    def test_wildcarded_inputs_outputs(self):
+        """Tests the context manager with wildcarded inputs and outputs.
+
+        Notes:
+            1. Create a context with a wildcarded input and output and
+               another non-wildcarded input and output.
+            2. Get an address under the wildcard and set to both the non-wildcarded
+               address and an address under the wildcard.
+            3. Squash the context and compare to a manually generated state
+               hash.
+        """
+
+        # 1
+        namespaces = [
+            self._create_address('a')[:8],
+            self._create_address('b')
+        ]
+
+        ctx_1 = self.context_manager.create_context(
+            inputs=namespaces,
+            outputs=namespaces,
+            base_contexts=[],
+            state_hash=self.first_state_hash)
+
+        # 2
+        self.context_manager.get(
+            context_id=ctx_1,
+            address_list=[self._create_address('a')])
+
+        self.context_manager.set(
+            context_id=ctx_1,
+            address_value_list=[{self._create_address('a'): b'1',
+                                 self._create_address('b'): b'2'}])
+
+        # 3
+        squash = self.context_manager.get_squash_handler()
+
+        tree = MerkleDatabase(self.database_results)
+        tree.set_merkle_root(self.first_state_hash)
+
+        calculated_state_root = tree.update(
+            set_items={self._create_address('a'): b'1',
+                       self._create_address('b'): b'2'})
+
+        state_root = squash(state_root=self.first_state_hash,
+                            context_ids=[ctx_1],
+                            persist=True,
+                            clean_up=True)
+
+        self.assertEqual(state_root, calculated_state_root)
+
     @unittest.skip("Necessary to catch scheduler bugs--Depth-first search")
     def test_check_for_bad_combination(self):
         """Tests that the context manager will raise
@@ -1382,8 +1468,10 @@ class TestContextManager(unittest.TestCase):
         tree.set_merkle_root(sh1)
 
         sh2_assertion = tree.update(
-            {},
-            delete_items={self._create_address('b'): b'1',
-                          self._create_address('c'): b'2',
-                          self._create_address('d'): b'3'},
+            {self._create_address('e'): b'2'},
+            delete_items=[self._create_address('b'),
+                          self._create_address('c'),
+                          self._create_address('d')],
             virtual=False)
+        self.assertEqual(sh2, sh2_assertion,
+                         "The final state hash must be correct")

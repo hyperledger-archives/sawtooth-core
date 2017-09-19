@@ -55,6 +55,23 @@ class MerkleDatabase(object):
             for value in self._yield_iter(path + child, node["c"][child]):
                 yield value
 
+    def __contains__(self, item):
+        """Does the tree contain an address.
+
+        Args:
+            item (str): An address.
+
+        Returns:
+            (bool): True if it does contain, False otherwise.
+        """
+
+        try:
+            self.get(item)
+        except KeyError:
+            return False
+
+        return True
+
     def get_merkle_root(self):
         return self._root_hash
 

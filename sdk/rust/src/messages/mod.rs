@@ -26,3 +26,5 @@ pub mod processor;
 pub mod genesis;
 pub mod client;
 pub mod network;
+pub mod events;
+pub mod authorization;

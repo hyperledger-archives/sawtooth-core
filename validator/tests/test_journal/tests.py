@@ -31,8 +31,23 @@ from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.timed_cache import TimedCache
+from sawtooth_validator.journal.event_extractors \
+    import BlockEventExtractor
+from sawtooth_validator.journal.event_extractors \
+    import ReceiptEventExtractor
+
+from sawtooth_validator.server.events.subscription import EventSubscription
+from sawtooth_validator.server.events.subscription import EventFilterType
+from sawtooth_validator.server.events.subscription import EventFilterFactory
 
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf.events_pb2 import Event
+from sawtooth_validator.protobuf.events_pb2 import EventList
+from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaSet
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 
@@ -50,6 +65,7 @@ from test_journal.mock import MockStateDeltaProcessor
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import MockPermissionVerifier
 from test_journal.mock import SynchronousExecutor
+from test_journal.mock import MockBatchInjectorFactory
 from test_journal.utils import wait_until
 
 from test_journal import mock_consensus
@@ -330,6 +346,33 @@ class TestBlockPublisher(unittest.TestCase):
         self.publish_block()
         self.assert_no_block_published() # block should be empty after batch
         # with duplicate transaction is dropped.
+
+    def test_batch_injection_start_block(self):
+        '''
+        Test that the batch is injected at the beginning of the block.
+        '''
+
+        injected_batch = self.make_batch()
+
+        self.publisher = BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            data_dir=None,
+            config_dir=None,
+            permission_verifier=self.permission_verifier,
+            batch_injector_factory=MockBatchInjectorFactory(injected_batch))
+
+        self.receive_batches()
+
+        self.publish_block()
+
+        self.assert_batch_in_block(injected_batch)
 
     # assertions
     def assert_block_published(self):
@@ -788,11 +831,11 @@ class TestChainController(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=self.permission_verifier)
+            permission_verifier=self.permission_verifier,
+            chain_observers=[self.state_delta_processor])
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -1101,11 +1144,11 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            state_delta_processor=self.state_delta_processor,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=self.permission_verifier)
+            permission_verifier=self.permission_verifier,
+            chain_observers=[self.state_delta_processor])
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 
@@ -1180,6 +1223,7 @@ class TestJournal(unittest.TestCase):
         # gossip layer.
 
         btm = BlockTreeManager()
+        journal = None
         try:
             journal = Journal(
                 block_store=btm.block_store,
@@ -1191,11 +1235,10 @@ class TestJournal(unittest.TestCase):
                 squash_handler=None,
                 identity_signing_key=btm.identity_signing_key,
                 chain_id_manager=None,
-                state_delta_processor=self.state_delta_processor,
                 data_dir=None,
                 config_dir=None,
-                permission_verifier=self.permission_verifier
-            )
+                permission_verifier=self.permission_verifier,
+                chain_observers=[self.state_delta_processor])
 
             self.gossip.on_batch_received = journal.on_batch_received
             self.gossip.on_block_received = journal.on_block_received
@@ -1223,7 +1266,7 @@ class TestJournal(unittest.TestCase):
 
 class TestTimedCache(unittest.TestCase):
     def test_cache(self):
-        bc = TimedCache(keep_time=1)
+        bc = TimedCache(keep_time=1, purge_frequency=0)
 
         with self.assertRaises(KeyError):
             bc["test"]
@@ -1243,7 +1286,7 @@ class TestTimedCache(unittest.TestCase):
         # use an invasive technique so that we don't have to sleep for
         # the item to expire
 
-        bc = TimedCache(keep_time=1)
+        bc = TimedCache(keep_time=1, purge_frequency=0)
 
         bc["test"] = "value"
         bc["test2"] = "value2"
@@ -1251,14 +1294,14 @@ class TestTimedCache(unittest.TestCase):
 
         # test that expired item i
         bc.cache["test"].timestamp = bc.cache["test"].timestamp - 2
-        bc.purge_expired()
+        bc["test2"] = "value2"  # set value to activate purge
         self.assertEqual(len(bc), 1)
         self.assertFalse("test" in bc)
         self.assertTrue("test2" in bc)
 
     def test_access_update(self):
 
-        bc = TimedCache(keep_time=1)
+        bc = TimedCache(keep_time=1, purge_frequency=0)
 
         bc["test"] = "value"
         bc["test2"] = "value2"
@@ -1267,7 +1310,7 @@ class TestTimedCache(unittest.TestCase):
         bc["test"] = "value"
         bc.cache["test"].timestamp = bc.cache["test"].timestamp - 2
         bc["test"]  # access to update timestamp
-        bc.purge_expired()
+        bc["test2"] = "value2"  # set value to activate purge
         self.assertEqual(len(bc), 2)
         self.assertTrue("test" in bc)
         self.assertTrue("test2" in bc)
@@ -1398,3 +1441,99 @@ class TestChainCommitState(unittest.TestCase):
         """
         self.assertFalse(self.commit_state.has_batch("missing"))
         self.assertFalse(self.commit_state.has_transaction("missing"))
+
+class TestBlockEventExtractor(unittest.TestCase):
+    def test_block_event_extractor(self):
+        """Test that a block_commit event is generated correctly."""
+        block_header = BlockHeader(
+            block_num=85,
+            state_root_hash="0987654321fedcba",
+            previous_block_id="0000000000000000")
+        block = BlockWrapper(Block(
+            header_signature="abcdef1234567890",
+            header=block_header.SerializeToString()))
+        extractor = BlockEventExtractor(block)
+        events = extractor.extract([EventSubscription(
+            event_type="block_commit")])
+        self.assertEqual(events, [
+            Event(
+                event_type="block_commit",
+                attributes=[
+                    Event.Attribute(key="block_id",value="abcdef1234567890"),
+                    Event.Attribute(key="block_num", value="85"),
+                    Event.Attribute(
+                        key="state_root_hash", value="0987654321fedcba"),
+                    Event.Attribute(
+                        key="previous_block_id",
+                        value="0000000000000000")])])
+
+class TestReceiptEventExtractor(unittest.TestCase):
+    def test_tf_events(self):
+        """Test that tf events are generated correctly."""
+        gen_data = [
+            ["test1", "test2"],
+            ["test3"],
+            ["test4", "test5", "test6"],
+        ]
+        event_sets = [
+            [
+                Event(event_type=event_type)
+                for event_type in events
+            ] for events in gen_data
+        ]
+        receipts = [
+            TransactionReceipt(events=events)
+            for events in event_sets
+        ]
+        extractor = ReceiptEventExtractor(receipts)
+
+        events = extractor.extract([])
+        self.assertEqual([], events)
+
+        events = extractor.extract([
+            EventSubscription(event_type="test1"),
+            EventSubscription(event_type="test5"),
+        ])
+        self.assertEqual(events, [event_sets[0][0], event_sets[2][1]])
+
+    def test_state_delta_events(self):
+        """Test that state_delta events are generated correctly."""
+        gen_data = [
+            [("a", b"a", StateChange.SET), ("b", b"b", StateChange.DELETE)],
+            [("a", b"a", StateChange.DELETE), ("d", b"d", StateChange.SET)],
+            [("e", b"e", StateChange.SET)],
+        ]
+        change_sets = [
+            [
+                StateChange(address=address, value=value, type=change_type)
+                for address, value, change_type in state_changes
+            ] for state_changes in gen_data
+        ]
+        receipts = [
+            TransactionReceipt(state_changes=state_changes)
+            for state_changes in change_sets
+        ]
+        extractor = ReceiptEventExtractor(receipts)
+
+        factory = EventFilterFactory()
+        events = extractor.extract([
+            EventSubscription(
+                event_type="state_delta",
+                filters=[factory.create("address", "a")]),
+            EventSubscription(
+                event_type="state_delta",
+                filters=[factory.create(
+                    "address", "[ce]", EventFilterType.regex_any)],
+            )
+        ])
+        self.assertEqual(events, [Event(
+            event_type="state_delta",
+            attributes=[
+                Event.Attribute(key="address", value=address)
+                for address in ["e", "d", "a", "b"]
+            ],
+            data=StateDeltaSet(state_changes=[
+                change_sets[2][0], change_sets[1][1],
+                change_sets[1][0], change_sets[0][1],
+            ]).SerializeToString(),
+        )])

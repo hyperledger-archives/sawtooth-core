@@ -68,14 +68,13 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         response_type (enum): Message status of the response
         tree (MerkleDatabase, optional): State tree to be queried
         block_store (BlockStoreAdapter, optional): Block chain to be queried
-        batch_cache (TimedCache, optional): A cache of Batches being processed
 
     Attributes:
         _status (class): Convenience ref to response_proto for accessing enums
     """
 
     def __init__(self, request_proto, response_proto, response_type,
-                 tree=None, block_store=None, batch_cache=None):
+                 tree=None, block_store=None):
         self._request_proto = request_proto
         self._response_proto = response_proto
         self._response_type = response_type
@@ -83,7 +82,6 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
 
         self._tree = tree
         self._block_store = block_store
-        self._batch_cache = batch_cache
 
     def handle(self, connection_id, message_content):
         """Handles parsing incoming requests, and wrapping the final response.

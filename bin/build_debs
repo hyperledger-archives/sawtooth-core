@@ -68,6 +68,8 @@ main() {
     # Group 3: Depends on 1 & 2
     build_pkg "families/settings"
 
+    build_pkg "families/identity"
+
     build_pkg "rest_api"
 
     build_pkg "sdk/examples/intkey_python"

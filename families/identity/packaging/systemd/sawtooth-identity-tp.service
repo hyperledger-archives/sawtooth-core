@@ -1,0 +1,12 @@
+[Unit]
+Description=Sawtooth TP Identity
+After=network.target
+
+[Service]
+User=sawtooth
+Group=sawtooth
+EnvironmentFile=-/etc/default/sawtooth-identity-tp
+ExecStart=/usr/bin/identity-tp $SAWTOOTH_IDENTITY_TP_ARGS
+
+[Install]
+WantedBy=multi-user.target

@@ -111,6 +111,9 @@ def start_rest_api(host, port, connection, timeout):
         '/transactions/{transaction_id}',
         handler.fetch_transaction)
 
+    app.router.add_get('/receipts', handler.list_receipts)
+    app.router.add_post('/receipts', handler.list_receipts)
+
     subscriber_handler = StateDeltaSubscriberHandler(connection)
     app.router.add_get('/subscriptions', subscriber_handler.subscriptions)
     app.on_shutdown.append(lambda app: subscriber_handler.on_shutdown())

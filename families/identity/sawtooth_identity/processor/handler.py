@@ -16,7 +16,7 @@
 import logging
 import hashlib
 
-from sawtooth_sdk.processor.state import StateEntry
+from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
@@ -192,6 +192,9 @@ def _set_policy(data, state):
                        address)
         raise InternalError('Unable to save policy {}'.format(new_policy.name))
 
+    state.add_event(
+        event_type="identity_update",
+        attributes=[("updated", new_policy.name)])
     LOGGER.debug("Set policy : \n%s", new_policy)
 
 
@@ -249,6 +252,9 @@ def _set_role(data, state):
         LOGGER.warning('Failed to set role %s at %s', role.name, address)
         raise InternalError('Unable to save role {}'.format(role.name))
 
+    state.add_event(
+        event_type="identity_update",
+        attributes=[("updated", role.name)])
     LOGGER.debug("Set role: \n%s", role)
 
 

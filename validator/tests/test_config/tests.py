@@ -194,6 +194,11 @@ class TestValidatorConfig(unittest.TestCase):
                 fd.write('seeds = ["tcp://peer:8802"]')
                 fd.write(os.linesep)
                 fd.write('scheduler = "serial"')
+                fd.write(os.linesep)
+                fd.write('[roles]')
+                fd.write(os.linesep)
+                fd.write('network = "trust"')
+                fd.write(os.linesep)
 
             config = load_toml_validator_config(filename)
             self.assertEqual(config.bind_network, "tcp://test:8800")
@@ -203,6 +208,8 @@ class TestValidatorConfig(unittest.TestCase):
             self.assertEqual(config.peers, ["tcp://peer:8801"])
             self.assertEqual(config.seeds, ["tcp://peer:8802"])
             self.assertEqual(config.scheduler, "serial")
+            self.assertEquals(config.roles, {"network": "trust"})
+
         finally:
             os.environ.clear()
             os.environ.update(orig_environ)

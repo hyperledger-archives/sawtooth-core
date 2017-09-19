@@ -189,22 +189,26 @@ func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermi
 // to the contract call.
 //
 // Returns the output from the EVM call.
-func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wait int) ([]byte, error) {
+func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wait int, chaining_enabled bool) (string, error) {
 	fromAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	toAddr, err := NewEvmAddrFromBytes(to)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	addresses := []string{
-		fromAddr.ToStateAddr().String(),
-		toAddr.ToStateAddr().String(),
-		// For checking global permissions
-		GlobalPermissionsAddress().ToStateAddr().String(),
+	var addresses []string
+	if chaining_enabled {
+		addresses = append(addresses, PREFIX)
+	} else {
+		addresses = append(addresses,
+			fromAddr.ToStateAddr().String(),
+			toAddr.ToStateAddr().String(),
+			// For checking global permissions
+			GlobalPermissionsAddress().ToStateAddr().String())
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
@@ -225,14 +229,12 @@ func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wa
 		},
 	}
 
-	body, err := c.sendTxn(transaction, encoder, wait)
+	txnId, err := c.sendTxn(transaction, encoder, wait)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	logger.Debug(body)
 
-	// In the future, this will return EVM output from the transaction
-	return []byte{}, nil
+	return txnId, nil
 }
 
 // SetPermissions updates the permissions of the account at the given address
@@ -284,10 +286,10 @@ func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, no
 	return nil
 }
 
-func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wait int) (*RespBody, error) {
+func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wait int) (string, error) {
 	payload, err := proto.Marshal(transaction)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't serialize transaction: %v", err)
+		return "", fmt.Errorf("Couldn't serialize transaction: %v", err)
 	}
 
 	txn := encoder.NewTransaction(payload, sdk.TransactionParams{})
@@ -303,12 +305,12 @@ func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wai
 
 	resp, err := http.Post(url, "application/octet-stream", buf)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't send transaction: %v", err)
+		return "", fmt.Errorf("Couldn't send transaction: %v", err)
 	}
 
 	body, err := ParseRespBody(resp)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if body.Data != nil {
@@ -317,21 +319,41 @@ func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wai
 		status := status_map["status"].(string)
 
 		if status == "PENDING" {
-			return nil, fmt.Errorf("Transaction was submitted, but client timed out before it was committed.")
+			return "", fmt.Errorf("Transaction was submitted, but client timed out before it was committed.")
 		}
 
 		if status == "INVALID" {
-			return nil, fmt.Errorf("Invalid transaction.")
+			return "", fmt.Errorf("Invalid transaction.")
 		}
 
 		if status == "UNKNOWN" {
-			return nil, fmt.Errorf("Something went wrong. Try resubmitting the transaction.")
+			return "", fmt.Errorf("Something went wrong. Try resubmitting the transaction.")
 		}
 	}
 
 	if body.Error.Code != 0 {
-		return nil, &body.Error
+		return "", &body.Error
 	}
 
-	return body, nil
+	return txn.HeaderSignature, nil
+}
+
+func (c *Client) GetReceipt(txnId string) (*SethTransactionReceipt, error) {
+	resp, err := http.Get(c.Url + "/receipts?id=" + txnId)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ParseReceiptBody(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	buf, err := base64.StdEncoding.DecodeString(body.Data[0].Data[0].Data)
+	if err != nil {
+		return nil, err
+	}
+	seth_receipt := &SethTransactionReceipt{}
+	err = proto.Unmarshal(buf, seth_receipt)
+	return seth_receipt, err
 }

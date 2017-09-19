@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from abc import ABCMeta
+from abc import abstractmethod
 import logging
 from threading import RLock
 
@@ -25,6 +28,7 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
+from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
@@ -134,6 +138,7 @@ class BlockValidator(object):
             'cur_chain': [],
             'committed_batches': [],
             'uncommitted_batches': [],
+            'execution_results': [],
         }
         self._permission_verifier = permission_verifier
 
@@ -209,10 +214,14 @@ class BlockValidator(object):
             state_hash = None
 
             for batch in blkw.batches:
-                result = scheduler.get_batch_execution_result(
+                batch_result = scheduler.get_batch_execution_result(
                     batch.header_signature)
-                if result is not None and result.is_valid:
-                    state_hash = result.state_hash
+                if batch_result is not None and batch_result.is_valid:
+                    txn_results = \
+                        scheduler.get_transaction_execution_results(
+                            batch.header_signature)
+                    self._result["execution_results"].extend(txn_results)
+                    state_hash = batch_result.state_hash
                 else:
                     return False
             if blkw.state_root_hash != state_hash:
@@ -335,7 +344,6 @@ class BlockValidator(object):
                             cur_blkw, new_blkw)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                self._done_cb(False, self._result)
                 raise BlockValidationAborted()
             new_chain.append(new_blkw)
             try:
@@ -455,6 +463,18 @@ class BlockValidator(object):
             self._done_cb(False, self._result)
 
 
+class ChainObserver(object, metaclass=ABCMeta):
+    @abstractmethod
+    def chain_update(self, block, receipts):
+        """This method is called by the ChainController on block boundaries.
+
+        Args:
+            block (:obj:`BlockWrapper`): The block that was just committed.
+            receipts (dict of {str: receipt}): Map of transaction signatures to
+                transaction receipts for all transactions in the block."""
+        raise NotImplementedError()
+
+
 class ChainController(object):
     """
     To evaluating new blocks to determine if they should extend or replace
@@ -470,39 +490,39 @@ class ChainController(object):
                  on_chain_updated,
                  squash_handler,
                  chain_id_manager,
-                 state_delta_processor,
                  identity_signing_key,
                  data_dir,
                  config_dir,
-                 permission_verifier):
+                 permission_verifier,
+                 chain_observers):
         """Initialize the ChainController
         Args:
-             block_cache: The cache of all recent blocks and the processing
-             state associated with them.
-             block_sender: an interface object used to send blocks to the
-             network.
-             state_view_factory: The factory object to create
-             executor: The thread pool to process block validations.
-             transaction_executor: The TransactionExecutor used to produce
-             schedulers for batch validation.
-             chain_head_lock: Lock to hold while the chain head is being
-             updated, this prevents other components that depend on the chain
-             head and the BlockStore from having the BlockStore change under
-             them.  This lock is only for core Journal components
-             (BlockPublisher and ChainController), other components should
-             handle block not found errors from the BlockStore explicitly.
-             on_chain_updated: The callback to call to notify the rest of the
-             system the head block in the chain has been changed.
-             squash_handler: a parameter passed when creating transaction
-             schedulers.
+            block_cache: The cache of all recent blocks and the processing
+                state associated with them.
+            block_sender: an interface object used to send blocks to the
+                network.
+            state_view_factory: The factory object to create
+            executor: The thread pool to process block validations.
+            transaction_executor: The TransactionExecutor used to produce
+                schedulers for batch validation.
+            chain_head_lock: Lock to hold while the chain head is being
+                updated, this prevents other components that depend on the
+                chain head and the BlockStore from having the BlockStore change
+                under them. This lock is only for core Journal components
+                (BlockPublisher and ChainController), other components should
+                handle block not found errors from the BlockStore explicitly.
+            on_chain_updated: The callback to call to notify the rest of the
+                 system the head block in the chain has been changed.
+                 squash_handler: a parameter passed when creating transaction
+                 schedulers.
             chain_id_manager: The ChainIdManager instance.
-            state_delta_processor (:obj:`StateDeltaProcessor`): The state
-                delta processor.
-             identity_signing_key: Private key for signing blocks.
-             data_dir: path to location where persistent data for the
-             consensus module can be stored.
-             config_dir: path to location where config data for the
-             consensus module can be found.
+            identity_signing_key: Private key for signing blocks.
+            data_dir: path to location where persistent data for the
+                consensus module can be stored.
+            config_dir: path to location where config data for the
+                consensus module can be found.
+            chain_observers (list of :obj:`ChainObserver`): A list of chain
+                observers.
         Returns:
             None
         """
@@ -529,8 +549,6 @@ class ChainController(object):
         # scheduled for validation.
         self._chain_id_manager = chain_id_manager
 
-        self._state_delta_processor = state_delta_processor
-
         try:
             self._chain_head = self._block_store.chain_head
             if self._chain_head is not None:
@@ -544,6 +562,7 @@ class ChainController(object):
 
         self._notify_on_chain_updated(self._chain_head)
         self._permission_verifier = permission_verifier
+        self._chain_observers = chain_observers
 
     @property
     def chain_head(self):
@@ -650,8 +669,10 @@ class ChainController(object):
                         [block.identifier[:8] for block in descendant_blocks])
                     self._submit_blocks_for_verification(descendant_blocks)
 
-                    # Publish the state deltas
-                    self._state_delta_processor.publish_deltas(new_block)
+                    receipts = self._make_receipts(result["execution_results"])
+                    # Update all chain observers
+                    for observer in self._chain_observers:
+                        observer.chain_update(new_block, receipts)
 
                 # If the block was determine to be invalid.
                 elif new_block.status == BlockStatus.Invalid:
@@ -773,3 +794,18 @@ class ChainController(object):
         else:
             LOGGER.warning("Cannot set initial chain head, this is not a "
                            "genesis block: %s", block)
+
+    def _make_receipts(self, results):
+        receipts = []
+        for result in results:
+            receipt = TransactionReceipt()
+            receipt.data.extend([
+                TransactionReceipt.Data(
+                    data_type=data_type, data=data)
+                for data_type, data in result.data
+            ])
+            receipt.state_changes.extend(result.state_changes)
+            receipt.events.extend(result.events)
+            receipt.transaction_id = result.signature
+            receipts.append(receipt)
+        return receipts

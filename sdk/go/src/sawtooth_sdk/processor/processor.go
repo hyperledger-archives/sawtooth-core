@@ -172,7 +172,7 @@ func (self *TransactionProcessor) ShutdownOnSignal(siglist ...os.Signal) {
 }
 
 // Handle incoming messages from the validator
-func receiveValidator(ids map[string]string, validator, workers *messaging.Connection, queue chan *validator_pb2.Message) {
+func receiveValidator(ids map[string]string, validator, workers messaging.Connection, queue chan *validator_pb2.Message) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Errorf(
@@ -262,7 +262,7 @@ func receiveValidator(ids map[string]string, validator, workers *messaging.Conne
 }
 
 // Handle incoming messages from the workers
-func receiveWorkers(ids map[string]string, validator, workers *messaging.Connection, workersLeft *uint) {
+func receiveWorkers(ids map[string]string, validator, workers messaging.Connection, workersLeft *uint) {
 	// Receive a mesasge from the workers
 	workerId, data, err := workers.RecvData()
 	if err != nil {
@@ -298,7 +298,7 @@ func receiveWorkers(ids map[string]string, validator, workers *messaging.Connect
 }
 
 // Register a handler with the validator
-func register(validator *messaging.Connection, handler TransactionHandler, queue chan *validator_pb2.Message) error {
+func register(validator messaging.Connection, handler TransactionHandler, queue chan *validator_pb2.Message) error {
 	regRequest := &processor_pb2.TpRegisterRequest{
 		Family:     handler.FamilyName(),
 		Version:    handler.FamilyVersion(),

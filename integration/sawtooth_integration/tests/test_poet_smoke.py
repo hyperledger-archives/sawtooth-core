@@ -19,10 +19,8 @@ import shlex
 import time
 import logging
 
-from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
-from sawtooth_cli.rest_client import RestClient
-
+from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -32,11 +30,11 @@ VALIDATOR_COUNT = 3
 
 # Wait times and batch count can be increased for more rigor.
 INITIAL_WAIT_TIME = 30
-TIME_BETWEEN_BATCHES = 1
 CATCH_UP_TIME = 30
 TRY_AGAIN_TIME = 60
 
 BATCH_COUNT = 20
+WAIT = 120
 
 class TestPoetSmoke(unittest.TestCase):
     def setUp(self):
@@ -45,7 +43,7 @@ class TestPoetSmoke(unittest.TestCase):
 
         wait_for_rest_apis(endpoints, tries=10)
 
-        self.clients = [IntkeyClient('http://' + endpoint)
+        self.clients = [IntkeyClient('http://' + endpoint, WAIT)
                         for endpoint in endpoints]
 
     def test_poet_smoke(self):
@@ -73,21 +71,18 @@ class TestPoetSmoke(unittest.TestCase):
 
         LOGGER.info('Sending populate txns')
         self.clients[0].send_txns(populate)
-        time.sleep(TIME_BETWEEN_BATCHES)
 
         # send txns to each validator in succession
         for i in range(BATCH_COUNT):
             for client in self.clients:
                 LOGGER.info('Sending batch {} @ {}'.format(i, client.url))
                 client.send_txns(increment)
-                time.sleep(TIME_BETWEEN_BATCHES)
 
         # send txns to one validator at a time
         for client in self.clients:
             for i in range(BATCH_COUNT):
                 LOGGER.info('Sending batch {} @ {}'.format(i, client.url))
                 client.send_txns(increment)
-                time.sleep(TIME_BETWEEN_BATCHES)
 
         # wait for validators to catch up
         time.sleep(CATCH_UP_TIME)
@@ -125,31 +120,6 @@ class TestPoetSmoke(unittest.TestCase):
             self.assertTrue(
                 any(sig in sig_list for sig in sig_list_0),
                 'Validators are not in consensus')
-
-
-class IntkeyClient(RestClient):
-    def __init__(self, url):
-        super().__init__(url)
-        self.url = url
-
-    def send_txns(self, txns):
-        batch = IntkeyMessageFactory().create_batch(txns)
-        self.send_batches(batch)
-
-    def recent_block_signatures(self, tolerance):
-        signatures = self.list_block_signatures()
-        return self.list_block_signatures()[:tolerance]
-
-    def list_block_signatures(self):
-        return [block['header_signature'] for block in self.list_blocks()]
-
-    def calculate_tolerance(self):
-        length = len(self.list_blocks())
-        # the most recent nth of the chain, at least 2 blocks
-        return max(
-            2,
-            length // 5)
-
 
 def _make_txns():
     fruits = 'fig', 'quince', 'medlar', 'cornel', 'pomegranate'

@@ -203,6 +203,48 @@ sawtooth config settings list
    :language: console
    :linenos:
 
+sawtooth identity
+=================
+
+.. literalinclude:: output/sawtooth_identity_usage.out
+  :language: console
+  :linenos:
+
+sawtooth identity policy
+========================
+
+.. literalinclude:: output/sawtooth_identity_policy_usage.out
+   :language: console
+   :linenos:
+
+sawtooth identity policy create
+===============================
+
+.. literalinclude:: output/sawtooth_identity_policy_create_usage.out
+  :language: console
+  :linenos:
+
+sawtooth identity policy list
+=============================
+
+.. literalinclude:: output/sawtooth_identity_policy_list_usage.out
+  :language: console
+  :linenos:
+
+sawtooth identity role create
+=============================
+
+.. literalinclude:: output/sawtooth_identity_policy_create_usage.out
+  :language: console
+  :linenos:
+
+sawtooth identity role list
+===========================
+
+.. literalinclude:: output/sawtooth_identity_role_list_usage.out
+  :language: console
+  :linenos:
+
 sawtooth state
 ==============
 

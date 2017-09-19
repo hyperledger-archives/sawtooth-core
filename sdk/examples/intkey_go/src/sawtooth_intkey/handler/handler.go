@@ -66,7 +66,7 @@ func (self *IntkeyHandler) Namespaces() []string {
 	return []string{self.namespace}
 }
 
-func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.State) error {
+func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.Context) error {
 	payloadData := request.GetPayload()
 	if payloadData == nil {
 		return &processor.InvalidTransactionError{Msg: "Must contain payload"}

@@ -10,4 +10,4 @@ System Administrator's Guide
    sysadmin_guide/systemd
    sysadmin_guide/log_configuration
    sysadmin_guide/rest_auth_proxy
-   sysadmin_guide/transactor_permissioning
+   sysadmin_guide/permissioning

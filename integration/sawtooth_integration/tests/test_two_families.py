@@ -36,6 +36,7 @@ LOGGER.setLevel(logging.INFO)
 
 INTKEY_PREFIX = '1cf126'
 XO_PREFIX = '5b7349'
+WAIT = 300
 
 class TestTwoFamilies(unittest.TestCase):
 
@@ -90,14 +91,19 @@ class TestTwoFamilies(unittest.TestCase):
                 how_many_updates += 1
 
             self.verify_state_after_n_updates(how_many_updates)
-            self.verify_all_state_xo_or_intkey()
 
     def verify_empty_state(self):
         LOGGER.debug('Verifying empty state')
+
         self.assertEqual(
             [],
-            _get_state(),
-            'Empty state error')
+            _get_intkey_state(),
+            'Expected intkey state to be empty')
+
+        self.assertEqual(
+            [],
+            _get_xo_state(),
+            'Expected xo state to be empty')
 
     def verify_state_after_n_updates(self, num):
         LOGGER.debug('Verifying state after {} updates'.format(num))
@@ -116,18 +122,6 @@ class TestTwoFamilies(unittest.TestCase):
             xo_data,
             self.xo_verifier.state_after_n_updates(num),
             'Wrong xo state')
-
-    def verify_all_state_xo_or_intkey(self):
-        state = _get_state()
-        xo_state = _get_xo_state()
-        intkey_state = _get_intkey_state()
-
-        for entry in state:
-            if entry not in intkey_state:
-                self.assertIn(
-                    entry,
-                    xo_state,
-                    'Unknown state entry')
 
 
 # sending commands
@@ -149,7 +143,10 @@ def _send_intkey_cmd(txns):
 
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
-    response = _query_rest_api('/batches', data=batch, headers=headers)
+    response = _query_rest_api(
+        '/batches?wait={}'.format(WAIT),
+        data=batch,
+        headers=headers)
     return response
 
 def _get_intkey_data():
@@ -178,10 +175,6 @@ def _get_state_prefix(prefix):
     response = _query_rest_api('/state?address=' + prefix)
     return response['data']
 
-def _get_state():
-    response = _query_rest_api('/state')
-    return response['data']
-
 def _query_rest_api(suffix='', data=None, headers={}):
     url = 'http://rest-api:8080' + suffix
     request = urllib.request.Request(url, data, headers)
@@ -193,12 +186,12 @@ def _query_rest_api(suffix='', data=None, headers={}):
 class XoTestVerifier:
     def __init__(self):
         self.xo_cmds = (
-            'xo create game',
-            'xo take game 5',
-            'xo take game 5',
-            'xo take game 9',
-            'xo create game',
-            'xo take game 4',
+            'xo create game --wait {}'.format(WAIT),
+            'xo take game 5 --wait {}'.format(WAIT),
+            'xo take game 5 --wait {}'.format(WAIT),
+            'xo take game 9 --wait {}'.format(WAIT),
+            'xo create game --wait {}'.format(WAIT),
+            'xo take game 4 --wait {}'.format(WAIT),
         )
 
     def state_after_n_updates(self, num):

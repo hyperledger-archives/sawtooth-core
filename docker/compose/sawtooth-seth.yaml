@@ -36,6 +36,27 @@ services:
     command: seth-tp -vv tcp://validator:4004
     stop_signal: SIGKILL
 
+  block-info-tp:
+    image: sawtooth-block-info-tp:latest
+    volumes:
+      - ../../:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: block-info-tp -vv tcp://validator:4004
+    stop_signal: SIGKILL
+
+  settings-tp:
+    image: sawtooth-settings-tp:latest
+    volumes:
+      - ../../:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    entrypoint: settings-tp -vv tcp://validator:4004
+
   validator:
     image: sawtooth-validator:latest
     volumes:
@@ -43,14 +64,27 @@ services:
     expose:
       - 4004
       - 8800
+    ports:
+      - 4004
+      - 8800
     command: "bash -c \"\
-        sawtooth keygen --key-dir /project/sawtooth-core sawtooth && \
+        if [ ! -f sawtooth.priv ]; then sawtooth keygen --key-dir /project/sawtooth-core sawtooth; fi && \
         sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawtooth config genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawtooth config proposal create \
+          -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.validator.batch_injectors=block_info \
+          -o config.batch && \
+        sawtooth admin genesis \
+          config-genesis.batch config.batch && \
         sawtooth-validator --endpoint tcp://validator:8800 -v \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
     \""
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   rest-api:
@@ -59,6 +93,8 @@ services:
       - ../../:/project/sawtooth-core
     expose:
       - 4004
+      - 8080
+    ports:
       - 8080
     depends_on:
      - validator

@@ -245,3 +245,36 @@ class StateNotFound(_ApiError):
     status_code = 404
     title = 'State Not Found'
     message = ('There is no state data at the address specified.')
+
+
+class ReceiptNotFound(_ApiError):
+    api_code = 80
+    status_code = 404
+    title = 'Transaction Receipt Not Found'
+    message = ('There is no transaction receipt for the transaction id '
+               'specified in the receipt store.')
+
+
+class ReceiptWrongContentType(_ApiError):
+    api_code = 81
+    status_code = 400
+    title = 'Wrong Content Type'
+    message = ("Requests for transaction receipts sent as a POST must have a "
+               "'Content-Type' header of 'application/json'.")
+
+
+class ReceiptBodyInvalid(_ApiError):
+    api_code = 82
+    status_code = 400
+    title = 'Bad Receipts Request'
+    message = ('Requests for transaction receipts sent as a POST must have a '
+               'JSON formatted body with an array of at least one id string.')
+
+
+class ReceiptIdQueryInvalid(_ApiError):
+    api_code = 83
+    status_code = 400
+    title = 'Id Query Invalid or Missing'
+    message = ("Requests for transaction receipts sent as a GET request must "
+               "have an 'id' query parameter with a comma-separated list of "
+               "at least one transaction id.")

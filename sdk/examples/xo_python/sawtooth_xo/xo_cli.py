@@ -135,6 +135,13 @@ def add_take_parser(subparsers, parent_parser):
         type=int,
         help='the square number to take')
 
+    parser.add_argument(
+        '--wait',
+        nargs='?',
+        const=sys.maxsize,
+        type=int,
+        help='wait for take to commit, set an integer to specify a timeout')
+
 
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
@@ -336,10 +343,16 @@ def do_take(args, config):
 
     client = XoClient(base_url=url, keyfile=key_file)
 
-    response = client.take(
-        name, space,
-        auth_user=auth_user,
-        auth_password=auth_password)
+    if args.wait and args.wait > 0:
+        response = client.take(
+            name, space, wait=args.wait,
+            auth_user=auth_user,
+            auth_password=auth_password)
+    else:
+        response = client.take(
+            name, space,
+            auth_user=auth_user,
+            auth_password=auth_password)
 
     print("Response: {}".format(response))
 

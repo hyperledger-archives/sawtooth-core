@@ -16,6 +16,6 @@
 
 __all__ = [
     'core',
-    'state',
+    'context',
     'exceptions'
 ]
