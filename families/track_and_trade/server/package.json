@@ -9,7 +9,8 @@
   "scripts": {
     "start": "rethinkdb & nodemon index.js",
     "init": "rethinkdb & node ./scripts/bootstrap_database.js && kill $! || true",
-    "test": "standard"
+    "test": "standard",
+    "make-fish": "node ./scripts/create_fish_type_batch.js > fish.batch"
   },
   "repository": {
     "type": "git",
