@@ -105,7 +105,7 @@ const submit = payload => {
       return requestPassword()
         .then(password => {
           const encryptedKey = localStorage.getItem(STORAGE_KEY)
-          setPrivateKey(encryptedKey, password)
+          setPrivateKey(password, encryptedKey)
         })
     })
     .then(() => {
