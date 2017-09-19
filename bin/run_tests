@@ -282,6 +282,7 @@ test_validator() {
     run_docker_test test_shutdown_smoke.yaml
     copy_coverage .coverage.test_shutdown_smoke
     run_docker_test test_events_and_receipts
+    copy_coverage .coverage.test_events_and_receipts
 }
 
 test_go_sdk() {
