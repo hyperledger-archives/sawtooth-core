@@ -661,7 +661,9 @@ class Topology(Thread):
         endpoint = self._network.connection_id_to_endpoint(connection_id)
         endpoint_info = self._temp_endpoints.get(endpoint)
 
-        LOGGER.debug("Endpoint has completed authorization: %s", endpoint)
+        LOGGER.debug("Endpoint has completed authorization: %s (id: %s)",
+                     endpoint,
+                     connection_id)
         if endpoint_info is None:
             LOGGER.debug("Received unknown endpoint: %s", endpoint)
 
