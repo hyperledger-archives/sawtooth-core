@@ -95,8 +95,37 @@ const listQuery = queryWithCurrentBlock(currentBlock => {
     })).coerceTo('array')
 })
 
+const fetchQuery = (publicKey, auth) => {
+  return queryWithCurrentBlock(
+    currentBlock => {
+      return getTable('agents', currentBlock)
+        .filter(hasPublicKey(publicKey))
+        .pluck('name', 'publicKey')
+        .nth(0)
+        .do(
+          agent => {
+            return r.branch(
+              auth,
+              agent.merge(
+                fetchUser(publicKey)),
+              agent)
+          })
+    }
+  )
+}
+
+const fetchUser = publicKey => {
+  return r.table('users')
+    .filter(hasPublicKey(publicKey))
+    .pluck('username', 'email', 'encryptedKey')
+    .nth(0)
+}
+
 const list = () => db.runQuery(listQuery)
 
+const fetch = (publicKey, auth) => db.runQuery(fetchQuery(publicKey, auth))
+
 module.exports = {
-  list
+  list,
+  fetch,
 }

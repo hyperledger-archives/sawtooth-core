@@ -50,6 +50,7 @@ class TrackAndTradeMessageFactory:
             public=public)
 
         self.public_key = self._factory.get_public_key()
+        self.private_key = self._factory.get_private_key()
         self.signer_address = addressing.make_agent_address(self.public_key)
 
     def create_agent(self, name):
