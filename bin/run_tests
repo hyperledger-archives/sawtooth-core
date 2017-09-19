@@ -30,6 +30,7 @@ MODULE_LIST="
     java_sdk
     javascript_sdk
     python_sdk
+    rust_sdk
     seth
     integration
 "
@@ -184,6 +185,9 @@ main() {
                 python_sdk)
                     test_python_sdk
                     ;;
+                rust_sdk)
+                    test_rust_sdk
+                    ;;
                 integration)
                     test_integration
                     ;;
@@ -328,6 +332,10 @@ test_python_sdk() {
     copy_coverage .coverage.test_xo_smoke_python
     run_docker_test test_two_families
     copy_coverage .coverage.two_families
+}
+
+test_rust_sdk() {
+    run_docker_test ./sdk/rust/unit_rust_sdk.yaml
 }
 
 test_seth() {
