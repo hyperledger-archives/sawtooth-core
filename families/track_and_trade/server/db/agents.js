@@ -20,8 +20,6 @@ const r = require('rethinkdb')
 
 const db = require('./')
 
-const MAX_BLOCK = Number.MAX_SAFE_INTEGER
-
 const hasCurrentBlock = currentBlock => obj => {
   return r.and(
     obj('startBlockNum').le(currentBlock),
@@ -67,36 +65,37 @@ const isReporter = agent => property => {
     ))
 }
 
-const getAgentsQuery = blocks => {
-  return blocks
+const queryWithCurrentBlock = query => {
+  return r.table('blocks')
     .orderBy(r.desc('blockNum'))
     .nth(0)('blockNum')
-    .do(currentBlock => {
-      return r.table('agents')
-        .filter(hasCurrentBlock(currentBlock))
-        .map(agent => r.expr({
-          'name': getName(agent),
-          'key': getPublicKey(agent),
-          'owns': r.table('records')
-            .filter(hasCurrentBlock(currentBlock))
-            .filter(isRecordOwner(agent))
-            .map(getRecordId)
-            .distinct(),
-          'custodian': r.table('records')
-            .filter(hasCurrentBlock(currentBlock))
-            .filter(isRecordCustodian(agent))
-            .map(getRecordId)
-            .distinct(),
-          'reports': r.table('properties')
-            .filter(hasCurrentBlock(currentBlock))
-            .filter(isReporter(agent))
-            .map(getRecordId)
-            .distinct()
-        }))
-    })
+    .do(query)
 }
 
-const list = () => db.queryTable('blocks', getAgentsQuery)
+const getTable = (tableName, currentBlock) =>
+      r.table(tableName).filter(hasCurrentBlock(currentBlock))
+
+const listQuery = queryWithCurrentBlock(currentBlock => {
+  return getTable('agents', currentBlock)
+    .map(agent => r.expr({
+      'name': getName(agent),
+      'key': getPublicKey(agent),
+      'owns': getTable('records', currentBlock)
+        .filter(isRecordOwner(agent))
+        .map(getRecordId)
+        .distinct(),
+      'custodian': getTable('records', currentBlock)
+        .filter(isRecordCustodian(agent))
+        .map(getRecordId)
+        .distinct(),
+      'reports': getTable('properties', currentBlock)
+        .filter(isReporter(agent))
+        .map(getRecordId)
+        .distinct()
+    })).coerceTo('array')
+})
+
+const list = () => db.runQuery(listQuery)
 
 module.exports = {
   list

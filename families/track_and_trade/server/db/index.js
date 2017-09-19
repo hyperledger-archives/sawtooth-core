@@ -38,6 +38,14 @@ const connect = () => {
     })
 }
 
+const runQuery = query => {
+  return query
+    .run(connection)
+    .catch(err => {
+      console.error(err.message)
+    })
+}
+
 // Runs a specified query against a database table
 const queryTable = (table, query, removeCursor = true) => {
   return query(r.table(table))
@@ -104,6 +112,7 @@ const validate = (input, schema) => {
 
 module.exports = {
   connect,
+  runQuery,
   queryTable,
   modifyTable,
   insertTable,
