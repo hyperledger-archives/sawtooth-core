@@ -23,7 +23,7 @@ const bodyParser = require('body-parser')
 const auth = require('./auth')
 const users = require('./users')
 const { Unauthorized } = require('./errors')
-const agents = require('../db/agents')
+const agents = require('./agents')
 const state = require('../db/state')
 const blockchain = require('../blockchain/')
 const batcher = require('../blockchain/batcher')
@@ -133,6 +133,7 @@ router.use(initInternalParams)
 router.use(authHandler)
 
 router.get('/agents', handle(agents.list))
+router.get('/agents/:publicKey', handle(agents.fetch))
 
 router.post('/authorization', handleBody(auth.authorize))
 

@@ -44,6 +44,7 @@ class TTClient(RestClient):
     def __init__(self, url=URL):
         self.factory = TrackAndTradeMessageFactory()
         self.public_key = self.factory.public_key
+        self.private_key = self.factory.private_key
 
         self.auth_token = None
 
@@ -109,21 +110,31 @@ class TTClient(RestClient):
     def get_agents(self):
         return self._submit_request(url=SERVER_URL + '/api/agents')[1]
 
-    def post_user(self, username, password, email):
+    def get_agent(self, public_key):
+        return self._submit_request(
+            url=SERVER_URL + '/api/agents/' + public_key,
+            headers={'Authorization': self.auth_token},
+        )[1]
+
+    def get_records(self):
+        return self._submit_request(url=SERVER_URL + '/api/records')[1]
+
+    def post_user(self, username):
         response = self._submit_request(
             url=SERVER_URL + '/api/users',
             method='POST',
             headers={'Content-Type': 'application/json'},
             data=json.dumps({
                 'username': username,
-                'password': password,
-                'email': email,
+                'email': '{}@website.com'.format(username),
+                'password': '{}pass'.format(username),
                 'publicKey': self.public_key,
+                'encryptedKey': self.private_key,
             }),
         )
 
         if self.auth_token is None:
-            self.auth_token = response['authorization']
+            self.auth_token = response[1]['authorization']
 
 
 class TestTrackAndTrade(unittest.TestCase):
@@ -559,6 +570,36 @@ class TestTrackAndTrade(unittest.TestCase):
                     [],
                 ],
             ]
+        )
+
+
+        jin.post_user('jin')
+
+        agent_auth_assertion = jin.get_agent(jin.public_key)
+
+        log_json(agent_auth_assertion)
+
+        self.assertEqual(
+            agent_auth_assertion,
+            {
+                'email': 'jin@website.com',
+                'encryptedKey': jin.private_key,
+                'name': 'Jin Kwon',
+                'publicKey': jin.public_key,
+                'username': 'jin',
+            }
+        )
+
+        agent_no_auth_assertion = sun.get_agent(jin.public_key)
+
+        log_json(agent_no_auth_assertion)
+
+        self.assertEqual(
+            agent_no_auth_assertion,
+            {
+                'name': 'Jin Kwon',
+                'publicKey': jin.public_key,
+            }
         )
 
 
