@@ -14,9 +14,31 @@
  * limitations under the License.
  * ----------------------------------------------------------------------------
  */
+'use strict'
 
-const AppState = {
-  signingKey: null
+const m = require('mithril')
+
+const Dashboard = {
+  view (vnode) {
+    return m('.container', [
+      m('h1', 'FishNet'),
+      m('.page-list',
+        m('h3', 'Pages'),
+        m('ul',
+          m('li',
+            m('a[href="/create"]',
+              { oncreate: m.route.link },
+              'Create Fish')),
+          m('li',
+            m('a[href="/signup"]',
+              { oncreate: m.route.link },
+              'Signup Agent')),
+          m('li',
+            m('a[href="/login"]',
+              { oncreate: m.route.link },
+              'Login Agent'))))
+    ])
+  }
 }
 
-module.exports = AppState
+module.exports = Dashboard
