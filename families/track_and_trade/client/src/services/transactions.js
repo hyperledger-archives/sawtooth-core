@@ -87,7 +87,7 @@ const setPrivateKey = (password, encryptedKey) => {
 const clearPrivateKey = () => {
   const encryptedKey = localStorage.getItem(STORAGE_KEY)
 
-  localStorage.clearItem(STORAGE_KEY)
+  localStorage.clear(STORAGE_KEY)
   txnEncoder = null
 
   return encryptedKey
