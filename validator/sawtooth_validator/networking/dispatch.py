@@ -119,6 +119,11 @@ class Dispatcher(Thread):
                     self._msg_type_handlers[message.message_type])
             )
             self._in_queue.put_nowait(message_id)
+
+            queue_size = self._in_queue.qsize()
+            if queue_size > 10:
+                LOGGER.debug("Dispatch incoming queue size: %s",
+                             queue_size)
         else:
             LOGGER.info("received a message of type %s "
                         "from %s but have no handler for that type",
