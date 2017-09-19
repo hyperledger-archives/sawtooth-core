@@ -28,8 +28,8 @@
 
 FROM ubuntu:xenial
 
-RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/apt/sources.list \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 44FC67F19B2466EA \
+RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+ && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
  && apt-get install -y -q --allow-downgrades \
     build-essential \
@@ -54,7 +54,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
     python3-multidict=2.1.4-1 \
     python3-netifaces=0.10.4-0.1build2 \
     python3-pip \
-    python3-protobuf=3.2.0-1 \
+    python3-protobuf=3.2.0-0~maarten0 \
     python3-pycares=2.1.1-1 \
     python3-pytest-runner=2.6.2-1 \
     python3-pytest=2.9.0-1 \
