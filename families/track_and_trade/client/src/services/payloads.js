@@ -93,4 +93,11 @@ const actionMethods = _.reduce(actionMap, (methods, value, key) => {
   return _.set(methods, key, _.partial(encode, key))
 }, {})
 
+// Add enums on an action by action basis
+actionMethods.createRecord.enum = PropertySchema.DataType
+actionMethods.createRecordType.enum = PropertySchema.DataType
+actionMethods.updateProperties.enum = PropertySchema.DataType
+actionMethods.createProposal.enum = Proposal.Role
+actionMethods.answerProposal.enum = actionMap.answerProposal.proto.Response
+
 module.exports = _.assign({ encode }, actionMethods)
