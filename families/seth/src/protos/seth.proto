@@ -162,3 +162,11 @@ message SetPermissionsTxn {
     // The Burrow-EVM permissions to assign to this account
     EvmPermissions permissions = 3;
 }
+
+// -- Execution Results --
+
+message SethTransactionReceipt {
+    bytes contract_address = 1; // A contract address, if created
+    uint64 gas_used = 2; // The gas consumed by this transaction
+    bytes return_value = 3; // The return value of the contract execution
+}

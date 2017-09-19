@@ -256,8 +256,8 @@ class TestSchedulers(unittest.TestCase):
         """Tests that transactions that are already determined to be in an
         invalid batch due to a prior transaction being invalid, won't run.
           x
-        [ A B ] [ C D ]
-                  B
+        [ A B C ] [ D E F]
+                    B
         Notes:
              1. Create an invalid transaction, txn A, and put it in a batch
                 with txn B. Create a transaction, txn C, that depends on txn B
@@ -285,23 +285,33 @@ class TestSchedulers(unittest.TestCase):
             private_key=private_key,
             public_key=public_key)
 
-        batch_1 = create_batch(transactions=[txn_a, txn_b],
-                               private_key=private_key,
-                               public_key=public_key)
-
         txn_c, _ = create_transaction(
             payload='C'.encode(),
             private_key=private_key,
-            public_key=public_key,
-            dependencies=[txn_b.header_signature])
+            public_key=public_key)
+
+        batch_1 = create_batch(transactions=[txn_a, txn_b, txn_c],
+                               private_key=private_key,
+                               public_key=public_key)
 
         txn_d, _ = create_transaction(
             payload='D'.encode(),
             private_key=private_key,
+            public_key=public_key,
+            dependencies=[txn_b.header_signature])
+
+        txn_e, _ = create_transaction(
+            payload='E'.encode(),
+            private_key=private_key,
+            public_key=public_key)
+
+        txn_f, _ = create_transaction(
+            payload='F'.encode(),
+            private_key=private_key,
             public_key=public_key)
 
         batch_2 = create_batch(
-            transactions=[txn_c, txn_d],
+            transactions=[txn_d, txn_e, txn_f],
             private_key=private_key,
             public_key=public_key)
 
@@ -327,6 +337,16 @@ class TestSchedulers(unittest.TestCase):
                 txn_signature=txn_id,
                 is_valid=validity,
                 context_id=None)
+
+        scheduler_iter2 = iter(scheduler)
+        txn_info_from_2 = next(scheduler_iter2)
+        txn_id_from_2 = txn_info_from_2.txn.header_signature
+        self.assertEqual(txn_id_from_2, txn_a.header_signature,
+                         "Only Transaction A is run, not "
+                         "txn {}".format(txn_info_from_2.txn.payload))
+        with self.assertRaises(StopIteration):
+            next(scheduler_iter2)
+
 
     def test_serial_completion_on_finalize(self):
         """Tests that iteration will stop when finalized is called on an
@@ -566,7 +586,6 @@ class TestSchedulers(unittest.TestCase):
         context_manager, scheduler = self._setup_serial_scheduler()
         self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
-    @unittest.skip("STL-486 Parallel-fail fast")
     def test_parallel_add_valid_batch_invalid_batch(self):
         """Tests the squash function. That the correct state hash is found
         at the end of valid and invalid batches, similar to block publishing.
@@ -641,10 +660,8 @@ class TestSchedulers(unittest.TestCase):
         sched2 = iter(scheduler)
         # 3)
         txn_info_a = next(sched2)
-        txn_a_header = transaction_pb2.TransactionHeader()
-        txn_a_header.ParseFromString(txn_info_a.txn.header)
-        inputs_or_outputs = list(txn_a_header.inputs)
-        address_a = inputs_or_outputs[0]
+
+        address_a = _get_address_from_txn(txn_info_a)
 
         txn_info_b = next(sched2)
         address_b = _get_address_from_txn(txn_info_b)
@@ -1092,8 +1109,13 @@ class TestParallelScheduler(unittest.TestCase):
             self.assertEqual(scheduled_txn_info, next(iterable2))
             self.assertIsNotNone(scheduled_txn_info)
             self.assertEqual(txn.payload, scheduled_txn_info.txn.payload)
+            c_id = self.context_manager.create_context(
+                self.first_state_root,
+                base_contexts=scheduled_txn_info.base_context_ids,
+                inputs=[],
+                outputs=[])
             self.scheduler.set_transaction_execution_result(
-                txn.header_signature, False, None)
+                txn.header_signature, True, c_id)
 
         self.scheduler.finalize()
         self.assertTrue(self.scheduler.complete(block=False))

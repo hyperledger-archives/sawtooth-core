@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import time
 import unittest
 import logging
 import json
@@ -30,6 +29,7 @@ from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
+WAIT = 300
 
 
 def get_blocks():
@@ -56,7 +56,8 @@ def get_state(address):
 
 def post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
-    response = query_rest_api('/batches', data=batch, headers=headers)
+    response = query_rest_api(
+        '/batches?wait={}'.format(WAIT), data=batch, headers=headers)
     return response
 
 
@@ -83,7 +84,6 @@ class TestBlockInfoInjector(unittest.TestCase):
         # Assert all block info transactions are committed
         for i in range(len(batches)):
             post_batch(batches[i])
-            time.sleep(0.5)
             block_info = get_block_info(i)
             self.assertEqual(block_info.block_num, i)
 

@@ -13,6 +13,10 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
+
+ # This test uses deletes along with invalid txns, chained dependencies,
+ # and txns with addresses that make them the predecessor of all later txns.
+
 ---
 -  #------------------------- Batch 1
   -

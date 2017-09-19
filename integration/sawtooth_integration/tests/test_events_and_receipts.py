@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import time
 import unittest
 import logging
 import json
@@ -36,6 +35,7 @@ from sawtooth_validator.protobuf import state_delta_pb2
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
+WAIT = 300
 
 
 class TestEventsAndReceipts(unittest.TestCase):
@@ -87,7 +87,7 @@ class TestEventsAndReceipts(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.batch_submitter = BatchSubmitter()
+        cls.batch_submitter = BatchSubmitter(WAIT)
 
     def setUp(self):
         self.url = "tcp://validator:4004"
@@ -180,13 +180,17 @@ class TestEventsAndReceipts(unittest.TestCase):
             events_pb2.ClientEventsUnsubscribeResponse.OK)
 
 class BatchSubmitter:
-    def __init__(self):
+    def __init__(self, timeout):
         self.batches = []
         self.imf = IntkeyMessageFactory()
+        self.timeout = timeout
 
     def _post_batch(self, batch):
         headers = {'Content-Type': 'application/octet-stream'}
-        response = self._query_rest_api('/batches', data=batch, headers=headers)
+        response = self._query_rest_api(
+            '/batches?wait={}'.format(self.timeout),
+            data=batch,
+            headers=headers)
         return response
 
     def _query_rest_api(self, suffix='', data=None, headers={}):
@@ -204,5 +208,4 @@ class BatchSubmitter:
         batch_list.ParseFromString(batch_list_bytes)
         self.batches.append(batch_list.batches[0])
         self._post_batch(batch_list_bytes)
-        time.sleep(0.5)
         return len(self.batches) - 1

@@ -57,6 +57,14 @@ class TestIdentity(TransactionProcessorTestCase):
             self.factory.create_set_role_response(key),
             recieved)
 
+    def _expect_add_event(self, key):
+        recieved = self.validator.expect(
+            self.factory.create_add_event_request(key))
+
+        self.validator.respond(
+            self.factory.create_add_event_response(),
+            recieved)
+
     def _expect_ok(self):
         self.validator.expect(self.factory.create_tp_response("OK"))
 
@@ -88,6 +96,7 @@ class TestIdentity(TransactionProcessorTestCase):
         self._expect_setting_get(ALLOWED_SIGNER_ADDRESS)
         self._expect_policy_get("policy1")
         self._expect_policy_set("policy1", "PERMIT_KEY *")
+        self._expect_add_event("policy1")
         self._expect_ok()
 
     def test_set_role(self):
@@ -99,6 +108,7 @@ class TestIdentity(TransactionProcessorTestCase):
         self._expect_policy_get("policy1", "PERMIT_KEY *")
         self._expect_role_get("role1")
         self._expect_role_set("role1", "policy1")
+        self._expect_add_event("role1")
         self._expect_ok()
 
     def test_set_role_bad_signer(self):

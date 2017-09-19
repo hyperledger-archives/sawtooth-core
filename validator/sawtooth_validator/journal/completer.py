@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import time
 from threading import RLock
 from collections import deque
 
@@ -45,30 +44,42 @@ class Completer(object):
     have their dependencies satisifed, otherwise it will request the batch that
     has the missing transaction.
     """
-    def __init__(self, block_store, gossip, cache_purge_frequency=30,
-                 requested_purge_frequency=1200):
+    def __init__(self,
+                 block_store,
+                 gossip,
+                 cache_keep_time=30,
+                 cache_purge_frequency=30,
+                 requested_keep_time=1200):
         """
         :param block_store (dictionary) The block store shared with the journal
         :param gossip (gossip.Gossip) Broadcasts block and batch request to
                 peers
-        :param cache_purge_frequency (int) The time between purging the
-                TimedCaches.
+        :param cache_keep_time (float) Time in seconds to keep values in
+            TimedCaches.
+        :param cache_purge_frequency (float) Time between purging the
+            TimedCaches.
         """
         self.gossip = gossip
-        self.batch_cache = TimedCache(cache_purge_frequency)
-        self.block_cache = BlockCache(block_store, cache_purge_frequency)
+        self.batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
+        self.block_cache = BlockCache(block_store,
+                                      cache_keep_time,
+                                      cache_purge_frequency)
         self._block_store = block_store
         # avoid throwing away the genesis block
         self.block_cache[NULL_BLOCK_IDENTIFIER] = None
         self._seen_txns = TimedCache(cache_purge_frequency)
         self._incomplete_batches = TimedCache(cache_purge_frequency)
         self._incomplete_blocks = TimedCache(cache_purge_frequency)
-        self._requested = TimedCache(requested_purge_frequency)
+        self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
+        self._incomplete_batches = TimedCache(cache_keep_time,
+                                              cache_purge_frequency)
+        self._incomplete_blocks = TimedCache(cache_keep_time,
+                                             cache_purge_frequency)
+        self._requested = TimedCache(requested_keep_time,
+                                     cache_purge_frequency)
         self._on_block_received = None
         self._on_batch_received = None
         self.lock = RLock()
-        self._cache_purge_frequency = cache_purge_frequency
-        self._purge_time = time.time() + self._cache_purge_frequency
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
@@ -261,17 +272,6 @@ class Completer(object):
                             to_complete.append(inc_block.header_signature)
                     del self._incomplete_blocks[my_key]
 
-    def _purge_caches(self):
-        if self._purge_time < time.time():
-            LOGGER.debug("Purges caches of expired entries.")
-            self._seen_txns.purge_expired()
-            self._incomplete_batches.purge_expired()
-            self._incomplete_blocks.purge_expired()
-            self.batch_cache.purge_expired()
-            self.block_cache.purge_expired()
-            self._requested.purge_expired()
-            self._purge_time = time.time() + self._cache_purge_frequency
-
     def set_on_block_received(self, on_block_received_func):
         self._on_block_received = on_block_received_func
 
@@ -286,7 +286,6 @@ class Completer(object):
                 self.block_cache[block.header_signature] = blkw
                 self._on_block_received(blkw)
                 self._process_incomplete_blocks(block.header_signature)
-                self._purge_caches()
 
     def add_batch(self, batch):
         with self.lock:

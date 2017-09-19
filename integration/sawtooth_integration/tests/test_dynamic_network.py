@@ -19,13 +19,12 @@ import logging
 import subprocess
 import shlex
 
-from sawtooth_cli.rest_client import RestClient
-from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
 from sawtooth_integration.tests import node_controller as NodeController
-
+from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
+WAIT = 120
 
 
 class TestDynamicNetwork(unittest.TestCase):
@@ -49,8 +48,8 @@ class TestDynamicNetwork(unittest.TestCase):
             'rounds': 3,
             'start_nodes_per_round': 2,
             'stop_nodes_per_round': 0,
-            'batches': 5,
-            'time_between_batches': 1,
+            'batches': 3,
+            'time_between_batches': 0,
             'poet_kwargs': {
                 'minimum_wait_time': 1.0,
                 'initial_wait_time': 100.0,
@@ -134,20 +133,27 @@ class TestDynamicNetwork(unittest.TestCase):
 
     def send_txns_all_at_once(self, batches, time_between_batches):
         for client in self.clients.values():
+            batch_ids = []
             for batch_num in range(batches):
-                self.send_increment_batch(
+                batch_id = self.send_increment_batch(
                     client, batch_num, time_between_batches)
+                batch_ids.append(batch_id)
+            client.poll_for_batches(batch_ids)
 
     def send_txns_alternating(self, batches, time_between_batches):
+        batch_ids = []
         for batch_num in range(batches):
             for client in self.clients.values():
-                self.send_increment_batch(
+                batch_id = self.send_increment_batch(
                     client, batch_num, time_between_batches)
+                batch_ids.append((client, batch_id))
+
+        for client, batch_id in batch_ids:
+            client.poll_for_batches([batch_id])
 
     def send_increment_batch(self, client, batch_num, time_between_batches):
         LOGGER.info('Sending batch {} @ {}'.format(batch_num, client.url))
-        client.send_txns(self.increment)
-        time.sleep(time_between_batches)
+        return client.send_txns(self.increment)
 
     def send_populate_batch(self, time_between_batches):
         LOGGER.info('Sending populate txns')
@@ -176,12 +182,11 @@ class TestDynamicNetwork(unittest.TestCase):
 
         # Check that none of the processes have returned
         for proc in processes:
-            if proc.returncode != None:
+            if proc.returncode is not None:
                 raise subprocess.CalledProcessError(proc.pid, proc.returncode)
 
         self.nodes[num] = processes
-        self.clients[num] = IntkeyClient(
-            NodeController.http_address(num))
+        self.clients[num] = IntkeyClient(NodeController.http_address(num), WAIT)
         time.sleep(1)
 
     # nodes are stopped in FIFO order
@@ -238,32 +243,6 @@ class TestDynamicNetwork(unittest.TestCase):
     def earliest_client(self):
         earliest = min(self.clients.keys())
         return self.clients[earliest]
-
-
-class IntkeyClient(RestClient):
-    def __init__(self, url):
-        super().__init__(url)
-        self.url = url
-        self.factory = IntkeyMessageFactory()
-
-    def send_txns(self, txns):
-        batch = self.factory.create_batch(txns)
-        self.send_batches(batch)
-
-    def recent_block_signatures(self, tolerance):
-        signatures = self.list_block_signatures()
-        return self.list_block_signatures()[:tolerance]
-
-    def list_block_signatures(self):
-        return [block['header_signature'] for block in self.list_blocks()]
-
-    def calculate_tolerance(self):
-        length = len(self.list_blocks())
-        # the most recent nth of the chain, at least 2 blocks
-        return max(
-            2,
-            length // 5)
-
 
 def make_txns():
     jacksons = 'michael', 'tito', 'jackie', 'jermaine', 'marlon'

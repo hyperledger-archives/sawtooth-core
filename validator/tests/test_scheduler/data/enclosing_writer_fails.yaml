@@ -13,6 +13,15 @@
 # limitations under the License.
 # -----------------------------------------------------------------------------
 
+
+
+  # This test repeatedly has batches with a txn that has a "" address as
+  # an output. Because of the way the Predecessor Tree works this txn becomes
+  # a predecessor of all later txns until another txn with a "" address as an
+  # output. These txn that are depended on by all other txns fail in this
+  # yaml file, which exercises the state finding process.
+
+
 ---
 - # --------------------------- Batch 1
   -

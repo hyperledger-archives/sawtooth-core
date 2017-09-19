@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import time
 from threading import RLock
 
 from sawtooth_validator.networking.dispatch import Handler
@@ -30,11 +29,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Responder(object):
-    def __init__(self, completer, cache_purge_frequency=30):
+    def __init__(self,
+                 completer,
+                 cache_keep_time=30,
+                 cache_purge_frequency=30):
         self.completer = completer
-        self.pending_requests = TimedCache(cache_purge_frequency)
-        self._cache_purge_frequency = cache_purge_frequency
-        self._purge_time = time.time() + self._cache_purge_frequency
+        self.pending_requests = TimedCache(cache_keep_time,
+                                           cache_purge_frequency)
         self._lock = RLock()
 
     def check_for_block(self, block_id):
@@ -70,13 +71,6 @@ class Responder(object):
         with self._lock:
             if requested_id in self.pending_requests:
                 del self.pending_requests[requested_id]
-
-    def purge_requests(self):
-        with self._lock:
-            if self._purge_time < time.time():
-                LOGGER.debug("Purge pending_requests of expired entries.")
-                self.pending_requests.purge_expired()
-                self._purge_time = time.time() + self._cache_purge_frequency
 
 
 class BlockResponderHandler(Handler):
@@ -147,7 +141,6 @@ class ResponderBlockResponseHandler(Handler):
                              connection)
 
         self._responder.remove_request(block.header_signature)
-        self._responder.purge_requests()
         return HandlerResult(status=HandlerStatus.PASS)
 
 
@@ -289,5 +282,4 @@ class ResponderBatchResponseHandler(Handler):
         for requested_id in requests_to_remove:
             self._responder.remove_request(requested_id)
 
-        self._responder.purge_requests()
         return HandlerResult(status=HandlerStatus.PASS)
