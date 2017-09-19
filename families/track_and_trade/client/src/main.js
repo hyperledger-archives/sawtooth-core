@@ -26,7 +26,7 @@ const api = require('./services/api')
 const transactions = require('./services/transactions')
 const navigation = require('./components/navigation')
 
-const FishForm = require('./views/add_fish_form')
+const AddFishForm = require('./views/add_fish_form')
 const Dashboard = require('./views/dashboard')
 const LoginForm = require('./views/login_form')
 const SignupForm = require('./views/signup_form')
@@ -99,7 +99,7 @@ const logout = () => {
 document.addEventListener('DOMContentLoaded', () => {
   m.route(document.querySelector('#app'), '/', {
     '/': resolve(Dashboard),
-    '/create': resolve(FishForm, true),
+    '/create': resolve(AddFishForm, true),
     '/login': resolve(LoginForm),
     '/logout': { onmatch: logout },
     '/signup': resolve(SignupForm)
