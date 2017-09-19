@@ -255,7 +255,14 @@ class Gossip(object):
             message (bytes): The message to be sent.
             connection_id (str): The connection to send it to.
         """
-        self._network.send(message_type, message, connection_id)
+        try:
+            self._network.send(message_type, message, connection_id)
+        except ValueError:
+            LOGGER.debug("Connection %s is no longer valid. "
+                         "Removing from list of peers.",
+                         connection_id)
+            if connection_id in self._peers:
+                del self._peers[connection_id]
 
     def broadcast(self, gossip_message, message_type, exclude=None):
         """Broadcast gossip messages.
@@ -274,15 +281,9 @@ class Gossip(object):
                 exclude = []
             for connection_id in self._peers.copy():
                 if connection_id not in exclude:
-                    try:
-                        self._network.send(message_type,
-                                           gossip_message.SerializeToString(),
-                                           connection_id)
-                    except ValueError:
-                        LOGGER.debug("Connection %s is no longer valid. "
-                                     "Removing from list of peers.",
-                                     connection_id)
-                        del self._peers[connection_id]
+                    self.send(message_type,
+                              gossip_message.SerializeToString(),
+                              connection_id)
 
     def connect_success(self, connection_id):
         """
