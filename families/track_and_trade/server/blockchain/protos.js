@@ -66,7 +66,7 @@ const compile = () => {
       'CreateProposalAction',
       'AnswerProposalAction',
       'RevokeReporterAction'
-    ]),
+    ])
   ])
 }
 
