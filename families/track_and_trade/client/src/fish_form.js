@@ -95,7 +95,7 @@ const FishForm = {
   },
 
   view (vnode) {
-    return m('.fish_form.container',
+    return m('.fish_form',
              m('form', {
                onsubmit: (e) => {
                  e.preventDefault()

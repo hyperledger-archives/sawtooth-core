@@ -29,7 +29,7 @@ const LoginForm = {
   view (vnode) {
     const setter = forms.stateSetter(vnode.state)
 
-    return m('.login-form.container', [
+    return m('.login-form', [
       m('form', {
         onsubmit: (e) => {
           e.preventDefault()
@@ -38,6 +38,7 @@ const LoginForm = {
               api.setAuth(res.authorization)
               transactions.setPrivateKey(vnode.state.password,
                                          res.encryptedKey)
+              m.route.set('/')
             })
         }
       },

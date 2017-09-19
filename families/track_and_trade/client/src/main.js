@@ -21,49 +21,86 @@ require('bootstrap')
 require('../styles/main.scss')
 
 const m = require('mithril')
-const { signer } = require('sawtooth-sdk/client')
 
-const AppState = require('./app_state')
 const FishForm = require('./fish_form')
+const api = require('./services/api')
+const transactions = require('./services/transactions')
+const navigation = require('./components/navigation')
+const Dashboard = require('./views/dashboard')
 const LoginForm = require('./views/login_form')
 const SignupForm = require('./views/signup_form')
 
-AppState.signingKey = signer.makePrivateKey()
-
-const Home = {
-  view () {
-    return m('.container', [
-      m('h1', 'FishNet'),
-      m('.page-list',
-        m('h3', 'Pages'),
-        m('ul',
-          m('li',
-            m('a[href="/create"]',
-              { oncreate: m.route.link },
-              'Create Fish')),
-          m('li',
-            m('a[href="/signup"]',
-              { oncreate: m.route.link },
-              'Signup Agent')),
-          m('li',
-            m('a[href="/login"]',
-              { oncreate: m.route.link },
-              'Login Agent'))))
-    ])
+/**
+ * A basic layout component that adds the navbar to the view.
+ */
+const Layout = {
+  view (vnode) {
+    return [
+      vnode.attrs.navbar,
+      m('.content.container', vnode.children)
+    ]
   }
 }
 
+const loggedInNav = () => {
+  const links = [
+    ['/create', 'Add Fish']
+  ]
+  return m(navigation.Navbar, {}, [
+    navigation.links(links),
+    navigation.button('/logout', 'Logout')
+  ])
+}
+
+const loggedOutNav = () => {
+  const links = []
+  return m(navigation.Navbar, {}, [
+    navigation.links(links),
+    navigation.button('/login', 'Login/Signup')
+  ])
+}
+
+/**
+ * Returns a route resolver which handles authorization related business.
+ */
+const resolve = (view, restricted = false) => {
+  const resolver = {}
+
+  if (restricted) {
+    resolver.onmatch = () => {
+      if (api.getAuth()) return view
+      m.route.set('/login')
+    }
+  }
+
+  resolver.render = () => {
+    if (api.getAuth()) {
+      return m(Layout, { navbar: loggedInNav() }, m(view))
+    }
+    return m(Layout, { navbar: loggedOutNav() }, m(view))
+  }
+
+  return resolver
+}
+
+/**
+ * Clears user info from memory/storage and redirects.
+ */
+const logout = () => {
+  api.clearAuth()
+  transactions.clearPrivateKey()
+  m.route.set('/')
+}
+
+/**
+ * Build and mount app/router
+ */
 document.addEventListener('DOMContentLoaded', () => {
   m.route(document.querySelector('#app'), '/', {
-    '/': Home,
-    '/create': {
-      render: () => m(FishForm, {signingKey: AppState.signingKey})
-    },
-    '/signup': {
-      render: () => m(SignupForm, AppState)
-    },
-    '/login': {
-      render: () => m(LoginForm, AppState)
-    }
+    '/': resolve(Dashboard),
+    '/create': resolve(FishForm, true),
+    '/login': resolve(LoginForm),
+    '/logout': { onmatch: logout },
+    '/signup': resolve(SignupForm)
   })
 })

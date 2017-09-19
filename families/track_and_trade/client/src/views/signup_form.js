@@ -33,6 +33,7 @@ const userSubmitter = state => e => {
   api.post('users', user)
     .then(res => api.setAuth(res.authorization))
     .then(() => transactions.submit(agent))
+    .then(() => m.route.set('/'))
 }
 
 /**
@@ -42,7 +43,7 @@ const SignupForm = {
   view (vnode) {
     const setter = forms.stateSetter(vnode.state)
 
-    return m('.signup-form.container', [
+    return m('.signup-form', [
       m('form', { onsubmit: userSubmitter(vnode.state) },
       m('legend', 'Create Agent'),
       forms.textInput(setter('name'), 'Name'),
