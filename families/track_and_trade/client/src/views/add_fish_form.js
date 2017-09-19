@@ -16,7 +16,9 @@
  */
 
 const m = require('mithril')
-const {submitRecord} = require('./transactions')
+
+const payloads = require('../services/payloads')
+const transactions = require('../services/transactions')
 
 /**
  * Possible selection options
@@ -83,7 +85,7 @@ const MultiSelect = {
 /**
  * The Form for tracking a new fish.
  */
-const FishForm = {
+const AddFishForm = {
   oninit (vnode) {
     // Initialize the empty reporters fields
     vnode.state.reporters = [
@@ -220,39 +222,44 @@ const _updateReporters = (vnode, reporterIndex) => {
  * Extract the appropriate values to pass to the create record transaction.
  */
 const _handleSubmit = (signingKey, state) => {
-  let txnFields = {
+  const recordPayload = payloads.createRecord({
     recordId: state.serialNumber,
     recordType: 'fish',
     properties: [
       {
         name: 'species',
         value: state.species,
-        type: 1 // STRING
+        type: payloads.createRecord.enum.STRING
       },
       {
         name: 'length',
         value: state.lengthInCM,
-        type: 3 // FLOAT
+        type: payloads.createRecord.enum.FLOAT
       },
       {
         name: 'weight',
         value: state.weightInKg,
-        type: 3 // FLOAT
+        type: payloads.createRecord.enum.FLOAT
       },
       {
         name: 'location',
         value: [state.latitude, state.longitude],
-        type: 4 // LOCATION
+        type: payloads.createRecord.enum.LOCATION
       }
     ]
-  }
-  let reporterProposals = state.reporters
+  })
+
+  const reporterPayloads = state.reporters
     .filter((reporter) => !!reporter.reporterKey)
-    .map((reporter) => ({
+    .map((reporter) => payloads.createProposal({
+      recordId: state.serialNumber,
       receivingAgent: reporter.reporterKey,
+      role: payloads.createProposal.enum.REPORTER,
       properties: reporter.properties
     }))
-  submitRecord(signingKey, txnFields, reporterProposals)
+
+  transactions.submit([recordPayload].concat(reporterPayloads))
+    .then(() => m.route.set('/'))
 }
 
 /**
@@ -263,4 +270,4 @@ const _formGroup = (label, formEl) =>
     m('label', label),
     formEl)
 
-module.exports = FishForm
+module.exports = AddFishForm
