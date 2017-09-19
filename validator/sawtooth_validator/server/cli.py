@@ -20,8 +20,6 @@ import os
 import pkg_resources
 import netifaces
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.config.path import load_path_config
 from sawtooth_validator.config.validator import load_default_validator_config
 from sawtooth_validator.config.validator import load_toml_validator_config
@@ -233,7 +231,6 @@ def main(args=None):
         identity_signing_key = load_identity_signing_key(
             key_dir=path_config.key_dir,
             key_name='validator')
-        pubkey = signing.generate_pubkey(identity_signing_key)
     except LocalConfigurationError as e:
         log_configuration(log_dir=path_config.log_dir,
                           name="validator")
@@ -248,7 +245,7 @@ def main(args=None):
                 init_console_logging(verbose_level=verbose_level)
         else:
             log_configuration(log_dir=path_config.log_dir,
-                              name="validator-" + pubkey[:8])
+                              name="validator")
 
     for line in path_config.to_toml_string():
         LOGGER.info("config [path]: %s", line)
