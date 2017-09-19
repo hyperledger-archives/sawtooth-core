@@ -17,6 +17,7 @@
 'use strict'
 
 const m = require('mithril')
+const _ = require('lodash')
 const sjcl = require('sjcl')
 const { signer, TransactionEncoder } = require('sawtooth-sdk/client')
 const modals = require('../components/modals')
@@ -97,7 +98,8 @@ const clearPrivateKey = () => {
  * Wraps a Protobuf payload in a TransactionList and submits it to the API.
  * Prompts user for their password if their private key is not in memory.
  */
-const submit = payload => {
+const submit = payloads => {
+  if (!_.isArray(payloads)) payloads = [payloads]
   return Promise.resolve()
     .then(() => {
       if (txnEncoder) return
@@ -109,7 +111,8 @@ const submit = payload => {
         })
     })
     .then(() => {
-      const txnList = txnEncoder.createEncoded(payload)
+      const txns = payloads.map(payload => txnEncoder.create(payload))
+      const txnList = txnEncoder.encode(txns)
       return api.postBinary('transactions', txnList)
     })
 }
