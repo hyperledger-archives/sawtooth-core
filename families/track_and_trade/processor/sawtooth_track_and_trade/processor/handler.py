@@ -354,7 +354,7 @@ def _update_properties(payload, signer, timestamp, state):
             )
         except StopIteration:
             raise InternalError(
-                'Property page does not exists')
+                'Property page does not exist')
 
         reported_value = _make_new_reported_value(
             reporter_index=reporter_index,
@@ -365,9 +365,6 @@ def _update_properties(payload, signer, timestamp, state):
         page.reported_values.extend([reported_value])
         page.reported_values.sort(
             key=lambda val: (val.timestamp, val.reporter_index))
-
-        page_container.entries.extend([page])
-        page_container.entries.sort(key=lambda page: page.name)
 
         _set_container(state, page_address, page_container)
 
