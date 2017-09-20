@@ -82,14 +82,14 @@
 /sdk/go/pkg/
 /sdk/go/src/golang.org/
 /sdk/go/src/gopkg.in/
-/sdk/rust/target
-/sdk/rust/Cargo.lock
-/sdk/rust/src/messages/*.rs
-!/sdk/rust/src/messages/mod.rs
 /families/seth/bin/
 /families/seth/src/sawtooth_seth/protobuf/
 /families/seth/rpc/Cargo.lock
 /families/seth/rpc/target/
+/sdk/rust/target
+/sdk/rust/Cargo.lock
+/sdk/rust/src/messages/*.rs
+!/sdk/rust/src/messages/mod.rs
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/
