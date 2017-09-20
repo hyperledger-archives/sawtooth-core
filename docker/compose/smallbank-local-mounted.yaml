@@ -69,7 +69,7 @@ services:
       - "8080:8080"
     depends_on:
      - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080 --opentsdb-url http://influxdb:8086 --opentsdb-db metrics
 
   influxdb:
     image: sawtooth-stats-influxdb:latest

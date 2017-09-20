@@ -18,10 +18,13 @@ import sys
 import logging
 import asyncio
 import argparse
+from urllib.parse import urlparse
 import pkg_resources
 from aiohttp import web
 
 from zmq.asyncio import ZMQEventLoop
+from pyformance import MetricsRegistry
+from pyformance.reporters import InfluxReporter
 
 from sawtooth_sdk.client.log import init_console_logging
 from sawtooth_sdk.client.log import log_configuration
@@ -57,6 +60,12 @@ def parse_args(args):
                         action='count',
                         default=0,
                         help='Increase level of output sent to stderr')
+    parser.add_argument('--opentsdb-url',
+                        help='The host and port for Open TSDB database \
+                        used for metrics')
+    parser.add_argument('--opentsdb-db',
+                        help='The name of the database used for storing \
+                        metrics')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -79,7 +88,7 @@ async def cors_handler(request):
     return web.Response(headers=headers)
 
 
-def start_rest_api(host, port, connection, timeout):
+def start_rest_api(host, port, connection, timeout, reporter=None):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
     loop = asyncio.get_event_loop()
@@ -89,7 +98,9 @@ def start_rest_api(host, port, connection, timeout):
 
     # Add routes to the web app
     LOGGER.info('Creating handlers for validator at %s', connection.url)
-    handler = RouteHandler(loop, connection, timeout)
+
+    registry = reporter.registry if reporter else None
+    handler = RouteHandler(loop, connection, timeout, registry)
 
     app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
 
@@ -114,6 +125,12 @@ def start_rest_api(host, port, connection, timeout):
     subscriber_handler = StateDeltaSubscriberHandler(connection)
     app.router.add_get('/subscriptions', subscriber_handler.subscriptions)
     app.on_shutdown.append(lambda app: subscriber_handler.on_shutdown())
+
+    # Start metrics reporter
+
+    if reporter:
+        LOGGER.info('Starting metrics reporter')
+        reporter.start()
 
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)
@@ -143,7 +160,9 @@ def main():
         opts_config = RestApiConfig(
             bind=opts.bind,
             connect=opts.connect,
-            timeout=opts.timeout)
+            timeout=opts.timeout,
+            opentsdb_url=opts.opentsdb_url,
+            opentsdb_db=opts.opentsdb_db)
         rest_api_config = load_rest_api_config(opts_config)
         url = None
         if "tcp://" not in rest_api_config.connect:
@@ -174,11 +193,26 @@ def main():
                   " host:port".format(rest_api_config.bind[0]))
             sys.exit(1)
 
+        reporter = None
+        if rest_api_config.opentsdb_url:
+            url = urlparse(rest_api_config.opentsdb_url)
+            proto, db_server, db_port, = url.scheme, url.hostname, url.port
+
+            registry = MetricsRegistry()
+            reporter = InfluxReporter(
+                registry=registry,
+                reporting_interval=1,
+                database=rest_api_config.opentsdb_db,
+                port=db_port,
+                protocol=proto,
+                server=db_server)
+
         start_rest_api(
             host,
             port,
             connection,
-            int(rest_api_config.timeout))
+            int(rest_api_config.timeout),
+            reporter)
         # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
