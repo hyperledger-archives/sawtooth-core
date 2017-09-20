@@ -75,6 +75,8 @@ def merge_rest_api_config(configs):
     bind = None
     connect = None
     timeout = None
+    opentsdb_url = None
+    opentsdb_db = None
 
     for config in reversed(configs):
         if config.bind is not None:
@@ -83,18 +85,32 @@ def merge_rest_api_config(configs):
             connect = config.connect
         if config.timeout is not None:
             timeout = config.timeout
+        if config.opentsdb_url is not None:
+            opentsdb_url = config.opentsdb_url
+        if config.opentsdb_db is not None:
+            opentsdb_db = config.opentsdb_db
 
     return RestApiConfig(
         bind=bind,
         connect=connect,
-        timeout=timeout)
+        timeout=timeout,
+        opentsdb_url=opentsdb_url,
+        opentsdb_db=opentsdb_db)
 
 
 class RestApiConfig:
-    def __init__(self, bind=None, connect=None, timeout=None):
+    def __init__(
+            self,
+            bind=None,
+            connect=None,
+            timeout=None,
+            opentsdb_url=None,
+            opentsdb_db=None):
         self._bind = bind
         self._connect = connect
         self._timeout = timeout
+        self._opentsdb_url = opentsdb_url
+        self._opentsdb_db = opentsdb_db
 
     @property
     def bind(self):
@@ -108,19 +124,33 @@ class RestApiConfig:
     def timeout(self):
         return self._timeout
 
+    @property
+    def opentsdb_url(self):
+        return self._opentsdb_url
+
+    @property
+    def opentsdb_db(self):
+        return self._opentsdb_db
+
     def __repr__(self):
         return \
-            "{}(bind={}, connect={}, timeout={})".format(
+            "{}(bind={}, connect={}, timeout={}," \
+            "opentsdb_url={}, opentsdb_db={})" \
+            .format(
                 self.__class__.__name__,
                 repr(self._bind),
                 repr(self._connect),
-                repr(self._timeout))
+                repr(self._timeout),
+                repr(self._opentsdb_url),
+                repr(self._opentsdb_db))
 
     def to_dict(self):
         return collections.OrderedDict([
             ('bind', self._bind),
             ('connect', self._connect),
-            ('timeout', self._timeout)
+            ('timeout', self._timeout),
+            ('opentsdb_url', self._opentsdb_url),
+            ('opentsdb_db', self._opentsdb_db)
         ])
 
     def to_toml_string(self):
