@@ -125,12 +125,12 @@ def do_submit(args):
         else:
             with open(filename) as fd:
                 json_content = fd.read()
-    except IOError, e:
+    except IOError as e:
         raise CliException(str(e))
 
     try:
         txn_content = json2dict(json_content)
-    except ValueError, e:
+    except ValueError as e:
         raise CliException("Decoding JSON: {}".format(str(e)))
 
     try:
