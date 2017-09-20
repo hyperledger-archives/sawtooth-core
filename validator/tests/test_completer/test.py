@@ -15,6 +15,7 @@
 import unittest
 import random
 import hashlib
+import string
 import cbor
 
 import sawtooth_signing as signing
