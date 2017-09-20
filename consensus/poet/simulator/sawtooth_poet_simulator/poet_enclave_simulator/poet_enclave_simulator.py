@@ -521,6 +521,10 @@ def unseal_signup_data(sealed_signup_data):
     return _PoetEnclaveSimulator.unseal_signup_data(sealed_signup_data)
 
 
+def release_signup_data(sealed_signup_data):
+    return _PoetEnclaveSimulator.release_signup_data(sealed_signup_data)
+
+
 def create_wait_timer(sealed_signup_data,
                       validator_address,
                       previous_certificate_id,

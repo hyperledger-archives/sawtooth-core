@@ -385,6 +385,76 @@ paths:
         503:
           $ref: "#/responses/503ServiceUnavailable"
 
+  /receipts:
+    get:
+      summary: Fetches the receipts for a set of transactions
+      description: |
+        Fetches an array of objects for each receipt requested.
+
+        The receipt(s) you want to retrieve can be specified using the `id`
+        filter parameter, where `id` refers to the transaction id of the
+        transaction the receipt is associated with.
+      parameters:
+        - name: id
+          in: query
+          description: A comma-separated list of transaction ids
+          type: string
+          required: true
+      responses:
+        200:
+          description: Successfully retrieved transaction receipts
+          schema:
+            properties:
+              data:
+                $ref: "#/definitions/TransactionReceipts"
+              link:
+                $ref: "#/definitions/Link"
+        400:
+          $ref: "#/responses/400BadRequest"
+        500:
+          $ref: "#/responses/500ServerError"
+        503:
+          $ref: "#/responses/503ServiceUnavailable"
+
+    post:
+      summary: Fetches the receipts for a set of transactions
+      description: |
+        Identical to `GET /receipts`, but takes ids of transactions as a JSON
+        formatted POST body rather than a query parameter. This allows for many
+        more receipts to be fetched and should be used with more than 15 ids.
+
+        Note that since query information is not encoded in the URL, no `link`
+        will be returned with this request.
+      consumes:
+        - application/json
+      parameters:
+        - name: Transaction Ids
+          in: body
+          description: A JSON array of transaction id strings
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              example: 89807bfc9089e37e00d87d97357de14cfbc455cd608438d426a625a30a0da9a31c406983803c4aa27e1f32a3ff61709e8ec4b56abbc553d7d330635b5d27029c
+        - $ref: "#/parameters/wait"
+      responses:
+        200:
+          description: Successfully retrieved transaction receipts
+          schema:
+            properties:
+              data:
+                $ref: "#/definitions/TransactionReceipts"
+              link:
+                $ref: "#/definitions/Link"
+        400:
+          $ref: "#/responses/400BadRequest"
+        500:
+          $ref: "#/responses/500ServerError"
+        503:
+          $ref: "#/responses/503ServiceUnavailable"
+
+
 responses:
   400BadRequest:
     description: Request was malformed
@@ -591,6 +661,56 @@ definitions:
       payload:
         type: string
         format: binary
+
+  TransactionReceipt:
+    properties:
+      transaction_id:
+        type: string
+        example: 540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a
+      state_changes:
+        type: array
+        items:
+          properties:
+            type:
+              type: string
+              example: SET
+            address:
+              type: string
+              example: 1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c
+            value:
+              type: string
+              format: binary
+      events:
+        type: array
+        items:
+          properties:
+            event_type:
+              type: string
+              example: block_commit
+            attributes:
+              type: array
+              items:
+                properties:
+                  key:
+                    type: string
+                  value:
+                    type: string
+            data:
+              type: string
+              format: binary
+      data:
+        type: array
+        items:
+          properties:
+            data_type:
+              type: string
+            data:
+              type: string
+              format: binary
+  TransactionReceipts:
+    type: array
+    items:
+      - $ref: "#/definitions/TransactionReceipt"
 
   BatchHeader:
     properties:

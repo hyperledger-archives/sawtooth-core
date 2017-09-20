@@ -23,6 +23,8 @@ import time
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.batch_injector import \
+    DefaultBatchInjectorFactory
 
 
 LOGGER = logging.getLogger(__name__)
@@ -37,19 +39,15 @@ class Journal(object):
     This object provides the threading and event queue for the processors.
     """
     class _ChainThread(Thread):
-        def __init__(self, chain_controller, block_queue, block_cache,
-                     block_cache_purge_frequency):
+        def __init__(self, chain_controller, block_queue, block_cache):
             Thread.__init__(self, name='_ChainThread')
             self._chain_controller = chain_controller
             self._block_queue = block_queue
             self._block_cache = block_cache
-            self._block_cache_purge_frequency = block_cache_purge_frequency
             self._exit = False
 
         def run(self):
             try:
-                block_cache_purge_time = time.time() + \
-                    self._block_cache_purge_frequency
                 while True:
                     try:
                         block = self._block_queue.get(timeout=1)
@@ -57,11 +55,6 @@ class Journal(object):
                     except queue.Empty:
                         pass  # this exception only happens if the
                         # wait on an empty queue after it times out.
-
-                    if block_cache_purge_time < time.time():
-                        self._block_cache.purge_expired()
-                        block_cache_purge_time = time.time() + \
-                            self._block_cache_purge_frequency
 
                     if self._exit:
                         return
@@ -121,7 +114,6 @@ class Journal(object):
                  squash_handler,
                  identity_signing_key,
                  chain_id_manager,
-                 state_delta_processor,
                  data_dir,
                  config_dir,
                  permission_verifier,
@@ -129,6 +121,7 @@ class Journal(object):
                  block_cache_purge_frequency=30,
                  block_cache_keep_time=300,
                  batch_observers=None,
+                 chain_observers=None,
                  block_cache=None):
         """
         Creates a Journal instance.
@@ -146,25 +139,25 @@ class Journal(object):
             identity_signing_key (str): Private key for signing blocks
             chain_id_manager (:obj:`ChainIdManager`) The ChainIdManager
                 instance.
-            state_delta_processor (:obj:`StateDeltaProcessor`): The state
-                delta processor.
             data_dir (str): directory for data storage.
             config_dir (str): directory for configuration.
             check_publish_block_frequency(float): delay in seconds between
                 checks if a block should be claimed.
             block_cache_purge_frequency (float): delay in seconds between
-            purges of the BlockCache.
+                purges of the BlockCache.
             block_cache_keep_time (float): time in seconds to hold unaccess
-            blocks in the BlockCache.
+                blocks in the BlockCache.
+            chain_observers (list of :obj:`ChainObserver`): Objects to notify
+                on chain updates.
             block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
                 place of an internally created instance. Defaults to None.
         """
         self._block_store = block_store
         self._block_cache = block_cache
         if self._block_cache is None:
-            self._block_cache = BlockCache(
-                self._block_store, keep_time=block_cache_keep_time)
-        self._block_cache_purge_frequency = block_cache_purge_frequency
+            self._block_cache = BlockCache(self._block_store,
+                                           block_cache_keep_time,
+                                           block_cache_purge_frequency)
         self._state_view_factory = state_view_factory
 
         self._transaction_executor = transaction_executor
@@ -184,12 +177,18 @@ class Journal(object):
         self._block_queue = queue.Queue()
         self._chain_thread = None
         self._chain_id_manager = chain_id_manager
-        self._state_delta_processor = state_delta_processor
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
+        self._chain_observers = [] if chain_observers is None \
+            else chain_observers
 
     def _init_subprocesses(self):
+        batch_injector_factory = DefaultBatchInjectorFactory(
+            block_store=self._block_store,
+            state_view_factory=self._state_view_factory,
+            signing_key=self._identity_signing_key,
+        )
         self._block_publisher = BlockPublisher(
             transaction_executor=self._transaction_executor,
             block_cache=self._block_cache,
@@ -201,7 +200,8 @@ class Journal(object):
             identity_signing_key=self._identity_signing_key,
             data_dir=self._data_dir,
             config_dir=self._config_dir,
-            permission_verifier=self._permission_verifier
+            permission_verifier=self._permission_verifier,
+            batch_injector_factory=batch_injector_factory,
         )
         self._publisher_thread = self._PublisherThread(
             block_publisher=self._block_publisher,
@@ -218,18 +218,16 @@ class Journal(object):
             on_chain_updated=self._block_publisher.on_chain_updated,
             squash_handler=self._squash_handler,
             chain_id_manager=self._chain_id_manager,
-            state_delta_processor=self._state_delta_processor,
             identity_signing_key=self._identity_signing_key,
             data_dir=self._data_dir,
             config_dir=self._config_dir,
-            permission_verifier=self._permission_verifier
+            permission_verifier=self._permission_verifier,
+            chain_observers=self._chain_observers,
         )
         self._chain_thread = self._ChainThread(
             chain_controller=self._chain_controller,
             block_queue=self._block_queue,
-            block_cache=self._block_cache,
-            block_cache_purge_frequency=self._block_cache_purge_frequency
-        )
+            block_cache=self._block_cache)
 
     # FXM: this is an inaccurate name.
     def get_current_root(self):

@@ -16,6 +16,9 @@
  */
 
 extern crate protobuf;
+#[macro_use]
+extern crate log;
 
 pub mod messages;
+pub mod messaging;
 pub mod signing;

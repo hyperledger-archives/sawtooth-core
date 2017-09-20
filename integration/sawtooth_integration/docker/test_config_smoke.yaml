@@ -35,7 +35,6 @@ services:
     expose:
       - 4004
       - 8800
-    # start the validator with an empty genesis batch
     command: "bash -c \"\
         echo 5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv > test.priv && \
         sawtooth admin keygen && \

@@ -24,7 +24,6 @@ from urllib.error import URLError
 from http.client import RemoteDisconnected
 import requests
 
-
 LOGGER = logging.getLogger(__name__)
 
 

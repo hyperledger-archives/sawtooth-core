@@ -96,12 +96,12 @@ binary serialization protocol is up to the implementer.
 
 {% else %}
 ``apply`` gets called with two arguments, ``transaction`` and
-``state_store``. The argument ``transaction`` is an instance of the class
+``context``. The argument ``transaction`` is an instance of the class
 Transaction that is created from the  protobuf definition. Also,
-``state_store`` is an instance of the class State from the  python SDK.
+``context`` is an instance of the class Context from the  python SDK.
 
 ``transaction`` holds the command that is to be executed (e.g. taking a space or
-creating a game), while ``state_store`` stores information about the current
+creating a game), while ``context`` stores information about the current
 state of the game (e.g. the board layout and whose turn it is).
 
 The transaction contains payload bytes that are opaque to the validator core,
@@ -113,7 +113,7 @@ Without yet getting into the details of how this information is encoded, we can
 start to think about what ``apply`` needs to do. ``apply`` needs to
 
 1) unpack the command data from the transaction,
-2) retrieve the game data from the state store,
+2) retrieve the game data from the context,
 3) play the game, and
 4) save the updated game data.
 
@@ -163,12 +163,12 @@ Accordingly, a top-down approach to ``apply`` might look like this:
 
 .. code-block:: python
 
-    def apply(self, transaction, state_store):
+    def apply(self, transaction, context):
         signer, game_name, action, space = \
             self._unpack_transaction(transaction)
 
         board, state, player1, player2 = \
-            self._get_state_data(game_name, state_store)
+            self._get_state_data(game_name, context)
 
         updated_game_data = self._play_xo(
             board, state,
@@ -176,7 +176,7 @@ Accordingly, a top-down approach to ``apply`` might look like this:
             signer, action, space
         )
 
-        self._store_game_data(game_name, updated_game_data, state_store)
+        self._store_game_data(game_name, updated_game_data, context)
 
 {% endif %}
 
@@ -328,10 +328,10 @@ is that given a game name, the state store is able to give back the correct game
 
 .. code-block:: python
 
-    def _get_state_data(self, game_name, state_store):
+    def _get_state_data(self, game_name, context):
         game_address = self._make_game_address(game_name)
 
-        state_entries = state_store.get([game_address])
+        state_entries = context.get_state([game_address])
 
         try:
             return self._decode_data(state_entries[0].data)
@@ -425,12 +425,12 @@ updated state of the game and store it back at the address from which it came.
 
 .. code-block:: python
 
-    def _store_game_data(self, game_name, game_data, state_store):
+    def _store_game_data(self, game_name, game_data, context):
         game_address = self._make_game_address(game_name)
 
         encoded_game_data = self._encode_data(game_data)
 
-        addresses = state_store.set([
+        addresses = context.set_state([
             StateEntry(
                 address=game_address,
                 data=encoded_game_data
@@ -601,7 +601,7 @@ about what kinds of transactions it can handle.
         def namespaces(self):
             return [self._namespace_prefix]
 
-        def apply(self, transaction, state_store):
+        def apply(self, transaction, context):
             # ...
 
 

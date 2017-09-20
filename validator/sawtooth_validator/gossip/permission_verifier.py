@@ -21,6 +21,10 @@ from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.validator_pb2 import Message
 from sawtooth_validator.protobuf.identity_pb2 import Policy
+from sawtooth_validator.protobuf.authorization_pb2 import \
+    AuthorizationViolation
+from sawtooth_validator.protobuf.authorization_pb2 import RoleType
+from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
@@ -32,11 +36,11 @@ LOGGER = logging.getLogger(__name__)
 
 class PermissionVerifier(object):
 
-    def __init__(self, identity_view_factory, permissions, current_root_func):
-        self._identity_view_factory = identity_view_factory
+    def __init__(self, permissions, current_root_func, identity_cache):
         # Off-chain permissions to be enforced
         self._permissions = permissions
         self._current_root_func = current_root_func
+        self._cache = identity_cache
 
     def is_batch_signer_authorized(self, batch, state_root=None):
         """ Check the batch signing key against the allowed transactor
@@ -61,24 +65,22 @@ class PermissionVerifier(object):
                 LOGGER.debug("Chain head is not set yet. Permit all.")
                 return True
 
-        identity_view = \
-            self._identity_view_factory.create_identity_view(state_root)
+        self._cache.update_view(state_root)
 
         header = BatchHeader()
         header.ParseFromString(batch.header)
 
-        role = \
-            identity_view.get_role("transactor.batch_signer")
+        role = self._cache.get_role("transactor.batch_signer", state_root)
 
         if role is None:
-            role = identity_view.get_role("transactor")
+            role = self._cache.get_role("transactor", state_root)
 
         if role is None:
             policy_name = "default"
         else:
             policy_name = role.policy_name
 
-        policy = identity_view.get_policy(policy_name)
+        policy = self._cache.get_policy(policy_name, state_root)
         if policy is None:
             allowed = True
         else:
@@ -87,12 +89,12 @@ class PermissionVerifier(object):
         if allowed:
             return self.is_transaction_signer_authorized(
                         batch.transactions,
-                        identity_view)
+                        state_root)
         LOGGER.debug("Batch Signer: %s is not permitted.",
                      header.signer_pubkey)
         return False
 
-    def is_transaction_signer_authorized(self, transactions, identity_view):
+    def is_transaction_signer_authorized(self, transactions, state_root):
         """ Check the transaction signing key against the allowed transactor
             permissions. The roles being checked are the following, from first
             to last:
@@ -112,18 +114,18 @@ class PermissionVerifier(object):
         """
         role = None
         if role is None:
-            role = identity_view.get_role(
-                "transactor.transaction_signer")
+            role = self._cache.get_role("transactor.transaction_signer",
+                                        state_root)
 
         if role is None:
-            role = identity_view.get_role("transactor")
+            role = self._cache.get_role("transactor", state_root)
 
         if role is None:
             policy_name = "default"
         else:
             policy_name = role.policy_name
 
-        policy = identity_view.get_policy(policy_name)
+        policy = self._cache.get_policy(policy_name, state_root)
 
         family_roles = {}
         for transaction in transactions:
@@ -131,11 +133,13 @@ class PermissionVerifier(object):
             header.ParseFromString(transaction.header)
             family_policy = None
             if header.family_name not in family_roles:
-                role = identity_view.get_role(
-                    "transactor.transaction_signer." + header.family_name)
+                role = self._cache.get_role(
+                    "transactor.transaction_signer." + header.family_name,
+                    state_root)
 
                 if role is not None:
-                    family_policy = identity_view.get_policy(role.policy_name)
+                    family_policy = self._cache.get_policy(role.policy_name,
+                                                           state_root)
                 family_roles[header.family_name] = family_policy
             else:
                 family_policy = family_roles[header.family_name]
@@ -206,8 +210,6 @@ class PermissionVerifier(object):
             Args:
                 transactions (List of Transactions): The transactions that are
                     being verified.
-                identity_view (IdentityView): The IdentityView that should be
-                    used to verify the transactions.
         """
         policy = None
         if "transactor.transaction_signer" in self._permissions:
@@ -239,6 +241,40 @@ class PermissionVerifier(object):
                                  header.signer_pubkey)
                     return False
 
+        return True
+
+    def check_network_role(self, public_key):
+        """ Check the public key of a node on the network to see if they are
+            permitted to participate. The roles being checked are the
+            following, from first to last:
+                "network"
+                "default"
+
+            The first role that is set will be the one used to enforce if the
+            node is allowed.
+
+            Args:
+                public_key (string): The public key belonging to a node on the
+                    network
+        """
+        state_root = self._current_root_func()
+        if state_root == INIT_ROOT_KEY:
+            LOGGER.debug("Chain head is not set yet. Permit all.")
+            return True
+
+        role = self._cache.get_role("network", state_root)
+
+        if role is None:
+            policy_name = "default"
+        else:
+            policy_name = role.policy_name
+        policy = self._cache.get_policy(policy_name, state_root)
+        if policy is not None:
+            if not self._allowed(public_key, policy):
+                LOGGER.debug(
+                    "Node is not permitted: %s.",
+                    public_key)
+                return False
         return True
 
     def _allowed(self, public_key, policy):
@@ -283,3 +319,91 @@ class BatchListPermissionVerifier(Handler):
             return make_response(response_proto.INTERNAL_ERROR)
 
         return HandlerResult(status=HandlerStatus.PASS)
+
+
+class NetworkPermissionHandler(Handler):
+    def __init__(self, network, permission_verifier, gossip):
+        self._network = network
+        self._permission_verifier = permission_verifier
+        self._gossip = gossip
+
+    def handle(self, connection_id, message_content):
+        # check to see if there is a public key
+        public_key = self._network.connection_id_to_public_key(connection_id)
+
+        if public_key is None:
+            LOGGER.debug("No public key found, %s is not permitted. "
+                         "Close connection.", connection_id)
+            violation = AuthorizationViolation(
+                violation=RoleType.Value("NETWORK"))
+            self._gossip.unregister_peer(connection_id)
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=violation,
+                message_type=validator_pb2.Message.AUTHORIZATION_VIOLATION)
+
+        # check public key against network/default role
+        permitted = self._permission_verifier.check_network_role(public_key)
+
+        if not permitted:
+            LOGGER.debug("Public key not permitted, %s is not permitted",
+                         connection_id)
+            self._gossip.unregister_peer(connection_id)
+            violation = AuthorizationViolation(
+                violation=RoleType.Value("NETWORK"))
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=violation,
+                message_type=validator_pb2.Message.AUTHORIZATION_VIOLATION)
+
+        # if allowed pass message
+        return HandlerResult(HandlerStatus.PASS)
+
+
+class IdentityCache():
+    def __init__(self, identity_view_factory, current_root_func):
+        self._identity_view_factory = identity_view_factory
+        self._identity_view = None
+        self._current_root_func = current_root_func
+        self._cache = {}
+
+    def __len__(self):
+        return len(self._cache)
+
+    def __contains__(self, item):
+        return item in self._cache
+
+    def __getitem__(self, item):
+        return self._cache.get(item)
+
+    def __iter__(self):
+        return iter(self._cache)
+
+    def get_role(self, item, state_root):
+        value = self._cache.get(item)
+        if value is None:
+            if self._identity_view is None:
+                self.update_view(state_root)
+            value = self._identity_view.get_role(item)
+            self._cache[item] = value
+        return value
+
+    def get_policy(self, item, state_root):
+        value = self._cache.get(item)
+        if value is None:
+            if self._identity_view is None:
+                self.update_view(state_root)
+            value = self._identity_view.get_policy(item)
+            self._cache[item] = value
+        return value
+
+    def forked(self):
+        self._cache = {}
+
+    def invalidate(self, item):
+        if item in self._cache:
+            del self._cache[item]
+
+    def update_view(self, state_root):
+        self._identity_view = \
+            self._identity_view_factory.create_identity_view(state_root)

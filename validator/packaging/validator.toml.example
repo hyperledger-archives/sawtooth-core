@@ -44,6 +44,12 @@ scheduler = 'serial'
 network_public_key = 'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)'
 network_private_key = 'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*'
 
+# The type of authorization that must be performed for the different type of
+# roles on the network. The different supported authorization types are "trust"
+# and "challenge". The default is "trust".
+[roles]
+network = "trust"
+
 # Any off-chain transactor permission roles. The roles should match the roles
 # stored in state for transactor permissioning. Due to the roles having . in the
 # key, the key must be wrapped in quotes so toml can process it. The value

@@ -36,6 +36,7 @@
 /families/track_and_trade/client/public/dist
 /families/track_and_trade/server/rethinkdb_data
 /families/identity/sawtooth_identity/protobuf
+/families/block_info/sawtooth_block_info/protobuf
 
 /coverage
 /coverage/html
@@ -72,6 +73,7 @@
 /sdk/examples/xo_java/target/
 /sdk/java/target/
 /sdk/go/src/sawtooth_sdk/protobuf/
+/sdk/go/src/mocks/
 /sdk/go/src/github.com/
 /sdk/go/bin/
 /sdk/examples/intkey_go/bin/
@@ -86,6 +88,8 @@
 !/sdk/rust/src/messages/mod.rs
 /families/seth/bin/
 /families/seth/src/sawtooth_seth/protobuf/
+/families/seth/rpc/Cargo.lock
+/families/seth/rpc/target/
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/

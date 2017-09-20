@@ -65,7 +65,7 @@ func (self *XoHandler) Namespaces() []string {
 	return []string{namespace}
 }
 
-func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.State) error {
+func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.Context) error {
 	// The xo player is defined as the signer of the transaction, so we unpack
 	// the transaction header to obtain the signer's public key, which will be
 	// used as the player's identity.
@@ -97,7 +97,7 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, state *pro
 	}
 }
 
-func applyCreate(name string, state *processor.State) error {
+func applyCreate(name string, state *processor.Context) error {
 	game, err := loadGame(name, state)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func applyCreate(name string, state *processor.State) error {
 	return saveGame(game, state)
 }
 
-func applyTake(name string, space int, player string, state *processor.State) error {
+func applyTake(name string, space int, player string, state *processor.Context) error {
 	game, err := loadGame(name, state)
 	if err != nil {
 		return err
@@ -269,7 +269,7 @@ func packGame(game *Game) []byte {
 	return buffer.Bytes()
 }
 
-func loadGame(name string, state *processor.State) (*Game, error) {
+func loadGame(name string, state *processor.Context) (*Game, error) {
 	// Use the namespace prefix + the hash of the game name to create the
 	// storage address
 	address := namespace + hexdigest(name)[:64]
@@ -298,7 +298,7 @@ func loadGame(name string, state *processor.State) (*Game, error) {
 	return nil, nil
 }
 
-func saveGame(game *Game, state *processor.State) error {
+func saveGame(game *Game, state *processor.Context) error {
 	address := namespace + hexdigest(game.Name)[:64]
 	data := packGame(game)
 

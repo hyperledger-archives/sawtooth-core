@@ -29,7 +29,6 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
 from sawtooth_validator.journal.chain_commit_state import \
     TransactionCommitCache
 
-
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
@@ -50,10 +49,12 @@ class _CandidateBlock(object):
                  scheduler,
                  committed_txn_cache,
                  block_builder,
-                 max_batches
+                 max_batches,
+                 batch_injectors,
                  ):
         self._pending_batches = []
         self._pending_batch_ids = set()
+        self._injected_batch_ids = set()
         self._block_store = block_store
         self._consensus = consensus
         self._scheduler = scheduler
@@ -63,6 +64,7 @@ class _CandidateBlock(object):
         # candidate block.
         self._block_builder = block_builder
         self._max_batches = max_batches
+        self._batch_injectors = batch_injectors
 
     def __del__(self):
         # Cancel the scheduler if it is not complete
@@ -82,6 +84,10 @@ class _CandidateBlock(object):
             return self._pending_batches[-1]
         raise ValueError('last_batch called on an empty block.'
                          'Empty block publishing is not supported.')
+
+    @property
+    def batches(self):
+        return self._pending_batches.copy()
 
     @property
     def can_add_batch(self):
@@ -147,6 +153,14 @@ class _CandidateBlock(object):
         return (self._block_store.has_batch(txn.header_signature) or
                 txn.header_signature in committed_txn_cache)
 
+    def _poll_injectors(self, poller, batch_list):
+        for injector in self._batch_injectors:
+            inject = poller(injector)
+            if inject:
+                for b in inject:
+                    self._injected_batch_ids.add(b.header_signature)
+                    batch_list.append(b)
+
     def add_batch(self, batch):
         """Add a batch to the _CandidateBlock
         :param batch: the batch to add to the block
@@ -163,12 +177,22 @@ class _CandidateBlock(object):
                          batch.header_signature)
             return
         elif self._check_batch_dependencies(batch, self._committed_txn_cache):
-            self._pending_batches.append(batch)
-            self._pending_batch_ids.add(batch.header_signature)
-            try:
-                self._scheduler.add_batch(batch)
-            except SchedulerError as err:
-                LOGGER.debug("Scheduler error processing batch: %s", err)
+            batches_to_add = []
+
+            # Inject batches at the beginning of the block
+            if not self._pending_batches:
+                self._poll_injectors(lambda injector: injector.block_start(
+                    self._block_builder.previous_block_id), batches_to_add)
+
+            batches_to_add.append(batch)
+
+            for b in batches_to_add:
+                self._pending_batches.append(b)
+                self._pending_batch_ids.add(b.header_signature)
+                try:
+                    self._scheduler.add_batch(b)
+                except SchedulerError as err:
+                    LOGGER.debug("Scheduler error processing batch: %s", err)
         else:
             LOGGER.debug("Dropping batch due to missing dependencies: %s",
                          batch.header_signature)
@@ -235,7 +259,13 @@ class _CandidateBlock(object):
             # the pending_batches, to be added to the next
             # block
             if result is None:
-                pending_batches.append(batch)
+                # If this was an injected batch, don't keep it in pending
+                # batches since it had to be in this block
+                if batch.header_signature not in self._injected_batch_ids:
+                    pending_batches.append(batch)
+                else:
+                    LOGGER.warning(
+                        "Failed to inject batch '%s'", batch.header_signature)
             elif result.is_valid:
                 # check if a dependent batch failed. This could be belt and
                 # suspenders action here but it is logically possible that
@@ -304,7 +334,8 @@ class BlockPublisher(object):
                  identity_signing_key,
                  data_dir,
                  config_dir,
-                 permission_verifier):
+                 permission_verifier,
+                 batch_injector_factory=None):
         """
         Initialize the BlockPublisher object
 
@@ -324,7 +355,8 @@ class BlockPublisher(object):
                 consensus module can be stored.
             config_dir (str): path to location where configuration can be
                 found.
-        """
+            batch_injector_factory (:obj:`BatchInjectorFatctory`): A factory
+                for creating BatchInjectors."""
         self._lock = RLock()
         self._candidate_block = None  # _CandidateBlock helper,
         # the next block in potential chain
@@ -345,6 +377,7 @@ class BlockPublisher(object):
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
+        self._batch_injector_factory = batch_injector_factory
 
     @property
     def chain_head_lock(self):
@@ -377,6 +410,12 @@ class BlockPublisher(object):
                            config_dir=self._config_dir,
                            validator_id=self._identity_public_key)
 
+        batch_injectors = []
+        if self._batch_injector_factory is not None:
+            batch_injectors = self._batch_injector_factory.create_injectors(
+                chain_head.identifier)
+            LOGGER.debug("Loaded batch injectors: %s", str(batch_injectors))
+
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,
             previous_block_id=chain_head.header_signature,
@@ -399,7 +438,9 @@ class BlockPublisher(object):
                                                 consensus, scheduler,
                                                 committed_txn_cache,
                                                 block_builder,
-                                                max_batches)
+                                                max_batches,
+                                                batch_injectors)
+
         for batch in self._pending_batches:
             if self._candidate_block.can_add_batch:
                 self._candidate_block.add_batch(batch)

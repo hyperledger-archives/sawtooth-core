@@ -21,7 +21,6 @@ from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_store import BlockStore
-from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchTracker
@@ -147,7 +146,6 @@ def make_store_and_tracker(size=3):
     """
     store = MockBlockStore(size=size)
     tracker = BatchTracker(store)
-    store.add_update_observer(tracker)
     tracker.notify_batch_pending(make_mock_batch('pending'))
     tracker.notify_batch_pending(make_mock_batch('invalid'))
     tracker.notify_txn_invalid('t-invalid', 'error message', b'error data')

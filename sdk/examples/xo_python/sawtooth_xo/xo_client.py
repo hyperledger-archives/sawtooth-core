@@ -54,8 +54,8 @@ class XoClient:
                                  auth_user=auth_user,
                                  auth_password=auth_password)
 
-    def take(self, name, space, auth_user=None, auth_password=None):
-        return self._send_xo_txn(name, "take", space,
+    def take(self, name, space, wait=None, auth_user=None, auth_password=None):
+        return self._send_xo_txn(name, "take", space, wait=wait,
                                  auth_user=auth_user,
                                  auth_password=auth_password)
 

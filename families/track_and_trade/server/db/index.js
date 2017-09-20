@@ -18,6 +18,7 @@
 
 const r = require('rethinkdb')
 const _ = require('lodash')
+const jsSchema = require('js-schema')
 
 const HOST = process.env.DB_HOST || 'localhost'
 const PORT = process.env.DB_PORT || 28015
@@ -48,19 +49,22 @@ const queryTable = (table, query, removeCursor = true) => {
     })
 }
 
-// Inserts a document into a table, throwing an error on failure
-// Accepts an optional validator function, which should have an errors method
-const insertTable = (table, doc, validator = d => true) => {
-  if (!validator(doc)) {
-    const [ key, message ] = _.entries(validator.errors(doc))[0]
-    return Promise.reject(new Error(`Invalid Input: "${key}" - ${message}`))
-  }
-
-  return queryTable(table, t => t.insert(doc), false)
+// Use for queries that modify a table, turns error messages into errors
+const modifyTable = (table, query) => {
+  return queryTable(table, query, false)
     .then(results => {
-      if (results.errors) {
+      if (results.errors > 0) {
         throw new Error(results.first_error)
       }
+      return results
+    })
+}
+
+// Inserts a document into a table, throwing an error on failure
+// Accepts an optional validator function, which should have an errors method
+const insertTable = (table, doc) => {
+  return modifyTable(table, t => t.insert(doc))
+    .then(results => {
       if (results.inserted === 0) {
         throw new Error(`Unknown Error: Unable to insert to ${table}`)
       }
@@ -68,8 +72,38 @@ const insertTable = (table, doc, validator = d => true) => {
     })
 }
 
+const updateTable = (table, primary, changes) => {
+  return modifyTable(table, t => {
+    return t.get(primary).update(changes, {returnChanges: true})
+  })
+    .then(results => {
+      if (results.replaced === 0 && results.unchanged === 0) {
+        throw new Error(`Unknown Error: Unable to update ${primary}`)
+      }
+      return results
+    })
+}
+
+// Validates a db input based on a schema as promised
+const validate = (input, schema) => {
+  return Promise.resolve()
+    .then(() => {
+      const validator = jsSchema(schema)
+      if (validator(input)) return input
+
+      const errors = validator.errors(input)
+      if (!errors) throw new Error('Invalid Input: one or more keys forbidden')
+
+      const [ key, message ] = _.entries(errors)[0]
+      throw new Error(`Invalid Input: "${key}" - ${message}`)
+    })
+}
+
 module.exports = {
   connect,
   queryTable,
-  insertTable
+  modifyTable,
+  insertTable,
+  updateTable,
+  validate
 }

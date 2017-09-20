@@ -35,7 +35,7 @@ type SawtoothAppState struct {
 	mgr *StateManager
 }
 
-func NewSawtoothAppState(state *processor.State) *SawtoothAppState {
+func NewSawtoothAppState(state *processor.Context) *SawtoothAppState {
 	return &SawtoothAppState{
 		mgr: NewStateManager(state),
 	}
@@ -193,6 +193,20 @@ func (s *SawtoothAppState) SetStorage(address, key, value Word256) {
 		Key:   key.Bytes(),
 		Value: value.Bytes(),
 	})
+}
+
+func (s *SawtoothAppState) GetBlockHash(blockNumber int64) (Word256, error) {
+	blockInfo, err := getBlockInfo(s.mgr.state, blockNumber)
+	if err != nil {
+		return Zero256, fmt.Errorf("Failed to get block info: %v", err.Error())
+	}
+
+	hash, err := StringToWord256(blockInfo.GetHeaderSignature())
+	if err != nil {
+		return Zero256, fmt.Errorf("Failed to get block info: %v", err.Error())
+	}
+
+	return hash, nil
 }
 
 // -- Utilities --

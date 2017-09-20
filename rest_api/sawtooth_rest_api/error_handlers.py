@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import txn_receipt_pb2
 import sawtooth_rest_api.exceptions as errors
 
 
@@ -81,6 +82,11 @@ class BatchNotFoundTrap(_ErrorTrap):
 class TransactionNotFoundTrap(_ErrorTrap):
     trigger = client_pb2.ClientTransactionGetResponse.NO_RESOURCE
     error = errors.TransactionNotFound
+
+
+class ReceiptNotFoundTrap(_ErrorTrap):
+    trigger = txn_receipt_pb2.ClientReceiptGetResponse.NO_RESOURCE
+    error = errors.ReceiptNotFound
 
 
 class StateNotFoundTrap(_ErrorTrap):

@@ -53,7 +53,7 @@ func (self *NoopHandler) Namespaces() []string {
 	return []string{self.namespace}
 }
 
-func (self *NoopHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.State) error {
+func (self *NoopHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.Context) error {
 	return nil
 }
 

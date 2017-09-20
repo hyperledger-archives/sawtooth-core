@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import time
 from threading import RLock
 from collections import deque
 
@@ -45,28 +44,42 @@ class Completer(object):
     have their dependencies satisifed, otherwise it will request the batch that
     has the missing transaction.
     """
-    def __init__(self, block_store, gossip, cache_purge_frequency=30):
+    def __init__(self,
+                 block_store,
+                 gossip,
+                 cache_keep_time=30,
+                 cache_purge_frequency=30,
+                 requested_keep_time=1200):
         """
         :param block_store (dictionary) The block store shared with the journal
         :param gossip (gossip.Gossip) Broadcasts block and batch request to
                 peers
-        :param cache_purge_frequency (int) The time between purging the
-                TimedCaches.
+        :param cache_keep_time (float) Time in seconds to keep values in
+            TimedCaches.
+        :param cache_purge_frequency (float) Time between purging the
+            TimedCaches.
         """
         self.gossip = gossip
-        self.batch_cache = TimedCache(cache_purge_frequency)
-        self.block_cache = BlockCache(block_store, cache_purge_frequency)
+        self.batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
+        self.block_cache = BlockCache(block_store,
+                                      cache_keep_time,
+                                      cache_purge_frequency)
         self._block_store = block_store
         # avoid throwing away the genesis block
         self.block_cache[NULL_BLOCK_IDENTIFIER] = None
         self._seen_txns = TimedCache(cache_purge_frequency)
         self._incomplete_batches = TimedCache(cache_purge_frequency)
         self._incomplete_blocks = TimedCache(cache_purge_frequency)
+        self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
+        self._incomplete_batches = TimedCache(cache_keep_time,
+                                              cache_purge_frequency)
+        self._incomplete_blocks = TimedCache(cache_keep_time,
+                                             cache_purge_frequency)
+        self._requested = TimedCache(requested_keep_time,
+                                     cache_purge_frequency)
         self._on_block_received = None
         self._on_batch_received = None
         self.lock = RLock()
-        self._cache_purge_frequency = cache_purge_frequency
-        self._purge_time = time.time() + self._cache_purge_frequency
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
@@ -94,13 +107,18 @@ class Completer(object):
             return None
 
         if block.previous_block_id not in self.block_cache:
-            LOGGER.debug("Request missing predecessor: %s",
-                         block.previous_block_id)
             if block.previous_block_id not in self._incomplete_blocks:
                 self._incomplete_blocks[block.previous_block_id] = [block]
             elif block not in self._incomplete_blocks[block.previous_block_id]:
                 self._incomplete_blocks[block.previous_block_id] += [block]
 
+            # We have already requested the block, do not do so again
+            if block.previous_block_id in self._requested:
+                return None
+
+            LOGGER.debug("Request missing predecessor: %s",
+                         block.previous_block_id)
+            self._requested[block.previous_block_id] = None
             self.gossip.broadcast_block_request(block.previous_block_id)
             return None
 
@@ -123,11 +141,16 @@ class Completer(object):
                 if batch_id not in self.batch_cache and \
                         batch_id not in temp_batches:
                     # Request all missing batches
-                    self.gossip.broadcast_batch_by_batch_id_request(batch_id)
                     if batch_id not in self._incomplete_blocks:
                         self._incomplete_blocks[batch_id] = [block]
                     elif block not in self._incomplete_blocks[batch_id]:
                         self._incomplete_blocks[batch_id] += [block]
+
+                    # We have already requested the batch, do not do so again
+                    if batch_id in self._requested:
+                        return None
+                    self._requested[batch_id] = None
+                    self.gossip.broadcast_batch_by_batch_id_request(batch_id)
                     building = False
 
             if not building:
@@ -138,12 +161,16 @@ class Completer(object):
             del block.batches[:]
             # reset batches with full list batches
             block.batches.extend(batches)
+            if block.header_signature in self._requested:
+                del self._requested[block.header_signature]
             return block
 
         else:
             batch_id_list = [x.header_signature for x in block.batches]
             # Check to see if batchs are in the correct order.
             if batch_id_list == list(block.header.batch_ids):
+                if block.header_signature in self._requested:
+                    del self._requested[block.header_signature]
                 return block
             # Check to see if the block has all batch_ids and they can be put
             # in the correct order
@@ -156,6 +183,9 @@ class Completer(object):
                     block.batches.extend(batches)
                 else:
                     return None
+
+                if block.header_signature in self._requested:
+                    del self._requested[block.header_signature]
 
                 return block
             else:
@@ -193,7 +223,10 @@ class Completer(object):
                                  batch.header_signature,
                                  dependency)
 
-                    dependencies.append(dependency)
+                    # Check to see if the dependency has already been requested
+                    if dependency not in self._requested:
+                        dependencies.append(dependency)
+                        self._requested[dependency] = None
                     if dependency not in self._incomplete_batches:
                         self._incomplete_batches[dependency] = [batch]
                     elif batch not in self._incomplete_batches[dependency]:
@@ -239,16 +272,6 @@ class Completer(object):
                             to_complete.append(inc_block.header_signature)
                     del self._incomplete_blocks[my_key]
 
-    def _purge_caches(self):
-        if self._purge_time < time.time():
-            LOGGER.debug("Purges caches of expired entries.")
-            self._seen_txns.purge_expired()
-            self._incomplete_batches.purge_expired()
-            self._incomplete_blocks.purge_expired()
-            self.batch_cache.purge_expired()
-            self.block_cache.purge_expired()
-            self._purge_time = time.time() + self._cache_purge_frequency
-
     def set_on_block_received(self, on_block_received_func):
         self._on_block_received = on_block_received_func
 
@@ -263,7 +286,6 @@ class Completer(object):
                 self.block_cache[block.header_signature] = blkw
                 self._on_block_received(blkw)
                 self._process_incomplete_blocks(block.header_signature)
-                self._purge_caches()
 
     def add_batch(self, batch):
         with self.lock:
@@ -274,10 +296,14 @@ class Completer(object):
                 self._add_seen_txns(batch)
                 self._on_batch_received(batch)
                 self._process_incomplete_blocks(batch.header_signature)
+                if batch.header_signature in self._requested:
+                    del self._requested[batch.header_signature]
                 # If there was a batch waiting on this transaction, process
                 # that batch
                 for txn in batch.transactions:
                     if txn.header_signature in self._incomplete_batches:
+                        if txn.header_signature in self._requested:
+                            del self._requested[txn.header_signature]
                         self._process_incomplete_batches(txn.header_signature)
 
     def get_chain_head(self):

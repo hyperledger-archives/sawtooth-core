@@ -55,6 +55,8 @@ type AppState interface {
 	GetStorage(Word256, Word256) Word256
 	SetStorage(Word256, Word256, Word256) // Setting to Zero is deleting.
 
+	// State
+	GetBlockHash(int64) (Word256, error)
 }
 
 type Params struct {

@@ -19,6 +19,8 @@ from sawtooth_validator.execution.scheduler import BatchExecutionResult
 
 from sawtooth_validator.journal.batch_sender import BatchSender
 from sawtooth_validator.journal.block_sender import BlockSender
+from sawtooth_validator.journal.batch_injector import BatchInjectorFactory
+from sawtooth_validator.journal.batch_injector import BatchInjector
 
 from sawtooth_validator.protobuf import batch_pb2
 from sawtooth_validator.protobuf import block_pb2
@@ -101,6 +103,9 @@ class MockScheduler(Scheduler):
         return BatchExecutionResult(
             is_valid=result,
             state_hash='0'*70)
+
+    def get_transaction_execution_results(self, batch_signature):
+        return []
 
     def set_transaction_execution_result(
             self, txn_signature, is_valid, context_id):
@@ -261,9 +266,25 @@ class MockStateDeltaProcessor(object):
     def __init__(self):
         self.block = None
 
-    def publish_deltas(self, block):
+    def chain_update(self, block, receipts):
         self.block = block
 
 class MockPermissionVerifier(object):
     def is_batch_signer_authorized(self, batch, state_root=None):
         return True
+
+
+class MockBatchInjectorFactory(BatchInjectorFactory):
+    def __init__(self, batch):
+        self._batch = batch
+
+    def create_injectors(self, previous_block_id):
+        return [MockBatchInjector(self._batch)]
+
+
+class MockBatchInjector(BatchInjector):
+    def __init__(self, batch):
+        self._batch = batch
+
+    def block_start(self, previous_block_id):
+        return [self._batch]

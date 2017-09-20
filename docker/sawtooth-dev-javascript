@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y -q --no-install-recommends \
  && curl -s -S -o /tmp/setup-node.sh https://deb.nodesource.com/setup_6.x \
  && chmod 755 /tmp/setup-node.sh \
  && /tmp/setup-node.sh \
- && apt-get install -y nodejs \
+ && apt-get install nodejs -y -q \
  && rm /tmp/setup-node.sh \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \

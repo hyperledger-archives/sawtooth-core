@@ -15,7 +15,7 @@
 
 import logging
 
-from sawtooth_sdk.processor.state import StateEntry
+from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader

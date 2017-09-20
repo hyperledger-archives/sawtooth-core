@@ -19,6 +19,7 @@ from sawtooth_validator.exceptions import PossibleForkDetectedError
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
+from sawtooth_validator.journal.chain import ChainObserver
 
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaEvent
@@ -64,7 +65,7 @@ class _DeltaSubscriber(object):
         return False
 
 
-class StateDeltaProcessor(object):
+class StateDeltaProcessor(ChainObserver):
     """The StateDeltaProcessor manages subscribers for state deltas.
     """
 
@@ -230,6 +231,9 @@ class StateDeltaProcessor(object):
         self._service.send(validator_pb2.Message.STATE_DELTA_EVENT,
                            message_bytes,
                            connection_id=connection_id)
+
+    def chain_update(self, block, receipts):
+        self.publish_deltas(block)
 
 
 class StateDeltaSubscriberValidationHandler(Handler):

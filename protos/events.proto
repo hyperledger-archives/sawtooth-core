@@ -20,16 +20,74 @@ option java_package = "sawtooth.sdk.protobuf";
 option go_package = "events_pb2";
 
 message Event {
-  // Determines how to deserialize event_data, what pairs to expect in Meta, and
-  // is used to subscribe to a class of events.
+  // Used to subscribe to events and servers as a hint for how to deserialize
+  // event_data and what pairs to expect in attributes.
   string event_type = 1;
-  // Opaque data defined by the event_type.
-  bytes  event_data = 2;
-  message Meta {
+
+  // Transparent data defined by the event_type.
+  message Attribute {
     string key = 1;
     string value = 2;
+  }
+  repeated Attribute attributes = 2;
+
+  // Opaque data defined by the event_type.
+  bytes  data = 3;
 }
-  // Transparent data defined by the event_type. Events of a given type can be
-  // filtered by key­value pairs in meta_data when subscribing.
-  repeated Meta meta_data = 3;
+
+message EventList {
+    repeated Event events = 1;
+}
+
+message EventFilter {
+    // EventFilter is used when subscribing to events to limit the events
+    // received within a given event type. See
+    // validator/server/events/subscription.py for further explanation.
+    string key = 1;
+    string match_string = 2;
+
+    enum FilterType {
+      SIMPLE_ANY = 0;
+      SIMPLE_ALL = 1;
+      REGEX_ANY  = 2;
+      REGEX_ALL  = 3;
+    }
+    FilterType filter_type = 3;
+}
+
+message EventSubscription {
+    // EventSubscription is used when subscribing to events to specify the type
+    // of events being subscribed to, along with any additional filters. See
+    // validator/server/events/subscription.py for further explanation.
+    string event_type = 1;
+    repeated EventFilter filters = 2;
+}
+
+message ClientEventsSubscribeRequest {
+    repeated EventSubscription subscriptions = 1;
+    // The block id (or ids, if trying to walk back a fork) the subscriber last
+    // received events on. It can be set to empty if it has not yet received the
+    // genesis block.
+    repeated string last_known_block_ids = 2;
+}
+
+message ClientEventsSubscribeResponse {
+    enum Status {
+         OK = 0;
+         INVALID_FILTER = 1;
+         UNKNOWN_BLOCK = 2;
+    }
+    Status status = 1;
+    // Additional information about the response status
+    string response_message = 2;
+}
+
+message ClientEventsUnsubscribeRequest {}
+
+message ClientEventsUnsubscribeResponse {
+    enum Status {
+         OK = 0;
+         INTERNAL_ERROR = 1;
+    }
+    Status status = 1;
 }

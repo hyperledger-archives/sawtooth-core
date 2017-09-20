@@ -35,6 +35,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
  && apt-get install -y -q \
     curl \
     python3-sawtooth-cli \
+    python3-sawtooth-identity \
     python3-sawtooth-intkey \
     python3-sawtooth-manage \
     python3-sawtooth-poet-common \

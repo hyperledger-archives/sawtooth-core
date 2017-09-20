@@ -26,6 +26,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 
+WAIT = 300
 REST_API = 'rest-api:8080'
 
 class TestXoSmoke(unittest.TestCase):
@@ -38,19 +39,19 @@ class TestXoSmoke(unittest.TestCase):
     def test_xo_smoke(self):
         game_cmds = (
             'xo init --url {}'.format(REST_API),
-            'xo create nunzio',
-            'xo take nunzio 1',
-            'xo take nunzio 4',
-            'xo take nunzio 2',
-            'xo take nunzio 2',
-            'xo take nunzio 5',
-            'xo create tony',
-            'xo take tony 9',
-            'xo take tony 8',
-            'xo take nunzio 3',
-            'xo take nunzio 7',
-            'xo take tony 6',
-            'xo create wait --wait 1'
+            'xo create nunzio --wait {}'.format(WAIT),
+            'xo take nunzio 1 --wait {}'.format(WAIT),
+            'xo take nunzio 4 --wait {}'.format(WAIT),
+            'xo take nunzio 2 --wait {}'.format(WAIT),
+            'xo take nunzio 2 --wait {}'.format(WAIT),
+            'xo take nunzio 5 --wait {}'.format(WAIT),
+            'xo create tony --wait {}'.format(WAIT),
+            'xo take tony 9 --wait {}'.format(WAIT),
+            'xo take tony 8 --wait {}'.format(WAIT),
+            'xo take nunzio 3 --wait {}'.format(WAIT),
+            'xo take nunzio 7 --wait {}'.format(WAIT),
+            'xo take tony 6 --wait {}'.format(WAIT),
+            'xo create wait --wait {}'.format(WAIT),
         )
 
         for cmd in game_cmds:

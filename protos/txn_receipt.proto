@@ -35,6 +35,8 @@ message TransactionReceipt {
   repeated Event events = 2;
   // Transaction family defined data
   repeated Data data = 3;
+
+  string transaction_id = 4;
 }
 
 // Fetches a specific txn by its id (header_signature) from the blockchain.

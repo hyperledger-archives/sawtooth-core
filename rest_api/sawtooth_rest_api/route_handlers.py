@@ -31,6 +31,7 @@ import sawtooth_rest_api.exceptions as errors
 import sawtooth_rest_api.error_handlers as error_handlers
 from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import txn_receipt_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
@@ -425,6 +426,68 @@ class RouteHandler(object):
             request,
             data=self._expand_transaction(response['transaction']),
             metadata=self._get_metadata(request, response))
+
+    async def list_receipts(self, request):
+        """Fetches the receipts for transaction by either a POST or GET.
+
+        Request:
+            body: A JSON array of one or more transaction id strings (if POST)
+            query:
+                - id: A comma separated list of up to 15 ids (if GET)
+                - wait: Request should return as soon as some receipts are
+                    available
+
+        Response:
+            data: A JSON object, with transaction ids as keys, and receipts as
+                values
+            link: The /receipts link queried (if GET)
+        """
+        error_traps = [error_handlers.ReceiptNotFoundTrap]
+
+        # Parse transaction ids from POST body, or query paramaters
+        if request.method == 'POST':
+            if request.headers['Content-Type'] != 'application/json':
+                LOGGER.debug(
+                    'Request headers had wrong Content-Type: %s',
+                    request.headers['Content-Type'])
+                raise errors.ReceiptWrongContentType()
+
+            ids = await request.json()
+
+            if (not ids
+                    or not isinstance(ids, list)
+                    or not all(isinstance(i, str) for i in ids)):
+                LOGGER.debug('Request body was invalid: %s', ids)
+                raise errors.ReceiptBodyInvalid()
+
+        else:
+            ids = self._get_filter_ids(request)
+            if not ids:
+                LOGGER.debug('Request for receipts missing id query')
+                raise errors.ReceiptIdQueryInvalid()
+
+        # Query validator
+        validator_query = \
+            txn_receipt_pb2.ClientReceiptGetRequest(
+                transaction_ids=ids)
+        self._set_wait(request, validator_query)
+
+        response = await self._query_validator(
+            Message.CLIENT_RECEIPT_GET_REQUEST,
+            txn_receipt_pb2.ClientReceiptGetResponse,
+            validator_query,
+            error_traps)
+
+        # Send response
+        if request.method != 'POST':
+            metadata = self._get_metadata(request, response)
+        else:
+            metadata = None
+
+        data = self._drop_id_prefixes(
+            self._drop_empty_props(response['receipts']))
+
+        return self._wrap_response(request, data=data, metadata=metadata)
 
     async def _query_validator(self, request_type, response_proto,
                                payload, error_traps=None):

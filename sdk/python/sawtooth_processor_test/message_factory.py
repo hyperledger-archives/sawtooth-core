@@ -34,7 +34,13 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import Entry
+
+from sawtooth_sdk.protobuf.events_pb2 import Event
 
 
 class InvalidMerkleAddressException(Exception):
@@ -241,3 +247,30 @@ class MessageFactory(object):
         return TpStateSetResponse(
             addresses=addresses
         )
+
+    def create_delete_request(self, addresses):
+        self._validate_addresses(addresses)
+        return TpStateDeleteRequest(
+            addresses=addresses
+        )
+
+    def create_delete_response(self, addresses):
+        self._validate_addresses(addresses)
+        return TpStateDeleteResponse(
+            addresses=addresses
+        )
+
+    def create_add_event_request(self, event_type, attributes=None, data=None):
+        attribute_list = []
+        for attribute in attributes:
+            attribute_list.append(
+                Event.Attribute(key=attribute[0], value=attribute[1]))
+        return TpAddEventRequest(
+            event=Event(
+                event_type=event_type,
+                attributes=attribute_list,
+                data=data))
+
+    def create_add_event_response(self):
+        return TpAddEventResponse(
+            status=TpAddEventResponse.OK)

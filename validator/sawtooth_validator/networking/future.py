@@ -13,10 +13,13 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from concurrent.futures import ThreadPoolExecutor
+import logging
 from threading import Condition
 from threading import RLock
 import time
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class FutureResult(object):
@@ -31,14 +34,13 @@ class FutureTimeoutError(Exception):
 
 
 class Future(object):
-    def __init__(self, correlation_id, request=None, has_callback=False):
+    def __init__(self, correlation_id, request=None, callback=None):
         self.correlation_id = correlation_id
         self._request = request
         self._result = None
         self._condition = Condition()
         self._create_time = time.time()
-        self._callback_func = None
-        self._has_callback = has_callback
+        self._callback_func = callback
         self._reconcile_time = None
 
     def done(self):
@@ -69,26 +71,13 @@ class Future(object):
         Returns:
             None
         """
-        if self._has_callback:
-            if self._callback_func is None:
-                self._condition.wait()
-            self._callback_func(self._request, self._result)
 
-    def add_callback(self, callback_func):
-        """Add a callback to be executed on set_result.
-        The callback must take two positional arguments,
-        (bytes), (FutureResult)
-
-        Args:
-            callback_func (callable): A function with signature
-                (bytes) SerializedProtobuf of the request, (FutureResult)
-
-        Returns:
-            None
-        """
-        with self._condition:
-            self._callback_func = callback_func
-            self._condition.notify_all()
+        if self._callback_func is not None:
+            try:
+                self._callback_func(self._request, self._result)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception('An unhandled error occurred while running '
+                                 'future callback')
 
     def get_duration(self):
         return self._reconcile_time - self._create_time
@@ -99,20 +88,10 @@ class FutureCollectionKeyError(Exception):
 
 
 class FutureCollection(object):
-    def __init__(self, max_workers=4):
+    def __init__(self, resolving_threadpool=None):
         self._futures = {}
         self._lock = RLock()
-        self._resolving_threadpool = ThreadPoolExecutor(
-            max_workers=max_workers)
-
-    def stop(self):
-        """Shutdown the threadpool used for running callbacks and wait for
-        all the callbacks to finish running.
-
-        Returns:
-            None
-        """
-        self._resolving_threadpool.shutdown(wait=True)
+        self._resolving_threadpool = resolving_threadpool
 
     def put(self, future):
         self._futures[future.correlation_id] = future
@@ -123,6 +102,8 @@ class FutureCollection(object):
             future.set_result(result)
             if self._resolving_threadpool is not None:
                 self._resolving_threadpool.submit(future.run_callback)
+            else:
+                future.run_callback()
 
     def get(self, correlation_id):
         try:

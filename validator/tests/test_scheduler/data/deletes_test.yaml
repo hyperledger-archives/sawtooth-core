@@ -1,0 +1,211 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# -----------------------------------------------------------------------------
+
+
+ # This test uses deletes along with invalid txns, chained dependencies,
+ # and txns with addresses that make them the predecessor of all later txns.
+
+---
+-  #------------------------- Batch 1
+  -
+    inputs:
+      - a:sha
+    outputs:
+      - a:sha
+    addresses_to_set:
+      - a:sha :
+  -
+    inputs:
+      - b:sha
+    outputs:
+      - b:sha
+    addresses_to_set:
+      - b:sha :
+    valid: False
+- # ----------------------- Batch 2
+  -
+    inputs:
+      - c:sha
+      - a:sha
+    outputs:
+      - ""
+    addresses_to_delete:
+      - a:sha
+    addresses_to_set:
+      - t:sha :
+  -
+    inputs:
+      - t:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
+    name: john
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - d:sha
+    addresses_to_delete:
+      - d:sha
+- #------------------------ Batch 3
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - e:sha :
+      - f:sha :
+      - g:sha :
+      - h:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - e:sha
+    addresses_to_delete:
+      - e:sha
+- # ----------------------- Batch 4
+  -
+    inputs:
+      - f:sha
+    outputs:
+      - f:sha
+    addresses_to_set:
+      - f:sha :
+    name: paul
+  -
+    inputs:
+      - m:sha
+    outputs:
+      - m:sha
+    addresses_to_delete:
+      - m:sha
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - y:sha
+    addresses_to_set:
+      - y:sha :
+    valid: False
+- # ------------------------ Batch 5
+  -
+    inputs:
+      - m:sha
+    outputs:
+      - m:sha
+    addresses_to_set:
+      - m:sha :
+  -
+    inputs:
+      - ""
+    outputs:
+      - ""
+    addresses_to_set:
+      - w:sha :
+      - x:sha :
+      - y:sha :
+      - z:sha :
+    addresses_to_delete:
+      - m:sha
+      - h:sha
+- # -------------------------- Batch 6
+  -
+    inputs:
+      - r:sha
+    outputs:
+      - d:sha
+    addresses_to_delete:
+      - d:sha
+  -
+    inputs:
+      - u:sha
+    outputs:
+      - m:sha
+    addresses_to_set:
+      - m:sha :
+    dependencies:
+      - paul
+    name: ringo
+- # -------------------------- Batch 7
+  -
+    inputs:
+      - f:sha
+    outputs:
+      - f:sha
+    addresses_to_set:
+      - f:sha :
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - d:sha
+    addresses_to_delete:
+      - d:sha
+  -
+    inputs:
+      - y:sha
+    outputs:
+      - y:sha
+    addresses_to_set:
+      - y:sha :
+- # --------------------- Batch 8
+  -
+    inputs:
+      - d:sha
+    outputs:
+      - ""
+    addresses_to_set:
+      - a:sha :
+      - b:sha :
+      - c:sha :
+      - v:sha :
+      - f:sha :
+      - m:sha :
+      - n:sha :
+  -
+    inputs:
+      - e:sha
+      - f:sha
+    outputs:
+      - g:sha
+    addresses_to_set:
+      - g:sha :
+    dependencies:
+      - ringo
+- #--------------------------- Batch 9
+  -
+    inputs:
+      - v:sha
+    outputs:
+      - v:sha
+    addresses_to_set:
+      - v:sha :
+  -
+    inputs:
+      - h:sha
+    outputs:
+      - h:sha
+    addresses_to_set:
+      - h:sha :
+  -
+    inputs:
+      - e:sha
+    outputs:
+      - d:sha
+    addresses_to_set:
+      - d:sha :
