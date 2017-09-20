@@ -86,8 +86,9 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && pip3 install \
     pylint \
     bandit \
-    pyformance \
-    coverage --upgrade
+    coverage --upgrade \
+&& pip3  install git+git://github.com/omergertel/pyformance.git@de7bee8ceddbb1c3ea3b6c28373a5b066b04b3b7 \
+	--upgrade
 
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
  && add-apt-repository \

@@ -41,7 +41,11 @@ RUN cd /debs \
  && echo "deb file:/debs ./" >> /etc/apt/sources.list \
  && echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
- && apt-get update
+ && apt-get update \
+ && apt-get install -y -q python3-pip  git\
+ && pip3 install git+git://github.com/omergertel/pyformance.git@de7bee8ceddbb1c3ea3b6c28373a5b066b04b3b7 \
+	--upgrade
+
 
 RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-rest-api
