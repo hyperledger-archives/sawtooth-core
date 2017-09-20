@@ -20,17 +20,33 @@ const m = require('mithril')
 const _ = require('lodash')
 
 /**
- * Returns an input field which modifies a particular value in state
+ * Returns a labeled form group
  */
-const input = (type, onValue, label, required = true) => {
+const group = (label, ...contents) => {
   return m('.form-group', [
     m('label', label),
-    m('input.form-control', {
-      type,
-      required,
-      oninput: m.withAttr('value', onValue)
-    })
+    contents
   ])
+}
+
+/**
+ * Returns a bare input field suitable for use in a form group.
+ * Passes its value to a callback, and defaults to required.
+ */
+const field = (onValue, attrs = null) => {
+  const defaults = {
+    required: true,
+    oninput: m.withAttr('value', onValue)
+  }
+
+  return m('input.form-control.mb-1', _.assign(defaults, attrs))
+}
+
+/**
+ * Returns a labeled input field which passes its value to a callback
+ */
+const input = (type, onValue, label, required) => {
+  return group(label, field(onValue, { type, required }))
 }
 
 const textInput = _.partial(input, 'text')
@@ -43,11 +59,27 @@ const emailInput = _.partial(input, 'email')
  */
 const stateSetter = state => key => value => { state[key] = value }
 
+/**
+ * Event listener which will set HTML5 validation on the triggered element
+ */
+const validator = (predicate, message, id = null) => e => {
+  const element = id === null ? e.target : document.getElementById(id)
+
+  if (predicate(element.value)) {
+    element.setCustomValidity('')
+  } else {
+    element.setCustomValidity(message)
+  }
+}
+
 module.exports = {
+  group,
+  field,
   input,
   textInput,
   passwordInput,
   numberInput,
   emailInput,
-  stateSetter
+  stateSetter,
+  validator
 }
