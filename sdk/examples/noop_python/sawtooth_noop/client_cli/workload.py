@@ -18,6 +18,7 @@ import getpass
 import logging
 import random
 import threading
+from  base64 import b64encode
 from collections import namedtuple
 from datetime import datetime
 from http.client import RemoteDisconnected
