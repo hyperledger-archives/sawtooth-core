@@ -6,8 +6,8 @@ Architecture
 .. toctree::
    :maxdepth: 2
 
-   architecture/transactions_and_batches
    architecture/global_state
+   architecture/transactions_and_batches
    architecture/journal
    architecture/rest_api
    architecture/poet
