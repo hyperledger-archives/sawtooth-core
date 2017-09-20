@@ -50,7 +50,7 @@ func (self *SmallbankHandler) Namespaces() []string {
 	return []string{namespace}
 }
 
-func (self *SmallbankHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.State) error {
+func (self *SmallbankHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
 	payload, err := unpackPayload(request.GetPayload())
 	if err != nil {
 		return err
@@ -61,25 +61,25 @@ func (self *SmallbankHandler) Apply(request *processor_pb2.TpProcessRequest, sta
 
 	switch payload.PayloadType {
 	case smallbank_pb2.SmallbankTransactionPayload_CREATE_ACCOUNT:
-		return applyCreateAccount(payload.CreateAccount, state)
+		return applyCreateAccount(payload.CreateAccount, context)
 	case smallbank_pb2.SmallbankTransactionPayload_DEPOSIT_CHECKING:
-		return applyDepositChecking(payload.DepositChecking, state)
+		return applyDepositChecking(payload.DepositChecking, context)
 	case smallbank_pb2.SmallbankTransactionPayload_WRITE_CHECK:
-		return applyWriteCheck(payload.WriteCheck, state)
+		return applyWriteCheck(payload.WriteCheck, context)
 	case smallbank_pb2.SmallbankTransactionPayload_TRANSACT_SAVINGS:
-		return applyTransactSavings(payload.TransactSavings, state)
+		return applyTransactSavings(payload.TransactSavings, context)
 	case smallbank_pb2.SmallbankTransactionPayload_SEND_PAYMENT:
-		return applySendPayment(payload.SendPayment, state)
+		return applySendPayment(payload.SendPayment, context)
 	case smallbank_pb2.SmallbankTransactionPayload_AMALGAMATE:
-		return applyAmalgamate(payload.Amalgamate, state)
+		return applyAmalgamate(payload.Amalgamate, context)
 	default:
 		return &processor.InvalidTransactionError{
 			Msg: fmt.Sprintf("Invalid PayloadType: '%v'", payload.PayloadType)}
 	}
 }
 
-func applyCreateAccount(createAccountData *smallbank_pb2.SmallbankTransactionPayload_CreateAccountTransactionData, state *processor.State) error {
-	account, err := loadAccount(createAccountData.CustomerId, state)
+func applyCreateAccount(createAccountData *smallbank_pb2.SmallbankTransactionPayload_CreateAccountTransactionData, context *processor.Context) error {
+	account, err := loadAccount(createAccountData.CustomerId, context)
 	if err != nil {
 		return err
 	}
@@ -99,13 +99,13 @@ func applyCreateAccount(createAccountData *smallbank_pb2.SmallbankTransactionPay
 		CheckingBalance: createAccountData.InitialCheckingBalance,
 	}
 
-	saveAccount(new_account, state)
+	saveAccount(new_account, context)
 
 	return nil
 }
 
-func applyDepositChecking(depositCheckingData *smallbank_pb2.SmallbankTransactionPayload_DepositCheckingTransactionData, state *processor.State) error {
-	account, err := loadAccount(depositCheckingData.CustomerId, state)
+func applyDepositChecking(depositCheckingData *smallbank_pb2.SmallbankTransactionPayload_DepositCheckingTransactionData, context *processor.Context) error {
+	account, err := loadAccount(depositCheckingData.CustomerId, context)
 	if err != nil {
 		return err
 	}
@@ -121,13 +121,13 @@ func applyDepositChecking(depositCheckingData *smallbank_pb2.SmallbankTransactio
 		CheckingBalance: account.CheckingBalance + depositCheckingData.Amount,
 	}
 
-	saveAccount(new_account, state)
+	saveAccount(new_account, context)
 
 	return nil
 }
 
-func applyWriteCheck(writeCheckData *smallbank_pb2.SmallbankTransactionPayload_WriteCheckTransactionData, state *processor.State) error {
-	account, err := loadAccount(writeCheckData.CustomerId, state)
+func applyWriteCheck(writeCheckData *smallbank_pb2.SmallbankTransactionPayload_WriteCheckTransactionData, context *processor.Context) error {
+	account, err := loadAccount(writeCheckData.CustomerId, context)
 	if err != nil {
 		return err
 	}
@@ -143,13 +143,13 @@ func applyWriteCheck(writeCheckData *smallbank_pb2.SmallbankTransactionPayload_W
 		CheckingBalance: account.CheckingBalance - writeCheckData.Amount,
 	}
 
-	saveAccount(new_account, state)
+	saveAccount(new_account, context)
 
 	return nil
 }
 
-func applyTransactSavings(transactSavingsData *smallbank_pb2.SmallbankTransactionPayload_TransactSavingsTransactionData, state *processor.State) error {
-	account, err := loadAccount(transactSavingsData.CustomerId, state)
+func applyTransactSavings(transactSavingsData *smallbank_pb2.SmallbankTransactionPayload_TransactSavingsTransactionData, context *processor.Context) error {
+	account, err := loadAccount(transactSavingsData.CustomerId, context)
 	if err != nil {
 		return err
 	}
@@ -176,18 +176,18 @@ func applyTransactSavings(transactSavingsData *smallbank_pb2.SmallbankTransactio
 		CheckingBalance: account.CheckingBalance,
 	}
 
-	saveAccount(new_account, state)
+	saveAccount(new_account, context)
 
 	return nil
 }
 
-func applySendPayment(sendPaymentData *smallbank_pb2.SmallbankTransactionPayload_SendPaymentTransactionData, state *processor.State) error {
-	source_account, err := loadAccount(sendPaymentData.SourceCustomerId, state)
+func applySendPayment(sendPaymentData *smallbank_pb2.SmallbankTransactionPayload_SendPaymentTransactionData, context *processor.Context) error {
+	source_account, err := loadAccount(sendPaymentData.SourceCustomerId, context)
 	if err != nil {
 		return err
 	}
 
-	dest_account, err := loadAccount(sendPaymentData.DestCustomerId, state)
+	dest_account, err := loadAccount(sendPaymentData.DestCustomerId, context)
 	if err != nil {
 		return err
 	}
@@ -214,19 +214,19 @@ func applySendPayment(sendPaymentData *smallbank_pb2.SmallbankTransactionPayload
 		CheckingBalance: dest_account.CheckingBalance + sendPaymentData.Amount,
 	}
 
-	saveAccount(new_source_account, state)
-	saveAccount(new_dest_account, state)
+	saveAccount(new_source_account, context)
+	saveAccount(new_dest_account, context)
 
 	return nil
 }
 
-func applyAmalgamate(amalgamateData *smallbank_pb2.SmallbankTransactionPayload_AmalgamateTransactionData, state *processor.State) error {
-	source_account, err := loadAccount(amalgamateData.SourceCustomerId, state)
+func applyAmalgamate(amalgamateData *smallbank_pb2.SmallbankTransactionPayload_AmalgamateTransactionData, context *processor.Context) error {
+	source_account, err := loadAccount(amalgamateData.SourceCustomerId, context)
 	if err != nil {
 		return err
 	}
 
-	dest_account, err := loadAccount(amalgamateData.DestCustomerId, state)
+	dest_account, err := loadAccount(amalgamateData.DestCustomerId, context)
 	if err != nil {
 		return err
 	}
@@ -249,8 +249,8 @@ func applyAmalgamate(amalgamateData *smallbank_pb2.SmallbankTransactionPayload_A
 		CheckingBalance: dest_account.CheckingBalance + source_account.SavingsBalance,
 	}
 
-	saveAccount(new_source_account, state)
-	saveAccount(new_dest_account, state)
+	saveAccount(new_source_account, context)
+	saveAccount(new_dest_account, context)
 
 	return nil
 }
@@ -285,10 +285,10 @@ func unpackAccount(accountData []byte) (*smallbank_pb2.Account, error) {
 	return account, nil
 }
 
-func loadAccount(customer_id uint32, state *processor.State) (*smallbank_pb2.Account, error) {
+func loadAccount(customer_id uint32, context *processor.Context) (*smallbank_pb2.Account, error) {
 	address := namespace + hexdigest(fmt.Sprint(customer_id))[:64]
 
-	results, err := state.Get([]string{address})
+	results, err := context.GetState([]string{address})
 	if err != nil {
 		return nil, &processor.InternalError{Msg: fmt.Sprint("Error getting state:", err)}
 	}
@@ -304,14 +304,14 @@ func loadAccount(customer_id uint32, state *processor.State) (*smallbank_pb2.Acc
 	return nil, nil
 }
 
-func saveAccount(account *smallbank_pb2.Account, state *processor.State) error {
+func saveAccount(account *smallbank_pb2.Account, context *processor.Context) error {
 	address := namespace + hexdigest(fmt.Sprint(account.CustomerId))[:64]
 	data, err := proto.Marshal(account)
 	if err != nil {
 		return &processor.InternalError{Msg: fmt.Sprint("Failed to serialize Account:", err)}
 	}
 
-	addresses, err := state.Set(map[string][]byte{
+	addresses, err := context.SetState(map[string][]byte{
 		address: data,
 	})
 	if err != nil {
