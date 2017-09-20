@@ -45,16 +45,22 @@ const Layout = {
 
 const loggedInNav = () => {
   const links = [
-    ['/create', 'Add Fish']
+    ['/create', 'Add Fish'],
+    ['/fish', 'View Fish'],
+    ['/agents', 'View Agents']
   ]
   return m(navigation.Navbar, {}, [
     navigation.links(links),
+    navigation.link('/profile', 'Profile'),
     navigation.button('/logout', 'Logout')
   ])
 }
 
 const loggedOutNav = () => {
-  const links = []
+  const links = [
+    ['/fish', 'View Fish'],
+    ['/agents', 'View Agents']
+  ]
   return m(navigation.Navbar, {}, [
     navigation.links(links),
     navigation.button('/login', 'Login/Signup')

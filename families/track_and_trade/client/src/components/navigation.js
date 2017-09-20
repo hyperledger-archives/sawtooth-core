@@ -39,7 +39,7 @@ const Navbar = {
 }
 
 /**
- * Creates a list of navbar links from an array of href/label tuples.
+ * Creates a list of left-aligned navbar links from href/label tuples.
  */
 const links = items => {
   return m('ul.navbar-nav.mr-auto', items.map(([href, label]) => {
@@ -47,6 +47,15 @@ const links = items => {
       m('a.nav-link', { href, oncreate: m.route.link }, label)
     ])
   }))
+}
+
+/**
+ * Creates a single link for use in a navbar.
+ */
+const link = (href, label) => {
+  return m('.navbar-nav', [
+    m('a.nav-link', { href, oncreate: m.route.link }, label)
+  ])
 }
 
 /**
@@ -61,6 +70,7 @@ const button = (href, label) => {
 
 module.exports = {
   Navbar,
+  link,
   links,
   button
 }
