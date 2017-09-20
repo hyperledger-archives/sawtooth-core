@@ -524,8 +524,9 @@ class _SendReceive(object):
         self._dispatcher.remove_send_message(self._connection)
         self._dispatcher.remove_send_last_message(self._connection)
         yield from self._stop_auth()
-        for task in asyncio.Task.all_tasks(self._event_loop):
+        for task in asyncio.Task.all_tasks(self._event_loop).copy():
             task.cancel()
+
         asyncio.ensure_future(self._stop_event_loop())
 
     @asyncio.coroutine
@@ -549,7 +550,7 @@ class _SendReceive(object):
             self._event_loop.run_until_complete(self._stop_auth())
         # Cancel all running tasks
         tasks = asyncio.Task.all_tasks(self._event_loop)
-        for task in tasks:
+        for task in tasks.copy():
             self._event_loop.call_soon_threadsafe(task.cancel)
         while tasks:
             for task in tasks.copy():
