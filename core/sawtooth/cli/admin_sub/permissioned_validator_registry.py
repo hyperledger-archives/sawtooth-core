@@ -104,7 +104,7 @@ def do_permissioned_validator_registry(args):
     try:
         with open(args.whitelist) as whitelist_fd:
             permissioned_validators = json.load(whitelist_fd)
-    except IOError, ex:
+    except IOError as ex:
         raise ClientException('IOError: {}'.format(str(ex)))
 
     result = {}
