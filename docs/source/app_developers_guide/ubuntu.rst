@@ -156,6 +156,14 @@ the terminal window:
 
   See :doc:`/cli/validator` for more information on the validator flags.
 
+.. note::
+
+  The validator can process transactions in serial or parallel with no difference
+  in the state produced. To process in parallel, use the option ``--scheduler parallel``.
+  The default option is ``--scheduler serial``. To get the most benefit from the parallel option,
+  start multiple transaction processors for types of transactions for which there is an expected
+  high volume.
+
 Starting the REST API
 =====================
 
