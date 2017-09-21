@@ -1,0 +1,125 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  settings-tp:
+    image: sawtooth-settings-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: settings-tp -vv tcp://validator:4004
+
+  identity-tp:
+    image: sawtooth-identity-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: identity-tp -vv tcp://validator:4004
+    stop_signal: SIGKILL
+
+  intkey-tp-python:
+    image: sawtooth-intkey-tp-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: intkey-tp-python -vv tcp://validator:4004
+    stop_signal: SIGKILL
+
+  xo-tp-python:
+    image: sawtooth-xo-tp-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: xo-tp-python -vv tcp://validator:4004
+    stop_signal: SIGKILL
+
+  #
+  # This validator depends on test_transactor_permissioning.sh which runs
+  # before the validator starts up. This script makes policy files and
+  # adds the names of these files to the 'permissions' section of
+  # the validator.toml config file.
+  #
+  validator:
+    image: sawtooth-validator:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+      - /root/.sawtooth/keys
+    expose:
+      - 4004
+      - 8800
+    command: "
+      bash -c \"\
+        /project/sawtooth-core/integration/sawtooth_integration/tests/scripts_for_permissioning_tests/test_transactor_permissioning.sh && \
+        sawtooth admin keygen && \
+        sawtooth config genesis -k /root/.sawtooth/keys/walter.priv -o config-genesis.batch && \
+        sawtooth admin genesis config-genesis.batch config.batch && \
+        sawtooth-validator -vv \
+            --endpoint tcp://validator:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind network:tcp://eth0:8800 \
+            \"
+      "
+    stop_signal: SIGKILL
+
+  rest-api:
+    image: sawtooth-rest-api:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+      - 8080
+    depends_on:
+      - validator
+    command: sawtooth-rest-api -vv --connect tcp://validator:4004 --bind rest-api:8080
+    stop_signal: SIGKILL
+
+  test-transactor-permissioning:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 8080
+    depends_on:
+      - validator
+      - rest-api
+    volumes_from:
+      - validator
+    command: nose2-3
+        -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+        -vv --log-capture
+        -s /project/sawtooth-core/integration/sawtooth_integration/tests
+        test_transactor_permissioning.TestTransactorPermissioning
+    stop_signal: SIGKILL
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/sdk/python:\
+        /project/sawtooth-core/cli:\
+        /project/sawtooth-core/sdk/examples/intkey_python:\
+        /project/sawtooth-core/integration:\
+        /project/sawtooth-core/signing"

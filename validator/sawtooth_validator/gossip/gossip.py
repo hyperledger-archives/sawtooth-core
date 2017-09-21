@@ -255,7 +255,14 @@ class Gossip(object):
             message (bytes): The message to be sent.
             connection_id (str): The connection to send it to.
         """
-        self._network.send(message_type, message, connection_id)
+        try:
+            self._network.send(message_type, message, connection_id)
+        except ValueError:
+            LOGGER.debug("Connection %s is no longer valid. "
+                         "Removing from list of peers.",
+                         connection_id)
+            if connection_id in self._peers:
+                del self._peers[connection_id]
 
     def broadcast(self, gossip_message, message_type, exclude=None):
         """Broadcast gossip messages.
@@ -274,15 +281,9 @@ class Gossip(object):
                 exclude = []
             for connection_id in self._peers.copy():
                 if connection_id not in exclude:
-                    try:
-                        self._network.send(message_type,
-                                           gossip_message.SerializeToString(),
-                                           connection_id)
-                    except ValueError:
-                        LOGGER.debug("Connection %s is no longer valid. "
-                                     "Removing from list of peers.",
-                                     connection_id)
-                        del self._peers[connection_id]
+                    self.send(message_type,
+                              gossip_message.SerializeToString(),
+                              connection_id)
 
     def connect_success(self, connection_id):
         """
@@ -660,12 +661,14 @@ class Topology(Thread):
         endpoint = self._network.connection_id_to_endpoint(connection_id)
         endpoint_info = self._temp_endpoints.get(endpoint)
 
-        LOGGER.debug("Endpoint has completed authorization: %s", endpoint)
+        LOGGER.debug("Endpoint has completed authorization: %s (id: %s)",
+                     endpoint,
+                     connection_id)
         if endpoint_info is None:
             LOGGER.debug("Received unknown endpoint: %s", endpoint)
 
         elif endpoint_info.status == EndpointStatus.PEERING:
-            self._connect_success_peering(connection_id)
+            self._connect_success_peering(connection_id, endpoint)
             del self._temp_endpoints[endpoint]
 
         elif endpoint_info.status == EndpointStatus.TOPOLOGY:
@@ -678,14 +681,13 @@ class Topology(Thread):
                 if endpoint in self._temp_endpoints:
                     del self._temp_endpoints[endpoint]
 
-    def _connect_success_peering(self, connection_id):
+    def _connect_success_peering(self, connection_id, endpoint):
         LOGGER.debug("Connection to %s succeeded", connection_id)
 
         register_request = PeerRegisterRequest(
             endpoint=self._endpoint)
         self._connection_statuses[connection_id] = PeerStatus.TEMP
 
-        endpoint = self._network.connection_id_to_endpoint(connection_id)
         self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
                            register_request.SerializeToString(),
                            connection_id,

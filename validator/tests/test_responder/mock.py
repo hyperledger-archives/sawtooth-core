@@ -32,6 +32,10 @@ class MockGossip():
         else:
             self.sent[connection_id] = [(message_type, message_data)]
 
+    def clear(self):
+        self.broadcasted = {}
+        self.sent = {}
+
 
 class MockCompleter():
     def __init__(self):

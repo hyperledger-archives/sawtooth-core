@@ -146,7 +146,7 @@ class _SendReceiveThread(Thread):
         LOGGER.debug("monitor socket received disconnect event")
         for future in self._futures.future_values():
             future.set_result(FutureError())
-        for task in asyncio.Task.all_tasks(self._event_loop):
+        for task in asyncio.Task.all_tasks(self._event_loop).copy():
             task.cancel()
         self._event_loop.stop()
         self._send_queue = None
@@ -176,7 +176,7 @@ class _SendReceiveThread(Thread):
     def _cancel_tasks_yet_to_be_done(self):
         """Cancels all the tasks (pending coroutines and futures)
         """
-        for task in asyncio.Task.all_tasks(self._event_loop):
+        for task in asyncio.Task.all_tasks(self._event_loop).copy():
             self._event_loop.call_soon_threadsafe(task.cancel)
         self._event_loop.call_soon_threadsafe(self._done_callback)
 
