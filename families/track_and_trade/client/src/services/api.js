@@ -45,6 +45,15 @@ const clearAuth = () => {
   return token
 }
 
+/**
+ * Parses the authToken to return the logged in user's public key
+ */
+const getPublicKey = () => {
+  const token = getAuth()
+  if (!token) return null
+  return atob(token.split('.')[1])
+}
+
 // Adds Authorization header and prepends API path to url
 const baseRequest = opts => {
   const Authorization = getAuth()
@@ -90,6 +99,7 @@ module.exports = {
   getAuth,
   setAuth,
   clearAuth,
+  getPublicKey,
   request,
   get,
   post,
