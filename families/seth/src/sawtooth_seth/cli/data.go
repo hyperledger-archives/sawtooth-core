@@ -20,10 +20,13 @@ package main
 import (
 	"fmt"
 	toml "github.com/pelletier/go-toml"
+	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"os"
 	"path"
+	sdk "sawtooth_sdk/client"
 	"strings"
+	"syscall"
 )
 
 const (
@@ -114,10 +117,13 @@ func CreateKeyDir() error {
 	return nil
 }
 
-func SaveKey(alias, key string, overwrite bool) error {
+func SaveKey(alias, key, keyType string, overwrite bool) error {
 	CreateKeyDir()
 
-	keyFilePath := path.Join(getKeyDir(), alias+".priv")
+	if keyType == "" {
+		keyType = "wif"
+	}
+	keyFilePath := path.Join(getKeyDir(), alias+"."+keyType)
 	if pathExists(keyFilePath) {
 		if !overwrite {
 			return fmt.Errorf("Alias already in use")
@@ -133,18 +139,44 @@ func SaveKey(alias, key string, overwrite bool) error {
 	return nil
 }
 
-func LoadKey(alias string) (string, error) {
-	keyFilePath := path.Join(getKeyDir(), alias+".priv")
-	if !pathExists(keyFilePath) {
-		return "", fmt.Errorf("No key with alias %v", alias)
+func LoadKey(alias string) ([]byte, error) {
+	keyFilePath := path.Join(getKeyDir(), alias)
+	var keyType = ""
+	if pathExists(keyFilePath + ".wif") {
+		keyType = "wif"
+	} else if pathExists(keyFilePath + ".pem") {
+		keyType = "pem"
+	}
+	if keyType == "" {
+		return nil, fmt.Errorf("No key with alias %v", alias)
 	}
 
-	buf, err := ioutil.ReadFile(keyFilePath)
+	buf, err := ioutil.ReadFile(keyFilePath + "." + keyType)
 	if err != nil {
-		return "", fmt.Errorf("Couldn't load key with alias %v: %v", alias, err)
+		return nil, fmt.Errorf("Couldn't load key with alias %v: %v", alias, err)
 	}
 
-	return strings.TrimSpace(string(buf)), nil
+	keystr := strings.TrimSpace(string(buf))
+
+	var priv []byte = nil
+	if keyType == "wif" {
+		priv, err = sdk.WifToPriv(keystr)
+	} else if keyType == "pem" {
+		var password = ""
+		if strings.Contains(keystr, "ENCRYPTED") {
+			fmt.Printf("Enter Password to unlock %v: ", alias)
+			password, err = getPassword()
+			if err != nil {
+				return nil, err
+			}
+		}
+		priv, err = sdk.PemToPriv(keystr, password)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return priv, nil
 }
 
 // -- Utilities --
@@ -154,4 +186,13 @@ func pathExists(p string) bool {
 		return false
 	}
 	return true
+}
+
+func getPassword() (string, error) {
+	passbytes, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", fmt.Errorf("Error reading password")
+	}
+	fmt.Print("\n")
+	return strings.TrimSpace(string(passbytes)), nil
 }

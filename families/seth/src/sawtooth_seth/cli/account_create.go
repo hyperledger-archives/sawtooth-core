@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	sdk "sawtooth_sdk/client"
 	"sawtooth_seth/client"
 	. "sawtooth_seth/protobuf/seth_pb2"
 )
@@ -54,11 +53,10 @@ func (args *AccountCreate) Register(parent *flags.Command) error {
 func (args *AccountCreate) Run(config *Config) error {
 	client := client.New(config.Url)
 
-	key, err := LoadKey(args.Positional.Alias)
+	priv, err := LoadKey(args.Positional.Alias)
 	if err != nil {
-		return fmt.Errorf("Couldn't load key from alias: %v", err)
+		return err
 	}
-	priv, _ := sdk.WifToPriv(key)
 
 	var (
 		mod   []byte
@@ -66,11 +64,10 @@ func (args *AccountCreate) Run(config *Config) error {
 	)
 
 	if args.Moderator != "" {
-		key, err = LoadKey(args.Moderator)
+		mod, err = LoadKey(args.Moderator)
 		if err != nil {
-			return fmt.Errorf("Couldn't load moderator from alias: %v", err)
+			return err
 		}
-		mod, _ = sdk.WifToPriv(key)
 	}
 
 	if args.Permissions != "" {

@@ -22,7 +22,6 @@ import (
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
 	"path"
-	sdk "sawtooth_sdk/client"
 	. "sawtooth_seth/common"
 )
 
@@ -49,23 +48,36 @@ func (args *AccountList) Run(*Config) error {
 	if err != nil {
 		fmt.Errorf("Couldn't list keys: %v", err)
 	}
+
+	aliases := make([]string, 0)
+	addrs := make([]string, 0)
 	for _, keyfile := range keys {
 		keyname := keyfile.Name()
-		if match, _ := path.Match("*.priv", keyname); match {
-			alias := keyname[:len(keyname)-5]
-			key, err := LoadKey(alias)
-			if err != nil {
-				return err
-			}
-			priv, _ := sdk.WifToPriv(key)
-			addr, err := PrivToEvmAddr(priv)
-			if err != nil {
-				return fmt.Errorf(
-					"Failed to derive address from key with alias %v: %v", alias, err,
-				)
-			}
-			fmt.Printf("%v: %v\n", alias, addr)
+		var alias string
+		if match, _ := path.Match("*.wif", keyname); match {
+			alias = keyname[:len(keyname)-4]
+		} else if match, _ := path.Match("*.pem", keyname); match {
+			alias = keyname[:len(keyname)-4]
+		} else {
+			continue
 		}
+		priv, err := LoadKey(alias)
+		if err != nil {
+			fmt.Printf("Couldn't load key with alias %v: %v\n", alias, err)
+			continue
+		}
+		addr, err := PrivToEvmAddr(priv)
+		if err != nil {
+			fmt.Printf(
+				"Failed to derive address from key with alias %v: %v\n", alias, err,
+			)
+			continue
+		}
+		aliases = append(aliases, alias)
+		addrs = append(addrs, addr.String())
+	}
+	for i, _ := range aliases {
+		fmt.Printf("%v: %v\n", aliases[i], addrs[i])
 	}
 
 	return nil

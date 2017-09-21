@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"io/ioutil"
+	"path"
 )
 
 type AccountImport struct {
@@ -56,7 +57,11 @@ func (args *AccountImport) Run(*Config) error {
 		return fmt.Errorf("Couldn't load key from file %v: %v", keyFilePath, err)
 	}
 
-	err = SaveKey(alias, string(buf), args.Force)
+	if match, _ := path.Match("*.pem", keyFilePath); match {
+		err = SaveKey(alias, string(buf), "pem", args.Force)
+	} else {
+		err = SaveKey(alias, string(buf), "", args.Force)
+	}
 	if err != nil {
 		return fmt.Errorf("Failed to import key: %v", err)
 	}
