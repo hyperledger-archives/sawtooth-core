@@ -46,6 +46,15 @@ const runQuery = query => {
     })
 }
 
+const queryWithCurrentBlock = query => {
+  return runQuery(
+    r.table('blocks')
+      .orderBy(r.desc('blockNum'))
+      .nth(0)('blockNum')
+      .do(query)
+  )
+}
+
 // Runs a specified query against a database table
 const queryTable = (table, query, removeCursor = true) => {
   return query(r.table(table))
@@ -113,6 +122,7 @@ const validate = (input, schema) => {
 module.exports = {
   connect,
   runQuery,
+  queryWithCurrentBlock,
   queryTable,
   modifyTable,
   insertTable,

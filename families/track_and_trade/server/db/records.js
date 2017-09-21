@@ -47,13 +47,6 @@ const hasBlock = block => obj => {
   )
 }
 
-const queryWithCurrentBlock = query => {
-  return r.table('blocks')
-    .orderBy(r.desc('blockNum'))
-    .nth(0)('blockNum')
-    .do(query)
-}
-
 const getTable = (tableName, block) =>
       r.table(tableName).filter(hasBlock(block))
 
@@ -116,18 +109,16 @@ const getUpdate = dataType => reporterKeys => block => value => {
 
 /* Queries */
 
-const fetchPropertyQuery = (recordId, propertyName) => {
-  return queryWithCurrentBlock(block => {
-    return findProperty(recordId)(propertyName)(block).do(property => {
-      return findReportedValues(recordId)(propertyName)(getDataType(property))(getAuthorizedReporterKeys(property))(block).do(values => {
-        return r.expr({
-          'name': propertyName,
-          'recordId': recordId,
-          'reporters': getAuthorizedReporterKeys(property),
-          'dataType': getDataType(property),
-          'value': values.nth(0)('value'),
-          'updates': values
-        })
+const fetchPropertyQuery = (recordId, propertyName) => block => {
+  return findProperty(recordId)(propertyName)(block).do(property => {
+    return findReportedValues(recordId)(propertyName)(getDataType(property))(getAuthorizedReporterKeys(property))(block).do(values => {
+      return r.expr({
+        'name': propertyName,
+        'recordId': recordId,
+        'reporters': getAuthorizedReporterKeys(property),
+        'dataType': getDataType(property),
+        'value': values.nth(0)('value'),
+        'updates': values
       })
     })
   })
@@ -136,7 +127,7 @@ const fetchPropertyQuery = (recordId, propertyName) => {
 /* Exported functions */
 
 const fetchProperty = (recordId, propertyName) => {
-  return db.runQuery(fetchPropertyQuery(recordId, propertyName))
+  return db.queryWithCurrentBlock(fetchPropertyQuery(recordId, propertyName))
 }
 
 module.exports = {

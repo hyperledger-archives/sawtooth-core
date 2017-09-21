@@ -65,53 +65,42 @@ const isReporter = agent => property => {
     ))
 }
 
-const queryWithCurrentBlock = query => {
-  return r.table('blocks')
-    .orderBy(r.desc('blockNum'))
-    .nth(0)('blockNum')
-    .do(query)
-}
+const getTable = (tableName, block) =>
+      r.table(tableName).filter(hasCurrentBlock(block))
 
-const getTable = (tableName, currentBlock) =>
-      r.table(tableName).filter(hasCurrentBlock(currentBlock))
-
-const listQuery = queryWithCurrentBlock(currentBlock => {
-  return getTable('agents', currentBlock)
+const listQuery = block => {
+  return getTable('agents', block)
     .map(agent => r.expr({
       'name': getName(agent),
       'key': getPublicKey(agent),
-      'owns': getTable('records', currentBlock)
+      'owns': getTable('records', block)
         .filter(isRecordOwner(agent))
         .map(getRecordId)
         .distinct(),
-      'custodian': getTable('records', currentBlock)
+      'custodian': getTable('records', block)
         .filter(isRecordCustodian(agent))
         .map(getRecordId)
         .distinct(),
-      'reports': getTable('properties', currentBlock)
+      'reports': getTable('properties', block)
         .filter(isReporter(agent))
         .map(getRecordId)
         .distinct()
     })).coerceTo('array')
-})
+}
 
-const fetchQuery = (publicKey, auth) => {
-  return queryWithCurrentBlock(
-    currentBlock => {
-      return getTable('agents', currentBlock)
-        .filter(hasPublicKey(publicKey))
-        .pluck('name', 'publicKey')
-        .nth(0)
-        .do(
-          agent => {
-            return r.branch(
-              auth,
-              agent.merge(
-                fetchUser(publicKey)),
-              agent)
-          })
-    }
-  )
+const fetchQuery = (publicKey, auth) => block => {
+  return getTable('agents', block)
+    .filter(hasPublicKey(publicKey))
+    .pluck('name', 'publicKey')
+    .nth(0)
+    .do(
+      agent => {
+        return r.branch(
+          auth,
+          agent.merge(
+            fetchUser(publicKey)),
+          agent)
+      })
 }
 
 const fetchUser = publicKey => {
@@ -121,9 +110,11 @@ const fetchUser = publicKey => {
     .nth(0)
 }
 
-const list = () => db.runQuery(listQuery)
+const list = () => db.queryWithCurrentBlock(listQuery)
 
-const fetch = (publicKey, auth) => db.runQuery(fetchQuery(publicKey, auth))
+const fetch = (publicKey, auth) =>
+      db.queryWithCurrentBlock(fetchQuery(publicKey, auth))
+
 
 module.exports = {
   list,
