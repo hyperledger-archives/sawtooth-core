@@ -10,14 +10,16 @@ state and block data from the blockchain using HTTP and the Sawtooth
 both to the included example transaction families, *IntKey* and *Xo*, as well
 as any transaction families you might write yourself.
 
-Sawtooth validators can be run either from prebuilt
-`Docker <https://www.docker.com/>`_ containers, or natively using
-`Ubuntu 16.04 <https://www.ubuntu.com/>`_. To get started, choose the platform
-appropriate to your use case and follow one of the the installation and usage
-guides below.
+Sawtooth validators can be run from prebuilt
+`Docker <https://www.docker.com/>`_ containers, installed natively using
+`Ubuntu 16.04 <https://www.ubuntu.com/>`_ or launched in AWS from the
+`AWS Marketplace <https://aws.amazon.com/marketplace/pp/B075TKQCC2>`_. To get
+started, choose the platform appropriate to your use case and follow one of
+the installation and usage guides below.
 
 .. toctree::
 	:maxdepth: 2
 
 	docker.rst
 	ubuntu.rst
+	aws.rst
