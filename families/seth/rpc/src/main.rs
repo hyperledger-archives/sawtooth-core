@@ -45,7 +45,7 @@ use requests::{RequestExecutor, RequestHandler};
 const SERVER_THREADS: usize = 3;
 
 fn main() {
-    let arg_matches = clap_app!(intkey =>
+    let arg_matches = clap_app!(("seth-rpc") =>
         (version: "1.0")
         (about: "Seth RPC Server")
         (@arg connect: --connect +takes_value
