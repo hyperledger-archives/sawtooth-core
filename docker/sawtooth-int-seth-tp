@@ -28,6 +28,7 @@ LABEL "install-type"="copied-bin"
 
 RUN apt-get update \
  && apt-get install -y -q \
+    libssl-dev \
     libzmq3-dev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
