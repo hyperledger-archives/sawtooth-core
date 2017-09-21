@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
+
 use jsonrpc_core::{Params, Value, Error};
 
 use client::{ValidatorClient};
@@ -22,6 +24,7 @@ use requests::{RequestHandler};
 
 use sawtooth_sdk::messaging::stream::MessageSender;
 use error;
+use filters::*;
 
 pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
     let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
@@ -37,24 +40,88 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
     methods
 }
 
-pub fn new_filter<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+
+static FILTER_ID: AtomicUsize = ATOMIC_USIZE_INIT;
+
+fn to_filter_id(value: Value) -> Result<String, Error> {
+    match value.get(0) {
+        Some(&Value::String(ref id)) => Ok(id.clone()),
+        x => Err(Error::invalid_params(format!("Unknown filter id: {:?}", x)))
+    }
+}
+
+fn add_filter<T>(mut client: ValidatorClient<T>, filter: Filter)
+    -> Result<Value, Error> where T: MessageSender
+{
+    let filter_id = String::from(
+        format!("{:#x}", FILTER_ID.fetch_add(1, Ordering::SeqCst)));
+
+    client.set_filter(filter_id.clone(), filter, 0);
+
+    Ok(Value::String(filter_id))
+}
+
+
+pub fn new_filter<T>(params: Params, mut client: ValidatorClient<T>)
+    -> Result<Value, Error> where T: MessageSender
+{
+    let value: Value = params.parse()?;
+    let log_filter = LogFilterSpec::from_value(value)?;
+    add_filter(client, Filter::Log(log_filter))
+}
+
+pub fn new_block_filter<T>(_params: Params, mut client: ValidatorClient<T>)
+    -> Result<Value, Error> where T: MessageSender
+{
+    add_filter(client, Filter::Block)
+}
+
+pub fn new_pending_transaction_filter<T>(_params: Params, mut client: ValidatorClient<T>)
+    -> Result<Value, Error> where T: MessageSender
+{
+    add_filter(client, Filter::Transaction)
+}
+
+pub fn uninstall_filter<T>(params: Params, mut client: ValidatorClient<T>)
+    -> Result<Value, Error> where T: MessageSender
+{
+    let filter_id = to_filter_id(params.parse()?)?;
+
+    match client.remove_filter(&filter_id) {
+        Some(_) => Ok(Value::Bool(true)),
+        None => Ok(Value::Bool(false))
+    }
+}
+
+
+pub fn get_filter_changes<T>(params: Params, mut client: ValidatorClient<T>)
+    -> Result<Value, Error> where T: MessageSender
+{
+    let filter_id = to_filter_id(params.parse()?)?;
+    let filter = client.get_filter(&filter_id).map_err(Error::invalid_params)?;
+    debug!("filter: {:?}", filter);
+
     Err(error::not_implemented())
 }
-pub fn new_block_filter<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+
+pub fn get_filter_logs<T>(params: Params, mut client: ValidatorClient<T>)
+    -> Result<Value, Error> where T: MessageSender
+{
+    let filter_id = to_filter_id(params.parse()?)?;
+
+    let filter = client.get_filter(&filter_id).map_err(Error::invalid_params)?;
+    debug!("filter: {:?}", filter);
+
     Err(error::not_implemented())
 }
-pub fn new_pending_transaction_filter<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+
+pub fn get_logs<T>(_params: Params, mut _client: ValidatorClient<T>)
+    -> Result<Value, Error> where T: MessageSender
+{
+    let params: Value = _params.parse()?;
+    let log_filter = LogFilterSpec::from_value(params)?;
+    debug!("filter: {:?}", log_filter);
+
     Err(error::not_implemented())
 }
-pub fn uninstall_filter<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
-pub fn get_filter_changes<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
-pub fn get_filter_logs<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
-pub fn get_logs<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
+

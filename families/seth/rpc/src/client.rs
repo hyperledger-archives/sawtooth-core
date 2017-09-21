@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::sync::{Arc, Mutex};
 use std::fmt::LowerHex;
 use std::str::FromStr;
 use std::collections::HashMap;
@@ -43,6 +44,7 @@ use messages::seth::{
     EvmEntry, EvmStateAccount, EvmStorage,
 };
 use accounts::{Account};
+use filters::Filter;
 
 use protobuf;
 use uuid;
@@ -91,6 +93,7 @@ const SETH_NS: &str = "a68b06";
 pub struct ValidatorClient<S: MessageSender> {
     sender: S,
     accounts: Vec<Account>,
+    filters: Arc<Mutex<HashMap<String, (Filter, u64)>>>
 }
 
 impl<S: MessageSender> ValidatorClient<S> {
@@ -98,6 +101,7 @@ impl<S: MessageSender> ValidatorClient<S> {
         ValidatorClient{
             sender: sender,
             accounts: accounts,
+            filters: Arc::new(Mutex::new(HashMap::new()))
         }
     }
 
@@ -316,6 +320,24 @@ impl<S: MessageSender> ValidatorClient<S> {
             option.map(|block|
                 String::from(block.header_signature)))
     }
+
+    pub fn remove_filter(&mut self, filter_id: &String) -> Option<(Filter, u64)> {
+        self.filters.lock().unwrap().remove(filter_id)
+    }
+
+    pub fn get_filter(&mut self, filter_id: &String) -> Result<(Filter, u64), String> {
+        let filters = self.filters.lock().unwrap();
+        if filters.contains_key(filter_id) {
+            Ok(filters[filter_id].clone())
+        } else {
+            Err(format!("Unknown filter id: {:?}", filter_id))
+        }
+    }
+
+    pub fn set_filter(&mut self, filter_id: String, filter: Filter, block_num: u64) {
+        self.filters.lock().unwrap().entry(filter_id).or_insert((filter, block_num));
+    }
+
 }
 
 
