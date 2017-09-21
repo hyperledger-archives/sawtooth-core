@@ -27,7 +27,7 @@ message Proposal {
     OPEN = 0;
     ACCEPTED = 1;
     REJECTED = 2;
-    CANCELLED = 3;
+    CANCELED = 3;
   }
 
   string record_id = 1;

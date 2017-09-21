@@ -459,7 +459,7 @@ def _answer_proposal(payload, signer, timestamp, state):
             raise InvalidTransaction(
                 'Only the issuing agent can cancel')
 
-        proposal.status = Proposal.CANCELLED
+        proposal.status = Proposal.CANCELED
 
     elif response == AnswerProposalAction.REJECT:
         if proposal.receiving_agent != signer:
@@ -488,7 +488,7 @@ def _accept_proposal(state, signer, proposal, timestamp):
     if role == Proposal.OWNER:
         if not _is_owner(record, issuing_agent):
             LOGGER.info('Issuing agent is not owner')
-            return Proposal.CANCELLED
+            return Proposal.CANCELED
 
         record.owners.extend([
             Record.AssociatedAgent(
@@ -505,7 +505,7 @@ def _accept_proposal(state, signer, proposal, timestamp):
     elif role == Proposal.CUSTODIAN:
         if not _is_custodian(record, issuing_agent):
             LOGGER.info('Issuing agent is not custodian')
-            return Proposal.CANCELLED
+            return Proposal.CANCELED
 
         record.custodians.extend([
             Record.AssociatedAgent(
@@ -522,7 +522,7 @@ def _accept_proposal(state, signer, proposal, timestamp):
     elif role == Proposal.REPORTER:
         if not _is_owner(record, issuing_agent):
             LOGGER.info('Issuing agent is not owner')
-            return Proposal.CANCELLED
+            return Proposal.CANCELED
 
         for prop_name in properties:
             prop, container, address = _get_property(

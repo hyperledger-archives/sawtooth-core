@@ -35,6 +35,7 @@ message Property {
   // The natural key of the Property's associated Record.
   string record_id = 2;
 
+  // The Property's type (int, string, etc.)
   PropertySchema.DataType data_type = 3;
 
   // The Reporters authorized to send updates, sorted by index. New
@@ -73,7 +74,12 @@ message PropertySchema {
 
   // The name of the property, e.g. "temperature"
   string name = 1;
+
+  // The Property's type (int, string, etc.)
   DataType data_type = 2;
+
+  // A flag indicating whether initial values must be provided for the
+  // Property when a Record is created.
   bool required = 3;
 }
 
@@ -81,6 +87,8 @@ message PropertySchema {
 message PropertyValue {
   // The name of the property being set
   string name = 1;
+
+  // The PropertyValue's type (int, string, etc.)
   PropertySchema.DataType data_type = 2;
 
   // The type-specific value to initialize or update a Property. Only
