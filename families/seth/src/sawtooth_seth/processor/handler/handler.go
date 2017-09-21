@@ -196,6 +196,7 @@ func unpackHeader(headerBytes []byte) (*transaction_pb2.TransactionHeader, error
 func getParams(context *processor.Context) (*evm.Params, error) {
 	blockInfoConfig, err := getBlockInfoConfig(context)
 	if err != nil {
+		logger.Debugf(err.Error())
 		logger.Debugf(
 			"Block info not available. BLOCKHASH, TIMESTAMP, and BLOCKHEIGHT instructions will result in failure")
 		return &evm.Params{

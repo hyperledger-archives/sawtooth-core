@@ -105,6 +105,8 @@ func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermiss
 		newAcctAddr.ToStateAddr().String(),
 		// For checking global permissions
 		GlobalPermissionsAddress().ToStateAddr().String(),
+		// For accessing block info
+		BLOCK_INFO_PREFIX,
 	}
 
 	// The account being created is not the creating account
@@ -155,6 +157,8 @@ func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermi
 		newAcctAddr.ToStateAddr().String(),
 		// For checking global permissions
 		GlobalPermissionsAddress().ToStateAddr().String(),
+		// For accessing block info
+		BLOCK_INFO_PREFIX,
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
@@ -208,7 +212,9 @@ func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wa
 			fromAddr.ToStateAddr().String(),
 			toAddr.ToStateAddr().String(),
 			// For checking global permissions
-			GlobalPermissionsAddress().ToStateAddr().String())
+			GlobalPermissionsAddress().ToStateAddr().String(),
+			// For accessing block info
+			BLOCK_INFO_PREFIX)
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
@@ -258,6 +264,8 @@ func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, no
 		toAddr.ToStateAddr().String(),
 		// For checking global permissions
 		GlobalPermissionsAddress().ToStateAddr().String(),
+		// For accessing block info
+		BLOCK_INFO_PREFIX,
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
