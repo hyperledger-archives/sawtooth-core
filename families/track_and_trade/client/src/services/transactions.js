@@ -64,7 +64,7 @@ const makePrivateKey = password => {
   txnEncoder = new TransactionEncoder(privateKey, encoderSettings)
 
   const encryptedKey = sjcl.encrypt(password, privateKey)
-  localStorage.setItem(STORAGE_KEY, encryptedKey)
+  window.localStorage.setItem(STORAGE_KEY, encryptedKey)
 
   const publicKey = signer.getPublicKey(privateKey)
   return { encryptedKey, publicKey }
@@ -77,7 +77,7 @@ const setPrivateKey = (password, encryptedKey) => {
   const privateKey = sjcl.decrypt(password, encryptedKey)
   txnEncoder = new TransactionEncoder(privateKey, encoderSettings)
 
-  localStorage.setItem(STORAGE_KEY, encryptedKey)
+  window.localStorage.setItem(STORAGE_KEY, encryptedKey)
 
   return encryptedKey
 }
@@ -86,9 +86,9 @@ const setPrivateKey = (password, encryptedKey) => {
  * Clears the users private key from memory and storage.
  */
 const clearPrivateKey = () => {
-  const encryptedKey = localStorage.getItem(STORAGE_KEY)
+  const encryptedKey = window.localStorage.getItem(STORAGE_KEY)
 
-  localStorage.clear(STORAGE_KEY)
+  window.localStorage.clear(STORAGE_KEY)
   txnEncoder = null
 
   return encryptedKey
@@ -106,7 +106,7 @@ const submit = payloads => {
 
       return requestPassword()
         .then(password => {
-          const encryptedKey = localStorage.getItem(STORAGE_KEY)
+          const encryptedKey = window.localStorage.getItem(STORAGE_KEY)
           setPrivateKey(password, encryptedKey)
         })
     })

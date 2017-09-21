@@ -27,20 +27,20 @@ let authToken = null
  */
 const getAuth = () => {
   if (!authToken) {
-    authToken = localStorage.getItem(STORAGE_KEY)
+    authToken = window.localStorage.getItem(STORAGE_KEY)
   }
   return authToken
 }
 
 const setAuth = token => {
-  localStorage.setItem(STORAGE_KEY, token)
+  window.localStorage.setItem(STORAGE_KEY, token)
   authToken = token
   return authToken
 }
 
 const clearAuth = () => {
   const token = getAuth()
-  localStorage.clear(STORAGE_KEY)
+  window.localStorage.clear(STORAGE_KEY)
   authToken = null
   return token
 }
@@ -51,7 +51,7 @@ const clearAuth = () => {
 const getPublicKey = () => {
   const token = getAuth()
   if (!token) return null
-  return atob(token.split('.')[1])
+  return window.atob(token.split('.')[1])
 }
 
 // Adds Authorization header and prepends API path to url
