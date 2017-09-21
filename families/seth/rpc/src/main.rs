@@ -45,6 +45,7 @@ mod client;
 mod messages;
 mod calls;
 mod accounts;
+mod filters;
 
 use client::{ValidatorClient};
 use requests::{RequestExecutor, RequestHandler};
