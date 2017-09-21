@@ -46,7 +46,10 @@ func TestSigning(t *testing.T) {
 }
 
 func TestEncoding(t *testing.T) {
-    priv := WifToPriv(WIFSTR)
+    priv, err := WifToPriv(WIFSTR)
+    if err != nil {
+        t.Error("Failed to load WIF key")
+    }
     if PrivToWif(priv) != WIFSTR {
         t.Error("Private key is different after encoding/decoding")
     }
@@ -88,7 +91,7 @@ func TestPemLoader(t *testing.T) {
 }
 
 func TestEncoder(t *testing.T) {
-    priv := WifToPriv(WIFSTR)
+    priv, _ := WifToPriv(WIFSTR)
 
     encoder := NewEncoder(priv, TransactionParams{
         FamilyName: "abc",

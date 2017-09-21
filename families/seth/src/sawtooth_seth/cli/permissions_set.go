@@ -53,7 +53,7 @@ func (args *PermissionsSet) Run(config *Config) error {
 	if err != nil {
 		return fmt.Errorf("Couldn't load key from alias: %v", err)
 	}
-	mod := sdk.WifToPriv(key)
+	mod, _ := sdk.WifToPriv(key)
 
 	if args.Address == "global" {
 		args.Address = "0000000000000000000000000000000000000000"

@@ -59,7 +59,7 @@ func (args *ContractCall) Run(config *Config) error {
 	if err != nil {
 		return fmt.Errorf("Couldn't load key from alias: %v", err)
 	}
-	priv := sdk.WifToPriv(key)
+	priv, _ := sdk.WifToPriv(key)
 
 	data, err := hex.DecodeString(args.Positional.Data)
 	if err != nil {

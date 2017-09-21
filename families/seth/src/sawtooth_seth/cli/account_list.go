@@ -57,7 +57,7 @@ func (args *AccountList) Run(*Config) error {
 			if err != nil {
 				return err
 			}
-			priv := sdk.WifToPriv(key)
+			priv, _ := sdk.WifToPriv(key)
 			addr, err := PrivToEvmAddr(priv)
 			if err != nil {
 				return fmt.Errorf(

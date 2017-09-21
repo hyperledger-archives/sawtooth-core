@@ -58,7 +58,7 @@ func (args *AccountCreate) Run(config *Config) error {
 	if err != nil {
 		return fmt.Errorf("Couldn't load key from alias: %v", err)
 	}
-	priv := sdk.WifToPriv(key)
+	priv, _ := sdk.WifToPriv(key)
 
 	var (
 		mod   []byte
@@ -70,7 +70,7 @@ func (args *AccountCreate) Run(config *Config) error {
 		if err != nil {
 			return fmt.Errorf("Couldn't load moderator from alias: %v", err)
 		}
-		mod = sdk.WifToPriv(key)
+		mod, _ = sdk.WifToPriv(key)
 	}
 
 	if args.Permissions != "" {

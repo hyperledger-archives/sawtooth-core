@@ -38,7 +38,7 @@ const (
 
 func TestIntkey(t *testing.T) {
   client := client.New("http://rest-api:8080")
-  priv := sdk.WifToPriv(PRIV)
+  priv, _ := sdk.WifToPriv(PRIV)
   init, _ := hex.DecodeString(INIT)
   nonce := uint64(0)
 
