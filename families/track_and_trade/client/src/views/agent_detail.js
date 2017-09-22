@@ -20,6 +20,7 @@ const m = require('mithril')
 const _ = require('lodash')
 
 const api = require('../services/api')
+const transactions = require('../services/transactions')
 const layout = require('../components/layout')
 const forms = require('../components/forms')
 
@@ -60,6 +61,26 @@ const infoForm = (state, key, onSubmit, opts) => {
   ])
 }
 
+const privateKeyField = state => {
+  return labeledField(
+    fieldHeader('Private Key',
+      forms.clickIcon('eye', () => {
+        if (state.toggled.privateKey) {
+          state.toggled.privateKey = false
+          return
+        }
+        return transactions.getPrivateKey()
+          .then(privateKey => {
+            state.toggled.privateKey = privateKey
+            m.redraw()
+          })
+      })),
+    toggledInfo(
+      state.toggled.privateKey,
+      bullets(64),
+      state.toggled.privateKey))
+}
+
 // Pencil icon that simply toggles visibility
 const editIcon = (obj, key) => {
   return forms.clickIcon('pencil', () => { obj[key] = !obj[key] })
@@ -97,7 +118,7 @@ const AgentDetailPage = {
     const publicKey = _.get(vnode.state, 'agent.publicKey', '')
 
     const profileContent = [
-      layout.row(staticField('PrivateKey', bullets(64))),
+      layout.row(privateKeyField(vnode.state)),
       layout.row([
         editField(vnode.state, 'Username', 'username'),
         staticField('Password', bullets(16))
