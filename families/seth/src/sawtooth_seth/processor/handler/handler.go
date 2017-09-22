@@ -143,6 +143,8 @@ func callVm(sas *SawtoothAppState, sender, receiver *evm.Account,
 		return nil, 0, fmt.Errorf("Block Info Error: %v", err)
 	}
 	vm := evm.NewVM(sas, *params, Zero256, nil)
+	evc := NewSawtoothEventFireable(sas.mgr.state)
+	vm.SetFireable(evc)
 
 	// Convert the gas to a signed int to be compatible with the burrow EVM
 	startGas := int64(gas)
