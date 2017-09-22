@@ -62,17 +62,17 @@ const FilterGroup = {
           className: vnode.state.currentFilter === label ? 'btn-primary' : 'btn-light',
           onclick: (e) => {
             e.preventDefault()
-            vnode.state.currentFilter = label,
+            vnode.state.currentFilter = label
             action()
           }
-        }, label))),
+        }, label)))
     ]
   }
 }
 
 const PagingButtons = {
   view (vnode) {
-    return [ 
+    return [
       m('.d-flex.justify-content-end',
         m('.btn-group', {
           role: 'group',
