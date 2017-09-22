@@ -69,6 +69,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     python3-protobuf \
     python3-psycopg2 \
     python3-pycares=2.1.1-1 \
+    python3-pyformance \
     python3-pytest-runner=2.6.2-1 \
     python3-pytest=2.9.0-1 \
     python3-pytz=2016.10-1 \
@@ -86,7 +87,6 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && pip3 install \
     pylint \
     bandit \
-    pyformance \
     coverage --upgrade
 
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
