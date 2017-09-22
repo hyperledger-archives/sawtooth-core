@@ -119,6 +119,12 @@ class TTClient(RestClient):
     def get_records(self):
         return self._submit_request(url=SERVER_URL + '/api/records')[1]
 
+    def get_record(self, record_id):
+        return self._submit_request(
+            url='{}/api/records/{}'.format(SERVER_URL, record_id),
+            headers={'Authorization': self.auth_token}
+        )[1]
+
     def get_record_property(self, record_id, property_name):
         return self._submit_request(
             url='{}/api/records/{}/property/{}'.format(
@@ -638,6 +644,10 @@ class TestTrackAndTrade(unittest.TestCase):
             self.assertEqual(len(reporter), 2)
             self.assertIn('name', reporter)
             self.assertIn('publicKey', reporter)
+
+        get_record = jin.get_record('fish-456')
+
+        log_json(get_record)
 
 
 def log_json(msg):

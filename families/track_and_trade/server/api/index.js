@@ -146,6 +146,7 @@ router.get('/info', handle(() => {
     }))
 }))
 
+router.get('/records/:recordId', handle(records.fetchRecord))
 router.get('/records/:recordId/property/:propertyName', handle(records.fetchProperty))
 router.get('/records/:recordId/:propertyName', handle(records.fetchProperty))
 

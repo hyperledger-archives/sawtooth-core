@@ -24,21 +24,32 @@ const db = require('./')
 
 const getAttribute = attr => obj => obj(attr)
 const getRecordId = getAttribute('recordId')
+const getRecordType = getAttribute('recordType')
+const getProperties = getAttribute('properties')
 const getName = getAttribute('name')
 const getPublicKey = getAttribute('publicKey')
 const getDataType = getAttribute('dataType')
 const getReporters = getAttribute('reporters')
 const getAuthorization = getAttribute('authorized')
 const getReportedValues = getAttribute('reportedValues')
+const getReceivingAgent = getAttribute('receivingAgent')
+const getStatus = getAttribute('status')
 
 const getAssociatedAgentId = role => record => record(role).nth(-1)('agentId')
 const getOwnerId = getAssociatedAgentId('owners')
 const getCustodianId = getAssociatedAgentId('custodians')
 
+const getAssociatedAgents =
+      role => record => record(role).orderBy(r.desc('timestamp'))
+const getOwners = getAssociatedAgents('owners')
+const getCustodians = getAssociatedAgents('custodians')
+
 const hasAttribute = getAttr => attr => obj => r.eq(attr, getAttr(obj))
 const hasName = hasAttribute(getName)
 const hasRecordId = hasAttribute(getRecordId)
 const hasPublicKey = hasAttribute(getPublicKey)
+const hasStatus = hasAttribute(getStatus)
+const hasReceivingAgent = hasAttribute(getReceivingAgent)
 
 const hasBlock = block => obj => {
   return r.and(
@@ -47,8 +58,18 @@ const hasBlock = block => obj => {
   )
 }
 
-const getTable = (tableName, block) =>
-      r.table(tableName).filter(hasBlock(block))
+const getTable = (tableName, block) => {
+  return r.table(tableName).filter(hasBlock(block))
+}
+
+const getProposals = recordId => receivingAgent => block => {
+  return getTable('proposals', block)
+    .filter(hasRecordId(recordId))
+    .filter(hasReceivingAgent(receivingAgent))
+    .filter(hasStatus('OPEN'))
+    .pluck('issuingAgent', 'role', 'properties')
+    .coerceTo('array')
+}
 
 const findRecord = recordId => block => {
   return getTable('records', block)
@@ -56,7 +77,7 @@ const findRecord = recordId => block => {
     .nth(0)
 }
 
-const findProperty = recordId => propertyName => block => {
+const findProperty = recordId => block => propertyName => {
   return getTable('properties', block)
     .filter(hasRecordId(recordId))
     .filter(hasName(propertyName))
@@ -107,20 +128,81 @@ const getUpdate = dataType => reporterKeys => block => value => {
   })
 }
 
-/* Queries */
+const getTypeProperties = record => block => {
+  return getTable('recordTypes', block)
+    .filter(hasName(getRecordType(record)))
+    .map(getProperties)
+    .map(getName)
+    .nth(0)
+    .map(findProperty(getRecordId(record))(block))
+    .coerceTo('array')
+}
 
-const fetchPropertyQuery = (recordId, propertyName) => block => {
-  return findProperty(recordId)(propertyName)(block).do(property => {
-    return findReportedValues(recordId)(propertyName)(getDataType(property))(getAuthorizedReporterKeys(property))(block).do(values => {
+const getPropertyValues = recordId => block => property => {
+  return getAuthorizedReporterKeys(property).do(reporterKeys => {
+    return getDataType(property).do(dataType => {
       return r.expr({
-        'name': propertyName,
-        'recordId': recordId,
-        'reporters': getAuthorizedReporterKeys(property),
-        'dataType': getDataType(property),
-        'value': values.nth(0)('value'),
-        'updates': values
+        'name': getName(property),
+        'dataType': dataType,
+        'reporterKeys': reporterKeys,
+        'values': findReportedValues(recordId)(getName(property))(dataType)(reporterKeys)(block),
       })
     })
+  })
+}
+
+const getCurrentValue = propertyValue => {
+  return r.branch(
+    propertyValue('values').count().eq(0),
+    r.expr([]),
+    propertyValue('values').nth(0)
+  )
+}
+
+/* Queries */
+
+const fetchPropertyQuery = (recordId, name) => block => {
+  return findProperty(recordId)(block)(name).do(property => {
+    return getPropertyValues(recordId)(block)(property).do(propertyValues => {
+      return r.expr({
+        'name': name,
+        'recordId': recordId,
+        'reporters': propertyValues('reporterKeys'),
+        'dataType': propertyValues('dataType'),
+        'value': getCurrentValue(propertyValues),
+        'updates': propertyValues('values')
+      })
+    })
+  })
+}
+
+const fetchRecordQuery = (recordId, authedKey) => block => {
+  return findRecord(recordId)(block).do(record => {
+    return getTypeProperties(record)(block)
+      .map(getPropertyValues(recordId)(block)).do(propertyValues => {
+        return r.expr({
+          'recordId': getRecordId(record),
+          'owner': getOwnerId(record),
+          'custodian': getCustodianId(record),
+          'properties': propertyValues
+            .map(propertyValue => r.expr({
+              'name': getName(propertyValue),
+              'type': getDataType(propertyValue),
+              'value': getCurrentValue(propertyValue)('value'),
+              'reporters': propertyValue('reporterKeys')
+            })),
+          'updates': r.expr({
+            'owners': getOwners(record),
+            'custodians': getCustodians(record),
+            'properties': propertyValues
+              .map(propertyValue => r.expr({
+                'name': getName(propertyValue),
+                'values': propertyValue('values').pluck('value', 'timestamp')
+              }))
+          }),
+          'proposals': getProposals(recordId)(authedKey)(block)
+        })
+      })
   })
 }
 
@@ -130,6 +212,11 @@ const fetchProperty = (recordId, propertyName) => {
   return db.queryWithCurrentBlock(fetchPropertyQuery(recordId, propertyName))
 }
 
+const fetchRecord = (recordId, authedKey) => {
+  return db.queryWithCurrentBlock(fetchRecordQuery(recordId, authedKey))
+}
+
 module.exports = {
-  fetchProperty
+  fetchProperty,
+  fetchRecord,
 }

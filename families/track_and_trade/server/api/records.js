@@ -18,9 +18,15 @@
 
 const db = require('../db/records')
 
-const fetchProperty = ({recordId, propertyName}) =>
-      db.fetchProperty(recordId, propertyName)
+const fetchProperty = ({recordId, propertyName}) => {
+  return db.fetchProperty(recordId, propertyName)
+}
+
+const fetchRecord = ({recordId, authedKey}) => {
+  return db.fetchRecord(recordId, authedKey)
+}
 
 module.exports = {
-  fetchProperty
+  fetchProperty,
+  fetchRecord,
 }
