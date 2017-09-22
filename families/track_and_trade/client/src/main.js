@@ -28,6 +28,7 @@ const navigation = require('./components/navigation')
 
 const AddFishForm = require('./views/add_fish_form')
 const AgentDetailPage = require('./views/agent_detail')
+const AgentList = require('./views/list_agents')
 const Dashboard = require('./views/dashboard')
 const LoginForm = require('./views/login_form')
 const SignupForm = require('./views/signup_form')
@@ -116,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
   m.route(document.querySelector('#app'), '/', {
     '/': resolve(Dashboard),
     '/agents/:publicKey': resolve(AgentDetailPage),
+    '/agents': resolve(AgentList),
     '/create': resolve(AddFishForm, true),
     '/login': resolve(LoginForm),
     '/logout': { onmatch: logout },
