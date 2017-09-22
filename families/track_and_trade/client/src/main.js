@@ -27,6 +27,7 @@ const transactions = require('./services/transactions')
 const navigation = require('./components/navigation')
 
 const AddFishForm = require('./views/add_fish_form')
+const AgentDetailPage = require('./views/agent_detail')
 const Dashboard = require('./views/dashboard')
 const LoginForm = require('./views/login_form')
 const SignupForm = require('./views/signup_form')
@@ -80,11 +81,11 @@ const resolve = (view, restricted = false) => {
     }
   }
 
-  resolver.render = () => {
+  resolver.render = vnode => {
     if (api.getAuth()) {
-      return m(Layout, { navbar: loggedInNav() }, m(view))
+      return m(Layout, { navbar: loggedInNav() }, m(view, vnode.attrs))
     }
-    return m(Layout, { navbar: loggedOutNav() }, m(view))
+    return m(Layout, { navbar: loggedOutNav() }, m(view, vnode.attrs))
   }
 
   return resolver
@@ -100,14 +101,25 @@ const logout = () => {
 }
 
 /**
+ * Redirects to user's agent page if logged in.
+ */
+const profile = () => {
+  const publicKey = api.getPublicKey()
+  if (publicKey) m.route.set(`/agents/${publicKey}`)
+  else m.route.set('/')
+}
+
+/**
  * Build and mount app/router
  */
 document.addEventListener('DOMContentLoaded', () => {
   m.route(document.querySelector('#app'), '/', {
     '/': resolve(Dashboard),
+    '/agents/:publicKey': resolve(AgentDetailPage),
     '/create': resolve(AddFishForm, true),
     '/login': resolve(LoginForm),
     '/logout': { onmatch: logout },
+    '/profile': { onmatch: profile },
     '/signup': resolve(SignupForm)
   })
 })
