@@ -78,7 +78,7 @@ const MultiSelect = {
 
                       handleChange(selected)
                     }
-                  }, label, m.trust((selected.indexOf(value) > -1 ? ' &#10004;' : ''))))))
+                  }, label, (selected.indexOf(value) > -1 ? ' \u2714' : '')))))
   }
 }
 
