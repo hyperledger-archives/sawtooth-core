@@ -106,7 +106,7 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
             try {
                 GlobalStateUPtr global_state(
                     new GlobalState(
-                        this->message_disptcher.CreateStream(),
+                        this->message_dispatcher.CreateStream(),
                         request.context_id()));
 
                 TransactionApplicatorUPtr applicator = iter->second->GetApplicator(
@@ -127,7 +127,7 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
             } catch (std::exception& e) {
                 response.set_status(
                         TpProcessResponse::INTERNAL_ERROR);
-                LOG4CXX_ERROR(logger, "TransactionProcessor -> Appl error"
+                LOG4CXX_ERROR(logger, "TransactionProcessor -> Apply error"
                     << e.what());
                 throw;
             }
@@ -136,11 +136,11 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
             response.set_status(TpProcessResponse::INVALID_TRANSACTION);
         }
     } catch (std::exception& e ) {
-        LOG4CXX_ERROR(logger, "TransactionProcessor -> Appl error"
+        LOG4CXX_ERROR(logger, "TransactionProcessor -> Apply error"
                     << e.what());
         response.set_status(TpProcessResponse::INTERNAL_ERROR);
     } catch (...) {
-        LOG4CXX_ERROR(logger, "TransactionProcessor -> Appl error unknown");
+        LOG4CXX_ERROR(logger, "TransactionProcessor -> Apply error unknown");
         response.set_status(TpProcessResponse::INTERNAL_ERROR);
     }
     this->response_stream->SendMessage(
@@ -149,12 +149,12 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
 
 void TransactionProcessor::Run() {
     try {
-        this->message_disptcher.Connect(this->connection_string);
-        this->response_stream = this->message_disptcher.CreateStream();
+        this->message_dispatcher.Connect(this->connection_string);
+        this->response_stream = this->message_dispatcher.CreateStream();
 
         this->Register();
 
-        zmqpp::socket socket(this->message_disptcher.context(), zmqpp::socket_type::dealer);
+        zmqpp::socket socket(this->message_dispatcher.context(), zmqpp::socket_type::dealer);
         socket.connect("inproc://request_queue");
 
         while (this->run) {

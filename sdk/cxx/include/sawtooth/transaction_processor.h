@@ -31,21 +31,21 @@ class TransactionProcessor {
     explicit TransactionProcessor(const std::string& connection_string);
     virtual ~TransactionProcessor();
     // Called to register the TransactionHandlers defined by your Transaction
-    // Processor.  All the TransactionHandler objects must be registered 
+    // Processor.  All the TransactionHandler objects must be registered
     // before run is called.
     void RegisterHandler(TransactionHandlerUPtr handler);
 
     // The main entry point for the TransactionProcessor. It will not return
-    // until the TransactionProcessor shutsdown.
+    // until the TransactionProcessor shuts down.
     void Run();
- 
+
  private:
     void Register();
     void HandleProcessingRequest(const void* msg, size_t msg_size);
- 
+
     bool run;
     std::string connection_string;
-    MessageDispatcher message_disptcher;
+    MessageDispatcher message_dispatcher;
     MessageStreamPtr response_stream;
 
     std::map<std::string, TransactionHandlerPtr> handlers;

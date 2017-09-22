@@ -57,7 +57,7 @@ static bool IsHex(const std::string& str) {
 
 // Checks if an address string meets the constraints of an address.
 // These are that it is exactly 134 characters long and contains only
-// lowercase hexidecimal characters.
+// lowercase hexadecimal characters.
 static void CheckIfValidAddr(const std::string& addr) {
     if (addr.length() != MERKLE_ADDRESS_LENGTH) {
         std::stringstream out;
@@ -72,7 +72,7 @@ static void CheckIfValidAddr(const std::string& addr) {
 
 // Checks if an address string meets the constraints of an address.
 // These are that it is exactly 6 characters long and contains only
-// lowercase hexidecimal characters.
+// lowercase hexadecimal characters.
 static void CheckIfValidNamespace(const std::string& addr) {
     if (addr.length() != NAMESPACE_PREFIX_LENGTH) {
         throw AddressFormatError("Namespace prefix does not contain 6 " \
@@ -83,7 +83,7 @@ static void CheckIfValidNamespace(const std::string& addr) {
     }
 }
 
-AddressMapper::AddressMapper(const std::string& namespace_) : 
+AddressMapper::AddressMapper(const std::string& namespace_) :
     namespace_initialized(false), namespace_(namespace_) {}
 
 std::string AddressMapper::MapKey(const std::string& key) const {
