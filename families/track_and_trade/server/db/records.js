@@ -206,6 +206,38 @@ const fetchRecordQuery = (recordId, authedKey) => block => {
   })
 }
 
+const listRecordsQuery = authedKey => block => {
+  return getTable('records', block)
+    .map(record => {
+      return getTypeProperties(record)(block)
+        .map(getPropertyValues(getRecordId(record))(block)).do(propertyValues => {
+          return r.expr({
+            'recordId': getRecordId(record),
+            'owner': getOwnerId(record),
+            'custodian': getCustodianId(record),
+            'properties': propertyValues
+              .map(propertyValue => r.expr({
+                'name': getName(propertyValue),
+                'type': getDataType(propertyValue),
+                'value': getCurrentValue(propertyValue)('value'),
+                'reporters': propertyValue('reporterKeys')
+              })),
+            'updates': r.expr({
+              'owners': getOwners(record),
+              'custodians': getCustodians(record),
+              'properties': propertyValues
+                .map(propertyValue => r.expr({
+                  'name': getName(propertyValue),
+                  'values': propertyValue('values').pluck('value', 'timestamp')
+                }))
+            }),
+            'proposals': getProposals(getRecordId(record))(authedKey)(block)
+          })
+        })
+    })
+    .coerceTo('array')
+}
+
 /* Exported functions */
 
 const fetchProperty = (recordId, propertyName) => {
@@ -216,7 +248,12 @@ const fetchRecord = (recordId, authedKey) => {
   return db.queryWithCurrentBlock(fetchRecordQuery(recordId, authedKey))
 }
 
+const listRecords = authedKey => {
+  return db.queryWithCurrentBlock(listRecordsQuery(authedKey))
+}
+
 module.exports = {
   fetchProperty,
   fetchRecord,
+  listRecords,
 }

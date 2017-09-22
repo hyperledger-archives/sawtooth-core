@@ -26,7 +26,12 @@ const fetchRecord = ({recordId, authedKey}) => {
   return db.fetchRecord(recordId, authedKey)
 }
 
+const listRecords = authedKey => {
+  return db.listRecords(authedKey)
+}
+
 module.exports = {
   fetchProperty,
   fetchRecord,
+  listRecords,
 }

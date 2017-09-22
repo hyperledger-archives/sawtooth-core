@@ -117,7 +117,10 @@ class TTClient(RestClient):
         )[1]
 
     def get_records(self):
-        return self._submit_request(url=SERVER_URL + '/api/records')[1]
+        return self._submit_request(
+            url=SERVER_URL + '/api/records',
+            headers={'Authorization': self.auth_token}
+        )[1]
 
     def get_record(self, record_id):
         return self._submit_request(
@@ -648,6 +651,10 @@ class TestTrackAndTrade(unittest.TestCase):
         get_record = jin.get_record('fish-456')
 
         log_json(get_record)
+
+        get_records = jin.get_records()
+
+        log_json(get_records)
 
 
 def log_json(msg):
