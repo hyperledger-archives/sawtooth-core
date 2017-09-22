@@ -108,6 +108,18 @@ const getPrivateKey = () => {
 }
 
 /**
+ * Re-encrypts a private key with a new password.
+ */
+const changePassword = password => {
+  return getPrivateKey()
+    .then(privateKey => {
+      const encryptedKey = sjcl.encrypt(password, privateKey)
+      window.localStorage.setItem(STORAGE_KEY, encryptedKey)
+      return encryptedKey
+    })
+}
+
+/**
  * Wraps a Protobuf payload in a TransactionList and submits it to the API.
  * Prompts user for their password if their private key is not in memory.
  */
@@ -135,5 +147,6 @@ module.exports = {
   setPrivateKey,
   clearPrivateKey,
   getPrivateKey,
+  changePassword,
   submit
 }
