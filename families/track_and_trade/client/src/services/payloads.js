@@ -52,6 +52,7 @@ const root = protobuf.Root.fromJSON(protoJson)
 const TTPayload = root.lookup('TTPayload')
 const PropertyValue = root.lookup('PropertyValue')
 const PropertySchema = root.lookup('PropertySchema')
+const Location = root.lookup('Location')
 const Proposal = root.lookup('Proposal')
 _.map(actionMap, action => {
   return _.set(action, 'proto', root.lookup(action.name))
@@ -62,7 +63,12 @@ const propertiesXformer = xform => data => {
   return _.set(data, 'properties', data.properties.map(xform))
 }
 const valueXform = propertiesXformer(prop => PropertyValue.create(prop))
-const schemaXform = propertiesXformer(prop => PropertySchema.create(prop))
+const schemaXform = propertiesXformer(prop => {
+  if (prop.locationValue) {
+    prop.locationValue = Location.create(prop.locationValue)
+  }
+  return PropertySchema.create(prop)
+})
 
 _.map(actionMap, action => _.set(action, 'xform', x => x))
 actionMap.createRecord.xform = valueXform

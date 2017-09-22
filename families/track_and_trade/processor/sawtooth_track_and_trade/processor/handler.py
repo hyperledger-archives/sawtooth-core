@@ -751,10 +751,15 @@ def _make_new_reported_value(reporter_index, timestamp, prop):
 
     attribute = DATA_TYPE_TO_ATTRIBUTE[prop.data_type]
 
-    setattr(
-        reported_value,
-        attribute,
-        getattr(prop, attribute))
+    # Cannot set messages, must set their attributes individually
+    if attribute == 'location_value':
+        reported_value.location_value.latitude = prop.location_value.latitude
+        reported_value.location_value.longitude = prop.location_value.longitude
+    else:
+        setattr(
+            reported_value,
+            attribute,
+            getattr(prop, attribute))
 
     return reported_value
 
