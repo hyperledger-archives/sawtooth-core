@@ -246,6 +246,12 @@ messages are received:
 - GossipPeersRequest
 - GossipPeersResponse
 
-In the future, sub-roles can be added to further restrict access to specific
-functions of the role. For example network.gossip could control who is allowed
-to send gossip messages.
+network.consensus
+  If a validator receives a GossipMessage that contains a new block published
+  by a node whose public key is not permitted by the policy, the message will
+  be dropped, an AuthorizationViolation will be returned, and the connection
+  will be closed.
+
+In the future, other sub-roles can be added to further restrict access to
+specific functions of the role. For example network.gossip could control who is
+allowed to send gossip messages.
