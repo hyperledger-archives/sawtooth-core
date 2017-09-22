@@ -53,6 +53,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     python3-lmdb=0.92-1 \
     python3-multidict=2.1.4-1 \
     python3-netifaces=0.10.4-0.1build2 \
+    python3-pyformance \
     python3-pip \
     python3-protobuf \
     python3-pycares=2.1.1-1 \
