@@ -391,7 +391,6 @@ def _create_proposal(payload, signer, timestamp, state):
     for proposal in open_proposals:
         if (proposal.receiving_agent == receiving_agent
                 and proposal.role == role
-                and proposal.timestamp == timestamp
                 and proposal.record_id == record_id):
             raise InvalidTransaction(
                 'Proposal already exists')
