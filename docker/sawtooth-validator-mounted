@@ -13,22 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-# Description:
-#   Builds an image to be used when developing in Python. The default CMD is to
-#   run build_python.
-#
-#   The image is also used by unit and integration tests. Docker is used to
-#   interact with and orchestrate the creation of other docker containers.
-#
-# Build:
-#   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-dev-python -t sawtooth-dev-python
-#
-# Run:
-#   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core \
-#     -v /var/run/docker.sock:/var/run/docker.sock sawtooth-dev-python
-
 FROM ubuntu:xenial
 
 LABEL "install-type"="mounted"
@@ -66,7 +50,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     python3-netifaces=0.10.4-0.1build2 \
     python3-nose2 \
     python3-pip \
-    python3-protobuf \
+    python3-protobuf=3.2.0-1 \
     python3-psycopg2 \
     python3-pycares=2.1.1-1 \
     python3-pytest-runner=2.6.2-1 \
@@ -111,5 +95,13 @@ RUN mkdir -p /project/sawtooth-core/ \
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
+RUN curl -sL https://repos.influxdata.com/influxdb.key | apt-key add -
+RUN echo deb https://repos.influxdata.com/ubuntu xenial stable > /etc/apt/sources.list.d/influxdb.list
+RUN apt-get update && apt-get install -y -q \
+    telegraf \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY telegraf.conf /etc/telegraf/telegraf.conf
+
 WORKDIR /project/sawtooth-core
-CMD build_python
