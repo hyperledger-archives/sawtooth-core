@@ -17,6 +17,7 @@
 'use strict'
 
 const m = require('mithril')
+const truncate = require('lodash/truncate')
 const {Table, FilterGroup, PagingButtons} = require('../components/tables.js')
 const api = require('../services/api')
 
@@ -51,7 +52,8 @@ const AgentList = {
               vnode.state.currentPage * PAGE_SIZE,
               (vnode.state.currentPage + 1) * PAGE_SIZE)
             .map((agent) => [
-              agent.name,
+              m(`a[href=/agents/${agent.key}]`, { oncreate: m.route.link },
+                truncate(agent.name, { length: 32 })),
               agent.key,
               agent.owns.length,
               agent.custodian.length,
