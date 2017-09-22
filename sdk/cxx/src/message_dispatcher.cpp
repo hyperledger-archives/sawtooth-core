@@ -39,7 +39,7 @@ MessageDispatcher::MessageDispatcher():
         context_(),
         server_socket(this->context_, zmqpp::socket_type::dealer),
         message_socket(this->context_, zmqpp::socket_type::dealer),
-        processessing_request_socket(this->context_, zmqpp::socket_type::dealer)
+        processing_request_socket(this->context_, zmqpp::socket_type::dealer)
         { }
 
 // Connect to the validator component endpoint socket and
@@ -60,7 +60,7 @@ void MessageDispatcher::Connect(const std::string& connection_string) {
     } while (!connected);
 
     this->message_socket.bind("inproc://send_queue");
-    this->processessing_request_socket.bind("inproc://request_queue");
+    this->processing_request_socket.bind("inproc://request_queue");
 
     // start the thread to process incoming messages
     this->dispatch_thread = std::thread(MessageDispatcher::DispatchThread,
@@ -78,7 +78,7 @@ void MessageDispatcher::Close() {
 
     this->server_socket.close();
     this->message_socket.close();
-    this->processessing_request_socket.close();
+    this->processing_request_socket.close();
 }
 
 void MessageDispatcher::ReceiveMessage() {
