@@ -75,6 +75,8 @@ from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import \
     NetworkPermissionHandler
+from sawtooth_validator.gossip.permission_verifier import \
+    NetworkConsensusPermissionHandler
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
@@ -471,6 +473,17 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             structure_verifier.GossipHandlerStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_MESSAGE 4) Verifies that the node is allowed to publish a
+        # block
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            NetworkConsensusPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         # GOSSIP_MESSAGE 5) Determines if we should broadcast the
