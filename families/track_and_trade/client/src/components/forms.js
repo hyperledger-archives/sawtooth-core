@@ -19,6 +19,8 @@
 const m = require('mithril')
 const _ = require('lodash')
 
+const layout = require('./layout')
+
 /**
  * Returns a labeled form group
  */
@@ -55,6 +57,13 @@ const numberInput = _.partial(input, 'number')
 const emailInput = _.partial(input, 'email')
 
 /**
+ * Creates an icon with an onclick function
+ */
+const clickIcon = (name, onclick) => {
+  return m('span.mx-3', { onclick }, layout.icon(name))
+}
+
+/**
  * Convenience function for returning partial onValue functions
  */
 const stateSetter = state => key => value => { state[key] = value }
@@ -80,6 +89,7 @@ module.exports = {
   passwordInput,
   numberInput,
   emailInput,
+  clickIcon,
   stateSetter,
   validator
 }
