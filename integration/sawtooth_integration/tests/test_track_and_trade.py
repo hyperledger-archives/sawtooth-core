@@ -658,9 +658,20 @@ class TestTrackAndTrade(unittest.TestCase):
         self.assertEqual(get_record['owner'], sun.public_key)
         self.assertEqual(get_record['recordId'], 'fish-456')
 
+        for attr in ('latitude',
+                     'longitude',
+                     'species',
+                     'temperature',
+                     'weight'):
+            self.assertIn(attr, get_record['updates']['properties'])
+
         get_records = jin.get_records()
 
         log_json(get_records)
+
+        for record in get_records:
+            self.assert_record_attributes(record)
+
 
     def assert_record_attributes(self, record):
         for attr in ('custodian',

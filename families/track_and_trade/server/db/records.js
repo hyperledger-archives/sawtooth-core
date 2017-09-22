@@ -159,6 +159,18 @@ const getCurrentValue = propertyValue => {
   )
 }
 
+const makePropertiesEntry = propertyValues => {
+  return propertyValues
+    .map(entry => {
+      return r.object(
+        getName(entry),
+        entry('values').pluck('value', 'timestamp')
+      )
+    })
+    .reduce((left, right) => left.merge(right))
+    .default({})
+}
+
 /* Queries */
 
 const fetchPropertyQuery = (recordId, name) => block => {
@@ -194,11 +206,7 @@ const fetchRecordQuery = (recordId, authedKey) => block => {
           'updates': r.expr({
             'owners': getOwners(record),
             'custodians': getCustodians(record),
-            'properties': propertyValues
-              .map(propertyValue => r.expr({
-                'name': getName(propertyValue),
-                'values': propertyValue('values').pluck('value', 'timestamp')
-              }))
+            'properties': makePropertiesEntry(propertyValues)
           }),
           'proposals': getProposals(recordId)(authedKey)(block)
         })
@@ -225,11 +233,7 @@ const listRecordsQuery = authedKey => block => {
             'updates': r.expr({
               'owners': getOwners(record),
               'custodians': getCustodians(record),
-              'properties': propertyValues
-                .map(propertyValue => r.expr({
-                  'name': getName(propertyValue),
-                  'values': propertyValue('values').pluck('value', 'timestamp')
-                }))
+              'properties': makePropertiesEntry(propertyValues)
             }),
             'proposals': getProposals(getRecordId(record))(authedKey)(block)
           })
