@@ -12,3 +12,4 @@ Architecture
    architecture/rest_api
    architecture/poet
    architecture/validator_network
+   architecture/permissioning_requirement
