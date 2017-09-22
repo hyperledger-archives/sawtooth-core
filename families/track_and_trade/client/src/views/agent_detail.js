@@ -74,6 +74,12 @@ const privateKeyField = state => {
             state.toggled.privateKey = privateKey
             m.redraw()
           })
+      }),
+      forms.clickIcon('cloud-download', () => {
+        return transactions.getPrivateKey()
+          .then(privateKey => {
+            forms.triggerDownload(`${state.agent.username}.priv`, privateKey)
+          })
       })),
     toggledInfo(
       state.toggled.privateKey,
