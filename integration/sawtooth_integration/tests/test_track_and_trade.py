@@ -652,9 +652,47 @@ class TestTrackAndTrade(unittest.TestCase):
 
         log_json(get_record)
 
+        self.assert_record_attributes(get_record)
+
+        self.assertEqual(get_record['custodian'], sun.public_key)
+        self.assertEqual(get_record['owner'], sun.public_key)
+        self.assertEqual(get_record['recordId'], 'fish-456')
+
         get_records = jin.get_records()
 
         log_json(get_records)
+
+    def assert_record_attributes(self, record):
+        for attr in ('custodian',
+                     'owner',
+                     'properties',
+                     'proposals',
+                     'recordId',
+                     'updates'):
+            self.assertIn(attr, record)
+
+        for prop in record['properties']:
+            for attr in ('name',
+                         'reporters',
+                         'type',
+                         'value'):
+                self.assertIn(attr, prop)
+
+        for prop in record['proposals']:
+            for attr in ('issuingAgent',
+                         'properties',
+                         'role'):
+                self.assertIn(attr, prop)
+
+        for attr in ('custodians',
+                     'owners',
+                     'properties'):
+            self.assertIn(attr, record['updates'])
+
+        for associated_agent in ('custodians', 'owners'):
+            for attr in ('agentId', 'timestamp'):
+                for entry in record['updates'][associated_agent]:
+                    self.assertIn(attr, entry)
 
 
 def log_json(msg):
