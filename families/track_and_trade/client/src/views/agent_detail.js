@@ -102,6 +102,26 @@ const editField = (state, label, key) => {
       infoForm(state, key, onSubmit, {placeholder: currentInfo})))
 }
 
+const passwordField = state => {
+  const onSubmit = () => {
+    return transactions.changePassword(state.update.password)
+      .then(encryptedKey => {
+        return api.patch('users', {
+          encryptedKey,
+          password: state.update.password
+        })
+      })
+      .then(() => m.redraw())
+  }
+
+  return labeledField(
+    fieldHeader('Password', editIcon(state.toggled, 'password')),
+    toggledInfo(
+      state.toggled.password,
+      bullets(16),
+      infoForm(state, 'password', onSubmit, { type: 'password' })))
+}
+
 /**
  * Displays information for a particular Agent.
  * The information can be edited if the user themself.
@@ -121,7 +141,7 @@ const AgentDetailPage = {
       layout.row(privateKeyField(vnode.state)),
       layout.row([
         editField(vnode.state, 'Username', 'username'),
-        staticField('Password', bullets(16))
+        passwordField(vnode.state)
       ]),
       layout.row(editField(vnode.state, 'Email', 'email'))
     ]
