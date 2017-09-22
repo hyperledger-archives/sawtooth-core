@@ -228,23 +228,26 @@ const _handleSubmit = (signingKey, state) => {
     properties: [
       {
         name: 'species',
-        value: state.species,
-        type: payloads.createRecord.enum.STRING
+        stringValue: state.species,
+        dataType: payloads.createRecord.enum.STRING
       },
       {
         name: 'length',
-        value: state.lengthInCM,
-        type: payloads.createRecord.enum.FLOAT
+        intValue: state.lengthInCM,
+        dataType: payloads.createRecord.enum.INT
       },
       {
         name: 'weight',
-        value: state.weightInKg,
-        type: payloads.createRecord.enum.FLOAT
+        intValue: state.weightInKg,
+        dataType: payloads.createRecord.enum.INT
       },
       {
         name: 'location',
-        value: [state.latitude, state.longitude],
-        type: payloads.createRecord.enum.LOCATION
+        locationValue: {
+          latitude: state.latitude,
+          longitude: state.longitude
+        },
+        dataType: payloads.createRecord.enum.LOCATION
       }
     ]
   })
