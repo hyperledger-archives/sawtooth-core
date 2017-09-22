@@ -56,6 +56,8 @@ services:
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind network:tcp://eth0:8800 \
+          --opentsdb-url http://influxdb:8086 \
+          --opentsdb-db metrics
         \""
 
   rest-api:

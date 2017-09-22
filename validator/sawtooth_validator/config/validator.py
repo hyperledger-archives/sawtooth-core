@@ -114,6 +114,8 @@ def merge_validator_config(configs):
     scheduler = None
     permissions = None
     roles = None
+    opentsdb_url = None
+    opentsdb_db = None
 
     for config in reversed(configs):
         if config.bind_network is not None:
@@ -138,6 +140,10 @@ def merge_validator_config(configs):
             permissions = config.permissions
         if config.roles is not None:
             roles = config.roles
+        if config.opentsdb_url is not None:
+            opentsdb_url = config.opentsdb_url
+        if config.opentsdb_db is not None:
+            opentsdb_db = config.opentsdb_db
 
     return ValidatorConfig(
          bind_network=bind_network,
@@ -150,7 +156,9 @@ def merge_validator_config(configs):
          network_private_key=network_private_key,
          scheduler=scheduler,
          permissions=permissions,
-         roles=roles
+         roles=roles,
+         opentsdb_url=opentsdb_url,
+         opentsdb_db=opentsdb_db
     )
 
 
@@ -194,8 +202,9 @@ class ValidatorConfig:
     def __init__(self, bind_network=None, bind_component=None,
                  endpoint=None, peering=None, seeds=None,
                  peers=None, network_public_key=None,
-                 network_private_key=None, scheduler=None, permissions=None,
-                 roles=None):
+                 network_private_key=None,
+                 scheduler=None, permissions=None,
+                 roles=None, opentsdb_url=None, opentsdb_db=None):
 
         self._bind_network = bind_network
         self._bind_component = bind_component
@@ -208,6 +217,8 @@ class ValidatorConfig:
         self._scheduler = scheduler
         self._permissions = permissions
         self._roles = roles
+        self._opentsdb_url = opentsdb_url
+        self._opentsdb_db = opentsdb_db
 
     @property
     def bind_network(self):
@@ -253,12 +264,21 @@ class ValidatorConfig:
     def roles(self):
         return self._roles
 
+    @property
+    def opentsdb_url(self):
+        return self._opentsdb_url
+
+    @property
+    def opentsdb_db(self):
+        return self._opentsdb_db
+
     def __repr__(self):
         return \
             "{}(bind_network={}, bind_component={}, " \
             "endpoint={}, peering={}, seeds={}, peers={}, "\
             "network_public_key={}, network_private_key={}, " \
-            "scheduler={}, permissions={}, roles={})".format(
+            "scheduler={}, permissions={}, roles={} " \
+            "opentsdb_url={}, opentsdb_db={})".format(
                 self.__class__.__name__,
                 repr(self._bind_network),
                 repr(self._bind_component),
@@ -270,7 +290,9 @@ class ValidatorConfig:
                 repr(self._network_private_key),
                 repr(self._scheduler),
                 repr(self._permissions),
-                repr(self._roles))
+                repr(self._roles),
+                repr(self._opentsdb_url),
+                repr(self._opentsdb_db))
 
     def to_dict(self):
         return collections.OrderedDict([
@@ -284,7 +306,9 @@ class ValidatorConfig:
             ('network_private_key', self._network_private_key),
             ('scheduler', self._scheduler),
             ('permissions', self._permissions),
-            ('roles', self._roles)
+            ('roles', self._roles),
+            ('opentsdb_url', self._opentsdb_url),
+            ('opentsdb_db', self._opentsdb_db)
         ])
 
     def to_toml_string(self):
