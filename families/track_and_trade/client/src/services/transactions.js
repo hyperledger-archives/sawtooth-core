@@ -45,7 +45,7 @@ const requestPassword = () => {
     title: 'Enter Password',
     acceptText: 'Submit',
     body: m('.container', [
-      m('.mb-4', 'Please confirm your password to decrypt your signing key.'),
+      m('.mb-4', 'Please confirm your password to unlock your signing key.'),
       m('input.form-control', {
         type: 'password',
         oninput: m.withAttr('value', value => { password = value })
@@ -95,6 +95,19 @@ const clearPrivateKey = () => {
 }
 
 /**
+ * Returns the user's private key as promised, requesting password as needed.
+ */
+const getPrivateKey = () => {
+  return Promise.resolve()
+  .then(() => {
+    if (txnEncoder) return txnEncoder._privateKey
+    const encryptedKey = window.localStorage.getItem(STORAGE_KEY)
+    return requestPassword()
+      .then(password => sjcl.decrypt(password, encryptedKey))
+  })
+}
+
+/**
  * Wraps a Protobuf payload in a TransactionList and submits it to the API.
  * Prompts user for their password if their private key is not in memory.
  */
@@ -121,5 +134,6 @@ module.exports = {
   makePrivateKey,
   setPrivateKey,
   clearPrivateKey,
+  getPrivateKey,
   submit
 }
