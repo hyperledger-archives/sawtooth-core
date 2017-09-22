@@ -640,7 +640,7 @@ following command:
 
 .. code-block:: console
 
-  $ docker logs CONTAINER
+  $ docker logs {CONTAINER}
 
 
 .. note:: 
