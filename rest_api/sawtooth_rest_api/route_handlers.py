@@ -59,10 +59,15 @@ class RouteHandler(object):
         timeout (int, optional): The time in seconds before the Api should
             cancel a request and report that the validator is unavailable.
     """
-    def __init__(self, loop, connection, timeout=DEFAULT_TIMEOUT):
+    def __init__(
+            self, loop, connection,
+            timeout=DEFAULT_TIMEOUT, metrics_registry=None):
         self._loop = loop
         self._connection = connection
         self._timeout = timeout
+        self._batch_counter = metrics_registry.counter('batch_counter') \
+            if metrics_registry \
+            else None
 
     async def submit_batches(self, request):
         """Accepts a binary encoded BatchList and submits it to the validator.
@@ -99,6 +104,10 @@ class RouteHandler(object):
         except DecodeError:
             LOGGER.debug('Submission body could not be decoded: %s', body)
             raise errors.BadProtobufSubmitted()
+
+        # Increment batch counter
+        if self._batch_counter:
+            self._batch_counter.inc()
 
         # Query validator
         error_traps = [error_handlers.BatchInvalidTrap]
