@@ -71,7 +71,9 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/ap
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install \
     pylint \
-    bandit
+    bandit \
+&& pip3  install git+git://github.com/omergertel/pyformance.git@de7bee8ceddbb1c3ea3b6c28373a5b066b04b3b7 \
+	--upgrade
 
 RUN apt-get update && apt-get install -y -q \
     dvipng \
