@@ -123,7 +123,7 @@ class Validator(object):
                  identity_signing_key, scheduler_type, permissions,
                  network_public_key=None, network_private_key=None,
                  roles=None,
-                 metrics_reporter=None
+                 metrics_registry=None
                  ):
         """Constructs a validator instance.
 
@@ -183,8 +183,6 @@ class Validator(object):
         block_store = BlockStore(block_db)
 
         batch_tracker = BatchTracker(block_store)
-
-        self._metrics_reporter = metrics_reporter
 
         # setup network
         self._dispatcher = Dispatcher()
@@ -277,9 +275,6 @@ class Validator(object):
         identity_observer = IdentityObserver(
             to_update=id_cache.invalidate,
             forked=id_cache.forked)
-
-        metrics_registry = self._metrics_reporter.registry \
-            if self._metrics_reporter else None
 
         # Create and configure journal
         self._journal = Journal(
@@ -768,10 +763,6 @@ class Validator(object):
             self._start()
 
     def _start(self):
-        if self._metrics_reporter:
-            LOGGER.info("Start Metrics Reporter")
-            self._metrics_reporter.start()
-
         self._network_dispatcher.start()
         self._network.start()
 
