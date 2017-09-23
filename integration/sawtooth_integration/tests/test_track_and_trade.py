@@ -117,7 +117,21 @@ class TTClient(RestClient):
         )[1]
 
     def get_records(self):
-        return self._submit_request(url=SERVER_URL + '/api/records')[1]
+        return self._submit_request(
+            url=SERVER_URL + '/api/records',
+            headers={'Authorization': self.auth_token}
+        )[1]
+
+    def get_record(self, record_id):
+        return self._submit_request(
+            url='{}/api/records/{}'.format(SERVER_URL, record_id),
+            headers={'Authorization': self.auth_token}
+        )[1]
+
+    def get_record_property(self, record_id, property_name):
+        return self._submit_request(
+            url='{}/api/records/{}/property/{}'.format(
+                SERVER_URL, record_id, property_name))[1]
 
     def post_user(self, username):
         response = self._submit_request(
@@ -601,6 +615,95 @@ class TestTrackAndTrade(unittest.TestCase):
                 'publicKey': jin.public_key,
             }
         )
+
+        get_record_property = jin.get_record_property(
+            'fish-456', 'temperature')
+
+        log_json(get_record_property)
+
+        self.assertIn('dataType', get_record_property)
+        self.assertEqual(get_record_property['dataType'], 'INT')
+
+        self.assertIn('name', get_record_property)
+        self.assertEqual(get_record_property['name'], 'temperature')
+
+        self.assertIn('recordId', get_record_property)
+        self.assertEqual(get_record_property['recordId'], 'fish-456')
+
+        self.assertIn('value', get_record_property)
+
+        self.assertIn('reporters', get_record_property)
+        self.assertEqual(len(get_record_property['reporters']), 2)
+
+        self.assertIn('updates', get_record_property)
+        self.assertEqual(len(get_record_property['updates']), 7)
+
+        for update in get_record_property['updates']:
+            self.assertIn('timestamp', update)
+            self.assertIn('value', update)
+            self.assertIn('reporter', update)
+
+            reporter = update['reporter']
+            self.assertEqual(len(reporter), 2)
+            self.assertIn('name', reporter)
+            self.assertIn('publicKey', reporter)
+
+        get_record = jin.get_record('fish-456')
+
+        log_json(get_record)
+
+        self.assert_record_attributes(get_record)
+
+        self.assertEqual(get_record['custodian'], sun.public_key)
+        self.assertEqual(get_record['owner'], sun.public_key)
+        self.assertEqual(get_record['recordId'], 'fish-456')
+
+        for attr in ('latitude',
+                     'longitude',
+                     'species',
+                     'temperature',
+                     'weight'):
+            self.assertIn(attr, get_record['updates']['properties'])
+
+        get_records = jin.get_records()
+
+        log_json(get_records)
+
+        for record in get_records:
+            self.assert_record_attributes(record)
+
+
+    def assert_record_attributes(self, record):
+        for attr in ('custodian',
+                     'owner',
+                     'properties',
+                     'proposals',
+                     'recordId',
+                     'updates'):
+            self.assertIn(attr, record)
+
+        for prop in record['properties']:
+            for attr in ('name',
+                         'reporters',
+                         'type',
+                         'value'):
+                self.assertIn(attr, prop)
+
+        for prop in record['proposals']:
+            for attr in ('issuingAgent',
+                         'properties',
+                         'role'):
+                self.assertIn(attr, prop)
+
+        for attr in ('custodians',
+                     'owners',
+                     'properties'):
+            self.assertIn(attr, record['updates'])
+
+        for associated_agent in ('custodians', 'owners'):
+            for attr in ('agentId', 'timestamp'):
+                for entry in record['updates'][associated_agent]:
+                    self.assertIn(attr, entry)
 
 
 def log_json(msg):
