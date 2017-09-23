@@ -19,6 +19,7 @@ import logging
 import asyncio
 import argparse
 from urllib.parse import urlparse
+import platform
 import pkg_resources
 from aiohttp import web
 
@@ -88,7 +89,7 @@ async def cors_handler(request):
     return web.Response(headers=headers)
 
 
-def start_rest_api(host, port, connection, timeout, reporter=None):
+def start_rest_api(host, port, connection, timeout, registry):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
     loop = asyncio.get_event_loop()
@@ -99,7 +100,6 @@ def start_rest_api(host, port, connection, timeout, reporter=None):
     # Add routes to the web app
     LOGGER.info('Creating handlers for validator at %s', connection.url)
 
-    registry = reporter.registry if reporter else None
     handler = RouteHandler(loop, connection, timeout, registry)
 
     app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
@@ -129,11 +129,6 @@ def start_rest_api(host, port, connection, timeout, reporter=None):
     app.router.add_get('/subscriptions', subscriber_handler.subscriptions)
     app.on_shutdown.append(lambda app: subscriber_handler.on_shutdown())
 
-    # Start metrics reporter
-    if reporter:
-        LOGGER.info('Starting metrics reporter')
-        reporter.start()
-
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)
 
@@ -150,6 +145,19 @@ def load_rest_api_config(first_config):
     toml_config = load_toml_rest_api_config(conf_file)
     return merge_rest_api_config(
         configs=[first_config, toml_config, default_config])
+
+
+class MetricsRegistryWrapper():
+    def __init__(self, registry):
+        self._registry = registry
+
+    def gauge(self, name):
+        return self._registry.gauge(
+            ''.join([name, ',host=', platform.node()]))
+
+    def counter(self, name):
+        return self._registry.counter(
+            ''.join([name, ',host=', platform.node()]))
 
 
 def main():
@@ -195,26 +203,34 @@ def main():
                   " host:port".format(rest_api_config.bind[0]))
             sys.exit(1)
 
-        reporter = None
+        wrapped_registry = None
         if rest_api_config.opentsdb_url:
+            LOGGER.info("Adding metrics reporter: url=%s, db=%s",
+                        rest_api_config.opentsdb_url,
+                        rest_api_config.opentsdb_db)
+
             url = urlparse(rest_api_config.opentsdb_url)
             proto, db_server, db_port, = url.scheme, url.hostname, url.port
 
             registry = MetricsRegistry()
+            wrapped_registry = MetricsRegistryWrapper(registry)
+
             reporter = InfluxReporter(
                 registry=registry,
                 reporting_interval=10,
                 database=rest_api_config.opentsdb_db,
+                prefix="sawtooth_rest_api",
                 port=db_port,
                 protocol=proto,
                 server=db_server)
+            reporter.start()
 
         start_rest_api(
             host,
             port,
             connection,
             int(rest_api_config.timeout),
-            reporter)
+            wrapped_registry)
         # pylint: disable=broad-except
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
