@@ -15,7 +15,6 @@
 import unittest
 import random
 import hashlib
-import string
 import cbor
 
 import sawtooth_signing as signing
@@ -91,11 +90,6 @@ class TestCompleter(unittest.TestCase):
             txn_list.append(transaction)
 
         return txn_list
-
-    def _generate_id(self):
-        return hashlib.sha512(''.join(
-            [random.choice(string.ascii_letters)
-                for _ in range(0, 1024)]).encode()).hexdigest()
 
     def _create_batches(self, batch_count, txn_count,
                         missing_dep=False):
