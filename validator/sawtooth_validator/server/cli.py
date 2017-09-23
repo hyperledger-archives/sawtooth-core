@@ -18,6 +18,7 @@ import sys
 import argparse
 import os
 from urllib.parse import urlparse
+import platform
 import pkg_resources
 import netifaces
 
@@ -200,6 +201,19 @@ def create_validator_config(opts):
         opentsdb_db=opts.opentsdb_db)
 
 
+class MetricsRegistryWrapper():
+    def __init__(self, registry):
+        self._registry = registry
+
+    def gauge(self, name):
+        return self._registry.gauge(
+            ''.join([name, ',host=', platform.node()]))
+
+    def counter(self, name):
+        return self._registry.counter(
+            ''.join([name, ',host=', platform.node()]))
+
+
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
@@ -302,19 +316,27 @@ def main(args=None):
                        "communications between validators will not be "
                        "authenticated or encrypted.")
 
-    metrics_reporter = None
+    wrapped_registry = None
     if validator_config.opentsdb_url:
+        LOGGER.info("Adding metrics reporter: url=%s, db=%s",
+                    validator_config.opentsdb_url,
+                    validator_config.opentsdb_db)
+
         url = urlparse(validator_config.opentsdb_url)
         proto, db_server, db_port, = url.scheme, url.hostname, url.port
 
         registry = MetricsRegistry()
+        wrapped_registry = MetricsRegistryWrapper(registry)
+
         metrics_reporter = InfluxReporter(
             registry=registry,
             reporting_interval=10,
             database=validator_config.opentsdb_db,
+            prefix="sawtooth_validator",
             port=db_port,
             protocol=proto,
             server=db_server)
+        metrics_reporter.start()
 
     validator = Validator(bind_network,
                           bind_component,
@@ -330,7 +352,7 @@ def main(args=None):
                           validator_config.network_public_key,
                           validator_config.network_private_key,
                           roles=validator_config.roles,
-                          metrics_reporter=metrics_reporter
+                          metrics_registry=wrapped_registry
                           )
 
     # pylint: disable=broad-except
