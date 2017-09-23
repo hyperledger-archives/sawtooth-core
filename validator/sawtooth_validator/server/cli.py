@@ -17,8 +17,12 @@ import logging
 import sys
 import argparse
 import os
+from urllib.parse import urlparse
 import pkg_resources
 import netifaces
+
+from pyformance import MetricsRegistry
+from pyformance.reporters import InfluxReporter
 
 from sawtooth_validator.config.path import load_path_config
 from sawtooth_validator.config.validator import load_default_validator_config
@@ -96,6 +100,12 @@ def parse_args(args):
                         choices=['trust', 'challenge'],
                         help='The type of authorization required to join the '
                              'validator network.')
+    parser.add_argument('--opentsdb-url',
+                        help='The host and port for Open TSDB database \
+                        used for metrics')
+    parser.add_argument('--opentsdb-db',
+                        help='The name of the database used for storing \
+                        metrics')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -185,8 +195,9 @@ def create_validator_config(opts):
         seeds=opts.seeds,
         peers=opts.peers,
         scheduler=opts.scheduler,
-        roles=opts.network_auth
-        )
+        roles=opts.network_auth,
+        opentsdb_url=opts.opentsdb_url,
+        opentsdb_db=opts.opentsdb_db)
 
 
 def main(args=None):
@@ -291,6 +302,20 @@ def main(args=None):
                        "communications between validators will not be "
                        "authenticated or encrypted.")
 
+    metrics_reporter = None
+    if validator_config.opentsdb_url:
+        url = urlparse(validator_config.opentsdb_url)
+        proto, db_server, db_port, = url.scheme, url.hostname, url.port
+
+        registry = MetricsRegistry()
+        metrics_reporter = InfluxReporter(
+            registry=registry,
+            reporting_interval=10,
+            database=validator_config.opentsdb_db,
+            port=db_port,
+            protocol=proto,
+            server=db_server)
+
     validator = Validator(bind_network,
                           bind_component,
                           endpoint,
@@ -304,7 +329,8 @@ def main(args=None):
                           validator_config.permissions,
                           validator_config.network_public_key,
                           validator_config.network_private_key,
-                          validator_config.roles
+                          roles=validator_config.roles,
+                          metrics_reporter=metrics_reporter
                           )
 
     # pylint: disable=broad-except
