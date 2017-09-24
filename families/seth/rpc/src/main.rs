@@ -17,12 +17,17 @@
 
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate log;
+extern crate simple_logging;
 extern crate uuid;
 extern crate jsonrpc_core;
 extern crate jsonrpc_http_server;
 extern crate futures_cpupool;
 extern crate sawtooth_sdk;
 extern crate protobuf;
+
+use log::LogLevelFilter;
 
 use sawtooth_sdk::messaging::stream::*;
 use sawtooth_sdk::messaging::zmq_stream::*;
@@ -36,7 +41,7 @@ mod error;
 
 mod account;
 mod block;
-mod log;
+mod logs;
 mod network;
 mod transaction;
 
@@ -45,19 +50,31 @@ use requests::{RequestExecutor, RequestHandler};
 const SERVER_THREADS: usize = 3;
 
 fn main() {
-    let arg_matches = clap_app!(intkey =>
+    let arg_matches = clap_app!(("seth-rpc") =>
         (version: "1.0")
         (about: "Seth RPC Server")
         (@arg connect: --connect +takes_value
          "Component endpoint of the validator to communicate with.")
         (@arg bind: --bind +takes_value
          "The host and port the RPC server should bind to.")
+        (@arg verbose: -v... "Increase the logging level.")
     ).get_matches();
 
     let bind = arg_matches.value_of("bind")
         .unwrap_or("0.0.0.0:3030");
     let connect = arg_matches.value_of("connect")
         .unwrap_or("tcp://localhost:4004");
+
+    let vs = arg_matches.occurrences_of("verbose");
+    let log_level = match vs {
+        0 => LogLevelFilter::Warn,
+        1 => LogLevelFilter::Info,
+        2 => LogLevelFilter::Debug,
+        _ => LogLevelFilter::Trace,
+    };
+    simple_logging::log_to_stderr(log_level).expect("Failed to initialize logger");
+
+    info!("Trying to connect to validator at {}", connect);
 
     let mut io = IoHandler::new();
     let connection = ZmqMessageConnection::new(connect);
@@ -78,6 +95,8 @@ fn main() {
         .start_http(&endpoint)
         .unwrap();
 
+    info!("Starting seth-rpc on http://{}", bind);
+
     server.wait();
 }
 
@@ -95,13 +114,13 @@ fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSend
     methods.push((String::from("eth_getBlockByHash"), block::get_block_by_hash));
     methods.push((String::from("eth_getBlockByNumber"), block::get_block_by_number));
 
-    methods.push((String::from("eth_newFilter"), log::new_filter));
-    methods.push((String::from("eth_newBlockFilter"), log::new_block_filter));
-    methods.push((String::from("eth_newPendingTransactionFilter"), log::new_pending_transaction_filter));
-    methods.push((String::from("eth_uninstallFilter"), log::uninstall_filter));
-    methods.push((String::from("eth_getFilterChanges"), log::get_filter_changes));
-    methods.push((String::from("eth_getFilterLogs"), log::get_filter_logs));
-    methods.push((String::from("eth_getLogs"), log::get_logs));
+    methods.push((String::from("eth_newFilter"), logs::new_filter));
+    methods.push((String::from("eth_newBlockFilter"), logs::new_block_filter));
+    methods.push((String::from("eth_newPendingTransactionFilter"), logs::new_pending_transaction_filter));
+    methods.push((String::from("eth_uninstallFilter"), logs::uninstall_filter));
+    methods.push((String::from("eth_getFilterChanges"), logs::get_filter_changes));
+    methods.push((String::from("eth_getFilterLogs"), logs::get_filter_logs));
+    methods.push((String::from("eth_getLogs"), logs::get_logs));
 
     methods.push((String::from("net_version"), network::version));
     methods.push((String::from("net_peerCount"), network::peer_count));

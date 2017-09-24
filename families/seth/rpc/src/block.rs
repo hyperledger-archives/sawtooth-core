@@ -39,7 +39,7 @@ pub fn block_number<T>(_params: Params, mut sender: T) -> Result<Value, Error> w
     let request_bytes = match protobuf::Message::write_to_bytes(&request) {
         Ok(b) => b,
         Err(error) => {
-            println!("ERROR serializing request: {:?}", error);
+            error!("Error serializing request: {:?}", error);
             return Err(Error::internal_error());
         },
     };
@@ -47,7 +47,7 @@ pub fn block_number<T>(_params: Params, mut sender: T) -> Result<Value, Error> w
     let correlation_id = match uuid::Uuid::new(uuid::UuidVersion::Random) {
         Some(cid) => cid.to_string(),
         None => {
-            println!("Error generating UUID");
+            error!("Error generating UUID");
             return Err(Error::internal_error());
         },
     };
@@ -56,7 +56,7 @@ pub fn block_number<T>(_params: Params, mut sender: T) -> Result<Value, Error> w
                                        &correlation_id, &request_bytes) {
         Ok(f) => f,
         Err(error) => {
-            println!("Error unwrapping future: {:?}", error);
+            error!("Error unwrapping future: {:?}", error);
             return Err(Error::internal_error());
         },
     };
@@ -64,7 +64,7 @@ pub fn block_number<T>(_params: Params, mut sender: T) -> Result<Value, Error> w
     let message = match future.get() {
         Ok(m) => m,
         Err(error) => {
-            println!("Error getting future: {:?}", error);
+            error!("Error getting future: {:?}", error);
             return Err(Error::internal_error());
         },
     };
@@ -72,7 +72,7 @@ pub fn block_number<T>(_params: Params, mut sender: T) -> Result<Value, Error> w
     let response: ClientBlockListResponse = match protobuf::parse_from_bytes(&message.content) {
         Ok(r) => r,
         Err(error) => {
-            println!("Error parsing response: {:?}", error);
+            error!("Error parsing response: {:?}", error);
             return Err(Error::internal_error());
         },
     };
@@ -81,7 +81,7 @@ pub fn block_number<T>(_params: Params, mut sender: T) -> Result<Value, Error> w
     let block_header: BlockHeader = match protobuf::parse_from_bytes(&block.header) {
         Ok(r) => r,
         Err(error) => {
-            println!("Error parsing block header: {:?}", error);
+            error!("Error parsing block header: {:?}", error);
             return Err(Error::internal_error());
         }
     };

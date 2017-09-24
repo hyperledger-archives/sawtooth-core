@@ -26,3 +26,5 @@ clap = "2.26"
 protobuf="1.4.1"
 sawtooth_sdk = { path = "../../../sdk/rust" }
 uuid = { version = "0.5", features = ["v4"] }
+log = "0.3.8"
+simple-logging = "1.0.1"
