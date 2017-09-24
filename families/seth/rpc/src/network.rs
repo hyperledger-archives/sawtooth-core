@@ -29,8 +29,8 @@ pub fn version<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where
 
 // Since this is only for HTTP right now, there won't be any connected peers
 pub fn peer_count<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
-    Ok(Value::String(format!("{:x}", 0)))
     info!("net_peerCount");
+    Ok(Value::String(format!("{:#x}", 0)))
 }
 
 // Return whether we are listening for connections, which is always true
