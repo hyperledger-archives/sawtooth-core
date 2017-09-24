@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	sdk "sawtooth_sdk/client"
 	"sawtooth_seth/client"
 	. "sawtooth_seth/protobuf/seth_pb2"
 )
@@ -55,11 +54,10 @@ func (args *ContractCreate) Register(parent *flags.Command) error {
 func (args *ContractCreate) Run(config *Config) error {
 	client := client.New(config.Url)
 
-	key, err := LoadKey(args.Positional.Alias)
+	priv, err := LoadKey(args.Positional.Alias)
 	if err != nil {
-		return fmt.Errorf("Couldn't load key from alias: %v", err)
+		return err
 	}
-	priv := sdk.WifToPriv(key)
 
 	init, err := hex.DecodeString(args.Positional.Init)
 	if err != nil {

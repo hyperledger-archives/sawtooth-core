@@ -38,8 +38,8 @@ const (
 
 func TestPermissions(t *testing.T) {
   client := client.New("http://rest-api:8080")
-  priv := sdk.WifToPriv(PRIV)
-  priv2 := sdk.WifToPriv(PRIV2)
+  priv, _ := sdk.WifToPriv(PRIV)
+  priv2, _ := sdk.WifToPriv(PRIV2)
   init, _ := hex.DecodeString(INIT)
   nonce := uint64(0)
 

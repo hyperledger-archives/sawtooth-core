@@ -20,6 +20,8 @@ package client
 import (
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/hex"
+	"fmt"
 	ellcurv "github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcutil/base58"
 	"math/big"
@@ -103,9 +105,23 @@ func PrivToWif(priv []byte) string {
 }
 
 // WifToPriv converts a WIF string to a private key
-func WifToPriv(wif string) []byte {
+func WifToPriv(wif string) (key []byte, err error) {
+	defer func() {
+		if recover() != nil {
+			err = fmt.Errorf("Failed to load WIF key")
+		}
+	}()
 	extcheck := base58.Decode(wif)
-	return extcheck[1 : len(extcheck)-4]
+	return extcheck[1 : len(extcheck)-4], nil
+}
+
+func PemToPriv(pem string, password string) ([]byte, error) {
+	pemlen := len(pem)
+	priv, _, err := loadPemKey(pem, pemlen, password)
+	if err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(priv)
 }
 
 // ---
