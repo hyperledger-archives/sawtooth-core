@@ -368,6 +368,48 @@ def _update_properties(payload, signer, timestamp, state):
 
         _set_container(state, page_address, page_container)
 
+        # increment page if needed
+
+        if len(page.reported_values) >= PROPERTY_PAGE_MAX_LENGTH:
+            new_page_number = (
+                page_number + 1
+                if page_number + 1 <= TOTAL_PROPERTY_PAGE_MAX
+                else 1
+            )
+
+            new_page_address = addressing.make_property_address(
+                record_id, name, new_page_number)
+
+            new_page_container = _get_container(state, new_page_address)
+
+            try:
+                new_page = next(
+                    page
+                    for page in new_page_container.entries
+                    if page.name == name
+                )
+
+                del new_page.reported_values[:]
+
+            except StopIteration:
+                new_page = PropertyPage(
+                    name=name,
+                    record_id=record_id,
+                )
+
+                new_page_container.entries.extend([new_page])
+
+            _set_container(state, new_page_address, new_page_container)
+
+            # increment the property's page number (or wrap back to 1)
+
+            prop.current_page = new_page_number
+
+            if new_page_number == 1 and not prop.wrapped:
+                prop.wrapped = True
+
+            _set_container(state, property_address, property_container)
+
 
 def _create_proposal(payload, signer, timestamp, state):
     record_id, receiving_agent, role, properties = \
