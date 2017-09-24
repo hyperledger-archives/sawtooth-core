@@ -317,6 +317,7 @@ def main(args=None):
                        "authenticated or encrypted.")
 
     wrapped_registry = None
+    metrics_reporter = None
     if validator_config.opentsdb_url:
         LOGGER.info("Adding metrics reporter: url=%s, db=%s",
                     validator_config.opentsdb_url,
@@ -371,4 +372,6 @@ def main(args=None):
         LOGGER.exception(e)
         sys.exit(1)
     finally:
+        if metrics_reporter:
+            metrics_reporter.stop()
         validator.stop()
