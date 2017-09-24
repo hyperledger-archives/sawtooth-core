@@ -11,8 +11,19 @@ the Ethereum Virtual Machine, which is used to process Ethereum transactions,
 defines a BLOCKHASH instruction which gives the processor executing the
 transaction access to the hashes of previous blocks.
 
-The blockinfo transaction family provides a way for storing information about
+The Blockinfo transaction family provides a way for storing information about
 a configureable number of historic blocks.
+
+.. note::
+
+   BlockInfo transactions should only be added to a block by a BlockInfo
+   Injector and validation rules should ensure that only one transaction of this
+   type is included at the beginning of the block. For more information,
+   see :doc:`Injecting Batches and On-Chain Block Validation Rules
+   <../architecture/injecting_batches_block_validation_rules>`.
+   It is important to note that the data written to state by this
+   transaction family cannot be trusted unless both the injector and
+   validation rules are enabled.
 
 State
 =====
