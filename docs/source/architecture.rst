@@ -14,3 +14,4 @@ Architecture
    architecture/validator_network
    architecture/permissioning_requirement
    architecture/injecting_batches_block_validation_rules
+   architecture/events_and_transactions_receipts
