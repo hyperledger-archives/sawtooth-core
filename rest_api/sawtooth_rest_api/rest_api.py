@@ -233,7 +233,8 @@ def main():
             wrapped_registry)
         # pylint: disable=broad-except
     except Exception as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        LOGGER.exception(e)
+        sys.exit(1)
     finally:
         if connection is not None:
             connection.close()
