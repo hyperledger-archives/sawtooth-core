@@ -37,6 +37,7 @@ from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.server.log import log_configuration
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
+from sawtooth_validator.metrics.wrappers import MetricsRegistryWrapper
 
 
 LOGGER = logging.getLogger(__name__)
@@ -199,19 +200,6 @@ def create_validator_config(opts):
         roles=opts.network_auth,
         opentsdb_url=opts.opentsdb_url,
         opentsdb_db=opts.opentsdb_db)
-
-
-class MetricsRegistryWrapper():
-    def __init__(self, registry):
-        self._registry = registry
-
-    def gauge(self, name):
-        return self._registry.gauge(
-            ''.join([name, ',host=', platform.node()]))
-
-    def counter(self, name):
-        return self._registry.counter(
-            ''.join([name, ',host=', platform.node()]))
 
 
 def main(args=None):
