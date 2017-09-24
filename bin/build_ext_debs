@@ -154,7 +154,7 @@ build_python_debs() {
     pytest==2.9.0
     cryptography==1.7.2
     lmdb==0.92
-    git+git://github.com/omergertel/pyformance.git@de7bee8ceddbb1c3ea3b6c28373a5b066b04b3b7
+    git+git://github.com/omergertel/pyformance.git@3acb18da5af5d386fe5aa56f9248228e6af165bc
     '
 
     # secp256k1 needs a couple of libraries not readily available
@@ -261,7 +261,7 @@ package_python_deb() {
         if [ $tar_pkg_name == 'pyformance' ]; then
             rm ./tests/test__syslog_reporter.py
 
-            sed -ibak -e 's/0.3.4/0.3.5.dev1/' pyformance/__version__.py
+            sed -ibak -e 's/0.3.4/0.3.5.dev2/' pyformance/__version__.py
         fi
 
         # Build the package
