@@ -18,7 +18,6 @@ import sys
 import argparse
 import os
 from urllib.parse import urlparse
-import platform
 import pkg_resources
 import netifaces
 

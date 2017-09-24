@@ -70,8 +70,7 @@ class TimerWrapper():
     def time(self):
         if self._timer:
             return self._timer.time()
-        else:
-            return self._noop
+        return self._noop
 
 
 class RouteHandler(object):
@@ -99,13 +98,13 @@ class RouteHandler(object):
         self._timeout = timeout
         if metrics_registry:
             self._post_batches_count = CounterWrapper(
-                    metrics_registry.counter('post_batches_count'))
+                metrics_registry.counter('post_batches_count'))
             self._post_batches_error = CounterWrapper(
-                    metrics_registry.counter('post_batches_error'))
+                metrics_registry.counter('post_batches_error'))
             self._post_batches_total_time = TimerWrapper(
-                    metrics_registry.timer('post_batches_total_time'))
+                metrics_registry.timer('post_batches_total_time'))
             self._post_batches_validator_time = TimerWrapper(
-                    metrics_registry.timer('post_batches_validator_time'))
+                metrics_registry.timer('post_batches_validator_time'))
         else:
             self._post_batches_count = CounterWrapper()
             self._post_batches_error = CounterWrapper()

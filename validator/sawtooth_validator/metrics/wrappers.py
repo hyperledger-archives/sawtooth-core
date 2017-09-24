@@ -61,5 +61,4 @@ class TimerWrapper():
     def time(self):
         if self._timer:
             return self._timer.time()
-        else:
-            return self._noop
+        return self._noop
