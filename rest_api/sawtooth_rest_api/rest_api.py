@@ -159,6 +159,10 @@ class MetricsRegistryWrapper():
         return self._registry.counter(
             ''.join([name, ',host=', platform.node()]))
 
+    def timer(self, name):
+        return self._registry.timer(
+            ''.join([name, ',host=', platform.node()]))
+
 
 def main():
     loop = ZMQEventLoop()
