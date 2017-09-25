@@ -207,7 +207,8 @@ class Validator(object):
             settings_view_factory=SettingsViewFactory(
                                     StateViewFactory(merkle_db)),
             scheduler_type=scheduler_type,
-            invalid_observers=[batch_tracker])
+            invalid_observers=[batch_tracker],
+            metrics_registry=metrics_registry)
 
         self._executor = executor
         self._service.set_check_connections(executor.check_connections)

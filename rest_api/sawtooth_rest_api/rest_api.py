@@ -159,6 +159,10 @@ class MetricsRegistryWrapper():
         return self._registry.counter(
             ''.join([name, ',host=', platform.node()]))
 
+    def timer(self, name):
+        return self._registry.timer(
+            ''.join([name, ',host=', platform.node()]))
+
 
 def main():
     loop = ZMQEventLoop()
@@ -233,7 +237,8 @@ def main():
             wrapped_registry)
         # pylint: disable=broad-except
     except Exception as e:
-        print("Error: {}".format(e), file=sys.stderr)
+        LOGGER.exception(e)
+        sys.exit(1)
     finally:
         if connection is not None:
             connection.close()

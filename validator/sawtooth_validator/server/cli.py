@@ -18,7 +18,6 @@ import sys
 import argparse
 import os
 from urllib.parse import urlparse
-import platform
 import pkg_resources
 import netifaces
 
@@ -37,6 +36,7 @@ from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.server.log import log_configuration
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
+from sawtooth_validator.metrics.wrappers import MetricsRegistryWrapper
 
 
 LOGGER = logging.getLogger(__name__)
@@ -201,19 +201,6 @@ def create_validator_config(opts):
         opentsdb_db=opts.opentsdb_db)
 
 
-class MetricsRegistryWrapper():
-    def __init__(self, registry):
-        self._registry = registry
-
-    def gauge(self, name):
-        return self._registry.gauge(
-            ''.join([name, ',host=', platform.node()]))
-
-    def counter(self, name):
-        return self._registry.counter(
-            ''.join([name, ',host=', platform.node()]))
-
-
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
@@ -317,6 +304,7 @@ def main(args=None):
                        "authenticated or encrypted.")
 
     wrapped_registry = None
+    metrics_reporter = None
     if validator_config.opentsdb_url:
         LOGGER.info("Adding metrics reporter: url=%s, db=%s",
                     validator_config.opentsdb_url,
@@ -371,4 +359,6 @@ def main(args=None):
         LOGGER.exception(e)
         sys.exit(1)
     finally:
+        if metrics_reporter:
+            metrics_reporter.stop()
         validator.stop()
