@@ -38,6 +38,7 @@ use jsonrpc_core::{Params};
 
 mod requests;
 mod error;
+mod messages;
 
 mod account;
 mod block;
