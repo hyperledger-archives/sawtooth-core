@@ -29,7 +29,7 @@ services:
       - 3030:3030
     environment:
       RUST_BACKTRACE: 1
-    command: cargo run -- --connect tcp://validator:4004
+    command: cargo run -- --connect tcp://validator:4004 -v
 
   validator:
     image: sawtooth-validator:latest

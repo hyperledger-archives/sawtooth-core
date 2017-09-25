@@ -31,6 +31,7 @@ use sawtooth_sdk::messages::validator::Message_MessageType;
 
 // Return the block number of the current chain head, in hex, as a string
 pub fn block_number<T>(_params: Params, mut sender: T) -> Result<Value, Error> where T: MessageSender {
+    info!("eth_blockNumber");
     let mut paging = PagingControls::new();
     paging.set_count(1);
     let mut request = ClientBlockListRequest::new();

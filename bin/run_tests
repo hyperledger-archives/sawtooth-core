@@ -347,6 +347,7 @@ test_seth() {
   run_docker_test seth_blocknum_test
   run_docker_test seth_timestamp_test
   run_docker_test seth_perm_test
+  run_docker_test ./families/seth/rpc/comp_seth_rpc.yaml
 }
 
 test_integration() {
