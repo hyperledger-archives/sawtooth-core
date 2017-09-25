@@ -21,6 +21,7 @@ const truncate = require('lodash/truncate')
 const moment = require('moment')
 const {Table, FilterGroup, PagingButtons} = require('../components/tables')
 const api = require('../services/api')
+const { formatTimestamp } = require('../services/parsing')
 
 const PAGE_SIZE = 50
 
@@ -58,8 +59,8 @@ const FishList = {
                   _getProp(rec, 'species'),
                   // This is the "created" time, synthesized from properties
                   // added on the initial create
-                  _formatTimestamp(_getOldestPropUpdateTime(rec)),
-                  _formatTimestamp(_getLatestPropUpdateTime(rec)),
+                  formatTimestamp(_getOldestPropUpdateTime(rec)),
+                  formatTimestamp(_getLatestPropUpdateTime(rec)),
                   _countPropUpdates(rec)
                 ]),
           noRowsText: 'No records found'
@@ -139,13 +140,6 @@ const _countPropUpdates = (record) => {
 
   return Object.values(record.updates.properties).reduce(
     (sum, updates) => sum + updates.length, 0)
-}
-
-const _formatTimestamp = (sec) => {
-  if (!sec) {
-    sec = Date.now() / 1000
-  }
-  return moment.unix(sec).format('MM/DD/YYYY, h:mm:ss a')
 }
 
 module.exports = FishList
