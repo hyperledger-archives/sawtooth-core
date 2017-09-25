@@ -15,11 +15,21 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::collections::HashMap;
+
 use futures_cpupool::{CpuPool};
 use jsonrpc_core::{Params, Value, Error, BoxFuture};
 
 use sawtooth_sdk::messaging::stream::*;
 use sawtooth_sdk::messages::validator::Message_MessageType;
+use sawtooth_sdk::messages::block::{Block};
+use sawtooth_sdk::messages::txn_receipt::{
+    ClientReceiptGetRequest,
+    ClientReceiptGetResponse,
+    ClientReceiptGetResponse_Status,
+};
+use sawtooth_sdk::messages::transaction::{TransactionHeader};
+use super::messages::seth::{SethTransactionReceipt};
 
 use protobuf;
 use uuid;
@@ -97,5 +107,56 @@ impl<S: MessageSender> ValidatorClient<S> {
         };
 
         Ok(response)
+    }
+
+    pub fn get_receipts(&mut self, block: &Block) -> Result<HashMap<String, SethTransactionReceipt>, String> {
+        let batches = &block.batches;
+        let mut transactions = Vec::new();
+        for batch in batches.iter() {
+            for txn in batch.transactions.iter() {
+                let header: TransactionHeader = match protobuf::parse_from_bytes(&txn.header) {
+                    Ok(h) => h,
+                    Err(_) => {
+                        continue;
+                    },
+                };
+                if header.family_name == "seth" {
+                    transactions.push(String::from(txn.header_signature.clone()));
+                }
+            }
+        }
+
+        let mut request = ClientReceiptGetRequest::new();
+        request.set_transaction_ids(protobuf::RepeatedField::from_vec(transactions));
+        let response: ClientReceiptGetResponse =
+            self.request(Message_MessageType::CLIENT_RECEIPT_GET_REQUEST, request)?;
+
+        let receipts = match response.status {
+            ClientReceiptGetResponse_Status::OK => response.receipts,
+            ClientReceiptGetResponse_Status::INTERNAL_ERROR => {
+                return Err(String::from("Received internal error from validator"));
+            },
+            ClientReceiptGetResponse_Status::NO_RESOURCE => {
+                return Err(String::from("Missing receipt"));
+            }
+        };
+        let mut seth_receipts: HashMap<String, SethTransactionReceipt> = HashMap::new();
+        for rcpt in receipts.iter() {
+            for datum in rcpt.data.iter() {
+                if datum.data_type == "seth_receipt" {
+                    match protobuf::parse_from_bytes(&datum.data) {
+                        Ok(seth_receipt) => {
+                            seth_receipts.insert(rcpt.transaction_id.clone(), seth_receipt);
+                        },
+                        Err(error) => {
+                            return Err(String::from(
+                                format!("Failed to deserialize Seth receipt: {:?}", error)
+                            ));
+                        },
+                    }
+                }
+            }
+        }
+        Ok(seth_receipts)
     }
 }
