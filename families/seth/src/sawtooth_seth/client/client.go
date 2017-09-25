@@ -365,3 +365,21 @@ func (c *Client) GetReceipt(txnId string) (*SethTransactionReceipt, error) {
 	err = proto.Unmarshal(buf, seth_receipt)
 	return seth_receipt, err
 }
+
+func (c *Client) GetEvents(txnId string) ([]Event, error) {
+	resp, err := http.Get(c.Url + "/receipts?id=" + txnId)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ParseReceiptBody(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	events := body.Data[0].Events
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
