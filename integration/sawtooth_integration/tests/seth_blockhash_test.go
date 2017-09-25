@@ -40,7 +40,7 @@ const (
 // Test getting the blockhash of the first block
 func TestBlockHash(t *testing.T) {
   client := c.New("http://rest-api:8080")
-  priv := sdk.WifToPriv(PRIV)
+  priv, _ := sdk.WifToPriv(PRIV)
   init, _ := hex.DecodeString(INIT_BLOCKHASH)
   nonce := uint64(0)
 
