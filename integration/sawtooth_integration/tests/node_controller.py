@@ -13,6 +13,7 @@
 # limitations under the License.
 # --------------------------------------------------------------------------
 
+import os
 import subprocess
 import shlex
 import time
@@ -86,11 +87,12 @@ def start_node(num,
                processor_func,
                peering_func,
                scheduler_func,
+               sawtooth_home,
                poet_kwargs):
     rest_api = start_rest_api(num)
     processors = start_processors(num, processor_func)
     validator = start_validator(
-        num, peering_func, scheduler_func, poet_kwargs)
+        num, peering_func, scheduler_func, sawtooth_home, poet_kwargs)
 
     wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)])
 
@@ -112,6 +114,7 @@ def stop_node(process_list):
 def validator_cmds(num,
                    peering_func,
                    scheduler_func,
+                   sawtooth_home,
                    initial_wait_time=3000.0,
                    minimum_wait_time=1.0,
                    target_wait_time=20.0,
@@ -133,7 +136,8 @@ def validator_cmds(num,
         peering_func (int -> str): a function of one argument n
             returning a string specifying the peers of the num-th node
     '''
-    keygen = 'sawtooth admin keygen --force'
+    keygen = 'sawtooth admin keygen {}'.format(
+        os.path.join(sawtooth_home, 'keys', 'validator'))
 
     validator = ' '.join([
         'sawtooth-validator -v',
@@ -144,12 +148,13 @@ def validator_cmds(num,
         peering_func(num)])
 
     # genesis stuff
-    priv = '/etc/sawtooth/keys/validator.priv'
+    priv = os.path.join(sawtooth_home, 'keys', 'validator.priv')
 
     config_genesis = ' '.join([
         'sawtooth config genesis',
         '-k {}'.format(priv),
-        '-o config-genesis.batch'
+        '-o {}'.format(os.path.join(
+            sawtooth_home, 'data', 'config-genesis.batch'))
     ])
 
     with open(
@@ -186,14 +191,18 @@ def validator_cmds(num,
         'sawtooth.poet.target_wait_time={}'.format(target_wait_time),
         'sawtooth.poet.initial_wait_time={}'.format(initial_wait_time),
         'sawtooth.poet.minimum_wait_time={}'.format(minimum_wait_time),
-        '-o config.batch'
+        '-o {}'.format(os.path.join(sawtooth_home, 'data', 'config.batch'))
     ])
 
-    poet = 'poet genesis -k {} -o poet.batch'.format(priv)
+    poet = 'poet genesis -k {} -o {}'.format(priv, os.path.join(
+        sawtooth_home, 'data', 'poet.batch'))
 
     genesis = ' '.join([
         'sawtooth admin genesis',
-        'config-genesis.batch config.batch poet.batch'
+        '{} {} {}'.format(
+            os.path.join(sawtooth_home, 'data', 'config-genesis.batch'),
+            os.path.join(sawtooth_home, 'data', 'config.batch'),
+            os.path.join(sawtooth_home, 'data', 'poet.batch'))
     ])
 
     validator_cmds = (
@@ -210,8 +219,13 @@ def validator_cmds(num,
 
     return validator_cmds
 
-def start_validator(num, peering_func, scheduler_func, poet_kwargs):
-    cmds = validator_cmds(num, peering_func, scheduler_func, **poet_kwargs)
+def start_validator(num,
+                    peering_func,
+                    scheduler_func,
+                    sawtooth_home,
+                    poet_kwargs):
+    cmds = validator_cmds(num, peering_func, scheduler_func,
+                          sawtooth_home, **poet_kwargs)
     for cmd in cmds[:-1]:
         process = start_process(cmd)
         process.wait(timeout=60)
@@ -304,3 +318,4 @@ def start_process(cmd):
     LOGGER.debug('Running command {}'.format(cmd))
     return subprocess.Popen(
         shlex.split(cmd))
+
