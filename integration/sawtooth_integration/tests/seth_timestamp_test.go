@@ -41,7 +41,7 @@ const (
 // Test getting the timestamp of the current block
 func TestBlockNumber(t *testing.T) {
   client := c.New("http://rest-api:8080")
-  priv := sdk.WifToPriv(PRIV)
+  priv, _ := sdk.WifToPriv(PRIV)
   init, _ := hex.DecodeString(INIT_TIMESTAMP)
   nonce := uint64(0)
 
