@@ -88,8 +88,9 @@ def main(args=None):
     protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
 
     # 7. Generate smallbank protos
-    proto_dir = JOIN(TOP_DIR, "families/smallbank/protos")
-    protoc(proto_dir, "families/smallbank", "smallbank_go/src/protobuf", "go")
+    if "go" in args:
+        proto_dir = JOIN(TOP_DIR, "families/smallbank/protos")
+        protoc(proto_dir, "families/smallbank", "smallbank_go/src/protobuf", "go")
 
     if "seth-go" in args:
         proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
