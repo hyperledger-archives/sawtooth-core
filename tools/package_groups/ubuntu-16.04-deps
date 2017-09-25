@@ -10,5 +10,6 @@ python3-colorlog
 python3-lmdb
 python3-netifaces
 python-psycopg2
+python3-pyformance
 python3-toml
 python3-zmq
