@@ -30,6 +30,7 @@ const AddFishForm = require('./views/add_fish_form')
 const AgentDetailPage = require('./views/agent_detail')
 const AgentList = require('./views/list_agents')
 const FishList = require('./views/list_fish')
+const FishDetail = require('./views/fish_detail')
 const Dashboard = require('./views/dashboard')
 const LoginForm = require('./views/login_form')
 const PropertyDetailPage = require('./views/property_detail')
@@ -121,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     '/agents/:publicKey': resolve(AgentDetailPage),
     '/agents': resolve(AgentList),
     '/create': resolve(AddFishForm, true),
+    '/fish/:recordId': resolve(FishDetail),
     '/fish': resolve(FishList),
     '/login': resolve(LoginForm),
     '/logout': { onmatch: logout },

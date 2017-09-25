@@ -18,10 +18,10 @@
 
 const m = require('mithril')
 const truncate = require('lodash/truncate')
-const moment = require('moment')
 const {Table, FilterGroup, PagingButtons} = require('../components/tables')
 const api = require('../services/api')
 const { formatTimestamp } = require('../services/parsing')
+const {getPropertyValue, getLatestPropertyUpdateTime, getOldestPropertyUpdateTime, countPropertyUpdates} = require('../utils/records')
 
 const PAGE_SIZE = 50
 
@@ -55,13 +55,15 @@ const FishList = {
             vnode.state.currentPage * PAGE_SIZE,
             (vnode.state.currentPage + 1) * PAGE_SIZE)
                 .map((rec) => [
-                  truncate(rec.recordId, { length: 32 }),
-                  _getProp(rec, 'species'),
+                  m(`a[href=/fish/${rec.recordId}]`, {
+                    oncreate: m.route.link
+                  }, truncate(rec.recordId, { length: 32 })),
+                  getPropertyValue(rec, 'species'),
                   // This is the "created" time, synthesized from properties
                   // added on the initial create
-                  formatTimestamp(_getOldestPropUpdateTime(rec)),
-                  formatTimestamp(_getLatestPropUpdateTime(rec)),
-                  _countPropUpdates(rec)
+                  formatTimestamp(getOldestPropertyUpdateTime(rec)),
+                  formatTimestamp(getLatestPropertyUpdateTime(rec)),
+                  countPropertyUpdates(rec)
                 ]),
           noRowsText: 'No records found'
         })
@@ -105,41 +107,5 @@ const _pagingButtons = (vnode) =>
     currentPage: vnode.state.currentPage,
     maxPage: Math.floor(vnode.state.filteredRecords.length / PAGE_SIZE)
   })
-
-const _getProp = (record, propName) => {
-  let prop = record.properties.find((prop) => prop.name === propName)
-  if (prop) {
-    return prop.value
-  } else {
-    return ''
-  }
-}
-
-const _getPropTimeByComparison = (compare) => (record) => {
-  if (!record.updates.properties) {
-    return null
-  }
-
-  return Object.values(record.updates.properties)
-      .reduce((acc, updates) => acc.concat(updates), [])
-      .reduce((selected, update) =>
-              compare(selected.timestamp, update.timestamp) ? update : selected)
-      .timestamp
-}
-
-const _getLatestPropUpdateTime =
-  _getPropTimeByComparison((selected, timestamp) => selected < timestamp)
-
-const _getOldestPropUpdateTime =
-  _getPropTimeByComparison((selected, timestamp) => selected > timestamp)
-
-const _countPropUpdates = (record) => {
-  if (!record.updates.properties) {
-    return 0
-  }
-
-  return Object.values(record.updates.properties).reduce(
-    (sum, updates) => sum + updates.length, 0)
-}
 
 module.exports = FishList
