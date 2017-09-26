@@ -88,6 +88,7 @@
 /families/seth/rpc/target/
 /families/seth/rpc/src/messages/*.rs
 !/families/seth/rpc/src/messages/mod.rs
+/families/seth/rpc/tests/protobuf/
 /sdk/rust/target
 /sdk/rust/Cargo.lock
 /sdk/rust/src/messages/*.rs
