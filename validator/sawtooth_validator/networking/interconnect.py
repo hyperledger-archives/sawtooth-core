@@ -358,7 +358,8 @@ class _SendReceive(object):
 
         yield from self._socket.send_multipart(message_bundle)
         if identity is None:
-            self.shutdown()
+            if self._connection != "ServerThread":
+                self.shutdown()
         else:
             self.remove_connected_identity(identity)
 
