@@ -38,6 +38,12 @@ const _labelProperty = (label, value) => [
     m('dd', value))
 ]
 
+const _row = (...cols) =>
+  m('.row',
+    cols
+    .filter((col) => col !== null)
+    .map((col) => m('.col', col)))
+
 const TransferDropdown = {
   oninit (vnode) {
     let publicKey = api.getPublicKey()
@@ -173,90 +179,79 @@ const FishDetail = {
     return [
       m('.fish-detail',
         m('h1.text-center', record.recordId),
-        m('.row',
-          m('.col',
-            _labelProperty('Created',
-                           _formatTimestamp(getOldestPropertyUpdateTime(record)))),
-          m('.col',
-            _labelProperty('Updated',
-                           _formatTimestamp(getLatestPropertyUpdateTime(record))))),
+        _row(
+          _labelProperty('Created',
+                         _formatTimestamp(getOldestPropertyUpdateTime(record))),
+          _labelProperty('Updated',
+                         _formatTimestamp(getLatestPropertyUpdateTime(record)))),
 
-        m('.row',
-          m('.col',
-            _labelProperty(
-              'Owner', _agentLink(owner))),
-          (owner.publicKey === publicKey
-           ? m('.col',
-               m(TransferDropdown, {
-                 handleSelected: _doTransfer(record, payloads.createProposal.enum.OWNER)
-               }, 'Transfer Ownership'))
-           : '')),
-        m('.row',
-          m('.col',
-            _labelProperty('Custodian', _agentLink(custodian))),
-          (custodian.publicKey === publicKey
-           ? m('.col',
-               m(TransferDropdown, {
-                 handleSelected: _doTransfer(record, payloads.createProposal.enum.CUSTODIAN)
-               }, 'Transfer Custodianship'))
-           : '')),
-        m('.row',
-          m('.col',
-            _labelProperty('Species', getPropertyValue(record, 'species')))),
+        _row(
+          _labelProperty('Owner', _agentLink(owner)),
+          (owner.key === publicKey
+           ? m(TransferDropdown, {
+             agents: vnode.state.agents,
+             handleSelected: _doTransfer(record, payloads.createProposal.enum.OWNER)
+           }, 'Transfer Ownership')
+           : null)),
 
-        m('.row',
-          m('.col',
-            _labelProperty('Length (cm)', getPropertyValue(record, 'length', 0) / PRECISION)),
-          m('.col',
-            _labelProperty('Weight (kg)', getPropertyValue(record, 'weight', 0) / PRECISION))),
+        _row(
+            _labelProperty('Custodian', _agentLink(custodian)),
+          (custodian.key === publicKey
+           ? m(TransferDropdown, {
+             agents: vnode.state.agents,
+             handleSelected: _doTransfer(record, payloads.createProposal.enum.CUSTODIAN)
+           }, 'Transfer Custodianship')
+           : null)),
 
-        m('.row',
-          m('.col',
-            _labelProperty('Location', _formatLocation(getPropertyValue(record, 'location')))),
+        _row(_labelProperty('Species', getPropertyValue(record, 'species'))),
+
+        _row(
+          _labelProperty('Length (cm)', getPropertyValue(record, 'length', 0) / PRECISION),
+          _labelProperty('Weight (kg)', getPropertyValue(record, 'weight', 0) / PRECISION)),
+
+        _row(
+          _labelProperty('Location', _formatLocation(getPropertyValue(record, 'location'))),
           (isReporter(record, 'location', publicKey)
-           ? m('.col', m(ReportLocation, { record }))
-          : '')),
+           ? m(ReportLocation, { record })
+           : null)),
 
-        m('.row',
-          m('.col',
-            _labelProperty('Temperature', _formatTemp(getPropertyValue(record, 'temperature')))),
+        _row(
+          _labelProperty('Temperature', _formatTemp(getPropertyValue(record, 'temperature'))),
           (isReporter(record, 'temperature', publicKey)
-           ? m('.col', m(ReportValue,
-             {
-               name: 'temperature',
-               label: 'Temperature (C°)',
-               record,
-               typeField: 'intValue',
-               type: payloads.updateProperties.enum.INT,
-               xform: (x) => parseInt(x)
-             }))
-          : '')),
+          ? m(ReportValue,
+            {
+              name: 'temperature',
+              label: 'Temperature (C°)',
+              record,
+              typeField: 'intValue',
+              type: payloads.updateProperties.enum.INT,
+              xform: (x) => parseInt(x)
+            })
+           : null)),
 
-        m('.row',
-          m('.col',
-            _labelProperty('Tilt', getPropertyValue(record, 'tilt', 'Unknown'))),
+        _row(
+          _labelProperty('Tilt', getPropertyValue(record, 'tilt', 'Unknown')),
           (isReporter(record, 'tilt', publicKey)
-           ? m('.col', m(ReportValue, {
+           ? m(ReportValue, {
              name: 'tilt',
              label: 'Tilt',
              record,
              typeField: 'stringValue',
              type: payloads.updateProperties.enum.STRING
-           }))
-           : '')),
+           })
+           : null)),
 
-        m('.row',
-          m('.col',
-            _labelProperty('Shock', getPropertyValue(record, 'shock', 'Unknown'))),
+        _row(
+          _labelProperty('Shock', getPropertyValue(record, 'shock', 'Unknown')),
           (isReporter(record, 'shock', publicKey)
-           ? m('.col', m(ReportValue, {
+           ? m(ReportValue, {
              name: 'shock',
              label: 'Shock',
              record,
              typeField: 'stringValue',
              type: payloads.updateProperties.enum.STRING
-           }))
-           : '')),
+           })
+           : null)),
 
         ((record.owner === publicKey && !record.final)
          ? m('.row.mb-3',
