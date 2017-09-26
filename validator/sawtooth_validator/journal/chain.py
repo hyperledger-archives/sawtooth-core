@@ -502,7 +502,8 @@ class ChainController(object):
                  data_dir,
                  config_dir,
                  permission_verifier,
-                 chain_observers):
+                 chain_observers,
+                 metrics_registry):
         """Initialize the ChainController
         Args:
             block_cache: The cache of all recent blocks and the processing
@@ -571,6 +572,9 @@ class ChainController(object):
         self._notify_on_chain_updated(self._chain_head)
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
+        self._chain_head_gauge = \
+            metrics_registry.gauge('chain_head', default='no chain head') \
+            if metrics_registry else None
 
     @property
     def chain_head(self):
@@ -663,6 +667,10 @@ class ChainController(object):
                         LOGGER.info(
                             "Chain head updated to: %s",
                             self._chain_head)
+
+                        if self._chain_head_gauge:
+                            self._chain_head_gauge.set_value(
+                                self._chain_head.identifier[:8])
 
                         # tell the BlockPublisher else the chain is updated
                         self._notify_on_chain_updated(

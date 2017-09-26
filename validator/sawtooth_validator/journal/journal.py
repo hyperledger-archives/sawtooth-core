@@ -229,6 +229,7 @@ class Journal(object):
             config_dir=self._config_dir,
             permission_verifier=self._permission_verifier,
             chain_observers=self._chain_observers,
+            metrics_registry=self._metrics_registry
         )
         self._chain_thread = self._ChainThread(
             chain_controller=self._chain_controller,
