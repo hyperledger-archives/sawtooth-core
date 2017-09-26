@@ -93,6 +93,60 @@ const triggerDownload = (name, ...contents) => {
   m.mount(container, null)
 }
 
+/**
+ * A MultiSelect component.
+ *
+ * Given a set of options, and currently selected values, allows the user to
+ * select all, deselect all, or select multiple.
+ */
+const MultiSelect = {
+  view (vnode) {
+    let handleChange = vnode.attrs.onchange || (() => null)
+    let selected = vnode.attrs.selected
+    return [
+      m('.dropdown',
+        m('button.btn.btn-light.btn-block.dropdown-toggle.text-left',
+          {
+            'data-toggle': 'dropdown',
+            onclick: (e) => {
+              e.preventDefault()
+              vnode.state.show = !vnode.state.show
+            }
+          }, vnode.attrs.label),
+        m('.dropdown-menu.w-100', {className: vnode.state.show ? 'show' : ''},
+          m("a.dropdown-item[href='#']", {
+            onclick: (e) => {
+              e.preventDefault()
+              handleChange(vnode.attrs.options.map(([value, label]) => value))
+            }
+          }, 'Select All'),
+          m("a.dropdown-item[href='#']", {
+            onclick: (e) => {
+              e.preventDefault()
+              handleChange([])
+            }
+          }, 'Deselect All'),
+          m('.dropdown-divider'),
+          vnode.attrs.options.map(
+            ([value, label]) =>
+             m("a.dropdown-item[href='#']", {
+               onclick: (e) => {
+                 e.preventDefault()
+
+                 let setLocation = selected.indexOf(value)
+                 if (setLocation >= 0) {
+                   selected.splice(setLocation, 1)
+                 } else {
+                   selected.push(value)
+                 }
+
+                 handleChange(selected)
+               }
+             }, label, (selected.indexOf(value) > -1 ? ' \u2714' : '')))))
+    ]
+  }
+}
+
 module.exports = {
   group,
   field,
@@ -104,5 +158,6 @@ module.exports = {
   clickIcon,
   stateSetter,
   validator,
-  triggerDownload
+  triggerDownload,
+  MultiSelect
 }
