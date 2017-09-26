@@ -21,6 +21,8 @@ const payloads = require('../services/payloads')
 const transactions = require('../services/transactions')
 const {MultiSelect} = require('../components/forms')
 
+const PRECISION = payloads.FLOAT_PRECISION
+
 /**
  * Possible selection options
  */
@@ -76,7 +78,7 @@ const AddFishForm = {
                    min: 0,
                    step: 'any',
                    oninput: m.withAttr('value', (value) => {
-                     vnode.state.lengthInCM = parseFloat(value)
+                     vnode.state.lengthInCM = value
                    }),
                    value: vnode.state.lengthInCM
                  })),
@@ -87,7 +89,7 @@ const AddFishForm = {
                    min: -90,
                    max: 90,
                    oninput: m.withAttr('value', (value) => {
-                     vnode.state.latitude = parseFloat(value)
+                     vnode.state.latitude = value
                    }),
                    value: vnode.state.latitude
                  }))),
@@ -97,7 +99,7 @@ const AddFishForm = {
                    type: 'number',
                    step: 'any',
                    oninput: m.withAttr('value', (value) => {
-                     vnode.state.weightInKg = parseFloat(value)
+                     vnode.state.weightInKg = value
                    }),
                    value: vnode.state.weightInKg
                  })),
@@ -108,7 +110,7 @@ const AddFishForm = {
                    min: -180,
                    max: 180,
                    oninput: m.withAttr('value', (value) => {
-                     vnode.state.longitude = parseFloat(value)
+                     vnode.state.longitude = value
                    }),
                    value: vnode.state.longitude
                  })))),
@@ -182,19 +184,19 @@ const _handleSubmit = (signingKey, state) => {
       },
       {
         name: 'length',
-        intValue: state.lengthInCM,
+        intValue: parseFloat(state.lengthInCM) * PRECISION,
         dataType: payloads.createRecord.enum.INT
       },
       {
         name: 'weight',
-        intValue: state.weightInKg,
+        intValue: parseFloat(state.weightInKg) * PRECISION,
         dataType: payloads.createRecord.enum.INT
       },
       {
         name: 'location',
         locationValue: {
-          latitude: state.latitude,
-          longitude: state.longitude
+          latitude: parseFloat(state.latitude) * PRECISION,
+          longitude: parseFloat(state.longitude) * PRECISION
         },
         dataType: payloads.createRecord.enum.LOCATION
       }
