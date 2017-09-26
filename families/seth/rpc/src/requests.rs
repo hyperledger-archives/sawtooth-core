@@ -68,10 +68,10 @@ impl<S: MessageSender> ValidatorClient<S> {
         ValidatorClient{ sender: sender }
     }
 
-    pub fn request<T, U>(&mut self, msg_type: Message_MessageType, msg: T) -> Result<U, String>
+    pub fn request<T, U>(&mut self, msg_type: Message_MessageType, msg: &T) -> Result<U, String>
         where T: protobuf::Message, U: protobuf::MessageStatic
     {
-        let msg_bytes = match protobuf::Message::write_to_bytes(&msg) {
+        let msg_bytes = match protobuf::Message::write_to_bytes(msg) {
             Ok(b) => b,
             Err(error) => {
                 return Err(String::from(format!("Error serializing request: {:?}", error)));
@@ -129,7 +129,7 @@ impl<S: MessageSender> ValidatorClient<S> {
         let mut request = ClientReceiptGetRequest::new();
         request.set_transaction_ids(protobuf::RepeatedField::from_vec(transactions));
         let response: ClientReceiptGetResponse =
-            self.request(Message_MessageType::CLIENT_RECEIPT_GET_REQUEST, request)?;
+            self.request(Message_MessageType::CLIENT_RECEIPT_GET_REQUEST, &request)?;
 
         let receipts = match response.status {
             ClientReceiptGetResponse_Status::OK => response.receipts,

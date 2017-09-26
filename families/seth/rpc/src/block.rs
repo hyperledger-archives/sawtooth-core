@@ -39,7 +39,7 @@ pub fn block_number<T>(_params: Params, mut client: ValidatorClient<T>) -> Resul
     request.set_paging(paging);
 
     let response: ClientBlockListResponse =
-        match client.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, request)
+        match client.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)
     {
         Ok(r) => r,
         Err(error) => {
