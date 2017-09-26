@@ -50,6 +50,7 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
+from sawtooth_validator.metrics.wrappers import TimerWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -291,6 +292,7 @@ class _SendReceive(object):
                                  "trip: %s %s",
                                  get_enum_name(message.message_type),
                                  my_future.get_duration())
+                    my_future.timer_stop()
 
                     self._futures.remove(message.correlation_id)
             except CancelledError:
@@ -586,7 +588,8 @@ class Interconnect(object):
                  roles=None,
                  authorize=False,
                  public_key=None,
-                 priv_key=None
+                 priv_key=None,
+                 metrics_registry=None
                  ):
         """
         Constructor for Interconnect.
@@ -650,6 +653,12 @@ class Interconnect(object):
             monitor=monitor)
 
         self._thread = None
+
+        if metrics_registry:
+            self._send_response_time = TimerWrapper(
+                metrics_registry.timer('interconnect_send_response_time'))
+        else:
+            self._send_response_time = TimerWrapper()
 
     @property
     def roles(self):
@@ -895,8 +904,9 @@ class Interconnect(object):
                 content=data,
                 message_type=message_type)
 
+            timer_ctx = self._send_response_time.time()
             fut = future.Future(message.correlation_id, message.content,
-                                callback)
+                                callback, timer_ctx=timer_ctx)
 
             self._futures.put(fut)
 

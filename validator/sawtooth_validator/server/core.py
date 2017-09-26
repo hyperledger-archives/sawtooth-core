@@ -199,7 +199,8 @@ class Validator(object):
                                      heartbeat=False,
                                      max_incoming_connections=20,
                                      monitor=True,
-                                     max_future_callback_workers=10)
+                                     max_future_callback_workers=10,
+                                     metrics_registry=metrics_registry)
 
         executor = TransactionExecutor(
             service=self._service,
@@ -245,7 +246,8 @@ class Validator(object):
             authorize=True,
             public_key=signing.generate_pubkey(identity_signing_key),
             priv_key=identity_signing_key,
-            roles=roles)
+            roles=roles,
+            metrics_registry=metrics_registry)
 
         self._gossip = Gossip(self._network,
                               endpoint=endpoint,
