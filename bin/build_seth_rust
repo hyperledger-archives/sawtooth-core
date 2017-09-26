@@ -19,16 +19,11 @@ set -e
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-echo -e "\033[0;32m--- Running protogen go ---\n\033[0m"
-$top_dir/bin/protogen go
+echo -e "\033[0;32m--- Running protogen seth-rust ---\n\033[0m"
+$top_dir/bin/protogen seth-rust
 
-echo -e "\033[0;32m--- Building seth-tp ---\n\033[0m"
+echo -e "\033[0;32m--- Building seth-rpc ---\n\033[0m"
 export GOPATH=/go:$top_dir/sdk/go:$top_dir/families/seth
-cd $top_dir/families/seth/src/sawtooth_seth/processor
 mkdir -p $top_dir/families/seth/bin
-go build -o $top_dir/families/seth/bin/seth-tp
-
-echo -e "\033[0;32m--- Building seth ---\n\033[0m"
-export GOPATH=/go:$top_dir/sdk/go:$top_dir/families/seth
-cd $top_dir/families/seth/src/sawtooth_seth/cli
-go build -o $top_dir/families/seth/bin/seth
+cd $top_dir/families/seth/rpc
+cargo build && cp ./target/debug/rpc $top_dir/families/seth/bin/seth-rpc

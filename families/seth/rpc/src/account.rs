@@ -17,24 +17,26 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
+use super::requests::{ValidatorClient};
+
 use sawtooth_sdk::messaging::stream::MessageSender;
 use super::error;
 
-pub fn get_balance<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_balance<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_storage_at<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_storage_at<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_code<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_code<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn sign<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn sign<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn call<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn call<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn accounts<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn accounts<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }

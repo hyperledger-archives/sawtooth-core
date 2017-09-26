@@ -74,4 +74,4 @@ ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin
 
 WORKDIR /
 
-CMD build_go && build_seth && build_smallbank_go
+CMD build_go && build_seth_go && build_smallbank_go

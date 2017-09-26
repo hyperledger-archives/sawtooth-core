@@ -17,39 +17,41 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
+use super::requests::{ValidatorClient};
+
 use sawtooth_sdk::messaging::stream::MessageSender;
 use super::error;
 
-pub fn get_transaction_count<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_transaction_count<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_block_transaction_count_by_hash<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_block_transaction_count_by_hash<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_block_transaction_count_by_number<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_block_transaction_count_by_number<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn send_transaction<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn send_transaction<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn send_raw_transaction<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn send_raw_transaction<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_transaction_by_hash<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_transaction_by_hash<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_transaction_by_block_hash_and_index<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_transaction_by_block_hash_and_index<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_transaction_by_block_number_and_index<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_transaction_by_block_number_and_index<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn get_transaction_receipt<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn get_transaction_receipt<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn gas_price<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn gas_price<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
-pub fn estimate_gas<T>(_params: Params, mut _sender: T) -> Result<Value, Error> where T: MessageSender {
+pub fn estimate_gas<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
