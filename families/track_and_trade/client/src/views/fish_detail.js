@@ -45,14 +45,6 @@ const _row = (...cols) =>
     .map((col) => m('.col', col)))
 
 const TransferDropdown = {
-  oninit (vnode) {
-    let publicKey = api.getPublicKey()
-    vnode.state.agents = []
-    api.get('agents').then(agents => {
-      vnode.state.agents = agents.filter((agent) => agent.key !== publicKey)
-    })
-  },
-
   view (vnode) {
     // Default to no-op
     let handleSelected = vnode.attrs.handleSelected || (() => null)
@@ -62,7 +54,7 @@ const TransferDropdown = {
           { 'data-toggle': 'dropdown' },
           vnode.children),
         m('.dropdown-menu',
-          vnode.state.agents.map(agent =>
+          vnode.attrs.agents.map(agent =>
             m("a.dropdown-item[href='#']", {
               onclick: (e) => {
                 e.preventDefault()
@@ -75,7 +67,7 @@ const TransferDropdown = {
 }
 
 const _agentLink = (agent) =>
-  m(`a[href=/agents/${agent.publicKey}]`,
+  m(`a[href=/agents/${agent.key}]`,
     { oncreate: m.route.link },
     agent.name)
 
@@ -154,16 +146,17 @@ const ReportValue = {
 
 const FishDetail = {
   oninit (vnode) {
+    let publicKey = api.getPublicKey()
     api.get(`records/${vnode.attrs.recordId}`)
     .then(record =>
       Promise.all([
         record,
-        api.get(`agents/${record.owner}`),
-        api.get(`agents/${record.custodian}`)]))
-    .then(([record, owner, custodian]) => {
+        api.get('agents')]))
+    .then(([record, agents, owner, custodian]) => {
       vnode.state.record = record
-      vnode.state.owner = owner
-      vnode.state.custodian = custodian
+      vnode.state.agents = agents.filter((agent) => agent.key !== publicKey)
+      vnode.state.owner = agents.find((agent) => agent.key === record.owner)
+      vnode.state.custodian = agents.find((agent) => agent.key === record.custodian)
     })
   },
 
