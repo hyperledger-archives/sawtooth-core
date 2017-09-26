@@ -54,7 +54,10 @@ class TestResponder(unittest.TestCase):
         the request from.
         """
         # The completer does not have the requested block
-        message = network_pb2.GossipBlockRequest(block_id="ABC", node_id=b"1")
+        message = network_pb2.GossipBlockRequest(
+            block_id="ABC",
+            node_id=b"1",
+            nonce="1")
         self.block_request_handler.handle(
             "Connection_1", message.SerializeToString())
         # If we cannot respond to the request, broadcast the block request
@@ -69,6 +72,12 @@ class TestResponder(unittest.TestCase):
         # Add the block to the completer and resend the Block Request
         block = block_pb2.Block(header_signature="ABC")
         self.completer.add_block(block)
+
+        message = network_pb2.GossipBlockRequest(
+            block_id="ABC",
+            node_id=b"1",
+            nonce="2")
+
         self.block_request_handler.handle(
             "Connection_1", message.SerializeToString())
 
@@ -82,9 +91,14 @@ class TestResponder(unittest.TestCase):
         """
         Test that the BlockResponderHandler correctly broadcasts a received
         request that the Responder cannot respond to, and does not rebroadcast
-        the same request.
+        the same request.  If we have already recieved the
+        request, do nothing.
         """
-        message = network_pb2.GossipBlockRequest(block_id="ABC", node_id=b"1")
+        message = network_pb2.GossipBlockRequest(
+            block_id="ABC",
+            node_id=b"1",
+            nonce="1"
+        )
         self.block_request_handler.handle(
             "Connection_1", message.SerializeToString())
         # If we cannot respond to the request, broadcast the block request
@@ -97,6 +111,23 @@ class TestResponder(unittest.TestCase):
         self.assert_message_not_sent(connection_id="Connection_1")
 
         self.gossip.clear()
+
+        # Message should be dropped since the same message has already been
+        # handled
+        self.block_request_handler.handle(
+            "Connection_2", message.SerializeToString())
+
+        self.assert_message_was_not_broadcasted(
+            message, validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
+
+        self.assert_request_not_pending(
+            requested_id="ABC", connection_id="Connection_2")
+
+        message = network_pb2.GossipBlockRequest(
+            block_id="ABC",
+            node_id=b"1",
+            nonce="2"
+        )
 
         self.block_request_handler.handle(
             "Connection_2", message.SerializeToString())
@@ -162,7 +193,9 @@ class TestResponder(unittest.TestCase):
         """
         # The completer does not have the requested batch
         message = network_pb2.GossipBatchByBatchIdRequest(
-            id="abc", node_id=b"1")
+            id="abc",
+            node_id=b"1",
+            nonce="1")
         self.batch_request_handler.handle(
             "Connection_1", message.SerializeToString())
         # If we cannot respond to the request broadcast batch request and add
@@ -174,6 +207,10 @@ class TestResponder(unittest.TestCase):
         self.assert_message_not_sent(connection_id="Connection_1")
 
         # Add the batch to the completer and resend the BatchByBatchIdRequest
+        message = network_pb2.GossipBatchByBatchIdRequest(
+            id="abc",
+            node_id=b"1",
+            nonce="2")
         batch = batch_pb2.Batch(header_signature="abc")
         self.completer.add_batch(batch)
         self.batch_request_handler.handle(
@@ -185,15 +222,18 @@ class TestResponder(unittest.TestCase):
             message_type=validator_pb2.Message.GOSSIP_BATCH_RESPONSE
             )
 
-    def test_batch_by_id_responder_handler_requsted(self):
+    def test_batch_by_id_responder_handler_requested(self):
         """
         Test that the BatchByBatchIdResponderHandler correctly broadcasts
         a received request that the Responder cannot respond to, and does not
-        rebroadcast the same request again.
+        rebroadcast the same request again.  If we have already recieved the
+        request, do nothing.
         """
         # The completer does not have the requested batch
         message = network_pb2.GossipBatchByBatchIdRequest(
-            id="abc", node_id=b"1")
+            id="abc",
+            node_id=b"1",
+            nonce="1")
         self.batch_request_handler.handle(
             "Connection_1", message.SerializeToString())
         # If we cannot respond to the request broadcast batch request and add
@@ -205,6 +245,22 @@ class TestResponder(unittest.TestCase):
         self.assert_message_not_sent(connection_id="Connection_1")
 
         self.gossip.clear()
+
+        # Message should be dropped since the same message has already been
+        # handled
+        self.batch_request_handler.handle(
+            "Connection_2", message.SerializeToString())
+
+        self.assert_message_was_not_broadcasted(
+            message, validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
+
+        self.assert_request_not_pending(
+            requested_id="abc", connection_id="Connection_2")
+
+        message = network_pb2.GossipBatchByBatchIdRequest(
+            id="abc",
+            node_id=b"1",
+            nonce="2")
 
         self.batch_request_handler.handle(
             "Connection_2", message.SerializeToString())
@@ -226,7 +282,9 @@ class TestResponder(unittest.TestCase):
         """
         # The completer does not have the requested batch with the transaction
         message = network_pb2.GossipBatchByTransactionIdRequest(
-            ids=["123"], node_id=b"1")
+            ids=["123"],
+            node_id=b"1",
+            nonce="1")
         self.batch_by_txn_request_handler.handle(
             "Connection_1", message.SerializeToString())
 
@@ -242,6 +300,10 @@ class TestResponder(unittest.TestCase):
 
         # Add the batch to the completer and resend the
         # BatchByTransactionIdRequest
+        message = network_pb2.GossipBatchByTransactionIdRequest(
+            ids=["123"],
+            node_id=b"1",
+            nonce="2")
         transaction = transaction_pb2.Transaction(header_signature="123")
         batch = batch_pb2.Batch(
             header_signature="abc", transactions=[transaction])
@@ -259,7 +321,8 @@ class TestResponder(unittest.TestCase):
         """
         Test that the BatchByTransactionIdResponderHandler correctly broadcasts
         a received request that the Responder cannot respond to, and does not
-        rebroadcast the same request again.
+        rebroadcast the same request again. If we have already recieved the
+        request, do nothing.
         """
         # The completer does not have the requested batch with the transaction
         message = network_pb2.GossipBatchByTransactionIdRequest(
@@ -278,6 +341,24 @@ class TestResponder(unittest.TestCase):
         self.assert_message_not_sent(connection_id="Connection_1")
 
         self.gossip.clear()
+
+        # Message should be dropped since the same message has already been
+        # handled
+        self.batch_by_txn_request_handler.handle(
+            "Connection_2", message.SerializeToString())
+
+        self.assert_message_was_not_broadcasted(
+            message,
+            validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST
+            )
+
+        self.assert_request_not_pending(
+            requested_id="123", connection_id="Connection_2")
+
+        message = network_pb2.GossipBatchByTransactionIdRequest(
+            ids=["123"],
+            node_id=b"1",
+            nonce="2")
         self.batch_by_txn_request_handler.handle(
             "Connection_2", message.SerializeToString())
 
@@ -437,5 +518,9 @@ class TestResponder(unittest.TestCase):
     def assert_request_pending(self, requested_id, connection_id):
         self.assertIn(connection_id, self.responder.get_request(requested_id))
 
-    def assert_request_not_pending(self, requested_id):
-        self.assertIsNone(self.responder.get_request(requested_id))
+    def assert_request_not_pending(self, requested_id, connection_id=None):
+        if self.responder.get_request(requested_id) is not None:
+            self.assertFalse(
+                connection_id in self.responder.get_request(requested_id))
+        else:
+            self.assertIsNone(self.responder.get_request(requested_id))
