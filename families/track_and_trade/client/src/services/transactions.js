@@ -123,7 +123,7 @@ const changePassword = password => {
  * Wraps a Protobuf payload in a TransactionList and submits it to the API.
  * Prompts user for their password if their private key is not in memory.
  */
-const submit = payloads => {
+const submit = (payloads, wait = false) => {
   if (!_.isArray(payloads)) payloads = [payloads]
   return Promise.resolve()
     .then(() => {
@@ -138,7 +138,7 @@ const submit = payloads => {
     .then(() => {
       const txns = payloads.map(payload => txnEncoder.create(payload))
       const txnList = txnEncoder.encode(txns)
-      return api.postBinary('transactions', txnList)
+      return api.postBinary(`transactions${wait ? '?wait' : ''}`, txnList)
     })
 }
 

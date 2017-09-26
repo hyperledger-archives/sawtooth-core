@@ -92,6 +92,14 @@ const initInternalParams = (req, res, next) => {
   next()
 }
 
+// Middleware for parsing the wait query parameter
+const waitParser = (req, res, next) => {
+  const DEFAULT_WAIT = 60
+  const parsed = req.query.wait === '' ? DEFAULT_WAIT : Number(req.query.wait)
+  req.query.wait = _.isNaN(parsed) ? null : parsed
+  next()
+}
+
 // Check the Authorization header if present.
 // Saves the encoded public key to the request object.
 const authHandler = (req, res, next) => {
@@ -131,6 +139,7 @@ router.use(bodyParser.raw({ type: 'application/octet-stream' }))
 
 router.use(logRequest)
 router.use(initInternalParams)
+router.use(waitParser)
 router.use(authHandler)
 
 router.get('/agents', handle(agents.list))

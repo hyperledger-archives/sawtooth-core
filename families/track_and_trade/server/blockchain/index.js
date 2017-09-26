@@ -35,6 +35,7 @@ const StateDeltaSubscribeResponse = root.lookup('StateDeltaSubscribeResponse')
 const StateDeltaEvent = root.lookup('StateDeltaEvent')
 const ClientBatchSubmitRequest = root.lookup('ClientBatchSubmitRequest')
 const ClientBatchSubmitResponse = root.lookup('ClientBatchSubmitResponse')
+const BatchStatus = root.lookup('BatchStatus')
 
 const subscribe = () => {
   stream.connect(() => {
@@ -65,21 +66,37 @@ const subscribe = () => {
   })
 }
 
-const submit = (txnBytes, { authedKey }) => {
+const submit = (txnBytes, { wait, authedKey }) => {
   const batch = batcher.batch(txnBytes, authedKey)
 
   return stream.send(
     Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
-    ClientBatchSubmitRequest.encode({ batches: [batch] }).finish()
+    ClientBatchSubmitRequest.encode({
+      batches: [batch],
+      waitForCommit: wait !== null,
+      timeout: wait
+    }).finish()
   )
   .then(response => ClientBatchSubmitResponse.decode(response))
-  .then(decoded => {
+  .then((decoded) => {
     const status = _.findKey(ClientBatchSubmitResponse.Status,
                              val => val === decoded.status)
     if (status !== 'OK') {
       throw new Error(`Batch submission failed with status '${status}'`)
     }
-    return { batch: batch.headerSignature }
+
+    if (wait === null) {
+      return { batch: batch.headerSignature }
+    }
+
+    if (decoded.batchStatuses[0].status !== BatchStatus.Status.COMMITTED) {
+      throw new Error(decoded.batchStatuses[0].invalidTransactions[0].message)
+    }
+
+    // Wait to return until new block is in database
+    return new Promise(resolve => setTimeout(() => {
+      resolve({ batch: batch.headerSignature })
+    }, 500))
   })
 }
 
