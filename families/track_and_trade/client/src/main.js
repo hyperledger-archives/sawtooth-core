@@ -32,6 +32,7 @@ const AgentList = require('./views/list_agents')
 const FishList = require('./views/list_fish')
 const Dashboard = require('./views/dashboard')
 const LoginForm = require('./views/login_form')
+const PropertyDetailPage = require('./views/property_detail')
 const SignupForm = require('./views/signup_form')
 
 /**
@@ -124,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     '/login': resolve(LoginForm),
     '/logout': { onmatch: logout },
     '/profile': { onmatch: profile },
+    '/properties/:recordId/:name': resolve(PropertyDetailPage),
     '/signup': resolve(SignupForm)
   })
 })
