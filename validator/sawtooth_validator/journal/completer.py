@@ -47,7 +47,7 @@ class Completer(object):
     def __init__(self,
                  block_store,
                  gossip,
-                 cache_keep_time=30,
+                 cache_keep_time=300,
                  cache_purge_frequency=30,
                  requested_keep_time=1200):
         """
