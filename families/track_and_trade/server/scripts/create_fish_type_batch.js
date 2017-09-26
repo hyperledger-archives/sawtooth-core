@@ -74,7 +74,7 @@ protos.compile()
       action: protos.TTPayload.Action.CREATE_AGENT,
       timestamp: Math.floor(Date.now() / 1000),
       createAgent: protos.CreateAgentAction.create({
-        name: signer.getPublicKey(privateKey)
+        name: 'FishNet Admin'
       })
     }).finish()
 
