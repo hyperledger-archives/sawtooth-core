@@ -18,6 +18,28 @@
 
 const moment = require('moment')
 
+const parseThen = fn => v => fn(JSON.parse(v))
+
+const STRINGIFIERS = {
+  LOCATION: v => `${v.latitude}, ${v.longitude}`,
+  tilt: parseThen(v => `X: ${v.x}, Y: ${v.y}`),
+  shock: parseThen(v => `Accel: ${v.accel}, Duration: ${v.duration}`),
+  '*': v => JSON.stringify(v, null, 1).replace(/[{}"]/g, '')
+}
+
+/**
+ * Parses a property value by its name or type, returning a string for display
+ */
+const stringifyValue = (value, type, name) => {
+  if (STRINGIFIERS[type]) {
+    return STRINGIFIERS[type](value)
+  }
+  if (STRINGIFIERS[name]) {
+    return STRINGIFIERS[name](value)
+  }
+  return STRINGIFIERS['*'](value)
+}
+
 /**
  * Parses seconds into a date/time string
  */
@@ -29,5 +51,6 @@ const formatTimestamp = sec => {
 }
 
 module.exports = {
+  stringifyValue,
   formatTimestamp
 }
