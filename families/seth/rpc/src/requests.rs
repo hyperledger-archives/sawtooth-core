@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::fmt::LowerHex;
 use std::collections::HashMap;
 
 use futures_cpupool::{CpuPool};
@@ -27,6 +28,11 @@ use sawtooth_sdk::messages::txn_receipt::{
     ClientReceiptGetRequest,
     ClientReceiptGetResponse,
     ClientReceiptGetResponse_Status,
+};
+use sawtooth_sdk::messages::client::{
+    ClientBlockGetRequest,
+    ClientBlockGetResponse,
+    ClientBlockGetResponse_Status,
 };
 use sawtooth_sdk::messages::transaction::{TransactionHeader};
 use super::messages::seth::{SethTransactionReceipt};
@@ -56,6 +62,11 @@ impl<T: MessageSender + Clone + Sync + Send + 'static> RequestExecutor<T> {
         Box::new(self.pool.spawn_fn(move || {handler(params, client)}))
     }
 
+}
+
+pub enum BlockKey {
+    Number(u64),
+    Signature(String),
 }
 
 #[derive(Clone)]
@@ -159,4 +170,35 @@ impl<S: MessageSender> ValidatorClient<S> {
         }
         Ok(seth_receipts)
     }
+
+    pub fn get_block(&mut self, block_key: BlockKey) -> Result<Option<Block>, String> {
+        let mut request = ClientBlockGetRequest::new();
+        match block_key {
+            BlockKey::Signature(block_id) => request.set_block_id(block_id),
+            BlockKey::Number(block_num) => request.set_block_num(block_num),
+        };
+
+        let response: ClientBlockGetResponse =
+            self.request(Message_MessageType::CLIENT_BLOCK_GET_REQUEST, &request)?;
+
+        match response.status {
+            ClientBlockGetResponse_Status::INTERNAL_ERROR => {
+                Err(String::from("Received internal error from validator"))
+            },
+            ClientBlockGetResponse_Status::NO_RESOURCE => {
+                Ok(None)
+            },
+            ClientBlockGetResponse_Status::OK => {
+                Ok(response.block.into_option())
+            },
+        }
+    }
+}
+
+pub fn num_to_hex<T>(n: &T) -> Value where T: LowerHex {
+    Value::String(String::from(format!("{:#x}", n)))
+}
+
+pub fn string_to_hex(s: &str) -> Value {
+    Value::String(String::from(format!("0x{}", s)))
 }
