@@ -183,7 +183,7 @@ class TestDynamicNetwork(unittest.TestCase):
         with SetSawtoothHome(sawtooth_home):
             processes = NodeController.start_node(
                 num, processors, peering, schedulers,
-                sawtooth_home, poet_kwargs)
+                sawtooth_home, NodeController.validator_cmds, poet_kwargs)
 
         # Check that none of the processes have returned
         for proc in processes:

@@ -88,11 +88,16 @@ def start_node(num,
                peering_func,
                scheduler_func,
                sawtooth_home,
+               validator_cmd_func,
                poet_kwargs):
     rest_api = start_rest_api(num)
     processors = start_processors(num, processor_func)
-    validator = start_validator(
-        num, peering_func, scheduler_func, sawtooth_home, poet_kwargs)
+    validator = start_validator(num,
+                                peering_func,
+                                scheduler_func,
+                                sawtooth_home,
+                                validator_cmd_func,
+                                poet_kwargs)
 
     wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)])
 
@@ -219,13 +224,25 @@ def validator_cmds(num,
 
     return validator_cmds
 
+
+def simple_validator_cmds(*args, **kwargs):
+    """Used with SetSawtoothHome in integrationtools, to have more control
+    at the test file level over how the validator is started.
+
+    Returns:
+        str : The validator startup command.
+    """
+    return ['sawtooth-validator -v']
+
+
 def start_validator(num,
                     peering_func,
                     scheduler_func,
                     sawtooth_home,
+                    validator_cmd_func,
                     poet_kwargs):
-    cmds = validator_cmds(num, peering_func, scheduler_func,
-                          sawtooth_home, **poet_kwargs)
+    cmds = validator_cmd_func(num, peering_func, scheduler_func,
+                              sawtooth_home, **poet_kwargs)
     for cmd in cmds[:-1]:
         process = start_process(cmd)
         process.wait(timeout=60)
