@@ -654,11 +654,8 @@ class Interconnect(object):
 
         self._thread = None
 
-        if metrics_registry:
-            self._send_response_time = TimerWrapper(
-                metrics_registry.timer('interconnect_send_response_time'))
-        else:
-            self._send_response_time = TimerWrapper()
+        self._metrics_registry = metrics_registry
+        self._send_response_timers = {}
 
     @property
     def roles(self):
@@ -667,6 +664,17 @@ class Interconnect(object):
     @property
     def endpoint(self):
         return self._endpoint
+
+    def _get_send_response_timer(self, tag):
+        if tag not in self._send_response_timers:
+            if self._metrics_registry:
+                self._send_response_timers[tag] = TimerWrapper(
+                    self._metrics_registry.timer(
+                        'interconnect_send_response_time', tags=[
+                            'message_type={}'.format(tag)]))
+            else:
+                self._send_response_timers[tag] = TimerWrapper()
+        return self._send_response_timers[tag]
 
     def connection_id_to_public_key(self, connection_id):
         """
@@ -904,7 +912,8 @@ class Interconnect(object):
                 content=data,
                 message_type=message_type)
 
-            timer_ctx = self._send_response_time.time()
+            timer_tag = get_enum_name(message.message_type)
+            timer_ctx = self._get_send_response_timer(timer_tag).time()
             fut = future.Future(message.correlation_id, message.content,
                                 callback, timer_ctx=timer_ctx)
 
