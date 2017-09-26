@@ -102,7 +102,9 @@ const PropertyDetailPage = {
           headers: ['Value', 'Reporter', 'Time'],
           rows: page.map(update => {
             return [
-              JSON.stringify(update.value, null, 1).replace(/[{}"]/g, ''),
+              parsing.stringifyValue(update.value,
+                                     vnode.state.property.dataType,
+                                     vnode.state.property.name),
               update.reporter.name,
               parsing.formatTimestamp(update.timestamp)
             ]
