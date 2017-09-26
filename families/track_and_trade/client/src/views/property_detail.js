@@ -31,9 +31,19 @@ const PAGE_SIZE = 50
 const updateSubmitter = state => e => {
   e.preventDefault()
   const { name, dataType, recordId } = state.property
+
+  let value = null
+  if (state.update) {
+    value = state.update
+  } else if (name === 'tilt' || name === 'shock') {
+    value = JSON.stringify(state.tmp)
+  } else {
+    value = state.tmp
+  }
+
   const update = { name }
   update.dataType = payloads.updateProperties.enum[dataType]
-  update[`${dataType.toLowerCase()}Value`] = state.update
+  update[`${dataType.toLowerCase()}Value`] = value
 
   const payload = payloads.updateProperties({
     recordId,
@@ -43,10 +53,68 @@ const updateSubmitter = state => e => {
   transactions.submit(payload, true)
     .then(() => api.get(`records/${recordId}/${name}`))
     .then(property => {
-      e.target.elements[0].value = null
+      _.each(e.target.elements, el => { el.value = null })
       state.update = null
+      state.tmp = {}
       state.property = property
     })
+}
+
+// Produces custom input fields for location, tilt, and shock
+const typedInput = state => {
+  const { dataType, name } = state.property
+
+  if (dataType === 'LOCATION') {
+    return [
+      m('.col.md-4.mr-1',
+        m('input.form-control', {
+          placeholder: 'Enter Latitude...',
+          oninput: m.withAttr('value', value => { state.tmp.latitude = value })
+        })),
+      m('.col.md-4',
+        m('input.form-control', {
+          placeholder: 'Enter Longitude...',
+          oninput: m.withAttr('value', value => { state.tmp.longitude = value })
+        }))
+    ]
+  }
+
+  if (name === 'tilt') {
+    return [
+      m('.col.md-4.mr-1',
+        m('input.form-control', {
+          placeholder: 'Enter X...',
+          oninput: m.withAttr('value', value => { state.tmp.x = value })
+        })),
+      m('.col.md-4',
+        m('input.form-control', {
+          placeholder: 'Enter Y...',
+          oninput: m.withAttr('value', value => { state.tmp.y = value })
+        }))
+    ]
+  }
+
+  if (name === 'shock') {
+    return [
+      m('.col.md-4.mr-1',
+        m('input.form-control', {
+          placeholder: 'Enter Acceleration...',
+          oninput: m.withAttr('value', value => { state.tmp.accel = value })
+        })),
+      m('.col.md-4',
+        m('input.form-control', {
+          placeholder: 'Enter Duration...',
+          oninput: m.withAttr('value', value => { state.tmp.duration = value })
+        }))
+    ]
+  }
+
+  return m('.col-md-8', [
+    m('input.form-control', {
+      placeholder: 'Enter new value...',
+      oninput: m.withAttr('value', value => { state.update = value })
+    })
+  ])
 }
 
 const updateForm = state => {
@@ -55,10 +123,7 @@ const updateForm = state => {
   }, [
     m('.container',
       m('.row.justify-content-center',
-        m('.col-md-8',
-          m('input.form-control', {
-            oninput: m.withAttr('value', value => { state.update = value })
-          })),
+        typedInput(state),
         m('.col-md-2',
           m('button.btn.btn-primary', { type: 'submit' }, 'Update'))))
   ])
@@ -70,6 +135,7 @@ const updateForm = state => {
 const PropertyDetailPage = {
   oninit (vnode) {
     vnode.state.currentPage = 0
+    vnode.state.tmp = {}
 
     api.get(`records/${vnode.attrs.recordId}/${vnode.attrs.name}`)
       .then(property => { vnode.state.property = property })
