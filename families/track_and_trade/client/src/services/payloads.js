@@ -105,4 +105,7 @@ actionMethods.updateProperties.enum = PropertySchema.DataType
 actionMethods.createProposal.enum = Proposal.Role
 actionMethods.answerProposal.enum = actionMap.answerProposal.proto.Response
 
-module.exports = _.assign({ encode }, actionMethods)
+module.exports = _.assign({
+  encode,
+  FLOAT_PRECISION: 1000000
+}, actionMethods)

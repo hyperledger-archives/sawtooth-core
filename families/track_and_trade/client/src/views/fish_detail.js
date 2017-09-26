@@ -30,6 +30,8 @@ const {
   isReporter
 } = require('../utils/records')
 
+const PRECISION = payloads.FLOAT_PRECISION
+
 const _labelProperty = (label, value) => [
   m('dl',
     m('dt', label),
@@ -204,9 +206,9 @@ const FishDetail = {
 
         m('.row',
           m('.col',
-            _labelProperty('Length (cm)', getPropertyValue(record, 'length'))),
+            _labelProperty('Length (cm)', getPropertyValue(record, 'length', 0) / PRECISION)),
           m('.col',
-            _labelProperty('Weight (kg)', getPropertyValue(record, 'weight')))),
+            _labelProperty('Weight (kg)', getPropertyValue(record, 'weight', 0) / PRECISION))),
 
         m('.row',
           m('.col',
@@ -217,7 +219,7 @@ const FishDetail = {
 
         m('.row',
           m('.col',
-            _labelProperty('Temperature (C°)', getPropertyValue(record, 'temperature', 'Unknown'))),
+            _labelProperty('Temperature', _formatTemp(getPropertyValue(record, 'temperature')))),
           (isReporter(record, 'temperature', publicKey)
            ? m('.col', m(ReportValue,
              {
@@ -274,10 +276,20 @@ const FishDetail = {
 
 const _formatLocation = (location) => {
   if (location && location.latitude && location.longitude) {
-    return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+    let latitude = location.latitude / PRECISION
+    let longitude = location.longitude / PRECISION
+    return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
   } else {
     return 'Unknown'
   }
+}
+
+const _formatTemp = (temp) => {
+  if (temp) {
+    return `${(temp / PRECISION).toFixed(6)} C°`
+  }
+
+  return 'Unknown'
 }
 
 const _formatTimestamp = (sec) => {
