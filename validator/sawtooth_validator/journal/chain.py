@@ -26,7 +26,9 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
-
+from sawtooth_validator.journal.validation_rule_enforcer import \
+    ValidationRuleEnforcer
+from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
 
@@ -144,6 +146,9 @@ class BlockValidator(object):
         }
         self._permission_verifier = permission_verifier
 
+        self._validation_rule_enforcer = \
+            ValidationRuleEnforcer(SettingsViewFactory(state_view_factory))
+
     def _get_previous_block_root_state_hash(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
             return INIT_ROOT_KEY
@@ -237,8 +242,8 @@ class BlockValidator(object):
         """
         Validate that all of the batch signers and transaction signer for the
         batches in the block are permitted by the transactor permissioning
-        roles stored in state as of theprevious block. If a transactor is found
-        to not be permitted, the block is invalid.
+        roles stored in state as of the previous block. If a transactor is
+        found to not be permitted, the block is invalid.
         """
         if blkw.block_num != 0:
             state_root = self._get_previous_block_root_state_hash(blkw)
@@ -246,6 +251,17 @@ class BlockValidator(object):
                 if not self._permission_verifier.is_batch_signer_authorized(
                         batch, state_root):
                     return False
+        return True
+
+    def _validate_on_chain_rules(self, blkw):
+        """
+        Validate that the block conforms to all validation rules stored in
+        state. If the block breaks any of the stored rules, the block is
+        invalid.
+        """
+        if blkw.block_num != 0:
+            state_root = self._get_previous_block_root_state_hash(blkw)
+            return self._validation_rule_enforcer.validate(blkw, state_root)
         return True
 
     def validate_block(self, blkw):
@@ -266,6 +282,8 @@ class BlockValidator(object):
                                   data_dir=self._data_dir,
                                   config_dir=self._config_dir,
                                   validator_id=self._identity_public_key)
+                if valid:
+                    valid = self._validate_on_chain_rules(blkw)
 
                 if valid:
                     valid = self._verify_block_batches(blkw)
