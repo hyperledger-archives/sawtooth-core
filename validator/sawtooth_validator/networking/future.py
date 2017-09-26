@@ -34,7 +34,8 @@ class FutureTimeoutError(Exception):
 
 
 class Future(object):
-    def __init__(self, correlation_id, request=None, callback=None):
+    def __init__(self, correlation_id, request=None, callback=None,
+                 timer_ctx=None):
         self.correlation_id = correlation_id
         self._request = request
         self._result = None
@@ -42,6 +43,7 @@ class Future(object):
         self._create_time = time.time()
         self._callback_func = callback
         self._reconcile_time = None
+        self._timer_ctx = timer_ctx
 
     def done(self):
         return self._result is not None
@@ -81,6 +83,11 @@ class Future(object):
 
     def get_duration(self):
         return self._reconcile_time - self._create_time
+
+    def timer_stop(self):
+        if self._timer_ctx:
+            self._timer_ctx.stop()
+        self._timer_ctx = None
 
 
 class FutureCollectionKeyError(Exception):

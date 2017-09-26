@@ -50,6 +50,7 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
+from sawtooth_validator.metrics.wrappers import TimerWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -291,6 +292,7 @@ class _SendReceive(object):
                                  "trip: %s %s",
                                  get_enum_name(message.message_type),
                                  my_future.get_duration())
+                    my_future.timer_stop()
 
                     self._futures.remove(message.correlation_id)
             except CancelledError:
@@ -586,7 +588,8 @@ class Interconnect(object):
                  roles=None,
                  authorize=False,
                  public_key=None,
-                 priv_key=None
+                 priv_key=None,
+                 metrics_registry=None
                  ):
         """
         Constructor for Interconnect.
@@ -651,6 +654,9 @@ class Interconnect(object):
 
         self._thread = None
 
+        self._metrics_registry = metrics_registry
+        self._send_response_timers = {}
+
     @property
     def roles(self):
         return self._roles
@@ -658,6 +664,17 @@ class Interconnect(object):
     @property
     def endpoint(self):
         return self._endpoint
+
+    def _get_send_response_timer(self, tag):
+        if tag not in self._send_response_timers:
+            if self._metrics_registry:
+                self._send_response_timers[tag] = TimerWrapper(
+                    self._metrics_registry.timer(
+                        'interconnect_send_response_time', tags=[
+                            'message_type={}'.format(tag)]))
+            else:
+                self._send_response_timers[tag] = TimerWrapper()
+        return self._send_response_timers[tag]
 
     def connection_id_to_public_key(self, connection_id):
         """
@@ -895,8 +912,10 @@ class Interconnect(object):
                 content=data,
                 message_type=message_type)
 
+            timer_tag = get_enum_name(message.message_type)
+            timer_ctx = self._get_send_response_timer(timer_tag).time()
             fut = future.Future(message.correlation_id, message.content,
-                                callback)
+                                callback, timer_ctx=timer_ctx)
 
             self._futures.put(fut)
 
