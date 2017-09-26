@@ -27,6 +27,8 @@ from sawtooth_validator.protobuf import batch_pb2
 
 LOGGER = logging.getLogger(__name__)
 
+CACHE_KEEP_TIME = 300
+
 
 class Responder(object):
     def __init__(self,
@@ -83,10 +85,25 @@ class BlockResponderHandler(Handler):
     def __init__(self, responder, gossip):
         self._responder = responder
         self._gossip = gossip
+        self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
     def handle(self, connection_id, message_content):
         block_request_message = network_pb2.GossipBlockRequest()
         block_request_message.ParseFromString(message_content)
+        if block_request_message.nonce in self._seen_requests:
+            LOGGER.debug("Received repeat GossipBlockRequest from %s",
+                         connection_id)
+            ack = network_pb2.NetworkAcknowledgement()
+            ack.status = ack.OK
+
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK)
+
+        self._seen_requests[block_request_message.nonce] = \
+            block_request_message.block_id
+
         block_id = block_request_message.block_id
         node_id = block_request_message.node_id
         block = self._responder.check_for_block(block_id)
@@ -171,10 +188,25 @@ class BatchByBatchIdResponderHandler(Handler):
     def __init__(self, responder, gossip):
         self._responder = responder
         self._gossip = gossip
+        self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
     def handle(self, connection_id, message_content):
         batch_request_message = network_pb2.GossipBatchByBatchIdRequest()
         batch_request_message.ParseFromString(message_content)
+        if batch_request_message.nonce in self._seen_requests:
+            LOGGER.debug("Received repeat GossipBatchByBatchIdRequest from %s",
+                         connection_id)
+            ack = network_pb2.NetworkAcknowledgement()
+            ack.status = ack.OK
+
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK)
+
+        self._seen_requests[batch_request_message.nonce] = \
+            batch_request_message.id
+
         batch = None
         batch = self._responder.check_for_batch(batch_request_message.id)
         node_id = batch_request_message.node_id
@@ -218,10 +250,24 @@ class BatchByTransactionIdResponderHandler(Handler):
     def __init__(self, responder, gossip):
         self._responder = responder
         self._gossip = gossip
+        self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
     def handle(self, connection_id, message_content):
         batch_request_message = network_pb2.GossipBatchByTransactionIdRequest()
         batch_request_message.ParseFromString(message_content)
+        if batch_request_message.nonce in self._seen_requests:
+            LOGGER.debug("Received repeat GossipBatchByTransactionIdRequest"
+                         " from %s", connection_id)
+            ack = network_pb2.NetworkAcknowledgement()
+            ack.status = ack.OK
+
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK)
+
+        self._seen_requests[batch_request_message.nonce] = \
+            batch_request_message.ids
         node_id = batch_request_message.node_id
         batch = None
         batches = []
@@ -262,6 +308,8 @@ class BatchByTransactionIdResponderHandler(Handler):
                 # only request batches we have not requested already
                 new_request.ids.extend(not_requested)
                 new_request.node_id = batch_request_message.node_id
+                # Keep same nonce as original message
+                new_request.nonce = batch_request_message.nonce
                 self._gossip.broadcast(
                     new_request,
                     validator_pb2.Message.

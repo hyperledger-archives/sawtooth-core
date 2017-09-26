@@ -16,6 +16,8 @@ import logging
 import copy
 import time
 import random
+import os
+import binascii
 from threading import Thread
 from threading import Lock
 from functools import partial
@@ -211,12 +213,16 @@ class Gossip(object):
 
     def broadcast_block_request(self, block_id):
         # Need to define node identity to be able to route directly back
-        block_request = GossipBlockRequest(block_id=block_id)
+        block_request = GossipBlockRequest(
+            block_id=block_id,
+            nonce=binascii.b2a_hex(os.urandom(16)))
         self.broadcast(block_request,
                        validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
 
     def send_block_request(self, block_id, connection_id):
-        block_request = GossipBlockRequest(block_id=block_id)
+        block_request = GossipBlockRequest(
+            block_id=block_id,
+            nonce=binascii.b2a_hex(os.urandom(16)))
         self.send(validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
                   block_request.SerializeToString(),
                   connection_id)
@@ -232,7 +238,8 @@ class Gossip(object):
     def broadcast_batch_by_transaction_id_request(self, transaction_ids):
         # Need to define node identity to be able to route directly back
         batch_request = GossipBatchByTransactionIdRequest(
-            ids=transaction_ids
+            ids=transaction_ids,
+            nonce=binascii.b2a_hex(os.urandom(16))
         )
         self.broadcast(
             batch_request,
@@ -241,7 +248,8 @@ class Gossip(object):
     def broadcast_batch_by_batch_id_request(self, batch_id):
         # Need to define node identity to be able to route directly back
         batch_request = GossipBatchByBatchIdRequest(
-            id=batch_id
+            id=batch_id,
+            nonce=binascii.b2a_hex(os.urandom(16))
         )
         self.broadcast(
             batch_request,
