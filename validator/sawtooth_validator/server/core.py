@@ -69,10 +69,14 @@ from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip import signature_verifier
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
+from sawtooth_validator.gossip.permission_verifier import IdentityCache
+from sawtooth_validator.gossip.identity_observer import IdentityObserver
 from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import \
     NetworkPermissionHandler
+from sawtooth_validator.gossip.permission_verifier import \
+    NetworkConsensusPermissionHandler
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
@@ -118,7 +122,8 @@ class Validator(object):
                  peering, seeds_list, peer_list, data_dir, config_dir,
                  identity_signing_key, scheduler_type, permissions,
                  network_public_key=None, network_private_key=None,
-                 roles=None
+                 roles=None,
+                 metrics_registry=None
                  ):
         """Constructs a validator instance.
 
@@ -202,7 +207,8 @@ class Validator(object):
             settings_view_factory=SettingsViewFactory(
                                     StateViewFactory(merkle_db)),
             scheduler_type=scheduler_type,
-            invalid_observers=[batch_tracker])
+            invalid_observers=[batch_tracker],
+            metrics_registry=metrics_registry)
 
         self._executor = executor
         self._service.set_check_connections(executor.check_connections)
@@ -259,10 +265,17 @@ class Validator(object):
         identity_view_factory = IdentityViewFactory(
             StateViewFactory(merkle_db))
 
+        id_cache = IdentityCache(identity_view_factory,
+                                 block_store.chain_head_state_root)
+
         permission_verifier = PermissionVerifier(
-            identity_view_factory,
             permissions,
-            block_store.chain_head_state_root)
+            block_store.chain_head_state_root,
+            id_cache)
+
+        identity_observer = IdentityObserver(
+            to_update=id_cache.invalidate,
+            forked=id_cache.forked)
 
         # Create and configure journal
         self._journal = Journal(
@@ -286,7 +299,9 @@ class Validator(object):
                 event_broadcaster,
                 receipt_store,
                 batch_tracker,
+                identity_observer
             ],
+            metrics_registry=metrics_registry
         )
 
         self._genesis_controller = GenesisController(
@@ -345,7 +360,7 @@ class Validator(object):
         # Set up base network handlers
         self._network_dispatcher.add_handler(
             validator_pb2.Message.NETWORK_PING,
-            PingHandler(),
+            PingHandler(network=self._network),
             network_thread_pool)
 
         self._network_dispatcher.add_handler(
@@ -461,6 +476,17 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             structure_verifier.GossipHandlerStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_MESSAGE 4) Verifies that the node is allowed to publish a
+        # block
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            NetworkConsensusPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         # GOSSIP_MESSAGE 5) Determines if we should broadcast the

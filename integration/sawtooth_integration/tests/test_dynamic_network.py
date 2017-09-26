@@ -25,7 +25,7 @@ from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 WAIT = 120
-
+ASSERT_CONSENSUS_TIMEOUT = 90
 
 class TestDynamicNetwork(unittest.TestCase):
     def setUp(self):
@@ -205,16 +205,12 @@ class TestDynamicNetwork(unittest.TestCase):
 
     # if the validators aren't in consensus, wait and try again
     def assert_consensus(self):
-        sleep_time = 3
-        growth_rate = 2
-        for _ in range(5):
-            if self.in_consensus():
-                return
+        timeout = ASSERT_CONSENSUS_TIMEOUT + time.time()
+        in_consensus = False
 
-            time.sleep(sleep_time)
-            sleep_time *= growth_rate
-
-        self.assertTrue(self.in_consensus())
+        while not in_consensus and time.time() < timeout:
+            in_consensus = self.in_consensus()
+        self.assertTrue(in_consensus)
 
     def in_consensus(self):
         tolerance = self.earliest_client().calculate_tolerance()

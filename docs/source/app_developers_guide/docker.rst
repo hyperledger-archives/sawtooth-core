@@ -533,7 +533,13 @@ To see which components are running, run this command from the container:
     PID TTY      STAT   TIME COMMAND
     1 ?        Ss     0:00 bash -c sawtooth admin keygen && sawtooth keygen my_key && sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && sawtooth admin genesis config-genesis.batch && sawtooth-validator -vv --endpoint
 
+.. note::
 
+  The validator can process transactions in serial or parallel with no difference
+  in the state produced. To process in parallel, give ``sawtooth-validator`` the option ``--scheduler parallel``
+  in the `sawtooth-default.yaml` file.
+  The default option is ``--scheduler serial``. To get the most benefit from the parallel option,
+  add more transaction processors to the `sawtooth-default.yaml` file.
 
 The REST API Container
 ----------------------
@@ -634,7 +640,7 @@ following command:
 
 .. code-block:: console
 
-  $ docker logs CONTAINER
+  $ docker logs {CONTAINER}
 
 
 .. note:: 

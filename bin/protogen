@@ -54,6 +54,13 @@ def main(args=None):
     if "go" in args:
         protoc(proto_dir, "sdk/go/src", "sawtooth_sdk/protobuf", "go")
 
+    if "rust" in args:
+        protoc(proto_dir, "sdk/rust", "src/messages", "rust")
+        protoc(JOIN(TOP_DIR, "families/smallbank/protos"),
+               "perf/smallbank_workload",
+               "src/",
+               "rust")
+
     # 2. Generate config protos
     proto_dir = JOIN(TOP_DIR, "families/settings/protos")
     protoc(proto_dir, "families/settings", "sawtooth_settings/protobuf")
@@ -80,15 +87,26 @@ def main(args=None):
     proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
     protoc(proto_dir, "families/block_info", "sawtooth_block_info/protobuf")
 
-    # 7. Generate Track and Trade protos
+    # 7. Generate smallbank protos
+    if "go" in args:
+        proto_dir = JOIN(TOP_DIR, "families/smallbank/protos")
+        protoc(proto_dir, "families/smallbank", "smallbank_go/src/protobuf", "go")
+
+    # 8. Generate Track and Trade protos
     protoc(
         JOIN(TOP_DIR, "families/track_and_trade/protos"),
         "families/track_and_trade/processor",
         "sawtooth_track_and_trade/protobuf")
 
-    if "go" in args:
+    if "seth-go" in args:
+        proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
+        protoc(proto_dir, "families/seth/src", "sawtooth_seth/protobuf", "go")
         proto_dir = JOIN(TOP_DIR, "families/seth/src/protos")
         protoc(proto_dir, "families/seth/src", "sawtooth_seth/protobuf", "go")
+
+    if "seth-rust" in args:
+        proto_dir = JOIN(TOP_DIR, "families/seth/src/protos")
+        protoc(proto_dir, "families/seth/rpc", "src/messages/", "rust")
 
 
 def protoc(src_dir, base_dir, pkg, language="python"):
@@ -98,6 +116,8 @@ def protoc(src_dir, base_dir, pkg, language="python"):
         protoc_go(src_dir, base_dir, pkg)
     elif language == "javascript":
         protoc_javascript(src_dir, base_dir, pkg)
+    elif language == "rust":
+        protoc_rust(src_dir, base_dir, pkg)
 
 
 def protoc_python(src_dir, base_dir, pkg):
@@ -195,6 +215,40 @@ def protoc_go(src_dir, base_dir, pkg):
 
         for args in defer:
             _protoc(args)
+
+
+def protoc_rust(src_dir, base_dir, pkg):
+    # 1. Create output package directory
+    pkg_dir = JOIN(TOP_DIR, base_dir, pkg)
+    os.makedirs(pkg_dir, exist_ok=True)
+
+    # 2. Create a temp directory for building
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_pkg_dir = JOIN(tmp_dir, pkg)
+        os.makedirs(tmp_pkg_dir)
+
+        # 3. Get a list of all .proto files to build
+        cwd = os.getcwd()
+        os.chdir(src_dir)
+        proto_files = glob("*.proto")
+        os.chdir(cwd)
+
+        # 4. Copy protos to temp dir and fix imports
+        for proto in proto_files:
+            src = JOIN(src_dir, proto)
+            dst = JOIN(tmp_pkg_dir, proto)
+            with open(src, encoding='utf-8') as fin:
+                with open(dst, "w", encoding='utf-8') as fout:
+                    src_contents = fin.read()
+                    fixed_contents = fix_import(src_contents, pkg)
+                    fout.write(fixed_contents)
+
+        # 5. Compile protobuf files
+        _protoc([
+            __file__,
+            "-I=%s" % tmp_dir,
+            "--rust_out=%s" % JOIN(TOP_DIR, base_dir, pkg),
+        ] + glob("%s/*.proto" % tmp_pkg_dir))
 
 
 def fix_import(contents, pkg, sub_dir=False):

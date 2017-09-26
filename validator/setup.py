@@ -60,7 +60,8 @@ setup(
         "toml",
         "PyYAML",
         "pyzmq",
-        "netifaces"
+        "netifaces",
+        "pyformance"
     ],
     data_files=data_files,
     entry_points={

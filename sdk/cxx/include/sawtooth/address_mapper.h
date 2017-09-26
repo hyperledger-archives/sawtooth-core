@@ -37,7 +37,7 @@ class AddressFormatError: public std::runtime_error {
 // from their native object ids to merkle trie addresses.
 //
 // The default implementation uses a SHA512 hash to map both the key and the
-// namespace to the mekle trie address. Collisions in the key mappings should
+// namespace to the merkle trie address. Collisions in the key mappings should
 // be uncommon but still possible, data storage behind the keys.
 //
 // Each instance of the mapper holds a namespace that is mapped to a
@@ -58,16 +58,16 @@ class AddressMapper {
 
     // Maps an namespace string to an namespace address prefix.
     // this provides a default implementation using SHA512.
-    // it is intended to be overriden by subclass implementations
-    // that can provide their own mapping of namspace strings to
+    // it is intended to be overridden by subclass implementations
+    // that can provide their own mapping of namespace strings to
     // prefixes. The requirements are that the mapping needs to
     // return a prefix that is 6 characters in length and consists
     // of only lower case hexadecimal characters(0123456789abcdef).
-    virtual std::string MapNamespace(const std::string& key) const; 
+    virtual std::string MapNamespace(const std::string& key) const;
 
     // Maps an key string to a address, this provides a default
     // implementation using SHA512.
-    // It is intended to be overriden by subclass implementations
+    // It is intended to be overridden by subclass implementations
     // that can provide their own mappings. The requirements are that
     // the mapping needs to return a string that is 128 characters
     // in length and consists of only lower case hexadecimal characters.
@@ -80,7 +80,7 @@ class AddressMapper {
     // Maps the key passed to the function and concatenates it with the
     // namespace prefix this object was initialized with and returns
     // a fully qualified Merkle Trie address. These addresses are always
-    // 134 characters in length and consist entirely of lower case hexidecimal
+    // 134 characters in length and consist entirely of lower case hexadecimal
     // characters(0123456789abcdef).
     std::string MakeAddress(const std::string& key);
  private:

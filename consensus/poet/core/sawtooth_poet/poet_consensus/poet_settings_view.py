@@ -31,7 +31,7 @@ class PoetSettingsView(object):
     _ENCLAVE_MODULE_NAME_ = \
         'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
     _INITIAL_WAIT_TIME_ = 3000.0
-    _KEY_BLOCK_CLAIM_LIMIT_ = 25
+    _KEY_BLOCK_CLAIM_LIMIT_ = 250
     _MINIMUM_WAIT_TIME_ = 1.0
     # pylint: disable=invalid-name
     _POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50

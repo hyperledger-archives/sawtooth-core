@@ -43,6 +43,7 @@ setup(name='sawtooth-rest-api',
           'cchardet',
           'protobuf',
           'sawtooth-sdk',
+          'pyformance'
           ],
       data_files=data_files,
       entry_points={

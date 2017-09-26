@@ -27,12 +27,6 @@ LOGGER.setLevel(logging.DEBUG)
 
 # This needs to be coordinated with the test's yaml file.
 VALIDATOR_COUNT = 3
-
-# Wait times and batch count can be increased for more rigor.
-INITIAL_WAIT_TIME = 30
-CATCH_UP_TIME = 30
-TRY_AGAIN_TIME = 60
-
 BATCH_COUNT = 20
 WAIT = 120
 
@@ -64,9 +58,6 @@ class TestPoetSmoke(unittest.TestCase):
         '''
         populate, increment = _make_txns()
 
-        # wait for validators to get genesis block
-        time.sleep(INITIAL_WAIT_TIME)
-
         self.assert_consensus()
 
         LOGGER.info('Sending populate txns')
@@ -85,17 +76,24 @@ class TestPoetSmoke(unittest.TestCase):
                 client.send_txns(increment)
 
         # wait for validators to catch up
-        time.sleep(CATCH_UP_TIME)
 
         self.assert_consensus()
 
     # if the validators aren't in consensus, wait and try again
     def assert_consensus(self):
-        try:
-            self._assert_consensus()
-        except AssertionError:
-            time.sleep(TRY_AGAIN_TIME)
-            self._assert_consensus()
+        start_time = time.time()
+
+        while time.time() < start_time + WAIT:
+            try:
+                self._assert_consensus()
+                return
+            except AssertionError:
+                LOGGER.info(
+                        'Blocks not yet in consensus after %d seconds' %
+                        time.time() - start_time)
+
+        raise AssertionError(
+                'Validators were not in consensus after %d seconds' % WAIT)
 
     def _assert_consensus(self):
         tolerance = self.clients[0].calculate_tolerance()

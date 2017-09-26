@@ -42,6 +42,37 @@ DEFAULT_TIMEOUT = 300
 LOGGER = logging.getLogger(__name__)
 
 
+class CounterWrapper():
+    def __init__(self, counter=None):
+        self._counter = counter
+
+    def inc(self):
+        if self._counter:
+            self._counter.inc()
+
+
+class NoopTimerContext():
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        pass
+
+    def stop(self):
+        pass
+
+
+class TimerWrapper():
+    def __init__(self, timer=None):
+        self._timer = timer
+        self._noop = NoopTimerContext()
+
+    def time(self):
+        if self._timer:
+            return self._timer.time()
+        return self._noop
+
+
 class RouteHandler(object):
     """Contains a number of aiohttp handlers for endpoints in the Rest Api.
 
@@ -59,10 +90,26 @@ class RouteHandler(object):
         timeout (int, optional): The time in seconds before the Api should
             cancel a request and report that the validator is unavailable.
     """
-    def __init__(self, loop, connection, timeout=DEFAULT_TIMEOUT):
+    def __init__(
+            self, loop, connection,
+            timeout=DEFAULT_TIMEOUT, metrics_registry=None):
         self._loop = loop
         self._connection = connection
         self._timeout = timeout
+        if metrics_registry:
+            self._post_batches_count = CounterWrapper(
+                metrics_registry.counter('post_batches_count'))
+            self._post_batches_error = CounterWrapper(
+                metrics_registry.counter('post_batches_error'))
+            self._post_batches_total_time = TimerWrapper(
+                metrics_registry.timer('post_batches_total_time'))
+            self._post_batches_validator_time = TimerWrapper(
+                metrics_registry.timer('post_batches_validator_time'))
+        else:
+            self._post_batches_count = CounterWrapper()
+            self._post_batches_error = CounterWrapper()
+            self._post_batches_total_time = TimerWrapper()
+            self._post_batches_validator_time = TimerWrapper()
 
     async def submit_batches(self, request):
         """Accepts a binary encoded BatchList and submits it to the validator.
@@ -81,16 +128,21 @@ class RouteHandler(object):
             link: /batches or /batch_status link for submitted batches
 
         """
+        timer_ctx = self._post_batches_total_time.time()
+        self._post_batches_count.inc()
+
         # Parse request
         if request.headers['Content-Type'] != 'application/octet-stream':
             LOGGER.debug(
                 'Submission headers had wrong Content-Type: %s',
                 request.headers['Content-Type'])
+            self._post_batches_error.inc()
             raise errors.SubmissionWrongContentType()
 
         body = await request.read()
         if not body:
             LOGGER.debug('Submission contained an empty body')
+            self._post_batches_error.inc()
             raise errors.NoBatchesSubmitted()
 
         try:
@@ -98,6 +150,7 @@ class RouteHandler(object):
             batch_list.ParseFromString(body)
         except DecodeError:
             LOGGER.debug('Submission body could not be decoded: %s', body)
+            self._post_batches_error.inc()
             raise errors.BadProtobufSubmitted()
 
         # Query validator
@@ -106,11 +159,12 @@ class RouteHandler(object):
             batches=batch_list.batches)
         self._set_wait(request, validator_query)
 
-        response = await self._query_validator(
-            Message.CLIENT_BATCH_SUBMIT_REQUEST,
-            client_pb2.ClientBatchSubmitResponse,
-            validator_query,
-            error_traps)
+        with self._post_batches_validator_time.time():
+            response = await self._query_validator(
+                Message.CLIENT_BATCH_SUBMIT_REQUEST,
+                client_pb2.ClientBatchSubmitResponse,
+                validator_query,
+                error_traps)
 
         # Build response envelope
         data = self._drop_id_prefixes(
@@ -125,11 +179,14 @@ class RouteHandler(object):
             data = None
             link = self._build_url(request, wait=False, id=id_string)
 
-        return self._wrap_response(
+        retval = self._wrap_response(
             request,
             data=data,
             metadata={'link': link},
             status=status)
+
+        timer_ctx.stop()
+        return retval
 
     async def list_statuses(self, request):
         """Fetches the committed status of batches by either a POST or GET.

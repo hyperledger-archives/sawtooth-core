@@ -105,6 +105,8 @@ func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermiss
 		newAcctAddr.ToStateAddr().String(),
 		// For checking global permissions
 		GlobalPermissionsAddress().ToStateAddr().String(),
+		// For accessing block info
+		BLOCK_INFO_PREFIX,
 	}
 
 	// The account being created is not the creating account
@@ -155,6 +157,8 @@ func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermi
 		newAcctAddr.ToStateAddr().String(),
 		// For checking global permissions
 		GlobalPermissionsAddress().ToStateAddr().String(),
+		// For accessing block info
+		BLOCK_INFO_PREFIX,
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
@@ -208,7 +212,9 @@ func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wa
 			fromAddr.ToStateAddr().String(),
 			toAddr.ToStateAddr().String(),
 			// For checking global permissions
-			GlobalPermissionsAddress().ToStateAddr().String())
+			GlobalPermissionsAddress().ToStateAddr().String(),
+			// For accessing block info
+			BLOCK_INFO_PREFIX)
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
@@ -258,6 +264,8 @@ func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, no
 		toAddr.ToStateAddr().String(),
 		// For checking global permissions
 		GlobalPermissionsAddress().ToStateAddr().String(),
+		// For accessing block info
+		BLOCK_INFO_PREFIX,
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
@@ -356,4 +364,22 @@ func (c *Client) GetReceipt(txnId string) (*SethTransactionReceipt, error) {
 	seth_receipt := &SethTransactionReceipt{}
 	err = proto.Unmarshal(buf, seth_receipt)
 	return seth_receipt, err
+}
+
+func (c *Client) GetEvents(txnId string) ([]Event, error) {
+	resp, err := http.Get(c.Url + "/receipts?id=" + txnId)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ParseReceiptBody(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	events := body.Data[0].Events
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
 }
