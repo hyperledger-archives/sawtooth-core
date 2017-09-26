@@ -834,7 +834,8 @@ class TestChainController(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
-            chain_observers=[self.state_delta_processor])
+            chain_observers=[self.state_delta_processor],
+            metrics_registry=None)
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -1147,7 +1148,8 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
-            chain_observers=[self.state_delta_processor])
+            chain_observers=[self.state_delta_processor],
+            metrics_registry=None)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 
