@@ -254,7 +254,20 @@ const FishDetail = {
              typeField: 'stringValue',
              type: payloads.updateProperties.enum.STRING
            }))
-           : '')))
+           : '')),
+
+        ((record.owner === publicKey && !record.final)
+         ? m('.row.mb-3',
+             m('.col.text-center',
+               m('button.btn.btn-danger', {
+                 onclick: (e) => {
+                   e.preventDefault()
+                   _finalizeRecord(record)
+                 }
+               },
+               'Finalize')))
+         : '')
+       )
     ]
   }
 }
@@ -294,6 +307,16 @@ const _updateProperty = (record, value) => {
 
   transactions.submit([updatePayload]).then(() => {
     console.log('Successfully submitted property update')
+  })
+}
+
+const _finalizeRecord = (record) => {
+  let finalizePayload = payloads.finalizeRecord({
+    recordId: record.recordId
+  })
+
+  transactions.submit([finalizePayload]).then(() => {
+    console.log('finalized')
   })
 }
 
