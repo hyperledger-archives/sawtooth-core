@@ -103,9 +103,10 @@ const MultiSelect = {
   view (vnode) {
     let handleChange = vnode.attrs.onchange || (() => null)
     let selected = vnode.attrs.selected
+    let color = vnode.attrs.color || 'light'
     return [
       m('.dropdown',
-        m('button.btn.btn-light.btn-block.dropdown-toggle.text-left',
+        m(`button.btn.btn-${color}.btn-block.dropdown-toggle.text-left`,
           {
             'data-toggle': 'dropdown',
             onclick: (e) => {

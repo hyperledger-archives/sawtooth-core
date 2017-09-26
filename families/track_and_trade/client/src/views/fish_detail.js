@@ -20,6 +20,7 @@ const m = require('mithril')
 const moment = require('moment')
 const truncate = require('lodash/truncate')
 
+const {MultiSelect} = require('../components/forms')
 const payloads = require('../services/payloads')
 const transactions = require('../services/transactions')
 const api = require('../services/api')
@@ -31,6 +32,15 @@ const {
 } = require('../utils/records')
 
 const PRECISION = payloads.FLOAT_PRECISION
+/**
+ * Possible selection options
+ */
+const authorizableProperties = [
+  ['location', 'Location'],
+  ['temperature', 'Temperature'],
+  ['tilt', 'Tilt'],
+  ['shock', 'Shock']
+]
 
 const _labelProperty = (label, value) => [
   m('dl',
@@ -144,6 +154,58 @@ const ReportValue = {
   }
 }
 
+const AuthorizeReporter = {
+  oninit (vnode) {
+    vnode.state.properties = []
+  },
+
+  view (vnode) {
+    return [
+      _row(m('strong', 'Authorize Reporter')),
+      m('.row',
+        m('.col-6',
+          m('input.form-control', {
+            type: 'text',
+            placeholder: 'Add Reporter Private Key',
+            value: vnode.state.reporter,
+            oninput: m.withAttr('value', (value) => {
+              vnode.state.reporter = value
+              let reporter = vnode.attrs.agents.find(
+                (agent) => agent.name === value || agent.key === value)
+              if (reporter) {
+                vnode.state.reporterKey = reporter.key
+              }
+            })
+          })),
+
+        m('.col-4',
+          m(MultiSelect, {
+            label: 'Select Fields',
+            color: 'primary',
+            options: authorizableProperties,
+            selected: vnode.state.properties,
+            onchange: (selection) => {
+              vnode.state.properties = selection
+            }
+          })),
+
+        m('.col-2',
+          m('button.btn.btn-primary',
+            {
+              disabled: (!vnode.state.reporterKey || vnode.state.properties.length === 0),
+              onclick: (e) => {
+                e.preventDefault()
+                vnode.attrs.onsubmit([vnode.state.reporterKey, vnode.state.properties])
+                vnode.state.reporterKey = null
+                vnode.state.reporter = null
+                vnode.state.properties = []
+              }
+            },
+            'Authorize')))
+    ]
+  }
+}
+
 const FishDetail = {
   oninit (vnode) {
     let publicKey = api.getPublicKey()
@@ -247,7 +309,16 @@ const FishDetail = {
            : null)),
 
         ((record.owner === publicKey && !record.final)
-         ? m('.row.mb-3',
+         ? m(AuthorizeReporter, {
+           record,
+           agents: vnode.state.agents,
+           onsubmit: ([publicKey, properties]) =>
+           _authorizeReporter(record, publicKey, properties)
+         })
+         : null),
+
+        ((record.owner === publicKey && !record.final)
+         ? m('.row.m-2',
              m('.col.text-center',
                m('button.btn.btn-danger', {
                  onclick: (e) => {
@@ -317,6 +388,19 @@ const _finalizeRecord = (record) => {
 
   transactions.submit([finalizePayload]).then(() => {
     console.log('finalized')
+  })
+}
+
+const _authorizeReporter = (record, reporterKey, properties) => {
+  let authroizePayload = payloads.createProposal({
+    recordId: record.recordId,
+    receivingAgent: reporterKey,
+    role: payloads.createProposal.enum.REPORTER,
+    properties: properties
+  })
+
+  transactions.submit([authroizePayload]).then(() => {
+    console.log('Successfully submitted proposal')
   })
 }
 
