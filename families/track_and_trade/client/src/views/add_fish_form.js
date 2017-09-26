@@ -28,7 +28,7 @@ const PRECISION = payloads.FLOAT_PRECISION
  */
 const authorizableProperties = [
   ['location', 'Location'],
-  ['temp', 'Temperature'],
+  ['temperature', 'Temperature'],
   ['tilt', 'Tilt'],
   ['shock', 'Shock']
 ]
