@@ -242,7 +242,7 @@ const FishDetail = {
 
         _row(
           _labelProperty('Owner', _agentLink(owner)),
-          (owner.key === publicKey
+          (owner.key === publicKey && !record.final
            ? m(TransferDropdown, {
              agents: vnode.state.agents,
              handleSelected: _doTransfer(record, payloads.createProposal.enum.OWNER)
@@ -251,7 +251,7 @@ const FishDetail = {
 
         _row(
             _labelProperty('Custodian', _agentLink(custodian)),
-          (custodian.key === publicKey
+          (custodian.key === publicKey && !record.final
            ? m(TransferDropdown, {
              agents: vnode.state.agents,
              handleSelected: _doTransfer(record, payloads.createProposal.enum.CUSTODIAN)
@@ -266,13 +266,13 @@ const FishDetail = {
 
         _row(
           _labelProperty('Location', _formatLocation(getPropertyValue(record, 'location'))),
-          (isReporter(record, 'location', publicKey)
+          (isReporter(record, 'location', publicKey) && !record.final
            ? m(ReportLocation, { record })
            : null)),
 
         _row(
           _labelProperty('Temperature', _formatTemp(getPropertyValue(record, 'temperature'))),
-          (isReporter(record, 'temperature', publicKey)
+          (isReporter(record, 'temperature', publicKey) && !record.final
           ? m(ReportValue,
             {
               name: 'temperature',
@@ -286,7 +286,7 @@ const FishDetail = {
 
         _row(
           _labelProperty('Tilt', getPropertyValue(record, 'tilt', 'Unknown')),
-          (isReporter(record, 'tilt', publicKey)
+          (isReporter(record, 'tilt', publicKey) && !record.final
            ? m(ReportValue, {
              name: 'tilt',
              label: 'Tilt',
@@ -298,7 +298,7 @@ const FishDetail = {
 
         _row(
           _labelProperty('Shock', getPropertyValue(record, 'shock', 'Unknown')),
-          (isReporter(record, 'shock', publicKey)
+          (isReporter(record, 'shock', publicKey) && !record.final
            ? m(ReportValue, {
              name: 'shock',
              label: 'Shock',
