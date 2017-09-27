@@ -58,6 +58,7 @@ const TransferDropdown = {
   view (vnode) {
     // Default to no-op
     let handleSelected = vnode.attrs.handleSelected || (() => null)
+    let onsuccess = vnode.attrs.onsuccess || (() => null)
     return [
       m('.dropdown',
         m('button.btn.btn-primary.btn-block.dropdown-toggle.text-left',
@@ -68,7 +69,7 @@ const TransferDropdown = {
             m("a.dropdown-item[href='#']", {
               onclick: (e) => {
                 e.preventDefault()
-                handleSelected(agent.key)
+                handleSelected(agent.key).then(onsuccess)
               }
             }, m('span.text-truncate',
                  truncate(agent.name, { length: 32 }))))))
@@ -89,11 +90,12 @@ const TransferControl = {
       return null
     }
 
+    let onsuccess = vnode.attrs.onsuccess || (() => null)
     if (record[role] === publicKey) {
       return [
         m(TransferDropdown, {
           agents,
-          handleSelected: _submitProposal(record, ROLE_TO_ENUM[role])
+          handleSelected: _submitProposal(record, ROLE_TO_ENUM[role], onsuccess)
         }, `Transfer ${label}`)
       ]
     } else if (_hasProposal(record, role)) {
@@ -104,6 +106,8 @@ const TransferControl = {
               e.preventDefault()
               _answerProposal(record, publicKey, ROLE_TO_ENUM[role],
                               payloads.answerProposal.enum.ACCEPT)
+
+                .then(onsuccess)
             }
           },
           `Accept ${label}`),
@@ -112,6 +116,7 @@ const TransferControl = {
               e.preventDefault()
               _answerProposal(record, publicKey, ROLE_TO_ENUM[role],
                               payloads.answerProposal.enum.REJECT)
+                .then(onsuccess)
             }
           },
           `Reject`))
@@ -134,17 +139,17 @@ const ReporterControl = {
       return null
     }
 
+    let onsuccess = vnode.attrs.onsuccess || (() => null)
     if (record.owner === publicKey) {
       return [
         m(AuthorizeReporter, {
           record,
           agents,
           onsubmit: ([publicKey, properties]) =>
-          _authorizeReporter(record, publicKey, properties)
+          _authorizeReporter(record, publicKey, properties).then(onsuccess)
         })
       ]
     } else if (_hasProposal(record, 'reporter')) {
-
       let proposal = _getProposal(record, 'reporter')
       return [
         m('.d-flex.justify-content-start',
@@ -153,6 +158,7 @@ const ReporterControl = {
               e.preventDefault()
               _answerProposal(record, publicKey, ROLE_TO_ENUM['reporter'],
                               payloads.answerProposal.enum.ACCEPT)
+                .then(onsuccess)
             }
           },
           `Accept Reporting Authorization for ${proposal.properties}`),
@@ -161,6 +167,7 @@ const ReporterControl = {
               e.preventDefault()
               _answerProposal(record, publicKey, ROLE_TO_ENUM['reporter'],
                               payloads.answerProposal.enum.REJECT)
+                .then(onsuccess)
             }
           },
           `Reject`))
@@ -182,49 +189,58 @@ const _propLink = (record, propName, content) =>
     content)
 
 const ReportLocation = {
-  view: (vnode) =>
-    m('form', {
-      onsubmit: (e) => {
-        e.preventDefault()
-        _updateProperty(vnode.attrs.record, {
-          name: 'location',
-          locationValue: {
-            latitude: parseFloat(vnode.state.latitude) * PRECISION,
-            longitude: parseFloat(vnode.state.longitude) * PRECISION
-          },
-          dataType: payloads.updateProperties.enum.LOCATION
-        })
-      }
-    },
-    m('.form-row',
-      m('.form-group.col-5',
-        m('label.sr-only', { 'for': 'latitude' }, 'Latitude'),
-        m("input.form-control[type='text']", {
-          name: 'latitude',
-          onchange: m.withAttr('value', (value) => {
-            vnode.state.latitude = value
-          }),
-          value: vnode.state.latitude,
-          placeholder: 'Latitude'
-        })),
+  view: (vnode) => {
+    let onsuccess = vnode.attrs.onsuccess || (() => null)
+    return [
+      m('form', {
+        onsubmit: (e) => {
+          e.preventDefault()
+          _updateProperty(vnode.attrs.record, {
+            name: 'location',
+            locationValue: {
+              latitude: parseFloat(vnode.state.latitude) * PRECISION,
+              longitude: parseFloat(vnode.state.longitude) * PRECISION
+            },
+            dataType: payloads.updateProperties.enum.LOCATION
+          }).then(() => {
+            vnode.state.latitude = ''
+            vnode.state.longitude = ''
+          })
+          .then(onsuccess)
+        }
+      },
+      m('.form-row',
+        m('.form-group.col-5',
+          m('label.sr-only', { 'for': 'latitude' }, 'Latitude'),
+          m("input.form-control[type='text']", {
+            name: 'latitude',
+            onchange: m.withAttr('value', (value) => {
+              vnode.state.latitude = value
+            }),
+            value: vnode.state.latitude,
+            placeholder: 'Latitude'
+          })),
 
-      m('.form-group.col-5',
-        m('label.sr-only', { 'for': 'longitude' }, 'Longitude'),
-        m("input.form-control[type='text']", {
-          name: 'longitude',
-          onchange: m.withAttr('value', (value) => {
-            vnode.state.longitude = value
-          }),
-          value: vnode.state.longitude,
-          placeholder: 'Longitude'
-        })),
+        m('.form-group.col-5',
+          m('label.sr-only', { 'for': 'longitude' }, 'Longitude'),
+          m("input.form-control[type='text']", {
+            name: 'longitude',
+            onchange: m.withAttr('value', (value) => {
+              vnode.state.longitude = value
+            }),
+            value: vnode.state.longitude,
+            placeholder: 'Longitude'
+          })),
 
-      m('.col-2',
-        m('button.btn.btn-primary', 'Update'))))
+        m('.col-2',
+          m('button.btn.btn-primary', 'Update'))))
+    ]
+  }
 }
 
 const ReportValue = {
   view: (vnode) => {
+    let onsuccess = vnode.attrs.onsuccess || (() => null)
     let xform = vnode.attrs.xform || ((x) => x)
     return [
       m('form', {
@@ -234,7 +250,10 @@ const ReportValue = {
             name: vnode.attrs.name,
             [vnode.attrs.typeField]: xform(vnode.state.value),
             dataType: vnode.attrs.type
+          }).then(() => {
+            vnode.state.value = ''
           })
+          .then(onsuccess)
         }
       },
         m('.form-row',
@@ -308,18 +327,7 @@ const AuthorizeReporter = {
 
 const FishDetail = {
   oninit (vnode) {
-    let publicKey = api.getPublicKey()
-    api.get(`records/${vnode.attrs.recordId}`)
-    .then(record =>
-      Promise.all([
-        record,
-        api.get('agents')]))
-    .then(([record, agents, owner, custodian]) => {
-      vnode.state.record = record
-      vnode.state.agents = agents.filter((agent) => agent.key !== publicKey)
-      vnode.state.owner = agents.find((agent) => agent.key === record.owner)
-      vnode.state.custodian = agents.find((agent) => agent.key === record.custodian)
-    })
+    _loadData(vnode.attrs.recordId, vnode.state)
   },
 
   view (vnode) {
@@ -347,18 +355,20 @@ const FishDetail = {
             record,
             agents: vnode.state.agents,
             role: 'owner',
-            label: 'Ownership'
+            label: 'Ownership',
+            onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
           })),
 
         _row(
-            _labelProperty('Custodian', _agentLink(custodian)),
-            m(TransferControl, {
-              publicKey,
-              record,
-              agents: vnode.state.agents,
-              role: 'custodian',
-              label: 'Custodianship'
-            })),
+          _labelProperty('Custodian', _agentLink(custodian)),
+          m(TransferControl, {
+            publicKey,
+            record,
+            agents: vnode.state.agents,
+            role: 'custodian',
+            label: 'Custodianship',
+            onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
+          })),
 
         _row(_labelProperty('Species', getPropertyValue(record, 'species'))),
 
@@ -372,7 +382,7 @@ const FishDetail = {
             _propLink(record, 'location', _formatLocation(getPropertyValue(record, 'location')))
           ),
           (isReporter(record, 'location', publicKey) && !record.final
-           ? m(ReportLocation, { record })
+           ? m(ReportLocation, { record, onsuccess: () => _loadData(record.recordId, vnode.state) })
            : null)),
 
         _row(
@@ -387,7 +397,8 @@ const FishDetail = {
               record,
               typeField: 'intValue',
               type: payloads.updateProperties.enum.INT,
-              xform: (x) => parseInt(x) * PRECISION
+              xform: (x) => parseInt(x) * PRECISION,
+              onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
             })
            : null)),
 
@@ -401,7 +412,8 @@ const FishDetail = {
              label: 'Tilt',
              record,
              typeField: 'stringValue',
-             type: payloads.updateProperties.enum.STRING
+             type: payloads.updateProperties.enum.STRING,
+             onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
            })
            : null)),
 
@@ -415,14 +427,16 @@ const FishDetail = {
              label: 'Shock',
              record,
              typeField: 'stringValue',
-             type: payloads.updateProperties.enum.STRING
+             type: payloads.updateProperties.enum.STRING,
+             onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
            })
            : null)),
 
         _row(m(ReporterControl, {
           record,
           publicKey,
-          agents: vnode.state.agents
+          agents: vnode.state.agents,
+          onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
         })),
 
         ((record.owner === publicKey && !record.final)
@@ -431,7 +445,8 @@ const FishDetail = {
                m('button.btn.btn-danger', {
                  onclick: (e) => {
                    e.preventDefault()
-                   _finalizeRecord(record)
+                   _finalizeRecord(record).then(() =>
+                     _loadData(vnode.attrs.recordId, vnode.state))
                  }
                },
                'Finalize')))
@@ -466,16 +481,32 @@ const _formatTimestamp = (sec) => {
   return moment.unix(sec).format('YYYY-MM-DD')
 }
 
-const _submitProposal = (record, role) => (publicKey) => {
+const _loadData = (recordId, state) => {
+  let publicKey = api.getPublicKey()
+  return api.get(`records/${recordId}`)
+  .then(record =>
+    Promise.all([
+      record,
+      api.get('agents')]))
+  .then(([record, agents, owner, custodian]) => {
+    state.record = record
+    state.agents = agents.filter((agent) => agent.key !== publicKey)
+    state.owner = agents.find((agent) => agent.key === record.owner)
+    state.custodian = agents.find((agent) => agent.key === record.custodian)
+  })
+}
+
+const _submitProposal = (record, role, onsuccess) => (publicKey) => {
   let transferPayload = payloads.createProposal({
     recordId: record.recordId,
     receivingAgent: publicKey,
     role: role
   })
 
-  transactions.submit([transferPayload]).then(() => {
+  return transactions.submit([transferPayload], true).then(() => {
     console.log('Successfully submitted proposal')
   })
+  .then(onsuccess)
 }
 
 const _answerProposal = (record, publicKey, role, response) => {
@@ -486,7 +517,7 @@ const _answerProposal = (record, publicKey, role, response) => {
     response
   })
 
-  transactions.submit([answerPayload]).then(() => {
+  return transactions.submit([answerPayload], true).then(() => {
     console.log('Successfully submitted answer')
   })
 }
@@ -497,7 +528,7 @@ const _updateProperty = (record, value) => {
     properties: [value]
   })
 
-  transactions.submit([updatePayload]).then(() => {
+  return transactions.submit([updatePayload], true).then(() => {
     console.log('Successfully submitted property update')
   })
 }
@@ -507,7 +538,7 @@ const _finalizeRecord = (record) => {
     recordId: record.recordId
   })
 
-  transactions.submit([finalizePayload]).then(() => {
+  return transactions.submit([finalizePayload], true).then(() => {
     console.log('finalized')
   })
 }
@@ -520,7 +551,7 @@ const _authorizeReporter = (record, reporterKey, properties) => {
     properties: properties
   })
 
-  transactions.submit([authroizePayload]).then(() => {
+  return transactions.submit([authroizePayload], true).then(() => {
     console.log('Successfully submitted proposal')
   })
 }
