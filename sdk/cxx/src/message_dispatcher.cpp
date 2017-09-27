@@ -67,8 +67,10 @@ void MessageDispatcher::Connect(const std::string& connection_string) {
     this->processing_request_socket.bind("inproc://request_queue");
 
     // start the thread to process incoming messages
-    this->dispatch_thread = std::thread(MessageDispatcher::DispatchThread,
-        this);
+    this->dispatch_thread = std::thread(
+        [this] {
+            this->DispatchThread();
+        });
     std::unique_lock<std::mutex> lock(this->mutex);
     while (!this->thread_ready) {
         this->condition.wait(lock);
@@ -159,24 +161,24 @@ MessageStreamPtr MessageDispatcher::CreateStream() {
         this->message_futures, this->mutex));
 }
 
-void MessageDispatcher::DispatchThread(MessageDispatcher* dispatcher) {
+void MessageDispatcher::DispatchThread() {
     zmqpp::poller socket_poller;
-    socket_poller.add(dispatcher->server_socket);
-    socket_poller.add(dispatcher->message_socket);
+    socket_poller.add(this->server_socket);
+    socket_poller.add(this->message_socket);
 
     {
-        std::unique_lock<std::mutex> lock(dispatcher->mutex);
-        dispatcher->thread_ready = true;
-        dispatcher->condition.notify_all();
+        std::unique_lock<std::mutex> lock(this->mutex);
+        this->thread_ready = true;
+        this->condition.notify_all();
     }
 
-    while (dispatcher->run) {
+    while (this->run) {
         socket_poller.poll();
-        if (socket_poller.has_input(dispatcher->server_socket)) {
-            dispatcher->ReceiveMessage();
+        if (socket_poller.has_input(this->server_socket)) {
+            this->ReceiveMessage();
         }
-        if (socket_poller.has_input(dispatcher->message_socket)) {
-            dispatcher->SendMessage();
+        if (socket_poller.has_input(this->message_socket)) {
+            this->SendMessage();
         }
     }
 }
