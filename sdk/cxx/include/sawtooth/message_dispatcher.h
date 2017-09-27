@@ -64,16 +64,21 @@ class MessageDispatcher {
     // processing requests to the Transaction Processing
     // thread(the main thread)
 
+    // Socket for inter-thread communication with the dispatch thread
+    static const std::string DISPATCH_THREAD_ENDPOINT;
+    zmqpp::socket dispatch_thread_socket;
+
     // Synchronization variables to coordinate with MessageStreams and the
     // dispatch thread.
-    std::condition_variable condition;
     std::mutex mutex;
-    std::atomic<bool> run;
-    bool thread_ready;
 
     std::unordered_map<std::string, std::shared_ptr<FutureMessage>> message_futures;
 
     std::thread dispatch_thread;
+
+    // Messages that are sent between threads in message dispatcher
+    static const std::string THREAD_READY_MESSAGE;
+    static const std::string THREAD_EXIT_MESSAGE;
 };
 
 }  // namespace sawtooth

@@ -35,6 +35,11 @@
 
 namespace sawtooth {
 
+const std::string MessageDispatcher::DISPATCH_THREAD_ENDPOINT(
+    "inproc://dispatch_thread");
+const std::string MessageDispatcher::THREAD_READY_MESSAGE("READY");
+const std::string MessageDispatcher::THREAD_EXIT_MESSAGE("EXIT");
+
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger
     ("sawtooth.MessageDispatcher"));
 
@@ -42,7 +47,8 @@ MessageDispatcher::MessageDispatcher():
         context_(),
         server_socket(this->context_, zmqpp::socket_type::dealer),
         message_socket(this->context_, zmqpp::socket_type::dealer),
-        processing_request_socket(this->context_, zmqpp::socket_type::dealer)
+        processing_request_socket(this->context_, zmqpp::socket_type::dealer),
+        dispatch_thread_socket(this->context_, zmqpp::socket_type::pair)
         { }
 
 // Connect to the validator component endpoint socket and
@@ -65,22 +71,27 @@ void MessageDispatcher::Connect(const std::string& connection_string) {
     this->message_socket.bind("inproc://send_queue");
     this->processing_request_socket.bind("inproc://request_queue");
 
-    // start the thread to process incoming messages
+    // Bind to the socket used to communicate with the dispatch thread,
+    // start the thread to process incoming messages, and then wait for the
+    // thread to indicate it is ready
+    this->dispatch_thread_socket.bind(
+        MessageDispatcher::DISPATCH_THREAD_ENDPOINT);
     this->dispatch_thread = std::thread(
         [this] {
             this->DispatchThread();
         });
-    std::unique_lock<std::mutex> lock(this->mutex);
-    while (!this->thread_ready) {
-        this->condition.wait(lock);
-    }
+    std::string throw_away_message;
+    do {
+        this->dispatch_thread_socket.receive(throw_away_message);
+    } while(throw_away_message != MessageDispatcher::THREAD_READY_MESSAGE);
 }
 
 void MessageDispatcher::Close() {
     // signal the dispatch thread to stop and join.
-    this->run = false;
+    this->dispatch_thread_socket.send(MessageDispatcher::THREAD_EXIT_MESSAGE);
     this->dispatch_thread.join();
 
+    this->dispatch_thread_socket.close();
     this->server_socket.close();
     this->message_socket.close();
     this->processing_request_socket.close();
@@ -166,13 +177,17 @@ void MessageDispatcher::DispatchThread() {
     socket_poller.add(this->server_socket);
     socket_poller.add(this->message_socket);
 
-    {
-        std::unique_lock<std::mutex> lock(this->mutex);
-        this->thread_ready = true;
-        this->condition.notify_all();
-    }
+    // Create a socket for inter-thread communication, connect with the other
+    // side, let message dispatcher know that we are ready, then add the
+    // socket to our poller
+    zmqpp::socket dispatch_socket(this->context_, zmqpp::socket_type::pair);
+    dispatch_socket.connect(MessageDispatcher::DISPATCH_THREAD_ENDPOINT);
+    dispatch_socket.send(std::string(MessageDispatcher::THREAD_READY_MESSAGE));
+    socket_poller.add(dispatch_socket);
 
-    while (this->run) {
+    bool threadShouldExit = false;
+
+    while (!threadShouldExit) {
         socket_poller.poll();
         if (socket_poller.has_input(this->server_socket)) {
             this->ReceiveMessage();
@@ -180,7 +195,14 @@ void MessageDispatcher::DispatchThread() {
         if (socket_poller.has_input(this->message_socket)) {
             this->SendMessage();
         }
+        if (socket_poller.has_input(dispatch_socket)) {
+            std::string message;
+            dispatch_socket.receive(message);
+            threadShouldExit = message == MessageDispatcher::THREAD_EXIT_MESSAGE;
+        }
     }
+
+    dispatch_socket.close();
 }
 
 }  // namespace sawtooth
