@@ -29,6 +29,8 @@ const { Table, PagingButtons } = require('../components/tables')
 
 const PAGE_SIZE = 50
 
+const withIntVal = fn => m.withAttr('value', v => fn(parsing.toInt(v)))
+
 const typedWidget = state => {
   const property = _.get(state, 'property', {})
 
@@ -69,6 +71,9 @@ const updateSubmitter = state => e => {
       _.each(e.target.elements, el => { el.value = null })
       state.update = null
       state.tmp = {}
+      property.updates.forEach(update => {
+        update.value = parsing.floatifyValue(update.value)
+      })
       state.property = property
     })
 }
@@ -82,12 +87,12 @@ const typedInput = state => {
       m('.col.md-4.mr-1',
         m('input.form-control', {
           placeholder: 'Enter Latitude...',
-          oninput: m.withAttr('value', value => { state.tmp.latitude = value })
+          oninput: withIntVal(value => { state.tmp.latitude = value })
         })),
       m('.col.md-4',
         m('input.form-control', {
           placeholder: 'Enter Longitude...',
-          oninput: m.withAttr('value', value => { state.tmp.longitude = value })
+          oninput: withIntVal(value => { state.tmp.longitude = value })
         }))
     ]
   }
@@ -97,12 +102,12 @@ const typedInput = state => {
       m('.col.md-4.mr-1',
         m('input.form-control', {
           placeholder: 'Enter X...',
-          oninput: m.withAttr('value', value => { state.tmp.x = value })
+          oninput: withIntVal(value => { state.tmp.x = value })
         })),
       m('.col.md-4',
         m('input.form-control', {
           placeholder: 'Enter Y...',
-          oninput: m.withAttr('value', value => { state.tmp.y = value })
+          oninput: withIntVal(value => { state.tmp.y = value })
         }))
     ]
   }
@@ -112,12 +117,12 @@ const typedInput = state => {
       m('.col.md-4.mr-1',
         m('input.form-control', {
           placeholder: 'Enter Acceleration...',
-          oninput: m.withAttr('value', value => { state.tmp.accel = value })
+          oninput: withIntVal(value => { state.tmp.accel = value })
         })),
       m('.col.md-4',
         m('input.form-control', {
           placeholder: 'Enter Duration...',
-          oninput: m.withAttr('value', value => { state.tmp.duration = value })
+          oninput: withIntVal(value => { state.tmp.duration = value })
         }))
     ]
   }
@@ -126,7 +131,7 @@ const typedInput = state => {
     return m('.col-md-8', [
       m('input.form-control', {
         placeholder: 'Enter Temperature...',
-        oninput: m.withAttr('value', value => { state.update = value })
+        oninput: withIntVal(value => { state.update = value })
       })
     ])
   }
@@ -158,7 +163,12 @@ const PropertyDetailPage = {
     vnode.state.tmp = {}
 
     api.get(`records/${vnode.attrs.recordId}/${vnode.attrs.name}`)
-      .then(property => { vnode.state.property = property })
+      .then(property => {
+        property.updates.forEach(update => {
+          update.value = parsing.floatifyValue(update.value)
+        })
+        vnode.state.property = property
+      })
   },
 
   view (vnode) {
