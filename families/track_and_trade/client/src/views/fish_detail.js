@@ -89,8 +89,8 @@ const ReportLocation = {
         _updateProperty(vnode.attrs.record, {
           name: 'location',
           locationValue: {
-            latitude: parseFloat(vnode.state.latitude),
-            longitude: parseFloat(vnode.state.longitude)
+            latitude: parseFloat(vnode.state.latitude) * PRECISION,
+            longitude: parseFloat(vnode.state.longitude) * PRECISION
           },
           dataType: payloads.updateProperties.enum.LOCATION
         })
@@ -280,7 +280,7 @@ const FishDetail = {
               record,
               typeField: 'intValue',
               type: payloads.updateProperties.enum.INT,
-              xform: (x) => parseInt(x)
+              xform: (x) => parseInt(x) * PRECISION
             })
            : null)),
 
