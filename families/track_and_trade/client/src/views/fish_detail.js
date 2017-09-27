@@ -122,8 +122,53 @@ const TransferControl = {
   }
 }
 
-const _hasProposal = (record, role) => {
-  return !!record.proposals.find((proposal) => proposal.role.toLowerCase() === role)
+const _getProposal = (record, role) =>
+  record.proposals.find((proposal) => proposal.role.toLowerCase() === role)
+
+const _hasProposal = (record, role) => !!_getProposal(record, role)
+
+const ReporterControl = {
+  view (vnode) {
+    let {record, agents, publicKey} = vnode.attrs
+    if (record.final) {
+      return null
+    }
+
+    if (record.owner === publicKey) {
+      return [
+        m(AuthorizeReporter, {
+          record,
+          agents,
+          onsubmit: ([publicKey, properties]) =>
+          _authorizeReporter(record, publicKey, properties)
+        })
+      ]
+    } else if (_hasProposal(record, 'reporter')) {
+
+      let proposal = _getProposal(record, 'reporter')
+      return [
+        m('.d-flex.justify-content-start',
+          m('button.btn.btn-primary', {
+            onclick: (e) => {
+              e.preventDefault()
+              _answerProposal(record, publicKey, ROLE_TO_ENUM['reporter'],
+                              payloads.answerProposal.enum.ACCEPT)
+            }
+          },
+          `Accept Reporting Authorization for ${proposal.properties}`),
+          m('button.btn.btn-danger.ml-auto', {
+            onclick: (e) => {
+              e.preventDefault()
+              _answerProposal(record, publicKey, ROLE_TO_ENUM['reporter'],
+                              payloads.answerProposal.enum.REJECT)
+            }
+          },
+          `Reject`))
+      ]
+    } else {
+      return null
+    }
+  }
 }
 
 const _agentLink = (agent) =>
@@ -374,14 +419,11 @@ const FishDetail = {
            })
            : null)),
 
-        ((record.owner === publicKey && !record.final)
-         ? m(AuthorizeReporter, {
-           record,
-           agents: vnode.state.agents,
-           onsubmit: ([publicKey, properties]) =>
-           _authorizeReporter(record, publicKey, properties)
-         })
-         : null),
+        _row(m(ReporterControl, {
+          record,
+          publicKey,
+          agents: vnode.state.agents
+        })),
 
         ((record.owner === publicKey && !record.final)
          ? m('.row.m-2',
