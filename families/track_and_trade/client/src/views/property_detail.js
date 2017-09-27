@@ -122,21 +122,28 @@ const typedInput = state => {
     ]
   }
 
-  return m('.col-md-8', [
-    m('input.form-control', {
-      placeholder: 'Enter new value...',
-      oninput: m.withAttr('value', value => { state.update = value })
-    })
-  ])
+  if (name === 'temperature') {
+    return m('.col-md-8', [
+      m('input.form-control', {
+        placeholder: 'Enter Temperature...',
+        oninput: m.withAttr('value', value => { state.update = value })
+      })
+    ])
+  }
+
+  return null
 }
 
 const updateForm = state => {
+  const inputField = typedInput(state)
+  if (!inputField) return null
+
   return m('form.my-5', {
     onsubmit: updateSubmitter(state)
   }, [
     m('.container',
       m('.row.justify-content-center',
-        typedInput(state),
+        inputField,
         m('.col-md-2',
           m('button.btn.btn-primary', { type: 'submit' }, 'Update'))))
   ])
