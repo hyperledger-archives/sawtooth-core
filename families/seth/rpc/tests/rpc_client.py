@@ -34,11 +34,15 @@ class RpcClient:
                 time.sleep(0.2)
 
     def call(self, method, params=None):
-        request = {"jsonrpc": "2.0", "method": method, "id" : self.id}
+        request = {"jsonrpc": "2.0", "method": method, "id": self.id}
         if params:
-            request[params] = params
+            request["params"] = params
         self.id += 1
-        return requests.post(self.url, json=request).json()['result']
+        response = requests.post(self.url, json=request).json()
+        try:
+            return response['result']
+        except KeyError:
+            return response
 
     def acall(self, method, params=None):
         def _acall(self):

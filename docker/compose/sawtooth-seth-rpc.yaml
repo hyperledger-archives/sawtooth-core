@@ -21,6 +21,7 @@ services:
     image: sawtooth-dev-rust:latest
     volumes:
       - ../../:/project/sawtooth-core
+      - ${CARGO_REGISTRY}/root/.cargo/registry
     working_dir: /project/sawtooth-core/families/seth/rpc
     expose:
       - 3030

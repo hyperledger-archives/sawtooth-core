@@ -731,10 +731,16 @@ class BlockGetRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         try:
-            block = self._block_store[request.block_id].block
+            if request.block_id != "":
+                block = self._block_store[request.block_id].block
+            else:
+                block = self._block_store.get_block_by_number(
+                    request.block_num).block
+
         except KeyError as e:
             LOGGER.debug(e)
             return self._status.NO_RESOURCE
+
         return self._wrap_response(block=block)
 
 

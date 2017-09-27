@@ -15,11 +15,27 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::fmt::LowerHex;
+use std::collections::HashMap;
+
 use futures_cpupool::{CpuPool};
 use jsonrpc_core::{Params, Value, Error, BoxFuture};
 
 use sawtooth_sdk::messaging::stream::*;
 use sawtooth_sdk::messages::validator::Message_MessageType;
+use sawtooth_sdk::messages::block::{Block};
+use sawtooth_sdk::messages::txn_receipt::{
+    ClientReceiptGetRequest,
+    ClientReceiptGetResponse,
+    ClientReceiptGetResponse_Status,
+};
+use sawtooth_sdk::messages::client::{
+    ClientBlockGetRequest,
+    ClientBlockGetResponse,
+    ClientBlockGetResponse_Status,
+};
+use sawtooth_sdk::messages::transaction::{TransactionHeader};
+use super::messages::seth::{SethTransactionReceipt};
 
 use protobuf;
 use uuid;
@@ -48,6 +64,11 @@ impl<T: MessageSender + Clone + Sync + Send + 'static> RequestExecutor<T> {
 
 }
 
+pub enum BlockKey {
+    Number(u64),
+    Signature(String),
+}
+
 #[derive(Clone)]
 pub struct ValidatorClient<S: MessageSender> {
     sender: S,
@@ -58,10 +79,10 @@ impl<S: MessageSender> ValidatorClient<S> {
         ValidatorClient{ sender: sender }
     }
 
-    pub fn request<T, U>(&mut self, msg_type: Message_MessageType, msg: T) -> Result<U, String>
+    pub fn request<T, U>(&mut self, msg_type: Message_MessageType, msg: &T) -> Result<U, String>
         where T: protobuf::Message, U: protobuf::MessageStatic
     {
-        let msg_bytes = match protobuf::Message::write_to_bytes(&msg) {
+        let msg_bytes = match protobuf::Message::write_to_bytes(msg) {
             Ok(b) => b,
             Err(error) => {
                 return Err(String::from(format!("Error serializing request: {:?}", error)));
@@ -98,4 +119,86 @@ impl<S: MessageSender> ValidatorClient<S> {
 
         Ok(response)
     }
+
+    pub fn get_receipts(&mut self, block: &Block) -> Result<HashMap<String, SethTransactionReceipt>, String> {
+        let batches = &block.batches;
+        let mut transactions = Vec::new();
+        for batch in batches.iter() {
+            for txn in batch.transactions.iter() {
+                let header: TransactionHeader = match protobuf::parse_from_bytes(&txn.header) {
+                    Ok(h) => h,
+                    Err(_) => {
+                        continue;
+                    },
+                };
+                if header.family_name == "seth" {
+                    transactions.push(String::from(txn.header_signature.clone()));
+                }
+            }
+        }
+
+        let mut request = ClientReceiptGetRequest::new();
+        request.set_transaction_ids(protobuf::RepeatedField::from_vec(transactions));
+        let response: ClientReceiptGetResponse =
+            self.request(Message_MessageType::CLIENT_RECEIPT_GET_REQUEST, &request)?;
+
+        let receipts = match response.status {
+            ClientReceiptGetResponse_Status::OK => response.receipts,
+            ClientReceiptGetResponse_Status::INTERNAL_ERROR => {
+                return Err(String::from("Received internal error from validator"));
+            },
+            ClientReceiptGetResponse_Status::NO_RESOURCE => {
+                return Err(String::from("Missing receipt"));
+            }
+        };
+        let mut seth_receipts: HashMap<String, SethTransactionReceipt> = HashMap::new();
+        for rcpt in receipts.iter() {
+            for datum in rcpt.data.iter() {
+                if datum.data_type == "seth_receipt" {
+                    match protobuf::parse_from_bytes(&datum.data) {
+                        Ok(seth_receipt) => {
+                            seth_receipts.insert(rcpt.transaction_id.clone(), seth_receipt);
+                        },
+                        Err(error) => {
+                            return Err(String::from(
+                                format!("Failed to deserialize Seth receipt: {:?}", error)
+                            ));
+                        },
+                    }
+                }
+            }
+        }
+        Ok(seth_receipts)
+    }
+
+    pub fn get_block(&mut self, block_key: BlockKey) -> Result<Option<Block>, String> {
+        let mut request = ClientBlockGetRequest::new();
+        match block_key {
+            BlockKey::Signature(block_id) => request.set_block_id(block_id),
+            BlockKey::Number(block_num) => request.set_block_num(block_num),
+        };
+
+        let response: ClientBlockGetResponse =
+            self.request(Message_MessageType::CLIENT_BLOCK_GET_REQUEST, &request)?;
+
+        match response.status {
+            ClientBlockGetResponse_Status::INTERNAL_ERROR => {
+                Err(String::from("Received internal error from validator"))
+            },
+            ClientBlockGetResponse_Status::NO_RESOURCE => {
+                Ok(None)
+            },
+            ClientBlockGetResponse_Status::OK => {
+                Ok(response.block.into_option())
+            },
+        }
+    }
+}
+
+pub fn num_to_hex<T>(n: &T) -> Value where T: LowerHex {
+    Value::String(String::from(format!("{:#x}", n)))
+}
+
+pub fn string_to_hex(s: &str) -> Value {
+    Value::String(String::from(format!("0x{}", s)))
 }

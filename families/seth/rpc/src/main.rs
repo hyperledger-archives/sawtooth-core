@@ -23,6 +23,7 @@ extern crate simple_logging;
 extern crate uuid;
 extern crate jsonrpc_core;
 extern crate jsonrpc_http_server;
+extern crate serde_json;
 extern crate futures_cpupool;
 extern crate sawtooth_sdk;
 extern crate protobuf;
