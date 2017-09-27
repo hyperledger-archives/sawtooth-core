@@ -344,6 +344,7 @@ test_rust_sdk() {
 
 test_seth() {
   run_docker_test ./families/seth/tests/unit_seth.yaml
+  run_docker_test seth_chaining_test
   run_docker_test seth_intkey_test
   run_docker_test seth_blockhash_test
   run_docker_test seth_blocknum_test
