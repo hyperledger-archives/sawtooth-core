@@ -23,6 +23,8 @@ from sawtooth_sdk.protobuf.client_pb2 import ClientBlockListRequest
 from sawtooth_sdk.protobuf.client_pb2 import ClientBlockListResponse
 from sawtooth_sdk.protobuf.client_pb2 import ClientBlockGetRequest
 from sawtooth_sdk.protobuf.client_pb2 import ClientBlockGetResponse
+from sawtooth_sdk.protobuf.client_pb2 import ClientStateGetRequest
+from sawtooth_sdk.protobuf.client_pb2 import ClientStateGetResponse
 from sawtooth_sdk.protobuf.block_pb2 import Block
 from sawtooth_sdk.protobuf.block_pb2 import BlockHeader
 from sawtooth_sdk.protobuf.batch_pb2 import Batch
@@ -33,6 +35,9 @@ from sawtooth_sdk.protobuf.txn_receipt_pb2 import ClientReceiptGetRequest
 from sawtooth_sdk.protobuf.txn_receipt_pb2 import ClientReceiptGetResponse
 from sawtooth_sdk.protobuf.txn_receipt_pb2 import TransactionReceipt
 from protobuf.seth_pb2 import SethTransactionReceipt
+from protobuf.seth_pb2 import EvmEntry
+from protobuf.seth_pb2 import EvmStateAccount
+from protobuf.seth_pb2 import EvmStorage
 
 
 class SethRpcTest(unittest.TestCase):
@@ -155,3 +160,117 @@ class SethRpcTest(unittest.TestCase):
         self.assertEqual(result["stateRoot"], "0x" + state_root)
         self.assertEqual(result["gasUsed"], hex(gas))
         self.assertEqual(result["transactions"][0], "0x" + txn_id)
+
+    # Account tests
+    def test_get_balance(self):
+        """Test that an account balance is retrieved correctly."""
+        self._test_get_account("balance")
+
+    def test_get_code(self):
+        """Test that an account's code is retrieved correctly."""
+        self._test_get_account("code")
+
+    def test_get_storage_at(self):
+        """Test that an account's storage is retrieved correctly."""
+        self._test_get_account("storage")
+
+    def _test_get_account(self, call):
+        account_address = "f" * 20 * 2
+        balance = 123
+        code_b = bytes([0xab, 0xcd, 0xef])
+        code_s = "abcdef"
+        position_b = bytes([0x01, 0x23, 0x45])
+        position_s = "012345"
+        stored_b = bytes([0x67, 0x89])
+        stored_s = "6789"
+
+        if call == "balance":
+            self.rpc.acall(
+                "eth_getBalance", ["0x" + account_address, "latest"])
+        elif call == "code":
+            self.rpc.acall(
+                "eth_getCode", ["0x" + account_address, "latest"])
+        elif call == "storage":
+            self.rpc.acall(
+                "eth_getStorageAt",
+                ["0x" + account_address, "0x" + position_s, "latest"])
+
+        # Receive and validate the state request
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_STATE_GET_REQUEST)
+        request = ClientStateGetRequest()
+        request.ParseFromString(msg.content)
+        self.assertEqual(request.address,
+            "a68b06" + account_address + "0" * 24)
+
+        # Respond with state
+        self.validator.respond(
+            Message.CLIENT_STATE_GET_RESPONSE,
+            ClientStateGetResponse(
+                status=ClientStateGetResponse.OK,
+                value=EvmEntry(
+                    account=EvmStateAccount(
+                        balance=balance,
+                        code=code_b),
+                    storage=[EvmStorage(key=position_b, value=stored_b)],
+                ).SerializeToString()),
+            msg)
+
+        # Validate response
+        result = self.rpc.get_result()
+        if call == "balance":
+            self.assertEqual(hex(balance), result)
+        elif call == "code":
+            self.assertEqual("0x" + code_s, result)
+        elif call == "storage":
+            self.assertEqual("0x" + stored_s, result)
+
+    def test_get_account_by_block_num(self):
+        """Tests that account info is retrieved correctly when a block number
+        is used as the block key.
+
+        This requires an extra exchange with the validator to translate the
+        block number into a block id, since it isn't possible to look up state
+        based on a block number.
+        """
+        account_address = "f" * 20 * 2
+        balance = 123
+        block_num = 321
+        block_id = "f" * 128
+
+        self.rpc.acall(
+            "eth_getBalance", ["0x" + account_address, hex(block_num)])
+
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
+        request = ClientBlockGetRequest()
+        request.ParseFromString(msg.content)
+        self.assertEqual(request.block_num, block_num)
+
+        self.validator.respond(
+            Message.CLIENT_BLOCK_GET_RESPONSE,
+            ClientBlockGetResponse(
+                status=ClientBlockGetResponse.OK,
+                block=Block(header_signature=block_id)
+            ),
+            msg)
+
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_STATE_GET_REQUEST)
+        request = ClientStateGetRequest()
+        request.ParseFromString(msg.content)
+        self.assertEqual(request.head_id, block_id)
+        self.assertEqual(request.address,
+            "a68b06" + account_address + "0" * 24)
+
+        self.validator.respond(
+            Message.CLIENT_STATE_GET_RESPONSE,
+            ClientStateGetResponse(
+                status=ClientStateGetResponse.OK,
+                value=EvmEntry(
+                    account=EvmStateAccount(balance=balance),
+                ).SerializeToString()),
+            msg)
+
+        result = self.rpc.get_result()
+        self.assertEqual(hex(balance), result)
