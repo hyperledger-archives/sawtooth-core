@@ -63,13 +63,6 @@ For more information on `Hyperledger Burrow`_, check out the project.
 
 .. _Hyperledger Burrow: https://github.com/hyperledger/burrow
 
-.. note::
-
-    This is a proof of concept implementation that attempts to solve problems
-    1, 2, and part of 3. Later versions of the spec will include solutions to
-    the remaining problems including optimizations, handling permissions, event
-    subscription, and incentives.
-
 State
 =====
 
@@ -97,7 +90,9 @@ For more information on Ethereum Accounts, see the `Ethereum Documentation`_.
 Account Storage Format
 ----------------------
 Accounts and any associated account storage shall be stored in global state
-using the following protobuf message format::
+using the following protobuf message format:
+
+.. code-block:: protobuf
 
     message EvmEntry {
         EvmStateAccount account = 1;
@@ -109,7 +104,18 @@ using the following protobuf message format::
         int64 balance = 2;
         bytes code = 3;
         int64 nonce = 4;
+        EvmPermissions permissions = 5;
     }
+
+    message EvmPermissions {
+      // Bit array where true means "has permission" and false means "doesn't have
+      // permission"
+      uint64 perms = 1;
+
+      // Bit array where true means "the permission has been set" and false means
+      // "the permission has not been set".
+      uint64 set_bit = 2;
+     }
 
     message EvmStorage {
         bytes key = 1;
@@ -159,47 +165,123 @@ Transaction Payload
 The transaction payload closely follows the structure as defined by the EVM
 yellow paper, section 4.3 (“The Transaction”). In the Seth
 Transaction Family, the transaction payload shall be represented using the
-following protobuf message::
+following protobuf message:
 
-    message EvmTransaction {
-        // "...the number of transactions sent by the sender; formally T_n."
-        uint64 nonce = 1;
+.. code-block:: protobuf
 
-        // "...the number of Wei to be paid per unit of gas for all computation
-        // costs incurred as a result of the execution of this transaction;
-        // formally T_p."
-        uint64 gas_price = 2;
+    message SethTransaction {
+      enum TransactionType {
+        DEFAULT = 0;
+        CREATE_EXTERNAL_ACCOUNT = 1;
+        CREATE_CONTRACT_ACCOUNT = 2;
+        MESSAGE_CALL = 3;
+        SET_PERMISSIONS = 4;
+      }
 
-        // "...the maximum amount of gas that should be used in executing this
-        // transaction. This is paid up-front, before any computation is done and
-        // may not be increased later; formally T_g"
-        uint64 gas_limit = 3;
+      TransactionType transaction_type = 1;
 
-        // "...the 160-bit address of the message call's recipient or, for a
-        // contract creation transaction, {}, used here to denote (the empty byte
-        // array); formally T_t."
-        bytes to = 4;
+      // To eliminate the need for two deserialization steps, all types of
+      // transactions are included as fields, but only the field indicated by the
+      // transaction type should be set.
+      CreateExternalAccountTxn create_external_account = 2;
+      CreateContractAccountTxn create_contract_account = 3;
+      MessageCallTxn message_call = 4;
+      SetPermissionsTxn set_permissions = 5;
+    }
 
-        // "...the number of Wei to be transferred to the message call's recipient
-        // or, in the case of contract creation, as an endowment to the newly
-        // created account; formally T_v."
-        uint64 value = 5;
+The following are the representation of the different transaction types that
+can be included in the above SethTransaction:
 
-        // The yellow paper also includes a signature in the transaction, but this
-        // is already included as part of the Sawtooth transaction so we don't
-        // duplicate it here.
+.. code-block:: protobuf
 
-        // "An unlimited size byte array specifying the EVM-code for the account
-        // initialisation procedure, formally T_i."
-        //
-        // This should only be set if this is a contract creation transaction.
-        bytes init = 7;
+    // The following transactions have fields that correspond to the transaction
+    // structure defined at: https://ethereum.github.io/yellowpaper/paper.pdf
+    // Quoted descriptions are from this paper.
 
-        // "An unlimited size byte array specifying the input data of the message
-        // call, formally T_d."
-        //
-        // This should only be set if this is a message call transaction.
-        bytes data = 8;
+    message CreateExternalAccountTxn {
+      // "...the number of transactions sent by the sender; formally T_n."
+      uint64 nonce = 1;
+
+      // "...the 160-bit address of the message call's recipient or, for a
+      // contract creation transaction, {}, used here to denote (the empty byte
+      // array); formally T_t."
+      bytes to = 2;
+
+      // The Burrow-EVM permissions to assign to the new account
+      EvmPermissions permissions = 3;
+    }
+
+    message CreateContractAccountTxn {
+      // "...the number of transactions sent by the sender; formally T_n."
+      uint64 nonce = 1;
+
+      // "...the number of Wei to be paid per unit of gas for all computation
+      // costs incurred as a result of the execution of this transaction;
+      // formally T_p."
+      uint64 gas_price = 2;
+
+      // "...the maximum amount of gas that should be used in executing this
+      // transaction. This is paid up-front, before any computation is done and
+      // may not be increased later; formally T_g"
+      uint64 gas_limit = 3;
+
+      // "...the number of Wei to be transferred to the message call's recipient
+      // or, in the case of contract creation, as an endowment to the newly
+      // created account; formally T_v."
+      uint64 value = 4;
+
+      // "An unlimited size byte array specifying the EVM-code for the account
+      // initialisation procedure, formally T_i."
+      //
+      // This should only be set if this is a contract creation transaction.
+      bytes init = 5;
+
+      // The Burrow-EVM permissions to assign to this account
+      EvmPermissions permissions = 6;
+    }
+
+    message MessageCallTxn {
+      // "...the number of transactions sent by the sender; formally T_n."
+      uint64 nonce = 1;
+
+      // "...the number of Wei to be paid per unit of gas for all computation
+      // costs incurred as a result of the execution of this transaction;
+      // formally T_p."
+      uint64 gas_price = 2;
+
+      // "...the maximum amount of gas that should be used in executing this
+      // transaction. This is paid up-front, before any computation is done and
+      // may not be increased later; formally T_g"
+      uint64 gas_limit = 3;
+
+      // "...the 160-bit address of the message call's recipient or, for a
+      // contract creation transaction, {}, used here to denote (the empty byte
+      // array); formally T_t."
+      bytes to = 4;
+
+      // "...the number of Wei to be transferred to the message call's recipient
+      // or, in the case of contract creation, as an endowment to the newly
+      // created account; formally T_v."
+      uint64 value = 5;
+
+      // "An unlimited size byte array specifying the input data of the message
+      // call, formally T_d."
+      //
+      // This should only be set if this is a message call transaction.
+      bytes data = 6;
+    }
+
+    message SetPermissionsTxn {
+      // "...the number of transactions sent by the sender; formally T_n."
+      uint64 nonce = 1;
+
+      // "...the 160-bit address of the message call's recipient or, for a
+      // contract creation transaction, {}, used here to denote (the empty byte
+      // array); formally T_t."
+      bytes to = 2;
+
+      // The Burrow-EVM permissions to assign to this account
+      EvmPermissions permissions = 3;
     }
 
 The following fields defined above shall be ignored for this version of the
@@ -218,19 +300,27 @@ Execution
 Transaction execution shall follow a simplified version of the Ethereum model
 described below:
 
-1. The sender address shall be calculated by taking the rightmost 160 bits of
+1. The payload will be unpacked and validated. If the payload is missing or the
+   payload is malformed in anyway, the transaction is invalid.
+2. The header of the transaction is checked. If the header is malformed or does
+   not have a public key, the transaction is invalid.
+3. The sender address shall be calculated by taking the rightmost 160 bits of
    the SHA3 hash of the public key used to submit the transaction. This public
-   key is included in the transaction header.
-2. If the `to` field is set, the transaction is interpreted as a “message call”
-   transaction. If not, it is a “contract creation” transaction.
-3. If the transaction is a “message call” transaction,
+   key is included in the transaction header. If the public key cannot be
+   decoded or the sender cannot be determined from the public key, the
+   transaction is invalid.
+4. If the transaction type is MESSAGE_CALL,
 
-    a. The receiver’s account will be retrieved from state using the address in
+    a. The sender’s account will be retrieved from state using the sender
+       address. If the account does not exist, the transaction is invalid.
+    b. Check that the account has permissions to make message calls. If the
+       account does not have permissions, the transaction is invalid.
+    c. Check that the nonce in the transaction matches the nonce stored in state
+       for the account. If it does not, the transaction is invalid.
+    d. The receiver’s account will be retrieved from state using the address in
        the `to` field. If the address is invalid, the account does not exist, or
        the account does not contain any code, the transaction is invalid.
-    b. The sender’s account will be retrieved from state using the sender
-       address. If the account does not exist, the transaction is invalid.
-    c. The EVM will be called using:
+    e. The EVM will be called using:
 
         - The sender account for the `caller` argument
         - The receiver account for the `callee` argument
@@ -241,19 +331,27 @@ described below:
         - The `gas_limit` field in the transaction payload for the `gas`
           argument.
 
-    d. The resulting output from the EVM shall be discarded because a mechanism
-       for returning data to the client does not exist yet.
-    e. The sender and receiver accounts and associated storage shall be pushed
+    f. The resulting output from the EVM shall be stored in a
+       SethTransactionReceipt.
+    g. The sender nonce is incremented.
+    h. The sender and receiver accounts and associated storage shall be pushed
        to state.
 
-4. If the transaction is a “contract creation” transaction,
+5. If the transaction is CREATE_CONTRACT_ACCOUNT,
 
-    a. If the sender address does not exist yet, an Externally Owned Account
-       shall be created at the address.
-    b. If the sender address does exist, a Contract Account shall be created at
-       a new address derived from the sender account as described above. The
-       sender account’s nonce shall then be incremented.
-    c. If the `init` field is set in the transaction payload, the EVM will be
+    a. The sender’s account will be retrieved from state using the sender
+       address. If the account does not exist, the transaction is invalid.
+    b. Check that the account has permissions to make contract accounts. If the
+       account does not have permissions, the transaction is invalid.
+    c. Check that the nonce in the transaction matches the nonce stored in state
+       for the account. If it does not, the transaction is invalid.
+    d. A Contract Account shall be created at a new address derived from the
+       sender account as described above. The sender account’s nonce shall then
+       be incremented.
+    e. Validate that that creating account has permissions to set permissions
+       if permissions are included. If it does not have permission the
+       transaction is invalid.
+    f. If the `init` field is set in the transaction payload, the EVM will be
        called using:
 
         - The sender account for the `caller` and `callee` arguments
@@ -263,9 +361,61 @@ described below:
         - The `gas_limit` field in the transaction payload for the `gas`
           argument.
 
-    d. The resulting output from the EVM shall be stored in the `code` field of
-       the newly created account.
-    e. The sender account and the newly created account shall be pushed to
-       state.
+    g. The resulting output from the EVM shall be stored in the `code` field of
+       the newly created account and shall be stored in a
+       SethTransactionReceipt.
+    h. The sender account, newly created account, and permissions shall be
+       pushed to state.
 
-5. If an error occurs while the EVM is executing, the transaction is invalid.
+6. If the transaction is CREATE_EXTERNAL_ACCOUNT and the sender is new,
+
+    a. A External Account address shall be created. If an account already
+       exists at that address, the transaction is invalid.
+    b. Check global permissions to see if the account can be created. If the
+       account cannot be created, the transaction is invalid. New accounts
+       inherit global permissions. If global permissions are not set, give
+       account all permissions.
+    c. The resulting output shall be stored in the `code` field of
+       the newly created account and shall be stored in a
+       SethTransactionReceipt.
+    d. The sender account, newly created account, and any permissions shall be
+       pushed to state.
+
+7. If the transaction is CREATE_EXTERNAL_ACCOUNT and the sender exists,
+
+    a. If the sender exists and wants to make more accounts, check that the
+       creating account has permissions to make accounts. If the account does
+       not have permissions, the transaction is invalid.
+    b. Check that the nonce in the transaction matches the nonce stored in
+       state for the account. If it does not, the transaction is invalid.
+    c. A External Account address shall be created. If an account already
+       exists at that address, the transaction is invalid.
+    d. Validate that that creating account has permissions to set permissions
+       if permissions are included. If it does not have permission the
+       transaction is invalid.
+    e. The resulting output shall be stored in the `code` field of
+       the newly created account and shall be stored in a
+       SethTransactionReceipt.
+    f. The sender nonce is incremented.
+    g. The sender account, newly created account, and any permissions shall be
+       pushed to state.
+
+8. If the transaction is SET_PERMISSIONS,
+
+     a. Check that permissions are set in the transaction. If there are not
+        any permissions, the transaction is invalid.
+     b. The sender’s account will be retrieved from state using the sender
+        address. If the account does not exist, the transaction is invalid.
+     c. Check that the account has permissions to make contract accounts. If the
+        account does not have permissions, the transaction is invalid.
+     d. Check that the nonce in the transaction matches the nonce stored in state
+        for the account. If it does not, the transaction is invalid.
+     e. Construct the address for the receiver for the permission change. If the
+        the address cannot be constructed, the transaction is invalid.
+     f. If the receiver does not exist, the transaction is invalid.
+     g. The sender nonce is incremented.
+     h. The sender account, receiver account permissions shall be
+        pushed to state.
+
+
+9. If an error occurs while the EVM is executing, the transaction is invalid.
