@@ -467,7 +467,7 @@ const _formatLocation = (location) => {
 }
 
 const _formatTemp = (temp) => {
-  if (temp) {
+  if (temp !== undefined || temp !== null) {
     return `${(temp / PRECISION).toFixed(6)} C°`
   }
 
