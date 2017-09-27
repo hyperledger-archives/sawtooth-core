@@ -19,9 +19,8 @@ const m = require('mithril')
 
 const payloads = require('../services/payloads')
 const transactions = require('../services/transactions')
+const parsing = require('../services/parsing')
 const {MultiSelect} = require('../components/forms')
-
-const PRECISION = payloads.FLOAT_PRECISION
 
 /**
  * Possible selection options
@@ -73,7 +72,7 @@ const AddFishForm = {
 
              m('.row',
                m('.col-sm',
-                 _formGroup('Length (cm)', m('input.form-control', {
+                 _formGroup('Length (m)', m('input.form-control', {
                    type: 'number',
                    min: 0,
                    step: 'any',
@@ -184,19 +183,19 @@ const _handleSubmit = (signingKey, state) => {
       },
       {
         name: 'length',
-        intValue: parseFloat(state.lengthInCM) * PRECISION,
+        intValue: parsing.toInt(state.lengthInCM),
         dataType: payloads.createRecord.enum.INT
       },
       {
         name: 'weight',
-        intValue: parseFloat(state.weightInKg) * PRECISION,
+        intValue: parsing.toInt(state.weightInKg),
         dataType: payloads.createRecord.enum.INT
       },
       {
         name: 'location',
         locationValue: {
-          latitude: parseFloat(state.latitude) * PRECISION,
-          longitude: parseFloat(state.longitude) * PRECISION
+          latitude: parsing.toInt(state.latitude),
+          longitude: parsing.toInt(state.longitude)
         },
         dataType: payloads.createRecord.enum.LOCATION
       }

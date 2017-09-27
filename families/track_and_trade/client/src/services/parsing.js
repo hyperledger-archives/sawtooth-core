@@ -16,14 +16,14 @@
  */
 'use strict'
 
+const _ = require('lodash')
 const moment = require('moment')
-
-const parseThen = fn => v => fn(JSON.parse(v))
+const { FLOAT_PRECISION } = require('./payloads')
 
 const STRINGIFIERS = {
   LOCATION: v => `${v.latitude}, ${v.longitude}`,
-  tilt: parseThen(v => `X: ${v.x}, Y: ${v.y}`),
-  shock: parseThen(v => `Accel: ${v.accel}, Duration: ${v.duration}`),
+  tilt: v => `X: ${v.x}, Y: ${v.y}`,
+  shock: v => `Accel: ${v.accel}, Duration: ${v.duration}`,
   '*': v => JSON.stringify(v, null, 1).replace(/[{}"]/g, '')
 }
 
@@ -41,6 +41,23 @@ const stringifyValue = (value, type, name) => {
 }
 
 /**
+ * Simple functions that turn numbers or number-like strings to
+ * an integer (in millionths) or back to a float.
+ */
+const toFloat = num => parseInt(num) / FLOAT_PRECISION
+const toInt = num => parseInt(parseFloat(num) * FLOAT_PRECISION)
+
+/**
+ * Calls toFloat on a property value, or it's sub-values in the case of
+ * location, tilt, or shock
+ */
+const floatifyValue = value => {
+  if (_.isString(value)) value = JSON.parse(value)
+  if (_.isObject(value)) return _.mapValues(value, toFloat)
+  return toFloat(value)
+}
+
+/**
  * Parses seconds into a date/time string
  */
 const formatTimestamp = sec => {
@@ -51,6 +68,9 @@ const formatTimestamp = sec => {
 }
 
 module.exports = {
+  toInt,
+  toFloat,
   stringifyValue,
+  floatifyValue,
   formatTimestamp
 }

@@ -22,6 +22,7 @@ const truncate = require('lodash/truncate')
 
 const {MultiSelect} = require('../components/forms')
 const payloads = require('../services/payloads')
+const parsing = require('../services/parsing')
 const transactions = require('../services/transactions')
 const api = require('../services/api')
 const {
@@ -31,7 +32,6 @@ const {
   isReporter
 } = require('../utils/records')
 
-const PRECISION = payloads.FLOAT_PRECISION
 /**
  * Possible selection options
  */
@@ -198,8 +198,8 @@ const ReportLocation = {
           _updateProperty(vnode.attrs.record, {
             name: 'location',
             locationValue: {
-              latitude: parseFloat(vnode.state.latitude) * PRECISION,
-              longitude: parseFloat(vnode.state.longitude) * PRECISION
+              latitude: parsing.toInt(vnode.state.latitude),
+              longitude: parsing.toInt(vnode.state.longitude)
             },
             dataType: payloads.updateProperties.enum.LOCATION
           }).then(() => {
@@ -220,7 +220,6 @@ const ReportLocation = {
             value: vnode.state.latitude,
             placeholder: 'Latitude'
           })),
-
         m('.form-group.col-5',
           m('label.sr-only', { 'for': 'longitude' }, 'Longitude'),
           m("input.form-control[type='text']", {
@@ -373,8 +372,8 @@ const FishDetail = {
         _row(_labelProperty('Species', getPropertyValue(record, 'species'))),
 
         _row(
-          _labelProperty('Length (cm)', getPropertyValue(record, 'length', 0) / PRECISION),
-          _labelProperty('Weight (kg)', getPropertyValue(record, 'weight', 0) / PRECISION)),
+          _labelProperty('Length (m)', parsing.toFloat(getPropertyValue(record, 'length', 0))),
+          _labelProperty('Weight (kg)', parsing.toFloat(getPropertyValue(record, 'weight', 0)))),
 
         _row(
           _labelProperty(
@@ -397,7 +396,7 @@ const FishDetail = {
               record,
               typeField: 'intValue',
               type: payloads.updateProperties.enum.INT,
-              xform: (x) => parseFloat(x) * PRECISION,
+              xform: (x) => parsing.toInt(x),
               onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
             })
            : null)),
@@ -458,9 +457,9 @@ const FishDetail = {
 
 const _formatLocation = (location) => {
   if (location && location.latitude !== undefined && location.longitude !== undefined) {
-    let latitude = location.latitude / PRECISION
-    let longitude = location.longitude / PRECISION
-    return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+    let latitude = parsing.toFloat(location.latitude)
+    let longitude = parsing.toFloat(location.longitude)
+    return `${latitude}, ${longitude}`
   } else {
     return 'Unknown'
   }
@@ -468,7 +467,7 @@ const _formatLocation = (location) => {
 
 const _formatTemp = (temp) => {
   if (temp !== undefined || temp !== null) {
-    return `${(temp / PRECISION).toFixed(6)} C°`
+    return `${parsing.toFloat(temp)} °C`
   }
 
   return 'Unknown'
