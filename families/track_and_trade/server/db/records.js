@@ -27,6 +27,7 @@ const getRecordId = getAttribute('recordId')
 const getRecordType = getAttribute('recordType')
 const getProperties = getAttribute('properties')
 const getName = getAttribute('name')
+const getFinal = getAttribute('final')
 const getPublicKey = getAttribute('publicKey')
 const getDataType = getAttribute('dataType')
 const getReporters = getAttribute('reporters')
@@ -188,57 +189,39 @@ const fetchPropertyQuery = (recordId, name) => block => {
   })
 }
 
-const fetchRecordQuery = (recordId, authedKey) => block => {
-  return findRecord(recordId)(block).do(record => {
-    return getTypeProperties(record)(block)
-      .map(getPropertyValues(recordId)(block)).do(propertyValues => {
-        return r.expr({
-          'recordId': getRecordId(record),
-          'owner': getOwnerId(record),
-          'custodian': getCustodianId(record),
-          'properties': propertyValues
-            .map(propertyValue => r.expr({
-              'name': getName(propertyValue),
-              'type': getDataType(propertyValue),
-              'value': getCurrentValue(propertyValue)('value'),
-              'reporters': propertyValue('reporterKeys')
-            })),
-          'updates': r.expr({
-            'owners': getOwners(record),
-            'custodians': getCustodians(record),
-            'properties': makePropertiesEntry(propertyValues)
-          }),
-          'proposals': getProposals(recordId)(authedKey)(block)
-        })
+const _loadRecord = (block, authedKey) => (record) => {
+  let recordId = getRecordId(record)
+  return getTypeProperties(record)(block)
+    .map(getPropertyValues(recordId)(block)).do(propertyValues => {
+      return r.expr({
+        'recordId': getRecordId(record),
+        'owner': getOwnerId(record),
+        'custodian': getCustodianId(record),
+        'final': getFinal(record),
+        'properties': propertyValues
+          .map(propertyValue => r.expr({
+            'name': getName(propertyValue),
+            'type': getDataType(propertyValue),
+            'value': getCurrentValue(propertyValue)('value'),
+            'reporters': propertyValue('reporterKeys')
+          })),
+        'updates': r.expr({
+          'owners': getOwners(record),
+          'custodians': getCustodians(record),
+          'properties': makePropertiesEntry(propertyValues)
+        }),
+        'proposals': getProposals(recordId)(authedKey)(block)
       })
-  })
+    })
+}
+
+const fetchRecordQuery = (recordId, authedKey) => block => {
+  return findRecord(recordId)(block).do(_loadRecord(block, authedKey))
 }
 
 const listRecordsQuery = authedKey => block => {
   return getTable('records', block)
-    .map(record => {
-      return getTypeProperties(record)(block)
-        .map(getPropertyValues(getRecordId(record))(block)).do(propertyValues => {
-          return r.expr({
-            'recordId': getRecordId(record),
-            'owner': getOwnerId(record),
-            'custodian': getCustodianId(record),
-            'properties': propertyValues
-              .map(propertyValue => r.expr({
-                'name': getName(propertyValue),
-                'type': getDataType(propertyValue),
-                'value': getCurrentValue(propertyValue)('value'),
-                'reporters': propertyValue('reporterKeys')
-              })),
-            'updates': r.expr({
-              'owners': getOwners(record),
-              'custodians': getCustodians(record),
-              'properties': makePropertiesEntry(propertyValues)
-            }),
-            'proposals': getProposals(getRecordId(record))(authedKey)(block)
-          })
-        })
-    })
+    .map(_loadRecord(block, authedKey))
     .coerceTo('array')
 }
 
