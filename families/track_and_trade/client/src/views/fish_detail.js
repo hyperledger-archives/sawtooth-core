@@ -93,7 +93,7 @@ const TransferControl = {
       return [
         m(TransferDropdown, {
           agents,
-          handleSelected: _doTransfer(record, ROLE_TO_ENUM[role])
+          handleSelected: _submitProposal(record, ROLE_TO_ENUM[role])
         }, `Transfer ${label}`)
       ]
     } else if (_hasProposal(record, role)) {
@@ -466,7 +466,7 @@ const _formatTimestamp = (sec) => {
   return moment.unix(sec).format('YYYY-MM-DD')
 }
 
-const _doTransfer = (record, role) => (publicKey) => {
+const _submitProposal = (record, role) => (publicKey) => {
   let transferPayload = payloads.createProposal({
     recordId: record.recordId,
     receivingAgent: publicKey,
