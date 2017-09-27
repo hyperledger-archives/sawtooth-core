@@ -54,7 +54,7 @@ class MessageDispatcher {
     void ReceiveMessage();
     void SendMessage();
 
-    static void DispatchThread(MessageDispatcher* dispatcher);
+    void DispatchThread();
 
     zmqpp::context context_;
     zmqpp::socket server_socket;
