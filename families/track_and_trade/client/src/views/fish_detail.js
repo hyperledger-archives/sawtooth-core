@@ -457,7 +457,7 @@ const FishDetail = {
 }
 
 const _formatLocation = (location) => {
-  if (location && location.latitude && location.longitude) {
+  if (location && location.latitude !== undefined && location.longitude !== undefined) {
     let latitude = location.latitude / PRECISION
     let longitude = location.longitude / PRECISION
     return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
