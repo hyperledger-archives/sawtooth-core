@@ -59,8 +59,8 @@ void TransactionProcessor::Register() {
             for (auto encoding : encodings) {
                 LOG4CXX_DEBUG(logger, "Register Handler: "
                     << handler.second->transaction_family_name()
-                    << "Version: "<< version
-                    << "Encoding: " << encoding);
+                    << " Version: "<< version
+                    << " Encoding: " << encoding);
                 TpRegisterRequest request;
                 request.set_family(handler.second->transaction_family_name());
                 request.set_encoding(encoding);
