@@ -76,10 +76,65 @@ const TransferDropdown = {
   }
 }
 
+const ROLE_TO_ENUM = {
+  'owner': payloads.createProposal.enum.OWNER,
+  'custodian': payloads.createProposal.enum.CUSTODIAN,
+  'reporter': payloads.createProposal.enum.REPORTER
+}
+
+const TransferControl = {
+  view (vnode) {
+    let {record, agents, publicKey, role, label} = vnode.attrs
+    if (record.final) {
+      return null
+    }
+
+    if (record[role] === publicKey) {
+      return [
+        m(TransferDropdown, {
+          agents,
+          handleSelected: _doTransfer(record, ROLE_TO_ENUM[role])
+        }, `Transfer ${label}`)
+      ]
+    } else if (_hasProposal(record, role)) {
+      return [
+        m('.d-flex.justify-content-start',
+          m('button.btn.btn-primary', {
+            onclick: (e) => {
+              e.preventDefault()
+              _answerProposal(record, publicKey, ROLE_TO_ENUM[role],
+                              payloads.answerProposal.enum.ACCEPT)
+            }
+          },
+          `Accept ${label}`),
+          m('button.btn.btn-danger.ml-auto', {
+            onclick: (e) => {
+              e.preventDefault()
+              _answerProposal(record, publicKey, ROLE_TO_ENUM[role],
+                              payloads.answerProposal.enum.REJECT)
+            }
+          },
+          `Reject`))
+      ]
+    } else {
+      return null
+    }
+  }
+}
+
+const _hasProposal = (record, role) => {
+  return !!record.proposals.find((proposal) => proposal.role.toLowerCase() === role)
+}
+
 const _agentLink = (agent) =>
   m(`a[href=/agents/${agent.key}]`,
     { oncreate: m.route.link },
     agent.name)
+
+const _propLink = (record, propName, content) =>
+  m(`a[href=/properties/${record.recordId}/${propName}]`,
+    { oncreate: m.route.link },
+    content)
 
 const ReportLocation = {
   view: (vnode) =>
@@ -242,21 +297,23 @@ const FishDetail = {
 
         _row(
           _labelProperty('Owner', _agentLink(owner)),
-          (owner.key === publicKey && !record.final
-           ? m(TransferDropdown, {
-             agents: vnode.state.agents,
-             handleSelected: _doTransfer(record, payloads.createProposal.enum.OWNER)
-           }, 'Transfer Ownership')
-           : null)),
+          m(TransferControl, {
+            publicKey,
+            record,
+            agents: vnode.state.agents,
+            role: 'owner',
+            label: 'Ownership'
+          })),
 
         _row(
             _labelProperty('Custodian', _agentLink(custodian)),
-          (custodian.key === publicKey && !record.final
-           ? m(TransferDropdown, {
-             agents: vnode.state.agents,
-             handleSelected: _doTransfer(record, payloads.createProposal.enum.CUSTODIAN)
-           }, 'Transfer Custodianship')
-           : null)),
+            m(TransferControl, {
+              publicKey,
+              record,
+              agents: vnode.state.agents,
+              role: 'custodian',
+              label: 'Custodianship'
+            })),
 
         _row(_labelProperty('Species', getPropertyValue(record, 'species'))),
 
@@ -265,13 +322,18 @@ const FishDetail = {
           _labelProperty('Weight (kg)', getPropertyValue(record, 'weight', 0) / PRECISION)),
 
         _row(
-          _labelProperty('Location', _formatLocation(getPropertyValue(record, 'location'))),
+          _labelProperty(
+            'Location',
+            _propLink(record, 'location', _formatLocation(getPropertyValue(record, 'location')))
+          ),
           (isReporter(record, 'location', publicKey) && !record.final
            ? m(ReportLocation, { record })
            : null)),
 
         _row(
-          _labelProperty('Temperature', _formatTemp(getPropertyValue(record, 'temperature'))),
+          _labelProperty(
+            'Temperature',
+            _propLink(record, 'temperature', _formatTemp(getPropertyValue(record, 'temperature')))),
           (isReporter(record, 'temperature', publicKey) && !record.final
           ? m(ReportValue,
             {
@@ -285,7 +347,9 @@ const FishDetail = {
            : null)),
 
         _row(
-          _labelProperty('Tilt', getPropertyValue(record, 'tilt', 'Unknown')),
+          _labelProperty(
+            'Tilt',
+            _propLink(record, 'tilt', getPropertyValue(record, 'tilt', 'Unknown'))),
           (isReporter(record, 'tilt', publicKey) && !record.final
            ? m(ReportValue, {
              name: 'tilt',
@@ -297,7 +361,9 @@ const FishDetail = {
            : null)),
 
         _row(
-          _labelProperty('Shock', getPropertyValue(record, 'shock', 'Unknown')),
+          _labelProperty(
+            'Shock',
+            _propLink(record, 'shock', getPropertyValue(record, 'shock', 'Unknown'))),
           (isReporter(record, 'shock', publicKey) && !record.final
            ? m(ReportValue, {
              name: 'shock',
@@ -367,6 +433,19 @@ const _doTransfer = (record, role) => (publicKey) => {
 
   transactions.submit([transferPayload]).then(() => {
     console.log('Successfully submitted proposal')
+  })
+}
+
+const _answerProposal = (record, publicKey, role, response) => {
+  let answerPayload = payloads.answerProposal({
+    recordId: record.recordId,
+    receivingAgent: publicKey,
+    role,
+    response
+  })
+
+  transactions.submit([answerPayload]).then(() => {
+    console.log('Successfully submitted answer')
   })
 }
 
