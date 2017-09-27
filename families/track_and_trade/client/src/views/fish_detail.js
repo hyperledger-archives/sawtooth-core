@@ -397,7 +397,7 @@ const FishDetail = {
               record,
               typeField: 'intValue',
               type: payloads.updateProperties.enum.INT,
-              xform: (x) => parseInt(x) * PRECISION,
+              xform: (x) => parseFloat(x) * PRECISION,
               onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
             })
            : null)),
