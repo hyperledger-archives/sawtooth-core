@@ -33,7 +33,7 @@ namespace sawtooth {
 
 // Main message processing handler. This object owns the ZMQ socket connection
 // to the validator as well as the internal routing sockets to route messages
-// to the main thread for processing and listens for messages to route back to 
+// to the main thread for processing and listens for messages to route back to
 // the validator.
 class MessageDispatcher {
  public:
@@ -47,7 +47,7 @@ class MessageDispatcher {
     MessageStreamPtr CreateStream();
     zmqpp::context& context() { return this->context_; }
  protected:
-    friend class TransactionProcessor;  
+    friend class TransactionProcessor;
     MessageDispatcher();
 
  private:
@@ -58,9 +58,9 @@ class MessageDispatcher {
 
     zmqpp::context context_;
     zmqpp::socket server_socket;
-    zmqpp::socket message_socket;  // inproc socket to recv messages to
+    zmqpp::socket message_socket;  // inproc socket to receive messages to
     // route to the validator
-    zmqpp::socket processessing_request_socket;  // inproc socket to send
+    zmqpp::socket processing_request_socket;  // inproc socket to send
     // processing requests to the Transaction Processing
     // thread(the main thread)
 

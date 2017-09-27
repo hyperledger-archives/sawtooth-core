@@ -243,7 +243,7 @@ def _check_verification_report(verification_report, signature):
     # 2. Does not include a revocation reason.
 
     if 'revocationReason' in verification_report_dict:
-        raise ValueError('AVR indicates the EPID group has been revoked')
+        raise EnvironmentError('AVR indicates the EPID group has been revoked')
 
     # 3. Includes an enclave quote status
 
@@ -255,9 +255,14 @@ def _check_verification_report(verification_report, signature):
     # 4. Enclave quote status should be "OK".
 
     if isv_enclave_quote_status.upper() != 'OK':
-        raise ValueError(
-            'AVR enclave quote status is not OK: {}'.format(
-                isv_enclave_quote_status))
+        # Allow out of date severity issues to pass.
+        if isv_enclave_quote_status.upper() == 'GROUP_OUT_OF_DATE':
+            logger.error('Machine requires update (probably BIOS)'
+                ' for SGX compliance.')
+        else:
+            raise EnvironmentError(
+                'AVR enclave quote status is bad: {}'.format(
+                    isv_enclave_quote_status))
 
     # 5. Includes an enclave quote.
 
@@ -274,9 +279,14 @@ def _check_verification_report(verification_report, signature):
     # 7. PSE manifest status should be "OK".
 
     if pse_manifest_status.upper() != 'OK':
-        raise ValueError(
-            'AVR PSE manifest status is not OK: {}'.format(
-                pse_manifest_status))
+        # Allow out of date severity issues to pass.
+        if pse_manifest_status.upper() == 'OUT_OF_DATE':
+            logger.error('Machine requires update (probably BIOS)'
+                ' for SGX compliance.')
+        else:
+            raise EnvironmentError(
+                'AVR PSE manifest status is bad: {}'.format(
+                    pse_manifest_status))
 
     # 8. Includes a PSE manifest hash.
 
@@ -288,7 +298,7 @@ def _check_verification_report(verification_report, signature):
     if not 'epidPseudonym' in verification_report_dict:
         raise ValueError('AVR does not contain an EPID psuedonym')
 
-    # 10. Inlcudes a nonce
+    # 10. Includes a nonce
 
     if not 'nonce' in verification_report_dict:
         raise ValueError('AVR does not contain a nonce')
@@ -344,7 +354,18 @@ def create_signup_info(originator_public_key_hash, nonce):
 
         # Check the AVR to make sure it is valid and does not indicate
         # any errors
-        _check_verification_report(verification_report, signature)
+        try:
+            _check_verification_report(verification_report, signature)
+        except ValueError as e:
+            logger.warning("Invalid attestation verification report",
+                str(e))
+            return None
+        except EnvironmentError as e:
+            logger.critical("Attestation errors prevent registering this"
+                "validator, (Check SGX installation and/or BIOS level): %s",
+                str(e))
+            return None
+
 
         # Now put the proof data into the dictionary
         signup_info['proof_data'] = \

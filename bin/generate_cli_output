@@ -41,6 +41,13 @@ save_usage sawtooth config proposal list
 save_usage sawtooth config proposal vote
 save_usage sawtooth config settings
 save_usage sawtooth config settings list
+save_usage sawtooth identity
+save_usage sawtooth identity policy
+save_usage sawtooth identity policy create
+save_usage sawtooth identity policy list
+save_usage sawtooth identity role
+save_usage sawtooth identity role create
+save_usage sawtooth identity role list
 save_usage sawtooth state
 save_usage sawtooth state list
 save_usage sawtooth state show

@@ -85,7 +85,6 @@ class BlockValidator(object):
                  consensus_module,
                  block_cache,
                  new_block,
-                 chain_head,
                  state_view_factory,
                  done_cb,
                  executor,
@@ -102,7 +101,6 @@ class BlockValidator(object):
              block_cache: The cache of all recent blocks and the processing
              state associated with them.
              new_block: The block to validate.
-             chain_head: The block at the current chain head.
              state_view_factory: The factory object to create.
              done_cb: The method to call when block validation completed
              executor: The thread pool to process block validations.
@@ -121,7 +119,11 @@ class BlockValidator(object):
         self._chain_commit_state = ChainCommitState(
             self._block_cache.block_store, [])
         self._new_block = new_block
-        self._chain_head = chain_head
+
+        # Set during execution of the of the  BlockValidation to the current
+        # chain_head at that time.
+        self._chain_head = None
+
         self._state_view_factory = state_view_factory
         self._done_cb = done_cb
         self._executor = executor
@@ -133,7 +135,7 @@ class BlockValidator(object):
         self._config_dir = config_dir
         self._result = {
             'new_block': new_block,
-            'chain_head': chain_head,
+            'chain_head': None,
             'new_chain': [],
             'cur_chain': [],
             'committed_batches': [],
@@ -271,6 +273,8 @@ class BlockValidator(object):
                 if valid:
                     valid = consensus.verify_block(blkw)
 
+                # since changes to the chain-head can change the state of the
+                # blocks in BlockStore we have to revalidate this block.
                 block_store = self._block_cache.block_store
                 if self._chain_head is not None and\
                         self._chain_head.identifier !=\
@@ -403,6 +407,10 @@ class BlockValidator(object):
             # current chain blocks
             new_chain = self._result["new_chain"]  # ordered list of the new
             # chain blocks
+
+            # get the current chain_head.
+            self._chain_head = self._block_cache.block_store.chain_head
+            self._result['chain_head'] = self._chain_head
 
             # 1) Find the common ancestor block, the root of the fork.
             # walk back till both chains are the same height
@@ -581,7 +589,6 @@ class ChainController(object):
             validator = BlockValidator(
                 consensus_module=consensus_module,
                 new_block=blkw,
-                chain_head=self._chain_head,
                 block_cache=self._block_cache,
                 state_view_factory=self._state_view_factory,
                 done_cb=self.on_block_validated,
@@ -618,7 +625,8 @@ class ChainController(object):
                     self._blocks_pending.pop(new_block.identifier, [])
 
                 # if the head has changed, since we started the work.
-                if result["chain_head"] != self._chain_head:
+                if result["chain_head"].identifier !=\
+                        self._chain_head.identifier:
                     LOGGER.info(
                         'Chain head updated from %s to %s while processing '
                         'block: %s',
@@ -768,7 +776,6 @@ class ChainController(object):
                 validator = BlockValidator(
                     consensus_module=consensus_module,
                     new_block=block,
-                    chain_head=self._chain_head,
                     block_cache=self._block_cache,
                     state_view_factory=self._state_view_factory,
                     done_cb=self.on_block_validated,

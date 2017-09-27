@@ -195,6 +195,20 @@ func (s *SawtoothAppState) SetStorage(address, key, value Word256) {
 	})
 }
 
+func (s *SawtoothAppState) GetBlockHash(blockNumber int64) (Word256, error) {
+	blockInfo, err := getBlockInfo(s.mgr.state, blockNumber)
+	if err != nil {
+		return Zero256, fmt.Errorf("Failed to get block info: %v", err.Error())
+	}
+
+	hash, err := StringToWord256(blockInfo.GetHeaderSignature())
+	if err != nil {
+		return Zero256, fmt.Errorf("Failed to get block info: %v", err.Error())
+	}
+
+	return hash, nil
+}
+
 // -- Utilities --
 
 func toStateAccount(acct *Account) *EvmStateAccount {

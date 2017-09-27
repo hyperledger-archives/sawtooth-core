@@ -3,8 +3,11 @@ pragma solidity ^0.4.0;
 contract intkey {
   mapping (uint => uint) storedData;
 
+  event Set(address from, bytes data);
+
   function set(uint key, uint value) {
     storedData[key] = value;
+    Set(msg.sender, msg.data);
   }
 
   function inc(uint key){

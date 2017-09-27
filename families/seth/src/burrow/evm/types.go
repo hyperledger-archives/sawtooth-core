@@ -55,6 +55,8 @@ type AppState interface {
 	GetStorage(Word256, Word256) Word256
 	SetStorage(Word256, Word256, Word256) // Setting to Zero is deleting.
 
+	// State
+	GetBlockHash(int64) (Word256, error)
 }
 
 type Params struct {
@@ -62,4 +64,15 @@ type Params struct {
 	BlockHash   Word256
 	BlockTime   int64
 	GasLimit    int64
+}
+
+type EventFireable interface {
+	FireEvent(string, EventDataLog) (error)
+}
+
+type EventDataLog struct {
+	Address     Word256
+	Topics      []Word256
+	Data        []byte
+	BlockHeight int64
 }

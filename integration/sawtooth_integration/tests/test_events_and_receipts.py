@@ -27,11 +27,11 @@ from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
 from sawtooth_intkey.processor.handler import make_intkey_address
 from sawtooth_sdk.messaging.stream import Stream
 
-from sawtooth_validator.protobuf import events_pb2
-from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.protobuf import batch_pb2
-from sawtooth_validator.protobuf import txn_receipt_pb2
-from sawtooth_validator.protobuf import state_delta_pb2
+from sawtooth_sdk.protobuf import events_pb2
+from sawtooth_sdk.protobuf import validator_pb2
+from sawtooth_sdk.protobuf import batch_pb2
+from sawtooth_sdk.protobuf import txn_receipt_pb2
+from sawtooth_sdk.protobuf import state_delta_pb2
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)

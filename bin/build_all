@@ -90,6 +90,7 @@ then
         java
         javascript
         python
+        rust
 "
 fi
 
@@ -145,9 +146,11 @@ main() {
                 python)
                     build_python
                     ;;
-
+                rust)
+                    build_rust
+                    ;;
                 *)
-                    echo "Module '$language' not found."
+                    warn "Module '$language' not found."
                     ;;
             esac
         fi
@@ -205,6 +208,12 @@ docker_build() {
 build_external() {
     docker_build docker/apache-basic_auth_proxy docker/ apache-basic_auth_proxy
     docker_build docker/track-and-trade-server docker/ track-and-trade-server
+    docker_build docker/grafana/sawtooth-stats-grafana \
+        docker/grafana \
+        sawtooth-stats-grafana
+    docker_build docker/influxdb/sawtooth-stats-influxdb \
+        docker/influxdb \
+        sawtooth-stats-influxdb
 }
 
 build_debs() {
@@ -231,6 +240,7 @@ then
         docker_build docker/sawtooth-dev-go docker/ sawtooth-intkey-tp-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-seth-tp
         docker_build docker/sawtooth-dev-go docker/ sawtooth-xo-tp-go
+        docker_build docker/sawtooth-dev-go docker/ sawtooth-smallbank-tp-go
         docker_run sawtooth-dev-go
     }
 
@@ -261,7 +271,13 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
+        docker_build $top_dir/docker/sawtooth-validator-mounted docker/ sawtooth-validator-mounted
         docker_run sawtooth-dev-python
+    }
+
+    build_rust() {
+        docker_build docker/sawtooth-dev-rust docker/ sawtooth-dev-rust
+        docker_run sawtooth-dev-rust
     }
 fi
 
@@ -281,12 +297,15 @@ then
         mkdir -p $build_dir
         cp $top_dir/docker/sawtooth-int-intkey-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
+        cp $top_dir/docker/sawtooth-int-smallbank-tp-go $build_dir
         cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
             $build_dir
         cp $top_dir/docker/sawtooth-int-seth-tp $build_dir
         cp $top_dir/families/seth/bin/seth-tp \
             $build_dir
         cp $top_dir/sdk/examples/xo_go/bin/xo-tp-go \
+            $build_dir
+        cp $top_dir/families/smallbank/smallbank_go/bin/smallbank-tp-go \
             $build_dir
         ls $build_dir
 
@@ -296,6 +315,8 @@ then
             sawtooth-seth-tp
         docker_build $build_dir/sawtooth-int-xo-tp-go $build_dir/ \
             sawtooth-xo-tp-go
+        docker_build $build_dir/sawtooth-int-smallbank-tp-go $build_dir/ \
+            sawtooth-smallbank-tp-go
     }
 
     build_java() {
@@ -359,6 +380,11 @@ then
 	docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-track-and-trade-tp
     }
 
+    build_rust() {
+        cp $top_dir/docker/sawtooth-dev-rust $build_dir
+        docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-dev-rust
+        docker_run sawtooth-dev-rust
+    }
 fi
 
 main

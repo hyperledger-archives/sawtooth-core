@@ -24,6 +24,8 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventResponse
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 
@@ -39,6 +41,8 @@ _TYPE_TO_PROTO = {
     Message.TP_STATE_SET_RESPONSE: TpStateSetResponse,
     Message.TP_STATE_DEL_REQUEST: TpStateDeleteRequest,
     Message.TP_STATE_DEL_RESPONSE: TpStateDeleteResponse,
+    Message.TP_ADD_EVENT_REQUEST: TpAddEventRequest,
+    Message.TP_ADD_EVENT_RESPONSE: TpAddEventResponse,
 }
 
 _PROTO_TO_TYPE = {

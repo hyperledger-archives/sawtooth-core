@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from base64 import b64encode
 import logging
 import hashlib
 import time
@@ -305,10 +306,11 @@ class PoetBlockPublisher(BlockPublisherInterface):
             # we don't try to keep signing up.  However, we are going to mark
             # that key state store entry as being refreshed so that we will
             # never actually try to use it.
+            dummy_data = b64encode(b'No sealed signup data').decode('utf-8')
             self._poet_key_state_store[
                 validator_info.signup_info.poet_public_key] = \
                 PoetKeyState(
-                    sealed_signup_data='No sealed signup data',
+                    sealed_signup_data=dummy_data,
                     has_been_refreshed=True)
 
             return False

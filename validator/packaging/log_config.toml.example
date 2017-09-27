@@ -9,13 +9,13 @@ datefmt = "%H:%M:%S"
 level = "DEBUG"
 formatter = "simple"
 class = "logging.FileHandler"
-filename = "example-debug.log"
+filename = "/var/log/sawtooth/validator-debug.log"
 
 [handlers.interconnect]
 level = "DEBUG"
 formatter = "simple"
 class = "logging.handlers.RotatingFileHandler"
-filename = "example-interconnect.log"
+filename = "/var/log/sawtooth/interconnect.log"
 maxBytes = 5000000
 backupCount=20
 
@@ -23,7 +23,7 @@ backupCount=20
 level = "ERROR"
 formatter = "simple"
 class = "logging.FileHandler"
-filename = "example-error.log"
+filename = "/var/log/sawtooth/validator-error.log"
 
 [loggers."sawtooth_validator.networking.interconnect"]
 level = "DEBUG"

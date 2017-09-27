@@ -14,7 +14,6 @@
 # ------------------------------------------------------------------------------
 import abc
 import enum
-from functools import partial
 import logging
 from threading import Condition
 from threading import Thread
@@ -120,6 +119,11 @@ class Dispatcher(Thread):
                     self._msg_type_handlers[message.message_type])
             )
             self._in_queue.put_nowait(message_id)
+
+            queue_size = self._in_queue.qsize()
+            if queue_size > 10:
+                LOGGER.debug("Dispatch incoming queue size: %s",
+                             queue_size)
         else:
             LOGGER.info("received a message of type %s "
                         "from %s but have no handler for that type",
@@ -142,7 +146,15 @@ class Dispatcher(Thread):
         try:
             handler_manager = next(collection)
             future = handler_manager.execute(connection_id, message.content)
-            future.add_done_callback(partial(self._determine_next, message_id))
+
+            def do_next(future):
+                try:
+                    self._determine_next(message_id, future)
+                except Exception:  # pylint: disable=broad-except
+                    LOGGER.exception(
+                        "Unhandled exception while determining next")
+
+            future.add_done_callback(do_next)
         except IndexError:
             # IndexError is raised if done with handlers
             del self._message_information[message_id]
@@ -212,7 +224,7 @@ class Dispatcher(Thread):
                     msg=message,
                     connection_id=connection_id)
             except KeyError:
-                LOGGER.info("Can't send message %s back to "
+                LOGGER.info("Can't send last message %s back to "
                             "%s because connection %s not in dispatcher",
                             get_enum_name(message.message_type), connection_id,
                             connection)

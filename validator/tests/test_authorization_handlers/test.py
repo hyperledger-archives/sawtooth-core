@@ -28,6 +28,8 @@ from sawtooth_validator.networking.handlers import \
     AuthorizationChallengeRequestHandler
 from sawtooth_validator.networking.handlers import \
     AuthorizationChallengeSubmitHandler
+from sawtooth_validator.networking.handlers import \
+    PingHandler
 
 from sawtooth_validator.protobuf.authorization_pb2 import ConnectionRequest
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
@@ -38,6 +40,7 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf.network_pb2 import PingRequest
 
 from test_authorization_handlers.mock import MockNetwork
 from test_authorization_handlers.mock import MockPermissionVerifier
@@ -124,6 +127,50 @@ class TestAuthorizationHandlers(unittest.TestCase):
         self.assertEqual(
             handler_status.message_type,
             validator_pb2.Message.AUTHORIZATION_CONNECTION_RESPONSE)
+
+    def test_ping_handler(self):
+        """
+        Test the PingHandler returns a NetworkAck if the connection has
+        has finished authorization.
+        """
+        ping = PingRequest()
+        network = MockNetwork({},
+                              connection_status={"connection_id":
+                                                 ConnectionStatus.CONNECTED})
+        handler = PingHandler(network)
+        handler_status = handler.handle("connection_id",
+                                        ping.SerializeToString())
+        self.assertEqual(handler_status.status, HandlerStatus.RETURN)
+        self.assertEqual(
+            handler_status.message_type,
+            validator_pb2.Message.NETWORK_ACK)
+
+    def test_ping_handler(self):
+        """
+        Test the PingHandler allows a ping from a connection who has not
+        finished authorization and returns a NetworkAck. Also test that
+        if that connection sends another ping in a short time period, the
+        connection is deemed malicious, an AuthorizationViolation is returned,
+        and the connection is closed.
+        """
+        ping = PingRequest()
+        network = MockNetwork({},
+                              connection_status={"connection_id":
+                                                 None})
+        handler = PingHandler(network)
+        handler_status = handler.handle("connection_id",
+                                        ping.SerializeToString())
+        self.assertEqual(handler_status.status, HandlerStatus.RETURN)
+        self.assertEqual(
+            handler_status.message_type,
+            validator_pb2.Message.NETWORK_ACK)
+
+        handler_status = handler.handle("connection_id",
+                                        ping.SerializeToString())
+        self.assertEqual(handler_status.status, HandlerStatus.RETURN_AND_CLOSE)
+        self.assertEqual(
+            handler_status.message_type,
+            validator_pb2.Message.AUTHORIZATION_VIOLATION)
 
     def test_authorization_trust_request(self):
         """

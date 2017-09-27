@@ -770,7 +770,6 @@ class TestBlockValidator(unittest.TestCase):
         return BlockValidator(
             consensus_module=mock_consensus,
             new_block=new_block,
-            chain_head=self.block_tree_manager.chain_head,
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
             done_cb=on_block_validated,

@@ -46,20 +46,19 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
     def _expect_ok(self):
         self.validator.expect(self.factory.create_tp_response("OK"))
 
-    def test_valid_signup_info(self):
+    def _test_valid_signup_info(self, signup_info):
         """
-        Testing valid validator_registry transaction. This includes sending new
-        signup info for a validator that has already been registered.
+        Testing valid validator_registry transaction.
         """
-        signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
-
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,
             signup_info=signup_info)
         # Send validator registry payload
+        transaction_message =\
+            self.factory.create_tp_process_request(payload.id, payload)
+        transaction_id = transaction_message.signature
         self.validator.send(
-            self.factory.create_tp_process_request(payload.id, payload))
+            transaction_message)
 
         # Expect Request for the address for report key PEM
         received = self.validator.expect(
@@ -107,7 +106,8 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
         # Expect a request to set ValidatorInfo for val_1
         received = self.validator.expect(
-            self.factory.create_set_request_validator_info("val_1"))
+            self.factory.create_set_request_validator_info(
+                "val_1", transaction_id, signup_info))
 
         # Respond with address for val_1
         # val_1 address is derived from the validators id
@@ -117,86 +117,19 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
             received)
 
         self._expect_ok()
-        # --------------------------
+
+    def test_valid_signup_info(self):
         signup_info = self.factory.create_signup_info(
             self.factory.pubkey_hash, "000")
+        self._test_valid_signup_info(signup_info)
 
-        payload = ValidatorRegistryPayload(
-            verb="reg", name="val_1", id=self.factory.public_key,
-            signup_info=signup_info)
+        # Re-register the same validator. Expect success.
+        self._test_valid_signup_info(signup_info)
 
-        # Send validator registry payload
-        self.validator.send(
-            self.factory.create_tp_process_request(payload.id, payload))
-
-        # Expect Request for the address for report key PEM
-        received = self.validator.expect(
-            self.factory.create_get_request_report_key_pem())
-
-        # Respond with simulator report key PEM
-        self.validator.respond(
-            self.factory.create_get_response_simulator_report_key_pem(),
-            received)
-
-        # Expect Request for the address for valid enclave measurements
-        received = self.validator.expect(
-            self.factory.create_get_request_enclave_measurements())
-
-        # Respond with the simulator valid enclave measurements
-        self.validator.respond(
-            self.factory.create_get_response_simulator_enclave_measurements(),
-            received)
-
-        # Expect Request for the address for valid enclave basenames
-        received = self.validator.expect(
-            self.factory.create_get_request_enclave_basenames())
-
-        # Respond with the simulator valid enclave basenames
-        self.validator.respond(
-            self.factory.create_get_response_simulator_enclave_basenames(),
-            received)
-
-        # Expect Request for the ValidatorMap
-        received = self.validator.expect(
-            self.factory.create_get_request_validator_map())
-
-        # Respond with a validator Map
-        self.validator.respond(
-            self.factory.create_get_response_validator_map(),
-            received)
-
-        # Clear the validator info for the address
-        # Expect del validator info
-        received = self.validator.expect(
-            self.factory.create_del_request_validator_info())
-
-        # Respond with an empty data message
-        self.validator.respond(
-            self.factory.create_del_response_validator_info(), received)
-
-        # Set the Map
-        # Expect set request ValidatorMap
-        received = self.validator.expect(
-            self.factory.create_set_request_validator_map())
-
-        # Respond with the ValidatorMap address
-        self.validator.respond(
-            self.factory.create_set_response_validator_map(),
-            received)
-
-        # Set the validator address
-        # Expect a request to set ValidatorInfo for val_1
-        received = self.validator.expect(
-            self.factory.create_set_request_validator_info("val_1"))
-
-        # Respond with address for val_1
-        # val_1 address is derived from the validators id
-        # val id is the same as the pubkey for the factory
-        self.validator.respond(
-            self.factory.create_set_response_validator_info(),
-            received)
-
-        self._expect_ok()
+    def test_out_of_date_tcb(self):
+        signup_info = self.factory.create_signup_info(
+            self.factory.pubkey_hash, "000", "OUT_OF_DATE")
+        self._test_valid_signup_info(signup_info)
 
     def test_invalid_name(self):
         """
