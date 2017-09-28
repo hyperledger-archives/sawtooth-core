@@ -17,11 +17,91 @@
 'use strict'
 
 const m = require('mithril')
+const Chart = require('chart.js')
 const GoogleMapsLoader = require('google-maps')
 
 // Google Maps Dev API key
 GoogleMapsLoader.KEY = 'AIzaSyAF75RJvbpC-NhYERNuWadktXnEkrmGDDI'
 let google = null
+
+const LineGraphWidget = {
+  view (vnode) {
+    return m('canvas#graph-container', { width: '100%' })
+  },
+
+  parseUpdates (updates) {
+    return updates.map(d => ({
+      t: d.timestamp * 1000,
+      y: d.value,
+      reporter: d.reporter.name
+    }))
+  },
+
+  oncreate (vnode) {
+    const ctx = document.getElementById('graph-container').getContext('2d')
+
+    vnode.state.graph = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [{
+          data: this.parseUpdates(vnode.attrs.updates),
+          fill: false,
+          pointStyle: 'triangle',
+          pointRadius: 8,
+          borderColor: '#ff0000',
+          lineTension: 0
+        }]
+      },
+      options: {
+        legend: {
+          display: false
+        },
+        tooltips: {
+          bodyFontSize: 14,
+          displayColors: false,
+          custom: model => {
+            if (model.body) {
+              const index = model.dataPoints[0].index
+              const reporter = vnode.state.graph.data.datasets[0]
+                .data[index].reporter
+              const value = model.body[0].lines[0]
+              model.body[0].lines[0] = `${value} (from ${reporter})`
+            }
+          }
+        },
+        responsive: true,
+        scales: {
+          xAxes: [{
+            type: 'time',
+            offset: true,
+            display: true,
+            time: {
+              minUnit: 'second',
+              tooltipFormat: 'MM/DD/YYYY, h:mm:ss a'
+            },
+            ticks: {
+              major: {
+                fontStyle: 'bold',
+                fontColor: '#ff0000'
+              }
+            }
+          }],
+          yAxes: [{
+            type: 'linear',
+            offset: true,
+            display: true
+          }]
+        }
+      }
+    })
+  },
+
+  onupdate (vnode) {
+    const data = this.parseUpdates(vnode.attrs.updates)
+    vnode.state.graph.data.datasets[0].data = data
+    vnode.state.graph.update()
+  }
+}
 
 const MapWidget = {
   view (vnode) {
@@ -79,5 +159,6 @@ const MapWidget = {
 }
 
 module.exports = {
+  LineGraphWidget,
   MapWidget
 }
