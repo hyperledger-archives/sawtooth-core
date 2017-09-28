@@ -44,6 +44,26 @@ const typedWidget = state => {
     return m(LineGraphWidget, { updates: property.updates })
   }
 
+  if (property.name === 'tilt') {
+    return m(LineGraphWidget, {
+      updates: property.updates.map(update => {
+        const amplitude = Math.sqrt(update.value.x ** 2 + update.value.y ** 2)
+        return _.assign({}, update, {value: amplitude.toFixed(3)})
+      })
+    })
+  }
+
+  if (property.name === 'shock') {
+    return m(LineGraphWidget, {
+      updates: property.updates.map(update => {
+        const degree = update.value.duration === 0
+          ? 0
+          : update.value.accel / update.value.duration
+        return _.assign({}, update, {value: degree.toFixed(3)})
+      })
+    })
+  }
+
   return null
 }
 
