@@ -38,6 +38,7 @@ use jsonrpc_http_server::{ServerBuilder};
 use jsonrpc_core::{Params};
 
 mod requests;
+mod client;
 mod error;
 mod messages;
 

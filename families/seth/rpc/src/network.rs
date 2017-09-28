@@ -17,7 +17,7 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use super::requests::{ValidatorClient};
+use super::client::{ValidatorClient};
 
 use sawtooth_sdk::messaging::stream::MessageSender;
 

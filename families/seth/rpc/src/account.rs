@@ -17,7 +17,7 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use super::requests::{
+use super::client::{
     ValidatorClient,
     BlockKey,
     BlockKeyParseError,
