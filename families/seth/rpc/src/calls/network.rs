@@ -18,10 +18,21 @@
 use jsonrpc_core::{Params, Value, Error};
 
 use client::{ValidatorClient};
+use requests::{RequestHandler};
 
 use sawtooth_sdk::messaging::stream::MessageSender;
 
 const SAWTOOTH_NET_VERSION: &str = "19";
+
+pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
+    let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
+
+    methods.push((String::from("net_version"), version));
+    methods.push((String::from("net_peerCount"), peer_count));
+    methods.push((String::from("net_listening"), listening));
+
+    methods
+}
 
 // Version refers to the particular network this JSON-RPC client is connected to
 pub fn version<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {

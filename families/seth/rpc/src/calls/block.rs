@@ -20,6 +20,7 @@ use serde_json::Map;
 use protobuf;
 
 use error;
+use requests::{RequestHandler};
 
 use client::{
     ValidatorClient,
@@ -37,6 +38,16 @@ use sawtooth_sdk::messages::client::{
 };
 use sawtooth_sdk::messages::block::BlockHeader;
 use sawtooth_sdk::messages::validator::Message_MessageType;
+
+pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
+    let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
+
+    methods.push((String::from("eth_blockNumber"), block_number));
+    methods.push((String::from("eth_getBlockByHash"), get_block_by_hash));
+    methods.push((String::from("eth_getBlockByNumber"), get_block_by_number));
+
+    methods
+}
 
 // Return the block number of the current chain head, in hex, as a string
 pub fn block_number<T>(_params: Params, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {

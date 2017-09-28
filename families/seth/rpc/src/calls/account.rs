@@ -27,6 +27,20 @@ use client::{
 
 use sawtooth_sdk::messaging::stream::MessageSender;
 use error;
+use requests::{RequestHandler};
+
+pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
+    let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
+
+    methods.push((String::from("eth_getBalance"), get_balance));
+    methods.push((String::from("eth_getStorageAt"), get_storage_at));
+    methods.push((String::from("eth_getCode"), get_code));
+    methods.push((String::from("eth_sign"), sign));
+    methods.push((String::from("eth_call"), call));
+    methods.push((String::from("eth_accounts"), accounts));
+
+    methods
+}
 
 fn validate_block_key(block: String) -> Result<BlockKey, Error> {
     match block.parse() {
