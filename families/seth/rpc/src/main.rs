@@ -27,7 +27,10 @@ extern crate serde_json;
 extern crate futures_cpupool;
 extern crate sawtooth_sdk;
 extern crate protobuf;
+extern crate rpassword;
+extern crate tiny_keccak;
 
+use std::process;
 use log::LogLevelFilter;
 
 use sawtooth_sdk::messaging::stream::*;
@@ -41,8 +44,11 @@ mod requests;
 mod client;
 mod messages;
 mod calls;
+mod accounts;
 
+use client::{ValidatorClient};
 use requests::{RequestExecutor, RequestHandler};
+use accounts::{Account};
 use calls::*;
 
 const SERVER_THREADS: usize = 3;
@@ -55,6 +61,8 @@ fn main() {
          "Component endpoint of the validator to communicate with.")
         (@arg bind: --bind +takes_value
          "The host and port the RPC server should bind to.")
+        (@arg unlock: --unlock... +takes_value
+         "The aliases of the accounts to unlock.")
         (@arg verbose: -v... "Increase the logging level.")
     ).get_matches();
 
@@ -62,6 +70,13 @@ fn main() {
         .unwrap_or("0.0.0.0:3030");
     let connect = arg_matches.value_of("connect")
         .unwrap_or("tcp://localhost:4004");
+    let accounts: Vec<Account> = arg_matches.values_of_lossy("unlock").unwrap_or_else(||
+        Vec::new()).iter().map(|alias|
+            abort_if_err(Account::load_from_alias(alias))).collect();
+
+    for account in accounts.iter() {
+        println!("{} unlocked: {}", account.alias(), account.address());
+    }
 
     let vs = arg_matches.occurrences_of("verbose");
     let log_level = match vs {
@@ -77,7 +92,8 @@ fn main() {
     let mut io = IoHandler::new();
     let connection = ZmqMessageConnection::new(connect);
     let (sender, _) = connection.create();
-    let executor = RequestExecutor::new(sender);
+    let client = ValidatorClient::new(sender, accounts);
+    let executor = RequestExecutor::new(client);
 
     let methods = get_method_list();
     for (name, method) in methods {
@@ -108,4 +124,14 @@ fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSend
     methods.extend(transaction::get_method_list().into_iter());
 
     methods
+}
+
+fn abort_if_err<T, E: std::error::Error>(r: Result<T, E>) -> T {
+    match r {
+        Ok(t) => t,
+        Err(error) => {
+            eprintln!("{}", error.description());
+            process::exit(1);
+        }
+    }
 }

@@ -38,10 +38,11 @@ use sawtooth_sdk::messages::client::{
     ClientStateGetResponse_Status,
 };
 use sawtooth_sdk::messages::transaction::{TransactionHeader};
-use super::messages::seth::{
+use messages::seth::{
     SethTransactionReceipt,
     EvmEntry, EvmStateAccount, EvmStorage,
 };
+use accounts::{Account};
 
 use protobuf;
 use uuid;
@@ -89,11 +90,19 @@ const SETH_NS: &str = "a68b06";
 #[derive(Clone)]
 pub struct ValidatorClient<S: MessageSender> {
     sender: S,
+    accounts: Vec<Account>,
 }
 
 impl<S: MessageSender> ValidatorClient<S> {
-    pub fn new(sender: S) -> Self {
-        ValidatorClient{ sender: sender }
+    pub fn new(sender: S, accounts: Vec<Account>) -> Self {
+        ValidatorClient{
+            sender: sender,
+            accounts: accounts,
+        }
+    }
+
+    pub fn loaded_accounts(&self) -> &[Account] {
+        &self.accounts
     }
 
     pub fn request<T, U>(&mut self, msg_type: Message_MessageType, msg: &T) -> Result<U, String>

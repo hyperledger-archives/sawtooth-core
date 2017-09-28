@@ -32,10 +32,10 @@ pub struct RequestExecutor<T: MessageSender + Clone + Sync + Send + 'static> {
 }
 
 impl<T: MessageSender + Clone + Sync + Send + 'static> RequestExecutor<T> {
-    pub fn new(sender: T) -> Self {
+    pub fn new(client: ValidatorClient<T>) -> Self {
         RequestExecutor {
             pool: CpuPool::new_num_cpus(),
-            client: ValidatorClient::new(sender),
+            client: client,
         }
     }
 
