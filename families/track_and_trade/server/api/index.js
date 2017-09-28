@@ -25,7 +25,6 @@ const users = require('./users')
 const { Unauthorized } = require('./errors')
 const agents = require('./agents')
 const records = require('./records')
-const state = require('../db/state')
 const blockchain = require('../blockchain/')
 const batcher = require('../blockchain/batcher')
 

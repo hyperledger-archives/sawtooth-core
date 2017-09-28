@@ -115,8 +115,7 @@ const list = () => db.queryWithCurrentBlock(listQuery)
 const fetch = (publicKey, auth) =>
       db.queryWithCurrentBlock(fetchQuery(publicKey, auth))
 
-
 module.exports = {
   list,
-  fetch,
+  fetch
 }
