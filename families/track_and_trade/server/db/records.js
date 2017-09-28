@@ -33,7 +33,6 @@ const getDataType = getAttribute('dataType')
 const getReporters = getAttribute('reporters')
 const getAuthorization = getAttribute('authorized')
 const getReportedValues = getAttribute('reportedValues')
-const getReceivingAgent = getAttribute('receivingAgent')
 const getStatus = getAttribute('status')
 
 const getAssociatedAgentId = role => record => record(role).nth(-1)('agentId')
@@ -50,7 +49,6 @@ const hasName = hasAttribute(getName)
 const hasRecordId = hasAttribute(getRecordId)
 const hasPublicKey = hasAttribute(getPublicKey)
 const hasStatus = hasAttribute(getStatus)
-const hasReceivingAgent = hasAttribute(getReceivingAgent)
 
 const hasBlock = block => obj => {
   return r.and(
@@ -66,9 +64,8 @@ const getTable = (tableName, block) => {
 const getProposals = recordId => receivingAgent => block => {
   return getTable('proposals', block)
     .filter(hasRecordId(recordId))
-    .filter(hasReceivingAgent(receivingAgent))
     .filter(hasStatus('OPEN'))
-    .pluck('issuingAgent', 'role', 'properties')
+    .pluck('receivingAgent', 'issuingAgent', 'role', 'properties')
     .coerceTo('array')
 }
 
@@ -146,7 +143,7 @@ const getPropertyValues = recordId => block => property => {
         'name': getName(property),
         'dataType': dataType,
         'reporterKeys': reporterKeys,
-        'values': findReportedValues(recordId)(getName(property))(dataType)(reporterKeys)(block),
+        'values': findReportedValues(recordId)(getName(property))(dataType)(reporterKeys)(block)
       })
     })
   })
@@ -248,5 +245,5 @@ const listRecords = authedKey => {
 module.exports = {
   fetchProperty,
   fetchRecord,
-  listRecords,
+  listRecords
 }
