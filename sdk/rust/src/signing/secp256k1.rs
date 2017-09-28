@@ -49,12 +49,7 @@ pub struct Secp256k1PrivateKey {
 
 impl Secp256k1PrivateKey {
     pub fn from_hex(s: &str) -> Result<Self, Error> {
-        match hex_str_to_bytes(s) {
-            Ok(key_bytes) => Ok(Secp256k1PrivateKey{
-                private: key_bytes
-            }),
-            Err(err) => return Err(err)
-        }
+        hex_str_to_bytes(s).map(|key_bytes| Secp256k1PrivateKey{ private: key_bytes })
     }
 
     pub fn from_wif(s: &str) -> Result<Self, Error> {
@@ -96,17 +91,12 @@ impl PrivateKey for Secp256k1PrivateKey {
 }
 
 pub struct Secp256k1PublicKey {
-    private: Vec<u8>
+    public: Vec<u8>
 }
 
 impl Secp256k1PublicKey {
     pub fn from_hex(s: &str) -> Result<Self, Error> {
-        match hex_str_to_bytes(s) {
-            Ok(key_bytes) => Ok(Secp256k1PublicKey{
-                private: key_bytes
-            }),
-            Err(err) => return Err(err)
-        }
+        hex_str_to_bytes(s).map(|key_bytes| Secp256k1PublicKey{ public: key_bytes })
     }
 }
 
@@ -116,11 +106,11 @@ impl PublicKey for Secp256k1PublicKey {
     }
 
     fn as_hex(&self) -> String {
-        bytes_to_hex_str(&self.private)
+        bytes_to_hex_str(&self.public)
     }
 
     fn as_slice(&self) -> &[u8] {
-        return &self.private;
+        return &self.public;
     }
 }
 
