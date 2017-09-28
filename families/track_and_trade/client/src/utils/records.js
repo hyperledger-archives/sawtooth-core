@@ -22,7 +22,7 @@ const _getProp = (record, propName) => {
 
 const getPropertyValue = (record, propName, defaultValue = null) => {
   let prop = _getProp(record, propName)
-  if (prop) {
+  if (prop && prop.value) {
     return prop.value
   } else {
     return defaultValue
