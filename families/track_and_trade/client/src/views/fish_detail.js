@@ -57,10 +57,10 @@ const _row = (...cols) =>
 const TransferDropdown = {
   view (vnode) {
     // Default to no-op
-    let handleSelected = vnode.attrs.handleSelected || (() => null)
     let onsuccess = vnode.attrs.onsuccess || (() => null)
     let record = vnode.attrs.record
     let role = vnode.attrs.role
+    let publicKey = vnode.attrs.publicKey
     return [
       m('.dropdown',
         m('button.btn.btn-primary.btn-block.dropdown-toggle.text-left',
@@ -73,7 +73,7 @@ const TransferDropdown = {
               m("a.dropdown-item[href='#']", {
                 onclick: (e) => {
                   e.preventDefault()
-                  if (proposal) {
+                  if (proposal && proposal.issuingAgent === publicKey) {
                     _answerProposal(record, agent.key, ROLE_TO_ENUM[role],
                                     payloads.answerProposal.enum.CANCEL)
                       .then(onsuccess)
@@ -84,7 +84,7 @@ const TransferDropdown = {
                 }
               }, m('span.text-truncate',
                    truncate(agent.name, { length: 32 }),
-                   (!!proposal ? ' \u2718' : '')))
+                   (proposal ? ' \u2718' : '')))
             ]
           })))
     ]
@@ -108,10 +108,11 @@ const TransferControl = {
     if (record[role] === publicKey) {
       return [
         m(TransferDropdown, {
+          publicKey,
           agents,
           record,
           role,
-          onsuccess,
+          onsuccess
         }, `Transfer ${label}`)
       ]
     } else if (_hasProposal(record, publicKey, role)) {
