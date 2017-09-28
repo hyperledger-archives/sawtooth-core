@@ -37,7 +37,9 @@ NARRATION = False
 
 REST_API = 'rest-api:8081'
 URL = 'http://' + REST_API
+
 SERVER_URL = 'http://tnt-server:3000'
+API = SERVER_URL + '/api'
 
 
 class TTClient(RestClient):
@@ -107,31 +109,48 @@ class TTClient(RestClient):
             self.factory.make_empty_payload(
                 self.public_key))
 
-    def get_agents(self):
-        return self._submit_request(url=SERVER_URL + '/api/agents')[1]
-
-    def get_agent(self, public_key):
+    def get_agents(self, fields=None, omit=None):
         return self._submit_request(
-            url=SERVER_URL + '/api/agents/' + public_key,
+            url='{}/agents{}'.format(
+                API,
+                make_query_string(fields, omit))
+        )[1]
+
+    def get_agent(self, public_key, fields=None, omit=None):
+        return self._submit_request(
+            url='{}/agents/{}{}'.format(
+                API,
+                public_key,
+                make_query_string(fields, omit)),
             headers={'Authorization': self.auth_token},
         )[1]
 
-    def get_records(self):
+    def get_records(self, fields=None, omit=None):
         return self._submit_request(
-            url=SERVER_URL + '/api/records',
+            url='{}/records{}'.format(
+                API,
+                make_query_string(fields, omit)),
             headers={'Authorization': self.auth_token}
         )[1]
 
-    def get_record(self, record_id):
+    def get_record(self, record_id, fields=None, omit=None):
         return self._submit_request(
-            url='{}/api/records/{}'.format(SERVER_URL, record_id),
+            url='{}/records/{}{}'.format(
+                API,
+                record_id,
+                make_query_string(fields, omit)),
             headers={'Authorization': self.auth_token}
         )[1]
 
-    def get_record_property(self, record_id, property_name):
+    def get_record_property(self, record_id, property_name,
+                            fields=None, omit=None):
         return self._submit_request(
-            url='{}/api/records/{}/property/{}'.format(
-                SERVER_URL, record_id, property_name))[1]
+            url='{}/records/{}/property/{}{}'.format(
+                API,
+                record_id,
+                property_name,
+                make_query_string(fields, omit))
+        )[1]
 
     def post_user(self, username):
         response = self._submit_request(
@@ -672,6 +691,81 @@ class TestTrackAndTrade(unittest.TestCase):
         for record in get_records:
             self.assert_record_attributes(record)
 
+        self.assertEqual(
+            jin.get_agent(
+                public_key=jin.public_key,
+                fields=[
+                    'publicKey',
+                    'name',
+                    'email',
+                ]
+            ),
+            {
+                'email': 'jin@website.com',
+                'name': 'Jin Kwon',
+                'publicKey': jin.public_key,
+            }
+        )
+
+        self.assertEqual(
+            sorted(
+                jin.get_agents(
+                    fields=[
+                        'name',
+                        'owns',
+                    ]
+                ),
+                key=lambda agent: agent['name']
+            ),
+            [
+                {
+                    'name': 'Jin Kwon',
+                    'owns': [],
+                },
+                {
+                    'name': 'Sun Kwon',
+                    'owns': ['fish-456'],
+                },
+                {
+                    'name': 'sensor-stark',
+                    'owns': [],
+                },
+            ]
+        )
+
+        self.assertEqual(
+            jin.get_record(
+                record_id='fish-456',
+                omit=[
+                    'properties',
+                    'proposals',
+                    'updates',
+                ]
+            ),
+            {
+                'custodian': sun.public_key,
+                'final': True,
+                'owner': sun.public_key,
+                'recordId': 'fish-456',
+            }
+        )
+
+        self.assertEqual(
+            jin.get_record_property(
+                record_id='fish-456',
+                property_name='weight',
+                omit=[
+                    'recordId',
+                    'reporters',
+                    'updates',
+                    'value',
+                ]
+            ),
+            {
+                'dataType': 'INT',
+                'name': 'weight',
+            }
+        )
 
     def assert_record_attributes(self, record):
         for attr in ('custodian',
@@ -704,6 +798,13 @@ class TestTrackAndTrade(unittest.TestCase):
             for attr in ('agentId', 'timestamp'):
                 for entry in record['updates'][associated_agent]:
                     self.assertIn(attr, entry)
+
+
+def make_query_string(fields, omit):
+    fields = '' if fields is None else '?fields=' + ','.join(fields)
+    omit = '' if omit is None else '?omit=' + ','.join(omit)
+
+    return fields if fields else omit
 
 
 def log_json(msg):
