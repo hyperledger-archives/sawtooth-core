@@ -7,6 +7,7 @@ Table of Contents
    introduction.rst
    architecture.rst
    app_developers_guide.rst
+   solidity_developers_guide.rst
    core_developers_guide.rst
    sysadmin_guide.rst
    rest_api.rst
