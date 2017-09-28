@@ -59,7 +59,7 @@ func TestContractChaining(t *testing.T) {
   nonce += 1
 
   // Create caller contract
-  callerContractAddr, err := client.CreateContractAccount(priv, init_caller, nil, nonce, 1000, WAIT)
+  callerContractResult, err := client.CreateContractAccount(priv, init_caller, nil, nonce, 1000, WAIT)
   if err != nil {
    t.Error(err.Error())
   }
@@ -67,15 +67,11 @@ func TestContractChaining(t *testing.T) {
 
   // Call contract
   cmd, _ := hex.DecodeString(CALL_HELLO_WORLD)
-  txn_id, err := client.MessageCall(priv, callerContractAddr, cmd, nonce, 1000, WAIT, true)
-  receipt, err := client.GetReceipt(txn_id)
-  if err != nil {
-    t.Fatal(err)
-  }
+  callResult, err := client.MessageCall(priv, callerContractResult.Address, cmd, nonce, 1000, WAIT, true)
 
   // Convert return value to string
-  n := bytes.IndexByte(receipt.ReturnValue, 0)
-  value := string(receipt.ReturnValue[:n])
+  n := bytes.IndexByte(callResult.ReturnValue, 0)
+  value := string(callResult.ReturnValue[:n])
 
   // Compare value
   if value != "helloworld" {

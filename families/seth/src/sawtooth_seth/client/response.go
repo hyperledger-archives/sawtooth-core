@@ -125,8 +125,8 @@ func ParseReceiptBody(resp *http.Response) (*ReceiptRespBody, error) {
 	}
 
 	return ParseReceiptBodyData(buf)
-
 }
+
 func ParseReceiptBodyData(buf []byte) (*ReceiptRespBody, error) {
 	body := &ReceiptRespBody{}
 	err := json.Unmarshal(buf, body)

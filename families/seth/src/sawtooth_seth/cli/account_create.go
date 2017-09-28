@@ -18,7 +18,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"sawtooth_seth/client"
@@ -81,20 +80,21 @@ func (args *AccountCreate) Run(config *Config) error {
 		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
 	}
 
-	addr, err := client.CreateExternalAccount(priv, mod, perms, args.Nonce, args.Wait)
+	clientResult, err := client.CreateExternalAccount(priv, mod, perms, args.Nonce, args.Wait)
 	if err != nil {
 		return fmt.Errorf("Problem submitting account creation transaction: %v", err)
 	}
 
 	if args.Wait > 0 {
-		fmt.Printf(
-			"Account created at %v\n", hex.EncodeToString(addr),
-		)
+		fmt.Printf("Account created\n")
 	} else {
-		fmt.Printf(
-			"Transaction submitted to create account at %v\n", hex.EncodeToString(addr),
-		)
+		fmt.Printf("Transaction submitted to create account\n")
 	}
+	info, err := clientResult.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("Error displaying receipt: %s", err.Error())
+	}
+	fmt.Println("Transaction Receipt: ", string(info))
 
 	return nil
 }
