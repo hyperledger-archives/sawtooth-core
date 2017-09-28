@@ -155,7 +155,7 @@ const getPropertyValues = recordId => block => property => {
 const getCurrentValue = propertyValue => {
   return r.branch(
     propertyValue('values').count().eq(0),
-    r.expr([]),
+    null,
     propertyValue('values').nth(0)
   )
 }
@@ -202,7 +202,13 @@ const _loadRecord = (block, authedKey) => (record) => {
           .map(propertyValue => r.expr({
             'name': getName(propertyValue),
             'type': getDataType(propertyValue),
-            'value': getCurrentValue(propertyValue)('value'),
+            'value': getCurrentValue(propertyValue).do(
+              value => r.branch(
+                value,
+                value('value'),
+                value
+              )
+            ),
             'reporters': propertyValue('reporterKeys')
           })),
         'updates': r.expr({
