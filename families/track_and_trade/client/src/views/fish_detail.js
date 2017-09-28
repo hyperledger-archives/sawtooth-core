@@ -98,7 +98,7 @@ const TransferControl = {
           handleSelected: _submitProposal(record, ROLE_TO_ENUM[role], onsuccess)
         }, `Transfer ${label}`)
       ]
-    } else if (_hasProposal(record, role)) {
+    } else if (_hasProposal(record, publicKey, role)) {
       return [
         m('.d-flex.justify-content-start',
           m('button.btn.btn-primary', {
@@ -127,10 +127,12 @@ const TransferControl = {
   }
 }
 
-const _getProposal = (record, role) =>
-  record.proposals.find((proposal) => proposal.role.toLowerCase() === role)
+const _getProposal = (record, receivingAgent, role) =>
+  record.proposals.find(
+    (proposal) => (proposal.role.toLowerCase() === role && proposal.receivingAgent === receivingAgent))
 
-const _hasProposal = (record, role) => !!_getProposal(record, role)
+const _hasProposal = (record, receivingAgent, role) =>
+  !!_getProposal(record, receivingAgent, role)
 
 const ReporterControl = {
   view (vnode) {
@@ -149,8 +151,8 @@ const ReporterControl = {
           _authorizeReporter(record, publicKey, properties).then(onsuccess)
         })
       ]
-    } else if (_hasProposal(record, 'reporter')) {
-      let proposal = _getProposal(record, 'reporter')
+    } else if (_hasProposal(record, publicKey, 'reporter')) {
+      let proposal = _getProposal(record, publicKey, 'reporter')
       return [
         m('.d-flex.justify-content-start',
           m('button.btn.btn-primary', {
