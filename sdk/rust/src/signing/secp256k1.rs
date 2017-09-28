@@ -29,6 +29,7 @@ use super::PrivateKey;
 use super::PublicKey;
 use super::Algorithm;
 use super::Error;
+use super::pem_loader::load_pem_key;
 
 impl From<secp256k1::Error> for Error {
     fn from(e: secp256k1::Error) -> Self {
@@ -48,12 +49,7 @@ pub struct Secp256k1PrivateKey {
 
 impl Secp256k1PrivateKey {
     pub fn from_hex(s: &str) -> Result<Self, Error> {
-        match hex_str_to_bytes(s) {
-            Ok(key_bytes) => Ok(Secp256k1PrivateKey{
-                private: key_bytes
-            }),
-            Err(err) => return Err(err)
-        }
+        hex_str_to_bytes(s).map(|key_bytes| Secp256k1PrivateKey{ private: key_bytes })
     }
 
     pub fn from_wif(s: &str) -> Result<Self, Error> {
@@ -67,6 +63,16 @@ impl Secp256k1PrivateKey {
         Ok(Secp256k1PrivateKey{
             private: b
         })
+    }
+
+    pub fn from_pem(s: &str) -> Result<Self, Error> {
+        let (priv_key_str, _) = load_pem_key(s, "")?;
+        Self::from_hex(&priv_key_str)
+    }
+
+    pub fn from_pem_with_password(s: &str, pw: &str) -> Result<Self, Error> {
+        let (priv_key_str, _) = load_pem_key(s, pw)?;
+        Self::from_hex(&priv_key_str)
     }
 }
 
@@ -85,17 +91,12 @@ impl PrivateKey for Secp256k1PrivateKey {
 }
 
 pub struct Secp256k1PublicKey {
-    private: Vec<u8>
+    public: Vec<u8>
 }
 
 impl Secp256k1PublicKey {
     pub fn from_hex(s: &str) -> Result<Self, Error> {
-        match hex_str_to_bytes(s) {
-            Ok(key_bytes) => Ok(Secp256k1PublicKey{
-                private: key_bytes
-            }),
-            Err(err) => return Err(err)
-        }
+        hex_str_to_bytes(s).map(|key_bytes| Secp256k1PublicKey{ public: key_bytes })
     }
 }
 
@@ -105,11 +106,11 @@ impl PublicKey for Secp256k1PublicKey {
     }
 
     fn as_hex(&self) -> String {
-        bytes_to_hex_str(&self.private)
+        bytes_to_hex_str(&self.public)
     }
 
     fn as_slice(&self) -> &[u8] {
-        return &self.private;
+        return &self.public;
     }
 }
 

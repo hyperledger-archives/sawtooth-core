@@ -27,7 +27,10 @@ extern crate serde_json;
 extern crate futures_cpupool;
 extern crate sawtooth_sdk;
 extern crate protobuf;
+extern crate rpassword;
+extern crate tiny_keccak;
 
+use std::process;
 use log::LogLevelFilter;
 
 use sawtooth_sdk::messaging::stream::*;
@@ -38,16 +41,15 @@ use jsonrpc_http_server::{ServerBuilder};
 use jsonrpc_core::{Params};
 
 mod requests;
-mod error;
+mod client;
 mod messages;
+mod calls;
+mod accounts;
 
-mod account;
-mod block;
-mod logs;
-mod network;
-mod transaction;
-
+use client::{ValidatorClient};
 use requests::{RequestExecutor, RequestHandler};
+use accounts::{Account};
+use calls::*;
 
 const SERVER_THREADS: usize = 3;
 
@@ -59,6 +61,8 @@ fn main() {
          "Component endpoint of the validator to communicate with.")
         (@arg bind: --bind +takes_value
          "The host and port the RPC server should bind to.")
+        (@arg unlock: --unlock... +takes_value
+         "The aliases of the accounts to unlock.")
         (@arg verbose: -v... "Increase the logging level.")
     ).get_matches();
 
@@ -66,6 +70,13 @@ fn main() {
         .unwrap_or("0.0.0.0:3030");
     let connect = arg_matches.value_of("connect")
         .unwrap_or("tcp://localhost:4004");
+    let accounts: Vec<Account> = arg_matches.values_of_lossy("unlock").unwrap_or_else(||
+        Vec::new()).iter().map(|alias|
+            abort_if_err(Account::load_from_alias(alias))).collect();
+
+    for account in accounts.iter() {
+        println!("{} unlocked: {}", account.alias(), account.address());
+    }
 
     let vs = arg_matches.occurrences_of("verbose");
     let log_level = match vs {
@@ -81,7 +92,8 @@ fn main() {
     let mut io = IoHandler::new();
     let connection = ZmqMessageConnection::new(connect);
     let (sender, _) = connection.create();
-    let executor = RequestExecutor::new(sender);
+    let client = ValidatorClient::new(sender, accounts);
+    let executor = RequestExecutor::new(client);
 
     let methods = get_method_list();
     for (name, method) in methods {
@@ -105,40 +117,21 @@ fn main() {
 fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
     let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
 
-    methods.push((String::from("eth_getBalance"), account::get_balance));
-    methods.push((String::from("eth_getStorageAt"), account::get_storage_at));
-    methods.push((String::from("eth_getCode"), account::get_code));
-    methods.push((String::from("eth_sign"), account::sign));
-    methods.push((String::from("eth_call"), account::call));
-    methods.push((String::from("eth_accounts"), account::accounts));
-
-    methods.push((String::from("eth_blockNumber"), block::block_number));
-    methods.push((String::from("eth_getBlockByHash"), block::get_block_by_hash));
-    methods.push((String::from("eth_getBlockByNumber"), block::get_block_by_number));
-
-    methods.push((String::from("eth_newFilter"), logs::new_filter));
-    methods.push((String::from("eth_newBlockFilter"), logs::new_block_filter));
-    methods.push((String::from("eth_newPendingTransactionFilter"), logs::new_pending_transaction_filter));
-    methods.push((String::from("eth_uninstallFilter"), logs::uninstall_filter));
-    methods.push((String::from("eth_getFilterChanges"), logs::get_filter_changes));
-    methods.push((String::from("eth_getFilterLogs"), logs::get_filter_logs));
-    methods.push((String::from("eth_getLogs"), logs::get_logs));
-
-    methods.push((String::from("net_version"), network::version));
-    methods.push((String::from("net_peerCount"), network::peer_count));
-    methods.push((String::from("net_listening"), network::listening));
-
-    methods.push((String::from("eth_getTransactionCount"), transaction::get_transaction_count));
-    methods.push((String::from("eth_getBlockTransactionCountByHash"), transaction::get_block_transaction_count_by_hash));
-    methods.push((String::from("eth_getBlockTransactionCountByNumber"), transaction::get_block_transaction_count_by_number));
-    methods.push((String::from("eth_sendTransaction"), transaction::send_transaction));
-    methods.push((String::from("eth_sendRawTransaction"), transaction::send_raw_transaction));
-    methods.push((String::from("eth_getTransactionByHash"), transaction::get_transaction_by_hash));
-    methods.push((String::from("eth_getTransactionByBlockHashAndIndex"), transaction::get_transaction_by_block_hash_and_index));
-    methods.push((String::from("eth_getTransactionByBlockNumberAndIndex"), transaction::get_transaction_by_block_number_and_index));
-    methods.push((String::from("eth_getTransactionReceipt"), transaction::get_transaction_receipt));
-    methods.push((String::from("eth_gasPrice"), transaction::gas_price));
-    methods.push((String::from("eth_estimateGas"), transaction::estimate_gas));
+    methods.extend(account::get_method_list().into_iter());
+    methods.extend(block::get_method_list().into_iter());
+    methods.extend(logs::get_method_list().into_iter());
+    methods.extend(network::get_method_list().into_iter());
+    methods.extend(transaction::get_method_list().into_iter());
 
     methods
+}
+
+fn abort_if_err<T, E: std::error::Error>(r: Result<T, E>) -> T {
+    match r {
+        Ok(t) => t,
+        Err(error) => {
+            eprintln!("{}", error.description());
+            process::exit(1);
+        }
+    }
 }

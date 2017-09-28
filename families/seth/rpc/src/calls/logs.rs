@@ -17,10 +17,25 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use super::requests::{ValidatorClient};
+use client::{ValidatorClient};
+use requests::{RequestHandler};
 
 use sawtooth_sdk::messaging::stream::MessageSender;
-use super::error;
+use error;
+
+pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
+    let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
+
+    methods.push((String::from("eth_newFilter"), new_filter));
+    methods.push((String::from("eth_newBlockFilter"), new_block_filter));
+    methods.push((String::from("eth_newPendingTransactionFilter"), new_pending_transaction_filter));
+    methods.push((String::from("eth_uninstallFilter"), uninstall_filter));
+    methods.push((String::from("eth_getFilterChanges"), get_filter_changes));
+    methods.push((String::from("eth_getFilterLogs"), get_filter_logs));
+    methods.push((String::from("eth_getLogs"), get_logs));
+
+    methods
+}
 
 pub fn new_filter<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())

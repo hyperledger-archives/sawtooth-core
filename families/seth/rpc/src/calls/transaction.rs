@@ -17,10 +17,29 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use super::requests::{ValidatorClient};
+use client::{ValidatorClient};
 
 use sawtooth_sdk::messaging::stream::MessageSender;
-use super::error;
+use error;
+use requests::{RequestHandler};
+
+pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
+    let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
+
+    methods.push((String::from("eth_getTransactionCount"), get_transaction_count));
+    methods.push((String::from("eth_getBlockTransactionCountByHash"), get_block_transaction_count_by_hash));
+    methods.push((String::from("eth_getBlockTransactionCountByNumber"), get_block_transaction_count_by_number));
+    methods.push((String::from("eth_sendTransaction"), send_transaction));
+    methods.push((String::from("eth_sendRawTransaction"), send_raw_transaction));
+    methods.push((String::from("eth_getTransactionByHash"), get_transaction_by_hash));
+    methods.push((String::from("eth_getTransactionByBlockHashAndIndex"), get_transaction_by_block_hash_and_index));
+    methods.push((String::from("eth_getTransactionByBlockNumberAndIndex"), get_transaction_by_block_number_and_index));
+    methods.push((String::from("eth_getTransactionReceipt"), get_transaction_receipt));
+    methods.push((String::from("eth_gasPrice"), gas_price));
+    methods.push((String::from("eth_estimateGas"), estimate_gas));
+
+    methods
+}
 
 pub fn get_transaction_count<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())

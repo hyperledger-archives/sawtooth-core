@@ -17,16 +17,31 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use super::requests::{
+use client::{
     ValidatorClient,
     BlockKey,
     BlockKeyParseError,
     num_to_hex,
-    bytes_to_hex,
+    hex_prefix,
+    bytes_to_hex_str,
 };
 
 use sawtooth_sdk::messaging::stream::MessageSender;
-use super::error;
+use error;
+use requests::{RequestHandler};
+
+pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
+    let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
+
+    methods.push((String::from("eth_getBalance"), get_balance));
+    methods.push((String::from("eth_getStorageAt"), get_storage_at));
+    methods.push((String::from("eth_getCode"), get_code));
+    methods.push((String::from("eth_sign"), sign));
+    methods.push((String::from("eth_call"), call));
+    methods.push((String::from("eth_accounts"), accounts));
+
+    methods
+}
 
 fn validate_block_key(block: String) -> Result<BlockKey, Error> {
     match block.parse() {
@@ -93,7 +108,7 @@ pub fn get_storage_at<T>(params: Params, mut client: ValidatorClient<T>) -> Resu
     let storage_address = validate_storage_address(position)?;
 
     match client.get_storage_at(account_address, storage_address, key) {
-        Ok(Some(value)) => Ok(bytes_to_hex(&value)),
+        Ok(Some(value)) => Ok(hex_prefix(&bytes_to_hex_str(&value))),
         Ok(None) => Ok(Value::Null),
         Err(error) => {
             error!("{}", error);
@@ -115,7 +130,7 @@ pub fn get_code<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Val
     let address = validate_account_address(address)?;
 
     match client.get_account(address, key) {
-        Ok(Some(account)) => Ok(bytes_to_hex(&account.code)),
+        Ok(Some(account)) => Ok(hex_prefix(&bytes_to_hex_str(&account.code))),
         Ok(None) => Ok(Value::Null),
         Err(error) => {
             error!("{}", error);
