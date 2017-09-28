@@ -168,7 +168,7 @@ router.get('/records/:recordId', handle(records.fetchRecord))
 router.get('/records/:recordId/property/:propertyName', handle(records.fetchProperty))
 router.get('/records/:recordId/:propertyName', handle(records.fetchProperty))
 
-router.post('/transactions', restrict, handleBody(blockchain.submit))
+router.post('/transactions', handleBody(blockchain.submit))
 
 router.route('/users')
   .post(handleBody(users.create))
