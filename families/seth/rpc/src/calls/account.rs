@@ -17,7 +17,7 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use super::client::{
+use client::{
     ValidatorClient,
     BlockKey,
     BlockKeyParseError,
@@ -26,7 +26,7 @@ use super::client::{
 };
 
 use sawtooth_sdk::messaging::stream::MessageSender;
-use super::error;
+use error;
 
 fn validate_block_key(block: String) -> Result<BlockKey, Error> {
     match block.parse() {

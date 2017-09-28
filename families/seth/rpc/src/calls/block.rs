@@ -21,7 +21,7 @@ use protobuf;
 
 use error;
 
-use super::client::{
+use client::{
     ValidatorClient,
     BlockKey,
     num_to_hex,

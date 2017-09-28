@@ -17,10 +17,10 @@
 
 use jsonrpc_core::{Params, Value, Error};
 
-use super::client::{ValidatorClient};
+use client::{ValidatorClient};
 
 use sawtooth_sdk::messaging::stream::MessageSender;
-use super::error;
+use error;
 
 pub fn new_filter<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())

@@ -39,16 +39,11 @@ use jsonrpc_core::{Params};
 
 mod requests;
 mod client;
-mod error;
 mod messages;
-
-mod account;
-mod block;
-mod logs;
-mod network;
-mod transaction;
+mod calls;
 
 use requests::{RequestExecutor, RequestHandler};
+use calls::*;
 
 const SERVER_THREADS: usize = 3;
 
