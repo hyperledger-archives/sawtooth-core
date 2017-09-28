@@ -66,8 +66,8 @@ const subscribe = () => {
   })
 }
 
-const submit = (txnBytes, { wait, authedKey }) => {
-  const batch = batcher.batch(txnBytes, authedKey)
+const submit = (txnBytes, { wait }) => {
+  const batch = batcher.batch(txnBytes)
 
   return stream.send(
     Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
