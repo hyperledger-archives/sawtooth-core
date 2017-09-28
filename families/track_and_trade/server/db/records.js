@@ -82,13 +82,6 @@ const findProperty = recordId => block => propertyName => {
     .nth(0)
 }
 
-const getAuthorizedReporterKeys = property => {
-  return getReporters(property)
-    .filter(getAuthorization)
-    .map(getPublicKey)
-    .coerceTo('array')
-}
-
 const getReporter = publicKey => block => {
   return getTable('agents', block)
     .filter(hasPublicKey(publicKey))
@@ -122,7 +115,7 @@ const getUpdate = dataType => reporterKeys => block => value => {
   return r.expr({
     'value': getValue(dataType)(value),
     'timestamp': value('timestamp'),
-    'reporter': getReporter(reporterKeys.nth(value('reporterIndex')))(block)
+    'reporter': getReporter(reporterKeys.map(getPublicKey).nth(value('reporterIndex')))(block)
   })
 }
 
@@ -137,7 +130,7 @@ const getTypeProperties = record => block => {
 }
 
 const getPropertyValues = recordId => block => property => {
-  return getAuthorizedReporterKeys(property).do(reporterKeys => {
+  return getReporters(property).do(reporterKeys => {
     return getDataType(property).do(dataType => {
       return r.expr({
         'name': getName(property),
@@ -169,6 +162,13 @@ const makePropertiesEntry = propertyValues => {
     .default({})
 }
 
+const getAuthorizedReporterKeys = propertyValue => {
+  return propertyValue('reporterKeys')
+    .filter(getAuthorization)
+    .map(getPublicKey)
+    .coerceTo('array')
+}
+
 /* Queries */
 
 const fetchPropertyQuery = (recordId, name) => block => {
@@ -177,7 +177,7 @@ const fetchPropertyQuery = (recordId, name) => block => {
       return r.expr({
         'name': name,
         'recordId': recordId,
-        'reporters': propertyValues('reporterKeys'),
+        'reporters': getAuthorizedReporterKeys(propertyValues),
         'dataType': propertyValues('dataType'),
         'value': getCurrentValue(propertyValues),
         'updates': propertyValues('values')
@@ -206,7 +206,7 @@ const _loadRecord = (block, authedKey) => (record) => {
                 value
               )
             ),
-            'reporters': propertyValue('reporterKeys')
+            'reporters': getAuthorizedReporterKeys(propertyValue),
           })),
         'updates': r.expr({
           'owners': getOwners(record),
