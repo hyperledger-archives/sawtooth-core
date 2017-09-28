@@ -177,6 +177,7 @@ class SethRpcTest(unittest.TestCase):
     def _test_get_account(self, call):
         account_address = "f" * 20 * 2
         balance = 123
+        nonce = 456
         code_b = bytes([0xab, 0xcd, 0xef])
         code_s = "abcdef"
         position_b = bytes([0x01, 0x23, 0x45])
@@ -194,6 +195,9 @@ class SethRpcTest(unittest.TestCase):
             self.rpc.acall(
                 "eth_getStorageAt",
                 ["0x" + account_address, "0x" + position_s, "latest"])
+        elif call == "count":
+            self.rpc.acall(
+                "eth_getTransactionCount", ["0x" + account_address, "latest"])
 
         # Receive and validate the state request
         msg = self.validator.receive()
@@ -211,6 +215,7 @@ class SethRpcTest(unittest.TestCase):
                 value=EvmEntry(
                     account=EvmStateAccount(
                         balance=balance,
+                        nonce=nonce,
                         code=code_b),
                     storage=[EvmStorage(key=position_b, value=stored_b)],
                 ).SerializeToString()),
@@ -224,6 +229,8 @@ class SethRpcTest(unittest.TestCase):
             self.assertEqual("0x" + code_s, result)
         elif call == "storage":
             self.assertEqual("0x" + stored_s, result)
+        elif call == "count":
+            self.assertEqual(hex(nonce), result)
 
     def test_get_account_by_block_num(self):
         """Tests that account info is retrieved correctly when a block number
@@ -274,3 +281,8 @@ class SethRpcTest(unittest.TestCase):
 
         result = self.rpc.get_result()
         self.assertEqual(hex(balance), result)
+
+    def test_accounts(self):
+        """Tests that account list is retrieved correctly."""
+        address = "434d46456b6973a678b77382fca0252629f4389f"
+        self.assertEqual(["0x" + address], self.rpc.call("eth_accounts"))

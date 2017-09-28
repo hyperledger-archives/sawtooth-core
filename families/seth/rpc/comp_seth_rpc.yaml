@@ -30,7 +30,14 @@ services:
       - 4004
     environment:
       RUST_BACKTRACE: 1
-    command: cargo run -- --connect tcp://comp-seth-rpc:4004 --bind 0.0.0.0:3030 -v
+    command: "bash -c \"
+      mkdir -p ~/.sawtooth/ &&
+      cp tests/data/test.wif ~/.sawtooth/test.wif &&
+      cargo run --
+        --connect tcp://comp-seth-rpc:4004
+        --bind 0.0.0.0:3030
+        -v
+        --unlock test\""
 
   comp-seth-rpc:
     image: sawtooth-dev-python:$ISOLATION_ID
