@@ -16,6 +16,7 @@
  */
 
 use std::fmt::LowerHex;
+use std::str::FromStr;
 use std::collections::HashMap;
 
 use futures_cpupool::{CpuPool};
@@ -33,9 +34,15 @@ use sawtooth_sdk::messages::client::{
     ClientBlockGetRequest,
     ClientBlockGetResponse,
     ClientBlockGetResponse_Status,
+    ClientStateGetRequest,
+    ClientStateGetResponse,
+    ClientStateGetResponse_Status,
 };
 use sawtooth_sdk::messages::transaction::{TransactionHeader};
-use super::messages::seth::{SethTransactionReceipt};
+use super::messages::seth::{
+    SethTransactionReceipt,
+    EvmEntry, EvmStateAccount, EvmStorage,
+};
 
 use protobuf;
 use uuid;
@@ -65,9 +72,43 @@ impl<T: MessageSender + Clone + Sync + Send + 'static> RequestExecutor<T> {
 }
 
 pub enum BlockKey {
+    Latest,
+    Earliest,
     Number(u64),
     Signature(String),
 }
+
+pub enum BlockKeyParseError {
+    Unsupported,
+    Invalid,
+}
+
+impl FromStr for BlockKey {
+    type Err = BlockKeyParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "latest" {
+            Ok(BlockKey::Latest)
+        } else if s == "earliest" {
+            Ok(BlockKey::Earliest)
+        } else if s == "pending" {
+            Err(BlockKeyParseError::Unsupported)
+        } else {
+            if s.len() < 3 {
+                Err(BlockKeyParseError::Invalid)
+            } else {
+                match u64::from_str_radix(&s[2..], 16) {
+                    Ok(num) => Ok(BlockKey::Number(num)),
+                    Err(_) => {
+                        Err(BlockKeyParseError::Invalid)
+                    },
+                }
+            }
+        }
+    }
+}
+
+const SETH_NS: &str = "a68b06";
 
 #[derive(Clone)]
 pub struct ValidatorClient<S: MessageSender> {
@@ -176,6 +217,8 @@ impl<S: MessageSender> ValidatorClient<S> {
         match block_key {
             BlockKey::Signature(block_id) => request.set_block_id(block_id),
             BlockKey::Number(block_num) => request.set_block_num(block_num),
+            BlockKey::Latest => {},
+            BlockKey::Earliest => request.set_block_id(String::from("0000000000000000")),
         };
 
         let response: ClientBlockGetResponse =
@@ -193,7 +236,104 @@ impl<S: MessageSender> ValidatorClient<S> {
             },
         }
     }
+
+    pub fn get_entry(&mut self, account_address: String, block: BlockKey) -> Result<Option<EvmEntry>, String> {
+        let address = String::from(SETH_NS) + &account_address + "000000000000000000000000";
+        let mut request = ClientStateGetRequest::new();
+        request.set_address(address);
+        match block {
+            BlockKey::Latest => {},
+            BlockKey::Earliest => {
+                request.set_head_id(String::from("0000000000000000"));
+            },
+            BlockKey::Signature(block_id) => {
+                request.set_head_id(block_id);
+            },
+            BlockKey::Number(block_num) => match self.block_num_to_block_id(block_num) {
+                Ok(Some(block_id)) => {
+                    request.set_head_id(block_id);
+                },
+                Ok(None) => {
+                    return Err(String::from("Invalid block number"));
+                },
+                Err(error) => {
+                    return Err(error);
+                },
+            },
+        }
+
+        let response: ClientStateGetResponse =
+            self.request(Message_MessageType::CLIENT_STATE_GET_REQUEST, &request)?;
+
+        let state_data = match response.status {
+            ClientStateGetResponse_Status::OK => response.value,
+            ClientStateGetResponse_Status::NO_RESOURCE => {
+                return Ok(None);
+            },
+            ClientStateGetResponse_Status::INTERNAL_ERROR => {
+                return Err(String::from("Internal error"));
+            },
+            ClientStateGetResponse_Status::NOT_READY => {
+                return Err(String::from("Validator isn't ready"));
+            },
+            ClientStateGetResponse_Status::NO_ROOT => {
+                return Err(String::from("No root"));
+            },
+            ClientStateGetResponse_Status::INVALID_ADDRESS => {
+                return Err(String::from("Invalid address"));
+            },
+        };
+
+        match protobuf::parse_from_bytes(&state_data) {
+            Ok(e) => Ok(Some(e)),
+            Err(error) => {
+                Err(String::from(format!("Failed to deserialize EVM entry: {:?}", error)))
+            },
+        }
+    }
+
+    pub fn get_account(&mut self, account_address: String, block: BlockKey) -> Result<Option<EvmStateAccount>, String> {
+        self.get_entry(account_address, block).map(|option|
+            option.map(|mut entry| entry.take_account()))
+    }
+
+    pub fn get_storage(&mut self, account_address: String, block: BlockKey) -> Result<Option<Vec<EvmStorage>>, String> {
+        self.get_entry(account_address, block).map(|option|
+            option.map(|mut entry| entry.take_storage().into_vec()))
+    }
+
+    pub fn get_storage_at(&mut self, account_address: String, storage_address: String, block: BlockKey) -> Result<Option<Vec<u8>>, String> {
+        let storage = self.get_storage(account_address, block)?;
+
+        match storage {
+            Some(storage) => {
+                let position = match hex_to_bytes(&storage_address) {
+                    Some(p) => p,
+                    None => {
+                        return Err(String::from("Failed to decode position, invalid hex."));
+                    }
+                };
+                for entry in storage.into_iter() {
+                    if entry.key == position {
+                        return Ok(Some(Vec::from(entry.value)));
+                    }
+                }
+                return Ok(None);
+            },
+            None => {
+                return Ok(None);
+            }
+        }
+    }
+
+    fn block_num_to_block_id(&mut self, block_num: u64) -> Result<Option<String>, String> {
+        self.get_block(BlockKey::Number(block_num)).map(|option|
+            option.map(|block|
+                String::from(block.header_signature)))
+    }
 }
+
+
 
 pub fn num_to_hex<T>(n: &T) -> Value where T: LowerHex {
     Value::String(String::from(format!("{:#x}", n)))
@@ -201,4 +341,36 @@ pub fn num_to_hex<T>(n: &T) -> Value where T: LowerHex {
 
 pub fn string_to_hex(s: &str) -> Value {
     Value::String(String::from(format!("0x{}", s)))
+}
+
+pub fn bytes_to_hex(bytes: &[u8]) -> Value {
+    let mut s = String::from("0x");
+    for &b in bytes.iter() {
+        s.push_str(&(format!("{:x}", b)))
+    }
+    Value::String(s)
+}
+
+pub fn hex_to_bytes(hex: &str) -> Option<Vec<u8>> {
+    if hex.len() % 2 != 0 {
+        return None
+    }
+
+    let mut string = String::from(hex);
+    let mut bytes = Vec::new();
+    while string.len() > 0 {
+        let a = string.pop().unwrap();
+        let b = string.pop().unwrap();
+        let mut c = String::new();
+        c.push(b);
+        c.push(a);
+        match u8::from_str_radix(&c, 16) {
+            Ok(x) => bytes.push(x),
+            Err(_) => {
+                return None;
+            }
+        }
+    }
+    bytes.reverse();
+    Some(bytes)
 }
