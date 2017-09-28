@@ -24,7 +24,7 @@ const payloads = require('../services/payloads')
 const parsing = require('../services/parsing')
 const transactions = require('../services/transactions')
 const layout = require('../components/layout')
-const { MapWidget } = require('../components/data')
+const { LineGraphWidget, MapWidget } = require('../components/data')
 const { Table, PagingButtons } = require('../components/tables')
 
 const PAGE_SIZE = 50
@@ -38,6 +38,10 @@ const typedWidget = state => {
     return m(MapWidget, {
       coordinates: property.updates.map(update => update.value)
     })
+  }
+
+  if (property.dataType === 'INT' || property.dataType === 'FLOAT') {
+    return m(LineGraphWidget, { updates: property.updates })
   }
 
   return null
