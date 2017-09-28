@@ -519,6 +519,29 @@ class TestTrackAndTrade(unittest.TestCase):
 
         self.narrate(
             '''
+            Upon transfer of ownership, Sun became a reporter on all
+            of the record's properties and Jin reporter authorization
+            was revoked. Jin's sensor remains authorized.
+            '''
+        )
+
+        self.assert_invalid(
+            jin.update_properties(
+                'fish-456',
+                {'temperature': 6}))
+
+        self.assert_valid(
+            sun.update_properties(
+                'fish-456',
+                {'temperature': 6}))
+
+        self.assert_valid(
+            sensor_stark.update_properties(
+                'fish-456',
+                {'temperature': 7}))
+
+        self.narrate(
+            '''
             Sun wants to finalize the record to prevent any further updates.
             ''')
 
@@ -576,6 +599,7 @@ class TestTrackAndTrade(unittest.TestCase):
                 agent['name'],
                 agent['owns'],
                 agent['custodian'],
+                agent['reports'],
             ]
             for agent in
             sorted(
@@ -591,9 +615,11 @@ class TestTrackAndTrade(unittest.TestCase):
                     'Jin Kwon',
                     [],
                     [],
+                    [],
                 ],
                 [
                     'Sun Kwon',
+                    ['fish-456'],
                     ['fish-456'],
                     ['fish-456'],
                 ],
@@ -601,6 +627,7 @@ class TestTrackAndTrade(unittest.TestCase):
                     'sensor-stark',
                     [],
                     [],
+                    ['fish-456'],
                 ],
             ]
         )
@@ -655,7 +682,7 @@ class TestTrackAndTrade(unittest.TestCase):
         self.assertEqual(len(get_record_property['reporters']), 2)
 
         self.assertIn('updates', get_record_property)
-        self.assertEqual(len(get_record_property['updates']), 7)
+        self.assertEqual(len(get_record_property['updates']), 9)
 
         for update in get_record_property['updates']:
             self.assertIn('timestamp', update)
