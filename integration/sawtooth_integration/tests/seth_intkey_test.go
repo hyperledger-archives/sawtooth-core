@@ -50,7 +50,7 @@ func TestIntkey(t *testing.T) {
   nonce += 1
 
   // Create the Contract
-  contractAddr, err := client.CreateContractAccount(priv, init, nil, nonce, 1000, WAIT)
+  createContractResult, err := client.CreateContractAccount(priv, init, nil, nonce, 1000, WAIT)
   if err != nil {
    t.Error(err.Error())
   }
@@ -58,13 +58,9 @@ func TestIntkey(t *testing.T) {
 
   // Test event receipt
   cmd, _ := hex.DecodeString(SET_0_42)
-  txn_id, err := client.MessageCall(priv, contractAddr, cmd, nonce, 1000, 300, false)
-  events, err := client.GetEvents(txn_id)
-  if err != nil {
-    t.Fatal(err)
-  }
+  callSetResult, err := client.MessageCall(priv, createContractResult.Address, cmd, nonce, 1000, 300, false)
 
-  if events[0].Attributes[0].Key != "address" {
+  if callSetResult.Events[0].Attributes[0].Key != "address" {
     t.Errorf("Event was not created")
   }
   nonce += 1
@@ -77,14 +73,14 @@ func TestIntkey(t *testing.T) {
 
   for _, c := range cmds {
     cmd, _ := hex.DecodeString(c)
-    _, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000, WAIT, false)
+    _, err = client.MessageCall(priv, createContractResult.Address, cmd, nonce, 1000, WAIT, false)
     if err != nil {
       t.Error(err.Error())
     }
     nonce += 1
   }
 
-  entry, err := client.Get(contractAddr)
+  entry, err := client.Get(createContractResult.Address)
   if err != nil {
     t.Error(err.Error())
   }
@@ -114,12 +110,11 @@ func TestIntkey(t *testing.T) {
 
   // Get the value stored at key 0
   cmd, _ = hex.DecodeString(GET_0)
-  txn_id, err = client.MessageCall(priv, contractAddr, cmd, nonce, 1000, 300, false)
-  receipt, err := client.GetReceipt(txn_id)
+  callGetResult, err := client.MessageCall(priv, createContractResult.Address, cmd, nonce, 1000, 300, false)
   if err != nil {
     t.Fatal(err)
   }
-  value := word256.Uint64FromWord256(word256.RightPadWord256(receipt.ReturnValue))
+  value := word256.Uint64FromWord256(word256.RightPadWord256(callGetResult.ReturnValue))
   if value != 41 {
     t.Fatalf("Contract returned incorrect value: %v", value)
   }

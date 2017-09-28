@@ -20,6 +20,8 @@ package client
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"net/http"
@@ -39,6 +41,26 @@ func New(url string) *Client {
 	return &Client{
 		Url: url,
 	}
+}
+
+type ClientResult struct {
+	TransactionID string  `json:",omitempty"`
+	Address       []byte  `json:",omitempty"`
+	GasUsed       uint64  `json:",omitempty"`
+	ReturnValue   []byte  `json:",omitempty"`
+	Events        []Event `json:",omitempty"`
+}
+
+// Allows address bytes to be encoded to hex for CLI output
+func (r *ClientResult) MarshalJSON() ([]byte, error) {
+	type Alias ClientResult
+	return json.MarshalIndent(&struct {
+		*Alias
+		Address string `json:"Address,omitempty"`
+	}{
+		Alias:   (*Alias)(r),
+		Address: hex.EncodeToString(r.Address),
+	}, "", "  ")
 }
 
 // Get retrieves all data in state associated with the given address. If there
@@ -86,8 +108,9 @@ func (c *Client) Get(address []byte) (*EvmEntry, error) {
 // key will be used to create the new account. If perms is not nil, the new
 // account is created with the given permissions.
 //
-// Returns the address of the new account.
-func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermissions, nonce uint64, wait int) ([]byte, error) {
+// Returns the address of the new account, transaction ID, and receipt.
+func (c *Client) CreateExternalAccount(
+	priv, moderator []byte, perms *EvmPermissions, nonce uint64, wait int) (*ClientResult, error) {
 	newAcctAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
@@ -129,13 +152,31 @@ func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermiss
 		Outputs:         addresses,
 	})
 
-	body, err := c.sendTxn(transaction, encoder, wait)
+	txnID, err := c.sendTxn(transaction, encoder, wait)
 	if err != nil {
 		return nil, err
 	}
-	logger.Debug(body)
+	logger.Debug("Tranasaction ID: %s", txnID)
 
-	return newAcctAddr.Bytes(), nil
+	if wait > 0 {
+		receipt, err := c.getTransactionReceipt(txnID)
+		if err != nil {
+			logger.Debug("Unable to get transaction receipt: %s", err.Error())
+		} else {
+			sethReceipt, events := c.parseTransactionReceipt(receipt)
+			return &ClientResult{
+				TransactionID: txnID,
+				Address:       newAcctAddr.Bytes(),
+				GasUsed:       sethReceipt.GetGasUsed(),
+				ReturnValue:   sethReceipt.GetReturnValue(),
+				Events:        events,
+			}, nil
+		}
+	}
+	return &ClientResult{
+		TransactionID: txnID,
+		Address:       newAcctAddr.Bytes(),
+	}, nil
 }
 
 // CreateContractAccount creates a new contract associated with the account
@@ -143,8 +184,9 @@ func (c *Client) CreateExternalAccount(priv, moderator []byte, perms *EvmPermiss
 // data in init. If permissions are passed, the account is created with those
 // permissions.
 //
-// Returns the address of the new account.
-func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermissions, nonce uint64, gas uint64, wait int) ([]byte, error) {
+// Returns the address of the new account, transaction ID, and receipt.
+func (c *Client) CreateContractAccount(
+	priv []byte, init []byte, perms *EvmPermissions, nonce uint64, gas uint64, wait int) (*ClientResult, error) {
 	creatorAcctAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
 		return nil, err
@@ -179,13 +221,31 @@ func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermi
 		},
 	}
 
-	body, err := c.sendTxn(transaction, encoder, wait)
+	txnID, err := c.sendTxn(transaction, encoder, wait)
 	if err != nil {
 		return nil, err
 	}
-	logger.Debug(body)
+	logger.Debug(txnID)
 
-	return newAcctAddr.Bytes(), nil
+	if wait > 0 {
+		receipt, err := c.getTransactionReceipt(txnID)
+		if err != nil {
+			logger.Debug("Unable to get transaction receipt: %s", err.Error())
+		} else {
+			sethReceipt, events := c.parseTransactionReceipt(receipt)
+			return &ClientResult{
+				TransactionID: txnID,
+				Address:       newAcctAddr.Bytes(),
+				GasUsed:       sethReceipt.GetGasUsed(),
+				ReturnValue:   sethReceipt.GetReturnValue(),
+				Events:        events,
+			}, nil
+		}
+	}
+	return &ClientResult{
+		TransactionID: txnID,
+		Address:       newAcctAddr.Bytes(),
+	}, nil
 }
 
 // MessageCall sends a message call from the account associated with the given
@@ -193,15 +253,16 @@ func (c *Client) CreateContractAccount(priv []byte, init []byte, perms *EvmPermi
 // to the contract call.
 //
 // Returns the output from the EVM call.
-func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wait int, chaining_enabled bool) (string, error) {
+func (c *Client) MessageCall(
+	priv, to, data []byte, nonce uint64, gas uint64, wait int, chaining_enabled bool) (*ClientResult, error) {
 	fromAddr, err := PrivToEvmAddr(priv)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	toAddr, err := NewEvmAddrFromBytes(to)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var addresses []string
@@ -235,12 +296,29 @@ func (c *Client) MessageCall(priv, to, data []byte, nonce uint64, gas uint64, wa
 		},
 	}
 
-	txnId, err := c.sendTxn(transaction, encoder, wait)
+	txnID, err := c.sendTxn(transaction, encoder, wait)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return txnId, nil
+	if wait > 0 {
+		receipt, err := c.getTransactionReceipt(txnID)
+		if err != nil {
+			logger.Debug("Unable to get transaction receipt: %s", err.Error())
+		} else {
+			sethReceipt, events := c.parseTransactionReceipt(receipt)
+			return &ClientResult{
+				TransactionID: txnID,
+				Address:       sethReceipt.GetContractAddress(),
+				GasUsed:       sethReceipt.GetGasUsed(),
+				ReturnValue:   sethReceipt.GetReturnValue(),
+				Events:        events,
+			}, nil
+		}
+	}
+	return &ClientResult{
+		TransactionID: txnID,
+	}, nil
 }
 
 // SetPermissions updates the permissions of the account at the given address
@@ -346,28 +424,43 @@ func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wai
 	return txn.HeaderSignature, nil
 }
 
-func (c *Client) GetReceipt(txnId string) (*SethTransactionReceipt, error) {
-	resp, err := http.Get(c.Url + "/receipts?id=" + txnId)
+func (c *Client) GetReceipt(txnID string) (*SethTransactionReceipt, error) {
+	receipt, err := c.getTransactionReceipt(txnID)
 	if err != nil {
 		return nil, err
 	}
-
-	body, err := ParseReceiptBody(resp)
-	if err != nil {
-		return nil, err
-	}
-
-	buf, err := base64.StdEncoding.DecodeString(body.Data[0].Data[0].Data)
-	if err != nil {
-		return nil, err
-	}
-	seth_receipt := &SethTransactionReceipt{}
-	err = proto.Unmarshal(buf, seth_receipt)
-	return seth_receipt, err
+	sethReceipt, _ := c.parseTransactionReceipt(receipt)
+	return &ClientResult{
+		Address:       sethReceipt.GetContractAddress(),
+		GasUsed:       sethReceipt.GetGasUsed(),
+		ReturnValue:   sethReceipt.GetReturnValue(),
+	}, nil
 }
 
-func (c *Client) GetEvents(txnId string) ([]Event, error) {
-	resp, err := http.Get(c.Url + "/receipts?id=" + txnId)
+func (c *Client) GetEvents(txnID string) ([]Event, error) {
+	receipt, err := c.getTransactionReceipt(txnID)
+	if err != nil {
+		return nil, err
+	}
+
+	events := receipt.Events
+	return events, nil
+}
+
+func (c *Client) parseTransactionReceipt(receipt *TransactionReceipt) (*SethTransactionReceipt, []Event) {
+	sethReceipt := &SethTransactionReceipt{}
+	buf, err := base64.StdEncoding.DecodeString(receipt.Data[0].Data)
+	if err != nil {
+		logger.Debugf("Receipt not available")
+		sethReceipt = nil
+	}
+	sethReceipt = &SethTransactionReceipt{}
+	err = proto.Unmarshal(buf, sethReceipt)
+	return sethReceipt, receipt.Events
+}
+
+func (c *Client) getTransactionReceipt(txnID string) (*TransactionReceipt, error) {
+	resp, err := http.Get(c.Url + "/receipts?id=" + txnID)
 	if err != nil {
 		return nil, err
 	}
@@ -377,9 +470,9 @@ func (c *Client) GetEvents(txnId string) ([]Event, error) {
 		return nil, err
 	}
 
-	events := body.Data[0].Events
-	if err != nil {
-		return nil, err
+	if body.Error.Code != 0 {
+		return nil, fmt.Errorf(body.Error.Message)
 	}
-	return events, nil
+
+	return &body.Data[0], nil
 }

@@ -76,20 +76,21 @@ func (args *ContractCreate) Run(config *Config) error {
 		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
 	}
 
-	addr, err := client.CreateContractAccount(priv, init, perms, args.Nonce, args.Gas, args.Wait)
+	clientResult, err := client.CreateContractAccount(priv, init, perms, args.Nonce, args.Gas, args.Wait)
 	if err != nil {
 		return fmt.Errorf("Problem submitting account creation transaction: %v", err)
 	}
 
 	if args.Wait > 0 {
-		fmt.Printf(
-			"Contract created at %v\n", hex.EncodeToString(addr),
-		)
+		fmt.Printf("Contract created\n")
 	} else {
-		fmt.Printf(
-			"Transaction submitted to create contract at %v\n", hex.EncodeToString(addr),
-		)
+		fmt.Printf("Transaction submitted to create contract\n")
 	}
+	info, err := clientResult.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("Error displaying receipt: %s", err.Error())
+	}
+	fmt.Println("Transaction Receipt: ", string(info))
 
 	return nil
 }

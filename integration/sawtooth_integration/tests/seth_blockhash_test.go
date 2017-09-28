@@ -52,19 +52,15 @@ func TestBlockHash(t *testing.T) {
   nonce += 1
 
   // Create the Contract
-  contractAddr, err := client.CreateContractAccount(priv, init, nil, nonce, 1000, WAIT)
+  contractCreateResult, err := client.CreateContractAccount(priv, init, nil, nonce, 1000, WAIT)
   if err != nil {
    t.Error(err.Error())
   }
   nonce += 1
 
   cmd, _ := hex.DecodeString(BLOCKHASH_1)
-  txn_id, err := client.MessageCall(priv, contractAddr, cmd, nonce, 1000, WAIT, false)
-  receipt, err := client.GetReceipt(txn_id)
-  if err != nil {
-    t.Fatal(err)
-  }
-  blockHash := hex.EncodeToString(receipt.GetReturnValue())
+  contractCallResult, err := client.MessageCall(priv, contractCreateResult.Address, cmd, nonce, 1000, WAIT, false)
+  blockHash := hex.EncodeToString(contractCallResult.ReturnValue)
 
   // Get expectedBlockHash of block 1 from BlockInfo
   blockInfoAddr, err := NewBlockInfoAddr(1);
