@@ -284,6 +284,10 @@ const ReportLocation = {
           m('label.sr-only', { 'for': 'latitude' }, 'Latitude'),
           m("input.form-control[type='text']", {
             name: 'latitude',
+            type: 'number',
+            step: 'any',
+            min: -90,
+            max: 90,
             onchange: m.withAttr('value', (value) => {
               vnode.state.latitude = value
             }),
@@ -294,6 +298,10 @@ const ReportLocation = {
           m('label.sr-only', { 'for': 'longitude' }, 'Longitude'),
           m("input.form-control[type='text']", {
             name: 'longitude',
+            type: 'number',
+            step: 'any',
+            min: -180,
+            max: 180,
             onchange: m.withAttr('value', (value) => {
               vnode.state.longitude = value
             }),
@@ -338,6 +346,102 @@ const ReportValue = {
             })),
          m('.col-2',
            m('button.btn.btn-primary', 'Update'))))
+    ]
+  }
+}
+
+const ReportTilt = {
+  view: (vnode) => {
+    let onsuccess = vnode.attrs.onsuccess || (() => null)
+    return [
+      m('form', {
+        onsubmit: (e) => {
+          e.preventDefault()
+          _updateProperty(vnode.attrs.record, {
+            name: 'tilt',
+            stringValue: JSON.stringify({
+              x: parsing.toInt(vnode.state.x),
+              y: parsing.toInt(vnode.state.y)
+            }),
+            dataType: payloads.updateProperties.enum.STRING,
+          })
+          .then(() => {
+            vnode.state.x = null
+            vnode.state.y = null
+          })
+          .then(onsuccess)
+        }
+      },
+      m('.form-row',
+        m('.col.md-4.mr-1',
+          m('input.form-control', {
+            placeholder: 'Enter X...',
+            type: 'number',
+            step: 'any',
+            oninput: m.withAttr('value', (value) => {
+              vnode.state.x = value
+            })
+          })),
+        m('.col.md-4',
+          m('input.form-control', {
+            placeholder: 'Enter Y...',
+            type: 'number',
+            step: 'any',
+            oninput: m.withAttr('value', (value) => {
+              vnode.state.y = value
+            })
+          })),
+        m('.col-2',
+          m('button.btn.btn-primary', 'Update'))))
+    ]
+  }
+}
+
+const ReportShock = {
+  view: (vnode) => {
+    let onsuccess = vnode.attrs.onsuccess || (() => null)
+    return [
+      m('form', {
+        onsubmit: (e) => {
+          e.preventDefault()
+          _updateProperty(vnode.attrs.record, {
+            name: 'shock',
+            stringValue: JSON.stringify({
+              accel: parsing.toInt(vnode.state.accel),
+              duration: parsing.toInt(vnode.state.duration)
+            }),
+            dataType: payloads.updateProperties.enum.STRING,
+          })
+          .then(() => {
+            vnode.state.accel = null
+            vnode.state.duration = null
+          })
+          .then(onsuccess)
+        }
+      },
+      m('.form-row',
+        m('.col.md-4.mr-1',
+          m('input.form-control', {
+            placeholder: 'Enter Acceleration...',
+            type: 'number',
+            step: 'any',
+            min: 0,
+            oninput: m.withAttr('value', (value) => {
+              vnode.state.accel = value
+            })
+          })),
+        m('.col.md-4',
+          m('input.form-control', {
+            placeholder: 'Enter Duration...',
+            type: 'number',
+            step: 'any',
+            min: 0,
+            oninput: m.withAttr('value', (value) => {
+              vnode.state.duration = value
+            })
+          })),
+        m('.col-2',
+          m('button.btn.btn-primary', 'Update'))))
     ]
   }
 }
@@ -474,14 +578,10 @@ const FishDetail = {
         _row(
           _labelProperty(
             'Tilt',
-            _propLink(record, 'tilt', getPropertyValue(record, 'tilt', 'Unknown'))),
+            _propLink(record, 'tilt', _formatValue(record, 'tilt'))),
           (isReporter(record, 'tilt', publicKey) && !record.final
-           ? m(ReportValue, {
-             name: 'tilt',
-             label: 'Tilt',
+           ? m(ReportTilt, {
              record,
-             typeField: 'stringValue',
-             type: payloads.updateProperties.enum.STRING,
              onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
            })
            : null)),
@@ -489,14 +589,10 @@ const FishDetail = {
         _row(
           _labelProperty(
             'Shock',
-            _propLink(record, 'shock', getPropertyValue(record, 'shock', 'Unknown'))),
+            _propLink(record, 'shock', _formatValue(record, 'shock'))),
           (isReporter(record, 'shock', publicKey) && !record.final
-           ? m(ReportValue, {
-             name: 'shock',
-             label: 'Shock',
+           ? m(ReportShock, {
              record,
-             typeField: 'stringValue',
-             type: payloads.updateProperties.enum.STRING,
              onsuccess: () => _loadData(vnode.attrs.recordId, vnode.state)
            })
            : null)),
@@ -522,6 +618,15 @@ const FishDetail = {
          : '')
        )
     ]
+  }
+}
+
+const _formatValue = (record, propName) => {
+  let prop = getPropertyValue(record, propName)
+  if (prop) {
+    return parsing.stringifyValue(parsing.floatifyValue(prop), '***', propName)
+  } else {
+    return 'N/A'
   }
 }
 
