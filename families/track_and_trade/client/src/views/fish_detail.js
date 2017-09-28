@@ -59,20 +59,34 @@ const TransferDropdown = {
     // Default to no-op
     let handleSelected = vnode.attrs.handleSelected || (() => null)
     let onsuccess = vnode.attrs.onsuccess || (() => null)
+    let record = vnode.attrs.record
+    let role = vnode.attrs.role
     return [
       m('.dropdown',
         m('button.btn.btn-primary.btn-block.dropdown-toggle.text-left',
           { 'data-toggle': 'dropdown' },
           vnode.children),
         m('.dropdown-menu',
-          vnode.attrs.agents.map(agent =>
-            m("a.dropdown-item[href='#']", {
-              onclick: (e) => {
-                e.preventDefault()
-                handleSelected(agent.key).then(onsuccess)
-              }
-            }, m('span.text-truncate',
-                 truncate(agent.name, { length: 32 }))))))
+          vnode.attrs.agents.map(agent => {
+            let proposal = _getProposal(record, agent.key, role)
+            return [
+              m("a.dropdown-item[href='#']", {
+                onclick: (e) => {
+                  e.preventDefault()
+                  if (proposal) {
+                    _answerProposal(record, agent.key, ROLE_TO_ENUM[role],
+                                    payloads.answerProposal.enum.CANCEL)
+                      .then(onsuccess)
+                  } else {
+                    _submitProposal(record, ROLE_TO_ENUM[role], agent.key)
+                      .then(onsuccess)
+                  }
+                }
+              }, m('span.text-truncate',
+                   truncate(agent.name, { length: 32 }),
+                   (!!proposal ? ' \u2718' : '')))
+            ]
+          })))
     ]
   }
 }
@@ -95,7 +109,9 @@ const TransferControl = {
       return [
         m(TransferDropdown, {
           agents,
-          handleSelected: _submitProposal(record, ROLE_TO_ENUM[role], onsuccess)
+          record,
+          role,
+          onsuccess,
         }, `Transfer ${label}`)
       ]
     } else if (_hasProposal(record, publicKey, role)) {
@@ -497,7 +513,7 @@ const _loadData = (recordId, state) => {
   })
 }
 
-const _submitProposal = (record, role, onsuccess) => (publicKey) => {
+const _submitProposal = (record, role, publicKey) => {
   let transferPayload = payloads.createProposal({
     recordId: record.recordId,
     receivingAgent: publicKey,
@@ -507,7 +523,6 @@ const _submitProposal = (record, role, onsuccess) => (publicKey) => {
   return transactions.submit([transferPayload], true).then(() => {
     console.log('Successfully submitted proposal')
   })
-  .then(onsuccess)
 }
 
 const _answerProposal = (record, publicKey, role, response) => {
