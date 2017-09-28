@@ -22,7 +22,8 @@ use client::{
     BlockKey,
     BlockKeyParseError,
     num_to_hex,
-    bytes_to_hex,
+    hex_prefix,
+    bytes_to_hex_str,
 };
 
 use sawtooth_sdk::messaging::stream::MessageSender;
@@ -107,7 +108,7 @@ pub fn get_storage_at<T>(params: Params, mut client: ValidatorClient<T>) -> Resu
     let storage_address = validate_storage_address(position)?;
 
     match client.get_storage_at(account_address, storage_address, key) {
-        Ok(Some(value)) => Ok(bytes_to_hex(&value)),
+        Ok(Some(value)) => Ok(hex_prefix(&bytes_to_hex_str(&value))),
         Ok(None) => Ok(Value::Null),
         Err(error) => {
             error!("{}", error);
@@ -129,7 +130,7 @@ pub fn get_code<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Val
     let address = validate_account_address(address)?;
 
     match client.get_account(address, key) {
-        Ok(Some(account)) => Ok(bytes_to_hex(&account.code)),
+        Ok(Some(account)) => Ok(hex_prefix(&bytes_to_hex_str(&account.code))),
         Ok(None) => Ok(Value::Null),
         Err(error) => {
             error!("{}", error);

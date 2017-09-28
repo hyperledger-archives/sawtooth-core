@@ -26,7 +26,7 @@ use client::{
     ValidatorClient,
     BlockKey,
     num_to_hex,
-    string_to_hex,
+    hex_prefix,
 };
 
 use sawtooth_sdk::messaging::stream::*;
@@ -101,9 +101,9 @@ fn get_block_obj<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Resu
 
     let mut bob = Map::new();
     bob.insert(String::from("number"), num_to_hex(&block_header.block_num));
-    bob.insert(String::from("hash"), string_to_hex(&block.header_signature));
-    bob.insert(String::from("parentHash"), string_to_hex(&block_header.previous_block_id));
-    bob.insert(String::from("stateRoot"), string_to_hex(&block_header.state_root_hash));
+    bob.insert(String::from("hash"), hex_prefix(&block.header_signature));
+    bob.insert(String::from("parentHash"), hex_prefix(&block_header.previous_block_id));
+    bob.insert(String::from("stateRoot"), hex_prefix(&block_header.state_root_hash));
 
     let receipts = match client.get_receipts(&block) {
         Ok(r) => r,
@@ -115,7 +115,7 @@ fn get_block_obj<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Resu
     let mut transactions = Vec::new();
     let mut gas: u64 = 0;
     for (txn_id, receipt) in receipts.into_iter() {
-        transactions.push(string_to_hex(&txn_id));
+        transactions.push(hex_prefix(&txn_id));
         gas += receipt.gas_used;
     }
     bob.insert(String::from("transactions"), Value::Array(transactions));

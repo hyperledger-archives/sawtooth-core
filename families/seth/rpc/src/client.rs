@@ -292,7 +292,7 @@ impl<S: MessageSender> ValidatorClient<S> {
 
         match storage {
             Some(storage) => {
-                let position = match hex_to_bytes(&storage_address) {
+                let position = match hex_str_to_bytes(&storage_address) {
                     Some(p) => p,
                     None => {
                         return Err(String::from("Failed to decode position, invalid hex."));
@@ -324,38 +324,30 @@ pub fn num_to_hex<T>(n: &T) -> Value where T: LowerHex {
     Value::String(String::from(format!("{:#x}", n)))
 }
 
-pub fn string_to_hex(s: &str) -> Value {
+pub fn hex_prefix(s: &str) -> Value {
     Value::String(String::from(format!("0x{}", s)))
 }
 
-pub fn bytes_to_hex(bytes: &[u8]) -> Value {
-    let mut s = String::from("0x");
-    for &b in bytes.iter() {
-        s.push_str(&(format!("{:x}", b)))
-    }
-    Value::String(s)
-}
-
-pub fn hex_to_bytes(hex: &str) -> Option<Vec<u8>> {
-    if hex.len() % 2 != 0 {
-        return None
-    }
-
-    let mut string = String::from(hex);
-    let mut bytes = Vec::new();
-    while string.len() > 0 {
-        let a = string.pop().unwrap();
-        let b = string.pop().unwrap();
-        let mut c = String::new();
-        c.push(b);
-        c.push(a);
-        match u8::from_str_radix(&c, 16) {
-            Ok(x) => bytes.push(x),
-            Err(_) => {
-                return None;
-            }
+pub fn hex_str_to_bytes(s: &str) -> Option<Vec<u8>> {
+    for ch in s.chars() {
+        if !ch.is_digit(16) {
+            return None
         }
     }
-    bytes.reverse();
-    Some(bytes)
+
+    let input: Vec<_> = s.chars().collect();
+
+    let decoded: Vec<u8> = input.chunks(2).map(|chunk| {
+        ((chunk[0].to_digit(16).unwrap() << 4) |
+        (chunk[1].to_digit(16).unwrap())) as u8
+    }).collect();
+
+    return Some(decoded);
+}
+
+pub fn bytes_to_hex_str(b: &[u8]) -> String {
+    b.iter()
+     .map(|b| format!("{:02x}", b))
+     .collect::<Vec<_>>()
+     .join("")
 }
