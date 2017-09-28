@@ -35,6 +35,7 @@ const router = express.Router()
 // Will catch errors and send on to any error handling middleware.
 const handlePromisedResponse = func => (req, res, next) => {
   func(req)
+    .then(filterQueryParams(req.query))
     .then(result => res.json(result))
     .catch(err => next(err))
 }
@@ -50,6 +51,14 @@ const handle = func => handlePromisedResponse(req => {
 const handleBody = func => handlePromisedResponse(req => {
   return func(req.body, _.assign({}, req.query, req.params, req.internal))
 })
+
+const filterQueryParams = ({ fields, omit }) => result => {
+  const filterParams = obj => fields ? _.pick(obj, fields.split(','))
+    : omit ? _.omit(obj, omit.split(','))
+      : obj
+
+  return Array.isArray(result) ? _.map(result, filterParams) : filterParams(result)
+}
 
 // Parses the endpoints from an Express router
 const getEndpoints = router => {
