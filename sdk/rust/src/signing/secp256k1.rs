@@ -29,6 +29,7 @@ use super::PrivateKey;
 use super::PublicKey;
 use super::Algorithm;
 use super::Error;
+use super::pem_loader::load_pem_key;
 
 impl From<secp256k1::Error> for Error {
     fn from(e: secp256k1::Error) -> Self {
@@ -67,6 +68,16 @@ impl Secp256k1PrivateKey {
         Ok(Secp256k1PrivateKey{
             private: b
         })
+    }
+
+    pub fn from_pem(s: &str) -> Result<Self, Error> {
+        let (priv_key_str, _) = load_pem_key(s, "")?;
+        Self::from_hex(&priv_key_str)
+    }
+
+    pub fn from_pem_with_password(s: &str, pw: &str) -> Result<Self, Error> {
+        let (priv_key_str, _) = load_pem_key(s, pw)?;
+        Self::from_hex(&priv_key_str)
     }
 }
 
