@@ -156,7 +156,7 @@ class Gossip(object):
             self._topology.add_candidate_peer_endpoints(peer_endpoints)
         else:
             LOGGER.debug("Could not add peer endpoints to topology. "
-                         "Topology does not exist.")
+                         "ConnectionManager does not exist.")
 
     def get_peers(self):
         """Returns a copy of the gossip peers.
@@ -321,7 +321,7 @@ class Gossip(object):
             self._topology.remove_temp_endpoint(endpoint)
 
     def start(self):
-        self._topology = Topology(
+        self._topology = ConnectionManager(
             gossip=self,
             network=self._network,
             endpoint=self._endpoint,
@@ -347,12 +347,12 @@ class Gossip(object):
             self._topology.stop()
 
 
-class Topology(Thread):
+class ConnectionManager(Thread):
     def __init__(self, gossip, network, endpoint,
                  initial_peer_endpoints, initial_seed_endpoints,
                  peering_mode, min_peers=3, max_peers=10,
                  check_frequency=1):
-        """Constructor for the Topology class.
+        """Constructor for the ConnectionManager class.
 
         Args:
             gossip (gossip.Gossip): The gossip overlay network.
@@ -374,7 +374,7 @@ class Topology(Thread):
                 to allow.
             check_frequency (int): How often to attempt dynamic connectivity.
         """
-        super().__init__(name="Topology")
+        super().__init__(name="ConnectionManager")
         self._lock = Lock()
         self._stopped = False
         self._gossip = gossip
