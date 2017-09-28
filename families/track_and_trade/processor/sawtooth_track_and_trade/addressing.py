@@ -60,6 +60,9 @@ def make_record_type_address(type_name):
     )
 
 
+RECORD_TYPE_ADDRESS_RANGE = NAMESPACE + RECORD_TYPE
+
+
 def make_property_address(record_id, property_name, page=0):
     return (
         make_property_address_range(record_id)

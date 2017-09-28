@@ -542,6 +542,45 @@ def _accept_proposal(state, signer, proposal, timestamp):
 
         _set_container(state, record_address, record_container)
 
+        # Authorize the new owner as a reporter on all of the record's
+        # properties and deauthorize the old owner, leaving everything
+        # else as-is
+        record_type, _, _ = _get_record_type(state, record.record_type)
+
+        for prop_name in (prop.name for prop in record_type.properties):
+            prop, prop_container, prop_address = _get_property(
+                state, record_id, prop_name)
+
+            old_owner = next(
+                reporter
+                for reporter in prop.reporters
+                if reporter.public_key == issuing_agent
+            )
+
+            old_owner.authorized = False
+
+            try:
+                new_owner = next(
+                    reporter
+                    for reporter in prop.reporters
+                    if reporter.public_key == receiving_agent
+                )
+
+                if not new_owner.authorized:
+                    new_owner.authorized = True
+                    _set_container(state, prop_address, prop_container)
+
+            except StopIteration:
+                new_owner = Property.Reporter(
+                    public_key=receiving_agent,
+                    authorized=True,
+                    index=len(prop.reporters),
+                )
+
+                prop.reporters.extend([new_owner])
+
+                _set_container(state, prop_address, prop_container)
+
         return Proposal.ACCEPTED
 
     elif role == Proposal.CUSTODIAN:

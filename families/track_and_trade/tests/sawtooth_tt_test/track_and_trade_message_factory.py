@@ -218,6 +218,7 @@ class TrackAndTradeMessageFactory:
                 proposal_address,
                 record_address,
                 property_address_range,
+                addressing.RECORD_TYPE_ADDRESS_RANGE,
             ],
             outputs=[
                 proposal_address,
