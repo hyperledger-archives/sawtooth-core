@@ -166,7 +166,42 @@ const ReporterControl = {
           agents,
           onsubmit: ([publicKey, properties]) =>
           _authorizeReporter(record, publicKey, properties).then(onsuccess)
-        })
+        }),
+
+        // Outstanding reporters
+        Object.entries(_reporters(record))
+        .filter(([key, _]) => key !== publicKey)
+        .map(([key, properties]) => {
+          return [
+            m('.mt-2.d-flex.justify-content-start',
+              `${_agentByKey(agents, key).name} authorized for ${properties}`,
+              m('.button.btn.btn-outline-danger.ml-auto', {
+                onclick: (e) => {
+                  e.preventDefault()
+                  _revokeAuthorization(record, key, properties)
+                    .then(onsuccess)
+                }
+              },
+              'Revoke Authorization'))
+          ]
+        }),
+
+        // Pending authorizations
+        record.proposals.filter((p) => p.role === 'REPORTER' && p.issuingAgent === publicKey).map(
+          (p) =>
+            m('.mt-2.d-flex.justify-content-start',
+              `Pending proposal for ${_agentByKey(agents, p.receivingAgent).name} on ${p.properties}`,
+              m('.button.btn.btn-outline-danger.ml-auto',
+                {
+                  onclick: (e) => {
+                    e.preventDefault()
+                    _answerProposal(record, p.receivingAgent, ROLE_TO_ENUM['reporter'],
+                                    payloads.answerProposal.enum.CANCEL)
+                      .then(onsuccess)
+                  }
+                },
+                'Rescind Proposal')))
+
       ]
     } else if (_hasProposal(record, publicKey, 'reporter')) {
       let proposal = _getProposal(record, publicKey, 'reporter')
@@ -196,6 +231,22 @@ const ReporterControl = {
     }
   }
 }
+
+/**
+ * Returns a map of reporter key, to authorized fields
+ */
+const _reporters = (record) =>
+  record.properties.reduce((acc, property) => {
+    return property.reporters.reduce((acc, key) => {
+      let props = (acc[key] || [])
+      props.push(property.name)
+      acc[key] = props
+      return acc
+    }, acc)
+  }, {})
+
+const _agentByKey = (agents, key) =>
+  agents.find((agent) => agent.key === key) || { name: 'Unknown Agent' }
 
 const _agentLink = (agent) =>
   m(`a[href=/agents/${agent.key}]`,
@@ -570,6 +621,18 @@ const _authorizeReporter = (record, reporterKey, properties) => {
 
   return transactions.submit([authroizePayload], true).then(() => {
     console.log('Successfully submitted proposal')
+  })
+}
+
+const _revokeAuthorization = (record, reporterKey, properties) => {
+  let revokePayload = payloads.revokeReporter({
+    recordId: record.recordId,
+    reporterId: reporterKey,
+    properties,
+  })
+
+  return transactions.submit([revokePayload], true).then(() => {
+    console.log('Successfully revoked reporter')
   })
 }
 
