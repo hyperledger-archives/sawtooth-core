@@ -536,7 +536,7 @@ const _formatLocation = (location) => {
 }
 
 const _formatTemp = (temp) => {
-  if (temp !== undefined || temp !== null) {
+  if (temp !== undefined && temp !== null) {
     return `${parsing.toFloat(temp)} °C`
   }
 
