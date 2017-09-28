@@ -68,9 +68,9 @@ const userSubmitter = state => e => {
   const user = _.assign(keys, _.pick(state, 'username', 'password', 'email'))
   const agent = payloads.createAgent(_.pick(state, 'name'))
 
-  api.post('users', user)
+  transactions.submit(agent, true)
+    .then(() => api.post('users', user))
     .then(res => api.setAuth(res.authorization))
-    .then(() => transactions.submit(agent))
     .then(() => m.route.set('/'))
 }
 
