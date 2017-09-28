@@ -33,5 +33,5 @@ const listRecords = authedKey => {
 module.exports = {
   fetchProperty,
   fetchRecord,
-  listRecords,
+  listRecords
 }
