@@ -104,6 +104,11 @@ class TTClient(RestClient):
                 role=role,
                 response=response))
 
+    def revoke_reporter(self, record_id, reporter_id, properties):
+        return self._post_tt_transaction(
+            self.factory.revoke_reporter(
+                record_id, reporter_id, properties))
+
     def send_empty_payload(self):
         return self._post_tt_transaction(
             self.factory.make_empty_payload(
@@ -522,8 +527,7 @@ class TestTrackAndTrade(unittest.TestCase):
             Upon transfer of ownership, Sun became a reporter on all
             of the record's properties and Jin reporter authorization
             was revoked. Jin's sensor remains authorized.
-            '''
-        )
+            ''')
 
         self.assert_invalid(
             jin.update_properties(
@@ -539,6 +543,49 @@ class TestTrackAndTrade(unittest.TestCase):
             sensor_stark.update_properties(
                 'fish-456',
                 {'temperature': 7}))
+
+        self.narrate(
+            '''
+            Sun decides to revoke the reporter authorization of Jin's
+            sensor and authorize her own sensor.
+            ''')
+
+        sensor_dollars = TTClient()
+
+        self.assert_valid(
+            sensor_dollars.create_agent(
+                'sensor-dollars'))
+
+        self.assert_valid(
+            sun.create_proposal(
+                record_id='fish-456',
+                receiving_agent=sensor_dollars.public_key,
+                role=Proposal.REPORTER,
+                properties=['temperature'],
+            ))
+
+        self.assert_valid(
+            sensor_dollars.answer_proposal(
+                record_id='fish-456',
+                role=Proposal.REPORTER,
+                response=AnswerProposalAction.ACCEPT,
+            ))
+
+        self.assert_valid(
+            sensor_dollars.update_properties(
+                'fish-456',
+                {'temperature': 8}))
+
+        self.assert_valid(
+            sun.revoke_reporter(
+                record_id='fish-456',
+                reporter_id=sensor_stark.public_key,
+                properties=['temperature']))
+
+        self.assert_invalid(
+            sensor_stark.update_properties(
+                'fish-456',
+                {'temperature': 9}))
 
         self.narrate(
             '''
@@ -584,7 +631,7 @@ class TestTrackAndTrade(unittest.TestCase):
             sun.finalize_record('fish-456'))
 
         self.assert_invalid(
-            jin.update_properties(
+            sun.update_properties(
                 'fish-456',
                 {'temperature': 2}))
 
@@ -624,14 +671,19 @@ class TestTrackAndTrade(unittest.TestCase):
                     ['fish-456'],
                 ],
                 [
-                    'sensor-stark',
+                    'sensor-dollars',
                     [],
                     [],
                     ['fish-456'],
                 ],
+                [
+                    'sensor-stark',
+                    [],
+                    [],
+                    [],
+                ],
             ]
         )
-
 
         jin.post_user('jin')
 
@@ -682,7 +734,7 @@ class TestTrackAndTrade(unittest.TestCase):
         self.assertEqual(len(get_record_property['reporters']), 2)
 
         self.assertIn('updates', get_record_property)
-        self.assertEqual(len(get_record_property['updates']), 9)
+        self.assertEqual(len(get_record_property['updates']), 10)
 
         for update in get_record_property['updates']:
             self.assertIn('timestamp', update)
@@ -752,6 +804,10 @@ class TestTrackAndTrade(unittest.TestCase):
                 {
                     'name': 'Sun Kwon',
                     'owns': ['fish-456'],
+                },
+                {
+                    'name': 'sensor-dollars',
+                    'owns': [],
                 },
                 {
                     'name': 'sensor-stark',

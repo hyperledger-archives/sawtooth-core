@@ -28,6 +28,7 @@ from sawtooth_track_and_trade.protobuf.payload_pb2 import \
 from sawtooth_track_and_trade.protobuf.payload_pb2 import FinalizeRecordAction
 from sawtooth_track_and_trade.protobuf.payload_pb2 import \
     UpdatePropertiesAction
+from sawtooth_track_and_trade.protobuf.payload_pb2 import RevokeReporterAction
 
 from sawtooth_track_and_trade.protobuf.property_pb2 import PropertySchema
 from sawtooth_track_and_trade.protobuf.property_pb2 import PropertyValue
@@ -224,6 +225,38 @@ class TrackAndTradeMessageFactory:
                 proposal_address,
                 record_address,
                 property_address_range,
+            ],
+        )
+
+    def revoke_reporter(self, record_id, reporter_id, properties):
+        payload = _make_tt_payload(
+            action=TTPayload.REVOKE_REPORTER,
+            revoke_reporter=RevokeReporterAction(
+                record_id=record_id,
+                reporter_id=reporter_id,
+                properties=properties))
+
+        record_address = addressing.make_record_address(record_id)
+
+        proposal_address = addressing.make_proposal_address(
+            record_id, reporter_id)
+
+        property_addresses = [
+            addressing.make_property_address(
+                record_id, property_name)
+            for property_name in properties
+        ]
+
+        return self._create_transaction(
+            payload,
+            inputs=[
+                record_address,
+                proposal_address,
+                *property_addresses,
+            ],
+            outputs=[
+                proposal_address,
+                *property_addresses,
             ],
         )
 
