@@ -22,6 +22,7 @@ const payloads = require('../services/payloads')
 const transactions = require('../services/transactions')
 const parsing = require('../services/parsing')
 const {MultiSelect} = require('../components/forms')
+const layout = require('../components/layout')
 
 /**
  * Possible selection options
@@ -76,49 +77,48 @@ const AddFishForm = {
                value: vnode.state.species
              })),
 
-             m('.row',
-               m('.col-sm',
-                 _formGroup('Length (m)', m('input.form-control', {
-                   type: 'number',
-                   min: 0,
-                   step: 'any',
-                   oninput: m.withAttr('value', (value) => {
-                     vnode.state.lengthInCM = value
-                   }),
-                   value: vnode.state.lengthInCM
-                 })),
+             layout.row([
+               _formGroup('Length (m)', m('input.form-control', {
+                 type: 'number',
+                 min: 0,
+                 step: 'any',
+                 oninput: m.withAttr('value', (value) => {
+                   vnode.state.lengthInCM = value
+                 }),
+                 value: vnode.state.lengthInCM
+               })),
+               _formGroup('Weight (kg)', m('input.form-control', {
+                 type: 'number',
+                 step: 'any',
+                 oninput: m.withAttr('value', (value) => {
+                   vnode.state.weightInKg = value
+                 }),
+                 value: vnode.state.weightInKg
+               }))
+             ]),
 
-                 _formGroup('Latitude', m('input.form-control', {
-                   type: 'number',
-                   step: 'any',
-                   min: -90,
-                   max: 90,
-                   oninput: m.withAttr('value', (value) => {
-                     vnode.state.latitude = value
-                   }),
-                   value: vnode.state.latitude
-                 }))),
-
-               m('.col-sm',
-                 _formGroup('Weight (kg)', m('input.form-control', {
-                   type: 'number',
-                   step: 'any',
-                   oninput: m.withAttr('value', (value) => {
-                     vnode.state.weightInKg = value
-                   }),
-                   value: vnode.state.weightInKg
-                 })),
-
-                 _formGroup('Longitude', m('input.form-control', {
-                   type: 'number',
-                   step: 'any',
-                   min: -180,
-                   max: 180,
-                   oninput: m.withAttr('value', (value) => {
-                     vnode.state.longitude = value
-                   }),
-                   value: vnode.state.longitude
-                 })))),
+             layout.row([
+               _formGroup('Latitude', m('input.form-control', {
+                 type: 'number',
+                 step: 'any',
+                 min: -90,
+                 max: 90,
+                 oninput: m.withAttr('value', (value) => {
+                   vnode.state.latitude = value
+                 }),
+                 value: vnode.state.latitude
+               })),
+               _formGroup('Longitude', m('input.form-control', {
+                 type: 'number',
+                 step: 'any',
+                 min: -180,
+                 max: 180,
+                 oninput: m.withAttr('value', (value) => {
+                   vnode.state.longitude = value
+                 }),
+                 value: vnode.state.longitude
+               }))
+             ]),
 
              m('.reporters.form-group',
                m('label', 'Authorize Reporters'),
