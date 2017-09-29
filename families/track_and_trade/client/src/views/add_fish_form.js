@@ -17,6 +17,7 @@
 
 const m = require('mithril')
 
+const api = require('../services/api')
 const payloads = require('../services/payloads')
 const transactions = require('../services/transactions')
 const parsing = require('../services/parsing')
@@ -44,6 +45,11 @@ const AddFishForm = {
         properties: []
       }
     ]
+    api.get('agents')
+      .then(agents => {
+        const publicKey = api.getPublicKey()
+        vnode.state.agents = agents.filter(agent => agent.key !== publicKey)
+      })
   },
 
   view (vnode) {
@@ -122,10 +128,14 @@ const AddFishForm = {
                    m('.col-sm-8',
                      m('input.form-control', {
                        type: 'text',
-                       placeholder: 'Add reporter by public key...',
-                       value: reporter.reporterKey,
+                       placeholder: 'Add reporter by name or public key...',
                        oninput: m.withAttr('value', (value) => {
-                         vnode.state.reporters[i].reporterKey = value
+                         const reporter = vnode.state.agents.find(agent => {
+                           return agent.name === value || agent.key === value
+                         })
+                         if (reporter) {
+                           vnode.state.reporters[i].reporterKey = reporter.key
+                         }
                        }),
                        onblur: () => _updateReporters(vnode, i)
                      })),
