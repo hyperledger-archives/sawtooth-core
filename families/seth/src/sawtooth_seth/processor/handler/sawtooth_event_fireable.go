@@ -20,9 +20,8 @@ package handler
 import (
 	. "burrow/evm"
 	"encoding/hex"
-	"github.com/golang/protobuf/proto"
+	"fmt"
 	"sawtooth_sdk/processor"
-	"sawtooth_seth/protobuf/seth_pb2"
 )
 
 type SawtoothEventFireable struct {
@@ -35,29 +34,23 @@ func NewSawtoothEventFireable(context *processor.Context) *SawtoothEventFireable
 	}
 }
 
-func (evc *SawtoothEventFireable) FireEvent(eventType string, eventDataLog EventDataLog) error {
+func (evc *SawtoothEventFireable) FireEvent(eventID string, eventDataLog EventDataLog) error {
 	attributes := []processor.Attribute{
 		{
 			Key:   "address",
 			Value: hex.EncodeToString(eventDataLog.Address.Bytes()),
 		},
+		{
+			Key:   "eventID",
+			Value: eventID,
+		},
 	}
-
-	var topics [][]byte
-	for _, topic := range eventDataLog.Topics {
-		topics = append(topics, topic.Bytes())
+	for i, topic := range eventDataLog.Topics {
+		attributes = append(attributes, processor.Attribute{
+			Key:   fmt.Sprintf("topic%v", i+1),
+			Value: hex.EncodeToString(topic.Bytes()),
+		})
 	}
-
-	log := &seth_pb2.EvmLogData{
-		Address: eventDataLog.Address.Bytes(),
-		Topics:  topics,
-		Data:    eventDataLog.Data,
-	}
-	data, err := proto.Marshal(log)
-	if err != nil {
-		return err
-	}
-
-	evc.context.AddEvent(eventType, attributes, data)
+	evc.context.AddEvent("seth_log_event", attributes, eventDataLog.Data)
 	return nil
 }
