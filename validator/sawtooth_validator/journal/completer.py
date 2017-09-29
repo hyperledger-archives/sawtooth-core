@@ -237,10 +237,6 @@ class Completer(object):
 
     def _add_seen_txns(self, batch):
         for txn in batch.transactions:
-            if txn.header_signature in self._seen_txns and \
-                    self._seen_txns[txn.header_signature] == \
-                    batch.header_signature:
-                break
             self._seen_txns[txn.header_signature] = batch.header_signature
 
     def _process_incomplete_batches(self, key):
