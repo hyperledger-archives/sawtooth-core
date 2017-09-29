@@ -116,10 +116,7 @@ pub fn uninstall_filter<T>(params: Params, mut client: ValidatorClient<T>)
 {
     let filter_id = to_filter_id(params.parse()?)?;
 
-    match client.remove_filter(&filter_id) {
-        Some(_) => Ok(Value::Bool(true)),
-        None => Ok(Value::Bool(false))
-    }
+    Ok(Value::Bool(client.remove_filter(&filter_id).is_some()))
 }
 
 fn get_block_changes<T>(mut client: ValidatorClient<T>, filter_id: String, last_block_id: String)
