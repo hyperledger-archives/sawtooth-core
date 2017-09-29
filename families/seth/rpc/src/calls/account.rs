@@ -36,8 +36,6 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
     methods.push((String::from("eth_getBalance"), get_balance));
     methods.push((String::from("eth_getStorageAt"), get_storage_at));
     methods.push((String::from("eth_getCode"), get_code));
-    methods.push((String::from("eth_sign"), sign));
-    methods.push((String::from("eth_call"), call));
     methods.push((String::from("eth_accounts"), accounts));
 
     methods
@@ -138,12 +136,9 @@ pub fn get_code<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Val
         },
     }
 }
-pub fn sign<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
-pub fn call<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
-pub fn accounts<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
+
+pub fn accounts<T>(_params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+    info!("eth_accounts");
+    Ok(Value::Array(Vec::from(client.loaded_accounts()).iter().map(|account|
+        hex_prefix(account.address())).collect()))
 }
