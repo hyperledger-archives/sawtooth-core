@@ -19,10 +19,19 @@ use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
 use jsonrpc_core::{Params, Value, Error};
 
-use client::{ValidatorClient};
+use client::{
+    ValidatorClient,
+    hex_prefix,
+};
 use requests::{RequestHandler};
 
 use sawtooth_sdk::messaging::stream::MessageSender;
+use sawtooth_sdk::messages::client::{
+    ClientBlockListRequest,
+    ClientBlockListResponse,
+    PagingControls,
+};
+use sawtooth_sdk::messages::validator::Message_MessageType;
 use error;
 use filters::*;
 
@@ -50,13 +59,17 @@ fn to_filter_id(value: Value) -> Result<String, Error> {
     }
 }
 
-fn add_filter<T>(mut client: ValidatorClient<T>, filter: Filter)
+fn add_filter<T>(mut client: ValidatorClient<T>,
+                 filter: Filter,
+                 starting_block_id: &str)
     -> Result<Value, Error> where T: MessageSender
 {
     let filter_id = String::from(
         format!("{:#x}", FILTER_ID.fetch_add(1, Ordering::SeqCst)));
 
-    client.set_filter(filter_id.clone(), filter, 0);
+    info!("Adding filter {} for {:?}, starting on block {}",
+          filter_id, filter, &starting_block_id[..8]);
+    client.set_filter(filter_id.clone(), filter, String::from(starting_block_id));
 
     Ok(Value::String(filter_id))
 }
@@ -67,19 +80,35 @@ pub fn new_filter<T>(params: Params, mut client: ValidatorClient<T>)
 {
     let value: Value = params.parse()?;
     let log_filter = LogFilterSpec::from_value(value)?;
-    add_filter(client, Filter::Log(log_filter))
+
+    let current_block = client.get_current_block().map_err(|e| {
+        error!("Unable to get current block: {:?}", e);
+        Error::internal_error()
+    })?;
+
+    add_filter(client, Filter::Log(log_filter), current_block.get_header_signature())
 }
 
 pub fn new_block_filter<T>(_params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
-    add_filter(client, Filter::Block)
+    let current_block = client.get_current_block().map_err(|e| {
+        error!("Unable to get current block: {:?}", e);
+        Error::internal_error()
+    })?;
+
+    add_filter(client, Filter::Block, current_block.get_header_signature())
 }
 
 pub fn new_pending_transaction_filter<T>(_params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
-    add_filter(client, Filter::Transaction)
+    let current_block = client.get_current_block().map_err(|e| {
+        error!("Unable to get current block: {:?}", e);
+        Error::internal_error()
+    })?;
+
+    add_filter(client, Filter::Transaction, current_block.get_header_signature())
 }
 
 pub fn uninstall_filter<T>(params: Params, mut client: ValidatorClient<T>)
@@ -93,15 +122,51 @@ pub fn uninstall_filter<T>(params: Params, mut client: ValidatorClient<T>)
     }
 }
 
+fn get_block_changes<T>(mut client: ValidatorClient<T>, filter_id: String, last_block_id: String)
+    -> Result<Value, Error> where T: MessageSender
+{
+    info!("get_block_changes");
+    let mut paging = PagingControls::new();
+    paging.set_count(100);
+    let mut request = ClientBlockListRequest::new();
+    request.set_paging(paging);
+
+    let response: ClientBlockListResponse =
+        client.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)
+            .map_err(|error| {
+                error!("{}", error);
+                Error::internal_error()
+            })?;
+
+    let block_ids: Vec<String> = response.blocks.iter()
+        .rev()
+        .skip_while(|block| block.get_header_signature() != last_block_id)
+        .skip(1) // skip the current block
+        .map(|block| String::from(block.get_header_signature()))
+        .collect();
+
+    if let Some(current_block_id) = block_ids.last() {
+        let block_id = (*current_block_id).clone();
+        client.set_filter(filter_id, Filter::Block, block_id);
+    }
+
+    let values: Vec<Value> =  block_ids.iter().map(|id| hex_prefix(&id)).collect();
+    Ok(Value::Array(values))
+}
+
 
 pub fn get_filter_changes<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
     let filter_id = to_filter_id(params.parse()?)?;
-    let filter = client.get_filter(&filter_id).map_err(Error::invalid_params)?;
+    let (filter, block_id) = client.get_filter(&filter_id).map_err(Error::invalid_params)?;
     debug!("filter: {:?}", filter);
 
-    Err(error::not_implemented())
+    match filter {
+        Filter::Block => get_block_changes(client, filter_id, block_id),
+        Filter::Transaction => Err(error::not_implemented()),
+        Filter::Log(_) => Err(error::not_implemented())
+    }
 }
 
 pub fn get_filter_logs<T>(params: Params, mut client: ValidatorClient<T>)

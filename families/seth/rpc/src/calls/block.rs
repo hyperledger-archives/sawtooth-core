@@ -31,13 +31,7 @@ use client::{
 
 use sawtooth_sdk::messaging::stream::*;
 
-use sawtooth_sdk::messages::client::{
-    ClientBlockListRequest,
-    ClientBlockListResponse,
-    PagingControls,
-};
 use sawtooth_sdk::messages::block::BlockHeader;
-use sawtooth_sdk::messages::validator::Message_MessageType;
 
 pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
     let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
@@ -52,22 +46,10 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
 // Return the block number of the current chain head, in hex, as a string
 pub fn block_number<T>(_params: Params, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_blockNumber");
-    let mut paging = PagingControls::new();
-    paging.set_count(1);
-    let mut request = ClientBlockListRequest::new();
-    request.set_paging(paging);
-
-    let response: ClientBlockListResponse =
-        match client.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)
-    {
-        Ok(r) => r,
-        Err(error) => {
-            error!("{}", error);
-            return Err(Error::internal_error());
-        }
-    };
-
-    let block = &response.blocks[0];
+    let block = client.get_current_block().map_err(|err| {
+        error!("Error requesting block: {:?}", err);
+        Error::internal_error()
+    })?;
     let block_header: BlockHeader = match protobuf::parse_from_bytes(&block.header) {
         Ok(r) => r,
         Err(error) => {

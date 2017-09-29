@@ -31,12 +31,15 @@ use sawtooth_sdk::messages::txn_receipt::{
     ClientReceiptGetResponse_Status,
 };
 use sawtooth_sdk::messages::client::{
+    ClientBlockListRequest,
+    ClientBlockListResponse,
     ClientBlockGetRequest,
     ClientBlockGetResponse,
     ClientBlockGetResponse_Status,
     ClientStateGetRequest,
     ClientStateGetResponse,
     ClientStateGetResponse_Status,
+    PagingControls
 };
 use sawtooth_sdk::messages::transaction::{TransactionHeader};
 use messages::seth::{
@@ -93,7 +96,7 @@ const SETH_NS: &str = "a68b06";
 pub struct ValidatorClient<S: MessageSender> {
     sender: S,
     accounts: Vec<Account>,
-    filters: Arc<Mutex<HashMap<String, (Filter, u64)>>>
+    filters: Arc<Mutex<HashMap<String, (Filter, String)>>>
 }
 
 impl<S: MessageSender> ValidatorClient<S> {
@@ -315,17 +318,30 @@ impl<S: MessageSender> ValidatorClient<S> {
         }
     }
 
+    pub fn get_current_block(&mut self) -> Result<Block, String> {
+        let mut paging = PagingControls::new();
+        paging.set_count(1);
+        let mut request = ClientBlockListRequest::new();
+        request.set_paging(paging);
+
+        let response: ClientBlockListResponse =
+           self.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)?;
+
+        let block = &response.blocks[0];
+        Ok(block.clone())
+    }
+
     fn block_num_to_block_id(&mut self, block_num: u64) -> Result<Option<String>, String> {
         self.get_block(BlockKey::Number(block_num)).map(|option|
             option.map(|block|
                 String::from(block.header_signature)))
     }
 
-    pub fn remove_filter(&mut self, filter_id: &String) -> Option<(Filter, u64)> {
+    pub fn remove_filter(&mut self, filter_id: &String) -> Option<(Filter, String)> {
         self.filters.lock().unwrap().remove(filter_id)
     }
 
-    pub fn get_filter(&mut self, filter_id: &String) -> Result<(Filter, u64), String> {
+    pub fn get_filter(&mut self, filter_id: &String) -> Result<(Filter, String), String> {
         let filters = self.filters.lock().unwrap();
         if filters.contains_key(filter_id) {
             Ok(filters[filter_id].clone())
@@ -334,8 +350,10 @@ impl<S: MessageSender> ValidatorClient<S> {
         }
     }
 
-    pub fn set_filter(&mut self, filter_id: String, filter: Filter, block_num: u64) {
-        self.filters.lock().unwrap().entry(filter_id).or_insert((filter, block_num));
+    pub fn set_filter(&mut self, filter_id: String, filter: Filter, block_id: String) {
+        let mut filters = self.filters.lock().unwrap();
+        let entry = filters.entry(filter_id).or_insert((filter, block_id.clone()));
+        (*entry).1 = block_id
     }
 
 }
