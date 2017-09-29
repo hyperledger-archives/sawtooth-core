@@ -26,8 +26,6 @@ use requests::{RequestHandler};
 pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
     let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
 
-    methods.push((String::from("eth_getBlockTransactionCountByHash"), get_block_transaction_count_by_hash));
-    methods.push((String::from("eth_getBlockTransactionCountByNumber"), get_block_transaction_count_by_number));
     methods.push((String::from("eth_sendTransaction"), send_transaction));
     methods.push((String::from("eth_sendRawTransaction"), send_raw_transaction));
     methods.push((String::from("eth_getTransactionByHash"), get_transaction_by_hash));
@@ -42,12 +40,6 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
     methods
 }
 
-pub fn get_block_transaction_count_by_hash<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
-pub fn get_block_transaction_count_by_number<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
 pub fn send_transaction<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }

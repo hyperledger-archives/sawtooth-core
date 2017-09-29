@@ -81,23 +81,41 @@ class SethRpcTest(unittest.TestCase):
 
     def test_get_block_by_hash(self):
         """Test that a block is retrieved correctly, given a block id."""
-        self._test_get_block(by="hash")
+        self._test_get_block(call="block", by="hash")
 
     def test_get_block_by_number(self):
         """Test that a block is retrieved correctly, given a block number."""
-        self._test_get_block(by="number")
+        self._test_get_block(call="block", by="number")
 
-    def _test_get_block(self, by):
+    def test_get_block_transaction_count_by_hash(self):
+        """Test that a block transaction count is retrieved correctly, given a
+        block id."""
+        self._test_get_block(call="count", by="hash")
+
+    def test_get_block_transaction_count_by_number(self):
+        """Test that a block transaction count is retrieved correctly, given a
+        block number."""
+        self._test_get_block(call="count", by="number")
+
+    def _test_get_block(self, call, by):
         block_id = "f" * 128
         block_num = 123
         prev_block_id = "e" * 128
         state_root = "d" * 64
         txn_id = "c" * 64
         gas = 456
-        if by == "hash":
-            self.rpc.acall("eth_getBlockByHash", ["0x" + block_id, False])
-        elif by == "number":
-            self.rpc.acall("eth_getBlockByNumber", [hex(block_num), False])
+        if call == "block":
+            if by == "hash":
+                self.rpc.acall("eth_getBlockByHash", ["0x" + block_id, False])
+            elif by == "number":
+                self.rpc.acall("eth_getBlockByNumber", [hex(block_num), False])
+        elif call == "count":
+            if by == "hash":
+                self.rpc.acall(
+                    "eth_getBlockTransactionCountByHash", ["0x" + block_id])
+            elif by == "number":
+                self.rpc.acall(
+                    "eth_getBlockTransactionCountByNumber", [hex(block_num)])
 
         # Verify block get request
         msg = self.validator.receive()
@@ -130,36 +148,40 @@ class SethRpcTest(unittest.TestCase):
             ),
             msg)
 
-        # Verify receipt get request
-        msg = self.validator.receive()
-        self.assertEqual(msg.message_type, Message.CLIENT_RECEIPT_GET_REQUEST)
-        request = ClientReceiptGetRequest()
-        request.ParseFromString(msg.content)
-        self.assertEqual(request.transaction_ids[0], txn_id)
+        if call == "block":
+            # Verify receipt get request
+            msg = self.validator.receive()
+            self.assertEqual(msg.message_type, Message.CLIENT_RECEIPT_GET_REQUEST)
+            request = ClientReceiptGetRequest()
+            request.ParseFromString(msg.content)
+            self.assertEqual(request.transaction_ids[0], txn_id)
 
-        self.validator.respond(
-            Message.CLIENT_RECEIPT_GET_RESPONSE,
-            ClientReceiptGetResponse(
-                status=ClientReceiptGetResponse.OK,
-                receipts=[TransactionReceipt(
-                    data=[TransactionReceipt.Data(
-                        data_type="seth_receipt",
-                        data=SethTransactionReceipt(
-                            gas_used=gas,
-                        ).SerializeToString(),
-                    )],
-                    transaction_id=txn_id,
-                )]
-            ),
-            msg)
+            self.validator.respond(
+                Message.CLIENT_RECEIPT_GET_RESPONSE,
+                ClientReceiptGetResponse(
+                    status=ClientReceiptGetResponse.OK,
+                    receipts=[TransactionReceipt(
+                        data=[TransactionReceipt.Data(
+                            data_type="seth_receipt",
+                            data=SethTransactionReceipt(
+                                gas_used=gas,
+                            ).SerializeToString(),
+                        )],
+                        transaction_id=txn_id,
+                    )]
+                ),
+                msg)
 
         result = self.rpc.get_result()
-        self.assertEqual(result["number"], hex(block_num))
-        self.assertEqual(result["hash"], "0x" + block_id)
-        self.assertEqual(result["parentHash"], "0x" + prev_block_id)
-        self.assertEqual(result["stateRoot"], "0x" + state_root)
-        self.assertEqual(result["gasUsed"], hex(gas))
-        self.assertEqual(result["transactions"][0], "0x" + txn_id)
+        if call == "block":
+            self.assertEqual(result["number"], hex(block_num))
+            self.assertEqual(result["hash"], "0x" + block_id)
+            self.assertEqual(result["parentHash"], "0x" + prev_block_id)
+            self.assertEqual(result["stateRoot"], "0x" + state_root)
+            self.assertEqual(result["gasUsed"], hex(gas))
+            self.assertEqual(result["transactions"][0], "0x" + txn_id)
+        elif call == "count":
+            self.assertEqual(result, "0x1")
 
     # Account tests
     def test_get_balance(self):

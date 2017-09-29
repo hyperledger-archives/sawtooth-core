@@ -39,6 +39,8 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
     methods.push((String::from("eth_blockNumber"), block_number));
     methods.push((String::from("eth_getBlockByHash"), get_block_by_hash));
     methods.push((String::from("eth_getBlockByNumber"), get_block_by_number));
+    methods.push((String::from("eth_getBlockTransactionCountByHash"), get_block_transaction_count_by_hash));
+    methods.push((String::from("eth_getBlockTransactionCountByNumber"), get_block_transaction_count_by_number));
 
     methods
 }
@@ -133,6 +135,22 @@ fn zerobytes(mut nbytes: usize) -> Value {
     s.push_str("0x");
     Value::String(s)
 }
+
+fn get_block_transaction_count<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+    let block = match client.get_block(block_key) {
+        Err(error) => {
+            error!("{:?}", error);
+            return Err(Error::internal_error());
+        },
+        Ok(None) => {
+            return Ok(Value::Null);
+        },
+        Ok(Some(block)) => block,
+    };
+
+    Ok(num_to_hex(&block.batches.iter().fold(0, |acc, batch| acc + batch.transactions.len())))
+}
+
 // Returns a block object using its "hash" to identify it. In Sawtooth, this is the blocks
 // signature, which is 64 bytes instead of 32.
 pub fn get_block_by_hash<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
@@ -159,6 +177,10 @@ pub fn get_block_by_number<T>(params: Params, client: ValidatorClient<T>) -> Res
         },
     };
 
+    if block_num.len() < 3 {
+        return Err(Error::invalid_params("Invalid block number"));
+    }
+
     let block_num = match u64::from_str_radix(&block_num[2..], 16) {
         Ok(num) => num,
         Err(error) => {
@@ -172,4 +194,39 @@ pub fn get_block_by_number<T>(params: Params, client: ValidatorClient<T>) -> Res
     }
 
     get_block_obj(BlockKey::Number(block_num), client)
+}
+
+// Returns the number of transactions in a block
+pub fn get_block_transaction_count_by_hash<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+    info!("eth_getBlockTransactionCountByHash");
+    let (block_hash,): (String,) = match params.parse() {
+        Ok(t) => t,
+        Err(error) => {
+            return Err(Error::invalid_params("Takes [blockHash: DATA(64)]"));
+        },
+    };
+    get_block_transaction_count(BlockKey::Signature(block_hash), client)
+}
+
+pub fn get_block_transaction_count_by_number<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+    info!("eth_getBlockTransactionCountByNumber");
+    let (block_num,): (String,) = match params.parse() {
+        Ok(t) => t,
+        Err(_) => {
+            return Err(Error::invalid_params("Takes [blockNum: QUANTITY]"));
+        },
+    };
+
+    if block_num.len() < 3 {
+        return Err(Error::invalid_params("Invalid block number"));
+    }
+
+    let block_num = match u64::from_str_radix(&block_num[2..], 16) {
+        Ok(num) => num,
+        Err(error) => {
+            return Err(Error::invalid_params(
+                format!("Failed to parse block number: {:?}", error)));
+        },
+    };
+    get_block_transaction_count(BlockKey::Number(block_num), client)
 }
