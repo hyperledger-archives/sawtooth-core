@@ -56,10 +56,12 @@ func (r *ClientResult) MarshalJSON() ([]byte, error) {
 	type Alias ClientResult
 	return json.MarshalIndent(&struct {
 		*Alias
-		Address string `json:"Address,omitempty"`
+		Address     string `json:"Address,omitempty"`
+		ReturnValue string `json:"ReturnValue,omitempty"`
 	}{
-		Alias:   (*Alias)(r),
-		Address: hex.EncodeToString(r.Address),
+		Alias:       (*Alias)(r),
+		Address:     hex.EncodeToString(r.Address),
+		ReturnValue: hex.EncodeToString(r.ReturnValue),
 	}, "", "  ")
 }
 
@@ -424,27 +426,28 @@ func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wai
 	return txn.HeaderSignature, nil
 }
 
-func (c *Client) GetReceipt(txnID string) (*SethTransactionReceipt, error) {
+func (c *Client) GetSethReceipt(txnID string) (*ClientResult, error) {
 	receipt, err := c.getTransactionReceipt(txnID)
 	if err != nil {
 		return nil, err
 	}
 	sethReceipt, _ := c.parseTransactionReceipt(receipt)
 	return &ClientResult{
-		Address:       sethReceipt.GetContractAddress(),
-		GasUsed:       sethReceipt.GetGasUsed(),
-		ReturnValue:   sethReceipt.GetReturnValue(),
+		Address:     sethReceipt.GetContractAddress(),
+		GasUsed:     sethReceipt.GetGasUsed(),
+		ReturnValue: sethReceipt.GetReturnValue(),
 	}, nil
 }
 
-func (c *Client) GetEvents(txnID string) ([]Event, error) {
+func (c *Client) GetEvents(txnID string) (*ClientResult, error) {
 	receipt, err := c.getTransactionReceipt(txnID)
 	if err != nil {
 		return nil, err
 	}
-
-	events := receipt.Events
-	return events, nil
+	_, events := c.parseTransactionReceipt(receipt)
+	return &ClientResult{
+		Events: events,
+	}, nil
 }
 
 func (c *Client) parseTransactionReceipt(receipt *TransactionReceipt) (*SethTransactionReceipt, []Event) {
