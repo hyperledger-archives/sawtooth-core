@@ -20,7 +20,7 @@ properties([[$class: 'BuildDiscarderProperty', strategy:
         [$class: 'LogRotator', artifactDaysToKeepStr: '',
         artifactNumToKeepStr: '', daysToKeepStr: '31', numToKeepStr: '']]]);
 
-node ('master') {
+node ('test') {
     // Create a unique workspace so Jenkins doesn't reuse an existing one
     ws("workspace/${env.BUILD_TAG}") {
         stage("Clone Repo") {
