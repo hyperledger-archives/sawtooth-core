@@ -21,6 +21,32 @@ const blocks = require('../db/blocks')
 const state = require('../db/state')
 const protos = require('./protos')
 
+const deltaQueue = {
+  _queue: [],
+  _running: false,
+
+  add (promisedFn) {
+    this._queue.push(promisedFn)
+    this._runUntilEmpty()
+  },
+
+  _runUntilEmpty () {
+    if (this._running) return
+    this._running = true
+    this._runNext()
+  },
+
+  _runNext () {
+    if (this._queue.length === 0) {
+      this._running = false
+    } else {
+      const current = this._queue.shift()
+      return current().then(() => this._runNext())
+    }
+  },
+
+}
+
 const getProtoName = address => {
   const typePrefix = address.slice(6, 8)
   if (typePrefix === 'ea') {
@@ -69,18 +95,20 @@ const getEntries = ({ address, value }) => {
 }
 
 const handle = event => {
-  return Promise.all(event.stateChanges.map(change => {
-    const addState = getAdder(change.address)
-    return Promise.all(getEntries(change).map(entry => {
-      return addState(entry, event.blockNum)
+  deltaQueue.add(() => {
+    return Promise.all(event.stateChanges.map(change => {
+      const addState = getAdder(change.address)
+      return Promise.all(getEntries(change).map(entry => {
+        return addState(entry, event.blockNum)
+      }))
     }))
-  }))
-    .then(() => {
-      return blocks.insert(
-        _.pick(event, 'blockNum', 'blockId', 'stateRootHash')
-      )
-    })
-    .then(() => event)
+      .then(() => {
+        return blocks.insert(
+          _.pick(event, 'blockNum', 'blockId', 'stateRootHash')
+        )
+      })
+      .then(() => event)
+  })
 }
 
 module.exports = {
