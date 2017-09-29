@@ -122,7 +122,7 @@ const AddFishForm = {
                    m('.col-sm-8',
                      m('input.form-control', {
                        type: 'text',
-                       placeholder: 'Add Reporter Private Key',
+                       placeholder: 'Add reporter by public key...',
                        value: reporter.reporterKey,
                        oninput: m.withAttr('value', (value) => {
                          vnode.state.reporters[i].reporterKey = value
