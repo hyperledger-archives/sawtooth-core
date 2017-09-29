@@ -363,7 +363,7 @@ const ReportTilt = {
               x: parsing.toInt(vnode.state.x),
               y: parsing.toInt(vnode.state.y)
             }),
-            dataType: payloads.updateProperties.enum.STRING,
+            dataType: payloads.updateProperties.enum.STRING
           })
           .then(() => {
             vnode.state.x = null
@@ -410,7 +410,7 @@ const ReportShock = {
               accel: parsing.toInt(vnode.state.accel),
               duration: parsing.toInt(vnode.state.duration)
             }),
-            dataType: payloads.updateProperties.enum.STRING,
+            dataType: payloads.updateProperties.enum.STRING
           })
           .then(() => {
             vnode.state.accel = null
@@ -735,7 +735,7 @@ const _revokeAuthorization = (record, reporterKey, properties) => {
   let revokePayload = payloads.revokeReporter({
     recordId: record.recordId,
     reporterId: reporterKey,
-    properties,
+    properties
   })
 
   return transactions.submit([revokePayload], true).then(() => {
