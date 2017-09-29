@@ -642,16 +642,25 @@ def _revoke_reporter(payload, signer, timestamp, state):
             'Record is final')
 
     for property_name in properties:
-        property_container, property_address, prop = \
+        prop, property_container, property_address = \
             _get_property(state, record_id, property_name)
 
-        if reporter_id not in prop.reporters:
-            raise InvalidTransaction(
-                'Reporter is not authorized')
+        try:
+            reporter = next(
+                reporter
+                for reporter in prop.reporters
+                if reporter.public_key == reporter_id
+            )
 
-        for reporter in prop.reporters:
-            if reporter.public_key == reporter_id:
-                reporter.authorization = False
+            if not reporter.authorized:
+                raise InvalidTransaction(
+                    'Reporter has already been revoked')
+
+        except StopIteration:
+            raise InvalidTransaction(
+                'Reporter cannot be revoked')
+
+        reporter.authorized = False
 
         _set_container(state, property_address, property_container)
 
