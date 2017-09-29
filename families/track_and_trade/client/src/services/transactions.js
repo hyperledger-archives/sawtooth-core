@@ -35,8 +35,16 @@ const encoderSettings = {
   batcherPubkey: null
 }
 
-api.get('info')
-  .then(res => { encoderSettings.batcherPubkey = res.pubkey })
+const setBatcherPubkey = () => {
+  return api.get('info')
+    .then(({ pubkey }) => {
+      if (txnEncoder) {
+        txnEncoder.batcherPubkey = pubkey
+      }
+      encoderSettings.batcherPubkey = pubkey
+    })
+}
+setBatcherPubkey()
 
 const requestPassword = () => {
   let password = null
@@ -134,6 +142,10 @@ const submit = (payloads, wait = false) => {
           const encryptedKey = window.localStorage.getItem(STORAGE_KEY)
           setPrivateKey(password, encryptedKey)
         })
+    })
+    .then(() => {
+      if (txnEncoder.batchPubkey) return
+      return setBatcherPubkey()
     })
     .then(() => {
       const txns = payloads.map(payload => txnEncoder.create(payload))
