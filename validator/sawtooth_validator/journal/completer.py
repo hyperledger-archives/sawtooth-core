@@ -67,9 +67,6 @@ class Completer(object):
         self._block_store = block_store
         # avoid throwing away the genesis block
         self.block_cache[NULL_BLOCK_IDENTIFIER] = None
-        self._seen_txns = TimedCache(cache_purge_frequency)
-        self._incomplete_batches = TimedCache(cache_purge_frequency)
-        self._incomplete_blocks = TimedCache(cache_purge_frequency)
         self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
         self._incomplete_batches = TimedCache(cache_keep_time,
                                               cache_purge_frequency)
