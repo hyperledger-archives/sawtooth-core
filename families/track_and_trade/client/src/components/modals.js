@@ -38,25 +38,29 @@ const BasicModal = {
       'aria-labelby': 'modal'
     }, [
       m('.modal-dialog', { role: 'document' },
-        m('.modal-content',
-          m('.modal-header',
-            m('h5.modal-title', vnode.attrs.title),
-            m('button.close', {
-              type: 'button',
-              onclick: cancelFn,
-              'data-dismiss': 'modal',
-              'aria-label': 'Close'
-            }, m('span', { 'aria-hidden': 'true' }, m.trust('&times;')))),
-          m('.modal-body', vnode.attrs.body),
-          m('.modal-footer',
-            m('button.btn.btn-secondary', {
-              onclick: cancelFn,
-              'data-dismiss': 'modal'
-            }, cancelText),
-            m('button.btn.btn-primary', {
-              onclick: acceptFn,
-              'data-dismiss': 'modal'
-            }, acceptText))))
+        m('form',
+          m('.modal-content',
+            m('.modal-header',
+              m('h5.modal-title', vnode.attrs.title),
+              m('button.close', {
+                type: 'button',
+                onclick: cancelFn,
+                'data-dismiss': 'modal',
+                'aria-label': 'Close'
+              }, m('span', { 'aria-hidden': 'true' }, m.trust('&times;')))
+              ),
+            m('.modal-body', vnode.attrs.body),
+            m('.modal-footer',
+              m('button.btn.btn-secondary', {
+                type: 'button',
+                onclick: cancelFn,
+                'data-dismiss': 'modal'
+              }, cancelText),
+              m('button.btn.btn-primary', {
+                type: 'submit',
+                onclick: acceptFn,
+                'data-dismiss': 'modal'
+              }, acceptText)))))
     ])
   }
 }
