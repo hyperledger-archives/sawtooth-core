@@ -17,6 +17,7 @@
 'use strict'
 
 const m = require('mithril')
+const sortBy = require('lodash/sortBy')
 const truncate = require('lodash/truncate')
 const {Table, FilterGroup, PagingButtons} = require('../components/tables.js')
 const api = require('../services/api')
@@ -30,8 +31,8 @@ const AgentList = {
     vnode.state.currentPage = 0
 
     api.get('/agents').then((agents) => {
-      vnode.state.agents = agents
-      vnode.state.filteredAgents = agents
+      vnode.state.agents = sortBy(agents, 'name')
+      vnode.state.filteredAgents = vnode.state.agents
     })
   },
 

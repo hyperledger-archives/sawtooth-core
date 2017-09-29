@@ -34,7 +34,10 @@ const FishList = {
 
     api.get('/records').then((records) => {
       vnode.state.records = records
-      vnode.state.filteredRecords = records
+      vnode.state.records.sort((a, b) => {
+        return getLatestPropertyUpdateTime(b) - getLatestPropertyUpdateTime(a)
+      })
+      vnode.state.filteredRecords = vnode.state.records
     })
   },
 
