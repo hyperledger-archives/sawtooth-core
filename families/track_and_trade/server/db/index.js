@@ -43,6 +43,7 @@ const runQuery = query => {
     .run(connection)
     .catch(err => {
       console.error(err.message)
+      throw new Error(err.message)
     })
 }
 
@@ -63,6 +64,7 @@ const queryTable = (table, query, removeCursor = true) => {
     .catch(err => {
       console.error(`Unable to query "${table}" table!`)
       console.error(err.message)
+      throw new Error(err.message)
     })
 }
 
