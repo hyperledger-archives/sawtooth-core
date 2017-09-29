@@ -61,7 +61,7 @@ void MessageDispatcher::Connect(const std::string& connection_string) {
         try {
             this->server_socket.connect(connection_string.c_str());
             connected = true;
-        } catch(std::exception e) {
+        } catch(std::exception& e) {
             LOG4CXX_DEBUG(logger, "Connection to validator failed, "
                 << "waiting to retry: " << e.what());
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
