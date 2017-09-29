@@ -78,6 +78,7 @@ fn add_filter<T>(mut client: ValidatorClient<T>,
 pub fn new_filter<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
+    info!("eth_newFilter");
     let value: Value = params.parse()?;
     let log_filter = LogFilterSpec::from_value(value)?;
 
@@ -92,6 +93,7 @@ pub fn new_filter<T>(params: Params, mut client: ValidatorClient<T>)
 pub fn new_block_filter<T>(_params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
+    info!("eth_newBlockFilter");
     let current_block = client.get_current_block().map_err(|e| {
         error!("Unable to get current block: {:?}", e);
         Error::internal_error()
@@ -103,6 +105,7 @@ pub fn new_block_filter<T>(_params: Params, mut client: ValidatorClient<T>)
 pub fn new_pending_transaction_filter<T>(_params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
+    info!("eth_newPendingTransactionFilter");
     let current_block = client.get_current_block().map_err(|e| {
         error!("Unable to get current block: {:?}", e);
         Error::internal_error()
@@ -114,6 +117,7 @@ pub fn new_pending_transaction_filter<T>(_params: Params, mut client: ValidatorC
 pub fn uninstall_filter<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
+    info!("eth_uninstallFilter");
     let filter_id = to_filter_id(params.parse()?)?;
 
     Ok(Value::Bool(client.remove_filter(&filter_id).is_some()))
@@ -122,7 +126,6 @@ pub fn uninstall_filter<T>(params: Params, mut client: ValidatorClient<T>)
 fn get_block_changes<T>(mut client: ValidatorClient<T>, filter_id: String, last_block_id: String)
     -> Result<Value, Error> where T: MessageSender
 {
-    info!("get_block_changes");
     let mut paging = PagingControls::new();
     paging.set_count(100);
     let mut request = ClientBlockListRequest::new();
@@ -151,10 +154,10 @@ fn get_block_changes<T>(mut client: ValidatorClient<T>, filter_id: String, last_
     Ok(Value::Array(values))
 }
 
-
 pub fn get_filter_changes<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
+    info!("eth_getFilterChanges");
     let filter_id = to_filter_id(params.parse()?)?;
     let (filter, block_id) = client.get_filter(&filter_id).map_err(Error::invalid_params)?;
     debug!("filter: {:?}", filter);
@@ -169,6 +172,7 @@ pub fn get_filter_changes<T>(params: Params, mut client: ValidatorClient<T>)
 pub fn get_filter_logs<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
+    info!("eth_getFilterLogs");
     let filter_id = to_filter_id(params.parse()?)?;
 
     let filter = client.get_filter(&filter_id).map_err(Error::invalid_params)?;
@@ -180,10 +184,10 @@ pub fn get_filter_logs<T>(params: Params, mut client: ValidatorClient<T>)
 pub fn get_logs<T>(_params: Params, mut _client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
+    info!("eth_getLogs");
     let params: Value = _params.parse()?;
     let log_filter = LogFilterSpec::from_value(params)?;
     debug!("filter: {:?}", log_filter);
 
     Err(error::not_implemented())
 }
-
