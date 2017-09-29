@@ -26,7 +26,6 @@ use requests::{RequestHandler};
 pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
     let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
 
-    methods.push((String::from("eth_getTransactionCount"), get_transaction_count));
     methods.push((String::from("eth_getBlockTransactionCountByHash"), get_block_transaction_count_by_hash));
     methods.push((String::from("eth_getBlockTransactionCountByNumber"), get_block_transaction_count_by_number));
     methods.push((String::from("eth_sendTransaction"), send_transaction));
@@ -37,13 +36,12 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
     methods.push((String::from("eth_getTransactionReceipt"), get_transaction_receipt));
     methods.push((String::from("eth_gasPrice"), gas_price));
     methods.push((String::from("eth_estimateGas"), estimate_gas));
+    methods.push((String::from("eth_sign"), sign));
+    methods.push((String::from("eth_call"), call));
 
     methods
 }
 
-pub fn get_transaction_count<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
 pub fn get_block_transaction_count_by_hash<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }
@@ -72,5 +70,11 @@ pub fn gas_price<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<
     Err(error::not_implemented())
 }
 pub fn estimate_gas<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+    Err(error::not_implemented())
+}
+pub fn sign<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+    Err(error::not_implemented())
+}
+pub fn call<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     Err(error::not_implemented())
 }

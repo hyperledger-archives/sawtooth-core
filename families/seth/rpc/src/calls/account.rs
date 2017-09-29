@@ -26,6 +26,8 @@ use client::{
     bytes_to_hex_str,
 };
 
+use messages::seth::{EvmStateAccount};
+
 use sawtooth_sdk::messaging::stream::MessageSender;
 use error;
 use requests::{RequestHandler};
@@ -36,9 +38,8 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
     methods.push((String::from("eth_getBalance"), get_balance));
     methods.push((String::from("eth_getStorageAt"), get_storage_at));
     methods.push((String::from("eth_getCode"), get_code));
-    methods.push((String::from("eth_sign"), sign));
-    methods.push((String::from("eth_call"), call));
     methods.push((String::from("eth_accounts"), accounts));
+    methods.push((String::from("eth_getTransactionCount"), get_transaction_count));
 
     methods
 }
@@ -72,26 +73,9 @@ fn validate_storage_address(address: String) -> Result<String, Error> {
     }
 }
 
-pub fn get_balance<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+pub fn get_balance<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_getBalance");
-    let (address, block): (String, String) = match params.parse() {
-        Ok(t) => t,
-        Err(_) => {
-            return Err(Error::invalid_params("Takes [address: DATA(20), block: QUANTITY|TAG]"));
-        },
-    };
-
-    let key = validate_block_key(block)?;
-    let address = validate_account_address(address)?;
-
-    match client.get_account(address, key) {
-        Ok(Some(account)) => Ok(num_to_hex(&account.balance)),
-        Ok(None) => Ok(Value::Null),
-        Err(error) => {
-            error!("{}", error);
-            Err(Error::internal_error())
-        },
-    }
+    get_account(params, client, |account| num_to_hex(&account.balance))
 }
 
 pub fn get_storage_at<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
@@ -117,8 +101,17 @@ pub fn get_storage_at<T>(params: Params, mut client: ValidatorClient<T>) -> Resu
     }
 }
 
-pub fn get_code<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+pub fn get_code<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_getCode");
+    get_account(params, client, |account| hex_prefix(&bytes_to_hex_str(&account.code)))
+}
+
+pub fn get_transaction_count<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+    info!("eth_getTransactionCount");
+    get_account(params, client, |account| num_to_hex(&account.nonce))
+}
+
+fn get_account<T, F>(params: Params, mut client: ValidatorClient<T>, f: F) -> Result<Value, Error> where T: MessageSender, F: Fn(EvmStateAccount) -> Value {
     let (address, block): (String, String) = match params.parse() {
         Ok(t) => t,
         Err(_) => {
@@ -130,7 +123,7 @@ pub fn get_code<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Val
     let address = validate_account_address(address)?;
 
     match client.get_account(address, key) {
-        Ok(Some(account)) => Ok(hex_prefix(&bytes_to_hex_str(&account.code))),
+        Ok(Some(account)) => Ok(f(account)),
         Ok(None) => Ok(Value::Null),
         Err(error) => {
             error!("{}", error);
@@ -138,12 +131,9 @@ pub fn get_code<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Val
         },
     }
 }
-pub fn sign<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
-pub fn call<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
-}
-pub fn accounts<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    Err(error::not_implemented())
+
+pub fn accounts<T>(_params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
+    info!("eth_accounts");
+    Ok(Value::Array(Vec::from(client.loaded_accounts()).iter().map(|account|
+        hex_prefix(account.address())).collect()))
 }
