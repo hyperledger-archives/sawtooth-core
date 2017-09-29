@@ -18,17 +18,14 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	"sawtooth_seth/client"
-	. "sawtooth_seth/protobuf/seth_pb2"
+	"os"
 )
 
 type Show struct {
-	Positional struct {
-		Address string `positional-arg-name:"address" description:"Address of account to show"`
-	} `positional-args:"true" required:"true"`
+	Subs []Command      `no-flag:"true"`
+	Cmd  *flags.Command `no-flag:"true"`
 }
 
 func (args *Show) Name() string {
@@ -36,74 +33,37 @@ func (args *Show) Name() string {
 }
 
 func (args *Show) Register(parent *flags.Command) error {
-	_, err := parent.AddCommand("show", "Show all data associated with a given account", "", args)
+	var err error
+	args.Cmd, err = parent.AddCommand(args.Name(), "Show data associated with accounts and transactions", "", args)
+
+	// Add sub-commands
+	args.Subs = []Command{
+		&ShowAccount{},
+		&ShowEvents{},
+		&ShowReceipt{},
+	}
+	for _, sub := range args.Subs {
+		err := sub.Register(args.Cmd)
+		if err != nil {
+			logger.Errorf("Couldn't register command %v: %v", sub.Name(), err)
+			os.Exit(1)
+		}
+	}
+
 	return err
 }
 
-func (args *Show) Run(config *Config) (err error) {
-	client := client.New(config.Url)
-
-	addr, err := hex.DecodeString(args.Positional.Address)
-	if err != nil {
-		return fmt.Errorf("Invalid address: %v", err)
+func (args *Show) Run(config *Config) error {
+	name := args.Cmd.Active.Name
+	for _, sub := range args.Subs {
+		if sub.Name() == name {
+			err := sub.Run(config)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			return nil
+		}
 	}
-
-	entry, err := client.Get(addr)
-	if err != nil {
-		return fmt.Errorf("Couldn't get data at %v: %v", addr, err)
-	}
-
-	DisplayEntry(entry)
-
 	return nil
-}
-
-func DisplayEntry(entry *EvmEntry) {
-	if entry == nil {
-		fmt.Println("Nothing at that address")
-		return
-	}
-
-	acct := entry.GetAccount()
-
-	if len(acct.GetAddress()) == 0 {
-		fmt.Println("Account does not exist")
-		return
-	}
-
-	addr := hex.EncodeToString(acct.GetAddress())
-	code := hex.EncodeToString(acct.GetCode())
-
-	fmt.Printf(`
-Address: %v
-Balance: %v
-Code   : %v
-Nonce  : %v
-`, addr, acct.GetBalance(), code, acct.GetNonce())
-
-	displayPermissions(acct.GetPermissions())
-	displayStorage(entry.GetStorage())
-
-}
-
-func displayStorage(stg []*EvmStorage) {
-	if stg == nil || len(stg) == 0 {
-		fmt.Println("(No Storage Set)\n")
-		return
-	}
-
-	fmt.Println("Storage:")
-	for _, pair := range stg {
-		key := hex.EncodeToString(pair.GetKey())
-		val := hex.EncodeToString(pair.GetValue())
-		fmt.Printf("%v -> %v\n", key, val)
-	}
-}
-
-func displayPermissions(perms *EvmPermissions) {
-	if perms == nil {
-		fmt.Println("(No Permissions Set)\n")
-	}
-
-	fmt.Printf("Perms  : %v\n", SerializePermissions(perms))
 }
