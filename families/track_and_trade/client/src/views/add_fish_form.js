@@ -130,6 +130,8 @@ const AddFishForm = {
                        type: 'text',
                        placeholder: 'Add reporter by name or public key...',
                        oninput: m.withAttr('value', (value) => {
+                         // clear any previously matched values
+                         vnode.state.reporters[i].reporterKey = null
                          const reporter = vnode.state.agents.find(agent => {
                            return agent.name === value || agent.key === value
                          })

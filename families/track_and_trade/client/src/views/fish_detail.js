@@ -461,6 +461,8 @@ const AuthorizeReporter = {
             placeholder: 'Add reporter by name or public key...',
             value: vnode.state.reporter,
             oninput: m.withAttr('value', (value) => {
+              // clear any previously matched values
+              vnode.state.reporterKey = null
               vnode.state.reporter = value
               let reporter = vnode.attrs.agents.find(
                 (agent) => agent.name === value || agent.key === value)
