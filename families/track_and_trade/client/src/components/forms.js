@@ -112,7 +112,8 @@ const MultiSelect = {
             onclick: (e) => {
               e.preventDefault()
               vnode.state.show = !vnode.state.show
-            }
+            },
+            onblur: e => { vnode.state.show = false }
           }, vnode.attrs.label),
         m('.dropdown-menu.w-100', {className: vnode.state.show ? 'show' : ''},
           m("a.dropdown-item[href='#']", {
