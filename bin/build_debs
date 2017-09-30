@@ -52,8 +52,6 @@ main() {
     # Group 1: No internal dependencies
     build_pkg "signing"
 
-    build_pkg "manage"
-
     pypath=$build_dir/consensus/poet/common
     pypath=$pypath:$build_dir/consensus/poet/common/tests
     build_pkg "consensus/poet/common"  $pypath
