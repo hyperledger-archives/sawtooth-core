@@ -403,20 +403,22 @@ class ContextManager(object):
             deletes = [addr for addr in deletes if addr in tree]
 
             if not updates and not deletes:
-                return state_root
+                state_hash = state_root
+            else:
+                virtual = not persist
+                state_hash = tree.update(updates, deletes, virtual=virtual)
+                if persist:
+                    # save the state changes to the state_delta_store
+                    changes = [StateChange(address=addr,
+                                           value=value,
+                                           type=StateChange.SET)
+                               for addr, value in updates.items()] +\
+                              [StateChange(address=addr,
+                                           type=StateChange.DELETE)
+                               for addr in deletes]
+                    self._state_delta_store.save_state_deltas(
+                        state_hash, changes)
 
-            virtual = not persist
-            state_hash = tree.update(updates, deletes, virtual=virtual)
-            if persist:
-                # save the state changes to the state_delta_store
-                changes = [StateChange(address=addr,
-                                       value=value,
-                                       type=StateChange.SET)
-                           for addr, value in updates.items()] +\
-                          [StateChange(address=addr,
-                                       type=StateChange.DELETE)
-                           for addr in deletes]
-                self._state_delta_store.save_state_deltas(state_hash, changes)
             if clean_up:
                 self.delete_contexts(context_ids_already_searched)
             return state_hash
