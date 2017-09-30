@@ -51,6 +51,7 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 from sawtooth_validator.metrics.wrappers import TimerWrapper
+from sawtooth_validator.metrics.wrappers import CounterWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -94,7 +95,8 @@ class _SendReceive(object):
                  zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
                  heartbeat=False, heartbeat_interval=10,
-                 connection_timeout=60, monitor=False):
+                 connection_timeout=60, monitor=False,
+                 metrics_registry=None):
         """
         Constructor for _SendReceive.
 
@@ -158,6 +160,9 @@ class _SendReceive(object):
         self._monitor_fd = None
         self._monitor_sock = None
 
+        self._metrics_registry = metrics_registry
+        self._received_message_counters = {}
+
     @property
     def connection(self):
         return self._connection
@@ -172,6 +177,17 @@ class _SendReceive(object):
                 hashlib.sha512(zmq_identity).hexdigest()
 
         return self._identities_to_connection_ids[zmq_identity]
+
+    def _get_received_message_counter(self, tag):
+        if tag not in self._received_message_counters:
+            if self._metrics_registry:
+                self._received_message_counters[tag] = CounterWrapper(
+                    self._metrics_registry.counter(
+                        'interconnect_received_message_count', tags=[
+                            'message_type={}'.format(tag)]))
+            else:
+                self._received_message_counters[tag] = CounterWrapper()
+        return self._received_message_counters[tag]
 
     @asyncio.coroutine
     def _do_heartbeat(self):
@@ -267,6 +283,9 @@ class _SendReceive(object):
                              self._connection,
                              get_enum_name(message.message_type),
                              sys.getsizeof(msg_bytes))
+
+                tag = get_enum_name(message.message_type)
+                self._get_received_message_counter(tag).inc()
 
                 if zmq_identity is not None:
                     connection_id = \
@@ -651,7 +670,8 @@ class Interconnect(object):
             server_private_key=server_private_key,
             heartbeat=heartbeat,
             connection_timeout=connection_timeout,
-            monitor=monitor)
+            monitor=monitor,
+            metrics_registry=metrics_registry)
 
         self._thread = None
 
@@ -738,7 +758,8 @@ class Interconnect(object):
             server_private_key=self._server_private_key,
             future_callback_threadpool=self._future_callback_threadpool,
             heartbeat=True,
-            connection_timeout=self._connection_timeout)
+            connection_timeout=self._connection_timeout,
+            metrics_registry=self._metrics_registry)
 
         self.outbound_connections[uri] = conn
         conn.start()
@@ -1123,7 +1144,8 @@ class OutboundConnection(object):
                  server_private_key,
                  future_callback_threadpool,
                  heartbeat=True,
-                 connection_timeout=60):
+                 connection_timeout=60,
+                 metrics_registry=None):
         self._futures = future.FutureCollection(
             resolving_threadpool=future_callback_threadpool)
         self._zmq_identity = zmq_identity
@@ -1147,9 +1169,11 @@ class OutboundConnection(object):
             server_public_key=server_public_key,
             server_private_key=server_private_key,
             heartbeat=heartbeat,
-            connection_timeout=connection_timeout)
+            connection_timeout=connection_timeout,
+            metrics_registry=metrics_registry)
 
         self._thread = None
+        self._metrics_registry = metrics_registry
 
     @property
     def connection_id(self):
