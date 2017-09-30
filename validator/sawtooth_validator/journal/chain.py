@@ -31,6 +31,8 @@ from sawtooth_validator.journal.validation_rule_enforcer import \
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator.metrics.wrappers import GaugeWrapper
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
@@ -143,6 +145,7 @@ class BlockValidator(object):
             'committed_batches': [],
             'uncommitted_batches': [],
             'execution_results': [],
+            'num_transactions': 0
         }
         self._permission_verifier = permission_verifier
 
@@ -229,6 +232,9 @@ class BlockValidator(object):
                             batch.header_signature)
                     self._result["execution_results"].extend(txn_results)
                     state_hash = batch_result.state_hash
+                    self._result["num_transactions"] = \
+                        self._result["num_transactions"] \
+                        + len(batch.transactions)
                 else:
                     return False
             if blkw.state_root_hash != state_hash:
@@ -594,6 +600,15 @@ class ChainController(object):
             metrics_registry.gauge('chain_head', default='no chain head') \
             if metrics_registry else None
 
+        if metrics_registry:
+            self._committed_transactions_count = CounterWrapper(
+                metrics_registry.counter('committed_transactions_count'))
+            self._block_num_gauge = GaugeWrapper(
+                metrics_registry.gauge('block_num'))
+        else:
+            self._committed_transactions_count = CounterWrapper()
+            self._block_num_gauge = GaugeWrapper()
+
     @property
     def chain_head(self):
         return self._chain_head
@@ -689,6 +704,12 @@ class ChainController(object):
                         if self._chain_head_gauge:
                             self._chain_head_gauge.set_value(
                                 self._chain_head.identifier[:8])
+
+                        self._committed_transactions_count.inc(
+                            result["num_transactions"])
+
+                        self._block_num_gauge.set_value(
+                            self._chain_head.block_num)
 
                         # tell the BlockPublisher else the chain is updated
                         self._notify_on_chain_updated(
