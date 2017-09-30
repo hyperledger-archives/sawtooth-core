@@ -174,13 +174,13 @@ class BlockValidator(object):
             txn_hdr = self._txn_header(txn)
             if self._chain_commit_state. \
                     has_transaction(txn.header_signature):
-                LOGGER.debug("Block rejected due duplicate" +
+                LOGGER.debug("Block rejected due to duplicate" +
                              " transaction, transaction: %s",
                              txn.header_signature[:8])
                 raise InvalidBatch()
             for dep in txn_hdr.dependencies:
                 if not self._chain_commit_state.has_transaction(dep):
-                    LOGGER.debug("Block rejected due missing "
+                    LOGGER.debug("Block rejected due to missing "
                                  "transaction dependency, transaction %s "
                                  "depends on %s",
                                  txn.header_signature[:8], dep[:8])
@@ -197,7 +197,7 @@ class BlockValidator(object):
                 for batch, has_more in look_ahead(blkw.block.batches):
                     if self._chain_commit_state.has_batch(
                             batch.header_signature):
-                        LOGGER.debug("Block(%s) rejected due duplicate "
+                        LOGGER.debug("Block(%s) rejected due to duplicate "
                                      "batch, batch: %s", blkw,
                                      batch.header_signature[:8])
                         raise InvalidBatch()
