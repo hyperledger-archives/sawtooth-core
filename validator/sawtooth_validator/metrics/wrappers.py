@@ -45,6 +45,15 @@ class CounterWrapper():
             self._counter.inc(val)
 
 
+class GaugeWrapper():
+    def __init__(self, gauge=None):
+        self._gauge = gauge
+
+    def set_value(self, val):
+        if self._gauge:
+            self._gauge.set_value(val)
+
+
 class NoopTimerContext():
     def __enter__(self):
         pass
