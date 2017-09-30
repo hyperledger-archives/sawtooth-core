@@ -40,9 +40,9 @@ class CounterWrapper():
     def __init__(self, counter=None):
         self._counter = counter
 
-    def inc(self):
+    def inc(self, val=1):
         if self._counter:
-            self._counter.inc()
+            self._counter.inc(val)
 
 
 class NoopTimerContext():
