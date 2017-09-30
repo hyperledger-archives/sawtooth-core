@@ -30,6 +30,7 @@ MODULE_LIST="
     java_sdk
     javascript_sdk
     python_sdk
+    track_and_trade
     rust_sdk
     seth
     integration
@@ -170,6 +171,9 @@ main() {
                 supplychain)
                     test_supplychain
                     ;;
+		track_and_trade)
+		    test_track_and_trade
+		    ;;
                 validator)
                     test_validator
                     ;;
@@ -276,6 +280,11 @@ test_supplychain() {
     copy_coverage .coverage.config
     run_docker_test ./families/supplychain/python/tests/int_supplychain_python.yaml
     copy_coverage .coverage.config
+}
+
+test_track_and_trade() {
+    run_docker_test test_track_and_trade
+    copy_coverage .coverage.track_and_trade
 }
 
 test_validator() {

@@ -1,0 +1,66 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+
+message Proposal {
+  enum Role {
+    OWNER = 0;
+    CUSTODIAN = 1;
+    REPORTER = 2;
+  }
+
+  enum Status {
+    OPEN = 0;
+    ACCEPTED = 1;
+    REJECTED = 2;
+    CANCELED = 3;
+  }
+
+  string record_id = 1;
+
+  // The time at which the Proposal was created
+  uint64 timestamp = 2;
+
+  // The public key of the Agent sending the Proposal. This Agent must
+  // be the owner of the Record (or the custodian, if the Proposal is
+  // to transfer custodianship).
+  string issuing_agent = 3;
+
+  // The public key of the Agent to whom the Proposal is sent.
+  string receiving_agent = 4;
+
+  // What the Proposal is for -- transferring ownership, transferring
+  // custodianship, or authorizing a reporter.
+  Role role = 5;
+
+  // The names of properties for which the reporter is being authorized
+  // (empty for owner or custodian transfers)
+  repeated string properties = 6;
+
+  // The status of the Proposal. For a given Record and receiving
+  // Agent, there can be only one open Proposal at a time for each
+  // role.
+  Status status = 7;
+
+  // The human-readable terms of transfer.
+  string terms = 8;
+}
+
+
+message ProposalContainer {
+  repeated Proposal entries = 1;
+}
