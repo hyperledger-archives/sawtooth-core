@@ -30,30 +30,80 @@ r.connect({host: HOST, port: PORT})
         if (dbExists) throw new Error(`"${NAME}" already exists`)
         return r.dbCreate(NAME).run(conn)
       })
-      .then(res => {
+      .then(() => {
         console.log('Creating "users" table...')
         return r.db(NAME).tableCreate('users', {
           primaryKey: 'publicKey'
         }).run(conn)
       })
-      .then(res => {
+      .then(() => {
         // The usernames table is used to quickly ensure unique usernames
         console.log('Creating "usernames" table...')
         return r.db(NAME).tableCreate('usernames', {
           primaryKey: 'username'
         }).run(conn)
       })
-      .then(res => {
-        console.log('Creating and populating "state" table...')
-        return r.db(NAME).tableCreate('state').run(conn)
-      })
-      .then(res => {
-        return r.db(NAME).table('state').insert({
-          name: 'message',
-          value: 'Hello Track and Trade!'
+      .then(() => {
+        console.log('Creating "blocks" table...')
+        return r.db(NAME).tableCreate('blocks', {
+          primaryKey: 'blockNum'
         }).run(conn)
       })
-      .then(res => {
+      .then(() => {
+        console.log('Creating "agents" table...')
+        return r.db(NAME).tableCreate('agents').run(conn)
+      })
+      .then(() => {
+        return r.db(NAME).table('agents').indexCreate('publicKey').run(conn)
+      })
+      .then(() => {
+        console.log('Creating "records" table...')
+        return r.db(NAME).tableCreate('records').run(conn)
+      })
+      .then(() => {
+        r.db(NAME).table('records').indexCreate('recordId').run(conn)
+      })
+      .then(() => {
+        console.log('Creating "recordTypes" table...')
+        return r.db(NAME).tableCreate('recordTypes').run(conn)
+      })
+      .then(() => {
+        return r.db(NAME).table('recordTypes').indexCreate('name').run(conn)
+      })
+      .then(() => {
+        console.log('Creating "properties" table...')
+        return r.db(NAME).tableCreate('properties').run(conn)
+      })
+      .then(() => {
+        return r.db(NAME).table('properties').indexCreate('attributes', [
+          r.row('name'),
+          r.row('recordId')
+        ]).run(conn)
+      })
+      .then(() => {
+        console.log('Creating "propertyPages" table...')
+        return r.db(NAME).tableCreate('propertyPages').run(conn)
+      })
+      .then(() => {
+        return r.db(NAME).table('propertyPages').indexCreate('attributes', [
+          r.row('name'),
+          r.row('recordId'),
+          r.row('pageNum')
+        ]).run(conn)
+      })
+      .then(() => {
+        console.log('Creating "proposals" table...')
+        return r.db(NAME).tableCreate('proposals').run(conn)
+      })
+      .then(() => {
+        return r.db(NAME).table('proposals').indexCreate('attributes', [
+          r.row('recordId'),
+          r.row('timestamp'),
+          r.row('receivingAgent'),
+          r.row('role')
+        ]).run(conn)
+      })
+      .then(() => {
         console.log('Bootstrapping complete, closing connection.')
         return conn.close()
       })
