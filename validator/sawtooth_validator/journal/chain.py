@@ -213,6 +213,10 @@ class BlockValidator(object):
                     else:
                         scheduler.add_batch(batch, blkw.state_root_hash)
             except InvalidBatch:
+                LOGGER.debug("Invalid batch %s encountered during "
+                             "verification of block %s",
+                             batch.header_signature[:8],
+                             blkw)
                 scheduler.cancel()
                 return False
             except:
