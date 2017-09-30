@@ -30,7 +30,6 @@ setup(name='sawtooth-cli',
       install_requires=[
           'colorlog',
           'protobuf',
-          'sawtooth-manage',
           'sawtooth-signing',
           'toml',
           'PyYAML',
