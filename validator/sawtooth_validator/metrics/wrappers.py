@@ -25,9 +25,11 @@ class MetricsRegistryWrapper():
             ''.join([name, ',host=', platform.node()]),
             default=default)
 
-    def counter(self, name):
+    def counter(self, name, tags=None):
+        if not tags:
+            tags = []
         return self._registry.counter(
-            ''.join([name, ',host=', platform.node()]))
+            ','.join([name, 'host={}'.format(platform.node())] + tags))
 
     def timer(self, name, tags=None):
         if not tags:
