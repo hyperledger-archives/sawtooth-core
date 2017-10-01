@@ -9,6 +9,7 @@ Architecture
    architecture/global_state
    architecture/transactions_and_batches
    architecture/journal
+   architecture/scheduling
    architecture/rest_api
    architecture/poet
    architecture/validator_network
