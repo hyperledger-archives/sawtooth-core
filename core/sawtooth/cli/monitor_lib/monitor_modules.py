@@ -113,7 +113,7 @@ class LogManager(StatsModule):
                     with open(log_config_file) as log_config_fd:
                         log_dic = json.load(log_config_fd)
                         logging.config.dictConfig(log_dic)
-                except IOError, ex:
+                except IOError as ex:
                     print("Could not read log config: {}"
                           .format(str(ex)), file=sys.stderr)
                     sys.exit(1)
@@ -122,7 +122,7 @@ class LogManager(StatsModule):
                     with open(log_config_file) as log_config_fd:
                         log_dic = yaml.safe_load(log_config_fd)
                         logging.config.dictConfig(log_dic)
-                except IOError, ex:
+                except IOError as ex:
                     print("Could not read log config: {}"
                           .format(str(ex)), file=sys.stderr)
                     sys.exit(1)
