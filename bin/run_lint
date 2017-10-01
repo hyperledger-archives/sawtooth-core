@@ -256,9 +256,7 @@ lint utility/ias_client "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/cli
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/manage
 export PYTHONPATH
 lint cli "$SINCE" || retval=1
-lint manage "$SINCE" || retval=1
 
 exit $retval

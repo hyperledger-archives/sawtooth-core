@@ -27,12 +27,6 @@ save_usage sawtooth batch submit
 save_usage sawtooth block
 save_usage sawtooth block list
 save_usage sawtooth block show
-save_usage sawtooth cluster
-save_usage sawtooth cluster extend
-save_usage sawtooth cluster logs
-save_usage sawtooth cluster start
-save_usage sawtooth cluster status
-save_usage sawtooth cluster stop
 save_usage sawtooth config
 save_usage sawtooth config genesis
 save_usage sawtooth config proposal
