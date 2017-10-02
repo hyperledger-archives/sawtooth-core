@@ -55,6 +55,23 @@ class SethRpcTest(unittest.TestCase):
         cls.url = 'http://seth-rpc:3030/'
         cls.rpc = RpcClient(cls.url)
         cls.rpc.wait_for_service()
+        # block values
+        cls.block_id = "f" * 128
+        cls.block_num = 123
+        cls.prev_block_id = "e" * 128
+        cls.state_root = "d" * 64
+        cls.txn_id = "c" * 64
+        cls.gas = 456
+        # account values
+        cls.account_address = "f" * 20 * 2
+        cls.balance = 123
+        cls.nonce = 456
+        cls.code_b = bytes([0xab, 0xcd, 0xef])
+        cls.code_s = "abcdef"
+        cls.position_b = bytes([0x01, 0x23, 0x45])
+        cls.position_s = "012345"
+        cls.stored_b = bytes([0x67, 0x89])
+        cls.stored_s = "6789"
 
     # Network tests
     def test_net_version(self):
@@ -86,180 +103,285 @@ class SethRpcTest(unittest.TestCase):
             msg)
         self.assertEqual("0xf", self.rpc.get_result())
 
-    def test_get_block_by_hash(self):
-        """Test that a block is retrieved correctly, given a block id."""
-        self._test_get_block(call="block", by="hash")
-
-    def test_get_block_by_number(self):
-        """Test that a block is retrieved correctly, given a block number."""
-        self._test_get_block(call="block", by="number")
-
     def test_get_block_transaction_count_by_hash(self):
         """Test that a block transaction count is retrieved correctly, given a
         block id."""
-        self._test_get_block(call="count", by="hash")
+        self.rpc.acall(
+            "eth_getBlockTransactionCountByHash", ["0x" + self.block_id])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_id, self.block_id)
+
+        self._send_block_back(msg)
+
+        result = self.rpc.get_result()
+        self.assertEqual(result, "0x1")
+
+    def test_get_block_transaction_count_by_hash_wrong_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getBlockTransactionCountByHash.
+        """
+        self.rpc.acall(
+            "eth_getBlockTransactionCountByHash", )
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [blockHash: DATA(64)]")
+
+    def test_get_block_transaction_count_by_hash_no_block(self):
+        """Test that None is returned if no block is found for
+           eth_getBlockTransactionCountByHash.
+        """
+        bad_id = "1" * 128
+        self.rpc.acall(
+            "eth_getBlockTransactionCountByHash", ["0x" + bad_id])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_id, bad_id)
+
+        self._send_block_no_resource(msg)
+
+        result = self.rpc.get_result()
+        self.assertIsNone(result)
 
     def test_get_block_transaction_count_by_number(self):
         """Test that a block transaction count is retrieved correctly, given a
         block number."""
-        self._test_get_block(call="count", by="number")
+        self.rpc.acall(
+            "eth_getBlockTransactionCountByNumber", [hex(self.block_num)])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_num, self.block_num)
 
-    def _test_get_block(self, call, by):
-        block_id = "f" * 128
-        block_num = 123
-        prev_block_id = "e" * 128
-        state_root = "d" * 64
-        txn_id = "c" * 64
-        gas = 456
-        if call == "block":
-            if by == "hash":
-                self.rpc.acall("eth_getBlockByHash", ["0x" + block_id, False])
-            elif by == "number":
-                self.rpc.acall("eth_getBlockByNumber", [hex(block_num), False])
-        elif call == "count":
-            if by == "hash":
-                self.rpc.acall(
-                    "eth_getBlockTransactionCountByHash", ["0x" + block_id])
-            elif by == "number":
-                self.rpc.acall(
-                    "eth_getBlockTransactionCountByNumber", [hex(block_num)])
-
-        # Verify block get request
-        msg = self.validator.receive()
-        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
-        request = ClientBlockGetRequest()
-        request.ParseFromString(msg.content)
-        if by == "hash":
-            self.assertEqual(request.block_id, block_id)
-        elif by == "number":
-            self.assertEqual(request.block_num, block_num)
-
-        self.validator.respond(
-            Message.CLIENT_BLOCK_GET_RESPONSE,
-            ClientBlockGetResponse(
-                status=ClientBlockGetResponse.OK,
-                block=Block(
-                    header=BlockHeader(
-                        block_num=block_num,
-                        previous_block_id=prev_block_id,
-                        state_root_hash=state_root
-                    ).SerializeToString(),
-                    header_signature=block_id,
-                    batches=[Batch(transactions=[Transaction(
-                        header=TransactionHeader(
-                            family_name="seth",
-                        ).SerializeToString(),
-                        header_signature=txn_id,
-                    )])],
-                )
-            ),
-            msg)
-
-        if call == "block":
-            # Verify receipt get request
-            msg = self.validator.receive()
-            self.assertEqual(msg.message_type, Message.CLIENT_RECEIPT_GET_REQUEST)
-            request = ClientReceiptGetRequest()
-            request.ParseFromString(msg.content)
-            self.assertEqual(request.transaction_ids[0], txn_id)
-
-            self.validator.respond(
-                Message.CLIENT_RECEIPT_GET_RESPONSE,
-                ClientReceiptGetResponse(
-                    status=ClientReceiptGetResponse.OK,
-                    receipts=[TransactionReceipt(
-                        data=[TransactionReceipt.Data(
-                            data_type="seth_receipt",
-                            data=SethTransactionReceipt(
-                                gas_used=gas,
-                            ).SerializeToString(),
-                        )],
-                        transaction_id=txn_id,
-                    )]
-                ),
-                msg)
+        self._send_block_back(msg)
 
         result = self.rpc.get_result()
-        if call == "block":
-            self.assertEqual(result["number"], hex(block_num))
-            self.assertEqual(result["hash"], "0x" + block_id)
-            self.assertEqual(result["parentHash"], "0x" + prev_block_id)
-            self.assertEqual(result["stateRoot"], "0x" + state_root)
-            self.assertEqual(result["gasUsed"], hex(gas))
-            self.assertEqual(result["transactions"][0], "0x" + txn_id)
-        elif call == "count":
-            self.assertEqual(result, "0x1")
+        self.assertEqual(result, "0x1")
+
+    def test_get_block_transaction_count_by_number_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getBlockTransactionCountByNumber.
+        """
+        self.rpc.acall(
+            "eth_getBlockTransactionCountByNumber", )
+
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [blockNum: QUANTITY]")
+
+    def test_get_block_transaction_count_by_number_no_block(self):
+        """Test that None is returned if no block is found for
+           eth_getBlockTransactionCountByNumber.
+        """
+        bad_num = 2
+        self.rpc.acall(
+            "eth_getBlockTransactionCountByNumber", [hex(bad_num)])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_num, bad_num)
+
+        self._send_block_no_resource(msg)
+
+        result = self.rpc.get_result()
+        self.assertIsNone(result)
+
+    def test_get_block_by_hash(self):
+        """Test that a block is retrieved correctly, given a block hash."""
+        self.rpc.acall("eth_getBlockByHash", ["0x" + self.block_id, False])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_id, self.block_id)
+
+        self._send_block_back(msg)
+        msg, request = self._receive_receipt_request()
+        self.assertEqual(request.transaction_ids[0], self.txn_id)
+
+        self._send_receipts_back(msg)
+        result = self.rpc.get_result()
+        self.assertEqual(result["number"], hex(self.block_num))
+        self.assertEqual(result["hash"], "0x" + self.block_id)
+        self.assertEqual(result["parentHash"], "0x" + self.prev_block_id)
+        self.assertEqual(result["stateRoot"], "0x" + self.state_root)
+        self.assertEqual(result["gasUsed"], hex(self.gas))
+        self.assertEqual(result["transactions"][0], "0x" + self.txn_id)
+
+    def test_get_block_by_hash_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getBlockByHash.
+        """
+        self.rpc.acall("eth_getBlockByHash", )
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [blockHash: DATA(64), full: BOOL]")
+
+    def test_get_block_by_bad_hash(self):
+        """Test that None is returned if no block is found for
+           eth_getBlockByHash.
+        """
+        bad_id = "1" * 128
+        self.rpc.acall("eth_getBlockByHash", ["0x" + bad_id, False])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_id, bad_id)
+
+        self._send_block_no_resource(msg)
+        result = self.rpc.get_result()
+        self.assertIsNone(result)
+
+    def test_get_block_by_number(self):
+        """Test that a block is retrieved correctly, given a block number."""
+        self.rpc.acall("eth_getBlockByNumber", [hex(self.block_num), False])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_num, self.block_num)
+
+        self._send_block_back(msg)
+        msg, request = self._receive_receipt_request()
+        self.assertEqual(request.transaction_ids[0], self.txn_id)
+
+        self._send_receipts_back(msg)
+        result = self.rpc.get_result()
+        self.assertEqual(result["number"], hex(self.block_num))
+        self.assertEqual(result["hash"], "0x" + self.block_id)
+        self.assertEqual(result["parentHash"], "0x" + self.prev_block_id)
+        self.assertEqual(result["stateRoot"], "0x" + self.state_root)
+        self.assertEqual(result["gasUsed"], hex(self.gas))
+        self.assertEqual(result["transactions"][0], "0x" + self.txn_id)
+
+    def test_get_block_by_number_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getBlockByNumber.
+        """
+        self.rpc.acall("eth_getBlockByNumber", )
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [blockNum: QUANTITY, full: BOOL]")
+
+    def test_get_block_by_bad_number(self):
+        """Test that None is returned if no block is found for
+           eth_getBlockByNumber.
+        """
+        bad_num = 2
+        self.rpc.acall("eth_getBlockByNumber", [hex(bad_num), False])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_num, bad_num)
+
+        self._send_block_no_resource(msg)
+        result = self.rpc.get_result()
+        self.assertIsNone(result)
 
     # Account tests
     def test_get_balance(self):
         """Test that an account balance is retrieved correctly."""
-        self._test_get_account("balance")
+        # self._test_get_account("balance")
+        self.rpc.acall(
+            "eth_getBalance", ["0x" + self.account_address, "latest"])
+
+        msg, request = self._receive_state_request()
+        self.assertEqual(request.address,
+            "a68b06" + self.account_address + "0" * 24)
+
+        self._send_state_response(msg)
+        result = self.rpc.get_result()
+        self.assertEqual(hex(self.balance), result)
+
+    def test_get_balance_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getBalance
+        """
+        self.rpc.acall("eth_getBalance",)
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [address: DATA(20), block: QUANTITY|TAG]")
+
+    def test_get_balance_no_block(self):
+        """Test that None is returned if no block is found for
+           eth_getBalance.
+        """
+        bad_account_address = "a" * 20 * 2
+        self.rpc.acall(
+            "eth_getBalance", ["0x" + bad_account_address, "latest"])
+
+        msg, request = self._receive_state_request()
+        self.assertEqual(request.address,
+            "a68b06" + bad_account_address + "0" * 24)
+
+        self._send_state_no_resource(msg)
+        result = self.rpc.get_result()
+        self.assertIsNone(result)
 
     def test_get_code(self):
         """Test that an account's code is retrieved correctly."""
-        self._test_get_account("code")
+        # self._test_get_account("balance")
+        self.rpc.acall(
+            "eth_getCode", ["0x" + self.account_address, "latest"])
+
+        msg, request = self._receive_state_request()
+        self.assertEqual(request.address,
+            "a68b06" + self.account_address + "0" * 24)
+
+        self._send_state_response(msg)
+        result = self.rpc.get_result()
+        self.assertEqual("0x" + self.code_s, result)
+
+    def test_get_code_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getCode.
+        """
+        self.rpc.acall("eth_getCode", )
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [address: DATA(20), block: QUANTITY|TAG]")
+
+    def test_get_code_no_block(self):
+        """Test that None is returned if no block is found for
+          eth_getCode.
+        """
+        bad_account_address = "a" * 20 * 2
+        self.rpc.acall(
+            "eth_getCode", ["0x" + bad_account_address, "latest"])
+        msg, request = self._receive_state_request()
+        self.assertEqual(request.address,
+            "a68b06" + bad_account_address + "0" * 24)
+
+        self._send_state_no_resource(msg)
+        result = self.rpc.get_result()
+        self.assertIsNone(result)
 
     def test_get_storage_at(self):
         """Test that an account's storage is retrieved correctly."""
-        self._test_get_account("storage")
+        # self._test_get_account("balance")
+        self.rpc.acall(
+            "eth_getStorageAt",
+            ["0x" + self.account_address, "0x" + self.position_s, "latest"])
 
-    def _test_get_account(self, call):
-        account_address = "f" * 20 * 2
-        balance = 123
-        nonce = 456
-        code_b = bytes([0xab, 0xcd, 0xef])
-        code_s = "abcdef"
-        position_b = bytes([0x01, 0x23, 0x45])
-        position_s = "012345"
-        stored_b = bytes([0x67, 0x89])
-        stored_s = "6789"
-
-        if call == "balance":
-            self.rpc.acall(
-                "eth_getBalance", ["0x" + account_address, "latest"])
-        elif call == "code":
-            self.rpc.acall(
-                "eth_getCode", ["0x" + account_address, "latest"])
-        elif call == "storage":
-            self.rpc.acall(
-                "eth_getStorageAt",
-                ["0x" + account_address, "0x" + position_s, "latest"])
-        elif call == "count":
-            self.rpc.acall(
-                "eth_getTransactionCount", ["0x" + account_address, "latest"])
-
-        # Receive and validate the state request
-        msg = self.validator.receive()
-        self.assertEqual(msg.message_type, Message.CLIENT_STATE_GET_REQUEST)
-        request = ClientStateGetRequest()
-        request.ParseFromString(msg.content)
+        msg, request = self._receive_state_request()
         self.assertEqual(request.address,
-            "a68b06" + account_address + "0" * 24)
+            "a68b06" + self.account_address + "0" * 24)
 
-        # Respond with state
-        self.validator.respond(
-            Message.CLIENT_STATE_GET_RESPONSE,
-            ClientStateGetResponse(
-                status=ClientStateGetResponse.OK,
-                value=EvmEntry(
-                    account=EvmStateAccount(
-                        balance=balance,
-                        nonce=nonce,
-                        code=code_b),
-                    storage=[EvmStorage(key=position_b, value=stored_b)],
-                ).SerializeToString()),
-            msg)
-
-        # Validate response
+        self._send_state_response(msg)
         result = self.rpc.get_result()
-        if call == "balance":
-            self.assertEqual(hex(balance), result)
-        elif call == "code":
-            self.assertEqual("0x" + code_s, result)
-        elif call == "storage":
-            self.assertEqual("0x" + stored_s, result)
-        elif call == "count":
-            self.assertEqual(hex(nonce), result)
+        self.assertEqual("0x" + self.stored_s, result)
+
+    def test_get_storage_at_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getStorageAt.
+        """
+        self.rpc.acall("eth_getStorageAt",)
+        result = self.rpc.get_result()
+        self.assertEqual(
+            result["error"]["message"],
+            "Takes [address: DATA(20), position: QUANTITY, block: "
+            "QUANTITY|TAG]")
+
+    def test_get_storage_at_no_address(self):
+        """Test that None is returned if no address is found for
+           eth_getStorageAt.
+        """
+        bad_account_address = "a" * 20 * 2
+        self.rpc.acall(
+            "eth_getStorageAt",
+            ["0x" + bad_account_address, "0x" + self.position_s, "latest"])
+
+        msg, request = self._receive_state_request()
+        self.assertEqual(request.address,
+            "a68b06" + bad_account_address + "0" * 24)
+
+        self._send_state_no_resource(msg)
+        result = self.rpc.get_result()
+        self.assertIsNone(result)
 
     def test_get_account_by_block_num(self):
         """Tests that account info is retrieved correctly when a block number
@@ -310,6 +432,15 @@ class SethRpcTest(unittest.TestCase):
 
         result = self.rpc.get_result()
         self.assertEqual(hex(balance), result)
+
+    def test_get_account_by_block_num_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getBalance.
+        """
+        self.rpc.acall("eth_getBalance",)
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [address: DATA(20), block: QUANTITY|TAG]")
 
     def test_accounts(self):
         """Tests that account list is retrieved correctly."""
@@ -388,17 +519,76 @@ class SethRpcTest(unittest.TestCase):
         self.assertEqual(result["gas"], hex(gas))
         self.assertEqual(result["input"], "0x" + data_s)
 
+    def test_get_transaction_by_hash_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getTransactionByHash.
+        """
+        self.rpc.acall("eth_getTransactionByHash",)
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [txnHash: DATA(64)]")
+
     def test_get_transaction_by_block_hash_and_index(self):
         """Tests that a transaction is retrieved correctly given a block
         signature and transaction index."""
-        self._test_get_transaction_by_idx(by="hash")
+        block_id = "a" * 128
+        block_num = 678
+        txn_ids = [
+            "0" * 64,
+            "1" * 64,
+            "2" * 64,
+            "3" * 64,
+        ]
+        txn_idx = 2
+        nonce = 4
+        pub_key = "035e1de3048a62f9f478440a22fd7655b" + \
+                  "80f0aac997be963b119ac54b3bfdea3b7"
+        addr = "b4d09ca3c0bc538340e904b689016bbb4248136c"
+
+        gas = 100
+        to_b = bytes([0xab, 0xcd, 0xef])
+        to_s = "abcdef"
+        data_b = bytes([0x67, 0x89])
+        data_s = "6789"
+        # self._test_get_transaction_by_idx(by="hash")
+        self.rpc.acall(
+            "eth_getTransactionByBlockHashAndIndex",
+            ["0x" + block_id, hex(txn_idx)])
+        msg, request = self._receive_block_request()
+
+        self.assertEqual(request.block_id, block_id)
+
+        block = self._make_multi_txn_block(
+            txn_ids, nonce, block_num, block_id, pub_key, gas, to_b,
+            data_b)
+
+        self._send_block_back(msg, block)
+
+        result = self.rpc.get_result()
+        self.assertEqual(result["hash"], "0x" + txn_ids[txn_idx])
+        self.assertEqual(result["nonce"], hex(nonce))
+        self.assertEqual(result["blockHash"], "0x" + block_id)
+        self.assertEqual(result["blockNumber"], hex(block_num))
+        self.assertEqual(result["transactionIndex"], hex(txn_idx))
+        self.assertEqual(result["from"], "0x" + addr)
+        self.assertEqual(result["to"], "0x" + to_s)
+        self.assertEqual(result["value"], "0x0")
+        self.assertEqual(result["gasPrice"], "0x0")
+        self.assertEqual(result["gas"], hex(gas))
+        self.assertEqual(result["input"], "0x" + data_s)
+
+    def test_get_transaction_by_block_hash_and_index_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getTransactionByBlockHashAndIndex.
+        """
+        self.rpc.acall("eth_getTransactionByBlockHashAndIndex",)
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [blockHash: DATA(64), index: QUANTITY]")
 
     def test_get_transaction_by_block_number_and_index(self):
         """Tests that a transaction is retrieved correctly given a block
         number and transaction index."""
-        self._test_get_transaction_by_idx(by="number")
-
-    def _test_get_transaction_by_idx(self, by):
         block_id = "a" * 128
         block_num = 678
         txn_ids = [
@@ -419,34 +609,19 @@ class SethRpcTest(unittest.TestCase):
         data_b = bytes([0x67, 0x89])
         data_s = "6789"
 
-        if by == "hash":
-            self.rpc.acall(
-                "eth_getTransactionByBlockHashAndIndex",
-                ["0x" + block_id, hex(txn_idx)])
-        elif by == "number":
-            self.rpc.acall(
-                "eth_getTransactionByBlockNumberAndIndex",
-                [hex(block_num), hex(txn_idx)])
+        self.rpc.acall(
+            "eth_getTransactionByBlockNumberAndIndex",
+            [hex(block_num), hex(txn_idx)])
 
-        msg = self.validator.receive()
-        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
-        request = ClientBlockGetRequest()
-        request.ParseFromString(msg.content)
+        msg, request = self._receive_block_request()
 
-        if by == "hash":
-            self.assertEqual(request.block_id, block_id)
-        elif by == "number":
-            self.assertEqual(request.block_num, block_num)
+        self.assertEqual(request.block_num, block_num)
 
-        self.validator.respond(
-            Message.CLIENT_BLOCK_GET_RESPONSE,
-            ClientBlockGetResponse(
-                status=ClientBlockGetResponse.OK,
-                block=self._make_multi_txn_block(
-                    txn_ids, nonce, block_num, block_id, pub_key, gas, to_b,
-                    data_b)
-            ),
-            msg)
+        block = self._make_multi_txn_block(
+            txn_ids, nonce, block_num, block_id, pub_key, gas, to_b,
+            data_b)
+
+        self._send_block_back(msg, block)
 
         result = self.rpc.get_result()
         self.assertEqual(result["hash"], "0x" + txn_ids[txn_idx])
@@ -460,6 +635,49 @@ class SethRpcTest(unittest.TestCase):
         self.assertEqual(result["gasPrice"], "0x0")
         self.assertEqual(result["gas"], hex(gas))
         self.assertEqual(result["input"], "0x" + data_s)
+
+    def test_get_transaction_by_block_number_and_index_bad_input(self):
+        """Test that the correct error message is returned if no input is given
+           to eth_getTransactionByBlockHashAndIndex.
+        """
+        self.rpc.acall("eth_getTransactionByBlockNumberAndIndex",)
+        result = self.rpc.get_result()
+        self.assertEqual(result["error"]["message"],
+                         "Takes [blockNum: DATA(64), index: QUANTITY]")
+
+    def test_get_transaction_no_block(self):
+        block_id = "a" * 128
+        block_num = 678
+        txn_ids = [
+            "0" * 64,
+            "1" * 64,
+            "2" * 64,
+            "3" * 64,
+        ]
+        txn_idx = 2
+        nonce = 4
+        pub_key = "035e1de3048a62f9f478440a22fd7655b" + \
+                  "80f0aac997be963b119ac54b3bfdea3b7"
+        addr = "b4d09ca3c0bc538340e904b689016bbb4248136c"
+
+        gas = 100
+        to_b = bytes([0xab, 0xcd, 0xef])
+        to_s = "abcdef"
+        data_b = bytes([0x67, 0x89])
+        data_s = "6789"
+
+        self.rpc.acall(
+            "eth_getTransactionByBlockNumberAndIndex",
+            [hex(block_num), hex(txn_idx)])
+
+        msg, request = self._receive_block_request()
+
+        self.assertEqual(request.block_num, block_num)
+
+        self._send_block_no_resource(msg)
+
+        result = self.rpc.get_result()
+        self.assertIsNone(result)
 
     def test_get_transaction_by_block_hash_and_index_no_block(self):
         """Tests that a transaction is retrieved correctly given a block
@@ -485,6 +703,102 @@ class SethRpcTest(unittest.TestCase):
 
         result = self.rpc.get_result()
         self.assertEqual(result, None)
+
+    def _send_block_back(self, msg, block=None):
+        if block is None:
+            block = Block(
+                header=BlockHeader(
+                    block_num=self.block_num,
+                    previous_block_id=self.prev_block_id,
+                    state_root_hash=self.state_root
+                ).SerializeToString(),
+                header_signature=self.block_id,
+                batches=[Batch(transactions=[Transaction(
+                    header=TransactionHeader(
+                        family_name="seth",
+                    ).SerializeToString(),
+                    header_signature=self.txn_id,
+                )])],
+            )
+
+        self.validator.respond(
+            Message.CLIENT_BLOCK_GET_RESPONSE,
+            ClientBlockGetResponse(
+                status=ClientBlockGetResponse.OK,
+                block=block
+            ),
+            msg)
+
+    def _send_block_no_resource(self, msg):
+        self.validator.respond(
+            Message.CLIENT_BLOCK_GET_RESPONSE,
+            ClientBlockGetResponse(
+                status=ClientBlockGetResponse.NO_RESOURCE
+            ),
+            msg)
+
+    def _send_state_no_resource(self, msg):
+        self.validator.respond(
+            Message.CLIENT_STATE_GET_RESPONSE,
+            ClientStateGetResponse(
+                status=ClientStateGetResponse.NO_RESOURCE,
+                ),
+            msg)
+
+    def _send_receipts_back(self, msg):
+        self.validator.respond(
+            Message.CLIENT_RECEIPT_GET_RESPONSE,
+            ClientReceiptGetResponse(
+                status=ClientReceiptGetResponse.OK,
+                receipts=[TransactionReceipt(
+                    data=[TransactionReceipt.Data(
+                        data_type="seth_receipt",
+                        data=SethTransactionReceipt(
+                            gas_used=self.gas,
+                        ).SerializeToString(),
+                    )],
+                    transaction_id=self.txn_id,
+                )]
+            ),
+            msg)
+
+    def _send_state_response(self, msg):
+        self.validator.respond(
+            Message.CLIENT_STATE_GET_RESPONSE,
+            ClientStateGetResponse(
+                status=ClientStateGetResponse.OK,
+                value=EvmEntry(
+                    account=EvmStateAccount(
+                        balance=self.balance,
+                        nonce=self.nonce,
+                        code=self.code_b),
+                    storage=[EvmStorage(key=self.position_b,
+                                        value=self.stored_b)],
+                ).SerializeToString()),
+            msg)
+
+    def _receive_receipt_request(self):
+        # Verify receipt get request
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_RECEIPT_GET_REQUEST)
+        request = ClientReceiptGetRequest()
+        request.ParseFromString(msg.content)
+        return msg, request
+
+
+    def _receive_block_request(self):
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
+        request = ClientBlockGetRequest()
+        request.ParseFromString(msg.content)
+        return msg, request
+
+    def _receive_state_request(self):
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_STATE_GET_REQUEST)
+        request = ClientStateGetRequest()
+        request.ParseFromString(msg.content)
+        return msg, request
 
     def _make_multi_txn_block(self, txn_ids, nonce, block_num, block_id,
                               pub_key, gas, to, data):
