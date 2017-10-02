@@ -38,7 +38,7 @@ func (evc *SawtoothEventFireable) FireEvent(eventID string, eventDataLog EventDa
 	attributes := []processor.Attribute{
 		{
 			Key:   "address",
-			Value: hex.EncodeToString(eventDataLog.Address.Bytes()),
+			Value: hex.EncodeToString(eventDataLog.Address.Postfix(20)),
 		},
 		{
 			Key:   "eventID",
