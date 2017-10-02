@@ -154,6 +154,12 @@ pub fn get_block_by_hash<T>(params: Params, client: ValidatorClient<T>) -> Resul
             return Err(Error::invalid_params("Takes [blockHash: DATA(64), full: BOOL]"));
         },
     };
+    let block_hash = match block_hash.get(2..) {
+        Some(bh) => String::from(bh),
+        None => {
+            return Err(Error::invalid_params("Invalid block hash, must have 0x"));
+        }
+    };
     if full {
         return Err(error::not_implemented());
     }
@@ -194,9 +200,15 @@ pub fn get_block_transaction_count_by_hash<T>(params: Params, client: ValidatorC
     info!("eth_getBlockTransactionCountByHash");
     let (block_hash,): (String,) = match params.parse() {
         Ok(t) => t,
-        Err(error) => {
+        Err(_) => {
             return Err(Error::invalid_params("Takes [blockHash: DATA(64)]"));
         },
+    };
+    let block_hash = match block_hash.get(2..) {
+        Some(bh) => String::from(bh),
+        None => {
+            return Err(Error::invalid_params("Invalid block hash, must have 0x"));
+        }
     };
     get_block_transaction_count(BlockKey::Signature(block_hash), client)
 }

@@ -123,7 +123,7 @@ class SethRpcTest(unittest.TestCase):
         request = ClientBlockGetRequest()
         request.ParseFromString(msg.content)
         if by == "hash":
-            self.assertEqual(request.block_id[2:], block_id)
+            self.assertEqual(request.block_id, block_id)
         elif by == "number":
             self.assertEqual(request.block_num, block_num)
 
