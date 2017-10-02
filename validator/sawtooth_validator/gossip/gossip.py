@@ -630,10 +630,13 @@ class ConnectionManager(Thread):
         get_peers_request = GetPeersRequest()
 
         for conn_id in peers:
-            self._network.send(
-                validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
-                get_peers_request.SerializeToString(),
-                conn_id)
+            try:
+                self._network.send(
+                    validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                    get_peers_request.SerializeToString(),
+                    conn_id)
+            except ValueError:
+                LOGGER.debug("Peer disconnected: %s", conn_id)
 
     def _get_peers_of_endpoints(self, peers, endpoints):
         get_peers_request = GetPeersRequest()
