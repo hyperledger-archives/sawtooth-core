@@ -453,3 +453,16 @@ pub fn bytes_to_hex_str(b: &[u8]) -> String {
      .collect::<Vec<_>>()
      .join("")
 }
+
+pub fn zerobytes(mut nbytes: usize) -> Value {
+    if nbytes == 0 {
+        return Value::String(String::from("0x0"));
+    }
+    let mut s = String::with_capacity(2 + nbytes * 2);
+    while nbytes > 0 {
+        s.push_str("00");
+        nbytes -= 1;
+    }
+    s.push_str("0x");
+    Value::String(s)
+}

@@ -28,6 +28,7 @@ use client::{
     BlockKey,
     num_to_hex,
     hex_prefix,
+    zerobytes,
 };
 
 use sawtooth_sdk::messaging::stream::*;
@@ -124,19 +125,6 @@ fn get_block_obj<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Resu
 
     Ok(Value::Object(bob))
 
-}
-
-fn zerobytes(mut nbytes: usize) -> Value {
-    if nbytes == 0 {
-        return Value::String(String::from("0x0"));
-    }
-    let mut s = String::with_capacity(2 + nbytes * 2);
-    while nbytes > 0 {
-        s.push_str("00");
-        nbytes -= 1;
-    }
-    s.push_str("0x");
-    Value::String(s)
 }
 
 fn get_block_transaction_count<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
