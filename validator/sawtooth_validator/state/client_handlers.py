@@ -855,4 +855,10 @@ class TransactionGetRequest(_ClientRequestHandler):
         except ValueError as e:
             LOGGER.debug(e)
             return self._status.NO_RESOURCE
-        return self._wrap_response(transaction=txn)
+        try:
+            block_id = self._block_store.get_block_by_transaction_id(
+                request.transaction_id).identifier
+        except ValueError as e:
+            block_id = ""
+
+        return self._wrap_response(transaction=txn, block=block_id)
