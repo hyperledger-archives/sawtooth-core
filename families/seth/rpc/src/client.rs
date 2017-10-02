@@ -16,7 +16,8 @@
  */
 
 use std::sync::{Arc, Mutex};
-use std::fmt::LowerHex;
+use std::error::Error as StdError;
+use std::fmt::{LowerHex, Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 use std::collections::HashMap;
 
@@ -52,7 +53,7 @@ use filters::Filter;
 use protobuf;
 use uuid;
 
-
+#[derive(Clone)]
 pub enum BlockKey {
     Latest,
     Earliest,
@@ -91,6 +92,52 @@ impl FromStr for BlockKey {
 }
 
 const SETH_NS: &str = "a68b06";
+
+#[derive(Debug)]
+pub enum Error {
+    ValidatorError,
+    NoResource,
+    CommunicationError(String),
+    ParseError(String),
+}
+
+impl StdError for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::ValidatorError => "Validator returned internal error",
+            Error::NoResource => "Resource not found",
+            Error::CommunicationError(ref msg) => msg,
+            Error::ParseError(ref msg) => msg,
+        }
+    }
+
+    fn cause(&self) -> Option<&StdError> { None }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        match *self {
+            Error::ValidatorError => write!(f, "ValidatorError"),
+            Error::NoResource => write!(f, "NoResource"),
+            Error::CommunicationError(ref msg) => write!(f, "CommunicationError: {}", msg),
+            Error::ParseError(ref msg) => write!(f, "ParseError: {}", msg),
+        }
+    }
+}
+
+impl From<SendError> for Error {
+    fn from(error: SendError) -> Self {
+        Error::CommunicationError(String::from(
+            format!("Failed to send msg: {:?}", error)))
+    }
+}
+
+impl From<ReceiveError> for Error {
+    fn from(error: ReceiveError) -> Self {
+        Error::CommunicationError(String::from(
+            format!("Failed to receive message: {:?}", error)))
+    }
+}
 
 #[derive(Clone)]
 pub struct ValidatorClient<S: MessageSender> {
@@ -153,6 +200,21 @@ impl<S: MessageSender> ValidatorClient<S> {
         Ok(response)
     }
 
+    pub fn send_request<T, U>(&mut self, msg_type: Message_MessageType, msg: &T) -> Result<U, Error>
+        where T: protobuf::Message, U: protobuf::MessageStatic
+    {
+        let msg_bytes = protobuf::Message::write_to_bytes(msg).map_err(|error|
+            Error::ParseError(String::from(
+                format!("Error serializing request: {:?}", error))))?;
+
+        let correlation_id = uuid::Uuid::new_v4().to_string();
+
+        let mut future = self.sender.send(msg_type, &correlation_id, &msg_bytes)?;
+        let response_msg = future.get()?;
+        protobuf::parse_from_bytes(&response_msg.content).map_err(|error|
+            Error::ParseError(String::from(format!("Error parsing response: {:?}", error))))
+    }
+
     pub fn get_receipts(&mut self, block: &Block) -> Result<HashMap<String, SethTransactionReceipt>, String> {
         let batches = &block.batches;
         let mut transactions = Vec::new();
@@ -204,7 +266,7 @@ impl<S: MessageSender> ValidatorClient<S> {
         Ok(seth_receipts)
     }
 
-    pub fn get_block(&mut self, block_key: BlockKey) -> Result<Option<Block>, String> {
+    pub fn get_block(&mut self, block_key: BlockKey) -> Result<Block, Error> {
         let mut request = ClientBlockGetRequest::new();
         match block_key {
             BlockKey::Signature(block_id) => request.set_block_id(block_id),
@@ -214,17 +276,21 @@ impl<S: MessageSender> ValidatorClient<S> {
         };
 
         let response: ClientBlockGetResponse =
-            self.request(Message_MessageType::CLIENT_BLOCK_GET_REQUEST, &request)?;
+            self.send_request(Message_MessageType::CLIENT_BLOCK_GET_REQUEST, &request)?;
 
         match response.status {
             ClientBlockGetResponse_Status::INTERNAL_ERROR => {
-                Err(String::from("Received internal error from validator"))
+                Err(Error::ValidatorError)
             },
             ClientBlockGetResponse_Status::NO_RESOURCE => {
-                Ok(None)
+                Err(Error::NoResource)
             },
             ClientBlockGetResponse_Status::OK => {
-                Ok(response.block.into_option())
+                if let Some(block) = response.block.into_option() {
+                    Ok(block)
+                } else {
+                    Err(Error::NoResource)
+                }
             },
         }
     }
@@ -242,14 +308,11 @@ impl<S: MessageSender> ValidatorClient<S> {
                 request.set_head_id(block_id);
             },
             BlockKey::Number(block_num) => match self.block_num_to_block_id(block_num) {
-                Ok(Some(block_id)) => {
+                Ok(block_id) => {
                     request.set_head_id(block_id);
                 },
-                Ok(None) => {
-                    return Err(String::from("Invalid block number"));
-                },
                 Err(error) => {
-                    return Err(error);
+                    return Err(String::from(format!("{:?}", error)));
                 },
             },
         }
@@ -331,10 +394,9 @@ impl<S: MessageSender> ValidatorClient<S> {
         Ok(block.clone())
     }
 
-    fn block_num_to_block_id(&mut self, block_num: u64) -> Result<Option<String>, String> {
-        self.get_block(BlockKey::Number(block_num)).map(|option|
-            option.map(|block|
-                String::from(block.header_signature)))
+    fn block_num_to_block_id(&mut self, block_num: u64) -> Result<String, Error> {
+        self.get_block(BlockKey::Number(block_num)).map(|block|
+            String::from(block.header_signature))
     }
 
     pub fn remove_filter(&mut self, filter_id: &String) -> Option<(Filter, String)> {

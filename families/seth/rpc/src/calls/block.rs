@@ -24,6 +24,7 @@ use requests::{RequestHandler};
 
 use client::{
     ValidatorClient,
+    Error as ClientError,
     BlockKey,
     num_to_hex,
     hex_prefix,
@@ -65,14 +66,16 @@ pub fn block_number<T>(_params: Params, mut client: ValidatorClient<T>) -> Resul
 
 fn get_block_obj<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     let block = match client.get_block(block_key) {
-        Err(error) => {
-            error!("{:?}", error);
-            return Err(Error::internal_error());
-        },
-        Ok(None) => {
-            return Ok(Value::Null);
-        },
-        Ok(Some(block)) => block,
+        Ok(b) => b,
+        Err(error) => match error {
+            ClientError::NoResource => {
+                return Ok(Value::Null);
+            },
+            _ => {
+                error!("{:?}", error);
+                return Err(Error::internal_error());
+            }
+        }
     };
 
     let block_header: BlockHeader = match protobuf::parse_from_bytes(&block.header) {
@@ -138,14 +141,16 @@ fn zerobytes(mut nbytes: usize) -> Value {
 
 fn get_block_transaction_count<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     let block = match client.get_block(block_key) {
-        Err(error) => {
-            error!("{:?}", error);
-            return Err(Error::internal_error());
-        },
-        Ok(None) => {
-            return Ok(Value::Null);
-        },
-        Ok(Some(block)) => block,
+        Ok(b) => b,
+        Err(error) => match error {
+            ClientError::NoResource => {
+                return Ok(Value::Null);
+            },
+            _ => {
+                error!("{:?}", error);
+                return Err(Error::internal_error());
+            }
+        }
     };
 
     Ok(num_to_hex(&block.batches.iter().fold(0, |acc, batch| acc + batch.transactions.len())))
