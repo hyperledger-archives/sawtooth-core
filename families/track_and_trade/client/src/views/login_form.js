@@ -33,7 +33,11 @@ const LoginForm = {
       m('form', {
         onsubmit: (e) => {
           e.preventDefault()
-          api.post('authorization', vnode.state)
+          const credentials = {
+            username: vnode.state.username,
+            password: api.hashPassword(vnode.state.password)
+          }
+          api.post('authorization', credentials)
             .then(res => {
               api.setAuth(res.authorization)
               transactions.setPrivateKey(vnode.state.password,

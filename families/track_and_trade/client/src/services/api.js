@@ -18,9 +18,19 @@
 
 const m = require('mithril')
 const _ = require('lodash')
+const sjcl = require('sjcl')
 
 const STORAGE_KEY = 'tnt.authorization'
 let authToken = null
+
+/**
+ * Generates a base-64 encoded SHA-256 hash of a plain text password
+ * for submission to authorization routes
+ */
+const hashPassword = password => {
+  const bits = sjcl.hash.sha256.hash(password)
+  return sjcl.codec.base64.fromBits(bits)
+}
 
 /**
  * Getters and setters to handle the auth token both in memory and storage
@@ -96,6 +106,7 @@ const postBinary = (endpoint, data) => {
 }
 
 module.exports = {
+  hashPassword,
   getAuth,
   setAuth,
   clearAuth,

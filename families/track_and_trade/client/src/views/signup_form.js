@@ -65,7 +65,8 @@ const userSubmitter = state => e => {
   e.preventDefault()
 
   const keys = transactions.makePrivateKey(state.password)
-  const user = _.assign(keys, _.pick(state, 'username', 'password', 'email'))
+  const user = _.assign(keys, _.pick(state, 'username', 'email'))
+  user.password = api.hashPassword(state.password)
   const agent = payloads.createAgent(_.pick(state, 'name'))
 
   transactions.submit(agent, true)
