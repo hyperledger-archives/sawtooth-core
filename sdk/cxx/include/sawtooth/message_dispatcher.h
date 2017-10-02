@@ -37,6 +37,8 @@ namespace sawtooth {
 // the validator.
 class MessageDispatcher {
  public:
+    ~MessageDispatcher();
+
     // Connect to the validator, create and bind to the internal routing sockets, and route the messages.
     void Connect(const std::string& connection_string);
     // Close all the open sockets and shutdown the message routing thread.
@@ -46,6 +48,15 @@ class MessageDispatcher {
     // submit messages to be routed back to the validator.
     MessageStreamPtr CreateStream();
     zmqpp::context& context() { return this->context_; }
+
+    // These are the types we will put in the message we send to the transaction
+    // processor when we detect that the server has connected/disconnected.
+    // These assume that there will never be transaction processing message type
+    // in this range.
+    static const Message::MessageType SERVER_CONNECT_EVENT =
+        static_cast<Message::MessageType>(0xFFFE);
+    static const Message::MessageType SERVER_DISCONNECT_EVENT =
+        static_cast<Message::MessageType>(0xFFFF);
  protected:
     friend class TransactionProcessor;
     MessageDispatcher();
@@ -53,6 +64,9 @@ class MessageDispatcher {
  private:
     void ReceiveMessage();
     void SendMessage();
+    uint16_t GetServerSocketEvent(
+        zmqpp::socket& server_monitor_socket
+        );
 
     void DispatchThread();
 
@@ -67,6 +81,10 @@ class MessageDispatcher {
     // Socket for inter-thread communication with the dispatch thread
     static const std::string DISPATCH_THREAD_ENDPOINT;
     zmqpp::socket dispatch_thread_socket;
+
+    bool server_is_connected;
+
+    static const std::string SERVER_MONITOR_ENDPOINT;
 
     // Synchronization variables to coordinate with MessageStreams and the
     // dispatch thread.
