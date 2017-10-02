@@ -144,19 +144,73 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
 
 void TransactionProcessor::Run() {
     try {
-        this->message_dispatcher.Connect(this->connection_string);
+        LOG4CXX_INFO(
+            logger,
+            "Create response stream");
         this->response_stream = this->message_dispatcher.CreateStream();
 
-        this->Register();
-
         zmqpp::socket socket(this->message_dispatcher.context(), zmqpp::socket_type::dealer);
+        LOG4CXX_INFO(
+            logger,
+            "Connect to inproc://request_queue");
         socket.connect("inproc://request_queue");
+
+        // Note that we are requesting a connect to the validator, but when this
+        // returns it does not mean that we are actually connected.  We need to
+        // wait for an event from the message dispatcher.
+        LOG4CXX_INFO(
+            logger,
+            "Connect to: " << this->connection_string);
+        this->message_dispatcher.Connect(this->connection_string);
+
+        bool server_is_connected = false;
 
         while (this->run) {
             zmqpp::message zmsg;
             socket.receive(zmsg);
-            this->HandleProcessingRequest(zmsg.raw_data(0), zmsg.size(0));
+
+            Message validator_message;
+            validator_message.ParseFromArray(zmsg.raw_data(0), zmsg.size(0));
+            switch (validator_message.message_type()) {
+                case Message::TP_PROCESS_REQUEST: {
+                    this->HandleProcessingRequest(
+                        validator_message.content().data(),
+                        validator_message.content().length());
+                    break;
+                }
+                case MessageDispatcher::SERVER_CONNECT_EVENT: {
+                    // If we are not already connected, we need to register
+                    if (!server_is_connected) {
+                        LOG4CXX_INFO(
+                            logger,
+                            "TransactionProcessor::Run : Server connected");
+                            this->Register();
+                    }
+
+                    server_is_connected = true;
+                    break;
+                }
+                case MessageDispatcher::SERVER_DISCONNECT_EVENT: {
+                    LOG4CXX_INFO(
+                        logger,
+                        "TransactionProcessor::Run : Server disconnected");
+                    server_is_connected = false;
+                    break;
+                }
+                default: {
+                    LOG4CXX_ERROR(
+                        logger,
+                        "TransactionProcessor::Run : Unknown message type: "
+                           << validator_message.message_type());
+                    break;
+                }
+            }
         }
+
+        LOG4CXX_INFO(
+            logger,
+            "Close message dispatcher");
+        this->message_dispatcher.Close();
     } catch(std::exception& e) {
         LOG4CXX_ERROR(logger, "TransactionProcessor::Run ERROR: " << e.what());
     }
