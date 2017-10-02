@@ -40,7 +40,10 @@ use sawtooth_sdk::messages::client::{
     ClientStateGetRequest,
     ClientStateGetResponse,
     ClientStateGetResponse_Status,
-    PagingControls
+    PagingControls,
+    ClientTransactionGetRequest,
+    ClientTransactionGetResponse,
+    ClientTransactionGetResponse_Status,
 };
 use sawtooth_sdk::messages::transaction::{TransactionHeader};
 use messages::seth::{
@@ -49,6 +52,7 @@ use messages::seth::{
 };
 use accounts::{Account};
 use filters::Filter;
+use transactions::{Transaction, TransactionKey};
 
 use protobuf;
 use uuid;
@@ -264,6 +268,53 @@ impl<S: MessageSender> ValidatorClient<S> {
             }
         }
         Ok(seth_receipts)
+    }
+
+    pub fn get_transaction_and_block(&mut self, txn_key: &TransactionKey) -> Result<(Transaction, Option<Block>), Error> {
+        match txn_key {
+            &TransactionKey::Signature(ref txn_id) => {
+                let mut request = ClientTransactionGetRequest::new();
+                request.set_transaction_id((*txn_id).clone());
+                let mut response: ClientTransactionGetResponse =
+                    self.send_request(
+                        Message_MessageType::CLIENT_TRANSACTION_GET_REQUEST, &request)?;
+
+                let block = {
+                    if response.block == "" {
+                        None
+                    } else {
+                        self.get_block(BlockKey::Signature(response.block.clone())).ok()
+                    }
+                };
+
+                match response.status {
+                    ClientTransactionGetResponse_Status::INTERNAL_ERROR => {
+                        Err(Error::ValidatorError)
+                    },
+                    ClientTransactionGetResponse_Status::NO_RESOURCE => {
+                        Err(Error::NoResource)
+                    },
+                    ClientTransactionGetResponse_Status::OK => {
+                        let txn = Transaction::try_from(response.take_transaction())?;
+                        Ok((txn, block))
+                    },
+                }
+            },
+            &TransactionKey::Index((ref index, ref block_key)) => {
+                let mut idx = *index;
+                let mut block = self.get_block((*block_key).clone())?;
+                for mut batch in block.take_batches().into_iter() {
+                    for txn in batch.take_transactions().into_iter() {
+                        if idx == 0 {
+                            let txn = Transaction::try_from(txn)?;
+                            return Ok((txn, Some(block)));
+                        }
+                        idx -= 1;
+                    }
+                }
+                Err(Error::NoResource)
+            }
+        }
     }
 
     pub fn get_block(&mut self, block_key: BlockKey) -> Result<Block, Error> {

@@ -25,6 +25,8 @@ from sawtooth_sdk.protobuf.client_pb2 import ClientBlockGetRequest
 from sawtooth_sdk.protobuf.client_pb2 import ClientBlockGetResponse
 from sawtooth_sdk.protobuf.client_pb2 import ClientStateGetRequest
 from sawtooth_sdk.protobuf.client_pb2 import ClientStateGetResponse
+from sawtooth_sdk.protobuf.client_pb2 import ClientTransactionGetRequest
+from sawtooth_sdk.protobuf.client_pb2 import ClientTransactionGetResponse
 from sawtooth_sdk.protobuf.block_pb2 import Block
 from sawtooth_sdk.protobuf.block_pb2 import BlockHeader
 from sawtooth_sdk.protobuf.batch_pb2 import Batch
@@ -38,6 +40,11 @@ from protobuf.seth_pb2 import SethTransactionReceipt
 from protobuf.seth_pb2 import EvmEntry
 from protobuf.seth_pb2 import EvmStateAccount
 from protobuf.seth_pb2 import EvmStorage
+from protobuf.seth_pb2 import SethTransaction
+from protobuf.seth_pb2 import CreateExternalAccountTxn
+from protobuf.seth_pb2 import CreateContractAccountTxn
+from protobuf.seth_pb2 import MessageCallTxn
+from protobuf.seth_pb2 import SetPermissionsTxn
 
 
 class SethRpcTest(unittest.TestCase):
@@ -308,3 +315,215 @@ class SethRpcTest(unittest.TestCase):
         """Tests that account list is retrieved correctly."""
         address = "434d46456b6973a678b77382fca0252629f4389f"
         self.assertEqual(["0x" + address], self.rpc.call("eth_accounts"))
+
+    # Transaction calls
+    def test_get_transaction_by_hash(self):
+        """Tests that a transaction is retrieved correctly given its hash."""
+        block_id = "a" * 128
+        block_num = 678
+        txn_ids = [
+            "0" * 64,
+            "1" * 64,
+            "2" * 64,
+            "3" * 64,
+        ]
+        txn_idx = 2
+        nonce = 4
+        pub_key = "035e1de3048a62f9f478440a22fd7655b" + \
+                  "80f0aac997be963b119ac54b3bfdea3b7"
+        addr = "b4d09ca3c0bc538340e904b689016bbb4248136c"
+
+        gas = 100
+        to_b = bytes([0xab, 0xcd, 0xef])
+        to_s = "abcdef"
+        data_b = bytes([0x67, 0x89])
+        data_s = "6789"
+
+        self.rpc.acall(
+            "eth_getTransactionByHash",
+            ["0x" + txn_ids[txn_idx]])
+
+        msg = self.validator.receive()
+        self.assertEqual(
+            msg.message_type, Message.CLIENT_TRANSACTION_GET_REQUEST)
+        request = ClientTransactionGetRequest()
+        request.ParseFromString(msg.content)
+        self.assertEqual(request.transaction_id, txn_ids[txn_idx])
+
+        block = self._make_multi_txn_block(
+            txn_ids, nonce, block_num, block_id, pub_key, gas, to_b,
+            data_b)
+
+        self.validator.respond(
+            Message.CLIENT_TRANSACTION_GET_RESPONSE,
+            ClientTransactionGetResponse(
+                status=ClientBlockGetResponse.OK,
+                transaction=block.batches[1].transactions[1],
+                block=block_id),
+            msg)
+
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
+        request = ClientBlockGetRequest()
+        request.ParseFromString(msg.content)
+        self.assertEqual(request.block_id, block_id)
+
+        self.validator.respond(
+            Message.CLIENT_BLOCK_GET_RESPONSE,
+            ClientBlockGetResponse(
+                status=ClientBlockGetResponse.OK,
+                block=block),
+            msg)
+
+        result = self.rpc.get_result()
+        self.assertEqual(result["hash"], "0x" + txn_ids[txn_idx])
+        self.assertEqual(result["nonce"], hex(nonce))
+        self.assertEqual(result["blockHash"], "0x" + block_id)
+        self.assertEqual(result["blockNumber"], hex(block_num))
+        self.assertEqual(result["transactionIndex"], hex(txn_idx))
+        self.assertEqual(result["from"], "0x" + addr)
+        self.assertEqual(result["to"], "0x" + to_s)
+        self.assertEqual(result["value"], "0x0")
+        self.assertEqual(result["gasPrice"], "0x0")
+        self.assertEqual(result["gas"], hex(gas))
+        self.assertEqual(result["input"], "0x" + data_s)
+
+    def test_get_transaction_by_block_hash_and_index(self):
+        """Tests that a transaction is retrieved correctly given a block
+        signature and transaction index."""
+        self._test_get_transaction_by_idx(by="hash")
+
+    def test_get_transaction_by_block_number_and_index(self):
+        """Tests that a transaction is retrieved correctly given a block
+        number and transaction index."""
+        self._test_get_transaction_by_idx(by="number")
+
+    def _test_get_transaction_by_idx(self, by):
+        block_id = "a" * 128
+        block_num = 678
+        txn_ids = [
+            "0" * 64,
+            "1" * 64,
+            "2" * 64,
+            "3" * 64,
+        ]
+        txn_idx = 2
+        nonce = 4
+        pub_key = "035e1de3048a62f9f478440a22fd7655b" + \
+                  "80f0aac997be963b119ac54b3bfdea3b7"
+        addr = "b4d09ca3c0bc538340e904b689016bbb4248136c"
+
+        gas = 100
+        to_b = bytes([0xab, 0xcd, 0xef])
+        to_s = "abcdef"
+        data_b = bytes([0x67, 0x89])
+        data_s = "6789"
+
+        if by == "hash":
+            self.rpc.acall(
+                "eth_getTransactionByBlockHashAndIndex",
+                ["0x" + block_id, hex(txn_idx)])
+        elif by == "number":
+            self.rpc.acall(
+                "eth_getTransactionByBlockNumberAndIndex",
+                [hex(block_num), hex(txn_idx)])
+
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
+        request = ClientBlockGetRequest()
+        request.ParseFromString(msg.content)
+
+        if by == "hash":
+            self.assertEqual(request.block_id, block_id)
+        elif by == "number":
+            self.assertEqual(request.block_num, block_num)
+
+        self.validator.respond(
+            Message.CLIENT_BLOCK_GET_RESPONSE,
+            ClientBlockGetResponse(
+                status=ClientBlockGetResponse.OK,
+                block=self._make_multi_txn_block(
+                    txn_ids, nonce, block_num, block_id, pub_key, gas, to_b,
+                    data_b)
+            ),
+            msg)
+
+        result = self.rpc.get_result()
+        self.assertEqual(result["hash"], "0x" + txn_ids[txn_idx])
+        self.assertEqual(result["nonce"], hex(nonce))
+        self.assertEqual(result["blockHash"], "0x" + block_id)
+        self.assertEqual(result["blockNumber"], hex(block_num))
+        self.assertEqual(result["transactionIndex"], hex(txn_idx))
+        self.assertEqual(result["from"], "0x" + addr)
+        self.assertEqual(result["to"], "0x" + to_s)
+        self.assertEqual(result["value"], "0x0")
+        self.assertEqual(result["gasPrice"], "0x0")
+        self.assertEqual(result["gas"], hex(gas))
+        self.assertEqual(result["input"], "0x" + data_s)
+
+    def test_get_transaction_by_block_hash_and_index_no_block(self):
+        """Tests that a transaction is retrieved correctly given a block
+        signature and transaction index, where the block doesn't exist but the
+        transaction does."""
+        block_id = "a" * 128
+        txn_idx = 2
+
+        self.rpc.acall(
+            "eth_getTransactionByBlockHashAndIndex",
+            ["0x" + block_id, hex(txn_idx)])
+
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
+        request = ClientBlockGetRequest()
+        request.ParseFromString(msg.content)
+        self.assertEqual(request.block_id, block_id)
+
+        self.validator.respond(
+            Message.CLIENT_BLOCK_GET_RESPONSE,
+            ClientBlockGetResponse(status=ClientBlockGetResponse.NO_RESOURCE),
+            msg)
+
+        result = self.rpc.get_result()
+        self.assertEqual(result, None)
+
+    def _make_multi_txn_block(self, txn_ids, nonce, block_num, block_id,
+                              pub_key, gas, to, data):
+        txns = [
+            Transaction(
+                header=TransactionHeader(
+                    family_name="seth",
+                    signer_pubkey=pub_key,
+                ).SerializeToString(),
+                header_signature=txn_ids[i],
+                payload=txn.SerializeToString())
+            for i, txn in enumerate([
+                SethTransaction(
+                    transaction_type=SethTransaction.SET_PERMISSIONS,
+                    set_permissions=SetPermissionsTxn()),
+                SethTransaction(
+                    transaction_type=SethTransaction.CREATE_EXTERNAL_ACCOUNT,
+                    create_external_account=CreateExternalAccountTxn()),
+                SethTransaction(
+                    transaction_type=SethTransaction.MESSAGE_CALL,
+                    message_call=MessageCallTxn(
+                        nonce=nonce,
+                        gas_limit=gas,
+                        to=to,
+                        data=data,
+                )),
+                SethTransaction(
+                    transaction_type=SethTransaction.CREATE_CONTRACT_ACCOUNT,
+                    create_contract_account=CreateContractAccountTxn()),
+            ])
+        ]
+
+        return Block(
+            header=BlockHeader(
+                block_num=block_num,
+            ).SerializeToString(),
+            header_signature=block_id,
+            batches=[
+                Batch(transactions=txns[0:1]),
+                Batch(transactions=txns[1:3]),
+                Batch(transactions=txns[3:4]),
+            ])
