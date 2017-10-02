@@ -56,6 +56,9 @@ def intkey_config_registry(num):
     # all nodes get the same processors
     return 'intkey-tp-python', 'settings-tp', 'poet-validator-registry-tp'
 
+def intkey_config_identity_registry(num):
+    return 'intkey-tp-python', 'settings-tp', 'identity-tp', 'poet-validator-registry-tp'
+
 def intkey_xo_config_registry(num):
     # all nodes get the same processors
     return (
@@ -99,7 +102,7 @@ def start_node(num,
                                 validator_cmd_func,
                                 poet_kwargs)
 
-    wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)])
+    wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)], tries=20)
 
     return [rest_api] + processors + [validator]
 

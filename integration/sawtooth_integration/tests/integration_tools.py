@@ -65,6 +65,9 @@ class RestClient:
 
         return self._post('/batches?wait', batch_list)
 
+    def block_list(self):
+        return self._get('/blocks')
+
     def _get(self, path, **queries):
         code, json_result = self._submit_request(
             self.url + path,
