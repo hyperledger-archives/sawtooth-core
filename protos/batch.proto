@@ -40,6 +40,10 @@ message Batch {
     // A list of the transactions that match the list of
     // transaction_ids listed in the batch header
     repeated Transaction transactions = 3;
+
+    // A debugging flag which indicates this batch should be traced through the
+    // system, resulting in a higher level of debugging output.
+    bool trace = 4;
 }
 
 message BatchList {
