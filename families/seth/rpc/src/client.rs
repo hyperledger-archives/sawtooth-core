@@ -16,7 +16,8 @@
  */
 
 use std::sync::{Arc, Mutex};
-use std::fmt::LowerHex;
+use std::error::Error as StdError;
+use std::fmt::{LowerHex, Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 use std::collections::HashMap;
 
@@ -39,7 +40,10 @@ use sawtooth_sdk::messages::client::{
     ClientStateGetRequest,
     ClientStateGetResponse,
     ClientStateGetResponse_Status,
-    PagingControls
+    PagingControls,
+    ClientTransactionGetRequest,
+    ClientTransactionGetResponse,
+    ClientTransactionGetResponse_Status,
 };
 use sawtooth_sdk::messages::transaction::{TransactionHeader};
 use messages::seth::{
@@ -48,11 +52,12 @@ use messages::seth::{
 };
 use accounts::{Account};
 use filters::Filter;
+use transactions::{Transaction, TransactionKey};
 
 use protobuf;
 use uuid;
 
-
+#[derive(Clone)]
 pub enum BlockKey {
     Latest,
     Earliest,
@@ -91,6 +96,52 @@ impl FromStr for BlockKey {
 }
 
 const SETH_NS: &str = "a68b06";
+
+#[derive(Debug)]
+pub enum Error {
+    ValidatorError,
+    NoResource,
+    CommunicationError(String),
+    ParseError(String),
+}
+
+impl StdError for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::ValidatorError => "Validator returned internal error",
+            Error::NoResource => "Resource not found",
+            Error::CommunicationError(ref msg) => msg,
+            Error::ParseError(ref msg) => msg,
+        }
+    }
+
+    fn cause(&self) -> Option<&StdError> { None }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        match *self {
+            Error::ValidatorError => write!(f, "ValidatorError"),
+            Error::NoResource => write!(f, "NoResource"),
+            Error::CommunicationError(ref msg) => write!(f, "CommunicationError: {}", msg),
+            Error::ParseError(ref msg) => write!(f, "ParseError: {}", msg),
+        }
+    }
+}
+
+impl From<SendError> for Error {
+    fn from(error: SendError) -> Self {
+        Error::CommunicationError(String::from(
+            format!("Failed to send msg: {:?}", error)))
+    }
+}
+
+impl From<ReceiveError> for Error {
+    fn from(error: ReceiveError) -> Self {
+        Error::CommunicationError(String::from(
+            format!("Failed to receive message: {:?}", error)))
+    }
+}
 
 #[derive(Clone)]
 pub struct ValidatorClient<S: MessageSender> {
@@ -153,6 +204,21 @@ impl<S: MessageSender> ValidatorClient<S> {
         Ok(response)
     }
 
+    pub fn send_request<T, U>(&mut self, msg_type: Message_MessageType, msg: &T) -> Result<U, Error>
+        where T: protobuf::Message, U: protobuf::MessageStatic
+    {
+        let msg_bytes = protobuf::Message::write_to_bytes(msg).map_err(|error|
+            Error::ParseError(String::from(
+                format!("Error serializing request: {:?}", error))))?;
+
+        let correlation_id = uuid::Uuid::new_v4().to_string();
+
+        let mut future = self.sender.send(msg_type, &correlation_id, &msg_bytes)?;
+        let response_msg = future.get()?;
+        protobuf::parse_from_bytes(&response_msg.content).map_err(|error|
+            Error::ParseError(String::from(format!("Error parsing response: {:?}", error))))
+    }
+
     pub fn get_receipts(&mut self, block: &Block) -> Result<HashMap<String, SethTransactionReceipt>, String> {
         let batches = &block.batches;
         let mut transactions = Vec::new();
@@ -204,7 +270,54 @@ impl<S: MessageSender> ValidatorClient<S> {
         Ok(seth_receipts)
     }
 
-    pub fn get_block(&mut self, block_key: BlockKey) -> Result<Option<Block>, String> {
+    pub fn get_transaction_and_block(&mut self, txn_key: &TransactionKey) -> Result<(Transaction, Option<Block>), Error> {
+        match txn_key {
+            &TransactionKey::Signature(ref txn_id) => {
+                let mut request = ClientTransactionGetRequest::new();
+                request.set_transaction_id((*txn_id).clone());
+                let mut response: ClientTransactionGetResponse =
+                    self.send_request(
+                        Message_MessageType::CLIENT_TRANSACTION_GET_REQUEST, &request)?;
+
+                let block = {
+                    if response.block == "" {
+                        None
+                    } else {
+                        self.get_block(BlockKey::Signature(response.block.clone())).ok()
+                    }
+                };
+
+                match response.status {
+                    ClientTransactionGetResponse_Status::INTERNAL_ERROR => {
+                        Err(Error::ValidatorError)
+                    },
+                    ClientTransactionGetResponse_Status::NO_RESOURCE => {
+                        Err(Error::NoResource)
+                    },
+                    ClientTransactionGetResponse_Status::OK => {
+                        let txn = Transaction::try_from(response.take_transaction())?;
+                        Ok((txn, block))
+                    },
+                }
+            },
+            &TransactionKey::Index((ref index, ref block_key)) => {
+                let mut idx = *index;
+                let mut block = self.get_block((*block_key).clone())?;
+                for mut batch in block.take_batches().into_iter() {
+                    for txn in batch.take_transactions().into_iter() {
+                        if idx == 0 {
+                            let txn = Transaction::try_from(txn)?;
+                            return Ok((txn, Some(block)));
+                        }
+                        idx -= 1;
+                    }
+                }
+                Err(Error::NoResource)
+            }
+        }
+    }
+
+    pub fn get_block(&mut self, block_key: BlockKey) -> Result<Block, Error> {
         let mut request = ClientBlockGetRequest::new();
         match block_key {
             BlockKey::Signature(block_id) => request.set_block_id(block_id),
@@ -214,17 +327,21 @@ impl<S: MessageSender> ValidatorClient<S> {
         };
 
         let response: ClientBlockGetResponse =
-            self.request(Message_MessageType::CLIENT_BLOCK_GET_REQUEST, &request)?;
+            self.send_request(Message_MessageType::CLIENT_BLOCK_GET_REQUEST, &request)?;
 
         match response.status {
             ClientBlockGetResponse_Status::INTERNAL_ERROR => {
-                Err(String::from("Received internal error from validator"))
+                Err(Error::ValidatorError)
             },
             ClientBlockGetResponse_Status::NO_RESOURCE => {
-                Ok(None)
+                Err(Error::NoResource)
             },
             ClientBlockGetResponse_Status::OK => {
-                Ok(response.block.into_option())
+                if let Some(block) = response.block.into_option() {
+                    Ok(block)
+                } else {
+                    Err(Error::NoResource)
+                }
             },
         }
     }
@@ -242,14 +359,11 @@ impl<S: MessageSender> ValidatorClient<S> {
                 request.set_head_id(block_id);
             },
             BlockKey::Number(block_num) => match self.block_num_to_block_id(block_num) {
-                Ok(Some(block_id)) => {
+                Ok(block_id) => {
                     request.set_head_id(block_id);
                 },
-                Ok(None) => {
-                    return Err(String::from("Invalid block number"));
-                },
                 Err(error) => {
-                    return Err(error);
+                    return Err(String::from(format!("{:?}", error)));
                 },
             },
         }
@@ -331,10 +445,9 @@ impl<S: MessageSender> ValidatorClient<S> {
         Ok(block.clone())
     }
 
-    fn block_num_to_block_id(&mut self, block_num: u64) -> Result<Option<String>, String> {
-        self.get_block(BlockKey::Number(block_num)).map(|option|
-            option.map(|block|
-                String::from(block.header_signature)))
+    fn block_num_to_block_id(&mut self, block_num: u64) -> Result<String, Error> {
+        self.get_block(BlockKey::Number(block_num)).map(|block|
+            String::from(block.header_signature))
     }
 
     pub fn remove_filter(&mut self, filter_id: &String) -> Option<(Filter, String)> {
@@ -390,4 +503,17 @@ pub fn bytes_to_hex_str(b: &[u8]) -> String {
      .map(|b| format!("{:02x}", b))
      .collect::<Vec<_>>()
      .join("")
+}
+
+pub fn zerobytes(mut nbytes: usize) -> Value {
+    if nbytes == 0 {
+        return Value::String(String::from("0x0"));
+    }
+    let mut s = String::with_capacity(2 + nbytes * 2);
+    while nbytes > 0 {
+        s.push_str("00");
+        nbytes -= 1;
+    }
+    s.push_str("0x");
+    Value::String(s)
 }

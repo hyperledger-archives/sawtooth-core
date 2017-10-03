@@ -427,4 +427,8 @@ message ClientTransactionGetResponse {
     }
     Status status = 1;
     Transaction transaction = 2;
+
+    // Identifier of the block this transaction is in. Not set if the
+    // transaction is pending.
+    string block = 3;
 }
