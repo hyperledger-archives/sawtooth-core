@@ -101,10 +101,17 @@ pub fn http_submitter(target: String, rate: u64, receiver: Arc<Mutex<mpsc::Recei
     let mut count = 0;
     let mut last_count = 0;
     let mut last_time = time::Instant::now();
+    let mut last_trace_time = time::Instant::now();
 
     loop {
         match receiver.lock().unwrap().recv().unwrap() {
-            Some(batch_list) => {
+            Some(mut batch_list) => {
+                // Set the trace flag on a batch about once every 5 seconds
+                if (time::Instant::now() - last_trace_time).as_secs() > 5 {
+                    batch_list.mut_batches()[0].trace = true;
+                    last_trace_time = time::Instant::now();
+                }
+
                 let bytes = batch_list.write_to_bytes().unwrap();
 
                 let mut req = Request::new(Method::Post, uri.parse().unwrap());

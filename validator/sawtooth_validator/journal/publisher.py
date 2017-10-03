@@ -165,6 +165,10 @@ class _CandidateBlock(object):
         """Add a batch to the _CandidateBlock
         :param batch: the batch to add to the block
         """
+        if batch.trace:
+            LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                         self.__class__.__name__)
+
         # first we check if the transaction dependencies are satisfied
         # The completer should have taken care of making sure all
         # Batches containing dependent transactions were sent to the
@@ -252,6 +256,10 @@ class _CandidateBlock(object):
         #   This list is needed in some case when the block is abandoned to
         #   make sure they do not remain in the pending_batches list.
         for batch in self._pending_batches:
+            if batch.trace:
+                LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                             self.__class__.__name__)
+
             result = self._scheduler.get_batch_execution_result(
                 batch.header_signature)
             # if a result is None, this means that the executor never

@@ -567,6 +567,11 @@ class BatchSubmitFinisher(_ClientRequestHandler):
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
     def _respond(self, request):
+        for batch in request.batches:
+            if batch.trace:
+                LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                             self.__class__.__name__)
+
         if not request.wait_for_commit:
             return self._status.OK
 

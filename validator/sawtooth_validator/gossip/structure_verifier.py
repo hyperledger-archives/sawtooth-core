@@ -163,6 +163,11 @@ class BatchListStructureVerifier(Handler):
         except DecodeError:
             return make_response(response_proto.INTERNAL_ERROR)
 
+        for batch in request.batches:
+            if batch.trace:
+                LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                             self.__class__.__name__)
+
         if not all(map(is_valid_batch, request.batches)):
             return make_response(response_proto.INVALID_BATCH)
 
