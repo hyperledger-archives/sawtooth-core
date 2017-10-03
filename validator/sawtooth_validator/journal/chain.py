@@ -721,6 +721,12 @@ class ChainController(object):
                             result["committed_batches"],
                             result["uncommitted_batches"])
 
+                        for batch in new_block.batches:
+                            if batch.trace:
+                                LOGGER.debug("TRACE %s: %s",
+                                             batch.header_signature,
+                                             self.__class__.__name__)
+
                     # Submit any immediate descendant blocks for verification
                     LOGGER.debug(
                         'Verify descendant blocks: %s (%s)',
