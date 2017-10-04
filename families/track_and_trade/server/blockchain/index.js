@@ -96,7 +96,7 @@ const submit = (txnBytes, { wait }) => {
     // Wait to return until new block is in database
     return new Promise(resolve => setTimeout(() => {
       resolve({ batch: batch.headerSignature })
-    }, 500))
+    }, 1000))
   })
 }
 
