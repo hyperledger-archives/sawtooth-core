@@ -1,0 +1,133 @@
+{
+  "records": [
+    {
+      "recordId": "1-4m-4-f1sh",
+      "recordType": "fish",
+      "properties": [
+          {
+            "name": "species",
+            "dataType": 1,
+            "stringValue": "BFT"
+          },
+          {
+            "name": "length",
+            "dataType": 2,
+            "intValue": 2257000
+          },
+          {
+            "name": "weight",
+            "dataType": 2,
+            "intValue": 247096000
+          },
+          {
+            "name": "location",
+            "dataType": 4,
+            "locationValue": {
+              "latitude": 42456486,
+              "longitude": -67982434
+            }
+          }
+      ],
+      "ownerIndex": 0,
+      "custodianIndex": 2,
+      "reporterIndex": 1
+    },
+
+    {
+      "recordId": "1-4m-sm0l-f1sh",
+      "recordType": "fish",
+      "properties": [
+          {
+            "name": "species",
+            "dataType": 1,
+            "stringValue": "STV"
+          },
+          {
+            "name": "length",
+            "dataType": 2,
+            "intValue": 672000
+          },
+          {
+            "name": "weight",
+            "dataType": 2,
+            "intValue": 7826000
+          },
+          {
+            "name": "location",
+            "dataType": 4,
+            "locationValue": {
+              "latitude": 46786299,
+              "longitude": -92051336
+            }
+          }
+      ],
+      "ownerIndex": 1
+    },
+
+    {
+      "recordId": "1-4m-n0t-f1sh",
+      "recordType": "fish",
+      "properties": [
+          {
+            "name": "species",
+            "dataType": 1,
+            "stringValue": "SPW"
+          },
+          {
+            "name": "length",
+            "dataType": 2,
+            "intValue": 20567000
+          },
+          {
+            "name": "weight",
+            "dataType": 2,
+            "intValue": 57243980000
+          },
+          {
+            "name": "location",
+            "dataType": 4,
+            "locationValue": {
+              "latitude": -31404863,
+              "longitude": 40018772
+            }
+          }
+      ],
+      "ownerIndex": 0
+    }
+  ],
+
+  "agents": [
+    {
+      "username": "ahab",
+      "password": "ahab",
+      "publicKey": "03ba003ea48e3599f73939b7908ca361cf539cc0baa7b0a049c590bcc46e2ef55a",
+      "name": "Ahab",
+      "email": "ahab@pequod.net",
+      "privateKey": "063f9ca21d4ef4955f3e120374f7c22272f42106c466a91d01779efba22c2cb6",
+      "encryptedKey": "{\"iv\":\"sKGty1gSvZGmCwzkGy0vvg==\",\"v\":1,\"iter\":10000,\"ks\":128,\"ts\":64,\"mode\":\"ccm\",\"adata\":\"\",\"cipher\":\"aes\",\"salt\":\"lYT7rTJpTV0=\",\"ct\":\"taU8UNB5oJrquzEiXBV+rTTnEq9XmaO9BKeLQQWWuyXJdZ6wR9G+FYrKPkYnXc30iS/9amSG272C8qqnPdM4OE0dvjIdWgSd\"}",
+      "hashedPassword": "KNYr+guWkg77DbaWofgK72LrNdaQzzJGIkk2rEHqP9Y="
+    },
+
+    {
+      "username": "ishmael",
+      "password": "ishmael",
+      "publicKey": "02f85a333b5a7db155285bdd39d61fa1b0c65550187e22b16f5a6d2f63b7f2df6c",
+      "name": "Ishmael",
+      "email": "ishmael@pequod.net",
+      "privateKey": "1ab38027228aef9a6642d6acbf7aa62e8db18795cc09c3e03586e49396afb3df",
+      "encryptedKey": "{\"iv\":\"ao0PDb6ukW58Z6FaUDnjKQ==\",\"v\":1,\"iter\":10000,\"ks\":128,\"ts\":64,\"mode\":\"ccm\",\"adata\":\"\",\"cipher\":\"aes\",\"salt\":\"lAcyL1LM+Gs=\",\"ct\":\"txXSA33qYOmFmEQvL20VtbcvROLh4WWurhCaQKzsVd50x5KOyHnOzECxRlWr3VnpAErDdYRd3Nuq2jtC9KT4+DxhW2S10aeo\"}",
+      "hashedPassword": "WYvPSxUEzs0jffzHa9fqQn1Q8BbZYUVhYr5ghAL4jn4="
+    },
+
+    {
+      "username": "starbuck",
+      "password": "starbuck",
+      "publicKey": "02c0d076f5b30e16b56d468e4f4da4be0c1ce29370b9ab850cc4a7aec0bf4dbebc",
+      "name": "Starbuck",
+      "email": "starbuck@pequod.net",
+      "privateKey": "a053435ccb852cbe0bbc1b9e6412d0393c71c367a1a4920fd5697e392e470ee0",
+      "encryptedKey": "{\"iv\":\"zzLQ+X5SdKRF5uAZFGcy1A==\",\"v\":1,\"iter\":10000,\"ks\":128,\"ts\":64,\"mode\":\"ccm\",\"adata\":\"\",\"cipher\":\"aes\",\"salt\":\"/TZy27IbJ/g=\",\"ct\":\"7vV+E3zUdgt0Qp5IPfLPQuslPQoznYAmnGCHt1NFesn1xAuDJYpl6qiP37DCJuDuWgnZvyoJ7BzxZwNzylFwwqLZVjTgXpOu\"}",
+      "hashedPassword": "jQwngNSrwaQPvjbGYYPXKrxuwUzPZXG1tRL2h6cfpco="
+    }
+  ]
+}
