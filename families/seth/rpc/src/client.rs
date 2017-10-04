@@ -21,6 +21,9 @@ use std::fmt::{LowerHex, Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 use std::collections::HashMap;
 
+use crypto::digest::Digest;
+use crypto::sha2::Sha512;
+
 use jsonrpc_core::{Value};
 
 use sawtooth_sdk::messaging::stream::*;
@@ -44,15 +47,16 @@ use sawtooth_sdk::messages::client::{
     ClientTransactionGetRequest,
     ClientTransactionGetResponse,
     ClientTransactionGetResponse_Status,
+    ClientBatchSubmitRequest,
+    ClientBatchSubmitResponse,
+    ClientBatchSubmitResponse_Status,
 };
-use sawtooth_sdk::messages::transaction::{TransactionHeader};
-use messages::seth::{
-    SethTransactionReceipt,
-    EvmEntry, EvmStateAccount, EvmStorage,
-};
-use accounts::{Account};
+use sawtooth_sdk::messages::transaction::{Transaction as TransactionPb, TransactionHeader};
+use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
+use messages::seth::{EvmEntry, EvmStateAccount, EvmStorage};
+use accounts::{Account, Error as AccountError};
 use filters::Filter;
-use transactions::{Transaction, TransactionKey};
+use transactions::{SethTransaction, SethReceipt, Transaction, TransactionKey};
 
 use protobuf;
 use uuid;
@@ -96,6 +100,7 @@ impl FromStr for BlockKey {
 }
 
 const SETH_NS: &str = "a68b06";
+const BLOCK_INFO_NS: &str = "00b10c";
 
 #[derive(Debug)]
 pub enum Error {
@@ -103,6 +108,9 @@ pub enum Error {
     NoResource,
     CommunicationError(String),
     ParseError(String),
+    AccountLoadError,
+    SigningError,
+    InvalidTransaction,
 }
 
 impl StdError for Error {
@@ -112,6 +120,9 @@ impl StdError for Error {
             Error::NoResource => "Resource not found",
             Error::CommunicationError(ref msg) => msg,
             Error::ParseError(ref msg) => msg,
+            Error::AccountLoadError => "Account loading failed",
+            Error::SigningError => "Signing failed",
+            Error::InvalidTransaction => "Submitted transaction was invalid",
         }
     }
 
@@ -125,6 +136,9 @@ impl Display for Error {
             Error::NoResource => write!(f, "NoResource"),
             Error::CommunicationError(ref msg) => write!(f, "CommunicationError: {}", msg),
             Error::ParseError(ref msg) => write!(f, "ParseError: {}", msg),
+            Error::AccountLoadError => write!(f, "AccountLoadError"),
+            Error::SigningError => write!(f, "SigningError"),
+            Error::InvalidTransaction => write!(f, "InvalidTransaction"),
         }
     }
 }
@@ -140,6 +154,17 @@ impl From<ReceiveError> for Error {
     fn from(error: ReceiveError) -> Self {
         Error::CommunicationError(String::from(
             format!("Failed to receive message: {:?}", error)))
+    }
+}
+
+impl From<AccountError> for Error {
+    fn from(error: AccountError) -> Self {
+        match error {
+            AccountError::ParseError(msg) => Error::ParseError(msg),
+            AccountError::IoError(_) => Error::AccountLoadError,
+            AccountError::AliasNotFound => Error::AccountLoadError,
+            AccountError::SigningError => Error::SigningError,
+        }
     }
 }
 
@@ -219,7 +244,79 @@ impl<S: MessageSender> ValidatorClient<S> {
             Error::ParseError(String::from(format!("Error parsing response: {:?}", error))))
     }
 
-    pub fn get_receipts(&mut self, block: &Block) -> Result<HashMap<String, SethTransactionReceipt>, String> {
+    pub fn send_transaction(&mut self, from: &str, txn: SethTransaction) -> Result<String, Error> {
+        let (batch, txn_signature) = self.make_batch(from, txn)?;
+
+        let mut request = ClientBatchSubmitRequest::new();
+        request.set_batches(protobuf::RepeatedField::from_vec(vec![batch]));
+
+        let response: ClientBatchSubmitResponse =
+            self.send_request(Message_MessageType::CLIENT_BATCH_SUBMIT_REQUEST, &request)?;
+
+        match response.status {
+            ClientBatchSubmitResponse_Status::OK => Ok(txn_signature),
+            ClientBatchSubmitResponse_Status::INTERNAL_ERROR => Err(Error::ValidatorError),
+            ClientBatchSubmitResponse_Status::INVALID_BATCH => Err(Error::InvalidTransaction),
+        }
+    }
+
+    fn make_batch(&self, from: &str, txn: SethTransaction) -> Result<(Batch, String), Error> {
+        let payload = protobuf::Message::write_to_bytes(&txn.to_pb()).map_err(|error|
+            Error::ParseError(String::from(
+                format!("Error serializing payload: {:?}", error))))?;
+
+        let account = self.loaded_accounts().iter()
+            .find(|account| account.address() == from)
+            .ok_or_else(|| {
+                error!("Account with address `{}` not found.", from);
+                Error::NoResource})?;
+
+        let mut txn_header = TransactionHeader::new();
+        txn_header.set_batcher_pubkey(String::from(account.pubkey()));
+        txn_header.set_family_name(String::from("seth"));
+        txn_header.set_family_version(String::from("1.0"));
+        txn_header.set_inputs(protobuf::RepeatedField::from_vec(
+            vec![String::from(SETH_NS), String::from(BLOCK_INFO_NS)]));
+        txn_header.set_outputs(protobuf::RepeatedField::from_vec(
+            vec![String::from(SETH_NS), String::from(BLOCK_INFO_NS)]));
+        txn_header.set_payload_encoding(String::from("application/protobuf"));
+
+        let mut sha = Sha512::new();
+        sha.input(&payload);
+        let hash = sha.result_str();
+        txn_header.set_payload_sha512(hash);
+
+        txn_header.set_signer_pubkey(String::from(account.pubkey()));
+        let txn_header_bytes = protobuf::Message::write_to_bytes(&txn_header).map_err(|error|
+            Error::ParseError(String::from(
+                format!("Error serializing transaction header: {:?}", error))))?;
+
+        let txn_signature = account.sign(&txn_header_bytes)?;
+
+        let mut txn = TransactionPb::new();
+        txn.set_header(txn_header_bytes);
+        txn.set_header_signature(txn_signature.clone());
+        txn.set_payload(payload);
+
+        let mut batch_header = BatchHeader::new();
+        batch_header.set_signer_pubkey(String::from(account.pubkey()));
+        batch_header.set_transaction_ids(protobuf::RepeatedField::from_vec(
+            vec![txn_signature.clone()]));
+        let batch_header_bytes = protobuf::Message::write_to_bytes(&batch_header).map_err(|error|
+            Error::ParseError(String::from(
+                format!("Error serializing batch header: {:?}", error))))?;
+
+        let batch_signature = account.sign(&batch_header_bytes)?;
+
+        let mut batch = Batch::new();
+        batch.set_header(batch_header_bytes);
+        batch.set_header_signature(batch_signature);
+        batch.set_transactions(protobuf::RepeatedField::from_vec(vec![txn]));
+
+        Ok((batch, txn_signature))
+    }
+
+    pub fn get_receipts_from_block(&mut self, block: &Block) -> Result<HashMap<String, SethReceipt>, String> {
         let batches = &block.batches;
         let mut transactions = Vec::new();
         for batch in batches.iter() {
@@ -236,38 +333,41 @@ impl<S: MessageSender> ValidatorClient<S> {
             }
         }
 
+        let receipts = self.get_receipts(&transactions).map_err(|error| match error {
+            Error::ValidatorError => String::from("Received internal error from validator"),
+            Error::NoResource => String::from("Missing receipt"),
+            _ => String::from("Unknown error"),
+        })?;
+
+        Ok(receipts)
+    }
+
+    pub fn get_receipts(&mut self, transaction_ids: &[String])
+        -> Result<HashMap<String, SethReceipt>, Error>
+    {
         let mut request = ClientReceiptGetRequest::new();
-        request.set_transaction_ids(protobuf::RepeatedField::from_vec(transactions));
+        request.set_transaction_ids(protobuf::RepeatedField::from_vec(Vec::from(transaction_ids)));
         let response: ClientReceiptGetResponse =
-            self.request(Message_MessageType::CLIENT_RECEIPT_GET_REQUEST, &request)?;
+            self.send_request(Message_MessageType::CLIENT_RECEIPT_GET_REQUEST, &request)?;
 
         let receipts = match response.status {
             ClientReceiptGetResponse_Status::OK => response.receipts,
             ClientReceiptGetResponse_Status::INTERNAL_ERROR => {
-                return Err(String::from("Received internal error from validator"));
+                return Err(Error::ValidatorError);
             },
             ClientReceiptGetResponse_Status::NO_RESOURCE => {
-                return Err(String::from("Missing receipt"));
-            }
+                return Err(Error::NoResource);
+            },
         };
-        let mut seth_receipts: HashMap<String, SethTransactionReceipt> = HashMap::new();
-        for rcpt in receipts.iter() {
-            for datum in rcpt.data.iter() {
-                if datum.data_type == "seth_receipt" {
-                    match protobuf::parse_from_bytes(&datum.data) {
-                        Ok(seth_receipt) => {
-                            seth_receipts.insert(rcpt.transaction_id.clone(), seth_receipt);
-                        },
-                        Err(error) => {
-                            return Err(String::from(
-                                format!("Failed to deserialize Seth receipt: {:?}", error)
-                            ));
-                        },
-                    }
-                }
-            }
+        let seth_receipt_list: Vec<SethReceipt> = receipts.iter()
+            .map(SethReceipt::from_receipt_pb)
+            .collect::<Result<Vec<SethReceipt>, Error>>()?;
+        let mut seth_receipt_map = HashMap::with_capacity(seth_receipt_list.len());
+        for receipt in seth_receipt_list.into_iter() {
+            seth_receipt_map.insert(receipt.transaction_id.clone(), receipt);
         }
-        Ok(seth_receipts)
+
+        Ok(seth_receipt_map)
     }
 
     pub fn get_transaction_and_block(&mut self, txn_key: &TransactionKey) -> Result<(Transaction, Option<Block>), Error> {

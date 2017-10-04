@@ -27,6 +27,8 @@ from sawtooth_sdk.protobuf.client_pb2 import ClientStateGetRequest
 from sawtooth_sdk.protobuf.client_pb2 import ClientStateGetResponse
 from sawtooth_sdk.protobuf.client_pb2 import ClientTransactionGetRequest
 from sawtooth_sdk.protobuf.client_pb2 import ClientTransactionGetResponse
+from sawtooth_sdk.protobuf.client_pb2 import ClientBatchSubmitRequest
+from sawtooth_sdk.protobuf.client_pb2 import ClientBatchSubmitResponse
 from sawtooth_sdk.protobuf.block_pb2 import Block
 from sawtooth_sdk.protobuf.block_pb2 import BlockHeader
 from sawtooth_sdk.protobuf.batch_pb2 import Batch
@@ -36,6 +38,7 @@ from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.protobuf.txn_receipt_pb2 import ClientReceiptGetRequest
 from sawtooth_sdk.protobuf.txn_receipt_pb2 import ClientReceiptGetResponse
 from sawtooth_sdk.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_sdk.protobuf.events_pb2 import Event
 from protobuf.seth_pb2 import SethTransactionReceipt
 from protobuf.seth_pb2 import EvmEntry
 from protobuf.seth_pb2 import EvmStateAccount
@@ -63,7 +66,16 @@ class SethRpcTest(unittest.TestCase):
         cls.txn_id = "c" * 64
         cls.gas = 456
         # account values
-        cls.account_address = "f" * 20 * 2
+        cls.pubkey = "036d7bb6ca0fd581eb037e91042320af97508003264f08545a9db134df215f373e"
+        cls.account_address = "434d46456b6973a678b77382fca0252629f4389f"
+        cls.contract_address = "f" * 20 * 2
+        cls.contract_address_b = bytes([0xff] * 20)
+        cls.contract_init_s = "0" * 60 * 2
+        cls.contract_init_b = bytes([0x0] * 60)
+        cls.contract_init_txn_id = "7c9ac003a3c10450292ec6a1811f9c4f03eeb26866c2c39e2e03af71fed6e87b187d09c4c7d14344723cd617c3e5a0cbc6a3ceeb1f154f699d92c15ea7dde71f"
+        cls.contract_call_s = "0" * 30 * 2
+        cls.contract_call_b = bytes([0x0] * 30)
+        cls.contract_call_txn_id = "b9d2d53d4b90b27c5958221c81390d3f9b068f789b03510d5ec1acdccf60025c0df0312d4cece4591528265fc8260ff2d0f39ad8a77d721cd7d82c1c0cd1e295"
         cls.balance = 123
         cls.nonce = 456
         cls.code_b = bytes([0xab, 0xcd, 0xef])
@@ -73,7 +85,7 @@ class SethRpcTest(unittest.TestCase):
         cls.stored_b = bytes([0x67, 0x89])
         cls.stored_s = "6789"
 
-    # Network tests
+    # -- Network tests -- #
     def test_net_version(self):
         """Test that the network id 19 is returned."""
         self.assertEqual("19", self.rpc.call("net_version"))
@@ -86,7 +98,7 @@ class SethRpcTest(unittest.TestCase):
         """Test that the True is returned."""
         self.assertEqual(True, self.rpc.call("net_listening"))
 
-    # Block tests
+    # -- Block tests -- #
     def test_block_number(self):
         """Test that the block number is extracted correctly and returned as
         hex."""
@@ -262,7 +274,7 @@ class SethRpcTest(unittest.TestCase):
         result = self.rpc.get_result()
         self.assertIsNone(result)
 
-    # Account tests
+    # -- Account tests -- #
     def test_get_balance(self):
         """Test that an account balance is retrieved correctly."""
         # self._test_get_account("balance")
@@ -447,11 +459,9 @@ class SethRpcTest(unittest.TestCase):
         address = "434d46456b6973a678b77382fca0252629f4389f"
         self.assertEqual(["0x" + address], self.rpc.call("eth_accounts"))
 
-    # Transaction calls
+    # -- Transaction tests -- #
     def test_get_transaction_by_hash(self):
         """Tests that a transaction is retrieved correctly given its hash."""
-        block_id = "a" * 128
-        block_num = 678
         txn_ids = [
             "0" * 64,
             "1" * 64,
@@ -459,65 +469,34 @@ class SethRpcTest(unittest.TestCase):
             "3" * 64,
         ]
         txn_idx = 2
-        nonce = 4
-        pub_key = "035e1de3048a62f9f478440a22fd7655b" + \
-                  "80f0aac997be963b119ac54b3bfdea3b7"
-        addr = "b4d09ca3c0bc538340e904b689016bbb4248136c"
-
-        gas = 100
-        to_b = bytes([0xab, 0xcd, 0xef])
-        to_s = "abcdef"
-        data_b = bytes([0x67, 0x89])
-        data_s = "6789"
 
         self.rpc.acall(
             "eth_getTransactionByHash",
             ["0x" + txn_ids[txn_idx]])
 
-        msg = self.validator.receive()
-        self.assertEqual(
-            msg.message_type, Message.CLIENT_TRANSACTION_GET_REQUEST)
-        request = ClientTransactionGetRequest()
-        request.ParseFromString(msg.content)
+        msg, request = self._receive_transaction_request()
         self.assertEqual(request.transaction_id, txn_ids[txn_idx])
 
-        block = self._make_multi_txn_block(
-            txn_ids, nonce, block_num, block_id, pub_key, gas, to_b,
-            data_b)
+        block = self._make_multi_txn_block(txn_ids)
 
-        self.validator.respond(
-            Message.CLIENT_TRANSACTION_GET_RESPONSE,
-            ClientTransactionGetResponse(
-                status=ClientBlockGetResponse.OK,
-                transaction=block.batches[1].transactions[1],
-                block=block_id),
-            msg)
+        self._send_transaction_response(msg, block.batches[1].transactions[1])
 
-        msg = self.validator.receive()
-        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
-        request = ClientBlockGetRequest()
-        request.ParseFromString(msg.content)
-        self.assertEqual(request.block_id, block_id)
+        msg, request = self._receive_block_request()
 
-        self.validator.respond(
-            Message.CLIENT_BLOCK_GET_RESPONSE,
-            ClientBlockGetResponse(
-                status=ClientBlockGetResponse.OK,
-                block=block),
-            msg)
+        self._send_block_back(msg, block)
 
         result = self.rpc.get_result()
         self.assertEqual(result["hash"], "0x" + txn_ids[txn_idx])
-        self.assertEqual(result["nonce"], hex(nonce))
-        self.assertEqual(result["blockHash"], "0x" + block_id)
-        self.assertEqual(result["blockNumber"], hex(block_num))
+        self.assertEqual(result["nonce"], hex(self.nonce))
+        self.assertEqual(result["blockHash"], "0x" + self.block_id)
+        self.assertEqual(result["blockNumber"], hex(self.block_num))
         self.assertEqual(result["transactionIndex"], hex(txn_idx))
-        self.assertEqual(result["from"], "0x" + addr)
-        self.assertEqual(result["to"], "0x" + to_s)
+        self.assertEqual(result["from"], "0x" + self.account_address)
+        self.assertEqual(result["to"], "0x" + self.contract_address)
         self.assertEqual(result["value"], "0x0")
         self.assertEqual(result["gasPrice"], "0x0")
-        self.assertEqual(result["gas"], hex(gas))
-        self.assertEqual(result["input"], "0x" + data_s)
+        self.assertEqual(result["gas"], hex(self.gas))
+        self.assertEqual(result["input"], "0x" + self.contract_call_s)
 
     def test_get_transaction_by_hash_bad_input(self):
         """Test that the correct error message is returned if no input is given
@@ -531,8 +510,6 @@ class SethRpcTest(unittest.TestCase):
     def test_get_transaction_by_block_hash_and_index(self):
         """Tests that a transaction is retrieved correctly given a block
         signature and transaction index."""
-        block_id = "a" * 128
-        block_num = 678
         txn_ids = [
             "0" * 64,
             "1" * 64,
@@ -540,42 +517,30 @@ class SethRpcTest(unittest.TestCase):
             "3" * 64,
         ]
         txn_idx = 2
-        nonce = 4
-        pub_key = "035e1de3048a62f9f478440a22fd7655b" + \
-                  "80f0aac997be963b119ac54b3bfdea3b7"
-        addr = "b4d09ca3c0bc538340e904b689016bbb4248136c"
 
-        gas = 100
-        to_b = bytes([0xab, 0xcd, 0xef])
-        to_s = "abcdef"
-        data_b = bytes([0x67, 0x89])
-        data_s = "6789"
-        # self._test_get_transaction_by_idx(by="hash")
         self.rpc.acall(
             "eth_getTransactionByBlockHashAndIndex",
-            ["0x" + block_id, hex(txn_idx)])
+            ["0x" + self.block_id, hex(txn_idx)])
         msg, request = self._receive_block_request()
 
-        self.assertEqual(request.block_id, block_id)
+        self.assertEqual(request.block_id, self.block_id)
 
-        block = self._make_multi_txn_block(
-            txn_ids, nonce, block_num, block_id, pub_key, gas, to_b,
-            data_b)
+        block = self._make_multi_txn_block(txn_ids)
 
         self._send_block_back(msg, block)
 
         result = self.rpc.get_result()
         self.assertEqual(result["hash"], "0x" + txn_ids[txn_idx])
-        self.assertEqual(result["nonce"], hex(nonce))
-        self.assertEqual(result["blockHash"], "0x" + block_id)
-        self.assertEqual(result["blockNumber"], hex(block_num))
+        self.assertEqual(result["nonce"], hex(self.nonce))
+        self.assertEqual(result["blockHash"], "0x" + self.block_id)
+        self.assertEqual(result["blockNumber"], hex(self.block_num))
         self.assertEqual(result["transactionIndex"], hex(txn_idx))
-        self.assertEqual(result["from"], "0x" + addr)
-        self.assertEqual(result["to"], "0x" + to_s)
+        self.assertEqual(result["from"], "0x" + self.account_address)
+        self.assertEqual(result["to"], "0x" + self.contract_address)
         self.assertEqual(result["value"], "0x0")
         self.assertEqual(result["gasPrice"], "0x0")
-        self.assertEqual(result["gas"], hex(gas))
-        self.assertEqual(result["input"], "0x" + data_s)
+        self.assertEqual(result["gas"], hex(self.gas))
+        self.assertEqual(result["input"], "0x" + self.contract_call_s)
 
     def test_get_transaction_by_block_hash_and_index_bad_input(self):
         """Test that the correct error message is returned if no input is given
@@ -589,8 +554,6 @@ class SethRpcTest(unittest.TestCase):
     def test_get_transaction_by_block_number_and_index(self):
         """Tests that a transaction is retrieved correctly given a block
         number and transaction index."""
-        block_id = "a" * 128
-        block_num = 678
         txn_ids = [
             "0" * 64,
             "1" * 64,
@@ -598,43 +561,31 @@ class SethRpcTest(unittest.TestCase):
             "3" * 64,
         ]
         txn_idx = 2
-        nonce = 4
-        pub_key = "035e1de3048a62f9f478440a22fd7655b" + \
-                  "80f0aac997be963b119ac54b3bfdea3b7"
-        addr = "b4d09ca3c0bc538340e904b689016bbb4248136c"
-
-        gas = 100
-        to_b = bytes([0xab, 0xcd, 0xef])
-        to_s = "abcdef"
-        data_b = bytes([0x67, 0x89])
-        data_s = "6789"
 
         self.rpc.acall(
             "eth_getTransactionByBlockNumberAndIndex",
-            [hex(block_num), hex(txn_idx)])
+            [hex(self.block_num), hex(txn_idx)])
 
         msg, request = self._receive_block_request()
 
-        self.assertEqual(request.block_num, block_num)
+        self.assertEqual(request.block_num, self.block_num)
 
-        block = self._make_multi_txn_block(
-            txn_ids, nonce, block_num, block_id, pub_key, gas, to_b,
-            data_b)
+        block = self._make_multi_txn_block(txn_ids)
 
         self._send_block_back(msg, block)
 
         result = self.rpc.get_result()
         self.assertEqual(result["hash"], "0x" + txn_ids[txn_idx])
-        self.assertEqual(result["nonce"], hex(nonce))
-        self.assertEqual(result["blockHash"], "0x" + block_id)
-        self.assertEqual(result["blockNumber"], hex(block_num))
+        self.assertEqual(result["nonce"], hex(self.nonce))
+        self.assertEqual(result["blockHash"], "0x" + self.block_id)
+        self.assertEqual(result["blockNumber"], hex(self.block_num))
         self.assertEqual(result["transactionIndex"], hex(txn_idx))
-        self.assertEqual(result["from"], "0x" + addr)
-        self.assertEqual(result["to"], "0x" + to_s)
+        self.assertEqual(result["from"], "0x" + self.account_address)
+        self.assertEqual(result["to"], "0x" + self.contract_address)
         self.assertEqual(result["value"], "0x0")
         self.assertEqual(result["gasPrice"], "0x0")
-        self.assertEqual(result["gas"], hex(gas))
-        self.assertEqual(result["input"], "0x" + data_s)
+        self.assertEqual(result["gas"], hex(self.gas))
+        self.assertEqual(result["input"], "0x" + self.contract_call_s)
 
     def test_get_transaction_by_block_number_and_index_bad_input(self):
         """Test that the correct error message is returned if no input is given
@@ -704,6 +655,145 @@ class SethRpcTest(unittest.TestCase):
         result = self.rpc.get_result()
         self.assertEqual(result, None)
 
+    def test_send_transaction_contract_creation(self):
+        """Tests that a contract creation txn is submitted correctly."""
+        self.rpc.acall(
+            "eth_sendTransaction", [{
+                "from": "0x" + self.account_address,
+                "data": "0x" + self.contract_init_s
+        }])
+
+        msg, txn = self._receive_submit_request()
+
+        seth_txn = SethTransaction()
+        seth_txn.ParseFromString(txn.payload)
+        self.assertEqual(
+            seth_txn.transaction_type, SethTransaction.CREATE_CONTRACT_ACCOUNT)
+        create = seth_txn.create_contract_account
+        self.assertEqual(create.init, self.contract_init_b)
+        self.assertEqual(create.gas_limit, 90000)
+        self.assertEqual(create.gas_price, 10000000000000)
+        self.assertEqual(create.value, 0)
+        self.assertEqual(create.nonce, 0)
+
+        self._send_submit_response(msg)
+        self.assertEqual(
+            "0x" + self.contract_init_txn_id, self.rpc.get_result())
+
+    def test_send_transaction_message_call(self):
+        """Tests that a message call txn is submitted correctly."""
+        self.rpc.acall(
+            "eth_sendTransaction", [{
+                "from": "0x" + self.account_address,
+                "data": "0x" + self.contract_call_s,
+                "to": "0x" + self.contract_address,
+        }])
+
+        msg, txn = self._receive_submit_request()
+
+        seth_txn = SethTransaction()
+        seth_txn.ParseFromString(txn.payload)
+        self.assertEqual(
+            seth_txn.transaction_type, SethTransaction.MESSAGE_CALL)
+        call = seth_txn.message_call
+        self.assertEqual(call.data, self.contract_call_b)
+        self.assertEqual(call.gas_limit, 90000)
+        self.assertEqual(call.gas_price, 10000000000000)
+        self.assertEqual(call.value, 0)
+        self.assertEqual(call.nonce, 0)
+
+        self._send_submit_response(msg)
+        self.assertEqual(
+            "0x" + self.contract_call_txn_id, self.rpc.get_result())
+
+    def test_get_transaction_receipt(self):
+        """Tests that a transaction receipt is retrieved correctly."""
+        self.rpc.acall(
+            "eth_getTransactionReceipt", ["0x" + self.txn_id])
+
+        topic1_s = "ffff"
+        topic1_b = bytes([0xff, 0xff])
+        topic2_s = "cccc"
+        topic2_b = bytes([0xcc, 0xcc])
+        log_data_s = "8888"
+        log_data_b = bytes([0x88, 0x88])
+        return_value_s = bytes([0x2a])
+        return_value_b = bytes([0x2a])
+
+        receipt = TransactionReceipt(
+            data=[TransactionReceipt.Data(
+                data_type="seth_receipt",
+                data=SethTransactionReceipt(
+                    gas_used=self.gas,
+                    return_value=return_value_b,
+                    contract_address=self.contract_address_b,
+                ).SerializeToString(),
+            )],
+            events=[Event(
+                event_type="seth_log_event",
+                attributes=[
+                    Event.Attribute(key="address", value=self.contract_address),
+                    Event.Attribute(key="topic1", value=topic1_s),
+                    Event.Attribute(key="topic2", value=topic2_s),
+                ],
+                data=log_data_b,
+            )],
+            transaction_id=self.txn_id,
+        )
+
+        msg, request = self._receive_receipt_request()
+        self.assertEqual(request.transaction_ids[0], self.txn_id)
+        self._send_receipts_back(msg, [receipt])
+
+        msg, request = self._receive_transaction_request()
+        self._send_transaction_response(msg)
+        msg, request = self._receive_block_request()
+        block = Block(
+            header=BlockHeader(block_num=self.block_num).SerializeToString(),
+            header_signature=self.block_id,
+            batches=[Batch(transactions=[
+                Transaction(header_signature=self.txn_id)])])
+        self._send_block_back(msg, block)
+
+        result = self.rpc.get_result()
+        self.assertEqual(result["transactionHash"], "0x" + self.txn_id)
+        self.assertEqual(result["transactionIndex"], hex(0))
+        self.assertEqual(result["blockHash"], "0x" + self.block_id)
+        self.assertEqual(result["blockNumber"], hex(self.block_num))
+        self.assertEqual(result["cumulativeGasUsed"], hex(self.gas))
+        self.assertEqual(result["gasUsed"], hex(self.gas))
+        self.assertEqual(
+            result["contractAddress"], "0x" + self.contract_address)
+
+        log = result["logs"][0]
+        self.assertEqual(log["removed"], False)
+        self.assertEqual(log["logIndex"], hex(0))
+        self.assertEqual(log["transactionIndex"], hex(0))
+        self.assertEqual(log["transactionHash"], "0x" + self.txn_id)
+        self.assertEqual(log["blockHash"], "0x" + self.block_id)
+        self.assertEqual(log["blockNumber"], hex(self.block_num))
+        self.assertEqual(log["address"], "0x" + self.contract_address)
+        self.assertEqual(log["data"], "0x" + log_data_s)
+
+        topic1, topic2 = log["topics"]
+        self.assertEqual(topic1, "0x" + topic1_s)
+        self.assertEqual(topic2, "0x" + topic2_s)
+
+    def test_gas_price(self):
+        """Tests that the gas price is returned correctly."""
+        self.assertEqual("0x0", self.rpc.call("eth_gasPrice"))
+
+    def test_sign(self):
+        """Tests that a payload is signed correctly."""
+        msg = b"test"
+        signature = self.rpc.call(
+            "eth_sign", ["0x" + self.account_address, "0x" + msg.hex()])
+        self.assertEqual(signature,
+            "0x4bd3560fcabbe7c13d8829dcb82b381fe3882db14aeb6d22b8b0ea069e60" +\
+            "28a02d85497c9b26203c31f028f31fa0ae9b944aa219ae6ecf7655b2e2428d" +\
+            "d6904f")
+
+    # -- Utilities -- #
     def _send_block_back(self, msg, block=None):
         if block is None:
             block = Block(
@@ -745,21 +835,22 @@ class SethRpcTest(unittest.TestCase):
                 ),
             msg)
 
-    def _send_receipts_back(self, msg):
+    def _send_receipts_back(self, msg, receipts=None):
+        if receipts is None:
+            receipts = [TransactionReceipt(
+                data=[TransactionReceipt.Data(
+                    data_type="seth_receipt",
+                    data=SethTransactionReceipt(
+                        gas_used=self.gas,
+                    ).SerializeToString(),
+                )],
+                transaction_id=self.txn_id,
+            )]
         self.validator.respond(
             Message.CLIENT_RECEIPT_GET_RESPONSE,
             ClientReceiptGetResponse(
                 status=ClientReceiptGetResponse.OK,
-                receipts=[TransactionReceipt(
-                    data=[TransactionReceipt.Data(
-                        data_type="seth_receipt",
-                        data=SethTransactionReceipt(
-                            gas_used=self.gas,
-                        ).SerializeToString(),
-                    )],
-                    transaction_id=self.txn_id,
-                )]
-            ),
+                receipts=receipts),
             msg)
 
     def _send_state_response(self, msg):
@@ -775,6 +866,32 @@ class SethRpcTest(unittest.TestCase):
                     storage=[EvmStorage(key=self.position_b,
                                         value=self.stored_b)],
                 ).SerializeToString()),
+            msg)
+
+    def _send_transaction_response(self, msg, transaction=None):
+        if transaction is None:
+            transaction = Transaction(
+                header=TransactionHeader(
+                    family_name="seth",
+                    signer_pubkey=self.pubkey,
+                ).SerializeToString(),
+                header_signature=self.txn_id,
+                payload=SethTransaction(
+                    transaction_type=SethTransaction.MESSAGE_CALL
+                ).SerializeToString())
+        self.validator.respond(
+            Message.CLIENT_TRANSACTION_GET_RESPONSE,
+            ClientTransactionGetResponse(
+                status=ClientBlockGetResponse.OK,
+                transaction=transaction,
+                block=self.block_id),
+            msg)
+
+
+    def _send_submit_response(self, msg):
+        self.validator.respond(
+            Message.CLIENT_BATCH_SUBMIT_RESPONSE,
+            ClientBatchSubmitResponse(status=ClientBatchSubmitResponse.OK),
             msg)
 
     def _receive_receipt_request(self):
@@ -800,8 +917,44 @@ class SethRpcTest(unittest.TestCase):
         request.ParseFromString(msg.content)
         return msg, request
 
-    def _make_multi_txn_block(self, txn_ids, nonce, block_num, block_id,
-                              pub_key, gas, to, data):
+    def _receive_transaction_request(self):
+        msg = self.validator.receive()
+        self.assertEqual(
+            msg.message_type, Message.CLIENT_TRANSACTION_GET_REQUEST)
+        request = ClientTransactionGetRequest()
+        request.ParseFromString(msg.content)
+        return msg, request
+
+    def _receive_submit_request(self):
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_BATCH_SUBMIT_REQUEST)
+        request = ClientBatchSubmitRequest()
+        request.ParseFromString(msg.content)
+
+        batch = request.batches[0]
+        batch_header = BatchHeader()
+        batch_header.ParseFromString(batch.header)
+        self.assertEqual(batch_header.signer_pubkey, self.pubkey)
+
+        txn = batch.transactions[0]
+        txn_header = TransactionHeader()
+        txn_header.ParseFromString(txn.header)
+        self.assertEqual(txn_header.signer_pubkey, self.pubkey)
+        self.assertEqual(txn_header.family_name, "seth")
+        self.assertEqual(txn_header.family_version, "1.0")
+        self.assertEqual(txn_header.payload_encoding, "application/protobuf")
+
+        return msg, txn
+
+    def _make_multi_txn_block(self, txn_ids):
+        gas = self.gas
+        nonce = self.nonce
+        block_id = self.block_id
+        block_num = self.block_num
+        pub_key = self.pubkey
+        to = self.contract_address_b
+        init = self.contract_init_b
+        data = self.contract_call_b
         txns = [
             Transaction(
                 header=TransactionHeader(
@@ -827,7 +980,9 @@ class SethRpcTest(unittest.TestCase):
                 )),
                 SethTransaction(
                     transaction_type=SethTransaction.CREATE_CONTRACT_ACCOUNT,
-                    create_contract_account=CreateContractAccountTxn()),
+                    create_contract_account=CreateContractAccountTxn(
+                        init=init,
+                    )),
             ])
         ]
 

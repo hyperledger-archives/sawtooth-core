@@ -41,6 +41,7 @@ pub enum Error {
     IoError(IoError),
     ParseError(String),
     AliasNotFound,
+    SigningError,
 }
 
 impl StdError for Error {
@@ -49,6 +50,7 @@ impl StdError for Error {
             Error::IoError(ref ie) => ie.description(),
             Error::ParseError(ref msg) => msg,
             Error::AliasNotFound => "Alias not found in data directory",
+            Error::SigningError => "Signing failed",
         }
     }
 
@@ -61,6 +63,7 @@ impl Display for Error {
             Error::IoError(ref ie) => ie.fmt(f),
             Error::ParseError(ref msg) => write!(f, "ParseError: {}", msg),
             Error::AliasNotFound => write!(f, "AliasNotFound"),
+            Error::SigningError => write!(f, "SigningError"),
         }
     }
 }
@@ -127,12 +130,23 @@ impl Account {
         Ok(contents)
     }
 
+    pub fn sign(&self, message: &[u8]) -> Result<String, Error> {
+        let algorithm = create_algorithm("secp256k1").unwrap();
+        let key = Secp256k1PrivateKey::from_hex(&self.private_key).map_err(|_|
+            Error::SigningError)?;
+        algorithm.sign(message, &key).map_err(|_| Error::SigningError)
+    }
+
     pub fn alias(&self) -> &str {
         &self.alias
     }
 
     pub fn address(&self) -> &str {
         &self.address
+    }
+
+    pub fn pubkey(&self) -> &str {
+        &self.public_key
     }
 }
 

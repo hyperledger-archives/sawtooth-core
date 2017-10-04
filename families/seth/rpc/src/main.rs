@@ -29,6 +29,7 @@ extern crate sawtooth_sdk;
 extern crate protobuf;
 extern crate rpassword;
 extern crate tiny_keccak;
+extern crate crypto;
 
 use std::process;
 use log::LogLevelFilter;
