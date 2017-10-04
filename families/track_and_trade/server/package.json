@@ -10,7 +10,8 @@
     "start": "rethinkdb & nodemon index.js",
     "init": "rethinkdb & node ./scripts/bootstrap_database.js && kill $! || true",
     "test": "standard",
-    "make-fish": "node ./scripts/create_fish_type_batch.js > fish.batch"
+    "make-fish": "node ./scripts/create_fish_type_batch.js > fish.batch",
+    "seed-example-fish": "DATA=\"example_fish_data.json\" node ./scripts/seed_example_data.js"
   },
   "repository": {
     "type": "git",
@@ -35,6 +36,8 @@
   },
   "devDependencies": {
     "nodemon": "^1.11.0",
+    "request": "^2.83.0",
+    "request-promise-native": "^1.0.5",
     "standard": "^10.0.3"
   }
 }
