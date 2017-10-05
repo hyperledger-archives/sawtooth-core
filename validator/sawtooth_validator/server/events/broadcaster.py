@@ -29,10 +29,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 class EventBroadcaster(ChainObserver):
-    def __init__(self, service):
+    def __init__(self, service, block_store, receipt_store):
         self._subscribers = {}
         self._subscribers_cv = Condition()
         self._service = service
+        self._block_store = block_store
+        self._receipt_store = receipt_store
 
     def add_subscriber(self, connection_id, subscriptions,
                        last_known_block_ids):
@@ -67,6 +69,46 @@ class EventBroadcaster(ChainObserver):
         with self._subscribers_cv:
             if connection_id in self._subscribers:
                 del self._subscribers[connection_id]
+
+    def get_events_for_block_ids(self, block_ids, subscriptions):
+        """Get a list of events associated with all the block ids.
+
+        Args:
+            block_ids (list of str): The block ids to search for events that
+                match each subscription.
+            subscriptions (list of EventSubscriptions): EventFilter and
+                event type to filter events.
+
+        Returns (list of Events): The Events associated which each block id.
+
+        Raises: KeyError A block id isn't found within the block store.
+
+        """
+
+        events = []
+
+        extractors = []
+        for block_id in block_ids:
+            blk_w = self._block_store[block_id]
+            extractors.append(BlockEventExtractor(blk_w))
+            receipts = []
+            for batch in blk_w.block.batches:
+                for txn in batch.transactions:
+                    try:
+                        receipts.append(self._receipt_store.get(
+                            txn.header_signature))
+                    except KeyError:
+                        LOGGER.warning(
+                            "Transaction id %s not found in receipt store "
+                            " while looking"
+                            " up events for block id %s",
+                            txn.header_signature[:10],
+                            block_id[:10])
+            extractors.append(ReceiptEventExtractor(receipts=receipts))
+
+        for extractor in extractors:
+            events.extend(extractor.extract(subscriptions))
+        return events
 
     def chain_update(self, block, receipts):
         extractors = [
