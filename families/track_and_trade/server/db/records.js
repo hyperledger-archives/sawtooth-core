@@ -86,7 +86,13 @@ const getReporter = publicKey => block => {
   return getTable('agents', block)
     .filter(hasPublicKey(publicKey))
     .pluck('name', 'publicKey')
-    .nth(0)
+    .coerceTo('array')
+    .do(results => {
+      return r.branch(
+        results.isEmpty(),
+        { name: 'BAD DATA', publicKey: 'BAD DATA' },
+        results(0))
+    })
 }
 
 const findReportedValues =
