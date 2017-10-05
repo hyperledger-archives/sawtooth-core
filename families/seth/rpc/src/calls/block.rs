@@ -93,7 +93,7 @@ fn get_block_obj<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Resu
     bob.insert(String::from("parentHash"), hex_prefix(&block_header.previous_block_id));
     bob.insert(String::from("stateRoot"), hex_prefix(&block_header.state_root_hash));
 
-    let receipts = match client.get_receipts(&block) {
+    let receipts = match client.get_receipts_from_block(&block) {
         Ok(r) => r,
         Err(error) => {
             error!("Error getting receipts: {:?}", error);

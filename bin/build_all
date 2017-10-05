@@ -85,6 +85,7 @@ fi
 if [[ $LANGUAGES = "" ]]
 then
     LANGUAGES="
+        ext
         cxx
         go
         java
@@ -103,8 +104,6 @@ main() {
 
     # Start in project directory
     cd $top_dir
-
-    build_external
 
     if [[ $BUILD_MODE == $DEBS ]]
     then
@@ -133,6 +132,9 @@ main() {
             case $language in
                 cxx)
                     build_cxx
+                    ;;
+                ext)
+                    build_external
                     ;;
                 go)
                     build_go

@@ -49,5 +49,6 @@ services:
         -c /project/sawtooth-core/families/seth/rpc/tests/nose2.cfg
         -v
         -s /project/sawtooth-core/families/seth/rpc/tests
+        --fail-fast
     environment:
         PYTHONPATH: "/project/sawtooth-core/sdk/python"
