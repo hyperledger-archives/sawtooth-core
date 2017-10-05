@@ -32,13 +32,22 @@ const FishList = {
 
     vnode.state.currentPage = 0
 
-    api.get('/records').then((records) => {
-      vnode.state.records = records
-      vnode.state.records.sort((a, b) => {
-        return getLatestPropertyUpdateTime(b) - getLatestPropertyUpdateTime(a)
+    const refresh = () => {
+      api.get('/records').then((records) => {
+        vnode.state.records = records
+        vnode.state.records.sort((a, b) => {
+          return getLatestPropertyUpdateTime(b) - getLatestPropertyUpdateTime(a)
+        })
+        vnode.state.filteredRecords = vnode.state.records
       })
-      vnode.state.filteredRecords = vnode.state.records
-    })
+        .then(() => { vnode.state.refreshId = setTimeout(refresh, 2000) })
+    }
+
+    refresh()
+  },
+
+  onbeforeremove (vnode) {
+    clearTimeout(vnode.state.refreshId)
   },
 
   view (vnode) {

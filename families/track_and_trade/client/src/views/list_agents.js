@@ -30,10 +30,19 @@ const AgentList = {
     vnode.state.filteredAgents = []
     vnode.state.currentPage = 0
 
-    api.get('/agents').then((agents) => {
-      vnode.state.agents = sortBy(agents, 'name')
-      vnode.state.filteredAgents = vnode.state.agents
-    })
+    const refresh = () => {
+      api.get('/agents').then((agents) => {
+        vnode.state.agents = sortBy(agents, 'name')
+        vnode.state.filteredAgents = vnode.state.agents
+      })
+        .then(() => { vnode.state.refreshId = setTimeout(refresh, 2000) })
+    }
+
+    refresh()
+  },
+
+  onbeforeremove (vnode) {
+    clearTimeout(vnode.state.refreshId)
   },
 
   view (vnode) {

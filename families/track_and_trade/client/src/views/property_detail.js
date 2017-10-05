@@ -186,13 +186,22 @@ const PropertyDetailPage = {
     vnode.state.currentPage = 0
     vnode.state.tmp = {}
 
-    api.get(`records/${vnode.attrs.recordId}/${vnode.attrs.name}`)
-      .then(property => {
-        property.updates.forEach(update => {
-          update.value = parsing.floatifyValue(update.value)
+    const refresh = () => {
+      api.get(`records/${vnode.attrs.recordId}/${vnode.attrs.name}`)
+        .then(property => {
+          property.updates.forEach(update => {
+            update.value = parsing.floatifyValue(update.value)
+          })
+          vnode.state.property = property
         })
-        vnode.state.property = property
-      })
+        .then(() => { vnode.state.refreshId = setTimeout(refresh, 2000) })
+    }
+
+    refresh()
+  },
+
+  onbeforeremove (vnode) {
+    clearTimeout(vnode.state.refreshId)
   },
 
   view (vnode) {
