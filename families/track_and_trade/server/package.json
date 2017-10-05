@@ -11,7 +11,8 @@
     "init": "rethinkdb & node ./scripts/bootstrap_database.js && kill $! || true",
     "test": "standard",
     "make-fish": "node ./scripts/create_fish_type_batch.js > fish.batch",
-    "seed-example-fish": "DATA=\"example_fish_data.json\" node ./scripts/seed_example_data.js"
+    "seed-example-fish": "DATA=\"example_fish_data.json\" node ./scripts/seed_example_data.js",
+    "update-example-fish": "DATA=\"example_fish_updates.json\" node ./scripts/update_example_data.js"
   },
   "repository": {
     "type": "git",
