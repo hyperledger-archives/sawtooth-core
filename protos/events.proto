@@ -91,3 +91,20 @@ message ClientEventsUnsubscribeResponse {
     }
     Status status = 1;
 }
+
+message ClientEventsGetRequest {
+    repeated EventSubscription subscriptions = 1;
+    repeated string block_ids = 2;
+}
+
+message ClientEventsGetResponse {
+    enum Status {
+        OK = 0;
+        INTERNAL_ERROR = 1;
+        INVALID_FILTER = 2;
+        UNKNOWN_BLOCK = 3;
+    }
+    Status status = 1;
+    repeated Event events = 2;
+
+}
