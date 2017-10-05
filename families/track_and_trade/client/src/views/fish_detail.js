@@ -503,6 +503,13 @@ const AuthorizeReporter = {
 const FishDetail = {
   oninit (vnode) {
     _loadData(vnode.attrs.recordId, vnode.state)
+    vnode.state.refreshId = setInterval(() => {
+      _loadData(vnode.attrs.recordId, vnode.state)
+    }, 2000)
+  },
+
+  onbeforeremove (vnode) {
+    clearInterval(vnode.state.refreshId)
   },
 
   view (vnode) {
