@@ -115,6 +115,8 @@ message Message {
         CLIENT_EVENTS_UNSUBSCRIBE_REQUEST = 502;
         CLIENT_EVENTS_UNSUBSCRIBE_RESPONSE = 503;
         CLIENT_EVENTS = 504;
+        CLIENT_EVENTS_GET_REQUEST = 505;
+        CLIENT_EVENTS_GET_RESPONSE = 506;
 
         // Temp message types until a discussion can be had about gossip msg
         GOSSIP_MESSAGE = 200;

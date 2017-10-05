@@ -20,6 +20,9 @@ from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
+
+from sawtooth_validator.protobuf.events_pb2 import ClientEventsGetRequest
+from sawtooth_validator.protobuf.events_pb2 import ClientEventsGetResponse
 from sawtooth_validator.protobuf.events_pb2 \
     import ClientEventsSubscribeRequest
 from sawtooth_validator.protobuf.events_pb2 \
@@ -118,3 +121,52 @@ class ClientEventsUnsubscribeHandler(Handler):
             HandlerStatus.RETURN,
             message_out=ack,
             message_type=self._msg_type)
+
+
+class ClientEventsGetRequestHandler(Handler):
+
+    def __init__(self, event_broadcaster):
+        self._event_broadcaster = event_broadcaster
+        self._filter_factory = EventFilterFactory()
+
+    def handle(self, connection_id, message_content):
+        request = ClientEventsGetRequest()
+        request.ParseFromString(message_content)
+
+        resp = ClientEventsGetResponse()
+        try:
+            subscriptions = [
+                EventSubscription(
+                    event_type=sub.event_type,
+                    filters=[
+                        self._filter_factory.create(
+                            f.key, f.match_string, f.filter_type)
+                        for f in sub.filters
+                    ],
+                )
+                for sub in request.subscriptions
+            ]
+        except InvalidFilterError as err:
+            LOGGER.warning("Invalid Filter Error: %s", err)
+            resp.status = resp.INVALID_FILTER
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=resp,
+                message_type=validator_pb2.Message.CLIENT_EVENTS_GET_RESPONSE)
+        try:
+            events = self._event_broadcaster.get_events_for_block_ids(
+                request.block_ids,
+                subscriptions)
+        except KeyError:
+            resp.status = resp.UNKNOWN_BLOCK
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=resp,
+                message_type=validator_pb2.Message.CLIENT_EVENTS_GET_RESPONSE)
+
+        resp.events.extend(events)
+        resp.status = resp.OK
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=resp,
+            message_type=validator_pb2.Message.CLIENT_EVENTS_GET_RESPONSE)

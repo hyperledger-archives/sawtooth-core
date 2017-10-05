@@ -102,6 +102,8 @@ from sawtooth_validator.networking.handlers import \
     AuthorizationViolationHandler
 
 from sawtooth_validator.server.events.broadcaster import EventBroadcaster
+from sawtooth_validator.server.events.handlers import \
+    ClientEventsGetRequestHandler
 from sawtooth_validator.server.events.handlers \
     import ClientEventsSubscribeHandler
 from sawtooth_validator.server.events.handlers \
@@ -217,7 +219,9 @@ class Validator(object):
         state_delta_processor = StateDeltaProcessor(self._service,
                                                     state_delta_store,
                                                     block_store)
-        event_broadcaster = EventBroadcaster(self._service)
+        event_broadcaster = EventBroadcaster(self._service,
+                                             block_store,
+                                             receipt_store)
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
@@ -742,6 +746,7 @@ class Validator(object):
             StateDeltaGetEventsHandler(block_store, state_delta_store),
             thread_pool)
 
+        # Client Events Handlers
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
             ClientEventsSubscribeValidationHandler(event_broadcaster),
@@ -755,6 +760,11 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
             ClientEventsUnsubscribeHandler(event_broadcaster),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_EVENTS_GET_REQUEST,
+            ClientEventsGetRequestHandler(event_broadcaster),
             thread_pool)
 
     def start(self):
