@@ -44,6 +44,16 @@ scheduler = 'serial'
 network_public_key = 'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)'
 network_private_key = 'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*'
 
+# The host and port for Open TSDB database used for metrics
+# opentsdb_url = ""
+
+# The name of the database used for storing metrics
+# opentsdb_db = ""
+
+# opentsdb_username = ""
+
+# opentsdb_password = ""
+
 # The type of authorization that must be performed for the different type of
 # roles on the network. The different supported authorization types are "trust"
 # and "challenge". The default is "trust".

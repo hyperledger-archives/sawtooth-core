@@ -323,7 +323,9 @@ def main(args=None):
             prefix="sawtooth_validator",
             port=db_port,
             protocol=proto,
-            server=db_server)
+            server=db_server,
+            username=validator_config.opentsdb_username,
+            password=validator_config.opentsdb_password)
         metrics_reporter.start()
 
     validator = Validator(bind_network,
