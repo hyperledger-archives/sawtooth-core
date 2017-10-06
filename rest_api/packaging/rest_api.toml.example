@@ -10,3 +10,12 @@
 
 # Seconds to wait for a validator response
 #   timeout = 300
+
+# The host and port for Open TSDB database used for metrics
+# opentsdb_url = ""
+
+# The name of the database used for storing metrics
+# opentsdb_db = ""
+
+# opentsdb_username = ""
+# opentsdb_password = ""

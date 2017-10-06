@@ -51,11 +51,23 @@ class TestRestApiConfig(unittest.TestCase):
                 fd.write('connect = "tcp://test:4004"')
                 fd.write(os.linesep)
                 fd.write('timeout = 10')
+                fd.write(os.linesep)
+                fd.write('opentsdb_db = "data_base"')
+                fd.write(os.linesep)
+                fd.write('opentsdb_url = "http://data_base:0000"')
+                fd.write(os.linesep)
+                fd.write('opentsdb_username = "name"')
+                fd.write(os.linesep)
+                fd.write('opentsdb_password = "secret"')
 
             config = load_toml_rest_api_config(filename)
             self.assertEqual(config.bind, ["test:1234"])
             self.assertEqual(config.connect, "tcp://test:4004")
             self.assertEqual(config.timeout, 10)
+            self.assertEquals(config.opentsdb_db,  "data_base")
+            self.assertEquals(config.opentsdb_url, "http://data_base:0000")
+            self.assertEquals(config.opentsdb_username, "name")
+            self.assertEquals(config.opentsdb_password, "secret")
 
         finally:
             os.environ.clear()
