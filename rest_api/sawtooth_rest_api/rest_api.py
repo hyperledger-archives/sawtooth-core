@@ -226,7 +226,9 @@ def main():
                 prefix="sawtooth_rest_api",
                 port=db_port,
                 protocol=proto,
-                server=db_server)
+                server=db_server,
+                username=rest_api_config.opentsdb_username,
+                password=rest_api_config.opentsdb_password)
             reporter.start()
 
         start_rest_api(
