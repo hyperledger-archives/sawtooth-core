@@ -163,6 +163,7 @@ impl Transaction {
     }
 }
 
+#[derive(Debug,Clone)]
 pub struct SethLog {
     pub address: String,
     pub topics: Vec<String>,

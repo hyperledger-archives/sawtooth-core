@@ -15,7 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::sync::{Arc, Mutex};
 use std::error::Error as StdError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
@@ -54,7 +53,7 @@ use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
 use sawtooth_sdk::messages::block::{BlockHeader};
 use messages::seth::{EvmEntry, EvmStateAccount, EvmStorage};
 use accounts::{Account, Error as AccountError};
-use filters::Filter;
+use filters::{FilterManager};
 use transactions::{SethTransaction, SethReceipt, Transaction, TransactionKey};
 use transform;
 
@@ -172,7 +171,7 @@ impl From<AccountError> for Error {
 pub struct ValidatorClient<S: MessageSender> {
     sender: S,
     accounts: Vec<Account>,
-    filters: Arc<Mutex<HashMap<String, (Filter, String)>>>
+    pub filters: FilterManager,
 }
 
 impl<S: MessageSender> ValidatorClient<S> {
@@ -180,7 +179,7 @@ impl<S: MessageSender> ValidatorClient<S> {
         ValidatorClient{
             sender: sender,
             accounts: accounts,
-            filters: Arc::new(Mutex::new(HashMap::new()))
+            filters: FilterManager::new(),
         }
     }
 
@@ -547,36 +546,37 @@ impl<S: MessageSender> ValidatorClient<S> {
         Ok(block.clone())
     }
 
+    pub fn get_current_block_number(&mut self) -> Result<u64, Error> {
+        let block = self.get_current_block()?;
+        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|error|
+            Error::ParseError(format!("Error parsing block_header: {:?}", error)))?;
+        Ok(block_header.block_num)
+    }
+
+    pub fn get_blocks_since(&mut self, since: u64) -> Result<Vec<(u64, Block)>, Error> {
+        let block = self.get_current_block()?;
+        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|error|
+            Error::ParseError(format!("Error parsing block_header: {:?}", error)))?;
+        let block_num = block_header.block_num;
+        if block_num <= since {
+            return Ok(Vec::new());
+        }
+
+        let mut blocks = Vec::with_capacity((block_num - (since+1)) as usize);
+        for block_num in (since+1)..block_num {
+            let block = self.get_block(BlockKey::Number(block_num))?;
+            let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|error|
+                Error::ParseError(format!("Error parsing block_header: {:?}", error)))?;
+            let block_num = block_header.block_num;
+            blocks.push((block_num, block));
+        }
+        blocks.push((block_num, block));
+
+        Ok(blocks)
+    }
+
     fn block_num_to_block_id(&mut self, block_num: u64) -> Result<String, Error> {
         self.get_block(BlockKey::Number(block_num)).map(|block|
             String::from(block.header_signature))
-    }
-
-    pub fn remove_filter(&mut self, filter_id: &String) -> Option<(Filter, String)> {
-        self.filters.lock().unwrap().remove(filter_id)
-    }
-
-    pub fn get_filter(&mut self, filter_id: &String) -> Result<(Filter, String), String> {
-        let filters = self.filters.lock().unwrap();
-        if filters.contains_key(filter_id) {
-            Ok(filters[filter_id].clone())
-        } else {
-            Err(format!("Unknown filter id: {:?}", filter_id))
-        }
-    }
-
-    pub fn set_filter(&mut self, filter_id: String, filter: Filter, block_id: String) {
-        let mut filters = self.filters.lock().unwrap();
-        let entry = filters.entry(filter_id).or_insert((filter, block_id.clone()));
-        (*entry).1 = block_id
-    }
-
-}
-
-
-
-        }
-
-    }
     }
 }
