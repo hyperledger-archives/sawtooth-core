@@ -422,7 +422,9 @@ impl<S: MessageSender> ValidatorClient<S> {
         match block_key {
             BlockKey::Signature(block_id) => request.set_block_id(block_id),
             BlockKey::Number(block_num) => request.set_block_num(block_num),
-            BlockKey::Latest => {},
+            BlockKey::Latest => {
+                return self.get_current_block();
+            },
             BlockKey::Earliest => request.set_block_id(String::from("0000000000000000")),
         };
 
@@ -532,14 +534,14 @@ impl<S: MessageSender> ValidatorClient<S> {
         }
     }
 
-    pub fn get_current_block(&mut self) -> Result<Block, String> {
+    pub fn get_current_block(&mut self) -> Result<Block, Error> {
         let mut paging = PagingControls::new();
         paging.set_count(1);
         let mut request = ClientBlockListRequest::new();
         request.set_paging(paging);
 
         let response: ClientBlockListResponse =
-           self.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)?;
+           self.send_request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)?;
 
         let block = &response.blocks[0];
         Ok(block.clone())
