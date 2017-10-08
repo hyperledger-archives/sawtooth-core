@@ -24,7 +24,7 @@ use std::io::Error as IoError;
 use sawtooth_sdk::signing::Error as SigningError;
 use sawtooth_sdk::signing::secp256k1::{Secp256k1PrivateKey};
 use sawtooth_sdk::signing::{PrivateKey, create_algorithm};
-use client::{bytes_to_hex_str};
+use transform;
 use rpassword;
 use tiny_keccak;
 
@@ -151,5 +151,5 @@ impl Account {
 }
 
 pub fn pubkey_to_address(pub_key: &[u8]) -> String {
-    bytes_to_hex_str(&tiny_keccak::keccak256(pub_key)[..20])
+    transform::bytes_to_hex_str(&tiny_keccak::keccak256(pub_key)[..20])
 }

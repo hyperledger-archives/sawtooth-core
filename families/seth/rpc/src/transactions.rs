@@ -37,9 +37,8 @@ use sawtooth_sdk::messages::events::{Event, Event_Attribute};
 use client::{
     Error,
     BlockKey,
-    bytes_to_hex_str,
-    hex_str_to_bytes,
 };
+use transform;
 use accounts::pubkey_to_address;
 
 pub enum SethTransaction {
@@ -142,15 +141,15 @@ impl Transaction {
     }
 
     pub fn from_addr(&self) -> String {
-        pubkey_to_address(&hex_str_to_bytes(&self.signer_pubkey).unwrap())
+        pubkey_to_address(&transform::hex_str_to_bytes(&self.signer_pubkey).unwrap())
     }
 
     pub fn to_addr(&self) -> Option<String> {
         match self.inner {
-            SethTransaction::CreateExternalAccount(ref txn) => Some(bytes_to_hex_str(&txn.to)),
+            SethTransaction::CreateExternalAccount(ref txn) => Some(transform::bytes_to_hex_str(&txn.to)),
             SethTransaction::CreateContractAccount(_) => None,
-            SethTransaction::MessageCall(ref txn) => Some(bytes_to_hex_str(&txn.to)),
-            SethTransaction::SetPermissions(ref txn) => Some(bytes_to_hex_str(&txn.to)),
+            SethTransaction::MessageCall(ref txn) => Some(transform::bytes_to_hex_str(&txn.to)),
+            SethTransaction::SetPermissions(ref txn) => Some(transform::bytes_to_hex_str(&txn.to)),
         }
     }
 
@@ -158,7 +157,7 @@ impl Transaction {
         match self.inner {
             SethTransaction::CreateExternalAccount(_) => None,
             SethTransaction::CreateContractAccount(_) => None,
-            SethTransaction::MessageCall(ref txn) => Some(bytes_to_hex_str(&txn.data)),
+            SethTransaction::MessageCall(ref txn) => Some(transform::bytes_to_hex_str(&txn.data)),
             SethTransaction::SetPermissions(_) => None,
         }
     }
@@ -185,7 +184,7 @@ impl SethLog {
             .map(|attr| String::from(attr.value.as_str()))
             .collect();
 
-        let data: String = bytes_to_hex_str(event.get_data());
+        let data: String = transform::bytes_to_hex_str(event.get_data());
 
         Ok(SethLog {
             address: address,
@@ -224,9 +223,9 @@ impl SethReceipt {
             .map(SethLog::from_event_pb)
             .collect::<Result<Vec<SethLog>, Error>>()?;
 
-        let contract_address = bytes_to_hex_str(seth_receipt_pb.get_contract_address());
+        let contract_address = transform::bytes_to_hex_str(seth_receipt_pb.get_contract_address());
         let gas_used = seth_receipt_pb.get_gas_used();
-        let return_value = bytes_to_hex_str(seth_receipt_pb.get_return_value());
+        let return_value = transform::bytes_to_hex_str(seth_receipt_pb.get_return_value());
 
         Ok(SethReceipt {
             transaction_id: String::from(receipt.get_transaction_id()),

@@ -17,14 +17,12 @@
 
 use std::sync::{Arc, Mutex};
 use std::error::Error as StdError;
-use std::fmt::{LowerHex, Display, Formatter, Result as FmtResult};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 use std::collections::HashMap;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-
-use jsonrpc_core::{Value};
 
 use sawtooth_sdk::messaging::stream::*;
 use sawtooth_sdk::messages::validator::Message_MessageType;
@@ -53,10 +51,12 @@ use sawtooth_sdk::messages::client::{
 };
 use sawtooth_sdk::messages::transaction::{Transaction as TransactionPb, TransactionHeader};
 use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
+use sawtooth_sdk::messages::block::{BlockHeader};
 use messages::seth::{EvmEntry, EvmStateAccount, EvmStorage};
 use accounts::{Account, Error as AccountError};
 use filters::Filter;
 use transactions::{SethTransaction, SethReceipt, Transaction, TransactionKey};
+use transform;
 
 use protobuf;
 use uuid;
@@ -513,7 +513,7 @@ impl<S: MessageSender> ValidatorClient<S> {
 
         match storage {
             Some(storage) => {
-                let position = match hex_str_to_bytes(&storage_address) {
+                let position = match transform::hex_str_to_bytes(&storage_address) {
                     Some(p) => p,
                     None => {
                         return Err(String::from("Failed to decode position, invalid hex."));
@@ -573,47 +573,8 @@ impl<S: MessageSender> ValidatorClient<S> {
 
 
 
-pub fn num_to_hex<T>(n: &T) -> Value where T: LowerHex {
-    Value::String(String::from(format!("{:#x}", n)))
-}
-
-pub fn hex_prefix(s: &str) -> Value {
-    Value::String(String::from(format!("0x{}", s)))
-}
-
-pub fn hex_str_to_bytes(s: &str) -> Option<Vec<u8>> {
-    for ch in s.chars() {
-        if !ch.is_digit(16) {
-            return None
         }
+
     }
-
-    let input: Vec<_> = s.chars().collect();
-
-    let decoded: Vec<u8> = input.chunks(2).map(|chunk| {
-        ((chunk[0].to_digit(16).unwrap() << 4) |
-        (chunk[1].to_digit(16).unwrap())) as u8
-    }).collect();
-
-    return Some(decoded);
-}
-
-pub fn bytes_to_hex_str(b: &[u8]) -> String {
-    b.iter()
-     .map(|b| format!("{:02x}", b))
-     .collect::<Vec<_>>()
-     .join("")
-}
-
-pub fn zerobytes(mut nbytes: usize) -> Value {
-    if nbytes == 0 {
-        return Value::String(String::from("0x0"));
     }
-    let mut s = String::with_capacity(2 + nbytes * 2);
-    while nbytes > 0 {
-        s.push_str("00");
-        nbytes -= 1;
-    }
-    s.push_str("0x");
-    Value::String(s)
 }

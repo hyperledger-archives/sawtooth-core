@@ -24,11 +24,9 @@ use protobuf;
 
 use client::{
     ValidatorClient,
-    hex_prefix,
-    num_to_hex,
-    bytes_to_hex_str,
 };
 use requests::{RequestHandler};
+use transform;
 
 use sawtooth_sdk::messaging::stream::MessageSender;
 

@@ -26,10 +26,8 @@ use client::{
     ValidatorClient,
     Error as ClientError,
     BlockKey,
-    num_to_hex,
-    hex_prefix,
-    zerobytes,
 };
+use transform;
 
 use sawtooth_sdk::messaging::stream::*;
 
@@ -88,10 +86,10 @@ fn get_block_obj<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Resu
     };
 
     let mut bob = Map::new();
-    bob.insert(String::from("number"), num_to_hex(&block_header.block_num));
-    bob.insert(String::from("hash"), hex_prefix(&block.header_signature));
-    bob.insert(String::from("parentHash"), hex_prefix(&block_header.previous_block_id));
-    bob.insert(String::from("stateRoot"), hex_prefix(&block_header.state_root_hash));
+    bob.insert(String::from("number"), transform::num_to_hex(&block_header.block_num));
+    bob.insert(String::from("hash"), transform::hex_prefix(&block.header_signature));
+    bob.insert(String::from("parentHash"), transform::hex_prefix(&block_header.previous_block_id));
+    bob.insert(String::from("stateRoot"), transform::hex_prefix(&block_header.state_root_hash));
 
     let receipts = match client.get_receipts_from_block(&block) {
         Ok(r) => r,
@@ -103,24 +101,24 @@ fn get_block_obj<T>(block_key: BlockKey, mut client: ValidatorClient<T>) -> Resu
     let mut transactions = Vec::new();
     let mut gas: u64 = 0;
     for (txn_id, receipt) in receipts.into_iter() {
-        transactions.push(hex_prefix(&txn_id));
+        transactions.push(transform::hex_prefix(&txn_id));
         gas += receipt.gas_used;
     }
     bob.insert(String::from("transactions"), Value::Array(transactions));
-    bob.insert(String::from("gasUsed"), num_to_hex(&gas));
+    bob.insert(String::from("gasUsed"), transform::num_to_hex(&gas));
 
     // No corollaries in Sawtooth
-    bob.insert(String::from("nonce"), zerobytes(8));
-    bob.insert(String::from("sha3Uncles"), zerobytes(32));
-    bob.insert(String::from("logsBloom"), zerobytes(256));
-    bob.insert(String::from("transactionsRoot"), zerobytes(32));
-    bob.insert(String::from("receiptsRoot"), zerobytes(32));
-    bob.insert(String::from("miner"), zerobytes(20));
-    bob.insert(String::from("difficulty"), zerobytes(0));
-    bob.insert(String::from("totalDifficulty"), zerobytes(0));
-    bob.insert(String::from("extraData"), zerobytes(0));
-    bob.insert(String::from("size"), zerobytes(0));
-    bob.insert(String::from("gasLimit"), zerobytes(0));
+    bob.insert(String::from("nonce"), transform::zerobytes(8));
+    bob.insert(String::from("sha3Uncles"), transform::zerobytes(32));
+    bob.insert(String::from("logsBloom"), transform::zerobytes(256));
+    bob.insert(String::from("transactionsRoot"), transform::zerobytes(32));
+    bob.insert(String::from("receiptsRoot"), transform::zerobytes(32));
+    bob.insert(String::from("miner"), transform::zerobytes(20));
+    bob.insert(String::from("difficulty"), transform::zerobytes(0));
+    bob.insert(String::from("totalDifficulty"), transform::zerobytes(0));
+    bob.insert(String::from("extraData"), transform::zerobytes(0));
+    bob.insert(String::from("size"), transform::zerobytes(0));
+    bob.insert(String::from("gasLimit"), transform::zerobytes(0));
     bob.insert(String::from("uncles"), Value::Array(Vec::new()));
 
     Ok(Value::Object(bob))
@@ -141,7 +139,7 @@ fn get_block_transaction_count<T>(block_key: BlockKey, mut client: ValidatorClie
         }
     };
 
-    Ok(num_to_hex(&block.batches.iter().fold(0, |acc, batch| acc + batch.transactions.len())))
+    Ok(transform::num_to_hex(&block.batches.iter().fold(0, |acc, batch| acc + batch.transactions.len())))
 }
 
 // Returns a block object using its "hash" to identify it. In Sawtooth, this is the blocks

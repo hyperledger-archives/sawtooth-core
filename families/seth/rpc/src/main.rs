@@ -48,6 +48,7 @@ mod calls;
 mod accounts;
 mod filters;
 mod transactions;
+mod transform;
 
 use client::{ValidatorClient};
 use requests::{RequestExecutor, RequestHandler};
