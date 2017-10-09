@@ -40,8 +40,6 @@ from sawtooth_cli.transaction import add_transaction_parser
 from sawtooth_cli.transaction import do_transaction
 from sawtooth_cli.state import add_state_parser
 from sawtooth_cli.state import do_state
-from sawtooth_cli.cluster import add_cluster_parser
-from sawtooth_cli.cluster import do_cluster
 from sawtooth_cli.identity import add_identity_parser
 from sawtooth_cli.identity import do_identity
 
@@ -120,7 +118,6 @@ def create_parser(prog_name):
     add_batch_parser(subparsers, parent_parser)
     add_transaction_parser(subparsers, parent_parser)
     add_state_parser(subparsers, parent_parser)
-    add_cluster_parser(subparsers, parent_parser)
     add_identity_parser(subparsers, parent_parser)
 
     return parser
@@ -154,8 +151,6 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         do_transaction(args)
     elif args.command == 'state':
         do_state(args)
-    elif args.command == 'cluster':
-        do_cluster(args)
     elif args.command == 'identity':
         do_identity(args)
     else:

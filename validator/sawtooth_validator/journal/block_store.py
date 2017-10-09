@@ -147,6 +147,7 @@ class BlockStore(MutableMapping):
             out.append((batch.header_signature, blk_id))
             for txn in batch.transactions:
                 out.append((txn.header_signature, blk_id))
+        out.append((str(blkw.block_num), blk_id))
         return out
 
     @staticmethod
@@ -164,6 +165,7 @@ class BlockStore(MutableMapping):
             out.append(batch.header_signature)
             for txn in batch.transactions:
                 out.append(txn.header_signature)
+        out.append(str(blkw.block_num))
         return out
 
     def _get_block(self, key):
@@ -202,6 +204,12 @@ class BlockStore(MutableMapping):
             return self._get_block_indirect(txn_id)
         except KeyError:
             raise ValueError('Transaction "%s" not in BlockStore', txn_id)
+
+    def get_block_by_number(self, block_num):
+        try:
+            return self._get_block_indirect(str(block_num))
+        except KeyError:
+            raise KeyError('Block number "%s" not in BlockStore', block_num)
 
     def has_transaction(self, txn_id):
         return txn_id in self._block_store

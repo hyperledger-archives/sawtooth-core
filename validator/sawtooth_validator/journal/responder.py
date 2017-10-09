@@ -27,11 +27,13 @@ from sawtooth_validator.protobuf import batch_pb2
 
 LOGGER = logging.getLogger(__name__)
 
+CACHE_KEEP_TIME = 300
+
 
 class Responder(object):
     def __init__(self,
                  completer,
-                 cache_keep_time=30,
+                 cache_keep_time=300,
                  cache_purge_frequency=30):
         self.completer = completer
         self.pending_requests = TimedCache(cache_keep_time,
@@ -53,6 +55,12 @@ class Responder(object):
     def check_for_batch_by_transaction(self, transaction_id):
         batch = self.completer.get_batch_by_transaction(transaction_id)
         return batch
+
+    def already_requested(self, requested_id):
+        with self._lock:
+            if requested_id in self.pending_requests:
+                return True
+            return False
 
     def add_request(self, requested_id, connection_id):
         with self._lock:
@@ -77,10 +85,25 @@ class BlockResponderHandler(Handler):
     def __init__(self, responder, gossip):
         self._responder = responder
         self._gossip = gossip
+        self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
     def handle(self, connection_id, message_content):
         block_request_message = network_pb2.GossipBlockRequest()
         block_request_message.ParseFromString(message_content)
+        if block_request_message.nonce in self._seen_requests:
+            LOGGER.debug("Received repeat GossipBlockRequest from %s",
+                         connection_id)
+            ack = network_pb2.NetworkAcknowledgement()
+            ack.status = ack.OK
+
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK)
+
+        self._seen_requests[block_request_message.nonce] = \
+            block_request_message.block_id
+
         block_id = block_request_message.block_id
         node_id = block_request_message.node_id
         block = self._responder.check_for_block(block_id)
@@ -91,11 +114,16 @@ class BlockResponderHandler(Handler):
                 LOGGER.debug("No chain head available. Cannot respond to block"
                              " requests.")
             else:
+                if not self._responder.already_requested(block_id):
+                    self._gossip.broadcast(
+                        block_request_message,
+                        validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
+                        exclude=[connection_id])
+                else:
+                    LOGGER.debug("Block %s has already been requested",
+                                 block_id)
+
                 self._responder.add_request(block_id, connection_id)
-                self._gossip.broadcast(
-                    block_request_message,
-                    validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
-                    exclude=[connection_id])
         else:
             LOGGER.debug("Responding to block requests: %s",
                          block.get_block().header_signature)
@@ -108,7 +136,13 @@ class BlockResponderHandler(Handler):
                               block_response.SerializeToString(),
                               connection_id)
 
-        return HandlerResult(status=HandlerStatus.PASS)
+        ack = network_pb2.NetworkAcknowledgement()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class ResponderBlockResponseHandler(Handler):
@@ -141,17 +175,38 @@ class ResponderBlockResponseHandler(Handler):
                              connection)
 
         self._responder.remove_request(block.header_signature)
-        return HandlerResult(status=HandlerStatus.PASS)
+        ack = network_pb2.NetworkAcknowledgement()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class BatchByBatchIdResponderHandler(Handler):
     def __init__(self, responder, gossip):
         self._responder = responder
         self._gossip = gossip
+        self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
     def handle(self, connection_id, message_content):
         batch_request_message = network_pb2.GossipBatchByBatchIdRequest()
         batch_request_message.ParseFromString(message_content)
+        if batch_request_message.nonce in self._seen_requests:
+            LOGGER.debug("Received repeat GossipBatchByBatchIdRequest from %s",
+                         connection_id)
+            ack = network_pb2.NetworkAcknowledgement()
+            ack.status = ack.OK
+
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK)
+
+        self._seen_requests[batch_request_message.nonce] = \
+            batch_request_message.id
+
         batch = None
         batch = self._responder.check_for_batch(batch_request_message.id)
         node_id = batch_request_message.node_id
@@ -159,12 +214,17 @@ class BatchByBatchIdResponderHandler(Handler):
         if batch is None:
             # No batch found, broadcast original message to other peers
             # and add to pending requests
+            if not self._responder.already_requested(batch_request_message.id):
+                self._gossip.broadcast(
+                    batch_request_message,
+                    validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
+                    exclude=[connection_id])
+            else:
+                LOGGER.debug("Batch %s has already been requested",
+                             batch_request_message.id)
+
             self._responder.add_request(batch_request_message.id,
                                         connection_id)
-            self._gossip.broadcast(
-                batch_request_message,
-                validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST,
-                exclude=[connection_id])
         else:
             LOGGER.debug("Responding to batch requests %s",
                          batch.header_signature)
@@ -177,21 +237,42 @@ class BatchByBatchIdResponderHandler(Handler):
                               batch_response.SerializeToString(),
                               connection_id)
 
-        return HandlerResult(status=HandlerStatus.PASS)
+        ack = network_pb2.NetworkAcknowledgement()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class BatchByTransactionIdResponderHandler(Handler):
     def __init__(self, responder, gossip):
         self._responder = responder
         self._gossip = gossip
+        self._seen_requests = TimedCache(CACHE_KEEP_TIME)
 
     def handle(self, connection_id, message_content):
         batch_request_message = network_pb2.GossipBatchByTransactionIdRequest()
         batch_request_message.ParseFromString(message_content)
+        if batch_request_message.nonce in self._seen_requests:
+            LOGGER.debug("Received repeat GossipBatchByTransactionIdRequest"
+                         " from %s", connection_id)
+            ack = network_pb2.NetworkAcknowledgement()
+            ack.status = ack.OK
+
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK)
+
+        self._seen_requests[batch_request_message.nonce] = \
+            batch_request_message.ids
         node_id = batch_request_message.node_id
         batch = None
         batches = []
         unfound_txn_ids = []
+        not_requested = []
         for txn_id in batch_request_message.ids:
             batch = self._responder.check_for_batch_by_transaction(
                 txn_id)
@@ -199,6 +280,11 @@ class BatchByTransactionIdResponderHandler(Handler):
             # The txn_id was not found.
             if batch is None:
                 unfound_txn_ids.append(txn_id)
+                if not self._responder.already_requested(txn_id):
+                    not_requested.append(txn_id)
+                else:
+                    LOGGER.debug("Batch containing Transaction %s has already "
+                                 "been requested", txn_id)
 
             # Check to see if a previous txn was in the same batch.
             elif batch not in batches:
@@ -206,7 +292,8 @@ class BatchByTransactionIdResponderHandler(Handler):
 
             batch = None
 
-        if batches == []:
+        if batches == [] and len(not_requested) == \
+                len(batch_request_message.ids):
             for txn_id in batch_request_message.ids:
                 self._responder.add_request(txn_id, connection_id)
             self._gossip.broadcast(
@@ -216,16 +303,21 @@ class BatchByTransactionIdResponderHandler(Handler):
                 exclude=[connection_id])
 
         elif unfound_txn_ids != []:
-            new_request = network_pb2.GossipBatchByTransactionIdRequest()
-            new_request.ids.extend(unfound_txn_ids)
-            new_request.node_id = batch_request_message.node_id
+            if not_requested != []:
+                new_request = network_pb2.GossipBatchByTransactionIdRequest()
+                # only request batches we have not requested already
+                new_request.ids.extend(not_requested)
+                new_request.node_id = batch_request_message.node_id
+                # Keep same nonce as original message
+                new_request.nonce = batch_request_message.nonce
+                self._gossip.broadcast(
+                    new_request,
+                    validator_pb2.Message.
+                    GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
+                    exclude=[connection_id])
+            # Add all requests to responder
             for txn_id in unfound_txn_ids:
                 self._responder.add_request(txn_id, connection_id)
-            self._gossip.broadcast(
-                new_request,
-                validator_pb2.Message.
-                GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST,
-                exclude=[connection_id])
 
         if batches != []:
             for batch in batches:
@@ -240,7 +332,13 @@ class BatchByTransactionIdResponderHandler(Handler):
                                   batch_response.SerializeToString(),
                                   connection_id)
 
-        return HandlerResult(status=HandlerStatus.PASS)
+        ack = network_pb2.NetworkAcknowledgement()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)
 
 
 class ResponderBatchResponseHandler(Handler):
@@ -282,4 +380,10 @@ class ResponderBatchResponseHandler(Handler):
         for requested_id in requests_to_remove:
             self._responder.remove_request(requested_id)
 
-        return HandlerResult(status=HandlerStatus.PASS)
+        ack = network_pb2.NetworkAcknowledgement()
+        ack.status = ack.OK
+
+        return HandlerResult(
+            HandlerStatus.RETURN,
+            message_out=ack,
+            message_type=validator_pb2.Message.NETWORK_ACK)

@@ -16,6 +16,7 @@ package vm
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -71,10 +72,7 @@ type VM struct {
 	txid     []byte
 
 	callDepth int
-
-	// NOTE: [ben] revise event structure
-	//
-	// evc events.Fireable
+	evc EventFireable
 }
 
 func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
@@ -84,6 +82,7 @@ func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
 		origin:    origin,
 		callDepth: 0,
 		txid:      txid,
+		evc:	   nil,
 	}
 }
 
@@ -91,9 +90,9 @@ func NewVM(appState AppState, params Params, origin Word256, txid []byte) *VM {
 // and generalised for Hyperledger Burrow
 //
 // // satisfies events.Eventable
-// func (vm *VM) SetFireable(evc events.Fireable) {
-// 	vm.evc = evc
-// }
+func (vm *VM) SetFireable(evc EventFireable) {
+	vm.evc = evc
+}
 
 // CONTRACT: it is the duty of the contract writer to call known permissions
 // we do not convey if a permission is not set
@@ -640,7 +639,7 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			logger.Debugf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
 
 		case BLOCKHASH: // 0x40
-			blockNumber := Int64FromWord256(stack.Pop())
+			blockNumber := stack.Pop64()
 
 			if blockNumber > vm.params.BlockHeight {
 				logger.Debugf(" => attempted to get blockhash of a non-existent block")
@@ -656,12 +655,14 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 					return nil, ErrInvalidContract
 				}
 				stack.Push(vm.params.BlockHash)
+				logger.Debugf(" => 0x%X\n", vm.params.BlockHash)
 			} else {
 				hash, err := vm.appState.GetBlockHash(blockNumber)
 				if err != nil {
 					return nil, firstErr(err, ErrInvalidContract)
 				}
 				stack.Push(hash)
+				logger.Debugf(" => 0x%X\n", hash)
 			}
 
 		case COINBASE: // 0x41
@@ -670,11 +671,11 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 
 		case TIMESTAMP: // 0x42
 			time := vm.params.BlockTime
-			stack.Push64(int64(time))
+			stack.Push64(time)
 			logger.Debugf(" => 0x%X\n", time)
 
 		case BLOCKHEIGHT: // 0x43
-			number := int64(vm.params.BlockHeight)
+			number := vm.params.BlockHeight
 			stack.Push64(number)
 			logger.Debugf(" => 0x%X\n", number)
 
@@ -793,18 +794,18 @@ func (vm *VM) call(caller, callee *Account, code, input []byte, value int64, gas
 			data = copyslice(data)
 
 			// NOTE: [ben] revise event structure
-			//
-			// if vm.evc != nil {
-			// 	// eventID := txs.EventStringLogEvent(callee.Address.Postfix(20))
-			// 	fmt.Printf("eventID: %s\n", eventID)
-			// 	log := txs.EventDataLog{
-			// 		callee.Address,
-			// 		topics,
-			// 		data,
-			// 		vm.params.BlockHeight,
-			// 	}
-			// 	vm.evc.FireEvent(eventID, log)
-			// }
+			
+			if vm.evc != nil {
+				eventID := hex.EncodeToString(callee.Address.Postfix(20))
+				logger.Infof("eventID: %s\n", eventID)
+				log := EventDataLog {
+					callee.Address,
+					topics,
+					data,
+					vm.params.BlockHeight,
+				}
+				vm.evc.FireEvent(eventID, log)
+			}
 			logger.Debugf(" => T:%X D:%X\n", topics, data)
 
 		case CREATE: // 0xF0

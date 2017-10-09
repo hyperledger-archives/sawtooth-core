@@ -165,6 +165,10 @@ class _CandidateBlock(object):
         """Add a batch to the _CandidateBlock
         :param batch: the batch to add to the block
         """
+        if batch.trace:
+            LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                         self.__class__.__name__)
+
         # first we check if the transaction dependencies are satisfied
         # The completer should have taken care of making sure all
         # Batches containing dependent transactions were sent to the
@@ -252,6 +256,10 @@ class _CandidateBlock(object):
         #   This list is needed in some case when the block is abandoned to
         #   make sure they do not remain in the pending_batches list.
         for batch in self._pending_batches:
+            if batch.trace:
+                LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                             self.__class__.__name__)
+
             result = self._scheduler.get_batch_execution_result(
                 batch.header_signature)
             # if a result is None, this means that the executor never
@@ -335,7 +343,8 @@ class BlockPublisher(object):
                  data_dir,
                  config_dir,
                  permission_verifier,
-                 batch_injector_factory=None):
+                 batch_injector_factory=None,
+                 metrics_registry=None):
         """
         Initialize the BlockPublisher object
 
@@ -356,7 +365,10 @@ class BlockPublisher(object):
             config_dir (str): path to location where configuration can be
                 found.
             batch_injector_factory (:obj:`BatchInjectorFatctory`): A factory
-                for creating BatchInjectors."""
+                for creating BatchInjectors.
+            metrics_registry (MetricsRegistry): Metrics registry used to
+                create pending batch gauge
+        """
         self._lock = RLock()
         self._candidate_block = None  # _CandidateBlock helper,
         # the next block in potential chain
@@ -378,6 +390,11 @@ class BlockPublisher(object):
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
         self._batch_injector_factory = batch_injector_factory
+
+        # For metric gathering
+        self._pending_batch_gauge = \
+            metrics_registry.gauge('pending_batch_gauge') \
+            if metrics_registry else None
 
     @property
     def chain_head_lock(self):
@@ -456,6 +473,7 @@ class BlockPublisher(object):
         with self._lock:
             if self._permission_verifier.is_batch_signer_authorized(batch):
                 self._pending_batches.append(batch)
+                self._set_gauge(len(self._pending_batches))
                 # if we are building a block then send schedule it for
                 # execution.
                 if self._candidate_block and \
@@ -526,6 +544,8 @@ class BlockPublisher(object):
                                                   uncommitted_batches)
                     self._build_candidate_block(chain_head)
 
+                    self._set_gauge(len(self._pending_batches))
+
         # pylint: disable=broad-except
         except Exception as exc:
             LOGGER.critical("on_chain_updated exception.")
@@ -557,11 +577,14 @@ class BlockPublisher(object):
                         pending_batches)
                     self._candidate_block = None
                     # Update the _pending_batches to reflect what we learned.
+
                     last_batch_index = self._pending_batches.index(last_batch)
                     unsent_batches =\
                         self._pending_batches[last_batch_index + 1:]
                     self._pending_batches =\
                         pending_batches + unsent_batches
+
+                    self._set_gauge(len(self._pending_batches))
 
                     if block:
                         blkw = BlockWrapper(block)
@@ -579,3 +602,7 @@ class BlockPublisher(object):
         except Exception as exc:
             LOGGER.critical("on_check_publish_block exception.")
             LOGGER.exception(exc)
+
+    def _set_gauge(self, value):
+        if self._pending_batch_gauge:
+            self._pending_batch_gauge.set_value(value)

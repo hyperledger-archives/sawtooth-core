@@ -4,10 +4,8 @@ contract HelloWorld {
 	function helloWorld() returns(bytes32);
 }
 contract HelloWorldCaller {
-	bytes32 public data = "";
-
-	function callHelloWorld(address helloWorldAddr) {
+	function callHelloWorld(address helloWorldAddr) returns(bytes32) {
 		HelloWorld hello = HelloWorld(helloWorldAddr);
-		data = hello.helloWorld();
+		return hello.helloWorld();
 	}
 }

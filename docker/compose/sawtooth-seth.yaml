@@ -95,7 +95,7 @@ services:
       - 4004
       - 8080
     ports:
-      - 8080
+      - 8080:8080
     depends_on:
      - validator
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
@@ -118,3 +118,19 @@ services:
         until [ -f sawtooth.priv ]; do sleep 1; done && \
         tail -f /dev/null\""
     stop_signal: SIGKILL
+
+  seth-rpc:
+    image: sawtooth-dev-rust:latest
+    volumes:
+      - ../../:/project/sawtooth-core
+      - ${CARGO_REGISTRY}/root/.cargo/registry
+    working_dir: /project/sawtooth-core/families/seth/rpc
+    expose:
+      - 3030
+      - 4004
+    ports:
+      - 3030:3030
+    environment:
+      RUST_BACKTRACE: 1
+      PATH: /project/sawtooth-core/families/seth/bin
+    command: seth-rpc --connect tcp://validator:4004 -v

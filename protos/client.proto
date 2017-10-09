@@ -294,6 +294,7 @@ message ClientBlockListResponse {
 // specified by its unique id, in this case the block's header signature
 message ClientBlockGetRequest {
     string block_id = 1;
+    uint64 block_num = 2;
 }
 
 // A response that returns the block specified by a ClientBlockGetRequest.
@@ -426,4 +427,8 @@ message ClientTransactionGetResponse {
     }
     Status status = 1;
     Transaction transaction = 2;
+
+    // Identifier of the block this transaction is in. Not set if the
+    // transaction is pending.
+    string block = 3;
 }

@@ -1,7 +1,5 @@
 pragma solidity ^0.4.0;
 
 contract HelloWorld {
-	function helloWorld() returns(bytes32) {
-		return "Hello, world!";
-	}
+	function helloWorld() returns(bytes32) { return "helloworld"; }
 }

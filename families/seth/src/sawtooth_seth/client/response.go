@@ -98,11 +98,19 @@ type TransactionReceipt struct {
 		Type    string
 		Address string
 	}
-	Events []interface{}
+	Events []Event
 	Data   []struct {
 		Data     string
 		DataType string
 	}
+}
+type Event struct {
+	EventType  string
+	Attributes []struct {
+		Key   string
+		Value string
+	}
+	Data string
 }
 
 func ParseReceiptBody(resp *http.Response) (*ReceiptRespBody, error) {
@@ -117,8 +125,8 @@ func ParseReceiptBody(resp *http.Response) (*ReceiptRespBody, error) {
 	}
 
 	return ParseReceiptBodyData(buf)
-
 }
+
 func ParseReceiptBodyData(buf []byte) (*ReceiptRespBody, error) {
 	body := &ReceiptRespBody{}
 	err := json.Unmarshal(buf, body)

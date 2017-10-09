@@ -26,7 +26,7 @@ namespace sawtooth {
 class GlobalState {
  public:
     typedef std::pair<std::string, std::string> KeyValue;
- 
+
     // Takes the messages stream that it will use to communicate with the
     // Validator to retrieve the current state. It is not expected that this
     // will be called directly from a Transaction Processor. An instance will
@@ -38,13 +38,13 @@ class GlobalState {
 
     // Retrieve a single value from global state. If you are retrieving
     // multiple values, it is encouraged to use the batch get overload defined
-    // below. The function returns false if the value is not retreived, true if
+    // below. The function returns false if the value is not retrieved, true if
     // it is found in the GlobalStore, and throws an exception if an error occurs
     bool Get(std::string* out_value, const std::string& address) const;
 
-    // Retreive multiple values from the global state. Values are returned in
+    // Retrieve multiple values from the global state. Values are returned in
     // the out_values map. If a value is not present then there will be no
-    // entry in the returned map. So you must check for the precense of a
+    // entry in the returned map. So you must check for the presence of a
     // returned value prior to accessing it.
     void Get(std::unordered_map<std::string, std::string>* out_values,
         const std::vector<std::string>& addresses) const;

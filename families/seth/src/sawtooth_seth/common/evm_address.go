@@ -98,7 +98,7 @@ func (ea *EvmAddr) Derive(nonce uint64) *EvmAddr {
 }
 
 func (ea *EvmAddr) ToWord256() word256.Word256 {
-	return word256.RightPadWord256(ea.Bytes())
+	return word256.LeftPadWord256(ea.Bytes())
 }
 
 func (ea *EvmAddr) String() string {

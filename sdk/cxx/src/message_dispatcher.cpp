@@ -19,6 +19,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <sstream>
 
 #include <log4cxx/logger.h>
 #include <zmqpp/context.hpp>
@@ -26,6 +27,8 @@
 #include <zmqpp/socket.hpp>
 #include <zmqpp/socket_types.hpp>
 #include <zmqpp/socket_options.hpp>
+
+#include "proto/processor.pb.h"
 
 #include "sawtooth/message_dispatcher.h"
 
@@ -39,7 +42,7 @@ MessageDispatcher::MessageDispatcher():
         context_(),
         server_socket(this->context_, zmqpp::socket_type::dealer),
         message_socket(this->context_, zmqpp::socket_type::dealer),
-        processessing_request_socket(this->context_, zmqpp::socket_type::dealer)
+        processing_request_socket(this->context_, zmqpp::socket_type::dealer)
         { }
 
 // Connect to the validator component endpoint socket and
@@ -60,7 +63,7 @@ void MessageDispatcher::Connect(const std::string& connection_string) {
     } while (!connected);
 
     this->message_socket.bind("inproc://send_queue");
-    this->processessing_request_socket.bind("inproc://request_queue");
+    this->processing_request_socket.bind("inproc://request_queue");
 
     // start the thread to process incoming messages
     this->dispatch_thread = std::thread(MessageDispatcher::DispatchThread,
@@ -78,7 +81,7 @@ void MessageDispatcher::Close() {
 
     this->server_socket.close();
     this->message_socket.close();
-    this->processessing_request_socket.close();
+    this->processing_request_socket.close();
 }
 
 void MessageDispatcher::ReceiveMessage() {
@@ -91,22 +94,56 @@ void MessageDispatcher::ReceiveMessage() {
     LOG4CXX_DEBUG(logger, "ReceiveMessage MessageType: "
         << msg_proto->message_type());
 
-    if (msg_proto->message_type()
-            == Message_MessageType_TP_PROCESS_REQUEST) {
-        zmqpp::message out_zmsg;
-        const std::string& content = msg_proto->content();
-        out_zmsg.add(content.data(), content.length());
-        this->processessing_request_socket.send(out_zmsg);
-    } else {
-        std::unique_lock<std::mutex> lock(this->mutex);
-        const std::string& correlation_id = msg_proto->correlation_id();
-        auto iter = this->message_futures.find(correlation_id);
-        if (iter != this->message_futures.end()) {
-            iter->second->SetMessage(std::move(msg_proto));
-            this->message_futures.erase(iter);
-        } else {
-            LOG4CXX_DEBUG(logger, "Received Message without matching "
-                << "corrrelation_id:" << correlation_id);
+    switch (msg_proto->message_type()) {
+        case Message_MessageType_TP_PROCESS_REQUEST: {
+            zmqpp::message out_zmsg;
+            const std::string& content = msg_proto->content();
+            out_zmsg.add(content.data(), content.length());
+            this->processing_request_socket.send(out_zmsg);
+            break;
+        }
+        case Message_MessageType_TP_PING: {
+            LOG4CXX_DEBUG(
+                logger,
+                "Received TP_PING with correlation_id: "
+                    << msg_proto->correlation_id());
+
+            // Create a ping response message, set the status to OK, and
+            // serialize it.
+            TpPingResponse response;
+            response.set_status(TpPingResponse::OK);
+
+            std::stringstream proto_stream;
+            response.SerializeToOstream(&proto_stream);
+
+            // Encapsulate the protobuf ping response in a message and
+            // serialize it as well.
+            Message msg;
+            std::string msg_data;
+            msg.set_message_type(Message_MessageType_TP_PING_RESPONSE);
+            msg.set_correlation_id(msg_proto->correlation_id());
+            msg.set_content(proto_stream.str());
+            msg.SerializeToString(&msg_data);
+
+            // Encapsulate the message in a ZMQ message and send to the
+            // validator
+            zmqpp::message message;
+            message.add(msg_data.data(), msg_data.length());
+            this->server_socket.send(message);
+
+            break;
+        }
+        default: {
+            std::unique_lock<std::mutex> lock(this->mutex);
+            const std::string& correlation_id = msg_proto->correlation_id();
+            auto iter = this->message_futures.find(correlation_id);
+            if (iter != this->message_futures.end()) {
+                iter->second->SetMessage(std::move(msg_proto));
+                this->message_futures.erase(iter);
+            } else {
+                LOG4CXX_DEBUG(logger, "Received Message without matching "
+                    << "correlation_id:" << correlation_id);
+            }
         }
     }
 }

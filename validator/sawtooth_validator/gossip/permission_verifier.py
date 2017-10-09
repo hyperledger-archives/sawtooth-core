@@ -25,6 +25,9 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationViolation
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf.network_pb2 import GossipMessage
+from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
@@ -277,6 +280,36 @@ class PermissionVerifier(object):
                 return False
         return True
 
+    def check_network_consensus_role(self, public_key):
+        """ Check the public key of a node on the network to see if they are
+            permitted to publish blocks. The roles being checked are the
+            following, from first to last:
+                "network.consensus"
+                "default"
+
+            The first role that is set will be the one used to enforce if the
+            node is allowed to publish blocks.
+
+            Args:
+                public_key (string): The public key belonging to a node on the
+                    network
+        """
+        state_root = self._current_root_func()
+        role = self._cache.get_role("network.consensus", state_root)
+
+        if role is None:
+            policy_name = "default"
+        else:
+            policy_name = role.policy_name
+        policy = self._cache.get_policy(policy_name, state_root)
+        if policy is not None:
+            if not self._allowed(public_key, policy):
+                LOGGER.debug(
+                    "Node is not permitted to publish blocks: %s.",
+                    public_key)
+                return False
+        return True
+
     def _allowed(self, public_key, policy):
         for entry in policy.entries:
             if entry.type == Policy.PERMIT_KEY:
@@ -307,6 +340,10 @@ class BatchListPermissionVerifier(Handler):
         try:
             request = client_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)
+            for batch in request.batches:
+                if batch.trace:
+                    LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                                 self.__class__.__name__)
             if not all(self._verifier.check_off_chain_batch_roles(batch)
                        for batch in request.batches):
                 return make_response(response_proto.INVALID_BATCH)
@@ -355,6 +392,43 @@ class NetworkPermissionHandler(Handler):
                 HandlerStatus.RETURN_AND_CLOSE,
                 message_out=violation,
                 message_type=validator_pb2.Message.AUTHORIZATION_VIOLATION)
+
+        # if allowed pass message
+        return HandlerResult(HandlerStatus.PASS)
+
+
+class NetworkConsensusPermissionHandler(Handler):
+    def __init__(self, network, permission_verifier, gossip):
+        self._network = network
+        self._permission_verifier = permission_verifier
+        self._gossip = gossip
+
+    def handle(self, connection_id, message_content):
+        message = GossipMessage()
+        message.ParseFromString(message_content)
+        if message.content_type == "BLOCK":
+            public_key = \
+                self._network.connection_id_to_public_key(connection_id)
+            block = Block()
+            block.ParseFromString(message.content)
+            header = BlockHeader()
+            header.ParseFromString(block.header)
+            if header.signer_pubkey == public_key:
+                permitted = \
+                    self._permission_verifier.check_network_consensus_role(
+                        public_key)
+                if not permitted:
+                    LOGGER.debug(
+                        "Public key is not permitted to publish block, "
+                        "remove connection: %s", connection_id)
+                    self._gossip.unregister_peer(connection_id)
+                    violation = AuthorizationViolation(
+                        violation=RoleType.Value("NETWORK"))
+                    return HandlerResult(
+                        HandlerStatus.RETURN_AND_CLOSE,
+                        message_out=violation,
+                        message_type=validator_pb2.Message.
+                        AUTHORIZATION_VIOLATION)
 
         # if allowed pass message
         return HandlerResult(HandlerStatus.PASS)

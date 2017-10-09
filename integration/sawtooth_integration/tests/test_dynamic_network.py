@@ -18,14 +18,16 @@ import time
 import logging
 import subprocess
 import shlex
+from tempfile import mkdtemp
 
+from sawtooth_integration.tests.integration_tools import SetSawtoothHome
 from sawtooth_integration.tests import node_controller as NodeController
 from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 WAIT = 120
-
+ASSERT_CONSENSUS_TIMEOUT = 90
 
 class TestDynamicNetwork(unittest.TestCase):
     def setUp(self):
@@ -177,8 +179,11 @@ class TestDynamicNetwork(unittest.TestCase):
                    schedulers,
                    poet_kwargs):
         LOGGER.info('Starting node {}'.format(num))
-        processes = NodeController.start_node(
-            num, processors, peering, schedulers, poet_kwargs)
+        sawtooth_home = mkdtemp()
+        with SetSawtoothHome(sawtooth_home):
+            processes = NodeController.start_node(
+                num, processors, peering, schedulers,
+                sawtooth_home, NodeController.validator_cmds, poet_kwargs)
 
         # Check that none of the processes have returned
         for proc in processes:
@@ -205,16 +210,12 @@ class TestDynamicNetwork(unittest.TestCase):
 
     # if the validators aren't in consensus, wait and try again
     def assert_consensus(self):
-        sleep_time = 3
-        growth_rate = 2
-        for _ in range(5):
-            if self.in_consensus():
-                return
+        timeout = ASSERT_CONSENSUS_TIMEOUT + time.time()
+        in_consensus = False
 
-            time.sleep(sleep_time)
-            sleep_time *= growth_rate
-
-        self.assertTrue(self.in_consensus())
+        while not in_consensus and time.time() < timeout:
+            in_consensus = self.in_consensus()
+        self.assertTrue(in_consensus)
 
     def in_consensus(self):
         tolerance = self.earliest_client().calculate_tolerance()

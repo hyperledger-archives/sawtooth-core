@@ -136,7 +136,8 @@ class ValidatorRegistryMessageFactory(object):
         return json.dumps(proof_data_dict)
 
     # Currently this is done in the enclave
-    def create_signup_info(self, originator_public_key_hash, nonce):
+    def create_signup_info(self, originator_public_key_hash, nonce,
+                           pse_manifest_status='OK'):
         # currently not used
         # _active_wait_timer = None
 
@@ -190,7 +191,7 @@ class ValidatorRegistryMessageFactory(object):
             ('isvEnclaveQuoteStatus', 'OK'),
             ('isvEnclaveQuoteBody',
                 base64.b64encode(sgx_quote.serialize_to_bytes()).decode()),
-            ('pseManifestStatus', 'OK'),
+            ('pseManifestStatus', pse_manifest_status),
             ('pseManifestHash',
                 hashlib.sha256(base64.b64decode(pse_manifest)).hexdigest()),
             ('nonce', nonce),
@@ -228,29 +229,15 @@ class ValidatorRegistryMessageFactory(object):
         addresses = [self._key_to_address(self.public_key)]
         return self._factory.create_get_request(addresses)
 
-    def create_get_response_validator_info(self, validator_name):
-        signup_info = self.create_signup_info(self.pubkey_hash, "000")
+    def create_set_request_validator_info(
+            self, validator_name, transaction_id, signup_info=None):
+        if signup_info is None:
+            signup_info = self.create_signup_info(self.pubkey_hash, "000")
         data = ValidatorInfo(
             name=validator_name,
             id=self.public_key,
             signup_info=signup_info,
-            transaction_id="0103c991863cae73630fe0a9b8988ad35840a3994ad010cd4c"
-                           "60f17ca70b2054115bd5bdb0233f745826a61db0d83a32365f"
-                           "e4026b39a731b0e457a5f09be194"
-        ).SerializeToString()
-
-        address = self._key_to_address(self.public_key)
-        return self._factory.create_get_response({address: data})
-
-    def create_set_request_validator_info(self, validator_name):
-        signup_info = self.create_signup_info(self.pubkey_hash, "000")
-        data = ValidatorInfo(
-            name=validator_name,
-            id=self.public_key,
-            signup_info=signup_info,
-            transaction_id="0103c991863cae73630fe0a9b8988ad35840a3994ad010cd4c"
-                           "60f17ca70b2054115bd5bdb0233f745826a61db0d83a32365f"
-                           "e4026b39a731b0e457a5f09be194"
+            transaction_id=transaction_id
         ).SerializeToString()
 
         address = self._key_to_address(self.public_key)

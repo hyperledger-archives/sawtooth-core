@@ -18,10 +18,8 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	sdk "sawtooth_sdk/client"
 	"sawtooth_seth/client"
 	. "sawtooth_seth/protobuf/seth_pb2"
 )
@@ -54,11 +52,10 @@ func (args *AccountCreate) Register(parent *flags.Command) error {
 func (args *AccountCreate) Run(config *Config) error {
 	client := client.New(config.Url)
 
-	key, err := LoadKey(args.Positional.Alias)
+	priv, err := LoadKey(args.Positional.Alias)
 	if err != nil {
-		return fmt.Errorf("Couldn't load key from alias: %v", err)
+		return err
 	}
-	priv := sdk.WifToPriv(key)
 
 	var (
 		mod   []byte
@@ -66,11 +63,10 @@ func (args *AccountCreate) Run(config *Config) error {
 	)
 
 	if args.Moderator != "" {
-		key, err = LoadKey(args.Moderator)
+		mod, err = LoadKey(args.Moderator)
 		if err != nil {
-			return fmt.Errorf("Couldn't load moderator from alias: %v", err)
+			return err
 		}
-		mod = sdk.WifToPriv(key)
 	}
 
 	if args.Permissions != "" {
@@ -84,20 +80,21 @@ func (args *AccountCreate) Run(config *Config) error {
 		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
 	}
 
-	addr, err := client.CreateExternalAccount(priv, mod, perms, args.Nonce, args.Wait)
+	clientResult, err := client.CreateExternalAccount(priv, mod, perms, args.Nonce, args.Wait)
 	if err != nil {
 		return fmt.Errorf("Problem submitting account creation transaction: %v", err)
 	}
 
 	if args.Wait > 0 {
-		fmt.Printf(
-			"Account created at %v\n", hex.EncodeToString(addr),
-		)
+		fmt.Printf("Account created\n")
 	} else {
-		fmt.Printf(
-			"Transaction submitted to create account at %v\n", hex.EncodeToString(addr),
-		)
+		fmt.Printf("Transaction submitted to create account\n")
 	}
+	info, err := clientResult.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("Error displaying receipt: %s", err.Error())
+	}
+	fmt.Println("Transaction Receipt: ", string(info))
 
 	return nil
 }

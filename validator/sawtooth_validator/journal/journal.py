@@ -122,7 +122,8 @@ class Journal(object):
                  block_cache_keep_time=300,
                  batch_observers=None,
                  chain_observers=None,
-                 block_cache=None):
+                 block_cache=None,
+                 metrics_registry=None):
         """
         Creates a Journal instance.
 
@@ -151,6 +152,8 @@ class Journal(object):
                 on chain updates.
             block_cache (:obj:`BlockCache`, optional): A BlockCache to use in
                 place of an internally created instance. Defaults to None.
+            metrics_registry (:obj:`MetricsRegistry`, optional): Reigstry used
+            gather statistics.
         """
         self._block_store = block_store
         self._block_cache = block_cache
@@ -183,6 +186,8 @@ class Journal(object):
         self._chain_observers = [] if chain_observers is None \
             else chain_observers
 
+        self._metrics_registry = metrics_registry
+
     def _init_subprocesses(self):
         batch_injector_factory = DefaultBatchInjectorFactory(
             block_store=self._block_store,
@@ -202,6 +207,7 @@ class Journal(object):
             config_dir=self._config_dir,
             permission_verifier=self._permission_verifier,
             batch_injector_factory=batch_injector_factory,
+            metrics_registry=self._metrics_registry
         )
         self._publisher_thread = self._PublisherThread(
             block_publisher=self._block_publisher,
@@ -223,6 +229,7 @@ class Journal(object):
             config_dir=self._config_dir,
             permission_verifier=self._permission_verifier,
             chain_observers=self._chain_observers,
+            metrics_registry=self._metrics_registry
         )
         self._chain_thread = self._ChainThread(
             chain_controller=self._chain_controller,

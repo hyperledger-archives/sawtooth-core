@@ -32,7 +32,7 @@ from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution import processor_iterator
 from sawtooth_validator.networking.future import FutureResult
 from sawtooth_validator.networking.future import FutureTimeoutError
-
+from sawtooth_validator.metrics.wrappers import CounterWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +49,8 @@ class TransactionExecutorThread(object):
                  processors,
                  waiting_threadpool,
                  settings_view_factory,
-                 invalid_observers):
+                 invalid_observers,
+                 metrics_registry=None):
         """
         Args:
             service (Interconnect): The zmq internal interface
@@ -80,6 +81,13 @@ class TransactionExecutorThread(object):
         self._done = False
         self._invalid_observers = invalid_observers
         self._open_futures = {}
+        self._metrics_registry = metrics_registry
+
+        if metrics_registry:
+            self._transaction_execution_count = CounterWrapper(
+                    metrics_registry.counter('transaction_execution_count'))
+        else:
+            self._transaction_execution_count = CounterWrapper()
 
     def _future_done_callback(self, request, result):
         """
@@ -155,6 +163,8 @@ class TransactionExecutorThread(object):
 
     def _execute_schedule(self):
         for txn_info in self._scheduler:
+            self._transaction_execution_count.inc()
+
             txn = txn_info.txn
             header = transaction_pb2.TransactionHeader()
             header.ParseFromString(txn.header)
@@ -315,7 +325,8 @@ class TransactionExecutor(object):
                  context_manager,
                  settings_view_factory,
                  scheduler_type,
-                 invalid_observers=None):
+                 invalid_observers=None,
+                 metrics_registry=None):
         """
         Args:
             service (Interconnect): The zmq internal interface
@@ -345,6 +356,7 @@ class TransactionExecutor(object):
                                    else invalid_observers)
 
         self._scheduler_type = scheduler_type
+        self._metrics_registry = metrics_registry
 
     def create_scheduler(self,
                          squash_handler,
@@ -415,7 +427,8 @@ class TransactionExecutor(object):
             processors=self.processors,
             waiting_threadpool=self._waiting_threadpool,
             settings_view_factory=self._settings_view_factory,
-            invalid_observers=self._invalid_observers)
+            invalid_observers=self._invalid_observers,
+            metrics_registry=self._metrics_registry)
         self._executing_threadpool.submit(t.execute_thread)
         with self._lock:
             self._alive_threads.append(t)

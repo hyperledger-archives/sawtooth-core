@@ -316,10 +316,15 @@ class ValidatorRegistryTransactionHandler(object):
                     'Verification report does not contain a PSE manifest '
                     'status')
         if pse_manifest_status.upper() != 'OK':
-            raise \
-                ValueError(
-                    'PSE manifest status is {} (i.e., not OK)'.format(
-                        pse_manifest_status))
+            if pse_manifest_status.upper() == 'OUT_OF_DATE':
+                LOGGER.warning('Peer has out of date (but not revoked)'
+                               ' hardware, pseManifestStatus: %s',
+                               pse_manifest_status)
+            else:
+                raise \
+                    ValueError(
+                        'PSE manifest status is {} (i.e., not OK)'.format(
+                            pse_manifest_status))
 
         # Verify that the verification report contains a PSE manifest hash
         pse_manifest_hash = \
@@ -361,10 +366,15 @@ class ValidatorRegistryTransactionHandler(object):
                     'Verification report does not contain an enclave quote '
                     'status')
         if enclave_quote_status.upper() != 'OK':
-            raise \
-                ValueError(
-                    'Enclave quote status is {} (i.e., not OK)'.format(
-                        enclave_quote_status))
+            if enclave_quote_status.upper() == 'GROUP_OUT_OF_DATE':
+                LOGGER.warning('Peer has out of date (but not revoked)'
+                               ' hardware, isvEnclaveQuoteStatus: %s',
+                               str(enclave_quote_status))
+            else:
+                raise \
+                    ValueError(
+                        'Enclave quote status is {} (i.e., not OK)'.format(
+                            enclave_quote_status))
 
         # Verify that the verification report contains an enclave quote
         enclave_quote = verification_report_dict.get('isvEnclaveQuoteBody')

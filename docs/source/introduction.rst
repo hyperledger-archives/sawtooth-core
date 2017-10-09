@@ -37,20 +37,56 @@ Distributed ledgers generally consist of three basic components:
     * A protocol used to build consensus among participants around
       which transactions will be accepted by the ledger.
 
-In Sawtooth the data model and transaction language are implemented
-in a “transaction family”. While we expect users to build custom transaction
+Transaction Families
+====================
+In Sawtooth, the data model and transaction language are implemented
+in a *transaction family*. While we expect users to build custom transaction
 families that reflect the unique requirements of their ledgers, we provide
-three transaction families that are sufficient for building, testing and
-deploying a marketplace for digital assets:
+several core transaction families as models\:
 
-    * EndPointRegistry - A transaction family for registering ledger
-      services.
+    * Validator Registry - Provides a methodology
+      for registering ledger services.
 
-    * IntegerKey - A transaction family used for testing deployed ledgers.
+    * IntegerKey - Used for testing deployed ledgers.
 
-This set of transaction families provides an “out of the box” ledger that
-implements a fully functional marketplace for digital assets.
+    * Settings - Provides a reference implementation for storing
+      on-chain configuration settings.
 
+    * Identity - Handles on-chain permissioning for transactor
+      and validator keys to streamline managing identities
+      for lists of public keys.
+
+Additional transaction families provide models for specific areas\:
+
+    * Smallbank - Handles performance analysis for benchmarking
+      and performance testing when comparing the performance of
+      blockchain systems.
+      This transaction family is based on the H-Store Smallbank benchmark.
+
+    * Seth - Enables the creation and execution of smart contracts.
+      This transaction family integrates the Hyperledger Burrow
+      implementation of the Ethereum Virtual Machine (EVM)
+      into the Hyperledger Sawtooth framework using the
+      Sawtooth Go SDK.
+
+    * BlockInfo - Provides a methodology for storing information
+      about a configureable number of historic blocks.
+      This transaction family is used for Seth smart contracts.
+
+We also provide several example transaction families to demonstrate
+Sawtooth functionality\:
+
+    * XO - Allows users to play Tic-Tac-Toe, also known as
+      "noughts and crosses" or "Xs and Os".
+
+    * Supply Chain - Provides the infrastructure for tracking
+      physical objects in a real-world supply chain on the Sawtooth Ledger.
+
+    * Track and Trade - Provides a methodology for users to track goods
+      as they move through a supply chain.
+      This transaction family includes the history of ownership and
+      custodianship, as well as histories for a variety of properties
+      such as temperature and location.
 
 Consensus
 =========

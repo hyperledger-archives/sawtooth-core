@@ -27,14 +27,22 @@
 /consensus/poet/sgx/**/poet_enclave_wrap.cpp
 
 /core/sawtooth_core.egg-info/
+
+/families/**/__pycache__/
 /families/settings/sawtooth_settings/protobuf/
+/families/smallbank/smallbank_go/src/protobuf/
+/families/smallbank/smallbank_go/bin/
 /families/supplychain/python/sawtooth_supplychain/protobuf
 /families/supplychain/python/build/
-/families/**/__pycache__/
+/families/track_and_trade/**/node_modules
+/families/track_and_trade/**/package-lock.json
+/families/track_and_trade/processor/sawtooth_track_and_trade/protobuf
 /families/track_and_trade/client/public/dist
+/families/track_and_trade/client/src/protos.json
 /families/track_and_trade/server/rethinkdb_data
-/families/identity/sawtooth_identity/protobuf
+/families/track_and_trade/server/fish.batch
 /families/block_info/sawtooth_block_info/protobuf
+/families/identity/sawtooth_identity/protobuf
 
 /coverage
 /coverage/html
@@ -58,12 +66,15 @@
 /sdk/python/sawtooth_sdk/protobuf/
 /sdk/python/**/__pycache__/
 /sdk/javascript/node_modules
+/sdk/javascript/package-lock.json
 /sdk/javascript/protobuf/protobuf_bundle.json
 /sdk/examples/xo_python/**/__pycache__/
 /sdk/examples/xo_javascript/node_modules/
+/sdk/examples/xo_javascript/package-lock.json
 /sdk/examples/intkey_python/**/__pycache__/
 /sdk/examples/supplychain/python/**/__pycache__/
 /sdk/examples/intkey_javascript/node_modules/
+/sdk/examples/intkey_javascript/package-lock.json
 /sdk/examples/intkey_java/dependency-reduced-pom.xml
 /sdk/examples/intkey_java/target/
 /sdk/examples/noop_python/**/__pycache__/
@@ -84,7 +95,9 @@
 /families/seth/src/sawtooth_seth/protobuf/
 /families/seth/rpc/Cargo.lock
 /families/seth/rpc/target/
-/sdk/rust/Cargo.lock
+/families/seth/rpc/src/messages/*.rs
+!/families/seth/rpc/src/messages/mod.rs
+/families/seth/rpc/tests/protobuf/
 /sdk/rust/target
 /sdk/rust/Cargo.lock
 /sdk/rust/src/messages/*.rs
@@ -102,3 +115,11 @@
 /validator/**/__pycache__/
 
 /sdk/cxx/build/
+
+/perf/sawtooth_perf/Cargo.lock
+/perf/sawtooth_perf/target/
+/perf/sawtooth_workload/Cargo.lock
+/perf/sawtooth_workload/target/
+/perf/smallbank_workload/src/smallbank.rs
+/perf/smallbank_workload/Cargo.lock
+/perf/smallbank_workload/target/

@@ -44,7 +44,8 @@ func NewSawtoothAppState(state *processor.Context) *SawtoothAppState {
 // GetAccount retrieves an existing account with the given address. Returns nil
 // if the account doesn't exist.
 func (s *SawtoothAppState) GetAccount(addr Word256) *Account {
-	vmAddress, err := NewEvmAddrFromBytes(addr.Bytes()[:20])
+	addrBytes := addr.Bytes()[Word256Length-20:]
+	vmAddress, err := NewEvmAddrFromBytes(addrBytes)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -64,7 +65,8 @@ func (s *SawtoothAppState) GetAccount(addr Word256) *Account {
 // UpdateAccount updates the account in state. Creates the account if it doesn't
 // exist yet.
 func (s *SawtoothAppState) UpdateAccount(acct *Account) {
-	vmAddress, err := NewEvmAddrFromBytes(acct.Address.Bytes()[:20])
+	addrBytes := acct.Address.Bytes()[Word256Length-20:]
+	vmAddress, err := NewEvmAddrFromBytes(addrBytes)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -89,7 +91,8 @@ func (s *SawtoothAppState) UpdateAccount(acct *Account) {
 // RemoveAccount removes the account and associated storage from global state
 // and panics if it doesn't exist.
 func (s *SawtoothAppState) RemoveAccount(acct *Account) {
-	vmAddress, err := NewEvmAddrFromBytes(acct.Address.Bytes()[:20])
+	addrBytes := acct.Address.Bytes()[Word256Length-20:]
+	vmAddress, err := NewEvmAddrFromBytes(addrBytes)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -108,7 +111,8 @@ func (s *SawtoothAppState) RemoveAccount(acct *Account) {
 // or the address of the newly created account conflicts with an existing
 // account.
 func (s *SawtoothAppState) CreateAccount(creator *Account) *Account {
-	creatorAddress, err := NewEvmAddrFromBytes(creator.Address.Bytes()[:20])
+	addrBytes := creator.Address.Bytes()[Word256Length-20:]
+	creatorAddress, err := NewEvmAddrFromBytes(addrBytes)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -134,7 +138,8 @@ func (s *SawtoothAppState) CreateAccount(creator *Account) *Account {
 // GetStorage gets the 256 bit value stored with the given key in the given
 // account. panics if the account and key do not both exist.
 func (s *SawtoothAppState) GetStorage(address, key Word256) Word256 {
-	vmAddress, err := NewEvmAddrFromBytes(address.Bytes()[:20])
+	addrBytes := address.Bytes()[Word256Length-20:]
+	vmAddress, err := NewEvmAddrFromBytes(addrBytes)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -158,7 +163,8 @@ func (s *SawtoothAppState) GetStorage(address, key Word256) Word256 {
 }
 
 func (s *SawtoothAppState) SetStorage(address, key, value Word256) {
-	vmAddress, err := NewEvmAddrFromBytes(address.Bytes()[:20])
+	addrBytes := address.Bytes()[Word256Length-20:]
+	vmAddress, err := NewEvmAddrFromBytes(addrBytes)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -216,7 +222,7 @@ func toStateAccount(acct *Account) *EvmStateAccount {
 		return nil
 	}
 	return &EvmStateAccount{
-		Address:     acct.Address.Bytes()[:20],
+		Address:     acct.Address.Bytes()[Word256Length-20:],
 		Balance:     acct.Balance,
 		Code:        acct.Code,
 		Nonce:       acct.Nonce,
@@ -229,7 +235,7 @@ func toVmAccount(sa *EvmStateAccount) *Account {
 		return nil
 	}
 	return &Account{
-		Address:     RightPadWord256(sa.Address),
+		Address:     LeftPadWord256(sa.Address),
 		Balance:     sa.Balance,
 		Code:        sa.Code,
 		Nonce:       sa.Nonce,
