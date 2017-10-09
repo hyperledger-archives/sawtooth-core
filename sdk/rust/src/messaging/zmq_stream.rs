@@ -187,13 +187,6 @@ impl InboundRouter {
     }
 }
 
-impl Drop for InboundRouter {
-    fn drop(&mut self) {
-        let mut expected_replies = self.expected_replies.lock().unwrap();
-        expected_replies.clear();
-    }
-}
-
 /// Internal stream, guarding  a zmq socket.
 struct SendReceiveStream {
     address: String,
@@ -263,7 +256,7 @@ impl SendReceiveStream {
                 }
                 _ => continue
             }
-        } 
+        }
 
         debug!("Exited stream");
         self.socket.disconnect(&self.address).unwrap();

@@ -9,7 +9,10 @@
   "scripts": {
     "start": "rethinkdb & nodemon index.js",
     "init": "rethinkdb & node ./scripts/bootstrap_database.js && kill $! || true",
-    "test": "standard"
+    "test": "standard",
+    "make-fish": "node ./scripts/create_fish_type_batch.js > fish.batch",
+    "seed-example-fish": "DATA=\"example_fish_data.json\" node ./scripts/seed_example_data.js",
+    "update-example-fish": "DATA=\"example_fish_updates.json\" node ./scripts/update_example_data.js"
   },
   "repository": {
     "type": "git",
@@ -28,10 +31,14 @@
     "js-schema": "^1.0.1",
     "jsonwebtoken": "^7.4.3",
     "lodash": "^4.17.4",
-    "rethinkdb": "^2.3.3"
+    "protobufjs": "^6.8.0",
+    "rethinkdb": "^2.3.3",
+    "sawtooth-sdk": "^0.8.2"
   },
   "devDependencies": {
     "nodemon": "^1.11.0",
+    "request": "^2.83.0",
+    "request-promise-native": "^1.0.5",
     "standard": "^10.0.3"
   }
 }

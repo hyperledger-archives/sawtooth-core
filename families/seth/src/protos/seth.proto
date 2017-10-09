@@ -170,3 +170,21 @@ message SethTransactionReceipt {
     uint64 gas_used = 2; // The gas consumed by this transaction
     bytes return_value = 3; // The return value of the contract execution
 }
+
+// -- Logging --
+
+message EvmLogData {
+    // 20 Bytes - address from which this log originated.
+    bytes address = 1;
+
+    // Array of 0 to 4 32-byte blobs of data.
+    // (In solidity: The first topic is the hash of the signature
+    // of the event (e.g. Deposit(address,bytes32,uint256)), except
+    // you declared the event with the 'anonymous' specifier.)
+    // See the following:
+    // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getfilterchanges
+    repeated bytes topics = 2;
+
+    // contains one or more 32 Bytes non-indexed arguments of the log.
+    bytes data = 3;
+}

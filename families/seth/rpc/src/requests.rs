@@ -20,25 +20,28 @@ use jsonrpc_core::{Params, Value, Error, BoxFuture};
 
 use sawtooth_sdk::messaging::stream::*;
 
-pub type RequestHandler<T> = fn(Params, T) -> Result<Value, Error>;
+use super::client::{ValidatorClient};
+
+
+pub type RequestHandler<T> = fn(Params, ValidatorClient<T>) -> Result<Value, Error>;
 
 #[derive(Clone)]
 pub struct RequestExecutor<T: MessageSender + Clone + Sync + Send + 'static> {
     pool: CpuPool,
-    sender: T,
+    client: ValidatorClient<T>,
 }
 
 impl<T: MessageSender + Clone + Sync + Send + 'static> RequestExecutor<T> {
-    pub fn new(sender: T) -> Self {
+    pub fn new(client: ValidatorClient<T>) -> Self {
         RequestExecutor {
             pool: CpuPool::new_num_cpus(),
-            sender: sender,
+            client: client,
         }
     }
 
     pub fn run(&self, params: Params, handler: RequestHandler<T>) -> BoxFuture<Value, Error> {
-        let sender = self.sender.clone();
-        Box::new(self.pool.spawn_fn(move || {handler(params, sender)}))
+        let client = self.client.clone();
+        Box::new(self.pool.spawn_fn(move || {handler(params, client)}))
     }
 
 }

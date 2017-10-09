@@ -74,6 +74,10 @@ message GossipBlockRequest {
     // The identity of the validator that is requesting the block
     bytes node_id = 2;
 
+    // A random string that provides uniqueness for requests with
+    // otherwise identical fields.
+    string nonce = 3;
+
 }
 
 message GossipBlockResponse {
@@ -99,6 +103,10 @@ message GossipBatchByBatchIdRequest {
     // The identity of the validator that is requesting the batch
     bytes node_id = 2;
 
+    // A random string that provides uniqueness for requests with
+    // otherwise identical fields.
+    string nonce = 3;
+
 }
 
 message GossipBatchByTransactionIdRequest {
@@ -107,5 +115,9 @@ message GossipBatchByTransactionIdRequest {
 
     // The identity of the validator that is requesting the batches
     bytes node_id = 2;
+
+    // A random string that provides uniqueness for requests with
+    // otherwise identical fields.
+    string nonce = 3;
 
 }

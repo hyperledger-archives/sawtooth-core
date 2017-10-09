@@ -50,6 +50,8 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
+from sawtooth_validator.metrics.wrappers import TimerWrapper
+from sawtooth_validator.metrics.wrappers import CounterWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -93,7 +95,8 @@ class _SendReceive(object):
                  zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
                  heartbeat=False, heartbeat_interval=10,
-                 connection_timeout=60, monitor=False):
+                 connection_timeout=60, monitor=False,
+                 metrics_registry=None):
         """
         Constructor for _SendReceive.
 
@@ -157,6 +160,9 @@ class _SendReceive(object):
         self._monitor_fd = None
         self._monitor_sock = None
 
+        self._metrics_registry = metrics_registry
+        self._received_message_counters = {}
+
     @property
     def connection(self):
         return self._connection
@@ -171,6 +177,17 @@ class _SendReceive(object):
                 hashlib.sha512(zmq_identity).hexdigest()
 
         return self._identities_to_connection_ids[zmq_identity]
+
+    def _get_received_message_counter(self, tag):
+        if tag not in self._received_message_counters:
+            if self._metrics_registry:
+                self._received_message_counters[tag] = CounterWrapper(
+                    self._metrics_registry.counter(
+                        'interconnect_received_message_count', tags=[
+                            'message_type={}'.format(tag)]))
+            else:
+                self._received_message_counters[tag] = CounterWrapper()
+        return self._received_message_counters[tag]
 
     @asyncio.coroutine
     def _do_heartbeat(self):
@@ -267,6 +284,9 @@ class _SendReceive(object):
                              get_enum_name(message.message_type),
                              sys.getsizeof(msg_bytes))
 
+                tag = get_enum_name(message.message_type)
+                self._get_received_message_counter(tag).inc()
+
                 if zmq_identity is not None:
                     connection_id = \
                         self._identity_to_connection_id(zmq_identity)
@@ -291,6 +311,7 @@ class _SendReceive(object):
                                  "trip: %s %s",
                                  get_enum_name(message.message_type),
                                  my_future.get_duration())
+                    my_future.timer_stop()
 
                     self._futures.remove(message.correlation_id)
             except CancelledError:
@@ -358,7 +379,8 @@ class _SendReceive(object):
 
         yield from self._socket.send_multipart(message_bundle)
         if identity is None:
-            self.shutdown()
+            if self._connection != "ServerThread":
+                self.shutdown()
         else:
             self.remove_connected_identity(identity)
 
@@ -524,7 +546,8 @@ class _SendReceive(object):
         self._dispatcher.remove_send_message(self._connection)
         self._dispatcher.remove_send_last_message(self._connection)
         yield from self._stop_auth()
-        for task in asyncio.Task.all_tasks(self._event_loop).copy():
+        tasks = list(asyncio.Task.all_tasks(self._event_loop).copy())
+        for task in tasks:
             task.cancel()
 
         asyncio.ensure_future(self._stop_event_loop())
@@ -549,8 +572,8 @@ class _SendReceive(object):
             # is the Auth Task.
             self._event_loop.run_until_complete(self._stop_auth())
         # Cancel all running tasks
-        tasks = asyncio.Task.all_tasks(self._event_loop)
-        for task in tasks.copy():
+        tasks = list(asyncio.Task.all_tasks(self._event_loop).copy())
+        for task in tasks:
             self._event_loop.call_soon_threadsafe(task.cancel)
         while tasks:
             for task in tasks.copy():
@@ -585,7 +608,8 @@ class Interconnect(object):
                  roles=None,
                  authorize=False,
                  public_key=None,
-                 priv_key=None
+                 priv_key=None,
+                 metrics_registry=None
                  ):
         """
         Constructor for Interconnect.
@@ -646,9 +670,13 @@ class Interconnect(object):
             server_private_key=server_private_key,
             heartbeat=heartbeat,
             connection_timeout=connection_timeout,
-            monitor=monitor)
+            monitor=monitor,
+            metrics_registry=metrics_registry)
 
         self._thread = None
+
+        self._metrics_registry = metrics_registry
+        self._send_response_timers = {}
 
     @property
     def roles(self):
@@ -657,6 +685,17 @@ class Interconnect(object):
     @property
     def endpoint(self):
         return self._endpoint
+
+    def _get_send_response_timer(self, tag):
+        if tag not in self._send_response_timers:
+            if self._metrics_registry:
+                self._send_response_timers[tag] = TimerWrapper(
+                    self._metrics_registry.timer(
+                        'interconnect_send_response_time', tags=[
+                            'message_type={}'.format(tag)]))
+            else:
+                self._send_response_timers[tag] = TimerWrapper()
+        return self._send_response_timers[tag]
 
     def connection_id_to_public_key(self, connection_id):
         """
@@ -719,7 +758,8 @@ class Interconnect(object):
             server_private_key=self._server_private_key,
             future_callback_threadpool=self._future_callback_threadpool,
             heartbeat=True,
-            connection_timeout=self._connection_timeout)
+            connection_timeout=self._connection_timeout,
+            metrics_registry=self._metrics_registry)
 
         self.outbound_connections[uri] = conn
         conn.start()
@@ -894,8 +934,10 @@ class Interconnect(object):
                 content=data,
                 message_type=message_type)
 
+            timer_tag = get_enum_name(message.message_type)
+            timer_ctx = self._get_send_response_timer(timer_tag).time()
             fut = future.Future(message.correlation_id, message.content,
-                                callback)
+                                callback, timer_ctx=timer_ctx)
 
             self._futures.put(fut)
 
@@ -1102,7 +1144,8 @@ class OutboundConnection(object):
                  server_private_key,
                  future_callback_threadpool,
                  heartbeat=True,
-                 connection_timeout=60):
+                 connection_timeout=60,
+                 metrics_registry=None):
         self._futures = future.FutureCollection(
             resolving_threadpool=future_callback_threadpool)
         self._zmq_identity = zmq_identity
@@ -1126,9 +1169,11 @@ class OutboundConnection(object):
             server_public_key=server_public_key,
             server_private_key=server_private_key,
             heartbeat=heartbeat,
-            connection_timeout=connection_timeout)
+            connection_timeout=connection_timeout,
+            metrics_registry=metrics_registry)
 
         self._thread = None
+        self._metrics_registry = metrics_registry
 
     @property
     def connection_id(self):

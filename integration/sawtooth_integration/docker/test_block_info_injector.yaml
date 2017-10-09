@@ -40,7 +40,7 @@ services:
     stop_signal: SIGKILL
 
   block-info-tp:
-    image: sawtooth-block-info-tp:latest
+    image: sawtooth-block-info-tp:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -66,6 +66,7 @@ services:
         sawtooth config proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.validator.batch_injectors=block_info \
+          'sawtooth.validator.block_validation_rules=NofX:1,block_info;XatY:block_info,0;local:0' \
           -o config.batch && \
         sawtooth admin genesis \
           config-genesis.batch config.batch && \

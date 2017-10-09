@@ -22,6 +22,9 @@
 - name: James Carlyle
   user: jamescarlyle
 
+- name: Anne Chenette
+  user: chenette
+
 - name: Naissa Conde
   user: nconde
 
@@ -84,6 +87,9 @@
 
 - name: Darian Plumb
   user: dplumb94
+
+- name: Craig Rowe
+  user: crow15 
 
 - name: Peter Schwarz
   user: peterschwarz

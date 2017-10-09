@@ -42,20 +42,20 @@ class FutureMessage final {
     FutureMessage (const FutureMessage&&) = delete;
     FutureMessage& operator= (const FutureMessage&) = delete;
 
-    // Retreive the message correlation Id.
+    // Retrieve the message correlation Id.
     std::string correlation_id() const {
         return this->correlation_id_;
     }
 
-    // Check if the reponse message has been delivered. This can used to
+    // Check if the response message has been delivered. This can be used to
     // check if GetMessage will block or not.
     bool HasResponse() const {
         return this->msg != nullptr;
     }
 
-    // Get the message response and decode it in to the corresponding
+    // Get the message response and decode it into the corresponding
     // proto buffer type. This function will block until the message is
-    // availiable. Use HasResponse to test if the message has been delivered.
+    // available. Use HasResponse to test if the message has been delivered.
     template<typename T>
     void GetMessage(Message::MessageType msg_type, T* proto) {
         std::unique_lock<std::mutex> lock(this->mutex);
@@ -75,7 +75,7 @@ class FutureMessage final {
         proto->ParseFromArray(msg_data.c_str(), msg_data.length());
     }
 
-    // Set the reponse message and signal any potential waiters that it has
+    // Set the response message and signal any potential waiters that it has
     // been received. The futureMessage takes ownership of the messages.
     void SetMessage(MessageUPtr msg) {
         std::unique_lock<std::mutex> lock(this->mutex);

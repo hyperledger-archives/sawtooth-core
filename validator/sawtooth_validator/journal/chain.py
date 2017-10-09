@@ -26,9 +26,13 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
-
+from sawtooth_validator.journal.validation_rule_enforcer import \
+    ValidationRuleEnforcer
+from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator.metrics.wrappers import GaugeWrapper
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
@@ -85,7 +89,6 @@ class BlockValidator(object):
                  consensus_module,
                  block_cache,
                  new_block,
-                 chain_head,
                  state_view_factory,
                  done_cb,
                  executor,
@@ -102,7 +105,6 @@ class BlockValidator(object):
              block_cache: The cache of all recent blocks and the processing
              state associated with them.
              new_block: The block to validate.
-             chain_head: The block at the current chain head.
              state_view_factory: The factory object to create.
              done_cb: The method to call when block validation completed
              executor: The thread pool to process block validations.
@@ -121,7 +123,11 @@ class BlockValidator(object):
         self._chain_commit_state = ChainCommitState(
             self._block_cache.block_store, [])
         self._new_block = new_block
-        self._chain_head = chain_head
+
+        # Set during execution of the of the  BlockValidation to the current
+        # chain_head at that time.
+        self._chain_head = None
+
         self._state_view_factory = state_view_factory
         self._done_cb = done_cb
         self._executor = executor
@@ -133,14 +139,18 @@ class BlockValidator(object):
         self._config_dir = config_dir
         self._result = {
             'new_block': new_block,
-            'chain_head': chain_head,
+            'chain_head': None,
             'new_chain': [],
             'cur_chain': [],
             'committed_batches': [],
             'uncommitted_batches': [],
             'execution_results': [],
+            'num_transactions': 0
         }
         self._permission_verifier = permission_verifier
+
+        self._validation_rule_enforcer = \
+            ValidationRuleEnforcer(SettingsViewFactory(state_view_factory))
 
     def _get_previous_block_root_state_hash(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -167,13 +177,13 @@ class BlockValidator(object):
             txn_hdr = self._txn_header(txn)
             if self._chain_commit_state. \
                     has_transaction(txn.header_signature):
-                LOGGER.debug("Block rejected due duplicate" +
+                LOGGER.debug("Block rejected due to duplicate" +
                              " transaction, transaction: %s",
                              txn.header_signature[:8])
                 raise InvalidBatch()
             for dep in txn_hdr.dependencies:
                 if not self._chain_commit_state.has_transaction(dep):
-                    LOGGER.debug("Block rejected due missing "
+                    LOGGER.debug("Block rejected due to missing "
                                  "transaction dependency, transaction %s "
                                  "depends on %s",
                                  txn.header_signature[:8], dep[:8])
@@ -190,7 +200,7 @@ class BlockValidator(object):
                 for batch, has_more in look_ahead(blkw.block.batches):
                     if self._chain_commit_state.has_batch(
                             batch.header_signature):
-                        LOGGER.debug("Block(%s) rejected due duplicate "
+                        LOGGER.debug("Block(%s) rejected due to duplicate "
                                      "batch, batch: %s", blkw,
                                      batch.header_signature[:8])
                         raise InvalidBatch()
@@ -203,6 +213,10 @@ class BlockValidator(object):
                     else:
                         scheduler.add_batch(batch, blkw.state_root_hash)
             except InvalidBatch:
+                LOGGER.debug("Invalid batch %s encountered during "
+                             "verification of block %s",
+                             batch.header_signature[:8],
+                             blkw)
                 scheduler.cancel()
                 return False
             except:
@@ -222,6 +236,9 @@ class BlockValidator(object):
                             batch.header_signature)
                     self._result["execution_results"].extend(txn_results)
                     state_hash = batch_result.state_hash
+                    self._result["num_transactions"] = \
+                        self._result["num_transactions"] \
+                        + len(batch.transactions)
                 else:
                     return False
             if blkw.state_root_hash != state_hash:
@@ -235,8 +252,8 @@ class BlockValidator(object):
         """
         Validate that all of the batch signers and transaction signer for the
         batches in the block are permitted by the transactor permissioning
-        roles stored in state as of theprevious block. If a transactor is found
-        to not be permitted, the block is invalid.
+        roles stored in state as of the previous block. If a transactor is
+        found to not be permitted, the block is invalid.
         """
         if blkw.block_num != 0:
             state_root = self._get_previous_block_root_state_hash(blkw)
@@ -244,6 +261,17 @@ class BlockValidator(object):
                 if not self._permission_verifier.is_batch_signer_authorized(
                         batch, state_root):
                     return False
+        return True
+
+    def _validate_on_chain_rules(self, blkw):
+        """
+        Validate that the block conforms to all validation rules stored in
+        state. If the block breaks any of the stored rules, the block is
+        invalid.
+        """
+        if blkw.block_num != 0:
+            state_root = self._get_previous_block_root_state_hash(blkw)
+            return self._validation_rule_enforcer.validate(blkw, state_root)
         return True
 
     def validate_block(self, blkw):
@@ -264,6 +292,8 @@ class BlockValidator(object):
                                   data_dir=self._data_dir,
                                   config_dir=self._config_dir,
                                   validator_id=self._identity_public_key)
+                if valid:
+                    valid = self._validate_on_chain_rules(blkw)
 
                 if valid:
                     valid = self._verify_block_batches(blkw)
@@ -271,6 +301,8 @@ class BlockValidator(object):
                 if valid:
                     valid = consensus.verify_block(blkw)
 
+                # since changes to the chain-head can change the state of the
+                # blocks in BlockStore we have to revalidate this block.
                 block_store = self._block_cache.block_store
                 if self._chain_head is not None and\
                         self._chain_head.identifier !=\
@@ -404,6 +436,10 @@ class BlockValidator(object):
             new_chain = self._result["new_chain"]  # ordered list of the new
             # chain blocks
 
+            # get the current chain_head.
+            self._chain_head = self._block_cache.block_store.chain_head
+            self._result['chain_head'] = self._chain_head
+
             # 1) Find the common ancestor block, the root of the fork.
             # walk back till both chains are the same height
             (new_blkw, cur_blkw) = self._find_common_height(new_chain,
@@ -494,7 +530,8 @@ class ChainController(object):
                  data_dir,
                  config_dir,
                  permission_verifier,
-                 chain_observers):
+                 chain_observers,
+                 metrics_registry):
         """Initialize the ChainController
         Args:
             block_cache: The cache of all recent blocks and the processing
@@ -563,6 +600,18 @@ class ChainController(object):
         self._notify_on_chain_updated(self._chain_head)
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
+        self._chain_head_gauge = \
+            metrics_registry.gauge('chain_head', default='no chain head') \
+            if metrics_registry else None
+
+        if metrics_registry:
+            self._committed_transactions_count = CounterWrapper(
+                metrics_registry.counter('committed_transactions_count'))
+            self._block_num_gauge = GaugeWrapper(
+                metrics_registry.gauge('block_num'))
+        else:
+            self._committed_transactions_count = CounterWrapper()
+            self._block_num_gauge = GaugeWrapper()
 
     @property
     def chain_head(self):
@@ -581,7 +630,6 @@ class ChainController(object):
             validator = BlockValidator(
                 consensus_module=consensus_module,
                 new_block=blkw,
-                chain_head=self._chain_head,
                 block_cache=self._block_cache,
                 state_view_factory=self._state_view_factory,
                 done_cb=self.on_block_validated,
@@ -618,7 +666,8 @@ class ChainController(object):
                     self._blocks_pending.pop(new_block.identifier, [])
 
                 # if the head has changed, since we started the work.
-                if result["chain_head"] != self._chain_head:
+                if result["chain_head"].identifier !=\
+                        self._chain_head.identifier:
                     LOGGER.info(
                         'Chain head updated from %s to %s while processing '
                         'block: %s',
@@ -656,11 +705,27 @@ class ChainController(object):
                             "Chain head updated to: %s",
                             self._chain_head)
 
+                        if self._chain_head_gauge:
+                            self._chain_head_gauge.set_value(
+                                self._chain_head.identifier[:8])
+
+                        self._committed_transactions_count.inc(
+                            result["num_transactions"])
+
+                        self._block_num_gauge.set_value(
+                            self._chain_head.block_num)
+
                         # tell the BlockPublisher else the chain is updated
                         self._notify_on_chain_updated(
                             self._chain_head,
                             result["committed_batches"],
                             result["uncommitted_batches"])
+
+                        for batch in new_block.batches:
+                            if batch.trace:
+                                LOGGER.debug("TRACE %s: %s",
+                                             batch.header_signature,
+                                             self.__class__.__name__)
 
                     # Submit any immediate descendant blocks for verification
                     LOGGER.debug(
@@ -768,7 +833,6 @@ class ChainController(object):
                 validator = BlockValidator(
                     consensus_module=consensus_module,
                     new_block=block,
-                    chain_head=self._chain_head,
                     block_cache=self._block_cache,
                     state_view_factory=self._state_view_factory,
                     done_cb=self.on_block_validated,

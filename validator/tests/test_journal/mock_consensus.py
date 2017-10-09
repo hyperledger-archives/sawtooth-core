@@ -56,7 +56,7 @@ class BlockPublisher(BlockPublisherInterface):
         """
         return True
 
-    def finalize_block(self, block_header):
+    def finalize_block(self, block_header, weight=0):
         """Finalize a block_header to be claimed.
 
         Args:
@@ -64,7 +64,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             Boolean: True if the candidate block should be claimed.
         """
-        block_header.consensus = b"test_mode"
+        block_header.consensus = "test_mode:{}".format(weight).encode()
         return True
 
 
@@ -85,7 +85,7 @@ class BlockVerifier(BlockVerifierInterface):
             validator_id)
 
     def verify_block(self, block_wrapper):
-        return block_wrapper.consensus == b"test_mode"
+        return block_wrapper.consensus.startswith(b"test_mode")
 
 
 class ForkResolver(ForkResolverInterface):
@@ -115,9 +115,14 @@ class ForkResolver(ForkResolverInterface):
             bool: True if the new chain should replace the current chain.
             False if the new chain should be discarded.
         """
-
-        new_num, new_weight = new_fork_head.block_num, new_fork_head.weight
-        cur_num, cur_weight = cur_fork_head.block_num, cur_fork_head.weight
+        new_num = new_fork_head.block_num
+        new_weight = 0
+        if new_fork_head.consensus:
+            new_weight = int(new_fork_head.consensus.decode().split(':')[1])
+        cur_num = cur_fork_head.block_num
+        cur_weight = 0
+        if cur_fork_head.consensus:
+            cur_weight = int(cur_fork_head.consensus.decode().split(':')[1])
 
         # chains are ordered by length first, then weight
         if new_num == cur_num:

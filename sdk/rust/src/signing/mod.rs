@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
+mod pem_loader;
 pub mod secp256k1;
 
 use std::error::Error as StdError;

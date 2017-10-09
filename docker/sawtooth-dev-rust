@@ -33,9 +33,12 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
  && apt-get install -y -q --allow-downgrades \
+    build-essential \
     curl \
-    libzmq3-dev \
+    libssl-dev \
     gcc \
+    libzmq3-dev \
+    openssl \
     pkg-config \
     python3-grpcio-tools=1.1.3-1 \
  && apt-get clean \
@@ -59,5 +62,4 @@ RUN mkdir -p /project/sawtooth-core/ \
 
 WORKDIR /
 
-CMD build_rust
-
+CMD build_rust && build_seth_rust

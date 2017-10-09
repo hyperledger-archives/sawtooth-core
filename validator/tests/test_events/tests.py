@@ -15,19 +15,26 @@
 
 import unittest
 from unittest.mock import Mock
+from uuid import uuid4
 
 from sawtooth_validator.database.dict_database import DictDatabase
-from sawtooth_validator.networking.dispatch import Handler
-from sawtooth_validator.networking.dispatch import HandlerResult
+from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
+from sawtooth_validator.journal.event_extractors \
+    import BlockEventExtractor
+from sawtooth_validator.journal.receipt_store import TransactionReceiptStore
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.server.events.broadcaster import EventBroadcaster
+from sawtooth_validator.server.events.handlers \
+    import ClientEventsGetRequestHandler
 from sawtooth_validator.server.events.handlers \
     import ClientEventsSubscribeValidationHandler
 from sawtooth_validator.server.events.handlers \
     import ClientEventsSubscribeHandler
 from sawtooth_validator.server.events.handlers \
     import ClientEventsUnsubscribeHandler
+
 from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 from sawtooth_validator.server.events.subscription import EventFilterType
@@ -37,22 +44,76 @@ from sawtooth_validator.execution.tp_state_handlers import TpAddEventHandler
 from sawtooth_validator.protobuf import events_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf import state_context_pb2
+from sawtooth_validator.protobuf import txn_receipt_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
-from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.event_extractors \
-    import BlockEventExtractor
+import sawtooth_signing as signer
+
+from test_scheduler.yaml_scheduler_tester import create_batch
+from test_scheduler.yaml_scheduler_tester import create_transaction
 
 
-def create_block():
+def create_block(block_num=85,
+                 previous_block_id="0000000000000000",
+                 block_id="abcdef1234567890",
+                 batches=[]):
     block_header = block_pb2.BlockHeader(
-        block_num=85,
+        block_num=block_num,
         state_root_hash="0987654321fedcba",
-        previous_block_id="0000000000000000")
+        previous_block_id=previous_block_id)
     block = BlockWrapper(block_pb2.Block(
-        header_signature="abcdef1234567890",
-        header=block_header.SerializeToString()))
+        header_signature=block_id,
+        header=block_header.SerializeToString(),
+        batches=batches))
     return block
+
+
+def create_chain(num=10):
+    priv_key = signer.generate_privkey()
+    pub_key = signer.generate_pubkey(priv_key)
+
+    counter = 1
+    previous_block_id = "0000000000000000"
+    blocks = []
+    while counter <= num:
+        current_block_id = uuid4().hex
+        txns = [t[0] for t in [create_transaction(
+                payload=uuid4().hex.encode(),
+                private_key=priv_key,
+                public_key=pub_key) for _ in range(20)]]
+
+        txn_ids = [t.header_signature for t in txns]
+        batch = create_batch(
+            transactions=txns,
+            public_key=pub_key,
+            private_key=priv_key)
+
+        blk_w = create_block(
+            counter,
+            previous_block_id,
+            current_block_id,
+            batches=[batch])
+        blocks.append((current_block_id, blk_w, txn_ids))
+
+        counter += 1
+        previous_block_id = current_block_id
+
+    return blocks
+
+
+def create_receipt(txn_id, key_values):
+    events = []
+    for key, value in key_values:
+        event = events_pb2.Event()
+        event.event_type = "block_commit"
+        attribute = event.attributes.add()
+        attribute.key = key
+        attribute.value = value
+        events.append(event)
+
+    receipt = txn_receipt_pb2.TransactionReceipt(transaction_id=txn_id)
+    receipt.events.extend(events)
+    return receipt
 
 
 def create_block_commit_subscription():
@@ -180,11 +241,75 @@ class ClientEventsUnsubscribeHandlerTest(unittest.TestCase):
                          response.message_out.status)
 
 
+class ClientEventsGetRequestHandlerTest(unittest.TestCase):
+    def setUp(self):
+        self.block_store = BlockStore(DictDatabase())
+        self.receipt_store = TransactionReceiptStore(DictDatabase())
+        self._txn_ids_by_block_id = {}
+        for block_id, blk_w, txn_ids in create_chain():
+            self.block_store[block_id] = blk_w
+            self._txn_ids_by_block_id[block_id] = txn_ids
+            for txn_id in txn_ids:
+                receipt = create_receipt(txn_id=txn_id,
+                                         key_values=[("address", block_id)])
+                self.receipt_store.put(
+                    txn_id=txn_id,
+                    txn_receipt=receipt)
+
+    def test_get_events_by_block_id(self):
+        """Tests that the correct events are returned by the
+        ClientEventsGetRequest handler for each block id.
+
+        """
+
+        event_broadcaster = EventBroadcaster(
+            Mock(),
+            block_store=self.block_store,
+            receipt_store=self.receipt_store)
+        for block_id, txn_ids in self._txn_ids_by_block_id.items():
+            request = events_pb2.ClientEventsGetRequest()
+            request.block_ids.extend([block_id])
+            subscription = request.subscriptions.add()
+            subscription.event_type = "block_commit"
+            event_filter = subscription.filters.add()
+            event_filter.key = "address"
+            event_filter.match_string = block_id
+            event_filter.filter_type = event_filter.SIMPLE_ALL
+
+            event_filter2 = subscription.filters.add()
+            event_filter2.key = "block_id"
+            event_filter2.match_string = block_id
+            event_filter2.filter_type = event_filter2.SIMPLE_ALL
+
+            handler = ClientEventsGetRequestHandler(event_broadcaster)
+            handler_output = handler.handle(
+                "dummy_conn_id",
+                request.SerializeToString())
+
+            self.assertEqual(handler_output.message_type,
+                             validator_pb2.Message.CLIENT_EVENTS_GET_RESPONSE)
+
+            self.assertEqual(handler_output.status, HandlerStatus.RETURN)
+            self.assertTrue(
+                all(any(a.value == block_id
+                        for a in e.attributes)
+                    for e in handler_output.message_out.events),
+                "Each Event has at least one attribute value that is the"
+                " block id for the block.")
+            self.assertEqual(handler_output.message_out.status,
+                             events_pb2.ClientEventsGetResponse.OK)
+            self.assertTrue(len(handler_output.message_out.events) > 0)
+
+
 class EventBroadcasterTest(unittest.TestCase):
     def test_add_remove_subscriber(self):
         """Test adding and removing a subscriber."""
         mock_service = Mock()
-        event_broadcaster = EventBroadcaster(mock_service)
+        mock_block_store = Mock()
+        mock_receipt_store = Mock()
+        event_broadcaster = EventBroadcaster(mock_service,
+                                             mock_block_store,
+                                             mock_receipt_store)
         subscriptions = [EventSubscription(
             event_type="test_event",
             filters=[FILTER_FACTORY.create(key="test", match_string="test")],
@@ -208,7 +333,11 @@ class EventBroadcasterTest(unittest.TestCase):
         until it is enabled.
         """
         mock_service = Mock()
-        event_broadcaster = EventBroadcaster(mock_service)
+        mock_block_store = Mock()
+        mock_receipt_store = Mock()
+        event_broadcaster = EventBroadcaster(mock_service,
+                                             mock_block_store,
+                                             mock_receipt_store)
         block = create_block()
 
         event_broadcaster.chain_update(block, [])
@@ -229,6 +358,7 @@ class EventBroadcasterTest(unittest.TestCase):
         mock_service.send.assert_called_with(
             validator_pb2.Message.CLIENT_EVENTS,
             event_list, connection_id="test_conn_id")
+
 
 class TpAddEventHandlerTest(unittest.TestCase):
     def test_add_event(self):

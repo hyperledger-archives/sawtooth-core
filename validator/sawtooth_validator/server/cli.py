@@ -17,8 +17,12 @@ import logging
 import sys
 import argparse
 import os
+from urllib.parse import urlparse
 import pkg_resources
 import netifaces
+
+from pyformance import MetricsRegistry
+from pyformance.reporters import InfluxReporter
 
 from sawtooth_validator.config.path import load_path_config
 from sawtooth_validator.config.validator import load_default_validator_config
@@ -32,6 +36,7 @@ from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.server.log import log_configuration
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
+from sawtooth_validator.metrics.wrappers import MetricsRegistryWrapper
 
 
 LOGGER = logging.getLogger(__name__)
@@ -96,6 +101,12 @@ def parse_args(args):
                         choices=['trust', 'challenge'],
                         help='The type of authorization required to join the '
                              'validator network.')
+    parser.add_argument('--opentsdb-url',
+                        help='The host and port for Open TSDB database \
+                        used for metrics')
+    parser.add_argument('--opentsdb-db',
+                        help='The name of the database used for storing \
+                        metrics')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -185,8 +196,9 @@ def create_validator_config(opts):
         seeds=opts.seeds,
         peers=opts.peers,
         scheduler=opts.scheduler,
-        roles=opts.network_auth
-        )
+        roles=opts.network_auth,
+        opentsdb_url=opts.opentsdb_url,
+        opentsdb_db=opts.opentsdb_db)
 
 
 def main(args=None):
@@ -291,6 +303,31 @@ def main(args=None):
                        "communications between validators will not be "
                        "authenticated or encrypted.")
 
+    wrapped_registry = None
+    metrics_reporter = None
+    if validator_config.opentsdb_url:
+        LOGGER.info("Adding metrics reporter: url=%s, db=%s",
+                    validator_config.opentsdb_url,
+                    validator_config.opentsdb_db)
+
+        url = urlparse(validator_config.opentsdb_url)
+        proto, db_server, db_port, = url.scheme, url.hostname, url.port
+
+        registry = MetricsRegistry()
+        wrapped_registry = MetricsRegistryWrapper(registry)
+
+        metrics_reporter = InfluxReporter(
+            registry=registry,
+            reporting_interval=10,
+            database=validator_config.opentsdb_db,
+            prefix="sawtooth_validator",
+            port=db_port,
+            protocol=proto,
+            server=db_server,
+            username=validator_config.opentsdb_username,
+            password=validator_config.opentsdb_password)
+        metrics_reporter.start()
+
     validator = Validator(bind_network,
                           bind_component,
                           endpoint,
@@ -304,7 +341,8 @@ def main(args=None):
                           validator_config.permissions,
                           validator_config.network_public_key,
                           validator_config.network_private_key,
-                          validator_config.roles
+                          roles=validator_config.roles,
+                          metrics_registry=wrapped_registry
                           )
 
     # pylint: disable=broad-except
@@ -323,4 +361,6 @@ def main(args=None):
         LOGGER.exception(e)
         sys.exit(1)
     finally:
+        if metrics_reporter:
+            metrics_reporter.stop()
         validator.stop()

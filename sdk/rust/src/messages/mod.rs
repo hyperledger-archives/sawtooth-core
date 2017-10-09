@@ -28,3 +28,4 @@ pub mod client;
 pub mod network;
 pub mod events;
 pub mod authorization;
+pub mod txn_receipt;

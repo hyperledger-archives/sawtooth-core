@@ -16,6 +16,7 @@
 import hashlib
 import json
 import logging
+import os
 import time
 from base64 import b64decode
 from urllib.request import urlopen
@@ -62,7 +63,10 @@ class RestClient:
             dict: the json result data, as a dict
         """
 
-        return self._post('/batches', batch_list)
+        return self._post('/batches?wait', batch_list)
+
+    def block_list(self):
+        return self._get('/blocks')
 
     def _get(self, path, **queries):
         code, json_result = self._submit_request(
@@ -224,3 +228,19 @@ def wait_for_rest_apis(endpoints, tries=5):
             'http://{}/blocks'.format(endpoint),
             status_code=200,
             tries=tries)
+
+
+class SetSawtoothHome(object):
+
+    def __init__(self, sawtooth_home):
+        self._sawtooth_home = sawtooth_home
+
+    def __enter__(self):
+        os.environ['SAWTOOTH_HOME'] = self._sawtooth_home
+        for directory in map(lambda x: os.path.join(self._sawtooth_home, x),
+                       ['data', 'keys', 'etc', 'policy', 'logs']):
+            if not os.path.exists(directory):
+                os.mkdir(directory)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del os.environ['SAWTOOTH_HOME']

@@ -126,12 +126,11 @@ class WorkloadGenerator(object):
                     self.thread_pool, self._check_on_batch, batch)
 
     def stop(self):
-        tasks = asyncio.Task.all_tasks(self.loop).copy()
+        tasks = list(asyncio.Task.all_tasks(self.loop))
         for task in tasks:
             self.loop.call_soon_threadsafe(task.cancel)
         try:
-            self.loop.run_until_complete(
-                asyncio.gather(*asyncio.Task.all_tasks()))
+            self.loop.run_until_complete(asyncio.gather(*tasks))
         except CancelledError:
             self.loop.call_soon_threadsafe(self.loop.stop)
         self._workload.on_will_stop()

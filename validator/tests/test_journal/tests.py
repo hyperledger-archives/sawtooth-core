@@ -770,7 +770,6 @@ class TestBlockValidator(unittest.TestCase):
         return BlockValidator(
             consensus_module=mock_consensus,
             new_block=new_block,
-            chain_head=self.block_tree_manager.chain_head,
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
             done_cb=on_block_validated,
@@ -835,7 +834,8 @@ class TestChainController(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
-            chain_observers=[self.state_delta_processor])
+            chain_observers=[self.state_delta_processor],
+            metrics_registry=None)
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -1148,7 +1148,8 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
-            chain_observers=[self.state_delta_processor])
+            chain_observers=[self.state_delta_processor],
+            metrics_registry=None)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 

@@ -47,7 +47,7 @@ class Completer(object):
     def __init__(self,
                  block_store,
                  gossip,
-                 cache_keep_time=30,
+                 cache_keep_time=300,
                  cache_purge_frequency=30,
                  requested_keep_time=1200):
         """
@@ -67,9 +67,6 @@ class Completer(object):
         self._block_store = block_store
         # avoid throwing away the genesis block
         self.block_cache[NULL_BLOCK_IDENTIFIER] = None
-        self._seen_txns = TimedCache(cache_purge_frequency)
-        self._incomplete_batches = TimedCache(cache_purge_frequency)
-        self._incomplete_blocks = TimedCache(cache_purge_frequency)
         self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
         self._incomplete_batches = TimedCache(cache_keep_time,
                                               cache_purge_frequency)
@@ -240,10 +237,6 @@ class Completer(object):
 
     def _add_seen_txns(self, batch):
         for txn in batch.transactions:
-            if txn.header_signature in self._seen_txns and \
-                    self._seen_txns[txn.header_signature] == \
-                    batch.header_signature:
-                break
             self._seen_txns[txn.header_signature] = batch.header_signature
 
     def _process_incomplete_batches(self, key):
@@ -357,6 +350,9 @@ class CompleterBatchListBroadcastHandler(Handler):
         request = ClientBatchSubmitRequest()
         request.ParseFromString(message_content)
         for batch in request.batches:
+            if batch.trace:
+                LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                             self.__class__.__name__)
             self._completer.add_batch(batch)
             self._gossip.broadcast_batch(batch)
         return HandlerResult(status=HandlerStatus.PASS)

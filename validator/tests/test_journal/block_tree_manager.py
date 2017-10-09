@@ -170,7 +170,7 @@ class BlockTreeManager(object):
         block_builder.set_state_hash('0'*70)
 
         consensus = mock_consensus.BlockPublisher()
-        consensus.finalize_block(block_builder.block_header)
+        consensus.finalize_block(block_builder.block_header, weight=weight)
 
         header_bytes = block_builder.block_header.SerializeToString()
         signature = signing.sign(header_bytes, self.identity_signing_key)
@@ -191,7 +191,6 @@ class BlockTreeManager(object):
         if invalid_consensus:
             block_wrapper.header.consensus = b'BAD'
 
-        block_wrapper.weight = weight
         block_wrapper.status = status
 
         if add_to_cache:

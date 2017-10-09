@@ -567,6 +567,11 @@ class BatchSubmitFinisher(_ClientRequestHandler):
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
     def _respond(self, request):
+        for batch in request.batches:
+            if batch.trace:
+                LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                             self.__class__.__name__)
+
         if not request.wait_for_commit:
             return self._status.OK
 
@@ -731,10 +736,16 @@ class BlockGetRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         try:
-            block = self._block_store[request.block_id].block
+            if request.block_id != "":
+                block = self._block_store[request.block_id].block
+            else:
+                block = self._block_store.get_block_by_number(
+                    request.block_num).block
+
         except KeyError as e:
             LOGGER.debug(e)
             return self._status.NO_RESOURCE
+
         return self._wrap_response(block=block)
 
 
@@ -849,4 +860,10 @@ class TransactionGetRequest(_ClientRequestHandler):
         except ValueError as e:
             LOGGER.debug(e)
             return self._status.NO_RESOURCE
-        return self._wrap_response(transaction=txn)
+        try:
+            block_id = self._block_store.get_block_by_transaction_id(
+                request.transaction_id).identifier
+        except ValueError as e:
+            block_id = ""
+
+        return self._wrap_response(transaction=txn, block=block_id)

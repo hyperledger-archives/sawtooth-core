@@ -124,7 +124,14 @@ class ConnectHandler(Handler):
                 message_type=validator_pb2.Message.
                 AUTHORIZATION_CONNECTION_RESPONSE)
 
-        if not self._network.is_outbound_connection(connection_id):
+        try:
+            is_outbound_connection = self._network.is_outbound_connection(
+                connection_id)
+        except KeyError:
+            # Connection has gone away, drop message
+            return HandlerResult(HandlerStatus.DROP)
+
+        if not is_outbound_connection:
             if self._network.allow_inbound_connection():
                 LOGGER.debug("Allowing incoming connection: %s",
                              connection_id)
@@ -285,7 +292,14 @@ class AuthorizationTrustRequestHandler(Handler):
         if RoleType.Value("NETWORK") in request.roles:
             # Need to send ConnectionRequest to authorize ourself with the
             # connection if they initialized the connection
-            if not self._network.is_outbound_connection(connection_id):
+            try:
+                is_outbound_connection = self._network.is_outbound_connection(
+                    connection_id)
+            except KeyError:
+                # Connection has gone away, drop message
+                return HandlerResult(HandlerStatus.DROP)
+
+            if not is_outbound_connection:
                 self._network.send_connect_request(connection_id)
             else:
                 # If this is an outbound connection, authorization is complete
@@ -424,7 +438,14 @@ class AuthorizationChallengeSubmitHandler(Handler):
         if RoleType.Value("NETWORK") in auth_challenge_submit.roles:
             # Need to send ConnectionRequest to authorize ourself with the
             # connection if they initialized the connection
-            if not self._network.is_outbound_connection(connection_id):
+            try:
+                is_outbound_connection = self._network.is_outbound_connection(
+                    connection_id)
+            except KeyError:
+                # Connection has gone away, drop message
+                return HandlerResult(HandlerStatus.DROP)
+
+            if not is_outbound_connection:
                 self._network.send_connect_request(connection_id)
             else:
                 # If this is an outbound connection, authorization is complete

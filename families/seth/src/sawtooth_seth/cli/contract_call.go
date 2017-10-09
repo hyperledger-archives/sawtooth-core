@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	sdk "sawtooth_sdk/client"
 	"sawtooth_seth/client"
 )
 
@@ -55,11 +54,10 @@ func (args *ContractCall) Register(parent *flags.Command) error {
 func (args *ContractCall) Run(config *Config) error {
 	client := client.New(config.Url)
 
-	key, err := LoadKey(args.Positional.Alias)
+	priv, err := LoadKey(args.Positional.Alias)
 	if err != nil {
-		return fmt.Errorf("Couldn't load key from alias: %v", err)
+		return err
 	}
-	priv := sdk.WifToPriv(key)
 
 	data, err := hex.DecodeString(args.Positional.Data)
 	if err != nil {
@@ -75,20 +73,21 @@ func (args *ContractCall) Run(config *Config) error {
 		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
 	}
 
-	_, err = client.MessageCall(priv, addr, data, args.Nonce, args.Gas, args.Wait, args.Chaining)
+	clientResult, err := client.MessageCall(priv, addr, data, args.Nonce, args.Gas, args.Wait, args.Chaining)
 	if err != nil {
 		return fmt.Errorf("Problem submitting account creation transaction: %v", err)
 	}
 
 	if args.Wait > 0 {
-		fmt.Printf(
-			"Contract called at %v\n", hex.EncodeToString(addr),
-		)
+		fmt.Printf("Contract called\n")
 	} else {
-		fmt.Printf(
-			"Transaction submitted to call contract at %v\n", hex.EncodeToString(addr),
-		)
+		fmt.Printf("Transaction submitted to call contract\n")
 	}
+	info, err := clientResult.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("Error displaying receipt: %s", err.Error())
+	}
+	fmt.Println("Transaction Receipt: ", string(info))
 
 	return nil
 }

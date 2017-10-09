@@ -377,7 +377,7 @@ Challenge
   .. image:: ../images/challenge_authorization.*
      :width: 80%
      :align: center
-     :alt: Trust Authorization Flow
+     :alt: Challenge Authorization Flow
 
   When the validator receives an AuthorizationChallengeSubmit message, it
   verifies the public key against the signature. If the public key is verified,

@@ -38,8 +38,8 @@ const (
 
 func TestPermissions(t *testing.T) {
   client := client.New("http://rest-api:8080")
-  priv := sdk.WifToPriv(PRIV)
-  priv2 := sdk.WifToPriv(PRIV2)
+  priv, _ := sdk.WifToPriv(PRIV)
+  priv2, _ := sdk.WifToPriv(PRIV2)
   init, _ := hex.DecodeString(INIT)
   nonce := uint64(0)
 
@@ -78,7 +78,7 @@ func TestPermissions(t *testing.T) {
   }
 
   // Test that new accounts cannot be created without authorization
-  addr2, err := client.CreateExternalAccount(priv2, nil, nil, 0, WAIT)
+  _, err = client.CreateExternalAccount(priv2, nil, nil, 0, WAIT)
   if err == nil {
     t.Fatal("Account created but creation is disabled.")
   }
@@ -88,10 +88,11 @@ func TestPermissions(t *testing.T) {
     Perms: uint64(ptypes.CreateContract | ptypes.Call),
     SetBit: uint64(ptypes.CreateContract | ptypes.Call),
   }
-  addr2, err = client.CreateExternalAccount(priv2, priv, perms2, nonce, WAIT)
+  result, err := client.CreateExternalAccount(priv2, priv, perms2, nonce, WAIT)
   if err != nil {
     t.Fatal(err.Error())
   }
+  addr2 := result.Address
   nonce2 := uint64(1)
   nonce += 1
   entry, err := client.Get(addr2)
@@ -120,12 +121,12 @@ func TestPermissions(t *testing.T) {
   }
 
   // Verify the account can deploy a contract
-  contractAddr, err := client.CreateContractAccount(priv2, init, nil, nonce2, 1000, WAIT)
+  contractCreateResult, err := client.CreateContractAccount(priv2, init, nil, nonce2, 1000, WAIT)
   if err != nil {
    t.Fatal(err.Error())
   }
   nonce2 += 1
-  contractEntry, err := client.Get(contractAddr)
+  contractEntry, err := client.Get(contractCreateResult.Address)
   if err != nil {
     t.Fatal(err.Error())
   }
@@ -135,12 +136,12 @@ func TestPermissions(t *testing.T) {
 
   // Verify the account can call a contract
   cmd, _ := hex.DecodeString(SET_0_42)
-  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, WAIT, false)
+  _, err = client.MessageCall(priv2, contractCreateResult.Address, cmd, nonce2, 1000, WAIT, false)
   if err != nil {
     t.Fatal(err.Error())
   }
   nonce2 += 1
-  contractEntry, err = client.Get(contractAddr)
+  contractEntry, err = client.Get(contractCreateResult.Address)
   if err != nil {
     t.Fatal(err.Error())
   }
@@ -167,7 +168,7 @@ func TestPermissions(t *testing.T) {
 
   // Verify the account can't call a contract
   cmd, _ = hex.DecodeString(SET_0_42)
-  _, err = client.MessageCall(priv2, contractAddr, cmd, nonce2, 1000, WAIT, false)
+  _, err = client.MessageCall(priv2, contractCreateResult.Address, cmd, nonce2, 1000, WAIT, false)
   if err == nil {
     t.Fatal("Contract called but calling is disabled for this account.")
   }

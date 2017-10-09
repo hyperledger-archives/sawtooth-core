@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jessevdk/go-flags"
-	sdk "sawtooth_sdk/client"
 	"sawtooth_seth/client"
 )
 
@@ -49,11 +48,10 @@ func (args *PermissionsSet) Register(parent *flags.Command) error {
 
 func (args *PermissionsSet) Run(config *Config) error {
 	client := client.New(config.Url)
-	key, err := LoadKey(args.Positional.Moderator)
+	mod, err := LoadKey(args.Positional.Moderator)
 	if err != nil {
-		return fmt.Errorf("Couldn't load key from alias: %v", err)
+		return err
 	}
-	mod := sdk.WifToPriv(key)
 
 	if args.Address == "global" {
 		args.Address = "0000000000000000000000000000000000000000"

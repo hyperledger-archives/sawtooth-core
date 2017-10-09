@@ -37,5 +37,14 @@ module.exports = {
       'window.jQuery': 'jquery',
       Popper: ['popper.js', 'default']
     })
-  ]
+  ],
+
+  devServer: {
+    port: 3001,
+    contentBase: path.join(__dirname, 'public'),
+    publicPath: '/dist/',
+    proxy: {
+      '/api': 'http://localhost:3000'
+    }
+  }
 }

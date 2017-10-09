@@ -75,6 +75,8 @@ from sawtooth_validator.gossip.permission_verifier import \
     BatchListPermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import \
     NetworkPermissionHandler
+from sawtooth_validator.gossip.permission_verifier import \
+    NetworkConsensusPermissionHandler
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
@@ -100,6 +102,8 @@ from sawtooth_validator.networking.handlers import \
     AuthorizationViolationHandler
 
 from sawtooth_validator.server.events.broadcaster import EventBroadcaster
+from sawtooth_validator.server.events.handlers import \
+    ClientEventsGetRequestHandler
 from sawtooth_validator.server.events.handlers \
     import ClientEventsSubscribeHandler
 from sawtooth_validator.server.events.handlers \
@@ -120,7 +124,8 @@ class Validator(object):
                  peering, seeds_list, peer_list, data_dir, config_dir,
                  identity_signing_key, scheduler_type, permissions,
                  network_public_key=None, network_private_key=None,
-                 roles=None
+                 roles=None,
+                 metrics_registry=None
                  ):
         """Constructs a validator instance.
 
@@ -196,7 +201,8 @@ class Validator(object):
                                      heartbeat=False,
                                      max_incoming_connections=20,
                                      monitor=True,
-                                     max_future_callback_workers=10)
+                                     max_future_callback_workers=10,
+                                     metrics_registry=metrics_registry)
 
         executor = TransactionExecutor(
             service=self._service,
@@ -204,7 +210,8 @@ class Validator(object):
             settings_view_factory=SettingsViewFactory(
                                     StateViewFactory(merkle_db)),
             scheduler_type=scheduler_type,
-            invalid_observers=[batch_tracker])
+            invalid_observers=[batch_tracker],
+            metrics_registry=metrics_registry)
 
         self._executor = executor
         self._service.set_check_connections(executor.check_connections)
@@ -212,7 +219,9 @@ class Validator(object):
         state_delta_processor = StateDeltaProcessor(self._service,
                                                     state_delta_store,
                                                     block_store)
-        event_broadcaster = EventBroadcaster(self._service)
+        event_broadcaster = EventBroadcaster(self._service,
+                                             block_store,
+                                             receipt_store)
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
@@ -241,7 +250,8 @@ class Validator(object):
             authorize=True,
             public_key=signing.generate_pubkey(identity_signing_key),
             priv_key=identity_signing_key,
-            roles=roles)
+            roles=roles,
+            metrics_registry=metrics_registry)
 
         self._gossip = Gossip(self._network,
                               endpoint=endpoint,
@@ -297,6 +307,7 @@ class Validator(object):
                 batch_tracker,
                 identity_observer
             ],
+            metrics_registry=metrics_registry
         )
 
         self._genesis_controller = GenesisController(
@@ -471,6 +482,17 @@ class Validator(object):
         self._network_dispatcher.add_handler(
             validator_pb2.Message.GOSSIP_MESSAGE,
             structure_verifier.GossipHandlerStructureVerifier(),
+            network_thread_pool)
+
+        # GOSSIP_MESSAGE 4) Verifies that the node is allowed to publish a
+        # block
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            NetworkConsensusPermissionHandler(
+                network=self._network,
+                permission_verifier=permission_verifier,
+                gossip=self._gossip
+            ),
             network_thread_pool)
 
         # GOSSIP_MESSAGE 5) Determines if we should broadcast the
@@ -724,6 +746,7 @@ class Validator(object):
             StateDeltaGetEventsHandler(block_store, state_delta_store),
             thread_pool)
 
+        # Client Events Handlers
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
             ClientEventsSubscribeValidationHandler(event_broadcaster),
@@ -737,6 +760,11 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
             ClientEventsUnsubscribeHandler(event_broadcaster),
+            thread_pool)
+
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_EVENTS_GET_REQUEST,
+            ClientEventsGetRequestHandler(event_broadcaster),
             thread_pool)
 
     def start(self):

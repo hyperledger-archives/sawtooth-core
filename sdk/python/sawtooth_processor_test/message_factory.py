@@ -99,6 +99,9 @@ class MessageFactory(object):
     def get_public_key(self):
         return self._public
 
+    def get_private_key(self):
+        return self._private
+
     def create_tp_register(self):
         return TpRegisterRequest(
             family=self.family_name,

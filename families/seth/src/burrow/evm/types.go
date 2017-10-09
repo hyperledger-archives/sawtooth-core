@@ -65,3 +65,14 @@ type Params struct {
 	BlockTime   int64
 	GasLimit    int64
 }
+
+type EventFireable interface {
+	FireEvent(string, EventDataLog) (error)
+}
+
+type EventDataLog struct {
+	Address     Word256
+	Topics      []Word256
+	Data        []byte
+	BlockHeight int64
+}

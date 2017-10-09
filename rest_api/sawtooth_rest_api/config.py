@@ -53,7 +53,8 @@ def load_toml_rest_api_config(filename):
     toml_config = toml.loads(raw_config)
 
     invalid_keys = set(toml_config.keys()).difference(
-        ['bind', 'connect', 'timeout'])
+        ['bind', 'connect', 'timeout', 'opentsdb_db', 'opentsdb_url',
+         'opentsdb_username', 'opentsdb_password'])
     if invalid_keys:
         raise RestApiConfigurationError(
             "Invalid keys in rest api config: {}".format(
@@ -61,7 +62,11 @@ def load_toml_rest_api_config(filename):
     config = RestApiConfig(
         bind=toml_config.get("bind", None),
         connect=toml_config.get('connect', None),
-        timeout=toml_config.get('timeout', None)
+        timeout=toml_config.get('timeout', None),
+        opentsdb_url=toml_config.get('opentsdb_url', None),
+        opentsdb_db=toml_config.get('opentsdb_db', None),
+        opentsdb_username=toml_config.get('opentsdb_username', None),
+        opentsdb_password=toml_config.get('opentsdb_password', None),
     )
 
     return config
@@ -75,6 +80,10 @@ def merge_rest_api_config(configs):
     bind = None
     connect = None
     timeout = None
+    opentsdb_url = None
+    opentsdb_db = None
+    opentsdb_username = None
+    opentsdb_password = None
 
     for config in reversed(configs):
         if config.bind is not None:
@@ -83,18 +92,42 @@ def merge_rest_api_config(configs):
             connect = config.connect
         if config.timeout is not None:
             timeout = config.timeout
+        if config.opentsdb_url is not None:
+            opentsdb_url = config.opentsdb_url
+        if config.opentsdb_db is not None:
+            opentsdb_db = config.opentsdb_db
+        if config.opentsdb_username is not None:
+            opentsdb_username = config.opentsdb_username
+        if config.opentsdb_password is not None:
+            opentsdb_password = config.opentsdb_password
 
     return RestApiConfig(
         bind=bind,
         connect=connect,
-        timeout=timeout)
+        timeout=timeout,
+        opentsdb_url=opentsdb_url,
+        opentsdb_db=opentsdb_db,
+        opentsdb_username=opentsdb_username,
+        opentsdb_password=opentsdb_password)
 
 
 class RestApiConfig:
-    def __init__(self, bind=None, connect=None, timeout=None):
+    def __init__(
+            self,
+            bind=None,
+            connect=None,
+            timeout=None,
+            opentsdb_url=None,
+            opentsdb_db=None,
+            opentsdb_username=None,
+            opentsdb_password=None):
         self._bind = bind
         self._connect = connect
         self._timeout = timeout
+        self._opentsdb_url = opentsdb_url
+        self._opentsdb_db = opentsdb_db
+        self._opentsdb_username = opentsdb_username
+        self._opentsdb_password = opentsdb_password
 
     @property
     def bind(self):
@@ -108,19 +141,45 @@ class RestApiConfig:
     def timeout(self):
         return self._timeout
 
+    @property
+    def opentsdb_url(self):
+        return self._opentsdb_url
+
+    @property
+    def opentsdb_db(self):
+        return self._opentsdb_db
+
+    @property
+    def opentsdb_username(self):
+        return self._opentsdb_username
+
+    @property
+    def opentsdb_password(self):
+        return self._opentsdb_password
+
     def __repr__(self):
+        # skip opentsdb_db password
         return \
-            "{}(bind={}, connect={}, timeout={})".format(
+            "{}(bind={}, connect={}, timeout={}," \
+            "opentsdb_url={}, opentsdb_db={}, opentsdb_username={})" \
+            .format(
                 self.__class__.__name__,
                 repr(self._bind),
                 repr(self._connect),
-                repr(self._timeout))
+                repr(self._timeout),
+                repr(self._opentsdb_url),
+                repr(self._opentsdb_db),
+                repr(self._opentsdb_username))
 
     def to_dict(self):
         return collections.OrderedDict([
             ('bind', self._bind),
             ('connect', self._connect),
-            ('timeout', self._timeout)
+            ('timeout', self._timeout),
+            ('opentsdb_url', self._opentsdb_url),
+            ('opentsdb_db', self._opentsdb_db),
+            ('opentsdb_username', self._opentsdb_username),
+            ('opentsdb_password', self._opentsdb_password),
         ])
 
     def to_toml_string(self):

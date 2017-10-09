@@ -30,6 +30,7 @@ MODULE_LIST="
     java_sdk
     javascript_sdk
     python_sdk
+    track_and_trade
     rust_sdk
     seth
     integration
@@ -170,6 +171,9 @@ main() {
                 supplychain)
                     test_supplychain
                     ;;
+		track_and_trade)
+		    test_track_and_trade
+		    ;;
                 validator)
                     test_validator
                     ;;
@@ -265,6 +269,8 @@ test_identity() {
 test_block_info() {
   run_docker_test ./families/block_info/tests/test_tp_block_info.yaml
   copy_coverage .coverage.block_info
+  run_docker_test test_block_info_injector
+  copy_coverage .coverage.block_info_injector
 }
 
 test_supplychain() {
@@ -274,6 +280,11 @@ test_supplychain() {
     copy_coverage .coverage.config
     run_docker_test ./families/supplychain/python/tests/int_supplychain_python.yaml
     copy_coverage .coverage.config
+}
+
+test_track_and_trade() {
+    run_docker_test test_track_and_trade
+    copy_coverage .coverage.track_and_trade
 }
 
 test_validator() {
@@ -337,12 +348,18 @@ test_python_sdk() {
 
 test_rust_sdk() {
     run_docker_test ./sdk/rust/unit_rust_sdk.yaml
+    run_docker_test ./perf/sawtooth_workload/unit_perf_workload.yaml
 }
 
 test_seth() {
   run_docker_test ./families/seth/tests/unit_seth.yaml
+  run_docker_test seth_chaining_test
   run_docker_test seth_intkey_test
+  run_docker_test seth_blockhash_test
+  run_docker_test seth_blocknum_test
+  run_docker_test seth_timestamp_test
   run_docker_test seth_perm_test
+  run_docker_test ./families/seth/rpc/comp_seth_rpc.yaml
 }
 
 test_integration() {
@@ -356,6 +373,8 @@ test_integration() {
     copy_coverage .coverage.test_basic_auth_proxy
     run_docker_test test_transactor_permissioning
     copy_coverage .coverage.test_transactor_permissioning
+    run_docker_test test_network_permissioning --timeout 800
+    copy_coverage .coverage.test_network_permissioning
 }
 
 test_deployment() {
