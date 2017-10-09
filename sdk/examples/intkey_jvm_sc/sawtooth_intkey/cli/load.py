@@ -21,12 +21,15 @@ import argparse
 import cbor
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import json
+import logging
 import concurrent.futures
 from concurrent.futures import wait
 import urllib.request as urllib
 from urllib.error import URLError, HTTPError
 import requests
 from http.client import RemoteDisconnected
+
+LOGGER = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(
