@@ -24,17 +24,14 @@ use client::{
     ValidatorClient,
     BlockKey,
     Error as ClientError,
-    num_to_hex,
-    hex_prefix,
-    hex_str_to_bytes,
-    zerobytes,
 };
+use transform;
 
 use sawtooth_sdk::messages::block::BlockHeader;
 use sawtooth_sdk::messaging::stream::MessageSender;
 use error;
 use requests::{RequestHandler};
-use transactions::{TransactionKey, Transaction, SethTransaction, SethReceipt, SethLog};
+use transactions::{TransactionKey, SethTransaction};
 
 use messages::seth::{
     CreateContractAccountTxn as CreateContractAccountTxnPb,
@@ -58,52 +55,23 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
     methods
 }
 
-fn get_from_map<F,T>(map: &Map<String, Value>, key: &str, f: F) -> Result<Option<T>, Error>
-    where F: FnOnce(&str) -> Result<T, Error>
-{
-    if let Some(value) = map.get(key) {
-        value.as_str()
-            .ok_or_else(|| Error::invalid_params(format!("`{}` not a string", key)))
-            .and_then(|v| v.get(2..).ok_or_else(||
-                Error::invalid_params(format!("`{}` must have 0x", key))))
-            .and_then(f)
-            .map(|v| Some(v))
-    } else {
-        Ok(None)
-    }
-}
-
-fn get_u64_from_map(map: &Map<String, Value>, key: &str) -> Result<Option<u64>, Error> {
-    get_from_map(map, key, |v| u64::from_str_radix(v, 16).map_err(|error|
-        Error::invalid_params(format!("`{}` not a number: {:?}", key, error))))
-}
-
-fn get_bytes_from_map(map: &Map<String, Value>, key: &str) -> Result<Option<Vec<u8>>, Error> {
-    get_from_map(map, key, |v| hex_str_to_bytes(v).ok_or_else(||
-        Error::invalid_params(format!("`{}` not valid hex", key))))
-}
-
-fn get_string_from_map(map: &Map<String, Value>, key: &str) -> Result<Option<String>, Error> {
-    get_from_map(map, key, |v| Ok(String::from(v)))
-}
-
 pub fn send_transaction<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_sendTransaction");
     let (txn,): (Map<String, Value>,) = params.parse().map_err(|_|
         Error::invalid_params("Takes [txn: OBJECT]"))?;
 
     // Required arguments
-    let from = get_string_from_map(&txn, "from").and_then(|f| f.ok_or_else(||
+    let from = transform::get_string_from_map(&txn, "from").and_then(|f| f.ok_or_else(||
         Error::invalid_params("`from` not set")))?;
-    let data = get_bytes_from_map(&txn, "data").and_then(|f| f.ok_or_else(||
+    let data = transform::get_bytes_from_map(&txn, "data").and_then(|f| f.ok_or_else(||
         Error::invalid_params("`data` not set")))?;
 
     // Optional Arguments
-    let to = get_bytes_from_map(&txn, "to")?;
-    let gas = get_u64_from_map(&txn, "gas").map(|g| g.unwrap_or(90000))?;
-    let gas_price = get_u64_from_map(&txn, "gasPrice").map(|g| g.unwrap_or(10000000000000))?;
-    let value = get_u64_from_map(&txn, "value").map(|g| g.unwrap_or(0))?;
-    let nonce = get_u64_from_map(&txn, "nonce").map(|g| g.unwrap_or(0))?;
+    let to = transform::get_bytes_from_map(&txn, "to")?;
+    let gas = transform::get_u64_from_map(&txn, "gas").map(|g| g.unwrap_or(90000))?;
+    let gas_price = transform::get_u64_from_map(&txn, "gasPrice").map(|g| g.unwrap_or(10000000000000))?;
+    let value = transform::get_u64_from_map(&txn, "value").map(|g| g.unwrap_or(0))?;
+    let nonce = transform::get_u64_from_map(&txn, "nonce").map(|g| g.unwrap_or(0))?;
 
     let txn = if let Some(to) = to {
         // Message Call
@@ -131,7 +99,7 @@ pub fn send_transaction<T>(params: Params, mut client: ValidatorClient<T>) -> Re
         Error::internal_error()
     })?;
 
-    Ok(hex_prefix(&txn_signature))
+    Ok(transform::hex_prefix(&txn_signature))
 }
 
 pub fn send_raw_transaction<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
@@ -247,14 +215,14 @@ fn get_transaction<T>(mut client: ValidatorClient<T>, txn_key: &TransactionKey) 
             // We know the transaction index already, because get_transaction_and_block succeeded
             match txn_key {
                 &TransactionKey::Index((index, _)) =>
-                    Ok(make_txn_obj(txn, index, &block.header_signature, block_header.block_num)),
+                    Ok(transform::make_txn_obj(txn, index, &block.header_signature, block_header.block_num)),
                 &TransactionKey::Signature(ref txn_id) => {
                     let txn_id = (*txn_id).clone();
                     let mut index = 0;
                     for mut batch in block.take_batches().into_iter() {
                         for transaction in batch.take_transactions().into_iter() {
                             if transaction.header_signature == txn_id {
-                                return Ok(make_txn_obj(
+                                return Ok(transform::make_txn_obj(
                                     txn, index, &block.header_signature, block_header.block_num));
                             }
                             index += 1;
@@ -268,7 +236,7 @@ fn get_transaction<T>(mut client: ValidatorClient<T>, txn_key: &TransactionKey) 
         }
         None => {
             // Transaction exists, but isn't in a block yet
-            Ok(make_txn_obj_no_block(txn))
+            Ok(transform::make_txn_obj_no_block(txn))
         }
     }
 
@@ -317,7 +285,7 @@ pub fn get_transaction_receipt<T>(params: Params, mut client: ValidatorClient<T>
                 txn_id, block.header_signature);
             Error::internal_error()})?;
 
-    Ok(make_txn_receipt_obj(
+    Ok(transform::make_txn_receipt_obj(
         &receipt, index as u64, &block.header_signature, block_header.block_num))
 }
 
@@ -342,7 +310,7 @@ pub fn sign<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Erro
 
     let payload = payload.get(2..)
         .ok_or_else(|| Error::invalid_params("Payload must have 0x prefix"))
-        .and_then(|p| hex_str_to_bytes(&p).ok_or_else(||
+        .and_then(|p| transform::hex_str_to_bytes(&p).ok_or_else(||
             Error::invalid_params("Payload is invalid hex")))
         .and_then(|payload_data| {
             let payload_string = String::from_utf8(payload_data.clone()).map_err(|error|
@@ -363,83 +331,11 @@ pub fn sign<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Erro
         Error::internal_error()
     })?;
 
-    Ok(hex_prefix(&signature))
+    Ok(transform::hex_prefix(&signature))
 }
 
 pub fn call<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_estimateGas");
     // Implementing this requires running the EVM, which is not possible within the RPC.
     Err(error::not_implemented())
-}
-
-fn make_txn_receipt_obj(receipt: &SethReceipt, txn_idx: u64, block_id: &str, block_num: u64) -> Value {
-    let mut map = Map::new();
-    map.insert(String::from("transactionHash"), hex_prefix(&receipt.transaction_id));
-    map.insert(String::from("transactionIndex"), num_to_hex(&txn_idx));
-    map.insert(String::from("blockHash"), hex_prefix(block_id));
-    map.insert(String::from("blockNumber"), num_to_hex(&block_num));
-    map.insert(String::from("cumulativeGasUsed"), num_to_hex(&receipt.gas_used)); // Calculating this is expensive
-    map.insert(String::from("gasUsed"), num_to_hex(&receipt.gas_used));
-    map.insert(String::from("contractAddress"), hex_prefix(&receipt.contract_address));
-    map.insert(String::from("logs"), Value::Array(receipt.logs.iter().map(|log|
-        make_log_obj(log, &receipt.transaction_id, txn_idx, block_id, block_num)).collect()));
-    Value::Object(map)
-}
-
-fn make_log_obj(log: &SethLog, txn_id: &str, txn_idx: u64, block_id: &str, block_num: u64) -> Value {
-    let mut map = Map::new();
-    map.insert(String::from("removed"), Value::Bool(false));
-    map.insert(String::from("logIndex"), num_to_hex(&0)); // Calculating this is expensive
-    map.insert(String::from("transactionIndex"), num_to_hex(&txn_idx));
-    map.insert(String::from("transactionHash"), hex_prefix(txn_id));
-    map.insert(String::from("blockHash"), hex_prefix(block_id));
-    map.insert(String::from("blockNumber"), num_to_hex(&block_num));
-    map.insert(String::from("address"), hex_prefix(&log.address));
-    map.insert(String::from("data"), hex_prefix(&log.data));
-    map.insert(String::from("topics"), Value::Array(log.topics.iter().map(|t|
-        hex_prefix(t)).collect()));
-    Value::Object(map)
-}
-
-fn make_txn_obj(txn: Transaction, txn_idx: u64, block_id: &str, block_num: u64) -> Value {
-    let obj = make_txn_obj_no_block(txn);
-    if let Value::Object(mut map) = obj {
-        map.insert(String::from("blockHash"), hex_prefix(block_id));
-        map.insert(String::from("blockNumber"), num_to_hex(&block_num));
-        map.insert(String::from("transactionIndex"), num_to_hex(&txn_idx));
-        Value::Object(map)
-    } else {
-        obj
-    }
-}
-
-fn make_txn_obj_no_block(txn: Transaction) -> Value {
-    let mut map = Map::with_capacity(11);
-    map.insert(String::from("hash"), hex_prefix(&txn.hash()));
-    map.insert(String::from("nonce"), num_to_hex(&txn.nonce()));
-    map.insert(String::from("blockHash"), Value::Null);
-    map.insert(String::from("blockNumber"), Value::Null);
-    map.insert(String::from("transactionIndex"), Value::Null);
-    map.insert(String::from("from"), hex_prefix(&txn.from_addr()));
-    let to = match txn.to_addr() {
-        Some(addr) => hex_prefix(&addr),
-        None => Value::Null,
-    };
-    map.insert(String::from("to"), to);
-
-    map.insert(String::from("value"), zerobytes(0));
-    map.insert(String::from("gasPrice"), zerobytes(0));
-
-    let gas = match txn.gas_limit() {
-        Some(g) => num_to_hex(&g),
-        None => zerobytes(0),
-    };
-    map.insert(String::from("gas"), gas);
-
-    let input = match txn.data() {
-        Some(data) => hex_prefix(&data),
-        None => zerobytes(0),
-    };
-    map.insert(String::from("input"), input);
-    Value::Object(map)
 }

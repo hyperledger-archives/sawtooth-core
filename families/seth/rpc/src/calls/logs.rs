@@ -15,7 +15,6 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 use std::collections::HashMap;
 
 use jsonrpc_core::{Params, Value, Error};
@@ -24,30 +23,19 @@ use protobuf;
 
 use client::{
     ValidatorClient,
-    hex_prefix,
-    num_to_hex,
-    bytes_to_hex_str,
+    Error as ClientError,
+    BlockKey,
 };
 use requests::{RequestHandler};
+use transform;
 
 use sawtooth_sdk::messaging::stream::MessageSender;
 
-use sawtooth_sdk::messages::block::{BlockHeader};
-use sawtooth_sdk::messages::client::{
-    ClientBlockListRequest,
-    ClientBlockListResponse,
-    PagingControls,
-};
-use sawtooth_sdk::messages::events::Event;
-use sawtooth_sdk::messages::txn_receipt::{
-    ClientReceiptGetRequest,
-    ClientReceiptGetResponse,
-    ClientReceiptGetResponse_Status,
-};
+use sawtooth_sdk::messages::block::{Block, BlockHeader};
 use sawtooth_sdk::messages::transaction::TransactionHeader;
-use sawtooth_sdk::messages::validator::Message_MessageType;
 use error;
 use filters::*;
+use transactions::{SethLog};
 
 pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: MessageSender {
     let mut methods: Vec<(String, RequestHandler<T>)> = Vec::new();
@@ -63,284 +51,269 @@ pub fn get_method_list<T>() -> Vec<(String, RequestHandler<T>)> where T: Message
     methods
 }
 
-
-static FILTER_ID: AtomicUsize = ATOMIC_USIZE_INIT;
-
-fn to_filter_id(value: Value) -> Result<String, Error> {
-    match value.get(0) {
-        Some(&Value::String(ref id)) => Ok(id.clone()),
-        x => Err(Error::invalid_params(format!("Unknown filter id: {:?}", x)))
-    }
-}
-
-fn add_filter<T>(mut client: ValidatorClient<T>,
-                 filter: Filter,
-                 starting_block_id: &str)
-    -> Result<Value, Error> where T: MessageSender
-{
-    let filter_id = String::from(
-        format!("{:#x}", FILTER_ID.fetch_add(1, Ordering::SeqCst)));
-
-    info!("Adding filter {} for {:?}, starting on block {}",
-          filter_id, filter, &starting_block_id[..8]);
-    client.set_filter(filter_id.clone(), filter, String::from(starting_block_id));
-
-    Ok(Value::String(filter_id))
-}
-
-
 pub fn new_filter<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
     info!("eth_newFilter");
-    let value: Value = params.parse()?;
-    let log_filter = LogFilterSpec::from_value(value)?;
+    let (filter,): (Map<String, Value>,) = params.parse().map_err(|_|
+        Error::invalid_params("Takes [filter: OBJECT]"))?;
+    let log_filter = LogFilter::from_map(filter)?;
 
-    let current_block = client.get_current_block().map_err(|e| {
-        error!("Unable to get current block: {:?}", e);
+    let current_block = client.get_current_block_number().map_err(|error| {
+        error!("Failed to get current block number: {}", error);
         Error::internal_error()
     })?;
 
-    add_filter(client, Filter::Log(log_filter), current_block.get_header_signature())
+    let filter_id = client.filters.new_filter(Filter::Log(log_filter), current_block);
+
+    Ok(transform::hex_prefix(&filter_id_to_hex(filter_id)))
 }
 
 pub fn new_block_filter<T>(_params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
     info!("eth_newBlockFilter");
-    let current_block = client.get_current_block().map_err(|e| {
-        error!("Unable to get current block: {:?}", e);
+    let current_block = client.get_current_block_number().map_err(|error| {
+        error!("Failed to get current block number: {}", error);
         Error::internal_error()
     })?;
-
-    add_filter(client, Filter::Block, current_block.get_header_signature())
+    let filter_id = client.filters.new_filter(Filter::Block, current_block);
+    Ok(transform::hex_prefix(&filter_id_to_hex(filter_id)))
 }
 
 pub fn new_pending_transaction_filter<T>(_params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
     info!("eth_newPendingTransactionFilter");
-    let current_block = client.get_current_block().map_err(|e| {
-        error!("Unable to get current block: {:?}", e);
+    let current_block = client.get_current_block_number().map_err(|error| {
+        error!("Failed to get current block number: {}", error);
         Error::internal_error()
     })?;
-
-    add_filter(client, Filter::Transaction, current_block.get_header_signature())
+    let filter_id = client.filters.new_filter(Filter::Transaction, current_block);
+    Ok(transform::hex_prefix(&filter_id_to_hex(filter_id)))
 }
 
 pub fn uninstall_filter<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
     info!("eth_uninstallFilter");
-    let filter_id = to_filter_id(params.parse()?)?;
+    let filter_id = params.parse()
+        .and_then(|(v,): (Value,)| transform::string_from_hex_value(&v))
+        .and_then(|s| filter_id_from_hex(&s).map_err(|error|
+            Error::invalid_params(format!("{}", error))))?;
 
-    Ok(Value::Bool(client.remove_filter(&filter_id).is_some()))
-}
-
-fn get_block_changes<T>(mut client: ValidatorClient<T>, filter_id: String, last_block_id: String)
-    -> Result<Value, Error> where T: MessageSender
-{
-    let mut paging = PagingControls::new();
-    paging.set_count(100);
-    let mut request = ClientBlockListRequest::new();
-    request.set_paging(paging);
-
-    let response: ClientBlockListResponse =
-        client.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)
-            .map_err(|error| {
-                error!("{}", error);
-                Error::internal_error()
-            })?;
-
-    let block_ids: Vec<String> = response.blocks.iter()
-        .rev()
-        .skip_while(|block| block.get_header_signature() != last_block_id)
-        .skip(1) // skip the current block
-        .map(|block| String::from(block.get_header_signature()))
-        .collect();
-
-    if let Some(current_block_id) = block_ids.last() {
-        let block_id = (*current_block_id).clone();
-        client.set_filter(filter_id, Filter::Block, block_id);
-    }
-
-    let values: Vec<Value> =  block_ids.iter().map(|id| hex_prefix(&id)).collect();
-    Ok(Value::Array(values))
+    Ok(Value::Bool(client.filters.remove_filter(&filter_id).is_some()))
 }
 
 pub fn get_filter_changes<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
     info!("eth_getFilterChanges");
-    let filter_id = to_filter_id(params.parse()?)?;
-    let (filter, block_id) = client.get_filter(&filter_id).map_err(Error::invalid_params)?;
-    debug!("filter: {:?}", filter);
+    let filter_id = params.parse()
+        .and_then(|(v,): (Value,)| transform::string_from_hex_value(&v))
+        .and_then(|s| filter_id_from_hex(&s).map_err(|error|
+            Error::invalid_params(format!("{}", error))))?;
 
-    match filter {
-        Filter::Block => get_block_changes(client, filter_id, block_id),
-        //  NOTE: There is no analog for this currently in Sawtooth.
-        Filter::Transaction => Err(error::not_implemented()),
-        Filter::Log(filter_spec) =>
-            get_logs_by_filter(client, Some(filter_id), filter_spec, block_id)
+    let FilterEntry{filter, last_block_sent} = client.filters.get_filter(&filter_id).ok_or_else(||
+        Error::invalid_params(format!("Unknown filter id: {}", filter_id)))?;
+
+    let blocks = client.get_blocks_since(last_block_sent).map_err(|error| {
+        error!("Failed to get blocks: {}", error);
+        Error::internal_error()
+    })?;
+
+    let response = match filter {
+        Filter::Block => {
+            blocks.iter()
+                .map(|&(_, ref block)| transform::hex_prefix(&block.header_signature))
+                .collect()
+        },
+        Filter::Transaction => {
+            blocks.iter()
+                .flat_map(|&(_, ref block)| block.get_batches().into_iter()
+                    .flat_map(|batch| batch.get_transactions().into_iter()
+                        .filter(|txn| {
+                            let header: Result<TransactionHeader, _> =
+                                protobuf::parse_from_bytes(&txn.header);
+                            if let Ok(header) = header {
+                                if header.family_name == "seth" {
+                                    true
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        })
+                        .map(|txn| transform::hex_prefix(&txn.header_signature))))
+                .collect()
+        },
+        Filter::Log(log_filter) => {
+            let mut all_logs = Vec::new();
+            for &(_, ref block) in blocks.iter() {
+                let logs = get_logs_from_block_and_filter(&mut client, block, &log_filter)?;
+                all_logs.extend(logs.into_iter());
+            }
+            all_logs
+        },
+    };
+
+    // NOTE: Updating is delayed until there are no more error sources that could cause an early
+    // return after upadting the filter
+    if let Some(&(block_num, _)) = blocks.last() {
+        client.filters.update_latest_block(&filter_id, block_num);
     }
+
+    Ok(Value::Array(response))
 }
 
 pub fn get_filter_logs<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
     info!("eth_getFilterLogs");
-    let filter_id = to_filter_id(params.parse()?)?;
-    let (filter, block_id) = client.get_filter(&filter_id).map_err(Error::invalid_params)?;
-    if let Filter::Log(filter_spec) = filter {
-        get_logs_by_filter(client, Some(filter_id), filter_spec, block_id)
+    let filter_id = params.parse()
+        .and_then(|(v,): (Value,)| transform::string_from_hex_value(&v))
+        .and_then(|s| filter_id_from_hex(&s).map_err(|error|
+            Error::invalid_params(format!("{}", error))))?;
+
+    let FilterEntry{filter, last_block_sent: _} = client.filters.get_filter(&filter_id).ok_or_else(||
+        Error::invalid_params(format!("Unknown filter id: {}", filter_id)))?;
+
+    if let Filter::Log(log_filter) = filter {
+        get_logs_from_filter(&mut client, &log_filter)
     } else {
         Err(Error::invalid_params(format!("Filter {} is not a log filter", filter_id)))
     }
 }
 
-pub fn get_logs<T>(_params: Params, mut client: ValidatorClient<T>)
+pub fn get_logs<T>(params: Params, mut client: ValidatorClient<T>)
     -> Result<Value, Error> where T: MessageSender
 {
     info!("eth_getLogs");
-    let params: Value = _params.parse()?;
-    let log_filter = LogFilterSpec::from_value(params)?;
-    let current_block = client.get_current_block().map_err(|e| {
-        error!("Unable to get current block: {:?}", e);
-        Error::internal_error()
-    })?;
+    let (filter,): (Map<String, Value>,) = params.parse().map_err(|_|
+        Error::invalid_params("Takes [filter: OBJECT]"))?;
+    let log_filter = LogFilter::from_map(filter)?;
 
-    let block_header: BlockHeader = protobuf::parse_from_bytes(&current_block.header).map_err(|e| {
+    get_logs_from_filter(&mut client, &log_filter)
+}
+
+fn get_logs_from_filter<T>(mut client: &mut ValidatorClient<T>, log_filter: &LogFilter)
+    -> Result<Value, Error>
+    where T: MessageSender
+{
+
+    let interval = (log_filter.from_block, log_filter.to_block);
+
+    match interval {
+        // Request for logs in the latest block
+        (None, None) => {
+            let block = client.get_current_block().map_err(|e| {
+                error!("Unable to get current block: {:?}", e);
+                Error::internal_error()
+            })?;
+
+            let logs = get_logs_from_block_and_filter(&mut client, &block, &log_filter)?;
+            Ok(Value::Array(logs))
+        },
+        // Request for logs from a block to the latest block
+        (Some(from), None) => {
+            let mut block_index = from;
+            let mut all_logs = Vec::new();
+            loop {
+                match client.get_block(BlockKey::Number(block_index)) {
+                    Ok(block) => {
+                        let logs = get_logs_from_block_and_filter(&mut client, &block, &log_filter)?;
+                        all_logs.extend(logs.into_iter());
+                    },
+                    Err(ClientError::NoResource) => {
+                        // Stop getting blocks when there are no more left
+                        return Ok(Value::Array(all_logs));
+                    },
+                    Err(error) => {
+                        error!("{}", error);
+                        return Err(Error::internal_error());
+                    },
+                }
+                block_index += 1;
+            }
+        },
+        // Request for logs from a block to a block
+        (Some(from), Some(to)) => {
+            let mut all_logs = Vec::new();
+            for block_index in from..to {
+                match client.get_block(BlockKey::Number(block_index)) {
+                    Ok(block) => {
+                        let logs = get_logs_from_block_and_filter(&mut client, &block, &log_filter)?;
+                        all_logs.extend(logs.into_iter());
+                    },
+                    Err(ClientError::NoResource) => {
+                        // If we get a no resource, just send what was found
+                        return Ok(Value::Array(all_logs));
+                    },
+                    Err(error) => {
+                        error!("{}", error);
+                        return Err(Error::internal_error());
+                    },
+                }
+            }
+            Ok(Value::Array(all_logs))
+        },
+        // Getting the entire block history up to a certain block is not supported
+        (None, Some(_)) => {
+            Err(error::not_implemented())
+        },
+    }
+}
+
+fn get_logs_from_block_and_filter<T>(client: &mut ValidatorClient<T>, block: &Block, log_filter: &LogFilter)
+    -> Result<Vec<Value>, Error>
+    where T: MessageSender
+{
+    let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|e| {
         error!("Error parsing block header: {:?}", e);
         Error::internal_error()
     })?;
 
-    // Filter from the previous block, so as to find all the logs in this block that match
-    get_logs_by_filter(client, None, log_filter, block_header.previous_block_id)
-}
+    // Get receipts (which have logs in them)
+    let receipts = client.get_receipts_from_block(&block).map_err(|error| {
+        error!("Unable to get receipts for current block: {}", error);
+        Error::internal_error()
+    })?;
 
-///
-/// Returns the logs by the given filter, since the last block id
-fn get_logs_by_filter<T>(mut client: ValidatorClient<T>,
-                         _filter_id: Option<String>,
-                         filter_spec: LogFilterSpec,
-                         last_block_id: String)
-    -> Result<Value, Error> where T: MessageSender
-{
-    debug!("log filter: {:?} since {}", filter_spec, &last_block_id[..8]);
-    let mut paging = PagingControls::new();
-    paging.set_count(100);
-    let mut request = ClientBlockListRequest::new();
-    request.set_paging(paging);
+    warn!("LogFilter: {:?}", log_filter);
+    // Filter logs
+    let logs: HashMap<String, Vec<SethLog>> = receipts.into_iter()
+        .map(|(txn_id, receipt)| {
+            warn!("Logs: {:?}", receipt.logs);
+            let logs: Vec<SethLog> = receipt.logs.into_iter()
+                .filter(|log: &SethLog|
+                    log_filter.contains(&log, None))
+                .collect();
+            (txn_id, logs)
+        })
+        .filter(|&(_, ref logs)| logs.len() > 0)
+        .collect();
+    warn!("Filtered Logs: {:?}", logs);
 
-    let response: ClientBlockListResponse =
-        client.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)
-            .map_err(|error| {
-                error!("{}", error);
-                Error::internal_error()
-            })?;
+    // Contextual data for logs
+    let block_id = block.get_header_signature();
+    let block_num = block_header.get_block_num();
+    let transactions = block.get_batches().iter()
+        .flat_map(|batch| batch.get_transactions().iter()).collect::<Vec<_>>();
 
-    let mut relevant_txn_ids = Vec::new(); // to maintain txn order
-    let mut relevant_txns = HashMap::new();
-    for block in response.blocks.iter()
-        .rev()
-        .skip_while(|block| block.get_header_signature() != last_block_id)
-        .skip(1) // skip last_block_id, as well
-    {
-        let block_header: BlockHeader =
-            protobuf::parse_from_bytes(&block.header)
-                .map_err(|error| {
-                    error!("Parsing error (block header): {}", error);
-                    Error::internal_error()
-                })?;
-
-        let mut txn_in_block = 0;
-        for batch in block.get_batches() {
-            for txn in batch.get_transactions() {
-                txn_in_block += 1;
-
-                let header: TransactionHeader =
-                    protobuf::parse_from_bytes(&txn.header)
-                        .map_err(|error| {
-                            error!("Parsing error (txn header): {}", error);
-                            Error::internal_error()
-                        })?;
-                if &header.family_name == "seth" {
-                    relevant_txn_ids.push(txn.header_signature.clone());
-                    relevant_txns.insert(&txn.header_signature,
-                                         (block.get_header_signature().clone(),
-                                          block_header.block_num.clone(),
-                                          txn_in_block));
-                }
-            }
+    let mut log_objects = Vec::with_capacity(logs.len());
+    for (txn_id, logs) in logs.into_iter() {
+        let index = transactions.iter()
+            .position(|txn| txn.header_signature == txn_id)
+            .ok_or_else(|| {
+                error!("Failed to find index of txn `{}` in block `{}`",
+                    txn_id, block_id);
+                Error::internal_error()})?;
+        for log in logs.iter() {
+            let log_obj = transform::make_log_obj(
+                log, &txn_id, index as u64, block_id, block_num);
+            log_objects.push(log_obj);
         }
     }
-
-    let mut receipt_request = ClientReceiptGetRequest::new();
-    receipt_request.set_transaction_ids(
-        protobuf::RepeatedField::from_vec(relevant_txn_ids));
-    let receipt_response: ClientReceiptGetResponse =
-        client.request(Message_MessageType::CLIENT_RECEIPT_GET_REQUEST, &request)
-            .map_err(|error| {
-                error!("{}", error);
-                Error::internal_error()
-            })?;
-
-    if receipt_response.status == ClientReceiptGetResponse_Status::INTERNAL_ERROR {
-        error!("Internal error on validator while requesting receipts");
-        return Err(Error::internal_error());
-    }
-
-    let logs: Vec<Value> =
-        receipt_response.get_receipts().into_iter()
-            .flat_map(|receipt| {
-                receipt.get_events().into_iter()
-                    .filter(|event| event.event_type == "seth_log_event")
-                    .map(|event| {
-                        let txn_id = &receipt.transaction_id.clone();
-                        let (block_id, block_num, txn_in_block) =
-                            relevant_txns.get(&txn_id).unwrap().clone();
-
-                        let mut log_obj = Map::new();
-                        log_obj.insert(String::from("logIndex"),
-                                       num_to_hex(&txn_in_block));
-                        log_obj.insert(String::from("transactionIndex"),
-                                       num_to_hex(&txn_in_block));
-                        log_obj.insert(String::from("transactionHash"),
-                                       hex_prefix(&txn_id));
-                        log_obj.insert(String::from("blockHash"),
-                                       hex_prefix(&block_id));
-                        log_obj.insert(String::from("blockNumber"),
-                                       num_to_hex(&block_num));
-
-                        let mut topics: Vec<Value> = Vec::new();
-                        for topic_key in &["topic1", "topic2", "topic3", "topic4"] {
-                            if let Some(topic_data) = get_event_attr(event, topic_key) {
-                                topics.push(Value::String(String::from(topic_data)));
-                            }
-                        }
-                        if let Some(address) = get_event_attr(event, "address") {
-                            log_obj.insert(String::from("address"),
-                                           hex_prefix(&address));
-                        }
-
-                        log_obj.insert(String::from("topics"), Value::Array(topics));
-                        log_obj.insert(String::from("data"),
-                                       Value::String(bytes_to_hex_str(&event.data)));
-
-                        Value::Object(log_obj)
-                    })
-                    // The following is to manage an issue with the relevant_txns
-                    // and the inner closure
-                    .collect::<Vec<_>>()
-                    .into_iter()
-            })
-            .collect();
-
-    Ok(Value::Array(logs))
-}
-
-fn get_event_attr<'a>(event: &'a Event, attr_key: &str) -> Option<&'a str> {
-    event.get_attributes().iter()
-         .filter(|attr| &attr.key == attr_key)
-         .map(|attr| attr.get_value().clone()).nth(0)
+    Ok(log_objects)
 }

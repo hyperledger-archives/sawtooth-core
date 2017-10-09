@@ -21,10 +21,8 @@ use client::{
     ValidatorClient,
     BlockKey,
     BlockKeyParseError,
-    num_to_hex,
-    hex_prefix,
-    bytes_to_hex_str,
 };
+use transform;
 
 use messages::seth::{EvmStateAccount};
 
@@ -75,7 +73,7 @@ fn validate_storage_address(address: String) -> Result<String, Error> {
 
 pub fn get_balance<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_getBalance");
-    get_account(params, client, |account| num_to_hex(&account.balance))
+    get_account(params, client, |account| transform::num_to_hex(&account.balance))
 }
 
 pub fn get_storage_at<T>(params: Params, mut client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
@@ -92,7 +90,7 @@ pub fn get_storage_at<T>(params: Params, mut client: ValidatorClient<T>) -> Resu
     let storage_address = validate_storage_address(position)?;
 
     match client.get_storage_at(account_address, storage_address, key) {
-        Ok(Some(value)) => Ok(hex_prefix(&bytes_to_hex_str(&value))),
+        Ok(Some(value)) => Ok(transform::hex_prefix(&transform::bytes_to_hex_str(&value))),
         Ok(None) => Ok(Value::Null),
         Err(error) => {
             error!("{}", error);
@@ -103,12 +101,12 @@ pub fn get_storage_at<T>(params: Params, mut client: ValidatorClient<T>) -> Resu
 
 pub fn get_code<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_getCode");
-    get_account(params, client, |account| hex_prefix(&bytes_to_hex_str(&account.code)))
+    get_account(params, client, |account| transform::hex_prefix(&transform::bytes_to_hex_str(&account.code)))
 }
 
 pub fn get_transaction_count<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_getTransactionCount");
-    get_account(params, client, |account| num_to_hex(&account.nonce))
+    get_account(params, client, |account| transform::num_to_hex(&account.nonce))
 }
 
 fn get_account<T, F>(params: Params, mut client: ValidatorClient<T>, f: F) -> Result<Value, Error> where T: MessageSender, F: Fn(EvmStateAccount) -> Value {
@@ -135,5 +133,5 @@ fn get_account<T, F>(params: Params, mut client: ValidatorClient<T>, f: F) -> Re
 pub fn accounts<T>(_params: Params, client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
     info!("eth_accounts");
     Ok(Value::Array(Vec::from(client.loaded_accounts()).iter().map(|account|
-        hex_prefix(account.address())).collect()))
+        transform::hex_prefix(account.address())).collect()))
 }

@@ -49,6 +49,9 @@ from protobuf.seth_pb2 import CreateContractAccountTxn
 from protobuf.seth_pb2 import MessageCallTxn
 from protobuf.seth_pb2 import SetPermissionsTxn
 
+import logging
+LOGGER = logging.getLogger(__name__)
+
 
 class SethRpcTest(unittest.TestCase):
     @classmethod
@@ -84,6 +87,14 @@ class SethRpcTest(unittest.TestCase):
         cls.position_s = "012345"
         cls.stored_b = bytes([0x67, 0x89])
         cls.stored_s = "6789"
+        cls.topic1_s = "ff" * 32
+        cls.topic1_b = bytes([0xff] * 32)
+        cls.topic2_s = "cc" * 32
+        cls.topic2_b = bytes([0xcc] * 32)
+        cls.log_data_s = "8888"
+        cls.log_data_b = bytes([0x88, 0x88])
+        cls.return_value_s = "2a"
+        cls.return_value_b = bytes([0x2a])
 
     # -- Network tests -- #
     def test_net_version(self):
@@ -711,39 +722,9 @@ class SethRpcTest(unittest.TestCase):
         self.rpc.acall(
             "eth_getTransactionReceipt", ["0x" + self.txn_id])
 
-        topic1_s = "ffff"
-        topic1_b = bytes([0xff, 0xff])
-        topic2_s = "cccc"
-        topic2_b = bytes([0xcc, 0xcc])
-        log_data_s = "8888"
-        log_data_b = bytes([0x88, 0x88])
-        return_value_s = bytes([0x2a])
-        return_value_b = bytes([0x2a])
-
-        receipt = TransactionReceipt(
-            data=[TransactionReceipt.Data(
-                data_type="seth_receipt",
-                data=SethTransactionReceipt(
-                    gas_used=self.gas,
-                    return_value=return_value_b,
-                    contract_address=self.contract_address_b,
-                ).SerializeToString(),
-            )],
-            events=[Event(
-                event_type="seth_log_event",
-                attributes=[
-                    Event.Attribute(key="address", value=self.contract_address),
-                    Event.Attribute(key="topic1", value=topic1_s),
-                    Event.Attribute(key="topic2", value=topic2_s),
-                ],
-                data=log_data_b,
-            )],
-            transaction_id=self.txn_id,
-        )
-
         msg, request = self._receive_receipt_request()
         self.assertEqual(request.transaction_ids[0], self.txn_id)
-        self._send_receipts_back(msg, [receipt])
+        self._send_receipts_back(msg)
 
         msg, request = self._receive_transaction_request()
         self._send_transaction_response(msg)
@@ -762,6 +743,7 @@ class SethRpcTest(unittest.TestCase):
         self.assertEqual(result["blockNumber"], hex(self.block_num))
         self.assertEqual(result["cumulativeGasUsed"], hex(self.gas))
         self.assertEqual(result["gasUsed"], hex(self.gas))
+        self.assertEqual(result["returnValue"], "0x" + self.return_value_s)
         self.assertEqual(
             result["contractAddress"], "0x" + self.contract_address)
 
@@ -773,11 +755,11 @@ class SethRpcTest(unittest.TestCase):
         self.assertEqual(log["blockHash"], "0x" + self.block_id)
         self.assertEqual(log["blockNumber"], hex(self.block_num))
         self.assertEqual(log["address"], "0x" + self.contract_address)
-        self.assertEqual(log["data"], "0x" + log_data_s)
+        self.assertEqual(log["data"], "0x" + self.log_data_s)
 
         topic1, topic2 = log["topics"]
-        self.assertEqual(topic1, "0x" + topic1_s)
-        self.assertEqual(topic2, "0x" + topic2_s)
+        self.assertEqual(topic1, "0x" + self.topic1_s)
+        self.assertEqual(topic2, "0x" + self.topic2_s)
 
     def test_gas_price(self):
         """Tests that the gas price is returned correctly."""
@@ -792,6 +774,332 @@ class SethRpcTest(unittest.TestCase):
             "0x4bd3560fcabbe7c13d8829dcb82b381fe3882db14aeb6d22b8b0ea069e60" +\
             "28a02d85497c9b26203c31f028f31fa0ae9b944aa219ae6ecf7655b2e2428d" +\
             "d6904f")
+
+    # -- Log tests -- #
+    def test_new_filter(self):
+        """Test that new log filters are created sequentially and that nothing
+        breaks while creating them."""
+        self.rpc.acall("eth_newFilter", [{
+            "fromBlock": "0x1",
+            "toBlock": "0x2",
+            "address": "0x" + self.contract_address,
+            "topics": [
+                "0x000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+                None,
+                [
+                    "0x000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+                    "0x0000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebccc"
+                ,]
+            ]
+        }])
+        self._block_list_exchange()
+        result = self.rpc.get_result()
+        n = int(result, 16)
+        self.rpc.acall("eth_newFilter", [{
+            "address": [
+                "0x" + self.contract_address,
+                "0x" + self.account_address,
+            ],
+            "topics": [],
+        }])
+        self._block_list_exchange()
+        result = self.rpc.get_result()
+        n_plus_1 = int(result, 16)
+        self.assertEqual(n + 1, n_plus_1)
+
+    def test_new_block_filter(self):
+        """Test that new block filters are created sequentially and that
+        nothing breaks while creating them."""
+        self.rpc.acall("eth_newBlockFilter")
+        self._block_list_exchange()
+        result = self.rpc.get_result()
+        n = int(result, 16)
+        self.rpc.acall("eth_newBlockFilter")
+        self._block_list_exchange()
+        result = self.rpc.get_result()
+        n_plus_1 = int(result, 16)
+        self.assertEqual(n + 1, n_plus_1)
+
+    def test_new_transaction_filter(self):
+        """Test that new transaction filters are created sequentially and that
+        nothing breaks while creating them."""
+        self.rpc.acall("eth_newPendingTransactionFilter")
+        self._block_list_exchange()
+        result = self.rpc.get_result()
+        n = int(result, 16)
+        self.rpc.acall("eth_newPendingTransactionFilter")
+        self._block_list_exchange()
+        result = self.rpc.get_result()
+        n_plus_1 = int(result, 16)
+        self.assertEqual(n + 1, n_plus_1)
+
+    def test_uninstall_filter(self):
+        """Test that uninstalling a filter works"""
+        self.rpc.acall("eth_newBlockFilter")
+        self._block_list_exchange()
+        filter_id = self.rpc.get_result()
+        self.assertEqual(
+            True, self.rpc.call("eth_uninstallFilter", [filter_id]))
+
+    def test_get_logs(self):
+        """Test that getting logs works."""
+        log_filter = {
+            "fromBlock": hex(self.block_num),
+            "address": "0x" + self.contract_address,
+            "topics": [
+                "0x" + self.topic1_s,
+                ["0x" + self.topic1_s, "0x" + self.topic2_s]
+            ],
+        }
+
+        self.rpc.acall("eth_getLogs", [log_filter])
+
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_num, self.block_num)
+        self._send_block_back(msg)
+
+        msg, request = self._receive_receipt_request()
+        self._send_receipts_back(msg)
+
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_num, self.block_num + 1)
+        self._send_block_no_resource(msg)
+
+        result = self.rpc.get_result()
+        log = result[0]
+        self.assertEqual(log["removed"], False)
+        self.assertEqual(log["logIndex"], hex(0))
+        self.assertEqual(log["transactionIndex"], hex(0))
+        self.assertEqual(log["transactionHash"], "0x" + self.txn_id)
+        self.assertEqual(log["blockHash"], "0x" + self.block_id)
+        self.assertEqual(log["blockNumber"], hex(self.block_num))
+        self.assertEqual(log["address"], "0x" + self.contract_address)
+        self.assertEqual(log["data"], "0x" + self.log_data_s)
+
+        topic1, topic2 = log["topics"]
+        self.assertEqual(topic1, "0x" + self.topic1_s)
+        self.assertEqual(topic2, "0x" + self.topic2_s)
+
+    def test_get_filter_logs(self):
+        """Test that getting logs from a filter works."""
+        log_filter = {
+            "fromBlock": hex(self.block_num),
+            "address": "0x" + self.contract_address,
+            "topics": [
+                "0x" + self.topic1_s,
+                ["0x" + self.topic1_s, "0x" + self.topic2_s]
+            ],
+        }
+
+        self.rpc.acall("eth_newFilter", [log_filter])
+        self._block_list_exchange()
+        filter_id = self.rpc.get_result()
+
+        self.rpc.acall("eth_getFilterLogs", [filter_id])
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_num, self.block_num)
+        self._send_block_back(msg)
+
+        msg, request = self._receive_receipt_request()
+        self._send_receipts_back(msg)
+
+        msg, request = self._receive_block_request()
+        self.assertEqual(request.block_num, self.block_num + 1)
+        self._send_block_no_resource(msg)
+
+        result = self.rpc.get_result()
+        log = result[0]
+        self.assertEqual(log["removed"], False)
+        self.assertEqual(log["logIndex"], hex(0))
+        self.assertEqual(log["transactionIndex"], hex(0))
+        self.assertEqual(log["transactionHash"], "0x" + self.txn_id)
+        self.assertEqual(log["blockHash"], "0x" + self.block_id)
+        self.assertEqual(log["blockNumber"], hex(self.block_num))
+        self.assertEqual(log["address"], "0x" + self.contract_address)
+        self.assertEqual(log["data"], "0x" + self.log_data_s)
+
+        topic1, topic2 = log["topics"]
+        self.assertEqual(topic1, "0x" + self.topic1_s)
+        self.assertEqual(topic2, "0x" + self.topic2_s)
+
+    def test_get_block_filter_changes(self):
+        """Tests that getting block filter changes works."""
+        self.rpc.acall("eth_newBlockFilter")
+        self._block_list_exchange()
+        filter_id = self.rpc.get_result()
+
+        block_id_plus_1 = "e" * 128
+        block_id_plus_2 = "d" * 128
+        self.rpc.acall("eth_getFilterChanges", [filter_id])
+        self._block_list_exchange(blocks=[Block(
+            header=BlockHeader(
+                block_num=self.block_num+2,
+            ).SerializeToString(),
+            header_signature=block_id_plus_2,
+        )])
+        self._block_get_exchange(block=Block(
+            header=BlockHeader(
+                block_num=self.block_num+1,
+            ).SerializeToString(),
+            header_signature=block_id_plus_1,
+        ))
+        result = self.rpc.get_result()
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], "0x" + block_id_plus_1)
+        self.assertEqual(result[1], "0x" + block_id_plus_2)
+
+    def test_get_transaction_filter_changes(self):
+        """Tests that getting transaction filter changes works."""
+        self.rpc.acall("eth_newPendingTransactionFilter")
+        self._block_list_exchange()
+        filter_id = self.rpc.get_result()
+
+        txn_id_1 = "e" * 128
+        txn_id_2 = "d" * 128
+        self.rpc.acall("eth_getFilterChanges", [filter_id])
+        self._block_list_exchange(blocks=[Block(
+            header=BlockHeader(
+                block_num=self.block_num+2,
+            ).SerializeToString(),
+            batches=[Batch(transactions=[Transaction(
+                header=TransactionHeader(
+                    family_name="seth",
+                ).SerializeToString(),
+                header_signature=txn_id_2,
+            )])],
+        )])
+        self._block_get_exchange(block=Block(
+            header=BlockHeader(
+                block_num=self.block_num+1,
+            ).SerializeToString(),
+            batches=[Batch(transactions=[Transaction(
+                header=TransactionHeader(
+                    family_name="seth",
+                ).SerializeToString(),
+                header_signature=txn_id_1,
+            )])],
+        ))
+        result = self.rpc.get_result()
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], "0x" + txn_id_1)
+        self.assertEqual(result[1], "0x" + txn_id_2)
+
+    def test_get_log_filter_changes(self):
+        """Tests that getting log filter changes works."""
+        txn_ids = [
+            "d" * 128,
+            "e" * 128,
+        ]
+        topics = [
+            self.topic1_s,
+            self.topic2_s,
+        ]
+
+        # Create the filter
+        self.rpc.acall("eth_newFilter", [{
+            "address": "0x" + self.contract_address,
+            "topics": [
+                ["0x" + t for t in topics],
+            ]
+        }])
+        self._block_list_exchange()
+        filter_id = self.rpc.get_result()
+
+        # Request changes
+        self.rpc.acall("eth_getFilterChanges", [filter_id])
+
+        # Exchange blocks
+        self._block_list_exchange(blocks=[Block(
+            header=BlockHeader(
+                block_num=self.block_num+2,
+            ).SerializeToString(),
+            header_signature=self.block_id,
+            batches=[Batch(transactions=[Transaction(
+                header=TransactionHeader(
+                    family_name="seth",
+                ).SerializeToString(),
+                header_signature=txn_ids[1],
+            )])],
+        )])
+        self._block_get_exchange(block=Block(
+            header=BlockHeader(
+                block_num=self.block_num+1,
+            ).SerializeToString(),
+            header_signature=self.block_id,
+            batches=[Batch(transactions=[Transaction(
+                header=TransactionHeader(
+                    family_name="seth",
+                ).SerializeToString(),
+                header_signature=txn_ids[0],
+            )])],
+        ))
+
+        receipts = [
+            TransactionReceipt(
+                data=[TransactionReceipt.Data(
+                    data_type="seth_receipt",
+                    data=SethTransactionReceipt(
+                        gas_used=self.gas,
+                        return_value=self.return_value_b,
+                        contract_address=self.contract_address_b,
+                    ).SerializeToString(),
+                )],
+                events=[Event(
+                    event_type="seth_log_event",
+                    attributes=[
+                        Event.Attribute(key="address", value=self.contract_address),
+                        Event.Attribute(key="topic1", value=topics[0]),
+                    ],
+                    data=self.log_data_b,
+                )],
+                transaction_id=txn_ids[0],
+            ),
+            TransactionReceipt(
+                data=[TransactionReceipt.Data(
+                    data_type="seth_receipt",
+                    data=SethTransactionReceipt(
+                        gas_used=self.gas,
+                        return_value=self.return_value_b,
+                        contract_address=self.contract_address_b,
+                    ).SerializeToString(),
+                )],
+                events=[Event(
+                    event_type="seth_log_event",
+                    attributes=[
+                        Event.Attribute(key="address", value=self.contract_address),
+                        Event.Attribute(key="topic1", value=topics[1]),
+                    ],
+                    data=self.log_data_b,
+                )],
+                transaction_id=txn_ids[1],
+            ),
+        ]
+
+        # Exchange receipts for block 1
+        msg, request = self._receive_receipt_request()
+        self.assertEqual(request.transaction_ids[0], txn_ids[0])
+        self._send_receipts_back(msg, [receipts[0]])
+
+        # Exchange receipts for block 2
+        msg, request = self._receive_receipt_request()
+        self.assertEqual(request.transaction_ids[0], txn_ids[1])
+        self._send_receipts_back(msg, [receipts[1]])
+
+        result = self.rpc.get_result()
+
+        self.assertEqual(len(result), 2)
+        for i, log in enumerate(result):
+            self.assertEqual(log["removed"], False)
+            self.assertEqual(log["logIndex"], hex(0))
+            self.assertEqual(log["transactionIndex"], hex(0))
+            self.assertEqual(log["transactionHash"], "0x" + txn_ids[i])
+            self.assertEqual(log["blockHash"], "0x" + self.block_id)
+            self.assertEqual(log["blockNumber"], hex(self.block_num + i + 1))
+            self.assertEqual(log["address"], "0x" + self.contract_address)
+            self.assertEqual(log["data"], "0x" + self.log_data_s)
+
+            topic1 = log["topics"][0]
+            self.assertEqual(topic1, "0x" + topics[i])
 
     # -- Utilities -- #
     def _send_block_back(self, msg, block=None):
@@ -827,6 +1135,31 @@ class SethRpcTest(unittest.TestCase):
             ),
             msg)
 
+    def _send_block_list_back(self, msg, blocks=None):
+        if blocks is None:
+            blocks = [Block(
+                header=BlockHeader(
+                    block_num=self.block_num,
+                    previous_block_id=self.prev_block_id,
+                    state_root_hash=self.state_root
+                ).SerializeToString(),
+                header_signature=self.block_id,
+                batches=[Batch(transactions=[Transaction(
+                    header=TransactionHeader(
+                        family_name="seth",
+                    ).SerializeToString(),
+                    header_signature=self.txn_id,
+                )])],
+            )]
+
+        self.validator.respond(
+            Message.CLIENT_BLOCK_LIST_RESPONSE,
+            ClientBlockListResponse(
+                status=ClientBlockListResponse.OK,
+                blocks=blocks,
+            ),
+            msg)
+
     def _send_state_no_resource(self, msg):
         self.validator.respond(
             Message.CLIENT_STATE_GET_RESPONSE,
@@ -842,7 +1175,18 @@ class SethRpcTest(unittest.TestCase):
                     data_type="seth_receipt",
                     data=SethTransactionReceipt(
                         gas_used=self.gas,
+                        return_value=self.return_value_b,
+                        contract_address=self.contract_address_b,
                     ).SerializeToString(),
+                )],
+                events=[Event(
+                    event_type="seth_log_event",
+                    attributes=[
+                        Event.Attribute(key="address", value=self.contract_address),
+                        Event.Attribute(key="topic1", value=self.topic1_s),
+                        Event.Attribute(key="topic2", value=self.topic2_s),
+                    ],
+                    data=self.log_data_b,
                 )],
                 transaction_id=self.txn_id,
             )]
@@ -910,6 +1254,13 @@ class SethRpcTest(unittest.TestCase):
         request.ParseFromString(msg.content)
         return msg, request
 
+    def _receive_block_list_request(self):
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_LIST_REQUEST)
+        request = ClientBlockListRequest()
+        request.ParseFromString(msg.content)
+        return msg, request
+
     def _receive_state_request(self):
         msg = self.validator.receive()
         self.assertEqual(msg.message_type, Message.CLIENT_STATE_GET_REQUEST)
@@ -945,6 +1296,14 @@ class SethRpcTest(unittest.TestCase):
         self.assertEqual(txn_header.payload_encoding, "application/protobuf")
 
         return msg, txn
+
+    def _block_get_exchange(self, block=None):
+        msg, _ = self._receive_block_request()
+        self._send_block_back(msg, block)
+
+    def _block_list_exchange(self, blocks=None):
+        msg, _ = self._receive_block_list_request()
+        self._send_block_list_back(msg, blocks)
 
     def _make_multi_txn_block(self, txn_ids):
         gas = self.gas

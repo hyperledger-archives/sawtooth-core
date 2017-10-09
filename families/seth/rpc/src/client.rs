@@ -15,16 +15,13 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::sync::{Arc, Mutex};
 use std::error::Error as StdError;
-use std::fmt::{LowerHex, Display, Formatter, Result as FmtResult};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 use std::collections::HashMap;
 
 use crypto::digest::Digest;
 use crypto::sha2::Sha512;
-
-use jsonrpc_core::{Value};
 
 use sawtooth_sdk::messaging::stream::*;
 use sawtooth_sdk::messages::validator::Message_MessageType;
@@ -53,10 +50,12 @@ use sawtooth_sdk::messages::client::{
 };
 use sawtooth_sdk::messages::transaction::{Transaction as TransactionPb, TransactionHeader};
 use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
+use sawtooth_sdk::messages::block::{BlockHeader};
 use messages::seth::{EvmEntry, EvmStateAccount, EvmStorage};
 use accounts::{Account, Error as AccountError};
-use filters::Filter;
+use filters::{FilterManager};
 use transactions::{SethTransaction, SethReceipt, Transaction, TransactionKey};
+use transform;
 
 use protobuf;
 use uuid;
@@ -172,7 +171,7 @@ impl From<AccountError> for Error {
 pub struct ValidatorClient<S: MessageSender> {
     sender: S,
     accounts: Vec<Account>,
-    filters: Arc<Mutex<HashMap<String, (Filter, String)>>>
+    pub filters: FilterManager,
 }
 
 impl<S: MessageSender> ValidatorClient<S> {
@@ -180,7 +179,7 @@ impl<S: MessageSender> ValidatorClient<S> {
         ValidatorClient{
             sender: sender,
             accounts: accounts,
-            filters: Arc::new(Mutex::new(HashMap::new()))
+            filters: FilterManager::new(),
         }
     }
 
@@ -422,7 +421,9 @@ impl<S: MessageSender> ValidatorClient<S> {
         match block_key {
             BlockKey::Signature(block_id) => request.set_block_id(block_id),
             BlockKey::Number(block_num) => request.set_block_num(block_num),
-            BlockKey::Latest => {},
+            BlockKey::Latest => {
+                return self.get_current_block();
+            },
             BlockKey::Earliest => request.set_block_id(String::from("0000000000000000")),
         };
 
@@ -513,7 +514,7 @@ impl<S: MessageSender> ValidatorClient<S> {
 
         match storage {
             Some(storage) => {
-                let position = match hex_str_to_bytes(&storage_address) {
+                let position = match transform::hex_str_to_bytes(&storage_address) {
                     Some(p) => p,
                     None => {
                         return Err(String::from("Failed to decode position, invalid hex."));
@@ -532,88 +533,50 @@ impl<S: MessageSender> ValidatorClient<S> {
         }
     }
 
-    pub fn get_current_block(&mut self) -> Result<Block, String> {
+    pub fn get_current_block(&mut self) -> Result<Block, Error> {
         let mut paging = PagingControls::new();
         paging.set_count(1);
         let mut request = ClientBlockListRequest::new();
         request.set_paging(paging);
 
         let response: ClientBlockListResponse =
-           self.request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)?;
+           self.send_request(Message_MessageType::CLIENT_BLOCK_LIST_REQUEST, &request)?;
 
         let block = &response.blocks[0];
         Ok(block.clone())
+    }
+
+    pub fn get_current_block_number(&mut self) -> Result<u64, Error> {
+        let block = self.get_current_block()?;
+        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|error|
+            Error::ParseError(format!("Error parsing block_header: {:?}", error)))?;
+        Ok(block_header.block_num)
+    }
+
+    pub fn get_blocks_since(&mut self, since: u64) -> Result<Vec<(u64, Block)>, Error> {
+        let block = self.get_current_block()?;
+        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|error|
+            Error::ParseError(format!("Error parsing block_header: {:?}", error)))?;
+        let block_num = block_header.block_num;
+        if block_num <= since {
+            return Ok(Vec::new());
+        }
+
+        let mut blocks = Vec::with_capacity((block_num - (since+1)) as usize);
+        for block_num in (since+1)..block_num {
+            let block = self.get_block(BlockKey::Number(block_num))?;
+            let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|error|
+                Error::ParseError(format!("Error parsing block_header: {:?}", error)))?;
+            let block_num = block_header.block_num;
+            blocks.push((block_num, block));
+        }
+        blocks.push((block_num, block));
+
+        Ok(blocks)
     }
 
     fn block_num_to_block_id(&mut self, block_num: u64) -> Result<String, Error> {
         self.get_block(BlockKey::Number(block_num)).map(|block|
             String::from(block.header_signature))
     }
-
-    pub fn remove_filter(&mut self, filter_id: &String) -> Option<(Filter, String)> {
-        self.filters.lock().unwrap().remove(filter_id)
-    }
-
-    pub fn get_filter(&mut self, filter_id: &String) -> Result<(Filter, String), String> {
-        let filters = self.filters.lock().unwrap();
-        if filters.contains_key(filter_id) {
-            Ok(filters[filter_id].clone())
-        } else {
-            Err(format!("Unknown filter id: {:?}", filter_id))
-        }
-    }
-
-    pub fn set_filter(&mut self, filter_id: String, filter: Filter, block_id: String) {
-        let mut filters = self.filters.lock().unwrap();
-        let entry = filters.entry(filter_id).or_insert((filter, block_id.clone()));
-        (*entry).1 = block_id
-    }
-
-}
-
-
-
-pub fn num_to_hex<T>(n: &T) -> Value where T: LowerHex {
-    Value::String(String::from(format!("{:#x}", n)))
-}
-
-pub fn hex_prefix(s: &str) -> Value {
-    Value::String(String::from(format!("0x{}", s)))
-}
-
-pub fn hex_str_to_bytes(s: &str) -> Option<Vec<u8>> {
-    for ch in s.chars() {
-        if !ch.is_digit(16) {
-            return None
-        }
-    }
-
-    let input: Vec<_> = s.chars().collect();
-
-    let decoded: Vec<u8> = input.chunks(2).map(|chunk| {
-        ((chunk[0].to_digit(16).unwrap() << 4) |
-        (chunk[1].to_digit(16).unwrap())) as u8
-    }).collect();
-
-    return Some(decoded);
-}
-
-pub fn bytes_to_hex_str(b: &[u8]) -> String {
-    b.iter()
-     .map(|b| format!("{:02x}", b))
-     .collect::<Vec<_>>()
-     .join("")
-}
-
-pub fn zerobytes(mut nbytes: usize) -> Value {
-    if nbytes == 0 {
-        return Value::String(String::from("0x0"));
-    }
-    let mut s = String::with_capacity(2 + nbytes * 2);
-    while nbytes > 0 {
-        s.push_str("00");
-        nbytes -= 1;
-    }
-    s.push_str("0x");
-    Value::String(s)
 }
