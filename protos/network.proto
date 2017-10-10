@@ -20,22 +20,18 @@ option go_package = "network_pb2";
 
 // The disconnect message from a client to the server
 message DisconnectMessage {
-    string identity = 1;
 }
 
 // The registration request from a peer to the validator
 message PeerRegisterRequest {
-    string identity = 1;
-    string endpoint = 2;
+    string endpoint = 1;
 }
 
 // The unregistration request from a peer to the validator
 message PeerUnregisterRequest {
-    string identity = 1;
 }
 
 message GetPeersRequest {
-    string identity = 1;
 }
 
 message GetPeersResponse {
@@ -65,41 +61,29 @@ message GossipBlockRequest {
     // The id of the block that is being requested
     string block_id = 1;
 
-    // The identity of the validator that is requesting the block
-    bytes node_id = 2;
-
     // A random string that provides uniqueness for requests with
     // otherwise identical fields.
-    string nonce = 3;
+    string nonce = 2;
 
 }
 
 message GossipBlockResponse {
     // The block
     bytes content = 1;
-
-    // The identity of the validator that requested the block
-    bytes node_id = 2;
 }
 
 message GossipBatchResponse {
     //The batch
     bytes content = 1;
-
-    // The identity of the validator that requested the batch
-    bytes node_id = 2;
 }
 
 message GossipBatchByBatchIdRequest {
     // The id of the batch that is being requested
     string id = 1;
 
-    // The identity of the validator that is requesting the batch
-    bytes node_id = 2;
-
     // A random string that provides uniqueness for requests with
     // otherwise identical fields.
-    string nonce = 3;
+    string nonce = 2;
 
 }
 
@@ -107,11 +91,8 @@ message GossipBatchByTransactionIdRequest {
     // The id's of the transaction that are in the batches requested
     repeated string ids = 1;
 
-    // The identity of the validator that is requesting the batches
-    bytes node_id = 2;
-
     // A random string that provides uniqueness for requests with
     // otherwise identical fields.
-    string nonce = 3;
+    string nonce = 2;
 
 }
