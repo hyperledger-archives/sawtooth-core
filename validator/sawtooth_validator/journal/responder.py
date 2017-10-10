@@ -105,7 +105,6 @@ class BlockResponderHandler(Handler):
             block_request_message.block_id
 
         block_id = block_request_message.block_id
-        node_id = block_request_message.node_id
         block = self._responder.check_for_block(block_id)
         if block is None:
             # No block found, broadcast original message to other peers
@@ -129,8 +128,7 @@ class BlockResponderHandler(Handler):
                          block.get_block().header_signature)
 
             block_response = network_pb2.GossipBlockResponse(
-                content=block.get_block().SerializeToString(),
-                node_id=node_id)
+                content=block.get_block().SerializeToString())
 
             self._gossip.send(validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
                               block_response.SerializeToString(),
@@ -209,7 +207,6 @@ class BatchByBatchIdResponderHandler(Handler):
 
         batch = None
         batch = self._responder.check_for_batch(batch_request_message.id)
-        node_id = batch_request_message.node_id
 
         if batch is None:
             # No batch found, broadcast original message to other peers
@@ -231,7 +228,7 @@ class BatchByBatchIdResponderHandler(Handler):
 
             batch_response = network_pb2.GossipBatchResponse(
                 content=batch.SerializeToString(),
-                node_id=node_id)
+                )
 
             self._gossip.send(validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
                               batch_response.SerializeToString(),
@@ -268,7 +265,6 @@ class BatchByTransactionIdResponderHandler(Handler):
 
         self._seen_requests[batch_request_message.nonce] = \
             batch_request_message.ids
-        node_id = batch_request_message.node_id
         batch = None
         batches = []
         unfound_txn_ids = []
@@ -307,7 +303,6 @@ class BatchByTransactionIdResponderHandler(Handler):
                 new_request = network_pb2.GossipBatchByTransactionIdRequest()
                 # only request batches we have not requested already
                 new_request.ids.extend(not_requested)
-                new_request.node_id = batch_request_message.node_id
                 # Keep same nonce as original message
                 new_request.nonce = batch_request_message.nonce
                 self._gossip.broadcast(
@@ -326,7 +321,7 @@ class BatchByTransactionIdResponderHandler(Handler):
 
                 batch_response = network_pb2.GossipBatchResponse(
                     content=batch.SerializeToString(),
-                    node_id=node_id)
+                    )
 
                 self._gossip.send(validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
                                   batch_response.SerializeToString(),

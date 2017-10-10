@@ -56,7 +56,6 @@ class TestResponder(unittest.TestCase):
         # The completer does not have the requested block
         message = network_pb2.GossipBlockRequest(
             block_id="ABC",
-            node_id=b"1",
             nonce="1")
         self.block_request_handler.handle(
             "Connection_1", message.SerializeToString())
@@ -75,7 +74,6 @@ class TestResponder(unittest.TestCase):
 
         message = network_pb2.GossipBlockRequest(
             block_id="ABC",
-            node_id=b"1",
             nonce="2")
 
         self.block_request_handler.handle(
@@ -96,7 +94,6 @@ class TestResponder(unittest.TestCase):
         """
         message = network_pb2.GossipBlockRequest(
             block_id="ABC",
-            node_id=b"1",
             nonce="1"
         )
         self.block_request_handler.handle(
@@ -125,7 +122,6 @@ class TestResponder(unittest.TestCase):
 
         message = network_pb2.GossipBlockRequest(
             block_id="ABC",
-            node_id=b"1",
             nonce="2"
         )
 
@@ -150,7 +146,7 @@ class TestResponder(unittest.TestCase):
         # The Responder does not have any pending requests for block "ABC"
         block = block_pb2.Block(header_signature="ABC")
         response_message = network_pb2.GossipBlockResponse(
-            content=block.SerializeToString(), node_id=b"1")
+            content=block.SerializeToString())
 
         self.block_response_handler.handle(
             "Connection_1", response_message.SerializeToString())
@@ -162,7 +158,7 @@ class TestResponder(unittest.TestCase):
         # Handle a request message for block "ABC". This adds it to the pending
         # request queue.
         request_message = \
-            network_pb2.GossipBlockRequest(block_id="ABC", node_id=b"1")
+            network_pb2.GossipBlockRequest(block_id="ABC")
 
         self.block_request_handler.handle(
             "Connection_2", request_message.SerializeToString())
@@ -194,7 +190,6 @@ class TestResponder(unittest.TestCase):
         # The completer does not have the requested batch
         message = network_pb2.GossipBatchByBatchIdRequest(
             id="abc",
-            node_id=b"1",
             nonce="1")
         self.batch_request_handler.handle(
             "Connection_1", message.SerializeToString())
@@ -209,7 +204,6 @@ class TestResponder(unittest.TestCase):
         # Add the batch to the completer and resend the BatchByBatchIdRequest
         message = network_pb2.GossipBatchByBatchIdRequest(
             id="abc",
-            node_id=b"1",
             nonce="2")
         batch = batch_pb2.Batch(header_signature="abc")
         self.completer.add_batch(batch)
@@ -232,7 +226,6 @@ class TestResponder(unittest.TestCase):
         # The completer does not have the requested batch
         message = network_pb2.GossipBatchByBatchIdRequest(
             id="abc",
-            node_id=b"1",
             nonce="1")
         self.batch_request_handler.handle(
             "Connection_1", message.SerializeToString())
@@ -259,7 +252,6 @@ class TestResponder(unittest.TestCase):
 
         message = network_pb2.GossipBatchByBatchIdRequest(
             id="abc",
-            node_id=b"1",
             nonce="2")
 
         self.batch_request_handler.handle(
@@ -283,7 +275,6 @@ class TestResponder(unittest.TestCase):
         # The completer does not have the requested batch with the transaction
         message = network_pb2.GossipBatchByTransactionIdRequest(
             ids=["123"],
-            node_id=b"1",
             nonce="1")
         self.batch_by_txn_request_handler.handle(
             "Connection_1", message.SerializeToString())
@@ -302,7 +293,6 @@ class TestResponder(unittest.TestCase):
         # BatchByTransactionIdRequest
         message = network_pb2.GossipBatchByTransactionIdRequest(
             ids=["123"],
-            node_id=b"1",
             nonce="2")
         transaction = transaction_pb2.Transaction(header_signature="123")
         batch = batch_pb2.Batch(
@@ -326,7 +316,7 @@ class TestResponder(unittest.TestCase):
         """
         # The completer does not have the requested batch with the transaction
         message = network_pb2.GossipBatchByTransactionIdRequest(
-            ids=["123"], node_id=b"1")
+            ids=["123"])
         self.batch_by_txn_request_handler.handle(
             "Connection_1", message.SerializeToString())
 
@@ -357,7 +347,6 @@ class TestResponder(unittest.TestCase):
 
         message = network_pb2.GossipBatchByTransactionIdRequest(
             ids=["123"],
-            node_id=b"1",
             nonce="2")
         self.batch_by_txn_request_handler.handle(
             "Connection_2", message.SerializeToString())
@@ -386,7 +375,7 @@ class TestResponder(unittest.TestCase):
         self.completer.add_batch(batch)
         # Request transactions 123 and 456
         message = network_pb2.GossipBatchByTransactionIdRequest(
-            ids=["123", "456"], node_id=b"1")
+            ids=["123", "456"])
         self.batch_by_txn_request_handler.handle(
             "Connection_1", message.SerializeToString())
         self.batch_request_handler.handle(
@@ -401,7 +390,7 @@ class TestResponder(unittest.TestCase):
         # Broadcast a BatchByTransactionIdRequest for just 456
         request_message = \
             network_pb2.GossipBatchByTransactionIdRequest(
-                ids=["456"], node_id=b"1")
+                ids=["456"])
         self.assert_message_was_broadcasted(
             request_message,
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST)
@@ -421,7 +410,7 @@ class TestResponder(unittest.TestCase):
         batch = batch_pb2.Batch(header_signature="abc")
 
         response_message = network_pb2.GossipBatchResponse(
-            content=batch.SerializeToString(), node_id=b"1")
+            content=batch.SerializeToString())
 
         self.batch_response_handler.handle(
             "Connection_1", response_message.SerializeToString())
@@ -433,7 +422,7 @@ class TestResponder(unittest.TestCase):
         # Handle a request message for batch "abc". This adds it to the pending
         # request queue.
         request_message = \
-            network_pb2.GossipBatchByBatchIdRequest(id="abc", node_id=b"1")
+            network_pb2.GossipBatchByBatchIdRequest(id="abc")
 
         self.batch_request_handler.handle(
             "Connection_2", request_message.SerializeToString())
@@ -467,11 +456,11 @@ class TestResponder(unittest.TestCase):
             header_signature="abc", transactions=[transaction])
 
         response_message = network_pb2.GossipBatchResponse(
-            content=batch.SerializeToString(), node_id=b"1")
+            content=batch.SerializeToString())
 
         request_message = \
             network_pb2.GossipBatchByTransactionIdRequest(
-                ids=["123"], node_id=b"1")
+                ids=["123"])
 
         # Send BatchByTransaciontIdRequest for txn "123" and add it to the
         # pending request cache
