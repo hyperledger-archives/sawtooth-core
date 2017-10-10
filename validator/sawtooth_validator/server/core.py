@@ -187,7 +187,7 @@ class Validator(object):
         batch_tracker = BatchTracker(block_store)
 
         # setup network
-        self._dispatcher = Dispatcher()
+        self._dispatcher = Dispatcher(metrics_registry=metrics_registry)
 
         thread_pool = ThreadPoolExecutor(max_workers=10)
         sig_pool = ThreadPoolExecutor(max_workers=3)
@@ -229,7 +229,8 @@ class Validator(object):
         network_thread_pool = ThreadPoolExecutor(max_workers=10)
         self._network_thread_pool = network_thread_pool
 
-        self._network_dispatcher = Dispatcher()
+        self._network_dispatcher = Dispatcher(
+            metrics_registry=metrics_registry)
 
         secure = False
         if network_public_key is not None and network_private_key is not None:
