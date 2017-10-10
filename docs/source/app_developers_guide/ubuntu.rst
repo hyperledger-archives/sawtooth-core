@@ -3,7 +3,7 @@ Using Sawtooth on Ubuntu 16.04
 ******************************
 
 
-This document guides you through the process of setting up Hyperledger Sawtooth
+This procedure guides you through the process of setting up Hyperledger Sawtooth
 for application development on Ubuntu, introduces some of the basic Sawtooth
 concepts necessary for application development, and walks through performing
 the following tasks:
@@ -37,9 +37,14 @@ depicted.
 Installation
 ============
 
+Installing Ubuntu
+-----------------
+
 Ubuntu packages are provided by one of the Sawtooth package repositories:
-stable or nightly.  We recommend using the stable repository. To add the stable
-repository, run the following commands in a terminal window:
+stable or nightly.  We recommend using the stable repository.
+
+To add the stable repository, run these commands in a terminal window
+on your host system:
 
 .. code-block:: console
 
@@ -47,7 +52,8 @@ repository, run the following commands in a terminal window:
   $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe'
   $ sudo apt-get update
 
-or, to use the nightly repository:
+To use the nightly repository, run the following commands in a terminal window
+on your host system:
 
 .. code-block:: console
 
@@ -55,20 +61,24 @@ or, to use the nightly repository:
   $ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
   $ sudo apt-get update
 
-.. caution::
+.. Caution::
 
   Nightly builds may be out-of-sync with the documentation and have not gone
   through long-running network testing.  We really do recommend the stable
   repository.
 
-Sawtooth consists of several Ubuntu packages, which can be installed together
-using the 'sawtooth' metapackage.  Run the following in a terminal window:
+Installing Sawtooth
+-------------------
+
+Sawtooth consists of several Ubuntu packages that can be installed together
+using the ``sawtooth`` metapackage.  Run the following command in the same
+host terminal window:
 
 .. code-block:: console
 
   $ sudo apt-get install -y sawtooth
 
-At any time after installation, you can view the sawtooth packages installed
+At any time after installation, you can view the installed sawtooth packages
 with the following command:
 
 .. code-block:: console
@@ -78,8 +88,8 @@ with the following command:
 Validator Start-up Process
 ==========================
 
-Create Genesis Block
---------------------
+Creating the Genesis Block
+--------------------------
 
 In most use cases, it is not necessary to create a genesis block when starting
 a validator, because the validator joins an existing distributed ledger
@@ -91,15 +101,16 @@ The genesis block contains some initial values that are necessary when a
 Sawtooth distributed ledger is created and used for the first time.
 One of the settings in the genesis block that should be set is the
 key that is authorized to set and change configuration settings, as
-shown below using the **sawtooth config genesis** command.
+shown below using the ``sawtooth config genesis`` command.
 
-To create the genesis block, run the following commands as root:
+To create the genesis block, open a new terminal window (the validator window)
+and run the following commands as root:
 
 .. code-block:: console
 
-  $ sawtooth keygen
-  $ sawtooth config genesis
-  $ sudo -u sawtooth sawtooth admin genesis config-genesis.batch
+  # sawtooth keygen
+  # sawtooth config genesis
+  # sudo -u sawtooth sawtooth admin genesis config-genesis.batch
 
 The following output appears:
 
@@ -114,36 +125,35 @@ The following output appears:
   validator, simply remove all files from /var/lib/sawtooth.
 
 
-Start Validator
----------------
+Starting the Validator
+----------------------
 
 To start a validator that listens locally on the default ports, run the
-following commands from a Linux terminal:
+following commands from the validator window:
 
 .. code-block:: console
 
    $ sudo sawtooth admin keygen
    $ sudo -u sawtooth sawtooth-validator -vv
 
-This will start the validator. Logging output will be printed to the
-terminal window. The validator outputs something similar to this to
-the terminal window:
+.. note::
 
+  The `-vv` flag sets the log level. To run the validator with less logging
+  output, use `-v` or omit the flag.
+
+Logging output will be printed to the validator terminal window. The validator
+output includes something similar to this:
 
 .. code-block:: console
 
   [16:18:30.145 INFO    chain] Chain controller initialized with chain head: None
   [16:18:30.145 INFO    publisher] Now building on top of block: None
 
-.. note::
+.. Tip::
 
-    When you want to stop the validator, or any other running sawtooth
-    component, press CTRL+C.
-
-.. note::
-
-  The `-vv` flag sets the log level. To run the validator with less logging
-  output, use `-v` or omit the flag.
+  If you want to stop the validator, enter CTRL-c in the validator's terminal
+  window.  You can stop any other running Sawtooth component by entering
+  CTRL-c in the apprpriate window.
 
 .. note::
 
@@ -168,8 +178,10 @@ Starting the REST API
 =====================
 
 In order to configure a running validator, submit batches, and query the state
-of the ledger, you must start the REST API application. Run the following
-command to start the REST API and connect to a local validator:
+of the ledger, you must start the REST API application.
+
+Open a new terminal window, then run the following command to start the
+REST API and connect to a local validator:
 
 .. code-block:: console
 
@@ -181,10 +193,18 @@ Running a Transaction Processor
 Transaction processors can be started either before or after the validator is
 started.
 
-The intkey transaction processor is provided as a simple example of a
+The IntegerKey transaction processor is provided as a simple example of a
 transaction family, which can also be used for testing purposes.
 
-To start an intkey transaction processor, run the following command:
+.. note::
+
+  In a production environment, you should always run a transaction processor
+  that supports the config transaction family.
+  See `Configuring the List of Transaction Families`_ for more information.
+
+
+To start an IntegerKey transaction processor, open a new terminal window, then
+run the following command:
 
 .. code-block:: console
 
@@ -194,12 +214,11 @@ To start an intkey transaction processor, run the following command:
 
   By default, the transaction processor tries to connect to a local validator
   on port 4004. This can be modified by passing a different endpoint as an
-  argument. The following is equivalent to the default::
+  argument. The following endpoint argument is equivalent to the default\:
+  ``intkey-tp-python -v tcp://127.0.0.1:4004``
 
-    intkey-tp-python -v tcp://127.0.0.1:4004
-
-This will start a transaction processor with an **intkey** handler that can
-understand and process transactions from the intkey transaction family.
+This command starts a transaction processor with an ``intkey`` handler that can
+understand and process transactions from the IntegerKey transaction family.
 
 The transaction processor produces the following output:
 
@@ -207,81 +226,63 @@ The transaction processor produces the following output:
 
   [23:07:57 INFO    core] register attempt: OK
 
-.. note::
+Configuring the List of Transaction Families
+============================================
 
-  In a production environment, you should always run a transaction processor
-  that supports the config transaction family. See `Settings Transaction
-  Family Usage`_ for more information.
+This section describes how to start the Settings transaction family, confirm
+that the REST API is running, and tell the validator or validator network to
+accept transactions from the IntegerKey and Settings transaction families.
 
-Multi-language Support for Transaction Processors
-=================================================
-
-Sawtooth supports multiple languages for transaction processor development and
-includes additional transaction processors written in several languages.
-The following lists the processors that are included:
-
-* settings-tp
-
-  - A settings family transaction processor written in Python
-
-* intkey-tp-go
-
-  - An intkey transaction processor written in Go
-
-* intkey-tp-java
-
-  - An intkey transaction processor written in Java
-
-* intkey-tp-javascript
-
-  - An intkey transaction processor written in JavaScript
-  - Requires node.js
-
-* jvm-sc-tp
-
-  - An intkey transaction processor implemented as a smart contract.
-  - The bytecode to run a transaction is stored in state and the blockchain.
-  - Requires Java
-
-* poet-validator-registry-tp
-
-  - A transaction family used by the PoET consensus algorithm implementation
-    to keep track of other validators.
-
-* xo-tp-javascript
-
-  - An XO transaction processor written in JavaScript
-  - Requires node.js
-
-* xo-tp-python
-
-  - An XO transaction processor written in Python
-
-
-Settings Transaction Family Usage
-=================================
-
-Sawtooth provides a :doc:`settings transaction family
+Sawtooth provides a :doc:`Settings transaction family
 <../transaction_family_specifications/settings_transaction_family>` that stores
-on-chain settings, along with a settings family transaction processor written
+on-chain settings, along with a Settings family transaction processor written
 in Python.
 
+.. note::
+
+  Sawtooth supports multiple languages for transaction processor development and
+  includes additional transaction processors written in several languages.
+  The following lists the processors that are included:
+
+  * settings-tp - A settings family transaction processor written in Python
+
+  * intkey-tp-go - An intkey transaction processor written in Go
+
+  * intkey-tp-java - An intkey transaction processor written in Java
+
+  * intkey-tp-javascript - An intkey transaction processor written in JavaScript
+    (requires node.js)
+
+  * jvm-sc-tp - An intkey transaction processor implemented as a smart contract;
+    the bytecode to run a transaction is stored in state and the blockchain
+    (requires Java)
+
+  * poet-validator-registry-tp - A transaction family used by the PoET consensus
+    algorithm implementation to keep track of other validators
+
+  * xo-tp-javascript - An XO transaction processor written in JavaScript
+    (requires node.js)
+
+  * xo-tp-python - An XO transaction processor written in Python
+
 One of the on-chain settings is the list of supported transaction families.
-To configure this setting, follow these steps:
+To configure this setting, use the follow steps to start the Settings family
+transaction processor, start the REST API, and create and submit the batch
+to change the settings.
 
-Step One: Start Settings Family Processor
------------------------------------------
+Starting the Settings Family Processor
+--------------------------------------
 
-To start the settings family transaction processor, run the following commands
-from the Linux CLI:
+To start the settings family transaction processor, open a new terminal window
+and run the following command:
 
 .. code-block:: console
 
   $ sudo -u sawtooth settings-tp -v
 
-Confirm that the transaction processor registers with the validator by viewing
-the terminal window in which the validator is running. A successful
-registration event produces the following output:
+Check the validator window to confirm that the transaction processor has
+registered with the validator.  A successful registration event produces the
+following output:
 
 .. code-block:: console
 
@@ -289,22 +290,31 @@ registration event produces the following output:
   [21:03:55.956 DEBUG   interconnect] ServerThread sending TP_REGISTER_RESPONSE to b'6d2d80275ae280ea'
 
 
-Step Two: Starting the Rest API
--------------------------------
+Verifying That the REST API is Running
+--------------------------------------
 
-In order to configure a running validator, you must start the REST API
-application. Run the following command to start the REST API, if it hasn't
-already been started.
+In order to configure a running validator, the REST API must be running.
+Run the following command in the terminal window in which you started
+the REST API:
+
+.. code-block:: console
+
+  $ ps aux | grep sawtooth-rest-api
+  root      2829  0.0  0.3  55756  3980 pts/0    S+   19:36   0:00 sudo -u sawtooth sawtooth-rest-api -v
+  sawtooth  2830  0.0  3.6 221164 37520 pts/0    Sl+  19:36   0:00 /usr/bin/python3 /usr/bin/sawtooth-rest-api -v
+  ubuntu    3004  0.0  0.0  12944   928 pts/4    S+   19:54   0:00 grep -E --color=auto sawtooth-rest-api
+
+If necessary, run the following command to start the REST API.
 
 .. code-block:: console
 
   $ sudo -u sawtooth sawtooth-rest-api -v
 
 
-Step Three: Create and Submit Batch
------------------------------------
+Changing the Transaction Family Settings
+----------------------------------------
 
-In the example below, a JSON array is submitted to the `sawtooth config`
+In the example below, a JSON array is submitted to the ``sawtooth config``
 command, which creates and submits a batch of transactions containing the
 settings change.
 
@@ -314,15 +324,15 @@ transactions of the following types:
 * intkey
 * sawtooth_settings
 
-To create and submit the batch containing the new settings, enter the
-following commands from the Linux CLI:
+To create and submit the batch containing the new settings, open a new
+terminal window and enter the following commands:
 
 .. code-block:: console
 
   $ sawtooth config proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/cbor"}, {"family":"sawtooth_settings", "version":"1.0", "encoding":"application/protobuf"}]'
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
-and output similar to the following appears in the validator terminal:
+and output similar to the following appears in the validator terminal window:
 
 .. code-block:: console
 
@@ -333,28 +343,31 @@ and output similar to the following appears in the validator terminal:
 Creating and Submitting Transactions
 ====================================
 
-The **intkey** command is provided to create sample transactions of the intkey
-transaction type for testing purposes.
+The ``intkey`` command creates sample transactions of the ``intkey``
+(IntegerKey) transaction type for testing purposes.
 
-This section guide you through the following tasks:
+This section guides you through the following tasks:
 
-1. Prepare a batch of intkey transactions that set the keys to random values.
+1. Preparing a batch of intkey transactions that set the keys to random values.
 
-2. Generate *inc* (increment) and *dec* (decrement) transactions to apply to
+2. Generating *inc* (increment) and *dec* (decrement) transactions to apply to
    the existing state stored in the blockchain.
 
-3. Submit these transactions to the validator.
+3. Submitting these transactions to the validator.
 
-Run the following commands from the Linux CLI:
+Open a new terminal window and run the following commands:
 
 .. code-block:: console
 
   $ intkey create_batch
-  $ intkey load
+  Writing to batches.intkey...
 
-You can observe the processing of the intkey transactions by observing the
-logging output of the intkey transaction processor. A truncated example of
-the intkey transaction processor's output is shown below:
+  $ intkey load
+  batches: 2 batch/sec: 135.96900883377907
+
+You can watch the processing of the intkey transactions by observing the
+logging output of the ``intkey`` transaction processor. A truncated example of
+this output is shown below:
 
 .. code-block:: console
 
@@ -370,63 +383,50 @@ the intkey transaction processor's output is shown below:
 Viewing Blocks and State
 ========================
 
-You can view the blocks stored in the blockchain, and the nodes of the Markle
-tree, using the sawtooth CLI.
+You can view the blocks stored in the blockchain and the nodes of the Merkle
+tree by using the ``sawtooth block`` command.
 
 .. note::
 
-  The sawtooth CLI provides help for all subcommands. For example, to get help
-  for the `block` subcommand, enter the command `sawtooth block -h`.
+  The ``sawtooth`` CLI provides help for all subcommands. For example, to get
+  help for the ``block`` subcommand, enter the command ``sawtooth block -h``.
 
-Starting the Rest API
----------------------
+Viewing the List of Blocks
+--------------------------
 
-In order to submit queries to the validator, you must start the REST API
-application. Run the following command to start the REST API, if it hasn't
-already been started.
-
-.. code-block:: console
-
-  $ sudo su - sawtooth sawtooth-rest-api -v
-
-
-Viewing List of Blocks
-----------------------
-
-Enter the command `sawtooth block list` to view the blocks stored by the state:
+Enter the command ``sawtooth block list`` to view the blocks stored by the state:
 
 .. code-block:: console
 
   $ sawtooth block list
 
+.. tip::
+
+   Expand the terminal window to at least 157 characters to view all output.
+
 The output of the command will be similar to this:
 
 .. code-block:: console
 
-  NUM  BLOCK_ID
-  8    22e79778855768ea380537fb13ad210b84ca5dd1cdd555db7792a9d029113b0a183d5d71cc5558e04d10a9a9d49031de6e86d6a7ddb25325392d15bb7ccfd5b7  2     8     02a0e049...
-  7    c84346f5e18c6ce29f1b3e6e31534da7cd538533457768f86a267053ddf73c4f1139c9055be283dfe085c94557de24726191eee9996d4192d21fa6acb0b29152  2     20    02a0e049...
-  6    efc0d6175b6329ac5d0814546190976bc6c4e18bd0630824c91e9826f93c7735371f4565a8e84c706737d360873fac383ab1cf289f9bf640b92c570cb1ba1875  2     27    02a0e049...
-  5    840c0ef13023f93e853a4555e5b46e761fc822d4e2d9131581fdabe5cb85f13e2fb45a0afd5f5529fbde5216d22a88dddec4b29eeca5ac7a7b1b1813fcc1399a  2     16    02a0e049...
-  4    4d6e0467431a409185e102301b8bdcbdb9a2b177de99ae139315d9b0fe5e27aa3bd43bda6b168f3ac8f45e84b069292ddc38ec6a1848df16f92cd35c5bd6e6c9  2     20    02a0e049...
-  3    9743e39eadf20e922e242f607d847445aba18dacdf03170bf71e427046a605744c84d9cb7d440d257c21d11e4da47e535ba7525afcbbc037da226db48a18f4a8  2     22    02a0e049...
-  2    6d7e641232649da9b3c23413a31db09ebec7c66f8207a39c6dfcb21392b033163500d367f8592b476e0b9c1e621d6c14e8c0546a7377d9093fb860a00c1ce2d3  2     38    02a0e049...
-  1    7252a5ab3440ee332aef5830b132cf9dc3883180fb086b2a50f62bf7c6c8ff08311b8009da3b3f6e38d3cfac1b3ac4cfd9a864d6a053c8b27df63d1c730469b3  2     120   02a0e049...
-  0    8821a997796f3e38a28dbb8e418ed5cbdd60b8a2e013edd20bca7ebf9a58f1302740374d98db76137e48b41dc404deda40ca4d2303a349133991513d0fec4074  0     0     02a0e049...
+  NUM  BLOCK_ID                                                                                                                          BATS  TXNS  SIGNER
+  2    5d4b9ba0c9b0615fc21fa89fe88c20fc3d2e2dba02e4b5e0df15ace9283dc4c62bc7b222d897c784ec1e4cc773759837635011e35603f4e6940ebca2e154d3ba  2     10    038b5e...
+  1    05d2f2101d30c7d9cc31b8f416818acf55a283828fcd45052fd51359e89c3a6a60c6f87354e2000e759754bf829bd375d27fcac495a378f00179efc140f0fee9  1     1     038b5e...
+  0    8b2781db2a19936d8873e7e0a44c5294ea1ad110984d565c3fb669169dfd3514790405634a27225f6ab0cfd0301c434adfa5df81a221f87919c122181f344362  1     1     038b5e...
 
 
 Viewing a Particular Block
 --------------------------
 
-Using the `sawtooth block list` command as shown above, copy the block id you want to
-view, then use the `sawtooth block show` command (truncated output shown):
+Using the output from the ``sawtooth block list`` above, copy the block id
+you want to view, then paste it in place of ``{BLOCK_ID}`` in the following
+``sawtooth block show`` command:
 
 .. code-block:: console
 
-    $ sawtooth block show 22e79778855768ea380537fb13ad210b84ca5dd1cdd555db7792a9d029113b0a183d5d71cc5558e04d10a9a9d49031de6e86d6a7ddb25325392d15bb7ccfd5b7
+    $ sawtooth block show {BLOCK_ID}
 
-
-The output of the command will be similar to this:
+The output of this command will be similar to this example (truncated output
+shown):
 
 .. code-block:: console
 
@@ -461,14 +461,13 @@ The output of the command will be similar to this:
 Viewing Global State
 --------------------
 
-Use the command `sawtooth state list` to list the nodes in the Merkle tree
-(truncated list):
+Use the command ``sawtooth state list`` to list the nodes in the Merkle tree:
 
 .. code-block:: console
 
   $ sawtooth state list
 
-The output of the command will be similar to this:
+The output of the command will be similar to this truncated list:
 
 .. code-block:: console
 
@@ -489,12 +488,14 @@ The output of the command will be similar to this:
 Viewing Data in a Node
 ----------------------
 
-Using the `sawtooth state list` command show above, copy the node id you want to
-view, then use the `sawtooth state show` command to view the node:
+You can use ``sawtooth state show`` command to view data for a specific node.
+Using the output from the ``sawtooth state list`` command above, copy the
+node id you want to view, then paste it in place of ``{NODE_ID}`` in the
+following command:
 
 .. code-block:: console
 
-  $ sawtooth state show 1cf126ddb507c936e4ee2ed07aa253c2f4e7487af3a0425f0dc7321f94be02950a081ab7058bf046c788dbaf0f10a980763e023cde0ee282585b9855e6e5f3715bf1fe
+  $ sawtooth state show {NODE_ID}
 
 
 The output of the command will be similar to this:
