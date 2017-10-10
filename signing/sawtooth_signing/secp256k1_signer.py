@@ -30,6 +30,7 @@ except ImportError:
 LOGGER = logging.getLogger(__name__)
 __CONTEXTBASE__ = secp256k1.Base(ctx=None, flags=secp256k1.ALL_FLAGS)
 __CTX__ = __CONTEXTBASE__.ctx
+__PK__ = secp256k1.PublicKey(ctx=__CTX__)  # Cache object to use as factory
 
 
 def generate_privkey(privkey_format='wif'):
@@ -114,8 +115,7 @@ def _decode_pubkey(serialized_pubkey, encoding_format='hex'):
         serialized_pubkey = binascii.unhexlify(serialized_pubkey)
     elif encoding_format != 'bytes':
         raise ValueError("Unrecognized pubkey encoding format")
-    pub = secp256k1.PrivateKey(
-        ctx=__CTX__).pubkey.deserialize(serialized_pubkey)
+    pub = __PK__.deserialize(serialized_pubkey)
     return secp256k1.PublicKey(pub, ctx=__CTX__)
 
 
