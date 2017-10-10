@@ -103,7 +103,7 @@ One of the settings in the genesis block that should be set is the
 key that is authorized to set and change configuration settings, as
 shown below using the ``sawtooth config genesis`` command.
 
-To create the genesis block, open a new terminal window (the validator window)
+To create the genesis block, open a new terminal window
 and run the following commands as root:
 
 .. code-block:: console
@@ -129,7 +129,7 @@ Starting the Validator
 ----------------------
 
 To start a validator that listens locally on the default ports, run the
-following commands from the validator window:
+following commands:
 
 .. code-block:: console
 
