@@ -19,9 +19,11 @@ from threading import Condition
 from threading import Thread
 import queue
 import uuid
+import functools
 
 from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.metrics.wrappers import TimerWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +33,7 @@ def _gen_message_id():
 
 
 class Dispatcher(Thread):
-    def __init__(self, timeout=10):
+    def __init__(self, timeout=10, metrics_registry=None):
         super().__init__(name='Dispatcher')
         self._timeout = timeout
         self._msg_type_handlers = {}
@@ -40,6 +42,19 @@ class Dispatcher(Thread):
         self._send_last_message = {}
         self._message_information = {}
         self._condition = Condition()
+        self._metrics_registry = metrics_registry
+        self._dispatch_timers = {}
+
+    def _get_dispatch_timer(self, tag):
+        if tag not in self._dispatch_timers:
+            if self._metrics_registry:
+                self._dispatch_timers[tag] = TimerWrapper(
+                    self._metrics_registry.timer(
+                        'dispatch_execution_time', tags=[
+                            'handler={}'.format(tag)]))
+            else:
+                self._dispatch_timers[tag] = TimerWrapper()
+        return self._dispatch_timers[tag]
 
     def add_send_message(self, connection, send_message):
         """Adds a send_message function to the Dispatcher's
@@ -147,14 +162,18 @@ class Dispatcher(Thread):
             handler_manager = next(collection)
             future = handler_manager.execute(connection_id, message.content)
 
-            def do_next(future):
+            timer_tag = type(handler_manager.handler).__name__
+            timer_ctx = self._get_dispatch_timer(timer_tag).time()
+
+            def do_next(timer_ctx, future):
+                timer_ctx.stop()
                 try:
                     self._determine_next(message_id, future)
                 except Exception:  # pylint: disable=broad-except
                     LOGGER.exception(
                         "Unhandled exception while determining next")
 
-            future.add_done_callback(do_next)
+            future.add_done_callback(functools.partial(do_next, timer_ctx))
         except IndexError:
             # IndexError is raised if done with handlers
             del self._message_information[message_id]
@@ -262,6 +281,10 @@ class _HandlerManager(object):
         """
         self._executor = executor
         self._handler = handler
+
+    @property
+    def handler(self):
+        return self._handler
 
     def execute(self, connection_id, message):
         return self._executor.submit(
