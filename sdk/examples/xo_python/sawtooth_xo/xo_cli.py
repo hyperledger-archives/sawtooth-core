@@ -184,6 +184,8 @@ def create_parser(prog_name):
 
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
+    subparsers.required = True
+
     add_create_parser(subparsers, parent_parser)
     add_init_parser(subparsers, parent_parser)
     add_reset_parser(subparsers, parent_parser)
