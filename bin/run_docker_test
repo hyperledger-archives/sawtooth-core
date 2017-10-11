@@ -16,10 +16,8 @@
 
 import subprocess
 import os
-import sys
 import argparse
 import time
-import traceback
 import logging
 import yaml
 
@@ -30,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 600
 COMPOSE_DOWN_RETRY_TIMEOUT = 60
-DOCKER_PS_TIMEOUT=30
+DOCKER_PS_TIMEOUT = 30
 
 
 class RunDockerTestError(BaseException):
@@ -74,8 +72,6 @@ def main():
 
     compose_down = compose + ['down', '--remove-orphans']
 
-    compose_kill = compose + ['kill']
-
     scrape = [
         'docker', 'ps', '-a',
         '--format={{.Names}},{{.Image}},{{.Label "install-type"}}',
@@ -93,7 +89,8 @@ def main():
     _validate_compose_dict(compose_dict, test_service, compose_file)
 
     if not args.clean:
-        _check_for_existing_containers(compose_file, compose_dict, isolation_id)
+        _check_for_existing_containers(
+            compose_file, compose_dict, isolation_id)
 
     for service in compose_dict['services']:
         scrape += [
@@ -102,7 +99,6 @@ def main():
 
     timer = Timer(args.timeout)
 
-
     # Run tests
     try:
         if not args.clean:
@@ -110,9 +106,13 @@ def main():
             timer.start()
 
             LOGGER.info("Bringing up with %s", str(compose_up))
+
             try:
                 # 1. Run the tests
-                subprocess.run(compose_up, check=True, timeout=timer.remaining())
+                subprocess.run(
+                    compose_up,
+                    check=True,
+                    timeout=timer.remaining())
 
             except FileNotFoundError as err:
                 LOGGER.error("Bad docker-compose up command")
@@ -158,24 +158,25 @@ def main():
                     scrape, stdout=subprocess.PIPE,
                     timeout=timer.remaining(), check=True
                 ).stdout.decode().strip()
+
                 for line in info.split('\n'):
                     container, image, install_type = line.split(',')
                     LOGGER.info(
-                        "Container {} ran image {} with install-type {}".format(
-                            container, image, install_type
-                        )
+                        "Container %s ran image %s with install-type %s",
+                        container, image, install_type
                     )
 
             except BaseException:
                 LOGGER.error("Could not gather information about image used.")
 
-        else: # cleaning
+        else:  # cleaning
             exit_status = 0
 
         LOGGER.info("Shutting down with: %s", str(compose_down))
+
         shutdown_success = False
-        for i in range(2):
-            if shutdown_success == False:
+        for _ in range(2):
+            if not shutdown_success:
 
                 # Always give compose down time to cleanup
                 timeout = max(timer.remaining(), COMPOSE_DOWN_RETRY_TIMEOUT)
@@ -206,7 +207,9 @@ def main():
         exit(int(exit_status))
 
     except KeyboardInterrupt:
-        subprocess.run(compose_down, check=True,
+        subprocess.run(
+            compose_down,
+            check=True,
             timeout=COMPOSE_DOWN_RETRY_TIMEOUT)
         exit(1)
 
@@ -254,7 +257,9 @@ def parse_args():
 
 
 def _get_test_service(compose_file):
-    return os.path.basename(compose_file).replace('.yaml', '').replace('_', '-')
+    return os.path.basename(
+        compose_file
+    ).replace('.yaml', '').replace('_', '-')
 
 
 def _validate_compose_dict(compose_dict, test_service, compose_file):
@@ -278,7 +283,8 @@ def _check_for_existing_containers(compose_file, compose_dict, isolation_id):
                     )
                 )
 
-def _check_for_existing_network(isolation_id):
+
+def _check_for_existing_network(isolation_id, compose_file):
     networks = _get_existing_networks()
     network_to_create = '{}_default'.format(isolation_id)
     if network_to_create in networks:
