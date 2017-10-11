@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"sawtooth_seth/client"
+	"strconv"
 )
 
 type ContractCall struct {
@@ -30,9 +31,9 @@ type ContractCall struct {
 		Address string `positional-arg-name:"address" description:"Address of contract to call"`
 		Data    string `positional-arg-name:"data" required:"true" description:"Input data to pass to contract when called; must conform to contract ABI"`
 	} `positional-args:"true"`
-	Gas      uint64 `short:"g" long:"gas" description:"Gas limit for contract creation" default:"0"`
-	Nonce    uint64 `short:"n" long:"nonce" description:"Current nonce of moderator account" default:"0"`
-	Wait     int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed" default:"0" optional:"true" optional-value:"60"`
+	Gas      uint64 `short:"g" long:"gas" description:"Gas limit for contract creation" default:"90000"`
+	Nonce    string `short:"n" long:"nonce" description:"Current nonce of moderator account"`
+	Wait     int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed; if flag passed, default is 60 seconds; if no flag passed, do not wait" optional:"true" optional-value:"60"`
 	Chaining bool   `short:"c" long:"chaining-enabled" description:"If true, enables contract chaining" defalt:"False"`
 }
 
@@ -73,7 +74,20 @@ func (args *ContractCall) Run(config *Config) error {
 		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
 	}
 
-	clientResult, err := client.MessageCall(priv, addr, data, args.Nonce, args.Gas, args.Wait, args.Chaining)
+	var nonce uint64
+	if args.Nonce == "" {
+		nonce, err = client.LookupAccountNonce(priv)
+		if err != nil {
+			return err
+		}
+	} else {
+		nonce, err = strconv.ParseUint(args.Nonce, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Invalid nonce `%v`: ", args.Nonce, err)
+		}
+	}
+
+	clientResult, err := client.MessageCall(priv, addr, data, nonce, args.Gas, args.Wait, args.Chaining)
 	if err != nil {
 		return fmt.Errorf("Problem submitting account creation transaction: %v", err)
 	}
