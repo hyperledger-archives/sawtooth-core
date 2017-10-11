@@ -120,7 +120,7 @@ def main():
                 exit(1)
 
             except subprocess.CalledProcessError as err:
-                LOGGER.error("Failed to start test.")
+                LOGGER.error("Test error")
                 LOGGER.exception(err)
                 exit_status = 1
 
