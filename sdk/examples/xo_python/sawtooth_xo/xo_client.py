@@ -44,8 +44,12 @@ class XoClient:
             with open(keyfile) as fd:
                 self._private_key = fd.read().strip()
                 fd.close()
-        except:
-            raise IOError("Failed to read keys.")
+        except FileNotFoundError:
+            raise XoException(
+                'Could not find private key file {}; '
+                'try running `xo init`'.format(keyfile))
+        except OSError:
+            raise XoException("Failed to read keys.")
 
         self._public_key = signing.generate_pubkey(self._private_key)
 
