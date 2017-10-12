@@ -21,6 +21,7 @@ import threading
 import queue
 
 from sawtooth_validator.protobuf import processor_pb2
+from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf import state_delta_pb2
@@ -398,8 +399,8 @@ class TransactionExecutor(object):
                 futures = {}
                 for connection_id in self.processors.get_all_processors():
                     fut = self._service.send(
-                        validator_pb2.Message.TP_PING,
-                        processor_pb2.TpPing().SerializeToString(),
+                        validator_pb2.Message.PING_REQUEST,
+                        network_pb2.PingRequest().SerializeToString(),
                         connection_id=connection_id)
                     futures[fut] = connection_id
                 for fut in futures:
@@ -407,7 +408,7 @@ class TransactionExecutor(object):
                         fut.result(timeout=10)
                     except FutureTimeoutError:
                         LOGGER.info(
-                            "%s did not respond to the TpPing, removing "
+                            "%s did not respond to the Ping, removing "
                             "transaction processor.", futures[fut])
                         self._remove_broken_connection(futures[fut])
         except Exception:  # pylint: disable=broad-except

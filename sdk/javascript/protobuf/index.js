@@ -36,8 +36,7 @@ TpStateSetResponse.Status = TpStateSetResponse.nested.Status.values
 const TpStateGetResponse = root.lookup('TpStateGetResponse')
 TpStateGetResponse.Status = TpStateGetResponse.nested.Status.values
 
-const TpPingResponse = root.lookup('TpPingResponse')
-TpPingResponse.Status = TpPingResponse.nested.Status.values
+const PingResponse = root.lookup('PingResponse')
 
 const Message = root.lookup('Message')
 Message.MessageType = Message.nested.MessageType.values
@@ -66,7 +65,7 @@ module.exports = {
 
   TpProcessResponse,
 
-  TpPingResponse,
+  PingResponse,
 
   //
   // State

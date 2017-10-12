@@ -29,6 +29,7 @@
 #include <zmqpp/socket_options.hpp>
 
 #include "proto/processor.pb.h"
+#include "proto/network.pb.h"
 
 #include "sawtooth/message_dispatcher.h"
 
@@ -102,16 +103,15 @@ void MessageDispatcher::ReceiveMessage() {
             this->processing_request_socket.send(out_zmsg);
             break;
         }
-        case Message_MessageType_TP_PING: {
+        case Message_MessageType_PING_REQUEST: {
             LOG4CXX_DEBUG(
                 logger,
-                "Received TP_PING with correlation_id: "
+                "Received PING_REQUEST with correlation_id: "
                     << msg_proto->correlation_id());
 
             // Create a ping response message, set the status to OK, and
             // serialize it.
-            TpPingResponse response;
-            response.set_status(TpPingResponse::OK);
+            PingResponse response;
 
             std::stringstream proto_stream;
             response.SerializeToOstream(&proto_stream);
@@ -120,7 +120,7 @@ void MessageDispatcher::ReceiveMessage() {
             // serialize it as well.
             Message msg;
             std::string msg_data;
-            msg.set_message_type(Message_MessageType_TP_PING_RESPONSE);
+            msg.set_message_type(Message_MessageType_PING_RESPONSE);
             msg.set_correlation_id(msg_proto->correlation_id());
             msg.set_content(proto_stream.str());
             msg.SerializeToString(&msg_data);

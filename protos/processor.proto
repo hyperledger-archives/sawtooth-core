@@ -101,16 +101,3 @@ message TpProcessResponse {
     // data that will be propagated back to the transaction submitter.
     bytes extended_data = 3;
 }
-
-
-message TpPing {
-}
-
-message TpPingResponse {
-    enum Status {
-        OK = 0;
-        ERROR = 1;
-    }
-
-    Status status = 1;
-}

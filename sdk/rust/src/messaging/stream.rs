@@ -108,7 +108,7 @@ mod tests {
 
     fn make_ping(correlation_id: &str)  -> Message {
         let mut message = Message::new();
-        message.set_message_type(Message_MessageType::NETWORK_PING);
+        message.set_message_type(Message_MessageType::PING_REQUEST);
         message.set_correlation_id(String::from(correlation_id));
         message.set_content(String::from("PING").into_bytes());
 

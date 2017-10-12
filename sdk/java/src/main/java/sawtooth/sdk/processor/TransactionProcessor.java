@@ -23,7 +23,7 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Message;
-import sawtooth.sdk.protobuf.TpPingResponse;
+import sawtooth.sdk.protobuf.PingResponse;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TpProcessResponse;
 import sawtooth.sdk.protobuf.TpRegisterRequest;
@@ -203,14 +203,13 @@ public class TransactionProcessor implements Runnable {
       if (!this.handlers.isEmpty()) {
         this.currentMessage = this.stream.receive();
         if (this.currentMessage != null) {
-          if (this.currentMessage.getMessageType() == Message.MessageType.TP_PING) {
-            logger.info("Recieved TpPing Message.");
-            TpPingResponse pingResponse = TpPingResponse
+          if (this.currentMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
+            logger.info("Recieved Ping Message.");
+            PingResponse pingResponse = PingResponse
                 .newBuilder()
-                .setStatus(TpPingResponse.Status.OK)
                 .build();
             this.stream.sendBack(
-                Message.MessageType.TP_PING_RESPONSE,
+                Message.MessageType.PING_RESPONSE,
                 this.currentMessage.getCorrelationId(),
                 pingResponse.toByteString());
             this.currentMessage = null;

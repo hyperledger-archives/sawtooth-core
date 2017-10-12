@@ -58,18 +58,14 @@ message Message {
         TP_STATE_DEL_REQUEST = 11;
         // State delete response from the validator/context_manager to the transaction processor
         TP_STATE_DEL_RESPONSE = 12;
-        // Message to check if a transaction processor is still connected.
-        TP_PING = 13;
-        // Response from transaction processor to tell the validator it received the ping
-        TP_PING_RESPONSE = 14;
         // Message to append data to a transaction receipt
-        TP_ADD_RECEIPT_DATA_REQUEST = 15;
+        TP_ADD_RECEIPT_DATA_REQUEST = 13;
         // Response from validator to tell transaction processor that data has been appended
-        TP_ADD_RECEIPT_DATA_RESPONSE = 16;
+        TP_ADD_RECEIPT_DATA_RESPONSE = 14;
         // Message to add event
-        TP_ADD_EVENT_REQUEST = 17;
+        TP_ADD_EVENT_REQUEST = 15;
         // Response from validator to tell transaction processor that event has been created
-        TP_ADD_EVENT_RESPONSE = 18;
+        TP_ADD_EVENT_RESPONSE = 16;
 
         // Submission of a batchlist from the web api or another client to the validator
         CLIENT_BATCH_SUBMIT_REQUEST = 100;
@@ -130,10 +126,9 @@ message Message {
         GOSSIP_GET_PEERS_REQUEST = 210;
         GOSSIP_GET_PEERS_RESPONSE = 211;
 
-        NETWORK_PING = 300;
-        NETWORK_ACK = 301;
-        NETWORK_CONNECT = 302;
-        NETWORK_DISCONNECT = 303;
+        NETWORK_ACK = 300;
+        NETWORK_CONNECT = 301;
+        NETWORK_DISCONNECT = 302;
 
         // Message types for State Delta Exports
         STATE_DELTA_SUBSCRIBE_REQUEST = 400;
@@ -153,6 +148,9 @@ message Message {
         AUTHORIZATION_CHALLENGE_RESPONSE = 605;
         AUTHORIZATION_CHALLENGE_SUBMIT = 606;
         AUTHORIZATION_CHALLENGE_RESULT = 607;
+
+        PING_REQUEST = 700;
+        PING_RESPONSE = 701;
     }
     // The type of message, used to determine how to 'route' the message
     // to the appropriate handler as well as how to deserialize the
