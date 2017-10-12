@@ -3,7 +3,7 @@ Using Sawtooth with Docker
 **************************
 
 
-This document walks through the process of setting up Hyperledger Sawtooth
+This procedure walks through the process of setting up Hyperledger Sawtooth
 for application development using Docker Compose, introduces some of the basic
 Sawtooth concepts necessary for application development, and walks through
 performing the following tasks:
@@ -18,7 +18,7 @@ tutorials that guide you in performing app development tasks, such as
 implementing business logic with transaction families and writing clients
 which use Sawtooth's REST API.
 
-Overview Of Sawtooth Components
+Overview of Sawtooth Components
 ===============================
 
 A running Sawtooth network consists of the following applications or processes:
@@ -39,7 +39,7 @@ Install Docker Engine And Docker Compose
 Windows
 -------
 
-Install the latest version of 
+Install the latest version of
 `Docker Engine for Windows <https://docs.docker.com/docker-for-windows/install/>`_.
 
 On Windows, Docker Compose is installed automatically when you
@@ -49,7 +49,7 @@ install Docker Engine.
 macOS
 -----
 
-Install the latest version of 
+Install the latest version of
 `Docker Engine for macOS <https://docs.docker.com/docker-for-mac/install/>`_.
 
 On macOS, Docker Compose is installed automatically when you
@@ -61,7 +61,7 @@ Linux
 
 On Linux, follow these steps:
 
-#. Install `Docker Engine <https://docs.docker.com/engine/installation/linux/ubuntu>`_. 
+#. Install `Docker Engine <https://docs.docker.com/engine/installation/linux/ubuntu>`_.
 #. Install `Docker Compose <https://github.com/docker/compose/releases>`_.
 
 .. warning::
@@ -73,7 +73,7 @@ On Linux, follow these steps:
 Environment Setup
 =================
 
-Download The Docker Compose File
+Download the Docker Compose File
 --------------------------------
 
 A Docker Compose file is provided which defines the process for constructing a
@@ -81,18 +81,18 @@ simple Sawtooth environment. This environment includes the following
 containers:
 
 * A single validator using dev-mode consensus
-* A REST-API connected to the validator
-* Settings, IntegerKey, and XO transaction processors
-* A client container for running the CLI tools
+* A REST API connected to the validator
+* The Settings, IntegerKey, and XO transaction processors
+* A client container for running the CLI commands
 
-The compose file also specifies the container images to download from Docker
-Hub and the network settings needed for all the containers to communicate
+The Docker Compose file also specifies the container images to download from
+Docker Hub and the network settings needed for all the containers to communicate
 correctly.
 
-This docker compose file can serve as the basis for your own multi-container
-sawtooth development environment or application.
+This Docker Compose file can serve as the basis for your own multi-container
+Sawtooth development environment or application.
 
-Download the docker compose file `here <./sawtooth-default.yaml>`_.
+Download the Docker Compose file `here <./sawtooth-default.yaml>`_.
 
 
 Proxy Settings (Optional)
@@ -101,26 +101,18 @@ Proxy Settings (Optional)
 To configure Docker to work with an HTTP or HTTPS proxy server, follow the
 instructions for your  operating system:
 
-
-Windows
-+++++++
-
-See the instructions for proxy configuration in
-`Get Started with Docker for Windows <https://docs.docker.com/docker-for-windows/#proxies>`_.
+* Windows - See the instructions for proxy configuration in
+  `Get Started with Docker for Windows
+  <https://docs.docker.com/docker-for-windows/#proxies>`_.
 
 
-macOS
-+++++
-
-See the instructions for proxy configuration in
-`Get Started with Docker for Mac <https://docs.docker.com/docker-for-mac/>`_.
+* macOS - See the instructions for proxy configuration in
+  `Get Started with Docker for Mac <https://docs.docker.com/docker-for-mac/>`_.
 
 
-Linux
-+++++
-
-See the instructions for proxy configuration in
-`Control and configure Docker with Systemd <https://docs.docker.com/engine/admin/systemd/#httphttps-proxy>`_.
+* Linux - See the instructions for proxy configuration in
+  `Control and configure Docker with
+  Systemd <https://docs.docker.com/engine/admin/systemd/#httphttps-proxy>`_.
 
 
 Starting Sawtooth
@@ -144,9 +136,9 @@ To start up the environment, perform the following tasks:
   To learn more about the startup process, see :doc:`ubuntu`.
 
 
-Downloading the docker images that comprise the Sawtooth demo
+Downloading the Docker images that comprise the Sawtooth demo
 environment can take several minutes. Once you see the containers
-registering and creating initial blocks you can move on to the next step.
+registering and creating initial blocks, you can move on to the next step.
 
 .. code-block:: console
 
@@ -166,9 +158,9 @@ Stopping Sawtooth
 
 If the environment needs to be reset or stopped for any reason, it can be
 returned to the default state by logging out of the client container, then
-pressing CTRL-c from the window where you originally ran docker-compose. Once
-the containers have all shut down run 'docker-compose -f sawtooth-default.yaml
-down'.
+pressing CTRL-c from the window where you originally ran ``docker-compose``. Once
+the containers have all shut down, run ``docker-compose -f sawtooth-default.yaml
+down``.
 
 Sample output after pressing CTRL-c:
 
@@ -201,20 +193,22 @@ Logging Into The Client Container
 The client container is used to run sawtooth CLI commands, which is the usual
 way to interact with validators or validator networks.
 
-Log into the client container by running the following command from a terminal
-window:
+Log into the client container by opening a new terminal window and
+running the following command. Note that ``sawtooth-client-default`` specifies
+the client container name.
 
 .. code-block:: console
 
   % docker exec -it sawtooth-client-default bash
 
-.. warning::
+
+.. Important::
 
   Your environment is ready for experimenting with Sawtooth. However, any work
   done in this environment will be lost once the container exits. The demo
-  compose file provided is useful as a starting point for the creation of your
+  Docker Compose file is useful as a starting point for the creation of your
   own Docker-based development environment. In order to use it for app
-  development, you need to take additional steps, such as mounting a host
+  development, you would need to take additional steps, such as mounting a host
   directory into the container. See `Docker's documentation
   <https://docs.docker.com/>`_ for details.
 
@@ -222,22 +216,24 @@ window:
 Confirming Connectivity
 -----------------------
 
-To confirm that a validator is up and running, and reachable from the client
-container, use this curl command:
+To confirm that a validator is running and reachable from the client
+container, run this ``curl`` command as root:
 
 .. code-block:: console
 
   root@75b380886502:/# curl http://rest-api:8080/blocks
 
 
-To check connectivity from the host computer, use this curl command:
+To check connectivity from the host computer, open a new terminal window on your
+host system and use this curl command:
 
 .. code-block:: console
 
   $ curl http://localhost:8080/blocks
 
 
-If the validator is running and reachable, the output should be similar to:
+If the validator is running and reachable, the output for each command
+should be similar to this example:
 
 .. code-block:: console
 
@@ -264,34 +260,31 @@ If the validator is running and reachable, the output should be similar to:
     }
   }root@75b380886502:/#
 
-If the validator process, or the validator container, is not running, the curl
-command will return nothing, or time out.
+If the validator process or the validator container is not running, the ``curl``
+command will time out or return nothing.
 
 
-Using The CLI Commands
-======================
+Using Sawtooth with CLI Commands
+================================
 
-Creating And Submitting Transactions
-------------------------------------
+Creating and Submitting Transactions with intkey
+------------------------------------------------
 
-Intkey
-++++++
+The ``intkey`` CLI command is provided to create sample transactions of the
+intkey transaction type for testing purposes. This step uses ``intkey`` to
+prepare batches of intkey transactions which set a few keys to random values,
+then randomly increment and decrement those values. These batches are saved
+locally, then submitted to the validator.
 
-The **intkey** CLI command is provided to create sample transactions of the
-intkey transaction type for testing purposes. Using it you will be able prepare
-batches of intkey transactions that *set* a few keys to random values, then
-randomly *inc* and *dec* those values. These batches will be saved locally, and
-then can then be submitted to the validator.
-
-To use, run the following commands from the client container:
+Run the following commands from the client container:
 
 .. code-block:: console
 
   $ intkey create_batch --count 10 --key-count 5
   $ intkey load -f batches.intkey -U http://rest-api:8080
 
-The terminal window in which you ran the docker-compose command will begin
-logging output as the validator and intkey transaction processor handle the
+The terminal window in which you ran the ``docker-compose`` command will begin
+logging output as the validator and ``intkey`` transaction processor handle the
 transactions just submitted:
 
 .. code-block:: console
@@ -310,14 +303,14 @@ transactions just submitted:
   intkey-tp-python_1  | [21:02:53.202 DEBUG    handler] Incrementing "ZeuYwh" by 1
 
 
-Submitting Transactions With Sawtooth Submit
-++++++++++++++++++++++++++++++++++++++++++++
+Submitting Transactions with sawtooth batch submit
+--------------------------------------------------
 
-You can also submit transactions, including intkey transactions, with the 
-``sawtooth batch submit`` command.
+Instead of using ``intkey load``, you can also submit transactions,
+including intkey transactions, with the ``sawtooth batch submit`` command.
 
-For example, submit the transactions in the file ``batches.intkey`` generated above
-with this command:
+For example, you can submit the transactions in the file ``batches.intkey``
+as generated above with this command:
 
 .. code-block:: console
 
@@ -327,15 +320,16 @@ with this command:
 Viewing the Block Chain
 -----------------------
 
-You can view the blocks stored in the blockchain using the sawtooth CLI.
+You can view the blocks stored in the blockchain using the
+``sawtooth block`` subcommand.
 
 .. note::
 
   The sawtooth CLI provides help for all subcommands. For example, to get help
   for the ``block`` subcommand, enter the command ``sawtooth block -h``.
 
-Viewing List Of Blocks
-++++++++++++++++++++++
+Viewing the List of Blocks
+++++++++++++++++++++++++++
 
 Enter the command ``sawtooth block list`` to view the blocks stored by the state:
 
@@ -347,31 +341,24 @@ The output of the command will be similar to this:
 
 .. code-block:: console
 
-  NUM  BLOCK_ID
-  8    22e79778855768ea380537fb13ad210b84ca5dd1cdd555db7792a9d029113b0a183d5d71cc5558e04d10a9a9d49031de6e86d6a7ddb25325392d15bb7ccfd5b7  2     8     02a0e049...
-  7    c84346f5e18c6ce29f1b3e6e31534da7cd538533457768f86a267053ddf73c4f1139c9055be283dfe085c94557de24726191eee9996d4192d21fa6acb0b29152  2     20    02a0e049...
-  6    efc0d6175b6329ac5d0814546190976bc6c4e18bd0630824c91e9826f93c7735371f4565a8e84c706737d360873fac383ab1cf289f9bf640b92c570cb1ba1875  2     27    02a0e049...
-  5    840c0ef13023f93e853a4555e5b46e761fc822d4e2d9131581fdabe5cb85f13e2fb45a0afd5f5529fbde5216d22a88dddec4b29eeca5ac7a7b1b1813fcc1399a  2     16    02a0e049...
-  4    4d6e0467431a409185e102301b8bdcbdb9a2b177de99ae139315d9b0fe5e27aa3bd43bda6b168f3ac8f45e84b069292ddc38ec6a1848df16f92cd35c5bd6e6c9  2     20    02a0e049...
-  3    9743e39eadf20e922e242f607d847445aba18dacdf03170bf71e427046a605744c84d9cb7d440d257c21d11e4da47e535ba7525afcbbc037da226db48a18f4a8  2     22    02a0e049...
-  2    6d7e641232649da9b3c23413a31db09ebec7c66f8207a39c6dfcb21392b033163500d367f8592b476e0b9c1e621d6c14e8c0546a7377d9093fb860a00c1ce2d3  2     38    02a0e049...
-  1    7252a5ab3440ee332aef5830b132cf9dc3883180fb086b2a50f62bf7c6c8ff08311b8009da3b3f6e38d3cfac1b3ac4cfd9a864d6a053c8b27df63d1c730469b3  2     120   02a0e049...
-  0    8821a997796f3e38a28dbb8e418ed5cbdd60b8a2e013edd20bca7ebf9a58f1302740374d98db76137e48b41dc404deda40ca4d2303a349133991513d0fec4074  0     0     02a0e049...
+  NUM  BLOCK_ID                                                                                                                          BATS  TXNS  SIGNER
+  1    e8377628b299f4a3ff11ed173958205f30c1db12ea136ee75ab1b659d43dccd62bc994592faaca1d98d73044da902e9a8ebaced1f1479046a2f829e02e8f7e7e  11    63    027da204...
+  0    97b210dd655fce913a76ec02c0fc131c8ec79b14592ec5170c55fea0c0c9fc7b6b84ba61d94d27d31a220d7301b33dd34c56d5221cc04d5724b9c97c34d70234  1     1     027da204...
 
 
-Viewing A Particular Block
+Viewing a Particular Block
 ++++++++++++++++++++++++++
 
 From the output generated by the ``sawtooth block list`` command, copy the id
-of a block you want to get more info about, then paste it where specified below
-in the ``sawtooth block show`` command:
+of a block you want to get more info about, then paste it in place of
+``{BLOCK_ID}`` in the following ``sawtooth block show`` command:
 
 .. code-block:: console
 
-  $ sawtooth block show --url http://rest-api:8080 {BLOCK ID}
+  $ sawtooth block show --url http://rest-api:8080 {BLOCK_ID}
 
 The output of this command includes all data stored under that block, and can be
-quite lengthy. Is should look something like this:
+quite long. It should look something like this:
 
 .. code-block:: console
 
@@ -416,17 +403,16 @@ quite lengthy. Is should look something like this:
 Viewing Global State
 --------------------
 
-Viewing List of Nodes (Addresses)
-+++++++++++++++++++++++++++++++++
+Viewing the List of Nodes (Addresses)
++++++++++++++++++++++++++++++++++++++
 
-Use the command ``sawtooth state list`` to list the nodes in the Merkle tree
-(truncated list):
+Use the command ``sawtooth state list`` to list the nodes in the Merkle tree:
 
 .. code-block:: console
 
   $ sawtooth state list --url http://rest-api:8080
 
-The output of the command will be similar to this:
+The output of the command will be similar to this truncated list:
 
 .. code-block:: console
 
@@ -441,19 +427,20 @@ The output of the command will be similar to this:
 
 
 
-Viewing Data At An Address
+Viewing Data at an Address
 ++++++++++++++++++++++++++
 
 From the output generated by the ``sawtooth state list`` command, copy the
-address you want to view, then paste it where where specified below in the
-``sawtooth state show`` command:
+address you want to view, then paste it in place of ``{STATE_ADDRESS}``
+in the following ``sawtooth state show`` command:
+
 
 .. code-block:: console
 
-  $ sawtooth state show --url http://rest-api:8080 {STATE ADDRESS}
+  $ sawtooth state show --url http://rest-api:8080 {STATE_ADDRESS}
 
 
-The output of the command will include both the bytes stored at that address,
+The output of the command will include both the bytes stored at that address
 and the block id of the *chain head* the current state is tied to. It should
 look similar to this:
 
@@ -464,15 +451,14 @@ look similar to this:
 
 
 
-Connecting To The REST API
+Connecting to the REST API
 ==========================
 
 From the Client Container
 -------------------------
 
-Use curl to confirm that you can connect to the REST API from the host.
-
-Enter the following command from the client container:
+Use ``curl`` to confirm that you can connect to the REST API from the host.
+Enter the following command from the terminal window for the client container:
 
 .. code-block:: console
 
@@ -482,29 +468,28 @@ Enter the following command from the client container:
 From the Host Operating System
 ------------------------------
 
-Use curl to confirm that you can connect to the REST API from the host.
-
-Enter the following command from a terminal window:
+Use ``curl`` to confirm that you can connect to the REST API from the host.
+Enter the following command from the terminal window for your host system:
 
 .. code-block:: console
 
   $ curl http://localhost:8080/blocks
 
 
-Container Overview
-==================
+Connecting to Each Container
+============================
 
 The Client Container
 --------------------
 
-No Sawtooth components are automatically started in this container
+* Submits transactions
+* Runs ``sawtooth`` CLI commands
+* Container name: ``sawtooth-client-default``
 
-The client container's primary uses:
+No Sawtooth components are automatically started in this container.
 
-* Submitting transactions
-* Running sawtooth CLI commands
-
-Log into this container by running this command from the host computer's terminal:
+Log into this container by running this command from the host computer's
+terminal window:
 
 .. code-block:: console
 
@@ -515,17 +500,18 @@ The Validator Container
 -----------------------
 
 * Runs a single validator
-* Available to the other containers and host on TCP port 4004
-* Hostname: validator
+* Available to the other containers and host on TCP port 4004 (default)
+* Hostname: ``validator``
+* Container name: ``sawtooth-validator-default``
 
 Log into this container by running this command from the host computer's
-terminal:
+terminal window:
 
 .. code-block:: console
 
   $ docker exec -it sawtooth-validator-default bash
 
-To see which components are running, run this command from the container:
+To see which components are running, use this command from the container:
 
 .. code-block:: console
 
@@ -546,9 +532,10 @@ The REST API Container
 
 * Runs the REST API
 * Available to the client container and host on TCP port 8080
+* Container name: ``sawtooth-rest-api-default``
 
 Log into this container by running this command from the host computer's
-terminal:
+terminal window:
 
 .. code-block:: console
 
@@ -566,12 +553,13 @@ To see which components are running, run this command from the container:
 The Settings Transaction Processor Container
 --------------------------------------------
 
-* Runs a single settings transaction proccessor
-* Hostname: settings-tp
-* Handles transactions of the *settings transaction family*
+* Runs a single Settings transaction proccessor
+* Handles transactions of the Settings transaction family
+* Hostname: ``settings-tp``
+* Container name: ``sawtooth-settings-tp-default``
 
 Log into this container by running this command from the host computer's
-terminal:
+terminal window:
 
 .. code-block:: console
 
@@ -586,15 +574,16 @@ To see which components are running, run this command from the container:
     1 ?        Ssl    0:00 /usr/bin/python3 /usr/bin/settings-tp -vv tcp://validator:4004
 
 
-The Intkey Transaction Processor Container
-------------------------------------------
+The IntegerKey Transaction Processor Container
+----------------------------------------------
 
-* Runs a single Intkey transaction processor
-* Hostname: intkey-tp-python
-* Handles transactions of the *intkey transaction family*
+* Runs a single IntegerKey transaction processor
+* Handles transactions of the IntegerKey transaction family
+* Hostname: ``intkey-tp-python``
+* Container name: ``sawtooth-intkey-tp-python-default``
 
 Log into this container by running this command from the host computer's
-terminal:
+terminal window:
 
 .. code-block:: console
 
@@ -613,11 +602,12 @@ The XO Transaction Processor Container
 --------------------------------------
 
 * Runs a single XO transaction processor
-* Hostname: xo-tp-python
-* Handles transactions of the *XO transaction family*
+* Handles transactions of the XO transaction family
+* Hostname: ``xo-tp-python``
+* Container name: ``sawtooth-xo-tp-python-default``
 
 Log into this container by running this command from the host computer's
-terminal:
+terminal window:
 
 .. code-block:: console
 
@@ -636,23 +626,22 @@ Viewing Log Files
 =================
 
 You can view the log files for any running Docker container using the
-following command:
+``docker logs`` command.
+Replace ``{CONTAINER}`` with the name of one of the Sawtooth Docker containers,
+such as ``sawtooth-validator-default``.
 
 .. code-block:: console
 
   $ docker logs {CONTAINER}
 
 
-.. note:: 
+Configuring the List of Transaction Families
+============================================
 
-  Replace CONTAINER with the name of one of the Sawtooth Docker containers,
-  e.g. ``sawtooth-validator-default``.
+Next, tell the validator or validator network to accept
+transactions from the IntegerKey and Settings transaction families.
 
-
-Settings Transaction Family Usage
-=================================
-
-Sawtooth provides a :doc:`settings transaction family
+Sawtooth provides a :doc:`Settings transaction family
 <../transaction_family_specifications/settings_transaction_family>` that stores
 on-chain configuration settings, along with a Settings family transaction
 processor written in Python.
@@ -669,20 +658,20 @@ transactions of the following types:
 * sawtooth_settings
 
 To create and submit the batch containing the new setting, enter the following
-commands:
+commands.
 
 .. note::
 
   The config command needs to use a key generated in the validator container.
   Thus, you must open a terminal window running in the validator container,
   rather than the client container (for the following command only).
-  Run the following command from your host machine's CLI:
+  Run the following command from your host machine's CLI.
 
 .. code-block:: console
 
   % docker exec -it sawtooth-validator-default bash
 
-Then run the following commands from the validator container:
+Then run the following command from the validator container:
 
 .. code-block:: console
 
@@ -694,7 +683,7 @@ Then run the following commands from the validator container:
 
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
-and output similar to the following appears in the validator terminal:
+and output similar to the following appears in the validator terminal window:
 
 .. code-block:: console
 
