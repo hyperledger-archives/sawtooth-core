@@ -23,7 +23,7 @@ from setuptools import setup, find_packages
 setup(name='sawtooth-cli',
       version=subprocess.check_output(
           ['../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake CLI',
+      description='Sawtooth CLI',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),

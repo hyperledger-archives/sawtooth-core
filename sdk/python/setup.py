@@ -41,7 +41,7 @@ data_files = [
 setup(name='sawtooth-sdk',
       version=subprocess.check_output(
           ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake Python SDK',
+      description='Sawtooth Python SDK',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),

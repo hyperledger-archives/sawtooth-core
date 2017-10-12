@@ -28,7 +28,7 @@ else:
 setup(name='sawtooth-ias-client',
       version=subprocess.check_output(
           ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake Intel Attestation Service Client',
+      description='Sawtooth Intel Attestation Service Client',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
