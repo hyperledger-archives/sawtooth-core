@@ -34,7 +34,7 @@ if os.path.exists("/lib/systemd/system"):
 setup(name='sawtooth-poet-families',
       version=subprocess.check_output(
           ['../../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake Transaction Processor Families',
+      description='Sawtooth Transaction Processor Families',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),

@@ -32,7 +32,7 @@ if os.path.exists("/lib/systemd/system"):
 setup(name='sawtooth-xo',
       version=subprocess.check_output(
           ['../../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake XO Example',
+      description='Sawtooth XO Example',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
