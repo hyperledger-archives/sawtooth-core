@@ -43,6 +43,7 @@ from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 from sawtooth_validator.protobuf.network_pb2 import NetworkAcknowledgement
 from sawtooth_validator.protobuf.network_pb2 import DisconnectMessage
 from sawtooth_validator.protobuf.network_pb2 import PingRequest
+from sawtooth_validator.protobuf.network_pb2 import PingResponse
 from sawtooth_validator.journal.timed_cache import TimedCache
 
 
@@ -196,8 +197,7 @@ class PingHandler(Handler):
         request = PingRequest()
         request.ParseFromString(message_content)
 
-        ack = NetworkAcknowledgement()
-        ack.status = ack.OK
+        ack = PingResponse()
         if self._network.get_connection_status(connection_id) == \
                 ConnectionStatus.CONNECTED:
 
@@ -207,7 +207,7 @@ class PingHandler(Handler):
             return HandlerResult(
                 HandlerStatus.RETURN,
                 message_out=ack,
-                message_type=validator_pb2.Message.NETWORK_ACK)
+                message_type=validator_pb2.Message.PING_RESPONSE)
 
         if connection_id in self._last_message:
             if time.time() - self._last_message[connection_id] < \
@@ -229,7 +229,7 @@ class PingHandler(Handler):
         return HandlerResult(
             HandlerStatus.RETURN,
             message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
+            message_type=validator_pb2.Message.PING_RESPONSE)
 
 
 class AuthorizationTrustRequestHandler(Handler):

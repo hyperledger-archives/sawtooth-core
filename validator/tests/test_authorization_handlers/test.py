@@ -143,7 +143,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         self.assertEqual(handler_status.status, HandlerStatus.RETURN)
         self.assertEqual(
             handler_status.message_type,
-            validator_pb2.Message.NETWORK_ACK)
+            validator_pb2.Message.PING_RESPONSE)
 
     def test_ping_handler(self):
         """
@@ -163,7 +163,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         self.assertEqual(handler_status.status, HandlerStatus.RETURN)
         self.assertEqual(
             handler_status.message_type,
-            validator_pb2.Message.NETWORK_ACK)
+            validator_pb2.Message.PING_RESPONSE)
 
         handler_status = handler.handle("connection_id",
                                         ping.SerializeToString())

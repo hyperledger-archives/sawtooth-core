@@ -366,7 +366,7 @@ class Validator(object):
 
         # Set up base network handlers
         self._network_dispatcher.add_handler(
-            validator_pb2.Message.NETWORK_PING,
+            validator_pb2.Message.PING_REQUEST,
             PingHandler(network=self._network),
             network_thread_pool)
 

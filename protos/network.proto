@@ -51,6 +51,9 @@ message GetPeersResponse {
 message PingRequest {
 }
 
+message PingResponse{
+}
+
 message GossipMessage {
     bytes content = 1;
     string content_type = 2;

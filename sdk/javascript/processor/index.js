@@ -23,7 +23,7 @@ const {
   TpUnregisterRequest,
   TpProcessRequest,
   TpProcessResponse,
-  TpPingResponse,
+  PingResponse,
   TransactionHeader,
   Message
 } = require('../protobuf')
@@ -52,12 +52,12 @@ class TransactionProcessor {
     this._stream.connect(() => {
       this._stream.onReceive(message => {
         if (message.messageType !== Message.MessageType.TP_PROCESS_REQUEST) {
-          if (message.messageType === Message.MessageType.TP_PING) {
-            console.log(`Received TpPing`)
-            let pingResponse = TpPingResponse.create({status: TpPingResponse.Status.OK})
-            this._stream.sendBack(Message.MessageType.TP_PING_RESPONSE,
+          if (message.messageType === Message.MessageType.PING_REQUEST) {
+            console.log(`Received Ping`)
+            let pingResponse = PingResponse.create()
+            this._stream.sendBack(Message.MessageType.PING_RESPONSE,
                                   message.correlationId,
-                                  TpPingResponse.encode(pingResponse).finish())
+                                  PingResponse.encode(pingResponse).finish())
             return
           }
           console.log(`Ignoring ${Message.MessageType.stringValue(message.messageType)}`)

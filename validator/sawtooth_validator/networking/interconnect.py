@@ -213,7 +213,7 @@ class _SendReceive(object):
                             message = validator_pb2.Message(
                                 correlation_id=_generate_id(),
                                 content=ping.SerializeToString(),
-                                message_type=validator_pb2.Message.NETWORK_PING
+                                message_type=validator_pb2.Message.PING_REQUEST
                             )
                             fut = future.Future(message.correlation_id,
                                                 message.content,
