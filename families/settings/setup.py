@@ -34,7 +34,7 @@ if os.path.exists("/lib/systemd/system"):
 setup(name='sawtooth-settings',
       version=subprocess.check_output(
           ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake Settings Transaction Processor',
+      description='Sawtooth Settings Transaction Processor',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),

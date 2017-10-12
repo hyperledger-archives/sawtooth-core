@@ -46,7 +46,7 @@ setup(
     name='sawtooth-validator',
     version=subprocess.check_output(
         ['../bin/get_version']).decode('utf-8').strip(),
-    description='Sawtooth Lake Validator',
+    description='Sawtooth Validator',
     author='Intel Corporation',
     url='https://github.com/hyperledger/sawtooth-core',
     packages=find_packages(),

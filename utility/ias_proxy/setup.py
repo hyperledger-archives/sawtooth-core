@@ -32,7 +32,7 @@ data_files = [
 setup(name='sawtooth-ias-proxy',
       version=subprocess.check_output(
           ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake Intel Attestation Service Proxy',
+      description='Sawtooth Intel Attestation Service Proxy',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
