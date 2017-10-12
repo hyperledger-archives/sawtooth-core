@@ -33,7 +33,7 @@ setup(name='sawtooth-ias-proxy',
       version=subprocess.check_output(
           ['../../bin/get_version']).decode('utf-8').strip(),
       description='Sawtooth Intel Attestation Service Proxy',
-      author='Intel Corporation',
+      author='Hyperledger Sawtooth',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
       install_requires=[

@@ -116,7 +116,7 @@ setup(name='sawtooth-poet-sgx',
       version=subprocess.check_output(
           ['../../../bin/get_version']).decode('utf-8').strip(),
       description='Sawtooth PoET SGX Enclave',
-      author='Intel Corporation',
+      author='Hyperledger Sawtooth',
       url='http://www.intel.com',
       packages=find_packages(),
       install_requires=[
