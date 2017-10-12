@@ -34,7 +34,7 @@ if os.path.exists("/lib/systemd/system"):
 setup(name='sawtooth-identity',
       version=subprocess.check_output(
           ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake Identity Transaction Processor',
+      description='Sawtooth Identity Transaction Processor',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),

@@ -24,7 +24,7 @@ from setuptools import setup, find_packages
 setup(name='sawtooth-poet-cli',
       version=subprocess.check_output(
           ['../../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Lake PoET CLI',
+      description='Sawtooth PoET CLI',
       author='Intel Corporation',
       url='https://github.com/hyperledger/sawtooth-core',
       packages=find_packages(),
