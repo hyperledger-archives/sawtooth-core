@@ -143,6 +143,11 @@ class XoClient:
                 raise XoException("Error {}: {}".format(
                     result.status_code, result.reason))
 
+        except requests.ConnectionError:
+            raise XoException(
+                'Could not connect at {}; is the REST API running?'.format(
+                    self._base_url))
+
         except BaseException as err:
             raise XoException(err)
 
