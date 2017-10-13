@@ -72,7 +72,7 @@ class TestTwoFamilies(unittest.TestCase):
         self.intkey_verifier = IntkeyTestVerifier()
         self.xo_verifier = XoTestVerifier()
 
-        _send_xo_cmd('xo init --url rest-api:8080')
+        _send_xo_cmd('sawtooth keygen')
 
         self.verify_empty_state()
 
@@ -84,7 +84,10 @@ class TestTwoFamilies(unittest.TestCase):
 
         for intkey_cmd, xo_cmd in commands:
             _send_intkey_cmd(intkey_cmd)
-            _send_xo_cmd(xo_cmd)
+            _send_xo_cmd('{} --url {} --wait {}'.format(
+                xo_cmd,
+                'http://rest-api:8080',
+                WAIT))
 
             if intkey_cmd == self.intkey_verifier.valid_txns:
                 how_many_updates += 1

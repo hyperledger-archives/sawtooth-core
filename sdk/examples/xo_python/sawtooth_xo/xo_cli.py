@@ -16,7 +16,6 @@
 from __future__ import print_function
 
 import argparse
-import configparser
 import getpass
 import logging
 import os
@@ -27,13 +26,14 @@ import pkg_resources
 
 from colorlog import ColoredFormatter
 
-import sawtooth_signing.secp256k1_signer as signing
-
 from sawtooth_xo.xo_client import XoClient
 from sawtooth_xo.xo_exceptions import XoException
 
 
 DISTRIBUTION_NAME = 'sawtooth-xo'
+
+
+DEFAULT_URL = 'http://127.0.0.1:8080'
 
 
 def create_console_handler(verbose_level):
@@ -89,20 +89,6 @@ def add_create_parser(subparsers, parent_parser):
         const=sys.maxsize,
         type=int,
         help='wait for game to commit, set an integer to specify a timeout')
-
-
-def add_init_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('init', parents=[parent_parser])
-
-    parser.add_argument(
-        '--username',
-        type=str,
-        help='the name of the player')
-
-    parser.add_argument(
-        '--url',
-        type=str,
-        help='the url of the REST API')
 
 
 def add_reset_parser(subparsers, parent_parser):
@@ -163,6 +149,16 @@ def create_parent_parser(prog_name):
         help='print version information')
 
     parent_parser.add_argument(
+        '--url',
+        type=str,
+        help='the url of the REST API')
+
+    parent_parser.add_argument(
+        '--keyfile',
+        type=str,
+        help='the file in which the user\'s private key is stored')
+
+    parent_parser.add_argument(
         '--auth-user',
         type=str,
         help='username for authentication if REST API is using Basic Auth')
@@ -187,7 +183,6 @@ def create_parser(prog_name):
     subparsers.required = True
 
     add_create_parser(subparsers, parent_parser)
-    add_init_parser(subparsers, parent_parser)
     add_reset_parser(subparsers, parent_parser)
     add_list_parser(subparsers, parent_parser)
     add_show_parser(subparsers, parent_parser)
@@ -196,51 +191,7 @@ def create_parser(prog_name):
     return parser
 
 
-def do_init(args, config):
-    username = config.get('DEFAULT', 'username')
-    if args.username is not None:
-        username = args.username
-
-    url = config.get('DEFAULT', 'url')
-    if args.url is not None:
-        url = args.url
-
-    config.set('DEFAULT', 'username', username)
-    print("set username: {}".format(username))
-    config.set('DEFAULT', 'url', url)
-    print("set url: {}".format(url))
-
-    save_config(config)
-
-    priv_filename = config.get('DEFAULT', 'key_file')
-    if priv_filename.endswith(".priv"):
-        addr_filename = priv_filename[0:-len(".priv")] + ".addr"
-    else:
-        addr_filename = priv_filename + ".addr"
-
-    if not os.path.exists(priv_filename):
-        try:
-            if not os.path.exists(os.path.dirname(priv_filename)):
-                os.makedirs(os.path.dirname(priv_filename))
-
-            privkey = signing.generate_privkey()
-            pubkey = signing.generate_pubkey(privkey)
-            addr = signing.generate_identifier(pubkey)
-
-            with open(priv_filename, "w") as priv_fd:
-                print("writing file: {}".format(priv_filename))
-                priv_fd.write(privkey)
-                priv_fd.write("\n")
-
-            with open(addr_filename, "w") as addr_fd:
-                print("writing file: {}".format(addr_filename))
-                addr_fd.write(addr)
-                addr_fd.write("\n")
-        except IOError as ioe:
-            raise XoException("IOError: {}".format(str(ioe)))
-
-
-def do_reset(args, config):
+def do_reset(args):
     home = os.path.expanduser("~")
     config_dir = os.path.join(home, ".sawtooth")
 
@@ -248,12 +199,12 @@ def do_reset(args, config):
         shutil.rmtree(home, ".sawtooth")
 
 
-def do_list(args, config):
-    url = config.get('DEFAULT', 'url')
-    key_file = config.get('DEFAULT', 'key_file')
+def do_list(args):
+    url = _get_url(args)
+    keyfile = _get_keyfile(args)
     auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url, keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=keyfile)
 
     game_list = [
         game.split(',')
@@ -274,14 +225,14 @@ def do_list(args, config):
         raise XoException("Could not retrieve game listing.")
 
 
-def do_show(args, config):
+def do_show(args):
     name = args.name
 
-    url = config.get('DEFAULT', 'url')
-    key_file = config.get('DEFAULT', 'key_file')
+    url = _get_url(args)
+    keyfile = _get_keyfile(args)
     auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url, keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=keyfile)
 
     data = client.show(name, auth_user=auth_user, auth_password=auth_password)
 
@@ -313,14 +264,14 @@ def do_show(args, config):
         raise XoException("Game not found: {}".format(name))
 
 
-def do_create(args, config):
+def do_create(args):
     name = args.name
 
-    url = config.get('DEFAULT', 'url')
-    key_file = config.get('DEFAULT', 'key_file')
+    url = _get_url(args)
+    keyfile = _get_keyfile(args)
     auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url, keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=keyfile)
 
     if args.wait and args.wait > 0:
         response = client.create(
@@ -335,15 +286,15 @@ def do_create(args, config):
     print("Response: {}".format(response))
 
 
-def do_take(args, config):
+def do_take(args):
     name = args.name
     space = args.space
 
-    url = config.get('DEFAULT', 'url')
-    key_file = config.get('DEFAULT', 'key_file')
+    url = _get_url(args)
+    keyfile = _get_keyfile(args)
     auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url, keyfile=key_file)
+    client = XoClient(base_url=url, keyfile=keyfile)
 
     if args.wait and args.wait > 0:
         response = client.take(
@@ -359,37 +310,19 @@ def do_take(args, config):
     print("Response: {}".format(response))
 
 
-def load_config():
-    home = os.path.expanduser("~")
-    real_user = getpass.getuser()
+def _get_url(args):
+    return DEFAULT_URL if args.url is None else args.url
 
-    config_file = os.path.join(home, ".sawtooth", "xo.cfg")
+
+def _get_keyfile(args):
+    if args.keyfile is not None:
+        return args.keyfile
+
+    real_user = getpass.getuser()
+    home = os.path.expanduser("~")
     key_dir = os.path.join(home, ".sawtooth", "keys")
 
-    config = configparser.ConfigParser()
-    config.set('DEFAULT', 'url', 'http://127.0.0.1:8080')
-    config.set('DEFAULT', 'key_dir', key_dir)
-    config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.priv')
-    config.set('DEFAULT', 'username', real_user)
-    if os.path.exists(config_file):
-        config.read(config_file)
-
-    return config
-
-
-def save_config(config):
-    home = os.path.expanduser("~")
-
-    config_file = os.path.join(home, ".sawtooth", "xo.cfg")
-    if not os.path.exists(os.path.dirname(config_file)):
-        os.makedirs(os.path.dirname(config_file))
-
-    with open("{}.new".format(config_file), "w") as fd:
-        config.write(fd)
-    if os.name == 'nt':
-        if os.path.exists(config_file):
-            os.remove(config_file)
-    os.rename("{}.new".format(config_file), config_file)
+    return '{}/{}.priv'.format(key_dir, real_user)
 
 
 def _get_auth_info(args):
@@ -414,20 +347,16 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
 
     setup_loggers(verbose_level=verbose_level)
 
-    config = load_config()
-
     if args.command == 'create':
-        do_create(args, config)
-    elif args.command == 'init':
-        do_init(args, config)
+        do_create(args)
     elif args.command == 'reset':
-        do_reset(args, config)
+        do_reset(args)
     elif args.command == 'list':
-        do_list(args, config)
+        do_list(args)
     elif args.command == 'show':
-        do_show(args, config)
+        do_show(args)
     elif args.command == 'take':
-        do_take(args, config)
+        do_take(args)
     else:
         raise XoException("invalid command: {}".format(args.command))
 

@@ -47,7 +47,7 @@ class XoClient:
         except FileNotFoundError:
             raise XoException(
                 'Could not find private key file {}; '
-                'try running `xo init`'.format(keyfile))
+                'try running `sawtooth keygen`'.format(keyfile))
         except OSError:
             raise XoException("Failed to read keys.")
 
