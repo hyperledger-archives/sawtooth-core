@@ -29,6 +29,7 @@ LOGGER.setLevel(logging.DEBUG)
 WAIT = 300
 REST_API = 'rest-api:8080'
 
+
 class TestXoSmoke(unittest.TestCase):
 
     @classmethod
@@ -37,25 +38,30 @@ class TestXoSmoke(unittest.TestCase):
         wait_for_rest_apis([REST_API])
 
     def test_xo_smoke(self):
+        _send_xo_cmd('sawtooth keygen')
+
         game_cmds = (
-            'xo init --url {}'.format(REST_API),
-            'xo create nunzio --wait {}'.format(WAIT),
-            'xo take nunzio 1 --wait {}'.format(WAIT),
-            'xo take nunzio 4 --wait {}'.format(WAIT),
-            'xo take nunzio 2 --wait {}'.format(WAIT),
-            'xo take nunzio 2 --wait {}'.format(WAIT),
-            'xo take nunzio 5 --wait {}'.format(WAIT),
-            'xo create tony --wait {}'.format(WAIT),
-            'xo take tony 9 --wait {}'.format(WAIT),
-            'xo take tony 8 --wait {}'.format(WAIT),
-            'xo take nunzio 3 --wait {}'.format(WAIT),
-            'xo take nunzio 7 --wait {}'.format(WAIT),
-            'xo take tony 6 --wait {}'.format(WAIT),
-            'xo create wait --wait {}'.format(WAIT),
+            'xo create nunzio',
+            'xo take nunzio 1',
+            'xo take nunzio 4',
+            'xo take nunzio 2',
+            'xo take nunzio 2',
+            'xo take nunzio 5',
+            'xo create tony',
+            'xo take tony 9',
+            'xo take tony 8',
+            'xo take nunzio 3',
+            'xo take nunzio 7',
+            'xo take tony 6',
+            'xo create wait',
         )
 
         for cmd in game_cmds:
-            _send_xo_cmd(cmd)
+            _send_xo_cmd(
+                '{} --url {} --wait {}'.format(
+                    cmd,
+                    self.client.url,
+                    WAIT))
 
         self.verify_game('nunzio', 'XXXOO----', 'P1-WIN')
         self.verify_game('tony', '-----X-OX', 'P2-NEXT')
@@ -72,7 +78,10 @@ class TestXoSmoke(unittest.TestCase):
         )
 
         for cmd in cli_cmds:
-            _send_xo_cmd(cmd)
+            _send_xo_cmd(
+                '{} --url {}'.format(
+                    cmd,
+                    self.client.url))
 
     def verify_game(self, game_name, expected_board, expected_turn):
         LOGGER.info('Verifying game: %s', game_name)
