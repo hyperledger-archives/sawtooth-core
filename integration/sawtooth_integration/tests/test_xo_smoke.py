@@ -74,7 +74,6 @@ class TestXoSmoke(unittest.TestCase):
             'xo list',
             'xo show nunzio',
             'xo show tony',
-            'xo reset',
         )
 
         for cmd in cli_cmds:

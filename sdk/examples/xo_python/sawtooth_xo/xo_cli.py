@@ -21,7 +21,6 @@ import logging
 import os
 import traceback
 import sys
-import shutil
 import pkg_resources
 
 from colorlog import ColoredFormatter
@@ -89,10 +88,6 @@ def add_create_parser(subparsers, parent_parser):
         const=sys.maxsize,
         type=int,
         help='wait for game to commit, set an integer to specify a timeout')
-
-
-def add_reset_parser(subparsers, parent_parser):
-    subparsers.add_parser('reset', parents=[parent_parser])
 
 
 def add_list_parser(subparsers, parent_parser):
@@ -183,20 +178,11 @@ def create_parser(prog_name):
     subparsers.required = True
 
     add_create_parser(subparsers, parent_parser)
-    add_reset_parser(subparsers, parent_parser)
     add_list_parser(subparsers, parent_parser)
     add_show_parser(subparsers, parent_parser)
     add_take_parser(subparsers, parent_parser)
 
     return parser
-
-
-def do_reset(args):
-    home = os.path.expanduser("~")
-    config_dir = os.path.join(home, ".sawtooth")
-
-    if os.path.exists(config_dir):
-        shutil.rmtree(home, ".sawtooth")
 
 
 def do_list(args):
@@ -349,8 +335,6 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
 
     if args.command == 'create':
         do_create(args)
-    elif args.command == 'reset':
-        do_reset(args)
     elif args.command == 'list':
         do_list(args)
     elif args.command == 'show':
