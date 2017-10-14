@@ -5,16 +5,37 @@
   <h1>Sawtooth Lake documentation</h1>
 
   <p>
-  <select name="version_switch" id="version_switch">
-  <option selected value="http://intelledger.github.io/0.7/">Version 0.7</option>
-  <option value="http://intelledger.github.io/0.8/">Version 0.8</option>
-  </select>
-  <script type="text/javascript">
-   var urlmenu = document.getElementById( 'version_switch' );
-   urlmenu.onchange = function() {
-        window.location.replace( this.options[ this.selectedIndex ].value );
-   };
-  </script>
+    <select id="version_switch"></select>
+    <script>
+      var BASE_URL = 'https://sawtooth.hyperledger.org/docs';
+      var VERSION_URL = 'https://sawtooth.hyperledger.org/versions.json';
+      var versionRequest = new XMLHttpRequest();
+      var versionSwitch = document.getElementById('version_switch');
+
+      versionSwitch.onchange = function() {
+        if (this.value) {
+          window.location.assign(this.value);
+        }
+      };
+
+      versionRequest.onreadystatechange = function() {
+        if (!versionSwitch.length && versionRequest.responseText) {
+          var versions = JSON.parse(versionRequest.responseText);
+          versions.forEach(function(versionTuple) {
+            var option = document.createElement('option');
+            option.innerText = versionTuple[0];
+            option.value = BASE_URL + versionTuple[1];
+            versionSwitch.appendChild(option);
+            if (window.location.href === option.value) {
+              option.selected = true;
+            }
+          });
+        }
+      };
+
+      versionRequest.open('GET', VERSION_URL, true);
+      versionRequest.send(null);
+    </script>
   </p>
 
   <p class="biglink"><a class="biglink" href="{{ pathto("introduction") }}">{% trans %}Introduction{% endtrans %}</a><br/>
