@@ -28,7 +28,10 @@ import (
 )
 
 type Opts struct {
-	Verbose []bool `short:"v" long:"verbose" description:"Increase verbosity"`
+	Verbose    []bool `short:"v" long:"verbose" description:"Increase verbosity"`
+	Positional struct {
+		Connect string `positional-arg-name:"connect" required:"false" description:"Validator component endpoint to connect to" default:"tcp://localhost:4004"`
+	} `positional-args:"true"`
 }
 
 func main() {
@@ -47,15 +50,13 @@ func main() {
 			os.Exit(2)
 		}
 	}
-	if len(remaining) > 1 {
-		fmt.Println("Must pass one or fewer endpoints")
+
+	if len(remaining) > 0 {
+		fmt.Printf("Error: Unrecognized arguments passed: %v\n", remaining)
 		os.Exit(2)
 	}
 
-	endpoint := "tcp://localhost:4004"
-	if len(remaining) == 1 {
-		endpoint = remaining[0]
-	}
+	endpoint := opts.Positional.Connect
 
 	switch len(opts.Verbose) {
 	case 2:
