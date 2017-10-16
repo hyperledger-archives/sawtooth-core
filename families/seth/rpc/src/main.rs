@@ -71,9 +71,9 @@ fn main() {
     ).get_matches();
 
     let bind = arg_matches.value_of("bind")
-        .unwrap_or("0.0.0.0:3030");
+        .unwrap_or("127.0.0.1:3030");
     let connect = arg_matches.value_of("connect")
-        .unwrap_or("tcp://localhost:4004");
+        .unwrap_or("tcp://127.0.0.1:4004");
     let accounts: Vec<Account> = arg_matches.values_of_lossy("unlock").unwrap_or_else(||
         Vec::new()).iter().map(|alias|
             abort_if_err(Account::load_from_alias(alias))).collect();
