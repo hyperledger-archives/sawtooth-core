@@ -66,7 +66,7 @@ class BlockInfoTransactionHandler(object):
     def namespaces(self):
         return [NAMESPACE]
 
-    def apply(self, transaction, state):
+    def apply(self, transaction, context):
         # Unpack payload
         txn = BlockInfoTxn()
         txn.ParseFromString(transaction.payload)
@@ -96,7 +96,7 @@ class BlockInfoTransactionHandler(object):
 
         # Get config and previous block (according to the block info in the
         # transaction) from state
-        entries = state.get([CONFIG_ADDRESS])
+        entries = context.get_state([CONFIG_ADDRESS])
 
         deletes = []
         sets = []
@@ -142,7 +142,8 @@ class BlockInfoTransactionHandler(object):
 
             validate_timestamp(next_block.timestamp, config.sync_tolerance)
 
-            entries = state.get([create_block_address(config.latest_block)])
+            entries = context.get_state(
+                [create_block_address(config.latest_block)])
             if not entries:
                 raise InternalError(
                     "Config and state out of sync. Latest block not found in"
@@ -181,14 +182,14 @@ class BlockInfoTransactionHandler(object):
 
         # If this is not true, something else has modified global state
         if deletes:
-            if set(deletes) != set(state.delete(deletes)):
+            if set(deletes) != set(context.delete(deletes)):
                 raise InternalError(
                     "Blocks should have been in state but weren't: {}".format(
                         deletes))
 
         if sets:
             addresses = set([k for k, _ in sets])
-            addresses_set = set(state.set([
+            addresses_set = set(context.set_state([
                 StateEntry(address=k, data=v) for k, v in sets]))
             if addresses != addresses_set:
                 raise InternalError("Failed to set addresses.")
