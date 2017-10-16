@@ -62,7 +62,7 @@ func (self *XoHandler) Namespaces() []string {
 	return []string{namespace}
 }
 
-func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.Context) error {
+func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
 	// The xo player is defined as the signer of the transaction, so we unpack
 	// the transaction header to obtain the signer's public key, which will be
 	// used as the player's identity.
@@ -85,17 +85,17 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, state *pro
 
 	switch payload.Action {
 	case "create":
-		return applyCreate(payload.Name, state)
+		return applyCreate(payload.Name, context)
 	case "take":
-		return applyTake(payload.Name, payload.Space, player, state)
+		return applyTake(payload.Name, payload.Space, player, context)
 	default:
 		return &processor.InvalidTransactionError{
 			Msg: fmt.Sprintf("Invalid Action : '%v'", payload.Action)}
 	}
 }
 
-func applyCreate(name string, state *processor.Context) error {
-	game, err := loadGame(name, state)
+func applyCreate(name string, context *processor.Context) error {
+	game, err := loadGame(name, context)
 	if err != nil {
 		return err
 	}
@@ -111,11 +111,11 @@ func applyCreate(name string, state *processor.Context) error {
 		Name:    name,
 	}
 
-	return saveGame(game, state)
+	return saveGame(game, context)
 }
 
-func applyTake(name string, space int, player string, state *processor.Context) error {
-	game, err := loadGame(name, state)
+func applyTake(name string, space int, player string, context *processor.Context) error {
+	game, err := loadGame(name, context)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func applyTake(name string, space int, player string, state *processor.Context) 
 		game.State = "TIE"
 	}
 
-	return saveGame(game, state)
+	return saveGame(game, context)
 }
 
 func isWin(board string, letter byte) bool {
@@ -266,12 +266,12 @@ func packGame(game *Game) []byte {
 	return buffer.Bytes()
 }
 
-func loadGame(name string, state *processor.Context) (*Game, error) {
+func loadGame(name string, context *processor.Context) (*Game, error) {
 	// Use the namespace prefix + the hash of the game name to create the
 	// storage address
 	address := namespace + hexdigest(name)[:64]
 
-	results, err := state.Get([]string{address})
+	results, err := context.GetState([]string{address})
 	if err != nil {
 		return nil, &processor.InternalError{Msg: fmt.Sprint("Error getting state:", err)}
 	}
@@ -295,11 +295,11 @@ func loadGame(name string, state *processor.Context) (*Game, error) {
 	return nil, nil
 }
 
-func saveGame(game *Game, state *processor.Context) error {
+func saveGame(game *Game, context *processor.Context) error {
 	address := namespace + hexdigest(game.Name)[:64]
 	data := packGame(game)
 
-	addresses, err := state.Set(map[string][]byte{
+	addresses, err := context.SetState(map[string][]byte{
 		address: data,
 	})
 	if err != nil {
