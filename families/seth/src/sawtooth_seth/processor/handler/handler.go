@@ -227,7 +227,7 @@ func getParams(context *processor.Context) (*evm.Params, error) {
 
 func getBlockInfoConfig(context *processor.Context) (*BlockInfoConfig, error) {
 	// Retrieve block info config from global state
-	entries, err := context.Get([]string{CONFIG_ADDRESS})
+	entries, err := context.GetState([]string{CONFIG_ADDRESS})
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func getBlockInfo(context *processor.Context, blockNumber int64) (*BlockInfo, er
 		return nil, fmt.Errorf("Failed to get block info address: %v", err.Error())
 	}
 	// Retrieve block info from global state
-	entries, err := context.Get([]string{blockInfoAddr.String()})
+	entries, err := context.GetState([]string{blockInfoAddr.String()})
 	if err != nil {
 		return nil, err
 	}
