@@ -30,7 +30,7 @@ const _timeoutPromise = (p, millis) => {
   }
 }
 
-class State {
+class Context {
   constructor (stream, contextId) {
     this._stream = stream
     this._contextId = contextId
@@ -89,4 +89,4 @@ class State {
   }
 }
 
-module.exports = State
+module.exports = Context
