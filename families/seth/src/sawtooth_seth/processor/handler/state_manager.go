@@ -92,7 +92,7 @@ func (mgr *StateManager) GetEntry(vmAddress *EvmAddr) (*EvmEntry, error) {
 	address := vmAddress.ToStateAddr()
 
 	// Retrieve the account from global state
-	entries, err := mgr.state.Get([]string{address.String()})
+	entries, err := mgr.state.GetState([]string{address.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (mgr *StateManager) SetEntry(vmAddress *EvmAddr, entry *EvmEntry) error {
 	}
 
 	// Store the account in global state
-	addresses, err := mgr.state.Set(map[string][]byte{
+	addresses, err := mgr.state.SetState(map[string][]byte{
 		address.String(): entryData,
 	})
 	if err != nil {
