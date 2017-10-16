@@ -77,11 +77,11 @@ const _toInternalError = (err) => {
   throw new InternalError(message)
 }
 
-const _setEntry = (state, address, data) => {
+const _setEntry = (context, address, data) => {
   let entries = {
     [address]: data
   }
-  return state.set(entries)
+  return context.setState(entries)
 }
 
 const _gameToStr = (board, state, player1, player2, name) => {
@@ -150,7 +150,7 @@ const _isWin = (board, letter) => {
     return false
 }
 
-const _handleCreate = (state, address, update, player) => (possibleAddressValues) => {
+const _handleCreate = (context, address, update, player) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
 
   let name = update.name
@@ -176,10 +176,10 @@ const _handleCreate = (state, address, update, player) => (possibleAddressValues
 
   _display(`Player ${player.toString().substring(0, 6)} created a game.`)
 
-  return _setEntry(state, address, setValue)
+  return _setEntry(context, address, setValue)
 }
 
-const _handleTake = (state, address, update, player) => (possibleAddressValues) => {
+const _handleTake = (context, address, update, player) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
 
   let name = update.name
@@ -263,7 +263,7 @@ const _handleTake = (state, address, update, player) => (possibleAddressValues) 
            _gameToStr(stateValue.board, stateValue.gameState, stateValue.player1
              , stateValue.player2, update.name))
 
-  return _setEntry(state, address, setValue)
+  return _setEntry(context, address, setValue)
 }
 
 class XOHandler extends TransactionHandler {
@@ -271,7 +271,7 @@ class XOHandler extends TransactionHandler {
     super(XO_FAMILY, '1.0', [XO_NAMESPACE])
   }
 
-  apply (transactionProcessRequest, state) {
+  apply (transactionProcessRequest, context) {
     return _decodeRequest(transactionProcessRequest.payload)
       .catch(_toInternalError)
       .then((update) => {
@@ -302,7 +302,7 @@ class XOHandler extends TransactionHandler {
 
         let address = XO_NAMESPACE + _hash(update.name)
 
-        return state.get([address]).then(handlerFn(state, address, update, player))
+        return context.getState([address]).then(handlerFn(context, address, update, player))
           .then((addresses) => {
             if (addresses.length === 0) {
               throw new InternalError('State Error!')
