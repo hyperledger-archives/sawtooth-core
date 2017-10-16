@@ -37,9 +37,9 @@ class BattleshipTransactionHandler:
     def namespaces(self):
         return [self._namespace_prefix]
 
-    def apply(self, transaction, state_store):
+    def apply(self, transaction, context):
 
         battleship_transaction = \
             BattleshipTransaction(self._namespace_prefix, transaction)
 
-        battleship_transaction.apply(state_store)
+        battleship_transaction.apply(context)
