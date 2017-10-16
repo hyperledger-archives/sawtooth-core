@@ -42,7 +42,7 @@ class Context {
    * @return a promise for a map of (address, buffer) pairs, where the buffer is
    * the encoded value at the specified address
    */
-  get (addresses, timeout = null) {
+  getState (addresses, timeout = null) {
     let getRequest = TpStateGetRequest.create({addresses, contextId: this._contextId})
     let future = this._stream.send(Message.MessageType.TP_STATE_GET_REQUEST,
                                    TpStateGetRequest.encode(getRequest).finish())
@@ -68,7 +68,7 @@ class Context {
    * buffer is the encoded value to be set at the the given address.
    * @return a promise for the adddress successfully set.
    */
-  set (addressValuePairs, timeout = null) {
+  setState (addressValuePairs, timeout = null) {
     let entries = Object.keys(addressValuePairs).map((address) =>
       Entry.create({address, data: addressValuePairs[address]}))
 
@@ -86,6 +86,16 @@ class Context {
         return setResponse.addresses
       }),
       timeout)
+  }
+
+  // Deprecated: use getState instead
+  get (addresses, timeout = null) {
+    return this.getState(addresses, timeout)
+  }
+
+  // Deprecated: use setState instead
+  set (addressValuePairs, timeout = null) {
+    return this.setState(addressValuePairs, timeout)
   }
 }
 
