@@ -40,14 +40,14 @@ class XoTransactionHandler:
     def namespaces(self):
         return [self._namespace_prefix]
 
-    def apply(self, transaction, state_store):
+    def apply(self, transaction, context):
 
         # 1. Deserialize the transaction and verify it is valid
         name, action, space, signer = _unpack_transaction(transaction)
 
         # 2. Retrieve the game data from state storage
         board, state, player1, player2, game_list = \
-            _get_state_data(state_store, self._namespace_prefix, name)
+            _get_state_data(context, self._namespace_prefix, name)
 
         # 3. Validate the game data
         _validate_game_data(
@@ -72,7 +72,7 @@ class XoTransactionHandler:
 
         # 6. Put the game data back in state storage
         _store_state_data(
-            state_store, game_list,
+            context, game_list,
             self._namespace_prefix, name,
             upd_board, upd_state,
             upd_player1, upd_player2)
@@ -149,12 +149,12 @@ def _make_xo_address(namespace_prefix, name):
         hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
 
 
-def _get_state_data(state_store, namespace_prefix, name):
+def _get_state_data(context, namespace_prefix, name):
     # Get data from address
     state_entries = \
-        state_store.get([_make_xo_address(namespace_prefix, name)])
+        context.get_state([_make_xo_address(namespace_prefix, name)])
 
-    # state_store.get() returns a list. If no data has been stored yet
+    # context.get_state() returns a list. If no data has been stored yet
     # at the given address, it will be empty.
     if state_entries:
         try:
@@ -181,7 +181,7 @@ def _get_state_data(state_store, namespace_prefix, name):
 
 
 def _store_state_data(
-        state_store, game_list,
+        context, game_list,
         namespace_prefix, name,
         board, state, player1, player2):
 
@@ -192,7 +192,7 @@ def _store_state_data(
         for name, (board, state, player1, player2) in game_list.items()
     ])).encode()
 
-    addresses = state_store.set([
+    addresses = context.set_state([
         StateEntry(
             address=_make_xo_address(namespace_prefix, name),
             data=state_data
