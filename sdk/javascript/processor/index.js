@@ -34,7 +34,7 @@ const {
   ValidatorConnectionError
 } = require('./exceptions')
 
-const State = require('./state')
+const Context = require('./context')
 
 const {Stream} = require('../messaging/stream')
 
@@ -65,7 +65,7 @@ class TransactionProcessor {
         }
 
         const request = TpProcessRequest.toObject(TpProcessRequest.decode(message.content), {defaults: false})
-        const state = new State(this._stream, request.contextId)
+        const context = new Context(this._stream, request.contextId)
 
         if (this._handlers.length > 0) {
           let txnHeader = TransactionHeader.decode(request.header)
@@ -75,7 +75,7 @@ class TransactionProcessor {
                candidate.version === txnHeader.familyVersion)
 
           if (handler) {
-            handler.apply(request, state)
+            handler.apply(request, context)
               .then(() => TpProcessResponse.encode({
                 status: TpProcessResponse.Status.OK
               }).finish())
@@ -164,8 +164,8 @@ class TransactionHandler {
     _readOnlyProperty(this, 'namespaces', namespaces)
   }
 
-  apply (transactionProcessRequest, state) {
-    throw new Error('apply(TpProcessRequest, state) not implemented')
+  apply (transactionProcessRequest, context) {
+    throw new Error('apply(TpProcessRequest, context) not implemented')
   }
 }
 
