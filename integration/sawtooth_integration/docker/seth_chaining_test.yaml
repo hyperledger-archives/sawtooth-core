@@ -29,7 +29,7 @@ services:
     stop_signal: SIGKILL
 
   seth-tp:
-    image: sawtooth-seth-tp:$ISOLATION_ID
+    image: sawtooth-dev-seth:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
@@ -72,7 +72,7 @@ services:
     stop_signal: SIGKILL
 
   seth-chaining-test:
-    image: sawtooth-dev-go:$ISOLATION_ID
+    image: sawtooth-dev-seth:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:

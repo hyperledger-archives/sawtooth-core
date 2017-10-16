@@ -20,7 +20,7 @@ version: "2.1"
 # trailing ':' is required.
 services:
   seth-rpc:
-    image: sawtooth-dev-rust:$ISOLATION_ID
+    image: sawtooth-dev-seth:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
       - ${CARGO_REGISTRY}/root/.cargo/registry

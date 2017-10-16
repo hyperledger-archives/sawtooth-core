@@ -1,0 +1,11 @@
+#!/bin/bash
+
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+bin=$top_dir/families/seth/bin/seth-rpc
+
+if [ -e $bin ]
+then
+    $bin $*
+else
+    echo "Please build Seth-RPC first with 'build_all -l rust' or 'build_seth_rust'"
+fi

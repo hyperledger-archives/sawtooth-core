@@ -92,13 +92,11 @@ def main(args=None):
         proto_dir = JOIN(TOP_DIR, "families/smallbank/protos")
         protoc(proto_dir, "families/smallbank", "smallbank_go/src/protobuf", "go")
 
-    if "seth-go" in args:
+    if "seth" in args:
         proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
         protoc(proto_dir, "families/seth/src", "sawtooth_seth/protobuf", "go")
         proto_dir = JOIN(TOP_DIR, "families/seth/src/protos")
         protoc(proto_dir, "families/seth/src", "sawtooth_seth/protobuf", "go")
-
-    if "seth-rust" in args:
         proto_dir = JOIN(TOP_DIR, "families/seth/src/protos")
         protoc(proto_dir, "families/seth/rpc", "src/messages/", "rust")
         protoc(proto_dir, "families/seth/rpc", "tests/protobuf")

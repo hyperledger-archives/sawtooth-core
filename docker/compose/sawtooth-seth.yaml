@@ -26,7 +26,7 @@ version: "3"
 services:
 
   seth-tp:
-    image: sawtooth-seth-tp:latest
+    image: sawtooth-dev-seth:latest
     volumes:
       - ../../:/project/sawtooth-core
     expose:
@@ -68,7 +68,6 @@ services:
       - 4004
       - 8800
     command: "bash -c \"\
-        if [ ! -f sawtooth.priv ]; then sawtooth keygen --key-dir /project/sawtooth-core sawtooth; fi && \
         sawtooth admin keygen && \
         sawtooth config genesis \
           -k /etc/sawtooth/keys/validator.priv \
@@ -101,36 +100,18 @@ services:
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
     stop_signal: SIGKILL
 
-  seth-client:
-    container_name: seth-client
-    image: sawtooth-dev-go:latest
+  seth:
+    container_name: seth
+    image: sawtooth-dev-seth:latest
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 8080
-    depends_on:
-      - validator
-      - rest-api
-    # Wait for rest_api
-    working_dir: "/project/sawtooth-core"
-    command: "bash -c \"seth init http://rest-api:8080 && \
-        cd /project/sawtooth-core && \
-        until [ -f sawtooth.priv ]; do sleep 1; done && \
-        tail -f /dev/null\""
-    stop_signal: SIGKILL
-
-  seth-rpc:
-    image: sawtooth-dev-rust:latest
-    volumes:
-      - ../../:/project/sawtooth-core
-      - ${CARGO_REGISTRY}/root/.cargo/registry
-    working_dir: /project/sawtooth-core/families/seth/rpc
     expose:
       - 3030
-      - 4004
+      - 8080
     ports:
       - 3030:3030
-    environment:
-      RUST_BACKTRACE: 1
-      PATH: /project/sawtooth-core/families/seth/bin
-    command: seth-rpc --connect tcp://validator:4004 -v
+    working_dir: "/project/sawtooth-core"
+    command: "bash -c \"
+        seth init http://rest-api:8080 && \
+        tail -f /dev/null\""
+    stop_signal: SIGKILL
