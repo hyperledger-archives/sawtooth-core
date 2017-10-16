@@ -98,8 +98,8 @@ class IdentityTransactionHandler(object):
     def namespaces(self):
         return [IDENTITY_NAMESPACE]
 
-    def apply(self, transaction, state):
-        _check_allowed_transactor(transaction, state)
+    def apply(self, transaction, context):
+        _check_allowed_transactor(transaction, context)
 
         payload = IdentityPayload()
         payload.ParseFromString(transaction.payload)
@@ -108,21 +108,21 @@ class IdentityTransactionHandler(object):
         data = payload.data
 
         if id_type == IdentityPayload.ROLE:
-            _set_role(data, state)
+            _set_role(data, context)
 
         elif id_type == IdentityPayload.POLICY:
-            _set_policy(data, state)
+            _set_policy(data, context)
 
         else:
             raise InvalidTransaction("The IdentityType must be either a"
                                      " ROLE or a POLICY")
 
 
-def _check_allowed_transactor(transaction, state):
+def _check_allowed_transactor(transaction, context):
     header = TransactionHeader()
     header.ParseFromString(transaction.header)
 
-    entries_list = _get_data(ALLOWED_SIGNER_ADDRESS, state)
+    entries_list = _get_data(ALLOWED_SIGNER_ADDRESS, context)
     if not entries_list:
         raise InvalidTransaction(
             "The transaction signer is not authorized to submit transactions: "
@@ -141,7 +141,7 @@ def _check_allowed_transactor(transaction, state):
         "{}".format(header.signer_pubkey))
 
 
-def _set_policy(data, state):
+def _set_policy(data, context):
     new_policy = Policy()
     new_policy.ParseFromString(data)
 
@@ -157,7 +157,7 @@ def _set_policy(data, state):
             raise InvalidTransaction("Every policy entry must have a key.")
 
     address = _get_policy_address(new_policy.name)
-    entries_list = _get_data(address, state)
+    entries_list = _get_data(address, context)
 
     policy_list = PolicyList()
     policies = []
@@ -178,7 +178,7 @@ def _set_policy(data, state):
 
     # Store policy in a PolicyList incase of hash collisions
     new_policy_list = PolicyList(policies=policies)
-    addresses = state.set([
+    addresses = context.set_state([
         StateEntry(
             address=address,
             data=new_policy_list.SerializeToString())])
@@ -188,13 +188,13 @@ def _set_policy(data, state):
                        address)
         raise InternalError('Unable to save policy {}'.format(new_policy.name))
 
-    state.add_event(
+    context.add_event(
         event_type="identity_update",
         attributes=[("updated", new_policy.name)])
     LOGGER.debug("Set policy : \n%s", new_policy)
 
 
-def _set_role(data, state):
+def _set_role(data, context):
     role = Role()
     role.ParseFromString(data)
 
@@ -205,7 +205,7 @@ def _set_role(data, state):
 
     # Check that the policy refernced exists
     policy_address = _get_policy_address(role.policy_name)
-    entries_list = _get_data(policy_address, state)
+    entries_list = _get_data(policy_address, context)
 
     if entries_list == []:
         raise InvalidTransaction(
@@ -226,7 +226,7 @@ def _set_role(data, state):
                 .format(role.name, role.policy_name))
 
     address = _get_role_address(role.name)
-    entries_list = _get_data(address, state)
+    entries_list = _get_data(address, context)
 
     # Store role in a Roleist incase of hash collisions
     role_list = RoleList()
@@ -239,7 +239,7 @@ def _set_role(data, state):
     roles = sorted(roles, key=lambda role: role.name)
 
     # set RoleList at the address above.
-    addresses = state.set([
+    addresses = context.set_state([
         StateEntry(
             address=address,
             data=RoleList(roles=roles).SerializeToString())])
@@ -248,18 +248,18 @@ def _set_role(data, state):
         LOGGER.warning('Failed to set role %s at %s', role.name, address)
         raise InternalError('Unable to save role {}'.format(role.name))
 
-    state.add_event(
+    context.add_event(
         event_type="identity_update",
         attributes=[("updated", role.name)])
     LOGGER.debug("Set role: \n%s", role)
 
 
-def _get_data(address, state):
+def _get_data(address, context):
     try:
-        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
+        entries_list = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
 
     except FutureTimeoutError:
-        LOGGER.warning('Timeout occured on state.get([%s])', address)
+        LOGGER.warning('Timeout occured on context.get_state([%s])', address)
         raise InternalError('Unable to get {}'.format(address))
 
     return entries_list
