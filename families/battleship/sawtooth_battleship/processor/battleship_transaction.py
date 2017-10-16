@@ -222,14 +222,14 @@ class BattleshipTransaction:
             raise InvalidTransaction(
                 'invalid action: {}'.format(self._action))
 
-    def apply(self, state_store):
+    def apply(self, context):
         """Applies all the updates in the transaction to the transaction
         store.
 
         Args:
-            store: state_store"""
+            store: context"""
 
-        state = _get_state_data(self._battleship_addr, state_store)
+        state = _get_state_data(self._battleship_addr, context)
         LOGGER.debug('Applying changes to state\nCURRENT STATE:\n%s', state)
 
         self.check_valid(state)
@@ -308,7 +308,7 @@ class BattleshipTransaction:
             raise InvalidTransaction(
                 "invalid state: {}".format(state[self._name].copy))
 
-        _store_state_data(self._battleship_addr, state, state_store)
+        _store_state_data(self._battleship_addr, state, context)
 
     def dump(self):
         """Returns a dict with attributes from the transaction object.
@@ -339,11 +339,11 @@ def _make_battleship_address(namespace_prefix, name):
         hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
 
 
-def _get_state_data(game_address, state_store):
+def _get_state_data(game_address, context):
     # Get data from address
-    state_entries = state_store.get([game_address])
+    state_entries = context.get_state([game_address])
 
-    # state_store.get() returns a list. If no data has been stored yet
+    # context.get_state() returns a list. If no data has been stored yet
     # at the given address, it will be empty.
     if state_entries:
         try:
@@ -358,9 +358,9 @@ def _get_state_data(game_address, state_store):
         return {}
 
 
-def _store_state_data(addr, new_state, state_store):
+def _store_state_data(addr, new_state, context):
     LOGGER.debug('Storing Upadated State....\nUPDATED STATE:\n%s', new_state)
-    addresses = state_store.set([
+    addresses = context.set_state([
         StateEntry(address=addr, data=json.dumps(new_state).encode())
     ])
 
