@@ -56,14 +56,14 @@ class IntkeyTransactionHandler:
     def namespaces(self):
         return [INTKEY_ADDRESS_PREFIX]
 
-    def apply(self, transaction, state_store):
+    def apply(self, transaction, context):
         verb, name, value = _unpack_transaction(transaction)
 
-        state = _get_state_data(name, state_store)
+        state = _get_state_data(name, context)
 
         updated_state = _do_intkey(verb, name, value, state)
 
-        _set_state_data(name, updated_state, state_store)
+        _set_state_data(name, updated_state, context)
 
 
 def _unpack_transaction(transaction):
@@ -123,10 +123,10 @@ def _validate_value(value):
                 a=MAX_VALUE))
 
 
-def _get_state_data(name, state_store):
+def _get_state_data(name, context):
     address = make_intkey_address(name)
 
-    state_entries = state_store.get([address])
+    state_entries = context.get_state([address])
 
     try:
         return cbor.loads(state_entries[0].data)
@@ -137,12 +137,12 @@ def _get_state_data(name, state_store):
             'Failed to load state data')
 
 
-def _set_state_data(name, state, state_store):
+def _set_state_data(name, state, context):
     address = make_intkey_address(name)
 
     encoded = cbor.dumps(state)
 
-    addresses = state_store.set([
+    addresses = context.set_state([
         StateEntry(
             address=address,
             data=encoded)])
