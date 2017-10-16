@@ -64,7 +64,7 @@ func (self *IntkeyHandler) Namespaces() []string {
 	return []string{self.namespace}
 }
 
-func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state *processor.Context) error {
+func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
 	payloadData := request.GetPayload()
 	if payloadData == nil {
 		return &processor.InvalidTransactionError{Msg: "Must contain payload"}
@@ -113,7 +113,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 	hashed_name := Hexdigest(name)
 	address := self.namespace + hashed_name[len(hashed_name)-64:]
 
-	results, err := state.Get([]string{address})
+	results, err := context.GetState([]string{address})
 	if err != nil {
 		return &processor.InternalError{Msg: fmt.Sprint("Error getting state:", err)}
 	}
@@ -173,7 +173,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, state 
 		}
 	}
 
-	addresses, err := state.Set(map[string][]byte{
+	addresses, err := context.SetState(map[string][]byte{
 		address: data,
 	})
 	if err != nil {
