@@ -55,13 +55,13 @@ class SettingsTransactionHandler(object):
     def namespaces(self):
         return [SETTINGS_NAMESPACE]
 
-    def apply(self, transaction, state):
+    def apply(self, transaction, context):
 
         txn_header = TransactionHeader()
         txn_header.ParseFromString(transaction.header)
         pubkey = txn_header.signer_pubkey
 
-        auth_keys = _get_auth_keys(state)
+        auth_keys = _get_auth_keys(context)
         if auth_keys and pubkey not in auth_keys:
             raise InvalidTransaction(
                 '{} is not authorized to change settings'.format(pubkey))
@@ -71,28 +71,29 @@ class SettingsTransactionHandler(object):
 
         if settings_payload.action == SettingsPayload.PROPOSE:
             return self._apply_proposal(
-                auth_keys, pubkey, settings_payload.data, state)
+                auth_keys, pubkey, settings_payload.data, context)
         elif settings_payload.action == SettingsPayload.VOTE:
             return self._apply_vote(pubkey, settings_payload.data,
-                                    auth_keys, state)
+                                    auth_keys, context)
         else:
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
 
-    def _apply_proposal(self, auth_keys, pubkey, setting_proposal_data, state):
+    def _apply_proposal(self, auth_keys, pubkey,
+                        setting_proposal_data, context):
         setting_proposal = SettingProposal()
         setting_proposal.ParseFromString(setting_proposal_data)
 
         proposal_id = hashlib.sha256(setting_proposal_data).hexdigest()
 
-        approval_threshold = _get_approval_threshold(state)
+        approval_threshold = _get_approval_threshold(context)
 
         _validate_setting(auth_keys,
                           setting_proposal.setting,
                           setting_proposal.value)
 
         if approval_threshold > 1:
-            setting_candidates = _get_setting_candidates(state)
+            setting_candidates = _get_setting_candidates(context)
 
             existing_candidate = _first(
                 setting_candidates.candidates,
@@ -115,18 +116,19 @@ class SettingsTransactionHandler(object):
             LOGGER.debug('Proposal made to set %s to %s',
                          setting_proposal.setting,
                          setting_proposal.value)
-            _save_setting_candidates(state, setting_candidates)
+            _save_setting_candidates(context, setting_candidates)
         else:
-            _set_setting_value(state,
+            _set_setting_value(context,
                                setting_proposal.setting,
                                setting_proposal.value)
 
-    def _apply_vote(self, pubkey, settings_vote_data, authorized_keys, state):
+    def _apply_vote(self, pubkey,
+                    settings_vote_data, authorized_keys, context):
         settings_vote = SettingVote()
         settings_vote.ParseFromString(settings_vote_data)
         proposal_id = settings_vote.proposal_id
 
-        setting_candidates = _get_setting_candidates(state)
+        setting_candidates = _get_setting_candidates(context)
         candidate = _first(
             setting_candidates.candidates,
             lambda candidate: candidate.proposal_id == proposal_id)
@@ -137,7 +139,7 @@ class SettingsTransactionHandler(object):
 
         candidate_index = _index_of(setting_candidates.candidates, candidate)
 
-        approval_threshold = _get_approval_threshold(state)
+        approval_threshold = _get_approval_threshold(context)
 
         vote_record = _first(candidate.votes,
                              lambda record: record.public_key == pubkey)
@@ -158,7 +160,7 @@ class SettingsTransactionHandler(object):
                 rejected_count += 1
 
         if accepted_count >= approval_threshold:
-            _set_setting_value(state,
+            _set_setting_value(context,
                                candidate.proposal.setting,
                                candidate.proposal.value)
             del setting_candidates.candidates[candidate_index]
@@ -171,11 +173,11 @@ class SettingsTransactionHandler(object):
             LOGGER.debug('Vote recorded for %s',
                          candidate.proposal.setting)
 
-        _save_setting_candidates(state, setting_candidates)
+        _save_setting_candidates(context, setting_candidates)
 
 
-def _get_setting_candidates(state):
-    value = _get_setting_value(state, 'sawtooth.settings.vote.proposals')
+def _get_setting_candidates(context):
+    value = _get_setting_value(context, 'sawtooth.settings.vote.proposals')
     if not value:
         return SettingCandidates(candidates={})
 
@@ -184,21 +186,21 @@ def _get_setting_candidates(state):
     return setting_candidates
 
 
-def _save_setting_candidates(state, setting_candidates):
-    _set_setting_value(state,
+def _save_setting_candidates(context, setting_candidates):
+    _set_setting_value(context,
                        'sawtooth.settings.vote.proposals',
                        base64.b64encode(
                            setting_candidates.SerializeToString()))
 
 
-def _get_approval_threshold(state):
+def _get_approval_threshold(context):
     return int(_get_setting_value(
-        state, 'sawtooth.settings.vote.approval_threshold', 1))
+        context, 'sawtooth.settings.vote.approval_threshold', 1))
 
 
-def _get_auth_keys(state):
+def _get_auth_keys(context):
     value = _get_setting_value(
-        state, 'sawtooth.settings.vote.authorized_keys', '')
+        context, 'sawtooth.settings.vote.authorized_keys', '')
     return _split_ignore_empties(value)
 
 
@@ -233,9 +235,9 @@ def _validate_setting(auth_keys, setting, value):
             'Setting sawtooth.settings.vote.proposals is read-only')
 
 
-def _get_setting_value(state, key, default_value=None):
+def _get_setting_value(context, key, default_value=None):
     address = _make_settings_key(key)
-    setting = _get_setting_entry(state, address)
+    setting = _get_setting_entry(context, address)
     for entry in setting.entries:
         if key == entry.key:
             return entry.value
@@ -243,9 +245,9 @@ def _get_setting_value(state, key, default_value=None):
     return default_value
 
 
-def _set_setting_value(state, key, value):
+def _set_setting_value(context, key, value):
     address = _make_settings_key(key)
-    setting = _get_setting_entry(state, address)
+    setting = _get_setting_entry(context, address)
 
     old_value = None
     old_entry_index = None
@@ -260,13 +262,13 @@ def _set_setting_value(state, key, value):
         setting.entries.add(key=key, value=value)
 
     try:
-        addresses = list(state.set(
+        addresses = list(context.set_state(
             [StateEntry(address=address,
                         data=setting.SerializeToString())],
             timeout=STATE_TIMEOUT_SEC))
     except FutureTimeoutError:
         LOGGER.warning(
-            'Timeout occured on state.set([%s, <value>])', address)
+            'Timeout occured on context.set_state([%s, <value>])', address)
         raise InternalError('Unable to set {}'.format(key))
 
     if len(addresses) != 1:
@@ -279,13 +281,13 @@ def _set_setting_value(state, key, value):
                     key, old_value, value)
 
 
-def _get_setting_entry(state, address):
+def _get_setting_entry(context, address):
     setting = Setting()
 
     try:
-        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
+        entries_list = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
-        LOGGER.warning('Timeout occured on state.get([%s])', address)
+        LOGGER.warning('Timeout occured on context.get_state([%s])', address)
         raise InternalError('Unable to get {}'.format(address))
 
     if entries_list:
