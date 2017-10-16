@@ -23,7 +23,6 @@ CLI Reference
    :maxdepth: 2
 
    cli/sawtooth.rst
-   cli/seth.rst
    cli/poet.rst
    cli/validator.rst
    cli/rest_api.rst

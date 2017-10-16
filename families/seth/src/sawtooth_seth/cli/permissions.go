@@ -44,7 +44,9 @@ Supported permissions are:
 * contract: Deploy new contracts from an owned account
 * account: Create new externally owned accounts
 
-When a new account is created, its permissions are inherited from the creating account, with the exception of the "root" permission, which is set to disabled during creation and must be set with a separate transaction. If the account is creating itself, its permissions are inherited from the account at the global permissions address. If no permissions are set at the global permissions address, all permissions are enabled for the new account (including root).
+When a new account is created, its permissions are inherited from the creating account according to the following rules:
+- If the account is a new external account, its permissions are inherited from the global permissions address. If no permissions are set at the global permissions address, all permissions are enabled for the new account.
+- If the account is a new contract account, its permissions are inherited from the creating account, with the exception of the "root" permission, which is set to deny.
 
 To specify permissions on the command line, use a comma-separated list of "prefixed" permissions from the list above. Permissions must be prefixed with a plus ("+") or minus ("-") to indicated allowed and not allowed respectively. Permissions that are omitted from the list will be left unset and default to those set at the global permissions address.
 
