@@ -43,14 +43,14 @@ const _toInternalError = (err) => {
   throw new InternalError(message)
 }
 
-const _setEntry = (state, address, stateValue) => {
+const _setEntry = (context, address, stateValue) => {
   let entries = {
     [address]: cbor.encode(stateValue)
   }
-  return state.set(entries)
+  return context.setState(entries)
 }
 
-const _applySet = (state, address, name, value) => (possibleAddressValues) => {
+const _applySet = (context, address, name, value) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
 
   let stateValue
@@ -69,10 +69,10 @@ const _applySet = (state, address, name, value) => (possibleAddressValues) => {
 
   stateValue[name] = value
 
-  return _setEntry(state, address, stateValue)
+  return _setEntry(context, address, stateValue)
 }
 
-const _applyOperator = (verb, op) => (state, address, name, value) => (possibleAddressValues) => {
+const _applyOperator = (verb, op) => (context, address, name, value) => (possibleAddressValues) => {
   let stateValueRep = possibleAddressValues[address]
   if (!stateValueRep || stateValueRep.length === 0) {
     throw new InvalidTransaction(`Verb is ${verb} but Name is not in state`)
@@ -98,7 +98,7 @@ const _applyOperator = (verb, op) => (state, address, name, value) => (possibleA
   // Increment the value in state by value
   // stateValue[name] = op(stateValue[name], value)
   stateValue[name] = result
-  return _setEntry(state, address, stateValue)
+  return _setEntry(context, address, stateValue)
 }
 
 const _applyInc = _applyOperator('inc', (x, y) => x + y)
@@ -109,7 +109,7 @@ class IntegerKeyHandler extends TransactionHandler {
     super(INT_KEY_FAMILY, '1.0', [INT_KEY_NAMESPACE])
   }
 
-  apply (transactionProcessRequest, state) {
+  apply (transactionProcessRequest, context) {
     return _decodeCbor(transactionProcessRequest.payload)
       .catch(_toInternalError)
       .then((update) => {
@@ -160,10 +160,10 @@ class IntegerKeyHandler extends TransactionHandler {
         let address = INT_KEY_NAMESPACE + _hash(name).slice(-64)
 
         // Get the current state, for the key's address:
-        let getPromise = state.get([address])
+        let getPromise = context.getState([address])
 
         // Apply the action to the promise's result:
-        let actionPromise = getPromise.then(actionFn(state, address, name, value))
+        let actionPromise = getPromise.then(actionFn(context, address, name, value))
 
         // Validate that the action promise results in the correctly set address:
         return actionPromise
