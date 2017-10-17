@@ -30,7 +30,6 @@ from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfo
 
 from sawtooth_block_info.common import FAMILY_NAME
 from sawtooth_block_info.common import FAMILY_VERSION
-from sawtooth_block_info.common import ENCODING
 from sawtooth_block_info.common import CONFIG_ADDRESS
 from sawtooth_block_info.common import BLOCK_INFO_NAMESPACE
 
@@ -53,7 +52,6 @@ class BlockInfoInjector(BatchInjector):
             inputs=[CONFIG_ADDRESS, BLOCK_INFO_NAMESPACE],
             outputs=[CONFIG_ADDRESS, BLOCK_INFO_NAMESPACE],
             dependencies=[],
-            payload_encoding=ENCODING,
             payload_sha512=hashlib.sha512(payload).hexdigest(),
             batcher_pubkey=self._public_key,
         ).SerializeToString()

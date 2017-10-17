@@ -65,9 +65,8 @@ def _sign(content, private):
 
 
 class MessageFactory(object):
-    def __init__(self, encoding, family_name, family_version,
+    def __init__(self, family_name, family_version,
                  namespace, private=None, public=None):
-        self.encoding = encoding
         self.family_name = family_name
         self.family_version = family_version
         if isinstance(namespace, (list)):
@@ -106,7 +105,6 @@ class MessageFactory(object):
         return TpRegisterRequest(
             family=self.family_name,
             version=self.family_version,
-            encoding=self.encoding,
             namespaces=self.namespaces
         )
 
@@ -136,7 +134,6 @@ class MessageFactory(object):
             inputs=inputs,
             outputs=outputs,
             dependencies=deps,
-            payload_encoding=self.encoding,
             payload_sha512=self.sha512(payload),
             batcher_pubkey=pub_key,
             nonce=nonce

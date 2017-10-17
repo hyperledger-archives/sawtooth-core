@@ -42,9 +42,6 @@ func (self *SmallbankHandler) FamilyName() string {
 func (self *SmallbankHandler) FamilyVersion() string {
 	return "1.0"
 }
-func (self *SmallbankHandler) Encoding() string {
-	return "application/protobuf"
-}
 
 func (self *SmallbankHandler) Namespaces() []string {
 	return []string{namespace}

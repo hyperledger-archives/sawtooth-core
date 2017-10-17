@@ -93,14 +93,13 @@ typedef std::unique_ptr<TransactionApplicator> TransactionApplicatorUPtr;
 
 // Definition of a TransactionHandler to be registered with the validator.
 // Every Transaction Processor should register at least one of these. This
-// definition allows for the handler to declare multiple version and encodings
+// definition allows for the handler to declare multiple version.
 // that it supports.
 class TransactionHandler {
  public:
     virtual ~TransactionHandler() {};
 
     virtual std::string transaction_family_name() const = 0;
-    virtual std::list<std::string> encodings() const = 0;
     virtual std::list<std::string> versions() const = 0;
     virtual std::list<std::string> namespaces() const = 0;
     // When a Transaction processing reqquest is received, the

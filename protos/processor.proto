@@ -31,10 +31,6 @@ message TpRegisterRequest {
     //      2.1  for version 2.1
     string version = 2;
 
-    // The supported encodings.
-    // 'application/cbor', 'application/protobuf', etc
-    string encoding = 3;
-
     // The namespaces this transaction processor expects to interact with
     // when processing transations matching this specification; will be
     // enforced by the state API on the validator.

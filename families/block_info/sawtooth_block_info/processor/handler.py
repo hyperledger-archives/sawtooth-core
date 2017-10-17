@@ -26,7 +26,6 @@ from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfoConfig
 
 from sawtooth_block_info.common import FAMILY_NAME
 from sawtooth_block_info.common import FAMILY_VERSION
-from sawtooth_block_info.common import ENCODING
 from sawtooth_block_info.common import NAMESPACE
 from sawtooth_block_info.common import CONFIG_ADDRESS
 from sawtooth_block_info.common import DEFAULT_SYNC_TOLERANCE
@@ -62,10 +61,6 @@ class BlockInfoTransactionHandler(object):
     @property
     def family_versions(self):
         return [FAMILY_VERSION]
-
-    @property
-    def encodings(self):
-        return [ENCODING]
 
     @property
     def namespaces(self):

@@ -137,7 +137,6 @@ def do_genesis(args):
             inputs=input_addresses,
             outputs=output_addresses,
             dependencies=[],
-            payload_encoding="application/protobuf",
             payload_sha512=sha512(serialized).hexdigest(),
             batcher_pubkey=pubkey,
             nonce=time.time().hex().encode()).SerializeToString()

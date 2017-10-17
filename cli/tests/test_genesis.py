@@ -197,7 +197,6 @@ def transaction(txn_sig, dependencies):
         inputs=[],
         outputs=[],
         dependencies=dependencies,
-        payload_encoding='application/protobuf',
         payload_sha512='some_sha512',
         batcher_pubkey='test_pubkey'
     ).SerializeToString()

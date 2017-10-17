@@ -85,11 +85,6 @@ public class JvmScHandler implements TransactionHandler{
   }
 
   @Override
-  public String getEncoding() {
-    return "application/protobuf";
-  }
-
-  @Override
   public String getVersion() {
     return "1.0";
   }

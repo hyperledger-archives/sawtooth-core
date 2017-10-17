@@ -47,11 +47,6 @@ message TransactionHeader {
     // what addresses the transaction processor is allowed to write to.
     repeated string outputs = 7;
 
-    // The payload encoding correlates to the transaction processor's payload
-    // encoding that this transaction can be processed on,
-    // for example ""application/cbor""
-    string payload_encoding = 8;
-
     //The sha512 hash of the encoded payload
     string payload_sha512 = 9;
 

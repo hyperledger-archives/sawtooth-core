@@ -75,10 +75,10 @@ class SethRpcTest(unittest.TestCase):
         cls.contract_address_b = bytes([0xff] * 20)
         cls.contract_init_s = "0" * 60 * 2
         cls.contract_init_b = bytes([0x0] * 60)
-        cls.contract_init_txn_id = "7c9ac003a3c10450292ec6a1811f9c4f03eeb26866c2c39e2e03af71fed6e87b187d09c4c7d14344723cd617c3e5a0cbc6a3ceeb1f154f699d92c15ea7dde71f"
+        cls.contract_init_txn_id = "cfb0f4224ec4effa35092161c7e84021bccf3527ff5c042e9cccf94478cbb1223f548e3f38af881605b3cf412b35432f45db5a1301e0f4758a094ffbd9f9f0c8"
         cls.contract_call_s = "0" * 30 * 2
         cls.contract_call_b = bytes([0x0] * 30)
-        cls.contract_call_txn_id = "b9d2d53d4b90b27c5958221c81390d3f9b068f789b03510d5ec1acdccf60025c0df0312d4cece4591528265fc8260ff2d0f39ad8a77d721cd7d82c1c0cd1e295"
+        cls.contract_call_txn_id = "5faa8f3ed941dc68f94678c5e28ed0a5997d461fd7f92fdcc00a17f7f7144c27743b43565bb913ac5ac33239220063f5c887246e0f3bbb22a7bd7f07d0ba8fe6"
         cls.balance = 123
         cls.nonce = 456
         cls.code_b = bytes([0xab, 0xcd, 0xef])
@@ -1293,7 +1293,6 @@ class SethRpcTest(unittest.TestCase):
         self.assertEqual(txn_header.signer_pubkey, self.pubkey)
         self.assertEqual(txn_header.family_name, "seth")
         self.assertEqual(txn_header.family_version, "1.0")
-        self.assertEqual(txn_header.payload_encoding, "application/protobuf")
 
         return msg, txn
 

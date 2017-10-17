@@ -191,10 +191,6 @@ class ValidatorRegistryTransactionHandler(object):
         return ['1.0']
 
     @property
-    def encodings(self):
-        return ['application/protobuf']
-
-    @property
     def namespaces(self):
         return [VAL_REG_NAMESPACE]
 

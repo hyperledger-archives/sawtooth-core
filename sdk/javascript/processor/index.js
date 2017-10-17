@@ -72,8 +72,7 @@ class TransactionProcessor {
 
           let handler = this._handlers.find((candidate) =>
              candidate.transactionFamilyName === txnHeader.familyName &&
-               candidate.version === txnHeader.familyVersion &&
-               candidate.encoding === txnHeader.payloadEncoding)
+               candidate.version === txnHeader.familyVersion)
 
           if (handler) {
             handler.apply(request, state)
@@ -123,19 +122,18 @@ class TransactionProcessor {
           TpRegisterRequest.encode({
             family: handler.transactionFamilyName,
             version: handler.version,
-            encoding: handler.encoding,
             namespaces: handler.namespaces
           }).finish()
         )
         .then(content => TpRegisterResponse.decode(content))
         .then(ack => {
-          let {transactionFamilyName: familyName, version, encoding} = handler
+          let {transactionFamilyName: familyName, version} = handler
           let status = ack.status === 0 ? 'succeeded' : 'failed'
-          console.log(`Registration of [${familyName} ${version} ${encoding}] ${status}`)
+          console.log(`Registration of [${familyName} ${version}] ${status}`)
         })
         .catch(e => {
-          let {transactionFamilyName: familyName, version, encoding} = handler
-          console.log(`Registration of [${familyName} ${version} ${encoding}] Failed!`, e)
+          let {transactionFamilyName: familyName, version} = handler
+          console.log(`Registration of [${familyName} ${version}] Failed!`, e)
         })
       })
     })
@@ -160,10 +158,9 @@ const _readOnlyProperty = (instance, propertyName, value) =>
       value})
 
 class TransactionHandler {
-  constructor (transactionFamilyName, version, encoding, namespaces) {
+  constructor (transactionFamilyName, version, namespaces) {
     _readOnlyProperty(this, 'transactionFamilyName', transactionFamilyName)
     _readOnlyProperty(this, 'version', version)
-    _readOnlyProperty(this, 'encoding', encoding)
     _readOnlyProperty(this, 'namespaces', namespaces)
   }
 

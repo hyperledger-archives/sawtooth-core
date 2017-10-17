@@ -642,9 +642,6 @@ definitions:
         items:
           type: string
           example: 1cf12650d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c
-      payload_encoding:
-        type: string
-        example: application/cbor
       payload_sha512:
         type: string
         example: fb6135ef73f4fe77367f9384b3bbbb158f4b8603c9d612157108e5c271868fce2242ee4abd7a29397ba63780c3ccab13783dfd4d9f0167beda03cdb0e37b87f4

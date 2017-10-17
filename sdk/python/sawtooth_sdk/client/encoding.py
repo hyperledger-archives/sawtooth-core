@@ -53,8 +53,6 @@ class TransactionEncoder(object):
             created by this encoder will read from (unusual)
         outputs (list of str, optional): State addresses that every Transaction
             created by this encoder will write to (unusual)
-        payload_encoding (str, optional): The byte-encoding the Transaction
-            Processor should expect
 
     Note:
         Every optional argument can be set or changed later as an attribute.
@@ -67,8 +65,7 @@ class TransactionEncoder(object):
                  family_name=None,
                  family_version=None,
                  inputs=None,
-                 outputs=None,
-                 payload_encoding=None):
+                 outputs=None):
         self._private_key = private_key
         self._public_key = generate_pubkey(private_key, privkey_format='bytes')
 
@@ -83,7 +80,6 @@ class TransactionEncoder(object):
         self.family_version = family_version
         self.inputs = inputs
         self.outputs = outputs
-        self.payload_encoding = payload_encoding
 
     def create(self,
                payload,
@@ -93,8 +89,7 @@ class TransactionEncoder(object):
                family_version=None,
                inputs=None,
                nonce=None,
-               outputs=None,
-               payload_encoding=None):
+               outputs=None):
         """Creates a new Transaction from a payload, and a combination of both
         TransactionHeader values passed in as keyword arguments, and defaults
         set on TransactionEncoder.
@@ -112,8 +107,6 @@ class TransactionEncoder(object):
             nonce (str, optional): Random string to ensure uniqueness
             outputs (list of str, optional): State addresses that Transaction
                 created by this encoder will write to
-            payload_encoding (str, optional): The byte-encoding the Transaction
-                Processor should expect
 
         Raises:
             TypeError: Raised if a user-supplied required header was not set
@@ -121,7 +114,6 @@ class TransactionEncoder(object):
                 Required user-supplied headers include:
                     * family_name
                     * family_version
-                    * payload_encoding
                     * inputs
                     * outputs
 
@@ -143,8 +135,6 @@ class TransactionEncoder(object):
             family_version=resolve_required('family_version', family_version),
             inputs=resolve_required('inputs', inputs),
             outputs=resolve_required('outputs', outputs),
-            payload_encoding=resolve_required('payload_encoding',
-                                              payload_encoding),
             batcher_pubkey=(batcher_pubkey if batcher_pubkey is not None
                             else self.batcher_pubkey),
             dependencies=(dependencies if dependencies is not None
@@ -184,8 +174,7 @@ class TransactionEncoder(object):
                        family_version=None,
                        inputs=None,
                        nonce=None,
-                       outputs=None,
-                       payload_encoding=None):
+                       outputs=None):
         """Convenience method which creates a single Transaction from a payload
         and supplied or default TransactionHeader values, before wrapping it
         in a TransactionList and serializing it. Accepts identical parameters
@@ -204,8 +193,6 @@ class TransactionEncoder(object):
             nonce (str, optional): Random string to ensure uniqueness
             outputs (list of str, optional): State addresses that Transaction
                 created by this encoder will write to
-            payload_encoding (str, optional): The byte-encoding the Transaction
-                Processor should expect
 
         Raises:
             TypeError: Raised if a user-supplied required header was not set
@@ -213,7 +200,6 @@ class TransactionEncoder(object):
                 Required user-supplied headers include:
                     * family_name
                     * family_version
-                    * payload_encoding
                     * inputs
                     * outputs
 
@@ -227,8 +213,7 @@ class TransactionEncoder(object):
                           family_version=family_version,
                           inputs=inputs,
                           nonce=nonce,
-                          outputs=outputs,
-                          payload_encoding=payload_encoding)
+                          outputs=outputs)
         return self.encode(txn)
 
 

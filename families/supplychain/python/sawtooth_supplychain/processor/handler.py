@@ -58,10 +58,6 @@ class SupplyChainHandler(object):
         return [SUPPLYCHAIN_VERSION]
 
     @property
-    def encodings(self):
-        return ['application/protobuf']
-
-    @property
     def namespaces(self):
         return [Addressing.agent_namespace(),
                 Addressing.application_namespace(),

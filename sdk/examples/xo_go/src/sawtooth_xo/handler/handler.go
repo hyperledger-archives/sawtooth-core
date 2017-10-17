@@ -57,9 +57,6 @@ func (self *XoHandler) FamilyName() string {
 func (self *XoHandler) FamilyVersion() string {
 	return "1.0"
 }
-func (self *XoHandler) Encoding() string {
-	return "csv-utf8"
-}
 
 func (self *XoHandler) Namespaces() []string {
 	return []string{namespace}

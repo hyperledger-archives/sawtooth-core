@@ -19,7 +19,6 @@ from sawtooth_processor_test.message_factory import MessageFactory
 class XoMessageFactory:
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
-            encoding="csv-utf8",
             family_name="xo",
             family_version="1.0",
             namespace=MessageFactory.sha512("xo".encode("utf-8"))[0:6],

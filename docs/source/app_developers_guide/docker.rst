@@ -383,7 +383,6 @@ quite long. It should look something like this:
         outputs:
         - 000000a87cb5eafdcca6a8b79606fb3afea5bdab274474a6aa82c1c0cbf0fbcaf64c0b
         - 000000a87cb5eafdcca6a8f82af32160bc531176b5001cb05e10bce3b0c44298fc1c14
-        payload_encoding: application/protobuf
         payload_sha512: 944b6b55e831a2ba37261d904b14b4e729399e4a7c41bd22fcb09c46f0b3821cd41750e38640e33f79b6b5745a20225a1f5427bd5085f3800c166bbb7fb899e8
         signer_pubkey: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
       header_signature: 24b168aaf5ea4a76a6c316924a1c26df0878908682ea5740dd70814e7c400d56354dee788191be8e28393c70398906fb467fac8db6279e90e4e61619589d42bf
@@ -678,7 +677,7 @@ Then run the following command from the validator container:
   $ sawtooth config proposal create \
     --url http://rest-api:8080 \
     --key /root/.sawtooth/keys/my_key.priv \
-    sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0", "encoding": "application/cbor"}, {"family":"sawtooth_settings", "version":"1.0", "encoding":"application/protobuf"}]'
+    sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
   $ sawtooth config settings list --url http://rest-api:8080
 
 
@@ -688,8 +687,4 @@ and output similar to the following appears in the validator terminal window:
 .. code-block:: console
 
   sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
-  sawtooth.validator.transaction_families: [{"family": "intkey", "version": "1.0", "encoding": "application/protobuf"}, {"family":"sawtooth_settings", "versi...
-
-
-
-
+  sawtooth.validator.transaction_families: [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "versi...

@@ -104,7 +104,6 @@ public class TransactionProcessor implements Runnable {
             .newBuilder()
             .setFamily(handler.transactionFamilyName())
             .addAllNamespaces(handler.getNameSpaces())
-            .setEncoding(handler.getEncoding())
             .setVersion(handler.getVersion())
             .build();
     try {
@@ -183,8 +182,7 @@ public class TransactionProcessor implements Runnable {
       for (int  i = 0; i < this.handlers.size(); i++) {
         TransactionHandler handler = this.handlers.get(i);
         if (header.getFamilyName().equals(handler.transactionFamilyName())
-            && header.getFamilyVersion().equals(handler.getVersion())
-            && header.getPayloadEncoding().equals(handler.getEncoding())) {
+            && header.getFamilyVersion().equals(handler.getVersion())) {
           return handler;
         }
       }
@@ -235,7 +233,6 @@ public class TransactionProcessor implements Runnable {
                     .newBuilder()
                     .setFamily(handler.transactionFamilyName())
                     .addAllNamespaces(handler.getNameSpaces())
-                    .setEncoding(handler.getEncoding())
                     .setVersion(handler.getVersion())
                     .build();
 

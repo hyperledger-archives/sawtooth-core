@@ -119,7 +119,6 @@ the right data into the right keys.
         inputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
         nonce=str(randint(0, 1000000000)),
         outputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
-        payload_encoding='application/cbor',
         payload_sha512=payload_sha512,
         signer_pubkey=public_key_hex)
 

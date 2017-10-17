@@ -147,11 +147,10 @@ func (c *Client) CreateExternalAccount(
 	}
 
 	encoder := sdk.NewEncoder(sender, sdk.TransactionParams{
-		FamilyName:      FAMILY_NAME,
-		FamilyVersion:   FAMILY_VERSION,
-		PayloadEncoding: ENCODING,
-		Inputs:          addresses,
-		Outputs:         addresses,
+		FamilyName:    FAMILY_NAME,
+		FamilyVersion: FAMILY_VERSION,
+		Inputs:        addresses,
+		Outputs:       addresses,
 	})
 
 	txnID, err := c.sendTxn(transaction, encoder, wait)
@@ -206,11 +205,10 @@ func (c *Client) CreateContractAccount(
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
-		FamilyName:      FAMILY_NAME,
-		FamilyVersion:   FAMILY_VERSION,
-		PayloadEncoding: ENCODING,
-		Inputs:          addresses,
-		Outputs:         addresses,
+		FamilyName:    FAMILY_NAME,
+		FamilyVersion: FAMILY_VERSION,
+		Inputs:        addresses,
+		Outputs:       addresses,
 	})
 
 	transaction := &SethTransaction{
@@ -281,11 +279,10 @@ func (c *Client) MessageCall(
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
-		FamilyName:      FAMILY_NAME,
-		FamilyVersion:   FAMILY_VERSION,
-		PayloadEncoding: ENCODING,
-		Inputs:          addresses,
-		Outputs:         addresses,
+		FamilyName:    FAMILY_NAME,
+		FamilyVersion: FAMILY_VERSION,
+		Inputs:        addresses,
+		Outputs:       addresses,
 	})
 
 	transaction := &SethTransaction{
@@ -349,11 +346,10 @@ func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, no
 	}
 
 	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
-		FamilyName:      FAMILY_NAME,
-		FamilyVersion:   FAMILY_VERSION,
-		PayloadEncoding: ENCODING,
-		Inputs:          addresses,
-		Outputs:         addresses,
+		FamilyName:    FAMILY_NAME,
+		FamilyVersion: FAMILY_VERSION,
+		Inputs:        addresses,
+		Outputs:       addresses,
 	})
 
 	transaction := &SethTransaction{

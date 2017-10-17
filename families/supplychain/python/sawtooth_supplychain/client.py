@@ -327,7 +327,6 @@ class SupplyChainClient(object):
             inputs=inputs or [],
             outputs=outputs or [],
             dependencies=[],
-            payload_encoding='application/protobuf',
             payload_sha512=_sha512(payload),
             batcher_pubkey=self._public_key,
             nonce=time.time().hex().encode()

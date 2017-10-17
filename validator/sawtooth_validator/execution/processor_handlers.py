@@ -36,17 +36,15 @@ class ProcessorRegisterHandler(Handler):
 
         LOGGER.info(
             'registered transaction processor: connection_id=%s, family=%s, '
-            'version=%s, encoding=%s, namespaces=%s',
+            'version=%s, namespaces=%s',
             connection_id,
             request.family,
             request.version,
-            request.encoding,
             list(request.namespaces))
 
         processor_type = processor_iterator.ProcessorType(
             request.family,
-            request.version,
-            request.encoding)
+            request.version)
 
         processor = processor_iterator.Processor(
             connection_id,

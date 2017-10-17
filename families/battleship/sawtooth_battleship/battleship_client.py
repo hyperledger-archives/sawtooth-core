@@ -46,7 +46,6 @@ class BattleshipClient:
             _private_key
             _public_key
             _transaction_family
-            _payload_encoding
             _family_version
             _wait
         """
@@ -61,7 +60,6 @@ class BattleshipClient:
 
         self._public_key = signing.generate_pubkey(self._private_key)
         self._transaction_family = "battleship"
-        self._payload_encoding = "json-utf8"
         self._family_version = "1.0"
         self._wait = wait
 
@@ -95,7 +93,6 @@ class BattleshipClient:
             inputs=[address],
             outputs=[address],
             dependencies=[],
-            payload_encoding=self._payload_encoding,
             payload_sha512=self._sha512(payload),
             batcher_pubkey=self._public_key,
             nonce=time.time().hex().encode()

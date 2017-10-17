@@ -70,9 +70,7 @@ playing tic-tac-toe.
 In addition to the name of the transaction family (family_name), each
 transaction specifies a family version string (family_version).  The version
 string enables upgrading a transaction family while coordinating the nodes
-in the network to upgrade.  The payload_encoding field allows the transaction
-family to support multiple serialization mechanisms (for example, json or
-cbor).
+in the network to upgrade.
 
 Dependencies and Input/Output Addresses
 ---------------------------------------
@@ -102,10 +100,7 @@ Payload
 The payload is used during transaction execution as a way to convey the change
 which should be applied to state.  Only the transaction family processing the
 transaction will deserialize the payload; to all other components of the
-system, payload is just a sequence of bytes.  The transaction family processing
-the transaction will deserialize the bytes using payload_encoding as a hint to
-determine the appropriate technique.  The payload_encoding string is defined
-by the transaction family itself.
+system, payload is just a sequence of bytes.
 
 The payload_sha512 field contains a SHA-512 hash of the payload bytes.  As part
 of the header, payload_sha512 is signed and later verified, while the payload
@@ -129,7 +124,7 @@ message types:
    :language: protobuf
    :caption: File: protos/batch.proto
    :linenos:
-	
+
 Header, Signature, and Public Keys
 ----------------------------------
 
@@ -149,7 +144,7 @@ Transactions
 The transactions field contains a list of Transactions which make up the batch.
 Transactions are applied in the order listed.  The transaction_ids field
 contains a list of Transaction header_signatures and must be the same order as
-the transactions field. 
+the transactions field.
 
 Why Batches?
 ============
@@ -184,7 +179,7 @@ Transactions and batches can also be signed by different keys.  For example, a
 browser application can sign the transaction and a server-side component can
 add transactions and create the batch and sign the batch.  This enables
 interesting application patterns, including aggregation of transactions from
-multiple transactors into an atomic operation (the batch).  
+multiple transactors into an atomic operation (the batch).
 
 There is an important restriction enforced between transactions and batches,
 which is that the transaction must contain the public key of the batch signer

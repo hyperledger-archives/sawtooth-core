@@ -29,7 +29,6 @@ let txnEncoder = null
 const encoderSettings = {
   familyName: 'track_and_trade',
   familyVersion: '1.0',
-  payloadEncoding: 'application/protobuf',
   inputs: ['1c1108'],
   outputs: ['1c1108'],
   batcherPubkey: null

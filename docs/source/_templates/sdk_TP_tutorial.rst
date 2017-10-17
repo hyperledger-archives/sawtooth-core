@@ -555,11 +555,6 @@ about what kinds of transactions it can handle.
       }
 
       @Override
-      public String getEncoding() {
-        return "csv-utf8";
-      }
-
-      @Override
       public String getVersion() {
         return "1.0";
       }

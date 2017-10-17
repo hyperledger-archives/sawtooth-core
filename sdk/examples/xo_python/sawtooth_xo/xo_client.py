@@ -159,7 +159,6 @@ class XoClient:
             inputs=[address],
             outputs=[address],
             dependencies=[],
-            payload_encoding="csv-utf8",
             payload_sha512=_sha512(payload),
             batcher_pubkey=self._public_key,
             nonce=time.time().hex().encode()

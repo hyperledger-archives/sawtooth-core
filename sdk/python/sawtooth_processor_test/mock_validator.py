@@ -132,9 +132,9 @@ class MockValidator(object):
         request = TpRegisterRequest()
         request.ParseFromString(message.content)
         LOGGER.debug(
-            "Processor registered: %s, %s, %s, %s",
+            "Processor registered: %s, %s, %s",
             str(request.family), str(request.version),
-            str(request.encoding), str(request.namespaces)
+            str(request.namespaces)
         )
         response = TpRegisterResponse(
             status=TpRegisterResponse.OK)

@@ -53,32 +53,27 @@ void TransactionProcessor::Register() {
         LOG4CXX_DEBUG(logger, "TransactionProcessor::Register: "
             << handler.first);
         auto versions = handler.second->versions();
-        auto encodings = handler.second->encodings();
 
         for (auto version : versions) {
-            for (auto encoding : encodings) {
-                LOG4CXX_DEBUG(logger, "Register Handler: "
-                    << handler.second->transaction_family_name()
-                    << "Version: "<< version
-                    << "Encoding: " << encoding);
-                TpRegisterRequest request;
-                request.set_family(handler.second->transaction_family_name());
-                request.set_encoding(encoding);
-                request.set_version(version);
-                for (auto namesp : handler.second->namespaces()) {
-                    request.add_namespaces(namesp);
-                }
-                FutureMessagePtr future = this->response_stream->SendMessage(
-                        Message_MessageType_TP_REGISTER_REQUEST, request);
-                TpRegisterResponse response;
-                future->GetMessage(
-                    Message_MessageType_TP_REGISTER_RESPONSE,
-                    &response);
-                if (response.status() != TpRegisterResponse::OK) {
-                    LOG4CXX_ERROR(logger, "Register failed, status code: "
-                        << response.status());
-                    throw std::runtime_error("Registation failed");
-                }
+            LOG4CXX_DEBUG(logger, "Register Handler: "
+                << handler.second->transaction_family_name()
+                << "Version: "<< version);
+            TpRegisterRequest request;
+            request.set_family(handler.second->transaction_family_name());
+            request.set_version(version);
+            for (auto namesp : handler.second->namespaces()) {
+                request.add_namespaces(namesp);
+            }
+            FutureMessagePtr future = this->response_stream->SendMessage(
+                    Message_MessageType_TP_REGISTER_REQUEST, request);
+            TpRegisterResponse response;
+            future->GetMessage(
+                Message_MessageType_TP_REGISTER_RESPONSE,
+                &response);
+            if (response.status() != TpRegisterResponse::OK) {
+                LOG4CXX_ERROR(logger, "Register failed, status code: "
+                    << response.status());
+                throw std::runtime_error("Registation failed");
             }
         }
     }
@@ -102,7 +97,7 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
         const std::string& family = txn_header.family_name();
         auto iter = this->handlers.find(family);
         if (iter != this->handlers.end()) {
-            // TBD match version and encoding
+            // TBD match version
             try {
                 GlobalStateUPtr global_state(
                     new GlobalState(

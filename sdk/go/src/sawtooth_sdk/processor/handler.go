@@ -42,7 +42,7 @@ import (
 //     processor.AddHandler(myHandler)
 //     processor.Start()
 //
-// The FamilyName(), FamilyVersion(), Encoding(), and Namespaces() methods are
+// The FamilyName(), FamilyVersion(), and Namespaces() methods are
 // used by the processor to route processing requests to the handler.
 type TransactionHandler interface {
 	// FamilyName should return the name of the transaction family that this
@@ -52,10 +52,6 @@ type TransactionHandler interface {
 	// FamilyVersion should return the version of the transaction family that
 	// this handler can process. Eg., "1.0"
 	FamilyVersion() string
-
-	// Encoding should return the encoding that this handler can interpret.
-	// Eg., "application/cbor"
-	Encoding() string
 
 	// Namespaces should return a slice containing all the handler's
 	// namespaces. Eg., []string{"abcdef"}

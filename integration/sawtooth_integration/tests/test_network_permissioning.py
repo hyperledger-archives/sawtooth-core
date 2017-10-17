@@ -312,7 +312,6 @@ class Client(object):
         self.pub_key = signer.generate_pubkey(self.priv_key)
         self._namespace = hashlib.sha512('intkey'.encode()).hexdigest()[:6]
         self._factory = MessageFactory(
-            'application/cbor',
             'intkey',
             '1.0',
             self._namespace)

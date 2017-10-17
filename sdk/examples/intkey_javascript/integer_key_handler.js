@@ -106,7 +106,7 @@ const _applyDec = _applyOperator('dec', (x, y) => x - y)
 
 class IntegerKeyHandler extends TransactionHandler {
   constructor () {
-    super(INT_KEY_FAMILY, '1.0', 'application/cbor', [INT_KEY_NAMESPACE])
+    super(INT_KEY_FAMILY, '1.0', [INT_KEY_NAMESPACE])
   }
 
   apply (transactionProcessRequest, state) {

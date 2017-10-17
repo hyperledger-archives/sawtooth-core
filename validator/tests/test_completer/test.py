@@ -70,7 +70,6 @@ class TestCompleter(unittest.TestCase):
                 inputs=[addr],
                 outputs=[addr],
                 dependencies=[],
-                payload_encoding="application/cbor",
                 payload_sha512=payload_encode)
 
             if missing_dep:

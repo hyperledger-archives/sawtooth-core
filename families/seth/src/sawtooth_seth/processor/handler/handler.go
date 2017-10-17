@@ -55,9 +55,7 @@ func (self *BurrowEVMHandler) FamilyName() string {
 func (self *BurrowEVMHandler) FamilyVersion() string {
 	return FAMILY_VERSION
 }
-func (self *BurrowEVMHandler) Encoding() string {
-	return ENCODING
-}
+
 func (self *BurrowEVMHandler) Namespaces() []string {
 	return []string{PREFIX}
 }
