@@ -18,7 +18,7 @@ from aiohttp.test_utils import unittest_run_loop
 from components import Mocks, BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_pb2
-from sawtooth_rest_api.protobuf.client_pb2 import BatchStatus
+from sawtooth_rest_api.protobuf.client_pb2 import ClientBatchStatus
 
 
 class PostBatchTests(BaseApiTest):
@@ -173,7 +173,8 @@ class PostBatchTests(BaseApiTest):
             - a link property that ends in '/batches?id=a'
         """
         batches = Mocks.make_batches('a')
-        statuses = [BatchStatus(batch_id='a', status=BatchStatus.COMMITTED)]
+        statuses = [ClientBatchStatus(
+            batch_id='a', status=ClientBatchStatus.COMMITTED)]
         self.connection.preset_response(batch_statuses=statuses)
 
         request = await self.post_batches(batches, wait=True)
@@ -205,7 +206,8 @@ class PostBatchTests(BaseApiTest):
             - a data property matching the batch statuses received
         """
         batches = Mocks.make_batches('pending')
-        statuses = [BatchStatus(batch_id='pending', status=BatchStatus.PENDING)]
+        statuses = [ClientBatchStatus(
+            batch_id='pending', status=ClientBatchStatus.PENDING)]
         self.connection.preset_response(batch_statuses=statuses)
 
         request = await self.post_batches(batches, wait=True)
@@ -220,7 +222,7 @@ class PostBatchTests(BaseApiTest):
         self.assert_statuses_match(statuses, response['data'])
 
 
-class BatchStatusTests(BaseApiTest):
+class ClientBatchStatusTests(BaseApiTest):
 
     async def get_application(self, loop):
         self.set_status_and_connection(
@@ -246,7 +248,8 @@ class BatchStatusTests(BaseApiTest):
             - a link property that ends in '/batch_status?id=pending'
             - a data property matching the batch statuses received
         """
-        statuses = [BatchStatus(batch_id='pending', status=BatchStatus.PENDING)]
+        statuses = [ClientBatchStatus(
+            batch_id='pending', status=ClientBatchStatus.PENDING)]
         self.connection.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200('/batch_status?id=pending')
@@ -274,10 +277,10 @@ class BatchStatusTests(BaseApiTest):
             - a link property that ends in '/batch_status?id=bad'
             - a data property matching the batch statuses received
         """
-        statuses = [BatchStatus(
+        statuses = [ClientBatchStatus(
             batch_id='bad-batch',
-            status=BatchStatus.INVALID,
-            invalid_transactions=[BatchStatus.InvalidTransaction(
+            status=ClientBatchStatus.INVALID,
+            invalid_transactions=[ClientBatchStatus.InvalidTransaction(
                 transaction_id='bad-transaction',
                 message='error message',
                 extended_data=b'error data')])]
@@ -301,7 +304,8 @@ class BatchStatusTests(BaseApiTest):
             - an error property with a code of 10
         """
         self.connection.preset_response(self.status.INTERNAL_ERROR)
-        response = await self.get_assert_status('/batch_status?id=pending', 500)
+        response = await self.get_assert_status(
+            '/batch_status?id=pending', 500)
 
         self.assert_has_valid_error(response, 10)
 
@@ -317,7 +321,8 @@ class BatchStatusTests(BaseApiTest):
             - an error property with a code of 27
         """
         self.connection.preset_response(self.status.NO_RESOURCE)
-        response = await self.get_assert_status('/batch_status?id=pending', 500)
+        response = await self.get_assert_status(
+            '/batch_status?id=pending', 500)
 
         self.assert_has_valid_error(response, 27)
 
@@ -338,7 +343,8 @@ class BatchStatusTests(BaseApiTest):
             - a link property that ends in '/batch_status?id=pending&wait'
             - a data property matching the batch statuses received
         """
-        statuses = [BatchStatus(batch_id='pending', status=BatchStatus.COMMITTED)]
+        statuses = [ClientBatchStatus(
+            batch_id='pending', status=ClientBatchStatus.COMMITTED)]
         self.connection.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200('/batch_status?id=pending&wait')
@@ -369,9 +375,12 @@ class BatchStatusTests(BaseApiTest):
             - a data property matching the batch statuses received
         """
         statuses = [
-            BatchStatus(batch_id='committed', status=BatchStatus.COMMITTED),
-            BatchStatus(batch_id='unknown', status=BatchStatus.UNKNOWN),
-            BatchStatus(batch_id='bad', status=BatchStatus.UNKNOWN)]
+            ClientBatchStatus(
+                batch_id='committed', status=ClientBatchStatus.COMMITTED),
+            ClientBatchStatus(
+                batch_id='unknown', status=ClientBatchStatus.UNKNOWN),
+            ClientBatchStatus(
+                batch_id='bad', status=ClientBatchStatus.UNKNOWN)]
         self.connection.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200(
@@ -415,9 +424,12 @@ class BatchStatusTests(BaseApiTest):
             - a data property matching the batch statuses received
         """
         statuses = [
-            BatchStatus(batch_id='committed', status=BatchStatus.COMMITTED),
-            BatchStatus(batch_id='pending', status=BatchStatus.PENDING),
-            BatchStatus(batch_id='bad', status=BatchStatus.UNKNOWN)]
+            ClientBatchStatus(
+                batch_id='committed', status=ClientBatchStatus.COMMITTED),
+            ClientBatchStatus(
+                batch_id='pending', status=ClientBatchStatus.PENDING),
+            ClientBatchStatus(
+                batch_id='bad', status=ClientBatchStatus.UNKNOWN)]
         self.connection.preset_response(batch_statuses=statuses)
 
         request = await self.client.post(

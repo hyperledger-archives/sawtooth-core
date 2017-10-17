@@ -488,14 +488,14 @@ def _format_batch_statuses(statuses, batch_ids, tracker):
     proto_statuses = []
 
     for batch_id in batch_ids:
-        if statuses[batch_id] == client_pb2.BatchStatus.INVALID:
+        if statuses[batch_id] == client_pb2.ClientBatchStatus.INVALID:
             invalid_txns = tracker.get_invalid_txn_info(batch_id)
             for txn_info in invalid_txns:
                 txn_info['transaction_id'] = txn_info.pop('id')
         else:
             invalid_txns = None
 
-        proto_statuses.append(client_pb2.BatchStatus(
+        proto_statuses.append(client_pb2.ClientBatchStatus(
             batch_id=batch_id,
             status=statuses[batch_id],
             invalid_transactions=invalid_txns))
