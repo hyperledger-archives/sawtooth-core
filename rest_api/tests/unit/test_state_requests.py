@@ -38,7 +38,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of '2'
             - a paging response with a start of 0, and 3 total resources
-            - three leaves with addresses/data of:
+            - three entries with addresses/data of:
                 * 'a': b'3'
                 * 'b': b'5'
                 * 'c': b'7'
@@ -52,11 +52,12 @@ class StateListTests(BaseApiTest):
             - a link property that ends in '/state?head=2&min=0&count=3'
             - a paging property that matches the paging response
             - a data property that is a list of 3 leaf dicts
-            - three leaves that match those in Protobuf response
+            - three entries that match those in Protobuf response
         """
         paging = Mocks.make_paging_response(0, 3)
-        leaves = Mocks.make_leaves(a=b'3', b=b'5', c=b'7')
-        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(a=b'3', b=b'5', c=b'7')
+        self.connection.preset_response(head_id='2', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state')
         controls = Mocks.make_paging_controls()
@@ -66,7 +67,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_link(response, '/state?head=2')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_with_validator_error(self):
@@ -107,7 +108,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of '1'
             - a paging response with a start of 0, and 2 total resources
-            - two leaves with addresses/data of:
+            - two entries with addresses/data of:
                 * 'a': b'2'
                 * 'b': b'4'
 
@@ -121,11 +122,12 @@ class StateListTests(BaseApiTest):
             - a link property that ends in '/state?head=1&min=0&count=2'
             - a paging property that matches the paging response
             - a data property that is a list of 2 leaf dicts
-            - three leaves that match those in Protobuf response
+            - three entries that match those in Protobuf response
         """
         paging = Mocks.make_paging_response(0, 2)
-        leaves = Mocks.make_leaves(a=b'2', b=b'4')
-        self.connection.preset_response(head_id='1', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(a=b'2', b=b'4')
+        self.connection.preset_response(head_id='1', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?head=1')
         controls = Mocks.make_paging_controls()
@@ -135,7 +137,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_link(response, '/state?head=1')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_with_bad_head(self):
@@ -169,14 +171,16 @@ class StateListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '2'
-            - a link property that ends in '/state?head=2&min=0&count=1&address=c'
+            - a link property that ends in
+            '/state?head=2&min=0&count=1&address=c'
             - a paging property that matches the paging response
             - a data property that is a list of 1 leaf dict
             - one leaf that matches the Protobuf response
         """
         paging = Mocks.make_paging_response(0, 1)
-        leaves = Mocks.make_leaves(c=b'7')
-        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(c=b'7')
+        self.connection.preset_response(head_id='2', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?address=c')
         controls = Mocks.make_paging_controls()
@@ -186,7 +190,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_link(response, '/state?head=2&address=c')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_with_bad_address(self):
@@ -232,14 +236,16 @@ class StateListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of '1'
-            - a link property that ends in '/state?head=1&min=0&count=1&address=a'
+            - a link property that ends in
+            '/state?head=1&min=0&count=1&address=a'
             - a paging property that matches the paging response
             - a data property that is a list of 1 leaf dict
             - one leaf that matches the Protobuf response
         """
         paging = Mocks.make_paging_response(0, 1)
-        leaves = Mocks.make_leaves(a=b'2')
-        self.connection.preset_response(head_id='1', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(a=b'2')
+        self.connection.preset_response(head_id='1', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?address=a&head=1')
         self.connection.assert_valid_request_sent(
@@ -251,7 +257,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_link(response, '/state?head=1&address=a')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_paginated(self):
@@ -274,8 +280,9 @@ class StateListTests(BaseApiTest):
             - and that dict is a leaf that matches the one received
         """
         paging = Mocks.make_paging_response(1, 4)
-        leaves = Mocks.make_leaves(c=b'3')
-        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(c=b'3')
+        self.connection.preset_response(head_id='d', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
@@ -287,7 +294,7 @@ class StateListTests(BaseApiTest):
                                      '/state?head=d&min=2&count=1',
                                      '/state?head=d&min=0&count=1')
         self.assert_has_valid_data_list(response, 1)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_with_zero_count(self):
@@ -324,7 +331,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of 'd'
             - a paging response with a start of 0, and 4 total resources
-            - two leaves of {'d': b'4'}, and {'c': b'3'}
+            - two entries of {'d': b'4'}, and {'c': b'3'}
 
         It should send a Protobuf request with:
             - a paging controls with a count of 2
@@ -335,11 +342,12 @@ class StateListTests(BaseApiTest):
             - a link property that ends in '/state?head=d&min=0&count=2'
             - paging that matches the response with a next link
             - a data property that is a list of 2 dicts
-            - and those dicts are leaves that match those received
+            - and those dicts are entries that match those received
         """
         paging = Mocks.make_paging_response(0, 4)
-        leaves = Mocks.make_leaves(d=b'4', c=b'3')
-        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(d=b'4', c=b'3')
+        self.connection.preset_response(head_id='d', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?count=2')
         controls = Mocks.make_paging_controls(2)
@@ -350,7 +358,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_paging(response, paging,
                                      '/state?head=d&min=2&count=2')
         self.assert_has_valid_data_list(response, 2)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_paginated_without_count(self):
@@ -359,7 +367,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of 'd'
             - a paging response with a start of 2, and 4 total resources
-            - two leaves of {'b': b'2'} and {'a': b'1'}
+            - two entries of {'b': b'2'} and {'a': b'1'}
 
         It should send a Protobuf request with:
             - a paging controls with a start_index of 2
@@ -370,11 +378,12 @@ class StateListTests(BaseApiTest):
             - a link property that ends in '/state?head=d&min=2&count=2'
             - paging that matches the response, with a previous link
             - a data property that is a list of 2 dicts
-            - and those dicts are leaves that match those received
+            - and those dicts are entries that match those received
         """
         paging = Mocks.make_paging_response(2, 4)
-        leaves = Mocks.make_leaves(b=b'2', a=b'1')
-        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(b=b'2', a=b'1')
+        self.connection.preset_response(head_id='d', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
@@ -385,7 +394,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_paging(response, paging,
                                      previous_link='/state?head=d&min=0&count=2')
         self.assert_has_valid_data_list(response, 2)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_paginated_by_min_id(self):
@@ -397,7 +406,7 @@ class StateListTests(BaseApiTest):
                 * a start_index of 1
                 * total_resources of 4
                 * a previous_id of 'd'
-            - three leaves of {'c': b'3'}, {'b': b'2'}, and {'a': b'1'}
+            - three entries of {'c': b'3'}, {'b': b'2'}, and {'a': b'1'}
 
         It should send a Protobuf request with:
             - a paging controls with a start_id of 'c'
@@ -408,11 +417,12 @@ class StateListTests(BaseApiTest):
             - a link property that ends in '/state?head=d&min=c&count=5'
             - paging that matches the response, with a previous link
             - a data property that is a list of 3 dicts
-            - and those dicts are leaves that match those received
+            - and those dicts are entries that match those received
         """
         paging = Mocks.make_paging_response(1, 4, previous_id='d')
-        leaves = Mocks.make_leaves(c=b'3', b=b'2', a=b'1')
-        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(c=b'3', b=b'2', a=b'1')
+        self.connection.preset_response(head_id='d', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
@@ -423,7 +433,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_paging(response, paging,
                                      previous_link='/state?head=d&max=d&count=5')
         self.assert_has_valid_data_list(response, 3)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_paginated_by_max_id(self):
@@ -436,7 +446,7 @@ class StateListTests(BaseApiTest):
                 * a total_resources of 4
                 * a previous_id of 'd'
                 * a next_id of 'a'
-            - two leaves of {'c': b'3'} and {'b': b'3'}
+            - two entries of {'c': b'3'} and {'b': b'3'}
 
         It should send a Protobuf request with:
             - a paging controls with a count of 2 and an end_id of 'b'
@@ -447,11 +457,12 @@ class StateListTests(BaseApiTest):
             - a link property that ends in '/state?head=d&max=b&count=2'
             - paging that matches the response, with next and previous links
             - a data property that is a list of 2 dicts
-            - and those dicts are leaves that match those received
+            - and those dicts are entries that match those received
         """
         paging = Mocks.make_paging_response(1, 4, previous_id='d', next_id='a')
-        leaves = Mocks.make_leaves(c=b'3', b=b'2')
-        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(c=b'3', b=b'2')
+        self.connection.preset_response(head_id='d', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
@@ -463,7 +474,7 @@ class StateListTests(BaseApiTest):
                                      '/state?head=d&min=a&count=2',
                                      '/state?head=d&max=d&count=2')
         self.assert_has_valid_data_list(response, 2)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_paginated_by_max_index(self):
@@ -472,7 +483,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of 'd'
             - a paging response with a start of 0, and 4 total resources
-            - three leaves with the ids {'d': b'4'}, {'c': b'3'} and {'b': b'2'}
+            - three entries with the ids {'d': b'4'}, {'c': b'3'} and {'b': b'2'}
 
         It should send a Protobuf request with:
             - a paging controls with a count of 2 and an start_index of 0
@@ -483,11 +494,12 @@ class StateListTests(BaseApiTest):
             - a link property that ends in '/state?head=d&min=3&count=7'
             - paging that matches the response, with a next link
             - a data property that is a list of 2 dicts
-            - and those dicts are leaves that match those received
+            - and those dicts are entries that match those received
         """
         paging = Mocks.make_paging_response(0, 4)
-        leaves = Mocks.make_leaves(d=b'4', c=b'3', b=b'2')
-        self.connection.preset_response(head_id='d', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(d=b'4', c=b'3', b=b'2')
+        self.connection.preset_response(head_id='d', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
@@ -498,7 +510,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_paging(response, paging,
                                      '/state?head=d&min=3&count=7')
         self.assert_has_valid_data_list(response, 3)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_sorted(self):
@@ -507,7 +519,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of '2'
             - a paging response with a start of 0, and 3 total resources
-            - three leaves with addresses/data of:
+            - three entries with addresses/data of:
                 * 'a': b'3'
                 * 'b': b'5'
                 * 'c': b'7'
@@ -522,11 +534,12 @@ class StateListTests(BaseApiTest):
             - a link property ending in '/state?head=2&sort=address'
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - three leaves that match those in Protobuf response
+            - three entries that match those in Protobuf response
         """
         paging = Mocks.make_paging_response(0, 3)
-        leaves = Mocks.make_leaves(a=b'3', b=b'5', c=b'7')
-        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(a=b'3', b=b'5', c=b'7')
+        self.connection.preset_response(head_id='2', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?sort=address')
         page_controls = Mocks.make_paging_controls()
@@ -539,7 +552,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_link(response, '/state?head=2&sort=address')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_batch_list_with_bad_sort(self):
@@ -564,7 +577,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of '2'
             - a paging response with a start of 0, and 3 total resources
-            - three leaves with addresses/data of:
+            - three entries with addresses/data of:
                 * 'c': b'7'
                 * 'b': b'5'
                 * 'a': b'3'
@@ -579,11 +592,12 @@ class StateListTests(BaseApiTest):
             - a link property ending in '/state?head=2&sort=-address'
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - three leaves that match those in Protobuf response
+            - three entries that match those in Protobuf response
         """
         paging = Mocks.make_paging_response(0, 3)
-        leaves = Mocks.make_leaves(c=b'7', b=b'5', a=b'3')
-        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(c=b'7', b=b'5', a=b'3')
+        self.connection.preset_response(head_id='2', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?sort=-address')
         page_controls = Mocks.make_paging_controls()
@@ -596,7 +610,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_link(response, '/state?head=2&sort=-address')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_sorted_by_length(self):
@@ -605,7 +619,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of '2'
             - a paging response with a start of 0, and 3 total resources
-            - three leaves with addresses/data of:
+            - three entries with addresses/data of:
                 * 'c': b'7'
                 * 'b': b'45'
                 * 'a': b'123'
@@ -620,11 +634,12 @@ class StateListTests(BaseApiTest):
             - a link property ending in '/state?head=2&sort=value.length'
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - three leaves that match those in Protobuf response
+            - three entries that match those in Protobuf response
         """
         paging = Mocks.make_paging_response(0, 3)
-        leaves = Mocks.make_leaves(c=b'7', b=b'45', a=b'123')
-        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(c=b'7', b=b'45', a=b'123')
+        self.connection.preset_response(head_id='2', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200('/state?sort=value.length')
         page_controls = Mocks.make_paging_controls()
@@ -637,7 +652,7 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_link(response, '/state?head=2&sort=value.length')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
     @unittest_run_loop
     async def test_state_list_sorted_by_many_keys(self):
@@ -646,7 +661,7 @@ class StateListTests(BaseApiTest):
         It will receive a Protobuf response with:
             - a head id of '2'
             - a paging response with a start of 0, and 3 total resources
-            - three leaves with addresses/data of:
+            - three entries with addresses/data of:
                 * 'c': b'7'
                 * 'b': b'5'
                 * 'a': b'3'
@@ -663,11 +678,12 @@ class StateListTests(BaseApiTest):
             - link with '/state?head=2&sort=-address,value.length'
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - three leaves that match those in Protobuf response
+            - three entries that match those in Protobuf response
         """
         paging = Mocks.make_paging_response(0, 3)
-        leaves = Mocks.make_leaves(c=b'7', b=b'5', a=b'3')
-        self.connection.preset_response(head_id='2', paging=paging, leaves=leaves)
+        entries = Mocks.make_entries(c=b'7', b=b'5', a=b'3')
+        self.connection.preset_response(head_id='2', paging=paging,
+                                        entries=entries)
 
         response = await self.get_assert_200(
             '/state?sort=-address,value.length')
@@ -683,7 +699,7 @@ class StateListTests(BaseApiTest):
             '/state?head=2&sort=-address,value.length')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_leaves_match(leaves, response['data'])
+        self.assert_entries_match(entries, response['data'])
 
 
 class StateGetTests(BaseApiTest):

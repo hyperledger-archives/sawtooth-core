@@ -247,12 +247,13 @@ class RouteHandler(object):
         return self._wrap_response(request, data=data, metadata=metadata)
 
     async def list_state(self, request):
-        """Fetches list of data leaves, optionally filtered by address prefix.
+        """Fetches list of data entries, optionally filtered by address prefix.
 
         Request:
             query:
                 - head: The id of the block to use as the head of the chain
-                - address: Return leaves whose addresses begin with this prefix
+                - address: Return entries whose addresses begin with this
+                prefix
 
         Response:
             data: An array of leaf objects with address and data keys
@@ -276,7 +277,7 @@ class RouteHandler(object):
             request=request,
             response=response,
             controls=paging_controls,
-            data=response.get('leaves', []))
+            data=response.get('entries', []))
 
     async def fetch_state(self, request):
         """Fetches data from a specific address in the validator's state tree.

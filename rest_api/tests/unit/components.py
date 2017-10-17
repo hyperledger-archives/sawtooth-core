@@ -20,7 +20,7 @@ from base64 import b64decode
 
 from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.protobuf import client_pb2
-from sawtooth_rest_api.protobuf.client_pb2 import Leaf
+from sawtooth_rest_api.protobuf.client_pb2 import ClientStateListResponse
 from sawtooth_rest_api.protobuf.client_pb2 import PagingControls
 from sawtooth_rest_api.protobuf.client_pb2 import PagingResponse
 from sawtooth_rest_api.protobuf.client_pb2 import SortControls
@@ -296,11 +296,11 @@ class BaseApiTest(AioHTTPTestCase):
             raise AssertionError(
                 'Expected "{}" to end with "{}"'.format(url, expected_ending))
 
-    def assert_leaves_match(self, proto_leaves, json_leaves):
-        """Asserts that each JSON leaf matches the original Protobuf leaves
+    def assert_entries_match(self, proto_entries, json_entries):
+        """Asserts that each JSON leaf matches the original Protobuf entries
         """
-        self.assertEqual(len(proto_leaves), len(json_leaves))
-        for pb_leaf, js_leaf in zip(proto_leaves, json_leaves):
+        self.assertEqual(len(proto_entries), len(json_entries))
+        for pb_leaf, js_leaf in zip(proto_entries, json_entries):
             self.assertIn('address', js_leaf)
             self.assertIn('data', js_leaf)
             self.assertEqual(pb_leaf.address, js_leaf['address'])
@@ -412,11 +412,12 @@ class Mocks(object):
             compare_length=compare_length)]
 
     @staticmethod
-    def make_leaves(**leaf_data):
-        """Returns Leaf objects with specfied kwargs turned into
+    def make_entries(**leaf_data):
+        """Returns Entry objects with specfied kwargs turned into
         addresses and data
         """
-        return [Leaf(address=a, data=d) for a, d in leaf_data.items()]
+        return [ClientStateListResponse.Entry(address=a, data=d)
+                for a, d in leaf_data.items()]
 
     @classmethod
     def make_blocks(cls, *block_ids):
