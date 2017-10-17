@@ -18,7 +18,7 @@ from time import time, sleep
 
 import sawtooth_validator.state.client_handlers as handlers
 from sawtooth_validator.protobuf import client_pb2
-from sawtooth_validator.protobuf.client_pb2 import BatchStatus
+from sawtooth_validator.protobuf.client_pb2 import ClientBatchStatus
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import make_mock_batch
 from test_client_request_handlers.mocks import make_store_and_tracker
@@ -64,12 +64,14 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
         the id 'new' until added by a separate thread.
 
         Expects to find:
-            - less than 8 seconds to have passed (i.e. did not wait for timeout)
+            - less than 8 seconds to have passed (i.e. did not wait for
+            timeout)
             - a response status of OK
             - a status of COMMITTED at key 'b-new' in batch_statuses
         """
         self._tracker.notify_batch_pending(make_mock_batch('new'))
         start_time = time()
+
         def delayed_add():
             sleep(1)
             self._store.add_block('new')
@@ -84,7 +86,8 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
         self.assertGreater(8, time() - start_time)
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(response.batch_statuses[0].batch_id, 'b-new')
-        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
+        self.assertEqual(response.batch_statuses[0].status,
+                         ClientBatchStatus.COMMITTED)
 
 
 class TestBatchStatusRequests(ClientHandlerTestCase):
@@ -114,7 +117,8 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(response.batch_statuses[0].batch_id, 'b-0')
-        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
+        self.assertEqual(response.batch_statuses[0].status,
+                         ClientBatchStatus.COMMITTED)
 
     def test_batch_status_bad_request(self):
         """Verifies bad requests for status of a batch break properly.
@@ -157,14 +161,13 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.OK, response.status)
         status = response.batch_statuses[0]
         self.assertEqual(status.batch_id, 'b-invalid')
-        self.assertEqual(status.status, BatchStatus.INVALID)
+        self.assertEqual(status.status, ClientBatchStatus.INVALID)
         self.assertEqual(1, len(status.invalid_transactions))
 
         invalid_txn = status.invalid_transactions[0]
         self.assertEqual(invalid_txn.transaction_id, 't-invalid')
         self.assertEqual(invalid_txn.message, 'error message')
         self.assertEqual(invalid_txn.extended_data, b'error data')
-
 
     def test_pending_batch_status(self):
         """Verifies batch status requests marked PENDING by the tracker work.
@@ -180,7 +183,8 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(response.batch_statuses[0].batch_id, 'b-pending')
-        self.assertEqual(response.batch_statuses[0].status, BatchStatus.PENDING)
+        self.assertEqual(response.batch_statuses[0].status,
+                         ClientBatchStatus.PENDING)
 
     def test_batch_status_when_missing(self):
         """Verifies requests for status of a batch that is not found work.
@@ -193,7 +197,8 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(response.batch_statuses[0].batch_id, 'z')
-        self.assertEqual(response.batch_statuses[0].status, BatchStatus.UNKNOWN)
+        self.assertEqual(response.batch_statuses[0].status,
+                         ClientBatchStatus.UNKNOWN)
 
     def test_batch_status_for_many_batches(self):
         """Verifies requests for status of many batches work properly.
@@ -213,13 +218,18 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
             - a status of PENDING at key 'b-pending' in batch_statuses
             - a status of UNKNOWN at key 'b-y' in batch_statuses
         """
-        response = self.make_request(batch_ids=['b-1', 'b-2', 'b-pending', 'y'])
+        response = self.make_request(
+            batch_ids=['b-1', 'b-2', 'b-pending', 'y'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
-        self.assertEqual(response.batch_statuses[1].status, BatchStatus.COMMITTED)
-        self.assertEqual(response.batch_statuses[2].status, BatchStatus.PENDING)
-        self.assertEqual(response.batch_statuses[3].status, BatchStatus.UNKNOWN)
+        self.assertEqual(response.batch_statuses[0].status,
+                         ClientBatchStatus.COMMITTED)
+        self.assertEqual(response.batch_statuses[1].status,
+                         ClientBatchStatus.COMMITTED)
+        self.assertEqual(response.batch_statuses[2].status,
+                         ClientBatchStatus.PENDING)
+        self.assertEqual(response.batch_statuses[3].status,
+                         ClientBatchStatus.UNKNOWN)
 
     def test_batch_status_with_wait(self):
         """Verifies requests for status that wait for commit work properly.
@@ -228,12 +238,14 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         the id 'b-new' until added by a separate thread.
 
         Expects to find:
-            - less than 8 seconds to have passed (i.e. did not wait for timeout)
+            - less than 8 seconds to have passed (i.e. did not wait for
+            timeout)
             - a response status of OK
             - a status of COMMITTED at key 'b-new' in batch_statuses
         """
         self._tracker.notify_batch_pending(make_mock_batch('new'))
         start_time = time()
+
         def delayed_add():
             sleep(1)
             self._store.add_block('new')
@@ -247,14 +259,16 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.assertGreater(8, time() - start_time)
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
+        self.assertEqual(response.batch_statuses[0].status,
+                         ClientBatchStatus.COMMITTED)
 
     def test_batch_status_with_committed_wait(self):
         """Verifies requests for status that wait for commit work properly,
         when the batch is already committed.
 
         Expects to find:
-            - less than 8 seconds to have passed (i.e. did not wait for timeout)
+            - less than 8 seconds to have passed (i.e. did not wait for
+            timeout)
             - a response status of OK
             - a status of COMMITTED at key 'b-0' in batch_statuses
         """
@@ -266,4 +280,5 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.assertGreater(8, time() - start_time)
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses[0].status, BatchStatus.COMMITTED)
+        self.assertEqual(response.batch_statuses[0].status,
+                         ClientBatchStatus.COMMITTED)

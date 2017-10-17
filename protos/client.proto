@@ -36,7 +36,7 @@ import "transaction.proto";
 //     INVALID - the batch failed validation, it should be resubmitted
 //     PENDING - the batch is still being processed
 //     UNKNOWN - no status for the batch could be found (possibly invalid)
-message BatchStatus {
+message ClientBatchStatus {
     enum Status {
         COMMITTED = 0;
         INVALID = 1;
@@ -117,7 +117,7 @@ message ClientBatchSubmitResponse {
         INVALID_BATCH = 2;
     }
     Status status = 1;
-    repeated BatchStatus batch_statuses = 2;
+    repeated ClientBatchStatus batch_statuses = 2;
 }
 
 // A request for the status of one or more batches, specified by id.
@@ -143,7 +143,7 @@ message ClientBatchStatusResponse {
         NO_RESOURCE = 4;
     }
     Status status = 1;
-    repeated BatchStatus batch_statuses = 2;
+    repeated ClientBatchStatus batch_statuses = 2;
 }
 
 message ClientStateCurrentRequest {

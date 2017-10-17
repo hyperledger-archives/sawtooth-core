@@ -19,7 +19,7 @@ from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.chain import ChainObserver
 from sawtooth_validator.execution.executor import InvalidTransactionObserver
 from sawtooth_validator.journal.journal import PendingBatchObserver
-from sawtooth_validator.protobuf.client_pb2 import BatchStatus
+from sawtooth_validator.protobuf.client_pb2 import ClientBatchStatus
 
 
 # By default invalid batch info will be kept for one hour
@@ -63,7 +63,8 @@ class BatchTracker(ChainObserver,
             for batch_id in self._pending.copy():
                 if self._block_store.has_batch(batch_id):
                     self._pending.remove(batch_id)
-                    self._update_observers(batch_id, BatchStatus.COMMITTED)
+                    self._update_observers(batch_id,
+                                           ClientBatchStatus.COMMITTED)
 
     def notify_txn_invalid(self, txn_id, message=None, extended_data=None):
         """Adds a batch id to the invalid cache along with the id of the
@@ -90,7 +91,7 @@ class BatchTracker(ChainObserver,
                     else:
                         self._invalid[batch_id].append(invalid_txn_info)
                     self._pending.discard(batch_id)
-                    self._update_observers(batch_id, BatchStatus.INVALID)
+                    self._update_observers(batch_id, ClientBatchStatus.INVALID)
                     return
 
     def notify_batch_pending(self, batch):
@@ -103,7 +104,8 @@ class BatchTracker(ChainObserver,
         with self._lock:
             self._pending.add(batch.header_signature)
             self._batch_info[batch.header_signature] = txn_ids
-            self._update_observers(batch.header_signature, BatchStatus.PENDING)
+            self._update_observers(batch.header_signature,
+                                   ClientBatchStatus.PENDING)
 
     def get_status(self, batch_id):
         """Returns the status enum for a batch.
@@ -116,12 +118,12 @@ class BatchTracker(ChainObserver,
         """
         with self._lock:
             if self._block_store.has_batch(batch_id):
-                return BatchStatus.COMMITTED
+                return ClientBatchStatus.COMMITTED
             if batch_id in self._invalid:
-                return BatchStatus.INVALID
+                return ClientBatchStatus.INVALID
             if batch_id in self._pending:
-                return BatchStatus.PENDING
-            return BatchStatus.UNKNOWN
+                return ClientBatchStatus.PENDING
+            return ClientBatchStatus.UNKNOWN
 
     def get_statuses(self, batch_ids):
         """Returns a statuses dict for the requested batches.
@@ -187,7 +189,7 @@ class BatchTracker(ChainObserver,
     def _has_no_pendings(self, statuses):
         """Returns True if a statuses dict has no PENDING statuses.
         """
-        return all(s != BatchStatus.PENDING for s in statuses.values())
+        return all(s != ClientBatchStatus.PENDING for s in statuses.values())
 
 
 class BatchFinishObserver(metaclass=abc.ABCMeta):
