@@ -282,7 +282,7 @@ class _Pager(object):
     """
     @classmethod
     def paginate_resources(cls, request, resources, on_fail_status):
-        """Truncates a list of resources based on PagingControls
+        """Truncates a list of resources based on ClientPagingControls
 
         Args:
             request (object): The parsed protobuf request object
@@ -290,10 +290,11 @@ class _Pager(object):
 
         Returns:
             list: The paginated list of resources
-            object: The PagingResponse to be sent back to the client
+            object: The ClientPagingResponse to be sent back to the client
         """
         if not resources:
-            return resources, client_pb2.PagingResponse(total_resources=0)
+            return (resources,
+                    client_pb2.ClientPagingResponse(total_resources=0))
 
         paging = request.paging
         count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
@@ -315,7 +316,7 @@ class _Pager(object):
 
         paged_resources = resources[start_index: start_index + count]
 
-        paging_response = client_pb2.PagingResponse(
+        paging_response = client_pb2.ClientPagingResponse(
             next_id=cls.id_by_index(start_index + count, resources),
             previous_id=cls.id_by_index(start_index - 1, resources),
             start_index=start_index,

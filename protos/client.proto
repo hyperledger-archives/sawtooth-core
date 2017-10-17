@@ -59,7 +59,7 @@ message ClientBatchStatus {
 //     end_id: The id of a resource to end the page with
 //     min_index: A resource index relative to the query, the newest being 0
 //     count: The number of results per page, defaults to and maxes out at 1000
-message PagingControls {
+message ClientPagingControls {
     oneof location_marker {
         string start_id = 1;
         string end_id = 2;
@@ -74,7 +74,7 @@ message PagingControls {
 //     previous_id: The id of the last resource in the previous page
 //     start_index: The index of the first resource in this page
 //     total_resources: The total resources available from the requested query
-message PagingResponse {
+message ClientPagingResponse {
     string next_id = 1;
     string previous_id = 2;
     int32 start_index = 3;
@@ -175,7 +175,7 @@ message ClientStateListRequest {
         string head_id = 2;
     }
     string address = 3;
-    PagingControls paging = 4;
+    ClientPagingControls paging = 4;
     repeated SortControls sorting = 5;
 }
 
@@ -212,7 +212,7 @@ message ClientStateListResponse {
     Status status = 1;
     repeated Entry entries = 2;
     string head_id = 3;
-    PagingResponse paging = 4;
+    ClientPagingResponse paging = 4;
 }
 
 // A request from a client for a particular entry in the merkle tree.
@@ -260,7 +260,7 @@ message ClientStateGetResponse {
 message ClientBlockListRequest {
     string head_id = 1;
     repeated string block_ids = 2;
-    PagingControls paging = 3;
+    ClientPagingControls paging = 3;
     repeated SortControls sorting = 4;
 }
 
@@ -288,7 +288,7 @@ message ClientBlockListResponse {
     Status status = 1;
     repeated Block blocks = 2;
     string head_id = 3;
-    PagingResponse paging = 4;
+    ClientPagingResponse paging = 4;
 }
 
 // A request to return a specific block from the validator. The block must be
@@ -321,7 +321,7 @@ message ClientBlockGetResponse {
 message ClientBatchListRequest {
     string head_id = 1;
     repeated string batch_ids = 2;
-    PagingControls paging = 3;
+    ClientPagingControls paging = 3;
     repeated SortControls sorting = 4;
 }
 
@@ -348,7 +348,7 @@ message ClientBatchListResponse {
     Status status = 1;
     repeated Batch batches = 2;
     string head_id = 3;
-    PagingResponse paging = 4;
+    ClientPagingResponse paging = 4;
 }
 
 // Fetches a specific batch by its id (header_signature) from the blockchain.
@@ -379,7 +379,7 @@ message ClientBatchGetResponse {
 message ClientTransactionListRequest {
     string head_id = 1;
     repeated string transaction_ids = 2;
-    PagingControls paging = 3;
+    ClientPagingControls paging = 3;
     repeated SortControls sorting = 4;
 }
 
@@ -406,7 +406,7 @@ message ClientTransactionListResponse {
     Status status = 1;
     repeated Transaction transactions = 2;
     string head_id = 3;
-    PagingResponse paging = 4;
+    ClientPagingResponse paging = 4;
 }
 
 // Fetches a specific txn by its id (header_signature) from the blockchain.

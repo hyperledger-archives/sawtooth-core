@@ -21,8 +21,8 @@ from base64 import b64decode
 from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf.client_pb2 import ClientStateListResponse
-from sawtooth_rest_api.protobuf.client_pb2 import PagingControls
-from sawtooth_rest_api.protobuf.client_pb2 import PagingResponse
+from sawtooth_rest_api.protobuf.client_pb2 import ClientPagingControls
+from sawtooth_rest_api.protobuf.client_pb2 import ClientPagingResponse
 from sawtooth_rest_api.protobuf.client_pb2 import SortControls
 from sawtooth_rest_api.protobuf.block_pb2 import Block
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
@@ -384,9 +384,9 @@ class Mocks(object):
     """
     @staticmethod
     def make_paging_controls(count=None, start_id=None, end_id=None, start_index=None):
-        """Returns a PagingControls Protobuf
+        """Returns a ClientPagingControls Protobuf
         """
-        return PagingControls(
+        return ClientPagingControls(
             count=count,
             start_id=start_id,
             end_id=end_id,
@@ -394,9 +394,9 @@ class Mocks(object):
 
     @staticmethod
     def make_paging_response(start, total, next_id=None, previous_id=None):
-        """Returns a PagingResponse Protobuf
+        """Returns a ClientPagingResponse Protobuf
         """
-        return PagingResponse(
+        return ClientPagingResponse(
             start_index=start,
             total_resources=total,
             next_id=next_id,

@@ -885,7 +885,7 @@ class RouteHandler(object):
 
     @staticmethod
     def _make_paging_message(controls):
-        """Turns a raw paging controls dict into Protobuf PagingControls.
+        """Turns a raw paging controls dict into Protobuf ClientPagingControls.
         """
         count = controls.get('count', None)
         end_index = controls.get('end_index', None)
@@ -903,7 +903,7 @@ class RouteHandler(object):
         else:
             start_index = controls.get('start_index', None)
 
-        return client_pb2.PagingControls(
+        return client_pb2.ClientPagingControls(
             start_id=controls.get('start_id', None),
             end_id=controls.get('end_id', None),
             start_index=start_index,

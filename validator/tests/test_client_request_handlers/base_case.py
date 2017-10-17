@@ -22,7 +22,7 @@ class ClientHandlerTestCase(unittest.TestCase):
     Run initialize as part of setUp, and then call make_request in each test.
     """
     def initialize(self, handler, request_proto, response_proto,
-                    store=None, roots=None, tracker=None):
+                   store=None, roots=None, tracker=None):
         self._identity = '1234567'
         self._handler = handler
         self._request_proto = request_proto
@@ -37,12 +37,12 @@ class ClientHandlerTestCase(unittest.TestCase):
         return self._handle(self._serialize(**kwargs))
 
     def make_paged_request(self, **kwargs):
-        """Parses out paging kwargs and adds them into a PagingControls object,
+        """Parses out paging kwargs and adds them into a ClientPagingControls object,
         before sending it all on to `make_request`
         """
         paging_keys = ['start_id', 'end_id', 'start_index', 'count']
         paging_args = {k: kwargs.pop(k) for k in paging_keys if k in kwargs}
-        paging_request = client_pb2.PagingControls(**paging_args)
+        paging_request = client_pb2.ClientPagingControls(**paging_args)
         return self.make_request(paging=paging_request, **kwargs)
 
     def make_sort_controls(self, *keys, reverse=False, compare_length=False):
@@ -87,11 +87,11 @@ class ClientHandlerTestCase(unittest.TestCase):
             self.assertIsInstance(item, cls)
 
     def assert_valid_paging(self, response, next_id='', previous_id='',
-                                start_index=0, total=3):
-        """Checks that a response's PagingResponse is set properly.
+                            start_index=0, total=3):
+        """Checks that a response's ClientPagingResponse is set properly.
         Defaults to expecting a single page with all mock resources.
         """
-        self.assertIsInstance(response.paging, client_pb2.PagingResponse)
+        self.assertIsInstance(response.paging, client_pb2.ClientPagingResponse)
         self.assertEqual(response.paging.next_id, next_id)
         self.assertEqual(response.paging.previous_id, previous_id)
         self.assertEqual(response.paging.start_index, start_index)
