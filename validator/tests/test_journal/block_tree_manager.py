@@ -350,7 +350,6 @@ class BlockTreeManager(object):
             family_name='test',
             family_version='1',
             nonce=_generate_id(16),
-            payload_encoding="text",
             payload_sha512=hasher.hexdigest().encode(),
             signer_pubkey=self.public_key
         ).SerializeToString()

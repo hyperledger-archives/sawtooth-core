@@ -43,7 +43,6 @@ from sawtooth_supplychain.protobuf.record_pb2 import Record
 class SupplychainMessageFactory(object):
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
-            encoding='application/protobuf',
             family_name=SUPPLYCHAIN_FAMILY_NAME,
             family_version=SUPPLYCHAIN_VERSION,
             namespace=[Addressing.agent_namespace(),

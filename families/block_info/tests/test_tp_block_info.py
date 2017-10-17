@@ -25,7 +25,6 @@ from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfoConfig
 
 from sawtooth_block_info.common import FAMILY_NAME
 from sawtooth_block_info.common import FAMILY_VERSION
-from sawtooth_block_info.common import ENCODING
 from sawtooth_block_info.common import NAMESPACE
 from sawtooth_block_info.common import CONFIG_ADDRESS
 from sawtooth_block_info.common import DEFAULT_SYNC_TOLERANCE
@@ -63,7 +62,6 @@ class TestBlockInfo(TransactionProcessorTestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.factory = MessageFactory(
-            encoding=ENCODING,
             family_name=FAMILY_NAME,
             family_version=FAMILY_VERSION,
             namespace=NAMESPACE,

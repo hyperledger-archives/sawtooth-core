@@ -58,7 +58,6 @@ def create_transaction(payload, private_key, public_key, inputs=None,
         outputs=outputs,
         dependencies=dependencies,
         nonce=str(time.time()),
-        payload_encoding="application/cbor",
         payload_sha512=hashlib.sha512(payload).hexdigest(),
         batcher_pubkey=public_key)
 

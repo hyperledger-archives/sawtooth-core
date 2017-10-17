@@ -25,8 +25,6 @@ public interface TransactionHandler {
 
   public String transactionFamilyName();
 
-  public String getEncoding();
-
   public String getVersion();
 
   public Collection<String> getNameSpaces();

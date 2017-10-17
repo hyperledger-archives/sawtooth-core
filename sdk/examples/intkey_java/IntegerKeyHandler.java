@@ -70,11 +70,6 @@ public class IntegerKeyHandler implements TransactionHandler {
   }
 
   @Override
-  public String getEncoding() {
-    return "application/cbor";
-  }
-
-  @Override
   public String getVersion() {
     return "1.0";
   }

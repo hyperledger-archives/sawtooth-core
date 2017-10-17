@@ -56,8 +56,6 @@ class TransactionEncoder {
    * @param {string} [template.familyVersion=''] - Version of the txn family.
    * @param {string[]} [template.inputs=[]] - Addresses to read from.
    * @param {string[]} [template.outputs=[]] - Addresses to write to.
-   * @param {string} [template.payloadEncoding=''] - Encoding used on payload,
-   *     for example: 'application/cbor'.
    * @param {function} [template.payloadEncoder] - A function that will encode
    *     payloads during transaction creation. For example, it might take an
    *     object, and return CBOR. If not set, the payload must be fully encoded
@@ -77,7 +75,6 @@ class TransactionEncoder {
     this.familyVersion = template.familyVersion || ''
     this.inputs = template.inputs || []
     this.outputs = template.outputs || []
-    this.payloadEncoding = template.payloadEncoding || ''
   }
 
   /**
@@ -99,8 +96,6 @@ class TransactionEncoder {
    * @param {string} [settings.familyVersion=''] - Version of the txn family.
    * @param {string[]} [settings.inputs=[]] - Addresses to read from.
    * @param {string[]} [settings.outputs=[]] - Addresses to write to.
-   * @param {string} [settings.payloadEncoding=''] - Encoding used on payload,
-   *     for example: 'application/cbor'.
    *
    * @return {Transaction} A new signed Transaction instance.
    */
@@ -116,7 +111,6 @@ class TransactionEncoder {
       inputs: settings.inputs || this.inputs,
       nonce: _generateNonce(),
       outputs: settings.outputs || this.outputs,
-      payloadEncoding: settings.payloadEncoding || this.payloadEncoding,
       payloadSha512: payloadSha512,
       signerPubkey: this._publicKey
     }).finish()

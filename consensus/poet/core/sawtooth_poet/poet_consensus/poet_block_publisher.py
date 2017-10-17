@@ -175,7 +175,6 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 inputs=input_addresses,
                 outputs=output_addresses,
                 dependencies=[],
-                payload_encoding="application/protobuf",
                 payload_sha512=hashlib.sha512(serialized).hexdigest(),
                 batcher_pubkey=block_header.signer_pubkey,
                 nonce=time.time().hex().encode()).SerializeToString()

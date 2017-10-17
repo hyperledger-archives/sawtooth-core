@@ -133,8 +133,7 @@ class TransactionExecutorThread(object):
 
             processor_type = processor_iterator.ProcessorType(
                 header.family_name,
-                header.family_version,
-                header.payload_encoding)
+                header.family_version)
 
             self._execute_or_wait_for_processor_type(
                 processor_type, request, req.signature)
@@ -172,8 +171,7 @@ class TransactionExecutorThread(object):
 
             processor_type = processor_iterator.ProcessorType(
                 header.family_name,
-                header.family_version,
-                header.payload_encoding)
+                header.family_version)
 
             config = self._settings_view_factory.create_settings_view(
                 txn_info.state_hash)
@@ -190,8 +188,7 @@ class TransactionExecutorThread(object):
                 required_transaction_processors = [
                     processor_iterator.ProcessorType(
                         d.get('family'),
-                        d.get('version'),
-                        d.get('encoding')) for d in transaction_families]
+                        d.get('version')) for d in transaction_families]
             except ValueError:
                 LOGGER.warning("sawtooth.validator.transaction_families "
                                "misconfigured. Expecting a json array, found"
@@ -206,12 +203,11 @@ class TransactionExecutorThread(object):
                 # transaction processors so
                 # failing transaction right away
                 LOGGER.debug("failing transaction %s of type (name=%s,"
-                             "version=%s,encoding=%s) since it isn't"
+                             "version=%s) since it isn't"
                              " required in the configuration",
                              txn.header_signature,
                              processor_type.name,
-                             processor_type.version,
-                             processor_type.encoding)
+                             processor_type.version)
 
                 self._scheduler.set_transaction_execution_result(
                     txn_signature=txn.header_signature,
@@ -490,10 +486,10 @@ class _Waiter(object):
             LOGGER.exception("Unhandled exception while waiting")
 
     def _wait_for_processors(self):
-        LOGGER.info('Waiting for transaction processor (%s, %s, %s)',
+        LOGGER.info('Waiting for transaction processor (%s, %s)',
                     self._processor_type.name,
                     self._processor_type.version,
-                    self._processor_type.encoding)
+                    )
         # Wait for the processor type to be registered
         self._processors.cancellable_wait(
             processor_type=self._processor_type,

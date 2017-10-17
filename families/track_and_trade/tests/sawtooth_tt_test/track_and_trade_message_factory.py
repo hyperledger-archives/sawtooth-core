@@ -43,7 +43,6 @@ LOGGER.setLevel(logging.DEBUG)
 class TrackAndTradeMessageFactory:
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
-            encoding='application/protobuf',
             family_name=addressing.FAMILY_NAME,
             family_version='1.0',
             namespace=addressing.NAMESPACE,

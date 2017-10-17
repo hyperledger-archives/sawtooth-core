@@ -21,7 +21,6 @@ from sawtooth_processor_test.message_factory import MessageFactory
 class BattleshipMessageFactory:
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
-            encoding="json-utf8",
             family_name="battleship",
             family_version="1.0",
             namespace=MessageFactory.sha512("battleship".encode("utf-8"))[0:6],

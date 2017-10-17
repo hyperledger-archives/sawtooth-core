@@ -59,9 +59,7 @@ func (self *IntkeyHandler) FamilyName() string {
 func (self *IntkeyHandler) FamilyVersion() string {
 	return "1.0"
 }
-func (self *IntkeyHandler) Encoding() string {
-	return "application/cbor"
-}
+
 func (self *IntkeyHandler) Namespaces() []string {
 	return []string{self.namespace}
 }

@@ -225,14 +225,11 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
 };
 
 // Defines the IntKey Handler to register with the transaction processor
-// sets the versions, encoding, and types of transactions that can be handled.
+// sets the versions and types of transactions that can be handled.
 class IntKeyHandler: public sawtooth::TransactionHandler {
  public:
     std::string transaction_family_name() const {
         return std::string("intkey");
-    }
-    std::list<std::string> encodings() const {
-        return  {"application/cbor"};
     }
     std::list<std::string> versions() const {
         return {"1.0"};

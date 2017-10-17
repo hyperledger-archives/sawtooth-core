@@ -114,7 +114,6 @@ pub fn process_smallbank_playlist(output: &mut Write,
 
         txn_header.set_family_name(String::from("smallbank"));
         txn_header.set_family_version(String::from("1.0"));
-        txn_header.set_payload_encoding(String::from("application/protobuf"));
 
         let elapsed = start.elapsed();
         txn_header.set_nonce(format!("{}{}", elapsed.as_secs(), elapsed.subsec_nanos()));

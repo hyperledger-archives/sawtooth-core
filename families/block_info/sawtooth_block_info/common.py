@@ -15,7 +15,6 @@
 
 FAMILY_NAME = 'block_info'
 FAMILY_VERSION = '1.0'
-ENCODING = 'application/protobuf'
 NAMESPACE = '00b10c'
 BLOCK_INFO_NAMESPACE = NAMESPACE + '00'
 CONFIG_ADDRESS = NAMESPACE + '01' + '0' * 62

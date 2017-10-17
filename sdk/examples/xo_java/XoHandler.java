@@ -61,11 +61,6 @@ public class XoHandler implements TransactionHandler {
   }
 
   @Override
-  public String getEncoding() {
-    return "csv-utf8";
-  }
-
-  @Override
   public String getVersion() {
     return "1.0";
   }

@@ -131,7 +131,7 @@ class ProcessorIteratorCollection(object):
         but just this particular wait.
 
         Args:
-            processor_type (ProcessorType): The family, version, encoding of
+            processor_type (ProcessorType): The family, and version of
                 the transaction processor.
             cancelled_event (threading.Event): is_set() will return True when
                 the wait is cancelled.
@@ -166,22 +166,18 @@ class Processor(object):
 
 
 class ProcessorType(object):
-    def __init__(self, name, version, encoding):
+    def __init__(self, name, version):
         self.name = name
         self.version = version
-        self.encoding = encoding
 
     def __repr__(self):
-        return "{}: {}: {}".format(self.name,
-                                   self.version,
-                                   self.encoding)
+        return "{}: {}".format(self.name, self.version)
 
     def __hash__(self):
-        return hash((self.name, self.version, self.encoding))
+        return hash((self.name, self.version))
 
     def __eq__(self, other):
-        return self.name == other.name and self.version == other.version \
-            and self.encoding == other.encoding
+        return self.name == other.name and self.version == other.version
 
 
 class ProcessorIterator(object, metaclass=ABCMeta):

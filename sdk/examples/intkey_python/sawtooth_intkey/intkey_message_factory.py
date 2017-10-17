@@ -23,7 +23,6 @@ from sawtooth_intkey.processor.handler import make_intkey_address
 class IntkeyMessageFactory:
     def __init__(self, private=None, public=None):
         self._factory = MessageFactory(
-            encoding='application/cbor',
             family_name='intkey',
             family_version='1.0',
             namespace=INTKEY_ADDRESS_PREFIX,

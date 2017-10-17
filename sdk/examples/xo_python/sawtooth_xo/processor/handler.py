@@ -37,10 +37,6 @@ class XoTransactionHandler:
         return ['1.0']
 
     @property
-    def encodings(self):
-        return ['csv-utf8']
-
-    @property
     def namespaces(self):
         return [self._namespace_prefix]
 

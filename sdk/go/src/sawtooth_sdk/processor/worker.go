@@ -134,15 +134,11 @@ func findHandler(handlers []TransactionHandler, header *transaction_pb2.Transact
 			break
 		}
 
-		if header.GetPayloadEncoding() != handler.Encoding() {
-			break
-		}
-
 		return handler, nil
 	}
 	return nil, fmt.Errorf(
-		"Unknown handler: (%v, %v, %v)", header.GetFamilyName(),
-		header.GetFamilyVersion(), header.GetPayloadEncoding(),
+		"Unknown handler: (%v, %v)", header.GetFamilyName(),
+		header.GetFamilyVersion(),
 	)
 }
 

@@ -218,7 +218,7 @@ mod tests {
 
         let mut producer = SignedBatchProducer::new(&mut source, 2, &signer, public_key);
         let batch_result = producer.next_batch().unwrap();
-        
+
         assert_eq!(batch_result, None);
     }
 
@@ -336,7 +336,6 @@ mod tests {
         txn_header.set_family_name(String::from("test_family"));
         txn_header.set_family_version(String::from("1.0"));
         txn_header.set_signer_pubkey(String::from("some_pubkey"));
-        txn_header.set_payload_encoding(String::from("text/string"));
         txn_header.set_payload_sha512(String::from("some_sha512_hash"));
 
         let mut txn = Transaction::new();

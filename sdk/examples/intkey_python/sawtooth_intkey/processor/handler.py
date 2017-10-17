@@ -53,10 +53,6 @@ class IntkeyTransactionHandler:
         return ['1.0']
 
     @property
-    def encodings(self):
-        return ['application/cbor']
-
-    @property
     def namespaces(self):
         return [INTKEY_ADDRESS_PREFIX]
 

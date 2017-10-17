@@ -119,8 +119,8 @@ func (self *TransactionProcessor) Start() error {
 		err := register(validator, h, queue)
 		if err != nil {
 			return fmt.Errorf(
-				"Error registering handler (%v, %v, %v, %v): %v",
-				h.FamilyName(), h.FamilyVersion, h.Encoding(),
+				"Error registering handler (%v, %v, %v): %v",
+				h.FamilyName(), h.FamilyVersion,
 				h.Namespaces(), err,
 			)
 		}
@@ -301,7 +301,6 @@ func register(validator messaging.Connection, handler TransactionHandler, queue 
 	regRequest := &processor_pb2.TpRegisterRequest{
 		Family:     handler.FamilyName(),
 		Version:    handler.FamilyVersion(),
-		Encoding:   handler.Encoding(),
 		Namespaces: handler.Namespaces(),
 	}
 
@@ -348,9 +347,9 @@ func register(validator messaging.Connection, handler TransactionHandler, queue 
 		return fmt.Errorf("Got response: %v", regResponse.GetStatus())
 	}
 	logger.Infof(
-		"Successfully registered handler (%v, %v, %v, %v)",
+		"Successfully registered handler (%v, %v, %v)",
 		handler.FamilyName(), handler.FamilyVersion,
-		handler.Encoding(), handler.Namespaces(),
+		handler.Namespaces(),
 	)
 
 	return nil

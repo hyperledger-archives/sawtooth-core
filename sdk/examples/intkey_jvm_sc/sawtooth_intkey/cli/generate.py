@@ -79,7 +79,6 @@ def create_jvm_sc_transaction(verb, private_key, public_key,
         inputs=addresses,
         outputs=addresses,
         dependencies=[],
-        payload_encoding="application/protobuf",
         payload_sha512=payload.sha512(),
         batcher_pubkey=public_key,
         nonce=str(time.time()))

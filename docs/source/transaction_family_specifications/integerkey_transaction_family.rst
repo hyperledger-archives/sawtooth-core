@@ -9,17 +9,17 @@ the value of entries stored in a state dictionary.
 
 An IntegerKey family transaction request is defined by the following values:
 
-* A verb which describes what action the transaction takes 
+* A verb which describes what action the transaction takes
 * A name of the entry that is to be set or changed
 * A value by which the entry will be set or changed
 
-The 'set' verb is used to create new entries. The initial value of the entry will be 
-set to the value specified in the transaction request. The 'inc' and 'dec' verbs are 
+The 'set' verb is used to create new entries. The initial value of the entry will be
+set to the value specified in the transaction request. The 'inc' and 'dec' verbs are
 used to change the value of existing entries in the state dictionary.
 
 State
 =====
-This section describes in detail how IntegerKey transaction information is stored 
+This section describes in detail how IntegerKey transaction information is stored
 and addressed.
 
 The address values of IntegerKey transaction family entries are stored in state as
@@ -119,21 +119,21 @@ The IntegerKey transaction processor receives a transaction request and a state 
 
 If the payload of the transaction request is empty, the transaction is invalid.
 
-The address for the transaction is generated using the algorithm stated in the Addressing 
+The address for the transaction is generated using the algorithm stated in the Addressing
 section of this document. If an encoding error occurs, the transaction is invalid.
 
-The transaction request *Verb* \, *Name*\ , and *Value* are checked. If any of these values are 
-empty, the transaction is invalid. *Verb* must be either 'set', 'inc', or 'dec'. 
-*Name* must be a utf-8 encoded string with a maximum of 20 characters. *Value* must be 
+The transaction request *Verb* \, *Name*\ , and *Value* are checked. If any of these values are
+empty, the transaction is invalid. *Verb* must be either 'set', 'inc', or 'dec'.
+*Name* must be a utf-8 encoded string with a maximum of 20 characters. *Value* must be
 a 32-bit unsigned integer. If any of these checks fail, the transaction is invalid.
 
-If the *Verb* is 'set', the state dictionary is checked to determine if the *Name* associated with the 
-transaction request already exists. If it does already exist, the transaction is invalid. 
+If the *Verb* is 'set', the state dictionary is checked to determine if the *Name* associated with the
+transaction request already exists. If it does already exist, the transaction is invalid.
 Otherwise the *Name* and *Value* are stored as a new entry in the state dictionary.
 
-If the *Verb* is 'inc', the *Name* specified by the transaction request is checked determine 
-if the entry exists in the state dictionary. If the *Name* does not exist in the state dictionary, 
+If the *Verb* is 'inc', the *Name* specified by the transaction request is checked determine
+if the entry exists in the state dictionary. If the *Name* does not exist in the state dictionary,
 it is an invalid transaction. Otherwise, we attempt to increment the *Value* in the state dictionary by the *Value* specified in the transaction request. If this incrementation would result in a value outside the range of 0 through 2\ :sup:`32` - 1 it is considered an invalid transaction. Otherwise, the *Value* in the state dictionary is incremented.
 
-If the *Verb* is 'dec', the *Name* specified by the transaction request is checked determine 
+If the *Verb* is 'dec', the *Name* specified by the transaction request is checked determine
 if the entry exists in the state dictionary. If the *Name* does not exist in the state dictionary, it is an invalid transaction. Otherwise, we attempt to decrement the *Value* in the state dictionary by the *Value* specified in the transaction request. If this decrementation would result in a value outside the range of 0 through 2\ :sup:`32` - 1, it is considered an invalid transaction. Otherwise, the *Value* in the state dictionary is decremented.

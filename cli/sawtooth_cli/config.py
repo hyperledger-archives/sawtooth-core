@@ -565,7 +565,6 @@ def _make_txn(pubkey, signing_key, setting_key, payload):
         inputs=_config_inputs(setting_key),
         outputs=_config_outputs(setting_key),
         dependencies=[],
-        payload_encoding='application/protobuf',
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
         batcher_pubkey=pubkey
     ).SerializeToString()

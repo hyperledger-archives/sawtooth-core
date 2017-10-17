@@ -27,14 +27,13 @@ import (
 )
 
 type TransactionParams struct {
-	FamilyName      string
-	FamilyVersion   string
-	PayloadEncoding string
-	Nonce           string
-	BatcherPubkey   string
-	Dependencies    []string
-	Inputs          []string
-	Outputs         []string
+	FamilyName    string
+	FamilyVersion string
+	Nonce         string
+	BatcherPubkey string
+	Dependencies  []string
+	Inputs        []string
+	Outputs       []string
 }
 
 type Encoder struct {
@@ -61,11 +60,10 @@ func NewEncoder(privkey []byte, defaults TransactionParams) *Encoder {
 func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transaction {
 	h := &transaction_pb2.TransactionHeader{
 		// Load defaults
-		FamilyName:      self.defaults.FamilyName,
-		FamilyVersion:   self.defaults.FamilyVersion,
-		PayloadEncoding: self.defaults.PayloadEncoding,
-		Nonce:           self.defaults.Nonce,
-		BatcherPubkey:   self.defaults.BatcherPubkey,
+		FamilyName:    self.defaults.FamilyName,
+		FamilyVersion: self.defaults.FamilyVersion,
+		Nonce:         self.defaults.Nonce,
+		BatcherPubkey: self.defaults.BatcherPubkey,
 
 		Inputs:       self.defaults.Inputs,
 		Outputs:      self.defaults.Outputs,
@@ -82,9 +80,6 @@ func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transa
 	}
 	if p.FamilyVersion != "" {
 		h.FamilyVersion = p.FamilyVersion
-	}
-	if p.PayloadEncoding != "" {
-		h.PayloadEncoding = p.PayloadEncoding
 	}
 	if p.Nonce != "" {
 		h.Nonce = p.Nonce

@@ -451,7 +451,6 @@ def _create_policy_txn(pubkey, signing_key, policy_name, rules):
         inputs=[_REQUIRED_INPUT, policy_address],
         outputs=[policy_address],
         dependencies=[],
-        payload_encoding="application/protobuf",
         payload_sha512=hashlib.sha512(
             payload.SerializeToString()).hexdigest(),
         batcher_pubkey=pubkey,
@@ -484,7 +483,6 @@ def _create_role_txn(pubkey, signing_key, role_name, policy_name):
         inputs=[_REQUIRED_INPUT, policy_address, role_address],
         outputs=[role_address],
         dependencies=[],
-        payload_encoding="application/protobuf",
         payload_sha512=hashlib.sha512(
             payload.SerializeToString()).hexdigest(),
         batcher_pubkey=pubkey,

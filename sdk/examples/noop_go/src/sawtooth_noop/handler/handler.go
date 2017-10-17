@@ -46,9 +46,6 @@ func (self *NoopHandler) FamilyName() string {
 func (self *NoopHandler) FamilyVersion() string {
 	return "1.0"
 }
-func (self *NoopHandler) Encoding() string {
-	return "none"
-}
 func (self *NoopHandler) Namespaces() []string {
 	return []string{self.namespace}
 }

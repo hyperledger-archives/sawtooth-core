@@ -54,7 +54,6 @@ def create_noop_transaction(private_key, public_key):
         inputs=[],
         outputs=[],
         dependencies=[],
-        payload_encoding="none",
         payload_sha512=payload.sha512(),
         batcher_pubkey=public_key,
         nonce=time.time().hex().encode())

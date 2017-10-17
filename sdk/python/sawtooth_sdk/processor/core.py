@@ -60,12 +60,10 @@ class TransactionProcessor(object):
 
     def _matches(self, handler, header):
         return header.family_name == handler.family_name \
-            and header.family_version in handler.family_versions \
-            and header.payload_encoding in handler.encodings
+            and header.family_version in handler.family_versions
 
     def _find_handler(self, header):
-        """Find a handler for a particular (family_name,
-        family_versions, payload_encoding)
+        """Find a handler for a particular (family_name, family_versions)
         :param header transaction_pb2.TransactionHeader:
         :return: handler
         """
@@ -86,12 +84,10 @@ class TransactionProcessor(object):
                 [TpRegisterRequest(
                     family=n,
                     version=v,
-                    encoding=e,
                     namespaces=h.namespaces)
-                 for n, v, e in itertools.product(
+                 for n, v in itertools.product(
                     [h.family_name],
-                     h.family_versions,
-                     h.encodings)] for h in self._handlers])
+                     h.family_versions,)] for h in self._handlers])
 
     def _unregister_request(self):
         """Returns a single TP_UnregisterRequest that requests

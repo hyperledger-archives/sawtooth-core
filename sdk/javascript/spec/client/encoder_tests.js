@@ -41,7 +41,6 @@ describe('TransactionEncoder', () => {
       familyVersion: 'test',
       inputs: ['test'],
       outputs: ['test'],
-      payloadEncoding: 'test',
       badTemplateKey: 'bad'
     }
 
@@ -91,7 +90,6 @@ describe('TransactionEncoder', () => {
       assert.equal('test', header.familyVersion)
       assert.deepEqual(['test'], header.inputs)
       assert.deepEqual(['test'], header.outputs)
-      assert.equal('test', header.payloadEncoding)
       assert.equal(undefined, header.badTemplateKey)
 
       assert(
@@ -110,7 +108,6 @@ describe('TransactionEncoder', () => {
         familyVersion: 'new',
         inputs: ['new'],
         outputs: ['new'],
-        payloadEncoding: 'new'
       })
 
       const header = TransactionHeader.decode(txn.header)
@@ -119,7 +116,6 @@ describe('TransactionEncoder', () => {
       assert.equal('new', header.familyVersion)
       assert.deepEqual(['new'], header.inputs)
       assert.deepEqual(['new'], header.outputs)
-      assert.equal('new', header.payloadEncoding)
 
       assert(
         signer.verify(txn.header, txn.headerSignature, publicKey),

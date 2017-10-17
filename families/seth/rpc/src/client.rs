@@ -278,7 +278,6 @@ impl<S: MessageSender> ValidatorClient<S> {
             vec![String::from(SETH_NS), String::from(BLOCK_INFO_NS)]));
         txn_header.set_outputs(protobuf::RepeatedField::from_vec(
             vec![String::from(SETH_NS), String::from(BLOCK_INFO_NS)]));
-        txn_header.set_payload_encoding(String::from("application/protobuf"));
 
         let mut sha = Sha512::new();
         sha.input(&payload);

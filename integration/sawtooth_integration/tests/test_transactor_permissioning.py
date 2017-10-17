@@ -248,13 +248,11 @@ class Families(enum.Enum):
 
 FamilyConfig = {
     Families.INTKEY: {
-        'encoding': 'application/cbor',
         'family_name': 'intkey',
         'family_version': '1.0',
         'namespace': MessageFactory.sha256('intkey'.encode())[:6]
     },
     Families.XO: {
-        'encoding': 'csv-utf8',
         'family_name': 'xo',
         'family_version': '1.0',
         'namespace': MessageFactory.sha256('xo'.encode())[:6]
@@ -338,7 +336,6 @@ class Transactor(object):
         self._factories[family_name] = MessageFactory(
             family_name=family_config['family_name'],
             family_version=family_config['family_version'],
-            encoding=family_config['encoding'],
             namespace=family_config['namespace'],
             private=self._private_key,
             public=self._public_key)
