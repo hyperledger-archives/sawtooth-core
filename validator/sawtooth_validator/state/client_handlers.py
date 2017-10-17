@@ -631,25 +631,25 @@ class StateListRequest(_ClientRequestHandler):
     def _respond(self, request):
         head_id = self._set_root(request)
 
-        # Fetch leaves and encode as protobuf
-        leaves = [
-            client_pb2.Leaf(address=a, data=v) for a, v in
-            self._tree.leaves(request.address or '').items()]
+        # Fetch entries and encode as protobuf
+        entries = [
+            client_pb2.ClientStateListResponse.Entry(address=a, data=v)
+            for a, v in self._tree.leaves(request.address or '').items()]
 
-        # Order leaves, remove if tree.leaves refactored to be ordered
-        leaves.sort(key=lambda l: l.address)
+        # Order entries, remove if tree.entries refactored to be ordered
+        entries.sort(key=lambda l: l.address)
 
-        leaves = _Sorter.sort_resources(
+        entries = _Sorter.sort_resources(
             request,
-            leaves,
+            entries,
             self._status.INVALID_SORT)
 
-        leaves, paging = _Pager.paginate_resources(
+        entries, paging = _Pager.paginate_resources(
             request,
-            leaves,
+            entries,
             self._status.INVALID_PAGING)
 
-        if not leaves:
+        if not entries:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
                 head_id=head_id,
@@ -658,7 +658,7 @@ class StateListRequest(_ClientRequestHandler):
         return self._wrap_response(
             head_id=head_id,
             paging=paging,
-            leaves=leaves)
+            entries=entries)
 
 
 class StateGetRequest(_ClientRequestHandler):

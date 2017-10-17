@@ -24,12 +24,6 @@ import "batch.proto";
 import "transaction.proto";
 
 
-// An entry in the State
-message Leaf {
-    string address = 1;
-    bytes data = 2;
-}
-
 // Information about the status of a batch submitted to the validator.
 //
 // Attributes:
@@ -208,8 +202,15 @@ message ClientStateListResponse {
         INVALID_PAGING = 5;
         INVALID_SORT = 6;
     }
+
+    // An entry in the State
+    message Entry {
+        string address = 1;
+        bytes data = 2;
+    }
+
     Status status = 1;
-    repeated Leaf leaves = 2;
+    repeated Entry entries = 2;
     string head_id = 3;
     PagingResponse paging = 4;
 }

@@ -202,9 +202,9 @@ paths:
     get:
       summary: Fetches the data for the current state
       description: >
-        Fetches a paginated list of leaves for the current state, or relative
+        Fetches a paginated list of entries for the current state, or relative
         to a particular head block. Using the `address` filter parameter, will
-        narrow the list to any leaves that have an address beginning with the
+        narrow the list to any entries that have an address beginning with the
         characters specified.
       parameters:
         - $ref: "#/parameters/head"
@@ -224,7 +224,7 @@ paths:
               data:
                 type: array
                 items:
-                  $ref: "#/definitions/Leaf"
+                  $ref: "#/definitions/Entry"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -603,7 +603,7 @@ definitions:
                 format: byte
                 example: ZXJyb3IgZGF0YQ==
 
-  Leaf:
+  Entry:
     properties:
       address:
         type: string
