@@ -16,6 +16,7 @@ from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_sdk.protobuf import state_context_pb2
 from sawtooth_sdk.protobuf import events_pb2
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
+from sawtooth_sdk.processor.exceptions import InternalError
 
 
 class StateEntry(object):
@@ -131,7 +132,7 @@ class Context(object):
                 Message.TP_ADD_RECEIPT_DATA_REQUEST,
                 request).result(timeout).content)
         if response.status == state_context_pb2.TpAddReceiptDataResponse.ERROR:
-            raise InvalidTransaction(
+            raise InternalError(
                 "Failed to add receipt data: {}".format((data_type, data)))
 
     def add_event(self, event_type, attributes=None, data=None, timeout=None):
@@ -166,7 +167,7 @@ class Context(object):
                 Message.TP_ADD_EVENT_REQUEST,
                 request).result(timeout).content)
         if response.status == state_context_pb2.TpAddEventResponse.ERROR:
-            raise InvalidTransaction(
+            raise InternalError(
                 "Failed to add event: ({}, {}, {})".format(
                     event_type, attributes, data))
 
