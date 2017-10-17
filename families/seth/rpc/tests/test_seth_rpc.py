@@ -1228,7 +1228,7 @@ class SethRpcTest(unittest.TestCase):
             ClientTransactionGetResponse(
                 status=ClientBlockGetResponse.OK,
                 transaction=transaction,
-                block=self.block_id),
+                block_id=self.block_id),
             msg)
 
 
