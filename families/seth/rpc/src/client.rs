@@ -40,7 +40,7 @@ use sawtooth_sdk::messages::client::{
     ClientStateGetRequest,
     ClientStateGetResponse,
     ClientStateGetResponse_Status,
-    PagingControls,
+    ClientPagingControls,
     ClientTransactionGetRequest,
     ClientTransactionGetResponse,
     ClientTransactionGetResponse_Status,
@@ -533,7 +533,7 @@ impl<S: MessageSender> ValidatorClient<S> {
     }
 
     pub fn get_current_block(&mut self) -> Result<Block, Error> {
-        let mut paging = PagingControls::new();
+        let mut paging = ClientPagingControls::new();
         paging.set_count(1);
         let mut request = ClientBlockListRequest::new();
         request.set_paging(paging);
