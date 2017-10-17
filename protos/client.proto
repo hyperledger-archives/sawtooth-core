@@ -431,5 +431,5 @@ message ClientTransactionGetResponse {
 
     // Identifier of the block this transaction is in. Not set if the
     // transaction is pending.
-    string block = 3;
+    string block_id = 3;
 }

@@ -378,10 +378,10 @@ impl<S: MessageSender> ValidatorClient<S> {
                         Message_MessageType::CLIENT_TRANSACTION_GET_REQUEST, &request)?;
 
                 let block = {
-                    if response.block == "" {
+                    if response.block_id == "" {
                         None
                     } else {
-                        self.get_block(BlockKey::Signature(response.block.clone())).ok()
+                        self.get_block(BlockKey::Signature(response.block_id.clone())).ok()
                     }
                 };
 

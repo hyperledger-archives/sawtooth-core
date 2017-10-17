@@ -867,4 +867,4 @@ class TransactionGetRequest(_ClientRequestHandler):
         except ValueError as e:
             block_id = ""
 
-        return self._wrap_response(transaction=txn, block=block_id)
+        return self._wrap_response(transaction=txn, block_id=block_id)
