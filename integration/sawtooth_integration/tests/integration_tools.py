@@ -27,6 +27,8 @@ import requests
 
 LOGGER = logging.getLogger(__name__)
 
+WAIT = 300
+
 
 class RestClient:
     def __init__(self, url, namespace=None):
@@ -62,8 +64,9 @@ class RestClient:
         Returns:
             dict: the json result data, as a dict
         """
-
-        return self._post('/batches?wait', batch_list)
+        submit_response = self._post('/batches', batch_list)
+        return self._submit_request("{}&wait={}".format(
+            submit_response['link'], WAIT))
 
     def block_list(self):
         return self._get('/blocks')
@@ -238,7 +241,7 @@ class SetSawtoothHome(object):
     def __enter__(self):
         os.environ['SAWTOOTH_HOME'] = self._sawtooth_home
         for directory in map(lambda x: os.path.join(self._sawtooth_home, x),
-                       ['data', 'keys', 'etc', 'policy', 'logs']):
+                             ['data', 'keys', 'etc', 'policy', 'logs']):
             if not os.path.exists(directory):
                 os.mkdir(directory)
 
