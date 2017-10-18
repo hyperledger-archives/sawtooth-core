@@ -26,6 +26,41 @@ intkey
    :language: console
    :linenos:
 
+intkey set
+==========
+
+.. literalinclude:: output/intkey_set_usage.out
+   :language: console
+   :linenos:
+
+intkey inc
+==========
+
+.. literalinclude:: output/intkey_inc_usage.out
+   :language: console
+   :linenos:
+
+intkey dec
+==========
+
+.. literalinclude:: output/intkey_dec_usage.out
+   :language: console
+   :linenos:
+
+intkey show
+===========
+
+.. literalinclude:: output/intkey_show_usage.out
+   :language: console
+   :linenos:
+
+intkey list
+===========
+
+.. literalinclude:: output/intkey_list_usage.out
+   :language: console
+   :linenos:
+
 intkey generate
 ===============
 

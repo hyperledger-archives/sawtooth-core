@@ -73,6 +73,11 @@ save_usage poet genesis
 save_usage poet enclave
 
 save_usage intkey
+save_usage intkey set
+save_usage intkey inc
+save_usage intkey dec
+save_usage intkey show
+save_usage intkey list
 save_usage intkey generate
 save_usage intkey load
 save_usage intkey populate
