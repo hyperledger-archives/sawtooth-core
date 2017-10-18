@@ -573,14 +573,7 @@ class BatchSubmitFinisher(_ClientRequestHandler):
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
 
-        if not request.wait_for_commit:
-            return self._status.OK
-
-        waiter = _BatchWaiter(self._batch_tracker)
-        batch_ids = [b.header_signature for b in request.batches]
-        statuses = waiter.wait_for_batches(batch_ids, request.timeout)
-
-        return self._wrap_response(batch_statuses=statuses)
+        return self._status.OK
 
 
 class BatchStatusRequest(_ClientRequestHandler):
@@ -592,7 +585,7 @@ class BatchStatusRequest(_ClientRequestHandler):
             validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE)
 
     def _respond(self, request):
-        if request.wait_for_commit:
+        if request.wait:
             waiter = _BatchWaiter(self._batch_tracker)
             statuses = waiter.wait_for_batches(
                 request.batch_ids,

@@ -45,7 +45,6 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
         response = self.make_request(batches=[make_mock_batch('new')])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertFalse(response.batch_statuses)
 
     def test_batch_submit_bad_request(self):
         """Verifies finisher breaks properly when sent a bad request.
@@ -56,38 +55,6 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
         response = self.make_bad_request(batches=[make_mock_batch('new')])
 
         self.assertEqual(self.status.INTERNAL_ERROR, response.status)
-
-    def test_batch_submit_with_wait(self):
-        """Verifies finisher works properly when waiting for commit.
-
-        Queries the default mock block store which will have no block with
-        the id 'new' until added by a separate thread.
-
-        Expects to find:
-            - less than 8 seconds to have passed (i.e. did not wait for
-            timeout)
-            - a response status of OK
-            - a status of COMMITTED at key 'b-new' in batch_statuses
-        """
-        self._tracker.notify_batch_pending(make_mock_batch('new'))
-        start_time = time()
-
-        def delayed_add():
-            sleep(1)
-            self._store.add_block('new')
-            self._tracker.chain_update(None, [])
-        Thread(target=delayed_add).start()
-
-        response = self.make_request(
-            batches=[make_mock_batch('new')],
-            wait_for_commit=True,
-            timeout=10)
-
-        self.assertGreater(8, time() - start_time)
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(response.batch_statuses[0].batch_id, 'b-new')
-        self.assertEqual(response.batch_statuses[0].status,
-                         ClientBatchStatus.COMMITTED)
 
 
 class TestBatchStatusRequests(ClientHandlerTestCase):
@@ -254,7 +221,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         response = self.make_request(
             batch_ids=['b-new'],
-            wait_for_commit=True,
+            wait=True,
             timeout=10)
 
         self.assertGreater(8, time() - start_time)
@@ -275,7 +242,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         start_time = time()
         response = self.make_request(
             batch_ids=['b-0'],
-            wait_for_commit=True,
+            wait=True,
             timeout=10)
 
         self.assertGreater(8, time() - start_time)

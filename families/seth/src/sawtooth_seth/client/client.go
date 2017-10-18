@@ -400,9 +400,6 @@ func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wai
 	buf := bytes.NewReader(b)
 
 	url := c.Url + "/batches"
-	if wait > 0 {
-		url += fmt.Sprintf("?wait=%v", wait)
-	}
 
 	resp, err := http.Post(url, "application/octet-stream", buf)
 	if err != nil {
@@ -414,26 +411,44 @@ func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wai
 		return "", err
 	}
 
-	if body.Data != nil {
-		data := body.Data.([]interface{})
-		status_map := data[0].(map[string]interface{})
-		status := status_map["status"].(string)
-
-		if status == "PENDING" {
-			return "", fmt.Errorf("Transaction was submitted, but client timed out before it was committed.")
+	if body.Link != "" {
+		status_url := body.Link
+		if wait > 0 {
+			status_url += fmt.Sprintf("&wait=%v", wait)
+		}
+		resp, err := http.Get(status_url)
+		if err != nil {
+			return "", fmt.Errorf("Couldn't send transaction: %v", err)
 		}
 
-		if status == "INVALID" {
-			return "", fmt.Errorf("Invalid transaction.")
+		body, err := ParseRespBody(resp)
+		if err != nil {
+			return "", err
 		}
 
-		if status == "UNKNOWN" {
-			return "", fmt.Errorf("Something went wrong. Try resubmitting the transaction.")
-		}
-	}
+		if body.Data != nil {
+			data := body.Data.([]interface{})
+			status_map := data[0].(map[string]interface{})
+			status := status_map["status"].(string)
 
-	if body.Error.Code != 0 {
-		return "", &body.Error
+			if status == "PENDING" {
+				return "", fmt.Errorf("Transaction was submitted, but client timed out before it was committed.")
+			}
+
+			if status == "INVALID" {
+				return "", fmt.Errorf("Invalid transaction.")
+			}
+
+			if status == "UNKNOWN" {
+				return "", fmt.Errorf("Something went wrong. Try resubmitting the transaction.")
+			}
+		}
+
+		if body.Error.Code != 0 {
+			return "", &body.Error
+		}
+	} else {
+		return "", fmt.Errorf("No batch status link returned!")
 	}
 
 	return txn.HeaderSignature, nil

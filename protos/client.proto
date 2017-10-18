@@ -94,18 +94,11 @@ message ClientSortControls {
 }
 
 // Submits a list of Batches to be added to the blockchain.
-// If `wait_for_commit` is set to true, the validator will wait to respond
-// until all batches are committed, or until the specified `timeout`
-// in seconds has elapsed. Defaults to 300.
 message ClientBatchSubmitRequest {
     repeated Batch batches = 1;
-    bool wait_for_commit = 2;
-    int32 timeout = 3;
 }
 
 // This is a response to a submission of one or more Batches.
-// If `wait_for_commit` was set in the request, this response will include a
-// `batch_statuses` property, with the status of each batch submitted.
 // Statuses:
 //   * OK - everything with the request worked as expected
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
@@ -117,16 +110,15 @@ message ClientBatchSubmitResponse {
         INVALID_BATCH = 2;
     }
     Status status = 1;
-    repeated ClientBatchStatus batch_statuses = 2;
 }
 
 // A request for the status of one or more batches, specified by id.
-// If `wait_for_commit` is set to true, the validator will wait to respond
-// until all batches are committed, or until the specified `timeout`
-// in seconds has elapsed. Defaults to 300.
+// If `wait` is set to true, the validator will wait to respond until all
+// batches are committed, or until the specified `timeout` in seconds has
+// elapsed. Defaults to 300.
 message ClientBatchStatusRequest {
     repeated string batch_ids = 1;
-    bool wait_for_commit = 2;
+    bool wait = 2;
     int32 timeout = 3;
 }
 

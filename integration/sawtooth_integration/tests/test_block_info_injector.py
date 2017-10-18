@@ -57,13 +57,17 @@ def get_state(address):
 def post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
     response = query_rest_api(
-        '/batches?wait={}'.format(WAIT), data=batch, headers=headers)
+        '/batches', data=batch, headers=headers)
+    response = submit_request('{}&wait={}'.format(response['link'], WAIT))
     return response
 
 
 def query_rest_api(suffix='', data=None, headers={}):
     url = 'http://rest-api:8080' + suffix
-    request = urllib.request.Request(url, data, headers)
+    return submit_request(urllib.request.Request(url, data, headers))
+
+
+def submit_request(request):
     response = urllib.request.urlopen(request).read().decode('utf-8')
     return json.loads(response)
 

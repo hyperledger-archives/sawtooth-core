@@ -179,6 +179,7 @@ class TestEventsAndReceipts(unittest.TestCase):
             subscription_response.status,
             events_pb2.ClientEventsUnsubscribeResponse.OK)
 
+
 class BatchSubmitter:
     def __init__(self, timeout):
         self.batches = []
@@ -190,13 +191,23 @@ class BatchSubmitter:
         response = self._query_rest_api(
             '/batches?wait={}'.format(self.timeout),
             data=batch,
-            headers=headers)
-        return response
+            headers=headers,
+            expected_code=202)
 
-    def _query_rest_api(self, suffix='', data=None, headers={}):
+        return self._submit_request('{}&wait={}'.format(
+            response['link'], self.timeout))
+
+    def _query_rest_api(self, suffix='', data=None, headers={},
+                        expected_code=200):
         url = 'http://rest-api:8080' + suffix
-        request = urllib.request.Request(url, data, headers)
-        response = urllib.request.urlopen(request).read().decode('utf-8')
+        return self._submit_request(urllib.request.Request(url, data, headers),
+                                    expected_code=expected_code)
+
+    def _submit_request(self, request, expected_code=200):
+        conn = urllib.request.urlopen(request)
+        assert(expected_code == conn.getcode())
+
+        response = conn.read().decode('utf-8')
         return json.loads(response)
 
     def make_batch(self, n):

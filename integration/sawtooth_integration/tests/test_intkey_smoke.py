@@ -15,7 +15,7 @@
 
 import unittest
 import logging
-import operator # used by verifier
+import operator  # used by verifier
 # -- used by rest_api callers --
 import urllib.request
 import urllib.error
@@ -33,6 +33,7 @@ LOGGER.setLevel(logging.INFO)
 
 WAIT = 300
 INTKEY_PREFIX = '1cf126'
+
 
 class TestIntkeySmoke(unittest.TestCase):
 
@@ -118,32 +119,44 @@ class TestIntkeySmoke(unittest.TestCase):
 
 # rest_api calls
 
+
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
     response = _query_rest_api(
-        '/batches?wait={}'.format(WAIT),
-        data=batch, headers=headers)
+        '/batches',
+        data=batch, headers=headers, expected_code=202)
+    response = _submit_request('{}&wait={}'.format(response['link'], WAIT))
     return response
+
 
 def _get_data():
     state = _get_state()
     # state is a list of dictionaries: { data: ..., address: ... }
     dicts = [cbor.loads(b64decode(entry['data'])) for entry in state]
-    data = {k:v for d in dicts for k, v in d.items()} # merge dicts
+    data = {k: v for d in dicts for k, v in d.items()}  # merge dicts
     return data
+
 
 def _get_state():
     response = _query_rest_api('/state?address={}'.format(INTKEY_PREFIX))
     return response['data']
 
-def _query_rest_api(suffix='', data=None, headers={}):
+
+def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
     url = 'http://rest-api:8080' + suffix
-    request = urllib.request.Request(url, data, headers)
-    response = urllib.request.urlopen(request).read().decode('utf-8')
+    return _submit_request(urllib.request.Request(url, data, headers),
+                           expected_code=expected_code)
+
+
+def _submit_request(request, expected_code=200):
+    conn = urllib.request.urlopen(request)
+    assert(expected_code == conn.getcode())
+
+    response = conn.read().decode('utf-8')
     return json.loads(response)
 
-# separate file?
 
+# separate file?
 class IntkeyTestVerifier:
     def __init__(self,
                  valid=('lark', 'thrush', 'jay', 'wren', 'finch'),

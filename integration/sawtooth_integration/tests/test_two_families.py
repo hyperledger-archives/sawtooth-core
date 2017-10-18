@@ -146,10 +146,8 @@ def _send_intkey_cmd(txns):
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
     response = _query_rest_api(
-        '/batches?wait={}'.format(WAIT),
-        data=batch,
-        headers=headers)
-    return response
+        '/batches', data=batch, headers=headers, expected_code=202)
+    return _submit_request('{}&wait={}'.format(response['link'], WAIT))
 
 def _get_intkey_data():
     state = _get_intkey_state()
@@ -177,10 +175,17 @@ def _get_state_prefix(prefix):
     response = _query_rest_api('/state?address=' + prefix)
     return response['data']
 
-def _query_rest_api(suffix='', data=None, headers={}):
+def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
     url = 'http://rest-api:8080' + suffix
-    request = urllib.request.Request(url, data, headers)
-    response = urllib.request.urlopen(request).read().decode('utf-8')
+    return _submit_request(urllib.request.Request(url, data, headers),
+                           expected_code=expected_code)
+
+
+def _submit_request(request, expected_code=200):
+    conn = urllib.request.urlopen(request)
+    assert(expected_code == conn.getcode())
+
+    response = conn.read().decode('utf-8')
     return json.loads(response)
 
 # verifiers

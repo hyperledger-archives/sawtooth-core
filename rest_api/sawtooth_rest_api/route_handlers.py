@@ -116,15 +116,9 @@ class RouteHandler(object):
 
         Request:
             body: octet-stream BatchList of one or more Batches
-            query:
-                - wait: Request should not return until all batches committed
-
         Response:
             status:
-                 - 200: Batches submitted, but wait timed out before committed
-                 - 201: All batches submitted and committed
-                 - 202: Batches submitted and pending (not told to wait)
-            data: Status of uncommitted batches (if any, when told to wait)
+                 - 202: Batches submitted and pending
             link: /batches or /batch_status link for submitted batches
 
         """
@@ -157,31 +151,22 @@ class RouteHandler(object):
         error_traps = [error_handlers.BatchInvalidTrap]
         validator_query = client_pb2.ClientBatchSubmitRequest(
             batches=batch_list.batches)
-        self._set_wait(request, validator_query)
 
         with self._post_batches_validator_time.time():
-            response = await self._query_validator(
+            await self._query_validator(
                 Message.CLIENT_BATCH_SUBMIT_REQUEST,
                 client_pb2.ClientBatchSubmitResponse,
                 validator_query,
                 error_traps)
 
         # Build response envelope
-        data = self._drop_id_prefixes(
-            self._drop_empty_props(response['batch_statuses'])) or None
         id_string = ','.join(b.header_signature for b in batch_list.batches)
 
-        if data is None or any(d['status'] != 'COMMITTED' for d in data):
-            status = 202
-            link = self._build_url(request, path='/batch_status', id=id_string)
-        else:
-            status = 201
-            data = None
-            link = self._build_url(request, wait=False, id=id_string)
+        status = 202
+        link = self._build_url(request, path='/batch_status', id=id_string)
 
         retval = self._wrap_response(
             request,
-            data=data,
             metadata={'link': link},
             status=status)
 
@@ -943,11 +928,11 @@ class RouteHandler(object):
 
     def _set_wait(self, request, validator_query):
         """Parses the `wait` query parameter, and sets the corresponding
-        `wait_for_commit` and `timeout` properties in the validator query.
+        `wait` and `timeout` properties in the validator query.
         """
         wait = request.url.query.get('wait', 'false')
         if wait.lower() != 'false':
-            validator_query.wait_for_commit = True
+            validator_query.wait = True
             try:
                 validator_query.timeout = int(wait)
             except ValueError:

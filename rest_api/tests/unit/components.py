@@ -187,15 +187,13 @@ class BaseApiTest(AioHTTPTestCase):
         app.router.add_post(endpoint, handler)
         return app
 
-    async def post_batches(self, batches, wait=False):
+    async def post_batches(self, batches):
         """POSTs batches to '/batches' with an optional wait parameter
         """
         batch_bytes = BatchList(batches=batches).SerializeToString()
-        query_string = '?wait' if wait else ''
-        wait_val = '=' + str(wait) if type(wait) == int else ''
 
         return await self.client.post(
-            '/batches' + query_string + wait_val,
+            '/batches',
             data=batch_bytes,
             headers={'content-type': 'application/octet-stream'})
 

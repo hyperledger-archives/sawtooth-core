@@ -107,9 +107,9 @@ func TestPermissions(t *testing.T) {
 	err = client.SetPermissions(priv2, globalPermsAddr, &EvmPermissions{
 		Perms:  uint64(ptypes.AllPermFlags),
 		SetBit: uint64(ptypes.AllPermFlags),
-	}, nonce2, 0)
-	if err != nil {
-		t.Fatal(err.Error())
+	}, nonce2, WAIT)
+	if err == nil || err.Error() != "Invalid transaction." {
+		t.Fatal("Should not have created permissions.")
 	}
 	globalPermsEntry, err = client.Get(globalPermsAddr)
 	if err != nil {

@@ -155,72 +155,6 @@ class PostBatchTests(BaseApiTest):
         response = await request.json()
         self.assert_has_valid_error(response, 34)
 
-    @unittest_run_loop
-    async def test_post_batch_with_wait(self):
-        """Verifies a POST /batches can wait for commit properly.
-
-        It will receive a Protobuf response with:
-            - batch statuses of {'a': COMMITTED}
-
-        It should send a Protobuf request with:
-            - a batches property that matches the batches sent
-            - a wait_for_commit property that is True
-            - a timeout property of 4 (Rest Api default)
-
-        It should send back a JSON response with:
-            - a response status of 201
-            - no data property
-            - a link property that ends in '/batches?id=a'
-        """
-        batches = Mocks.make_batches('a')
-        statuses = [ClientBatchStatus(
-            batch_id='a', status=ClientBatchStatus.COMMITTED)]
-        self.connection.preset_response(batch_statuses=statuses)
-
-        request = await self.post_batches(batches, wait=True)
-        self.connection.assert_valid_request_sent(
-            batches=batches,
-            wait_for_commit=True,
-            timeout=4)
-        self.assertEqual(201, request.status)
-
-        response = await request.json()
-        self.assert_has_valid_link(response, '/batches?id=a')
-        self.assertNotIn('data', response)
-
-    @unittest_run_loop
-    async def test_post_batch_with_timeout(self):
-        """Verifies a POST /batches works when timed out while waiting.
-
-        It will receive a Protobuf response with:
-            - batch statuses of {'pending': PENDING}
-
-        It should send a Protobuf request with:
-            - a batches property that matches the batches sent
-            - a wait_for_commit property that is True
-            - a timeout property of 4 (Rest Api default)
-
-        It should send back a JSON response with:
-            - a response status of 200
-            - a link property that ends in '/batch_status?id=pending'
-            - a data property matching the batch statuses received
-        """
-        batches = Mocks.make_batches('pending')
-        statuses = [ClientBatchStatus(
-            batch_id='pending', status=ClientBatchStatus.PENDING)]
-        self.connection.preset_response(batch_statuses=statuses)
-
-        request = await self.post_batches(batches, wait=True)
-        self.connection.assert_valid_request_sent(
-            batches=batches,
-            wait_for_commit=True,
-            timeout=4)
-        self.assertEqual(202, request.status)
-
-        response = await request.json()
-        self.assert_has_valid_link(response, '/batch_status?id=pending&wait')
-        self.assert_statuses_match(statuses, response['data'])
-
 
 class ClientBatchStatusTests(BaseApiTest):
 
@@ -335,7 +269,7 @@ class ClientBatchStatusTests(BaseApiTest):
 
         It should send a Protobuf request with:
             - a batch_ids property of ['pending']
-            - a wait_for_commit property that is True
+            - a wait property that is True
             - a timeout property of 4 (Rest Api default)
 
         It should send back a JSON response with:
@@ -350,7 +284,7 @@ class ClientBatchStatusTests(BaseApiTest):
         response = await self.get_assert_200('/batch_status?id=pending&wait')
         self.connection.assert_valid_request_sent(
             batch_ids=['pending'],
-            wait_for_commit=True,
+            wait=True,
             timeout=4)
 
         self.assert_has_valid_link(response, '/batch_status?id=pending&wait')
