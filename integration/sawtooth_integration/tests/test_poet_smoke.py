@@ -20,7 +20,7 @@ import time
 import logging
 
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
-from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
+from sawtooth_integration.tests.intkey_client import IntkeyClient
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)

@@ -22,7 +22,7 @@ from tempfile import mkdtemp
 
 from sawtooth_integration.tests.integration_tools import SetSawtoothHome
 from sawtooth_integration.tests import node_controller as NodeController
-from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
+from sawtooth_integration.tests.intkey_client import IntkeyClient
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
