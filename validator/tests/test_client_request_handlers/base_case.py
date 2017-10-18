@@ -46,10 +46,10 @@ class ClientHandlerTestCase(unittest.TestCase):
         return self.make_request(paging=paging_request, **kwargs)
 
     def make_sort_controls(self, *keys, reverse=False, compare_length=False):
-        """Creates a SortControls object and returns it in a list. Use
-        concatenation to combine multiple SortControls.
+        """Creates a ClientSortControls object and returns it in a list. Use
+        concatenation to combine multiple ClientSortControls.
         """
-        return [client_pb2.SortControls(
+        return [client_pb2.ClientSortControls(
             keys=keys,
             reverse=reverse,
             compare_length=compare_length)]

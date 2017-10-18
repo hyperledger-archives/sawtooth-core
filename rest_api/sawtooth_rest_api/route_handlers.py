@@ -911,7 +911,8 @@ class RouteHandler(object):
 
     @staticmethod
     def _get_sorting_message(request):
-        """Parses the sort query into a list of SortControls protobuf messages.
+        """Parses the sort query into a list of ClientSortControls protobuf
+        messages.
         """
         control_list = []
         sort_query = request.url.query.get('sort', None)
@@ -933,7 +934,7 @@ class RouteHandler(object):
             else:
                 compare_length = False
 
-            control_list.append(client_pb2.SortControls(
+            control_list.append(client_pb2.ClientSortControls(
                 keys=keys,
                 reverse=reverse,
                 compare_length=compare_length))

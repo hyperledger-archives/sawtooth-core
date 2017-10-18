@@ -367,7 +367,7 @@ class _Pager(object):
 
 class _Sorter(object):
     """A static class containing a method to sort lists of resources based on
-    SortControls sent with the request.
+    ClientSortControls sent with the request.
     """
     @classmethod
     def sort_resources(cls, request, resources, fail_enum, header_proto=None):
@@ -402,9 +402,9 @@ class _Sorter(object):
 
     @classmethod
     def _get_handler_set(cls, request, fail_enum, header_proto=None):
-        """Goes through the list of SortControls and returns a list of
-        unique _ValueHandlers. Maintains order, but drops SortControls that
-        have already appeared to help prevent spamming.
+        """Goes through the list of ClientSortControls and returns a list of
+        unique _ValueHandlers. Maintains order, but drops ClientSortControls
+        that have already appeared to help prevent spamming.
         """
         added = set()
         handlers = []
@@ -419,7 +419,7 @@ class _Sorter(object):
         return handlers
 
     class _ValueHandler(object):
-        """Handles fetching proper compare values for one SortControls.
+        """Handles fetching proper compare values for one ClientSortControls.
 
         Args:
             controls (object): Individual SortControl object

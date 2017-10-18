@@ -87,7 +87,7 @@ message ClientPagingResponse {
 //     keys: Nested set of keys to sort by (i.e. ['header', 'signer_public_key'])
 //     reverse: Whether or not to reverse the sort (i.e. descending order)
 //     compare_length: Sorts by value length, rather than the property itself
-message SortControls {
+message ClientSortControls {
     repeated string keys = 1;
     bool reverse = 2;
     bool compare_length = 3;
@@ -176,7 +176,7 @@ message ClientStateListRequest {
     }
     string address = 3;
     ClientPagingControls paging = 4;
-    repeated SortControls sorting = 5;
+    repeated ClientSortControls sorting = 5;
 }
 
 // A response that lists the data Entries from the state's merkle tree,
@@ -261,7 +261,7 @@ message ClientBlockListRequest {
     string head_id = 1;
     repeated string block_ids = 2;
     ClientPagingControls paging = 3;
-    repeated SortControls sorting = 4;
+    repeated ClientSortControls sorting = 4;
 }
 
 // A response that lists a chain of blocks with the newest at the beginning,
@@ -322,7 +322,7 @@ message ClientBatchListRequest {
     string head_id = 1;
     repeated string batch_ids = 2;
     ClientPagingControls paging = 3;
-    repeated SortControls sorting = 4;
+    repeated ClientSortControls sorting = 4;
 }
 
 // A response that lists batches from newest to oldest.
@@ -380,7 +380,7 @@ message ClientTransactionListRequest {
     string head_id = 1;
     repeated string transaction_ids = 2;
     ClientPagingControls paging = 3;
-    repeated SortControls sorting = 4;
+    repeated ClientSortControls sorting = 4;
 }
 
 // A response that lists transactions from newest to oldest.

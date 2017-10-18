@@ -23,7 +23,7 @@ from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf.client_pb2 import ClientStateListResponse
 from sawtooth_rest_api.protobuf.client_pb2 import ClientPagingControls
 from sawtooth_rest_api.protobuf.client_pb2 import ClientPagingResponse
-from sawtooth_rest_api.protobuf.client_pb2 import SortControls
+from sawtooth_rest_api.protobuf.client_pb2 import ClientSortControls
 from sawtooth_rest_api.protobuf.block_pb2 import Block
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
@@ -404,10 +404,10 @@ class Mocks(object):
 
     @staticmethod
     def make_sort_controls(*keys, reverse=False, compare_length=False):
-        """Returns a SortControls Protobuf in a list. Use concatenation to
+        """Returns a ClientSortControls Protobuf in a list. Use concatenation to
         combine multiple sort controls.
         """
-        return [SortControls(
+        return [ClientSortControls(
             keys=keys,
             reverse=reverse,
             compare_length=compare_length)]
