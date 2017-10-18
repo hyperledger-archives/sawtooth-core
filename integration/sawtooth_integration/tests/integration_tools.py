@@ -227,8 +227,10 @@ def wait_for_rest_apis(endpoints, tries=5):
             availability.
     """
     for endpoint in endpoints:
+        http = 'http://'
+        url = endpoint if endpoint.startswith(http) else http + endpoint
         wait_until_status(
-            'http://{}/blocks'.format(endpoint),
+            '{}/blocks'.format(url),
             status_code=200,
             tries=tries)
 
