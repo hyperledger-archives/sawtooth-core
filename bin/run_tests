@@ -335,6 +335,8 @@ test_python_sdk() {
     copy_coverage .coverage.test_xo_smoke_python
     run_docker_test test_two_families
     copy_coverage .coverage.two_families
+    run_docker_test test_intkey_cli
+    copy_coverage .coverage.intkey_cli
 }
 
 test_rust_sdk() {
