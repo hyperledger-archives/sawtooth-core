@@ -22,6 +22,7 @@ import logging
 import queue
 import sys
 from threading import Event
+from threading import Lock
 from threading import Thread
 import time
 import uuid
@@ -640,6 +641,7 @@ class Interconnect(object):
         self._server_private_key = server_private_key
         self._heartbeat = heartbeat
         self._connection_timeout = connection_timeout
+        self._connections_lock = Lock()
         self._connections = {}
         self.outbound_connections = {}
         self._max_incoming_connections = max_incoming_connections
@@ -1060,29 +1062,31 @@ class Interconnect(object):
                          connection_id)
 
     def _add_connection(self, connection, uri=None):
-        connection_id = connection.connection_id
-        if connection_id not in self._connections:
-            self._connections[connection_id] = \
-                ConnectionInfo(ConnectionType.OUTBOUND_CONNECTION,
-                               connection,
-                               uri,
-                               None,
-                               None)
+        with self._connections_lock:
+            connection_id = connection.connection_id
+            if connection_id not in self._connections:
+                self._connections[connection_id] = \
+                    ConnectionInfo(ConnectionType.OUTBOUND_CONNECTION,
+                                   connection,
+                                   uri,
+                                   None,
+                                   None)
 
     def remove_connection(self, connection_id):
-        LOGGER.debug("Removing connection: %s", connection_id)
-        if connection_id in self._connections:
-            connection_info = self._connections[connection_id]
+        with self._connections_lock:
+            LOGGER.debug("Removing connection: %s", connection_id)
+            if connection_id in self._connections:
+                connection_info = self._connections[connection_id]
 
-            if connection_info.connection_type == \
-                    ConnectionType.OUTBOUND_CONNECTION:
-                connection_info.connection.stop()
-                del self._connections[connection_id]
+                if connection_info.connection_type == \
+                        ConnectionType.OUTBOUND_CONNECTION:
+                    connection_info.connection.stop()
+                    del self._connections[connection_id]
 
-            elif connection_info.connection_type == \
-                    ConnectionType.ZMQ_IDENTITY:
-                self._send_receive_thread.remove_connected_identity(
-                    connection_info.connection)
+                elif connection_info.connection_type == \
+                        ConnectionType.ZMQ_IDENTITY:
+                    self._send_receive_thread.remove_connected_identity(
+                        connection_info.connection)
 
     def send_last_message(self, message_type, data,
                           connection_id, callback=None):
