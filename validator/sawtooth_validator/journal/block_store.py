@@ -20,11 +20,8 @@ from sawtooth_validator.exceptions import PossibleForkDetectedError
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
-
-CHAIN_HEAD_KEY = "chain_head_id"
 
 
 class BlockStore(MutableMapping):
@@ -40,8 +37,7 @@ class BlockStore(MutableMapping):
         if key != value.identifier:
             raise KeyError("Invalid key to store block under: {} expected {}".
                            format(key, value.identifier))
-        add_ops = self._build_add_block_ops(value)
-        self._block_store.set_batch(add_ops)
+        self._block_store.put(key, value)
 
     def __getitem__(self, key):
         return self._get_block(key)
@@ -66,6 +62,46 @@ class BlockStore(MutableMapping):
             out.append(str(value))
         return ','.join(out)
 
+    @staticmethod
+    def create_index_configuration():
+        return {
+            'batch': BlockStore._batch_index_keys,
+            'transaction': BlockStore._transaction_index_keys,
+            'block_num': BlockStore._block_num_index_keys,
+        }
+
+    @staticmethod
+    def deserialize_block(value):
+        """
+        Deserialize a byte string into a BlockWrapper
+
+        Args:
+            value (bytes): the byte string to deserialze
+
+        Returns:
+            BlockWrapper: a block wrapper instance
+        """
+        # Block id strings are stored under batch/txn ids for reference.
+        # Only Blocks, not ids or Nones, should be returned by _get_block.
+        block = Block()
+        block.ParseFromString(value)
+        return BlockWrapper(
+            status=BlockStatus.Valid,
+            block=block)
+
+    @staticmethod
+    def serialize_block(blkw):
+        """
+        Given a block wrapper, produce a byte string
+
+        Args:
+            blkw: (:obj:`BlockWrapper`) a block wrapper to serialize
+
+        Returns:
+            bytes: the serialized bytes
+        """
+        return blkw.block.SerializeToString()
+
     def update_chain(self, new_chain, old_chain=None):
         """
         Set the current chain head, does not validate that the block
@@ -79,27 +115,22 @@ class BlockStore(MutableMapping):
         :return:
         None
         """
-        add_pairs = []
-        del_keys = []
-        for blkw in new_chain:
-            add_pairs = add_pairs + self._build_add_block_ops(blkw)
-        if old_chain is not None:
-            for blkw in old_chain:
-                del_keys = del_keys + self._build_remove_block_ops(blkw)
-        add_pairs.append((CHAIN_HEAD_KEY, new_chain[0].identifier))
+        add_pairs = [(blkw.header_signature, blkw) for blkw in new_chain]
+        if old_chain:
+            del_keys = [blkw.header_signature for blkw in old_chain]
+        else:
+            del_keys = []
 
-        self._block_store.set_batch(add_pairs, del_keys)
+        self._block_store.update(add_pairs, del_keys)
 
     @property
     def chain_head(self):
         """
         Return the head block of the current chain.
         """
-        if CHAIN_HEAD_KEY not in self._block_store:
-            return None
-        if self._block_store[CHAIN_HEAD_KEY] in self._block_store:
-            return self._get_block(self._block_store[CHAIN_HEAD_KEY])
-        return None
+        with self._block_store.cursor(index='block_num') as curs:
+            curs.last()
+            return curs.value()
 
     def chain_head_state_root(self):
         """
@@ -133,95 +164,62 @@ class BlockStore(MutableMapping):
 
         return _BlockPredecessorIterator(self, start_block=starting_block)
 
-    def _build_add_block_ops(self, blkw):
-        """Build the batch operations to add a block to the BlockStore.
-
-        :param blkw (BlockWrapper): Block to add BlockStore.
-        :return:
-        list of key value tuples to add to the BlockStore
-        """
-        out = []
-        blk_id = blkw.identifier
-        out.append((blk_id, blkw.block.SerializeToString()))
-        for batch in blkw.batches:
-            out.append((batch.header_signature, blk_id))
-            for txn in batch.transactions:
-                out.append((txn.header_signature, blk_id))
-        out.append((str(blkw.block_num), blk_id))
-        return out
+    @staticmethod
+    def _batch_index_keys(block):
+        blkw = BlockWrapper.wrap(block)
+        return [batch.header_signature.encode()
+                for batch in blkw.batches]
 
     @staticmethod
-    def _build_remove_block_ops(blkw):
-        """Build the batch operations to remove a block from the BlockStore.
-
-        :param blkw (BlockWrapper): Block to remove.
-        :return:
-        list of values to remove from the BlockStore
-        """
-        out = []
-        blk_id = blkw.identifier
-        out.append(blk_id)
+    def _transaction_index_keys(block):
+        blkw = BlockWrapper.wrap(block)
+        keys = []
         for batch in blkw.batches:
-            out.append(batch.header_signature)
             for txn in batch.transactions:
-                out.append(txn.header_signature)
-        out.append(str(blkw.block_num))
-        return out
+                keys.append(txn.header_signature.encode())
+        return keys
+
+    @staticmethod
+    def _block_num_index_keys(block):
+        blkw = BlockWrapper.wrap(block)
+        # Format the number to a 64bit hex value, for natural ordering
+        return [BlockStore.block_num_to_hex(blkw.block_num).encode()]
+
+    @staticmethod
+    def block_num_to_hex(block_num):
+        return "{0:#0{1}x}".format(block_num, 18)
 
     def _get_block(self, key):
         value = self._block_store.get(key)
         if value is None:
             raise KeyError('Block "{}" not found in store'.format(key))
 
-        # Block id strings are stored under batch/txn ids for reference.
-        # Only Blocks, not ids or Nones, should be returned by _get_block.
-        if isinstance(value, bytes):
-            return self._decode_block(value)
-        raise KeyError('Block "{}" not found in store'.format(key))
-
-    def _get_block_indirect(self, key):
-        value = self._block_store.get_indirect(key)
-        if value is None:
-            raise KeyError('Block "{}" not found in store'.format(key))
-
-        # Block id strings are stored under batch/txn ids for reference.
-        # Only Blocks, not ids or Nones, should be returned by _get_block.
-        if isinstance(value, bytes):
-            return self._decode_block(value)
-        raise KeyError('Block "{}" not found in store'.format(key))
-
-    def _decode_block(self, value):
-        # Block id strings are stored under batch/txn ids for reference.
-        # Only Blocks, not ids or Nones, should be returned by _get_block.
-        block = Block()
-        block.ParseFromString(value)
-        return BlockWrapper(
-            status=BlockStatus.Valid,
-            block=block)
+        return BlockWrapper.wrap(value)
 
     def get_block_by_transaction_id(self, txn_id):
         try:
-            return self._get_block_indirect(txn_id)
+            return self._block_store.get(txn_id, index='transaction')
         except KeyError:
             raise ValueError('Transaction "%s" not in BlockStore', txn_id)
 
     def get_block_by_number(self, block_num):
         try:
-            return self._get_block_indirect(str(block_num))
+            return self._block_store.get(
+                BlockStore.block_num_to_hex(block_num), index='block_num')
         except KeyError:
             raise KeyError('Block number "%s" not in BlockStore', block_num)
 
     def has_transaction(self, txn_id):
-        return txn_id in self._block_store
+        return self._block_store.contains_key(txn_id, index='transaction')
 
     def get_block_by_batch_id(self, batch_id):
         try:
-            return self._get_block_indirect(batch_id)
+            return self._block_store.get(batch_id, index='batch')
         except KeyError:
             raise ValueError('Batch "%s" not in BlockStore', batch_id)
 
     def has_batch(self, batch_id):
-        return batch_id in self._block_store
+        return self._block_store.contains_key(batch_id, index='batch')
 
     def get_batch_by_transaction(self, transaction_id):
         """
@@ -236,12 +234,13 @@ class BlockStore(MutableMapping):
         The batch that has the transaction.
         """
         block = self.get_block_by_transaction_id(transaction_id)
+        if block is None:
+            return None
         # Find batch in block
         for batch in block.batches:
-            batch_header = BatchHeader()
-            batch_header.ParseFromString(batch.header)
-            if transaction_id in batch_header.transaction_ids:
-                return batch
+            for txn in batch.transactions:
+                if txn.header_signature == transaction_id:
+                    return batch
 
     def get_batch(self, batch_id):
         """
@@ -254,6 +253,9 @@ class BlockStore(MutableMapping):
         The batch with the batch_id.
         """
         block = self.get_block_by_batch_id(batch_id)
+        if block is None:
+            return None
+
         for batch in block.batches:
             if batch.header_signature == batch_id:
                 return batch

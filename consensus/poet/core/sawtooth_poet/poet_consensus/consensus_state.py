@@ -595,6 +595,16 @@ class ConsensusState(object):
         block = \
             block_cache.block_store.get_block_by_transaction_id(
                 validator_info.transaction_id)
+
+        if not block:
+            LOGGER.warning(
+                'Validator %s (ID=%s...%s): Signup txn %s not found in block.',
+                validator_info.name,
+                validator_info.id[:8],
+                validator_info.id[-8:],
+                validator_info.transaction_id[:8])
+            return False
+
         commit_block_id = block.identifier
 
         # Starting with that block's immediate predecessor, walk back until

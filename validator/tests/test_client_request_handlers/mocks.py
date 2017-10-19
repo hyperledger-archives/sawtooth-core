@@ -70,10 +70,15 @@ class MockBlockStore(BlockStore):
     possible to save meaningful state_root_hashes to a block.
     """
     def __init__(self, size=3, start='0'):
-        super().__init__(DictDatabase())
+        super().__init__(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
 
         for i in range(size):
             self.add_block(_increment_key(start, i))
+
+    def clear(self):
+        self._block_store = DictDatabase(
+            indexes=BlockStore.create_index_configuration())
 
     def add_block(self, base_id, root='merkle_root'):
         block_id = 'B-' + base_id

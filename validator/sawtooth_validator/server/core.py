@@ -25,6 +25,7 @@ import sawtooth_signing as signing
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
+from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
@@ -113,7 +114,12 @@ class Validator(object):
         block_db_filename = os.path.join(
             data_dir, 'block-{}.lmdb'.format(bind_network[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
-        block_db = LMDBNoLockDatabase(block_db_filename, 'c')
+        block_db = IndexedDatabase(
+            block_db_filename,
+            BlockStore.serialize_block,
+            BlockStore.deserialize_block,
+            flag='c',
+            indexes=BlockStore.create_index_configuration())
         block_store = BlockStore(block_db)
         block_cache = BlockCache(
             block_store, keep_time=300, purge_frequency=30)

@@ -43,8 +43,7 @@ class BlockStoreTest(unittest.TestCase):
         block = self.create_block()
         block_store = self.create_block_store(
             {
-                'chain_head_id': 'head',
-                'head': self.encode_block(block)
+                block.header_signature: block
             })
         chain_head = block_store.chain_head
         self.assert_blocks_equal(chain_head, block)
@@ -55,11 +54,9 @@ class BlockStoreTest(unittest.TestCase):
         block = self.create_block()
         block_store = self.create_block_store(
             {
-                'chain_head_id': 'head',
-                'head': self.encode_block(block),
-                'txn': 'head'
+                block.header_signature: block
             })
-        chain_head = block_store['head']
+        chain_head = block_store[block.header_signature]
         self.assert_blocks_equal(chain_head, block)
 
         with self.assertRaises(KeyError):
@@ -74,9 +71,7 @@ class BlockStoreTest(unittest.TestCase):
         block = self.create_block()
         block_store = self.create_block_store(
             {
-                'chain_head_id': 'head',
-                'head': self.encode_block(block),
-                'txn': 'head'
+                block.header_signature: block,
             })
         block2 = self.create_block()
         with self.assertRaises(KeyError):
@@ -94,22 +89,20 @@ class BlockStoreTest(unittest.TestCase):
         """ Test BlockStore tests if Transactions and Batches
         are commited to the current chain.
         """
+        block = self.create_block()
         block_store = self.create_block_store(
             {
-                'chain_head_id': 'block',
-                'block': self.create_serialized_block(),
-                'txn': 'block',
-                'batch': 'block'
+                block.header_signature: block
             })
 
-        self.assertTrue(block_store.has_transaction('txn'))
+        self.assertTrue(block_store.has_transaction(
+            _get_first_txn_id(block)))
         self.assertFalse(block_store.has_transaction('txn_missing'))
-        self.assertTrue(block_store.has_batch('batch'))
+        self.assertTrue(block_store.has_batch(
+            _get_first_batch_id(block)))
         self.assertFalse(block_store.has_transaction('batch_missing'))
 
-        self.assertTrue('block' in block_store)
-        self.assertTrue('batch' in block_store)
-        self.assertTrue('txn' in block_store)
+        self.assertTrue(block.header_signature in block_store)
 
         self.assertFalse('block_missing' in block_store)
         self.assertFalse('batch_missing' in block_store)
@@ -201,18 +194,11 @@ class BlockStoreTest(unittest.TestCase):
 
     @staticmethod
     def create_block_store(data=None):
-        return BlockStore(DictDatabase(data))
+        return BlockStore(DictDatabase(
+            data, indexes=BlockStore.create_index_configuration()))
 
     def create_block(self):
         return self.block_tree_manager.create_block()
-
-    def create_serialized_block(self):
-        block_wrapper = self.block_tree_manager.create_block()
-        return block_wrapper.block.SerializeToString()
-
-    @staticmethod
-    def encode_block(obj):
-        return obj.block.SerializeToString()
 
     @staticmethod
     def encode(obj):
@@ -229,7 +215,8 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
         3. Verify that the block ids match the chain, in reverse order
         """
 
-        block_store = BlockStore(DictDatabase())
+        block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
         chain = self._create_chain(5)
         block_store.update_chain(chain)
 
@@ -247,7 +234,8 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
         2. Iterate the chain using the get_predecessor_iter from block 3
         3. Verify that the block ids match the chain, in reverse order
         """
-        block_store = BlockStore(DictDatabase())
+        block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
         chain = self._create_chain(5)
         block_store.update_chain(chain)
 
@@ -264,7 +252,8 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
         """Given a block store with no blocks, iterate using predecessor iterator
         and verify that it results in an empty list.
         """
-        block_store = BlockStore(DictDatabase())
+        block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
 
         self.assertEqual([], [b for b in block_store.get_predecessor_iter()])
 
@@ -274,7 +263,8 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
 
         The fork occurrance will be simulated.
         """
-        block_store = BlockStore(DictDatabase())
+        block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
         chain = self._create_chain(5)
         block_store.update_chain(chain)
 
@@ -293,6 +283,7 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
         for i in range(length):
             block = BlockWrapper(
                 Block(header_signature='abcd{}'.format(i),
+                      batches=[],
                       header=BlockHeader(
                           block_num=i,
                           previous_block_id=previous_block_id
@@ -305,3 +296,18 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
         chain.reverse()
 
         return chain
+
+
+def _get_first_batch_id(block):
+    for batch in block.batches:
+        return batch.header_signature
+
+    return None
+
+
+def _get_first_txn_id(block):
+    for batch in block.batches:
+        for txn in batch.transactions:
+            return txn.header_signature
+
+    return None

@@ -72,7 +72,7 @@ class ClientHandlerTestCase(unittest.TestCase):
         """Breaks the chain head causing certain "latest" requests to fail.
         Simulates what block store would look like if genesis had not been run.
         """
-        del self._store.store['chain_head_id']
+        self._store.clear()
 
     def add_blocks(self, *base_ids):
         """Adds new blocks to a test case's block store with specified base_ids.

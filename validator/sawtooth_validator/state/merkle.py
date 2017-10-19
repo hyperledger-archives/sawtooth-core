@@ -182,7 +182,7 @@ class MerkleDatabase(object):
                 if path != '':
                     del path_map[parent_address]['c'][path_branch]
 
-        self._database.set_batch(batch)
+        self._database.put_multi(batch)
 
         return hash_key
 
@@ -244,7 +244,7 @@ class MerkleDatabase(object):
 
         if not virtual:
             # Apply all new hash, value pairs to the database
-            self._database.set_batch(update_batch)
+            self._database.put_multi(update_batch)
         return key_hash
 
     def _set_by_addr(self, address, value):
@@ -276,7 +276,7 @@ class MerkleDatabase(object):
 
         batch.append((root_hash, packed))
 
-        self._database.set_batch(batch)
+        self._database.put_multi(batch)
 
         return root_hash
 

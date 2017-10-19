@@ -1426,7 +1426,8 @@ class TestChainCommitState(unittest.TestCase):
 
     def create_chain_commit_state(self, blocks, uncommitted_blocks=None,
                                   chain_head=None):
-        block_store = BlockStore(DictDatabase())
+        block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
         block_store.update_chain(blocks)
         if chain_head is None:
             chain_head = block_store.chain_head.identifier
