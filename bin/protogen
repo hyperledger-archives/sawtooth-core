@@ -92,12 +92,6 @@ def main(args=None):
         proto_dir = JOIN(TOP_DIR, "families/smallbank/protos")
         protoc(proto_dir, "families/smallbank", "smallbank_go/src/protobuf", "go")
 
-    # 8. Generate Track and Trade protos
-    protoc(
-        JOIN(TOP_DIR, "families/track_and_trade/protos"),
-        "families/track_and_trade/processor",
-        "sawtooth_track_and_trade/protobuf")
-
     if "seth-go" in args:
         proto_dir = JOIN(TOP_DIR, "families/block_info/protos")
         protoc(proto_dir, "families/seth/src", "sawtooth_seth/protobuf", "go")

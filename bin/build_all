@@ -209,7 +209,6 @@ docker_build() {
 
 build_external() {
     docker_build docker/apache-basic_auth_proxy docker/ apache-basic_auth_proxy
-    docker_build docker/track-and-trade-server docker/ track-and-trade-server
     docker_build docker/grafana/sawtooth-stats-grafana \
         docker/grafana \
         sawtooth-stats-grafana
@@ -269,7 +268,6 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-battleship-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-supplychain-tp
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-track-and-trade-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
@@ -378,8 +376,6 @@ then
 
         docker_build $build_dir/sawtooth-int-validator \
             $build_dir/ sawtooth-validator
-
-	docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-track-and-trade-tp
     }
 
     build_rust() {
