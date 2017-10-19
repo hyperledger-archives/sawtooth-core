@@ -76,9 +76,7 @@ save_usage intkey-tp-python
 
 save_usage xo
 save_usage xo create
-save_usage xo init
 save_usage xo list
-save_usage xo reset
 save_usage xo show
 save_usage xo take
 save_usage xo-tp-python
