@@ -8,8 +8,11 @@ fi
 function save_usage() {
    safe_string=$(echo "$*" | sed -e 's/[^A-Za-z0-9-]/_/g')
    filename="source/cli/output/${safe_string}_usage.out"
+   if ! output=$("$@" -h); then
+       exit 1
+   fi
    echo "Generating: $filename"
-   $* -h > $filename
+   echo "$output" > "$filename"
 }
 
 export PATH=$PATH:$(pwd)/../bin
