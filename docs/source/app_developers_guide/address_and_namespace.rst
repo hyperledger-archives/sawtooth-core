@@ -56,7 +56,7 @@ Python code:
 
 
 Alternatively, a namespace prefix can utilize an arbitrary scheme. The current
-configuration transaction family uses a prefix of ‘000000’, for example.
+Settings transaction family uses a prefix of ‘000000’, for example.
 
 
 Address Construction

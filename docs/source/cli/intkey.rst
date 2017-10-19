@@ -15,9 +15,9 @@
 
 .. _intkey-cli-reference-label:
 
-******************
-intkey Family CLIs
-******************
+**************
+IntegerKey CLI
+**************
 
 intkey
 ======

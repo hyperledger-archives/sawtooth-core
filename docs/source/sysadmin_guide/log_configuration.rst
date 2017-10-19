@@ -58,7 +58,7 @@ The validator log config file should be named `log_config.toml`.
 Each transaction processor may also define its own config file. The name of
 this file is determined by the author. The transaction processors included in
 the Python SDK follow the convention `{Transaction_Family_Name}_log_config.toml`.
-For example, intkey's log config file is named `intkey_log_config.toml`.
+For example, the intkey (IntegerKey) log configuration file is `intkey_log_config.toml`.
 
 Config Directory
 ----------------

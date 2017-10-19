@@ -80,10 +80,11 @@ Creating And Submitting Transactions with intkey
 ------------------------------------------------
 
 The ``intkey`` CLI command is provided to create sample transactions of the
-intkey transaction type for testing purposes. Using it you will be able prepare
-batches of intkey transactions that *set* a few keys to random values, then
-randomly *inc* (increment) and *dec* (decrement) those values. These batches
-will be saved locally, and then can then be submitted to the validator.
+intkey (IntegerKey) transaction type for testing purposes. Using it you will
+be able to prepare batches of intkey transactions that *set* a few keys to
+random values, then randomly *inc* (increment) and *dec* (decrement) those
+values. These batches will be saved locally, and then can then be submitted
+to the validator.
 
 To use, run the following commands:
 
@@ -100,7 +101,7 @@ intkey logs in ``/var/log/sawtooth``.
 The validator logs show that state is being updated and a new block
 has been published.
 
-The intkey logs show values being incremented and decremented.
+The IntegerKey logs show values being incremented and decremented.
 
 .. note::
 
@@ -312,13 +313,13 @@ in Python.
   includes additional transaction processors written in several languages.
   The following lists the processors that are included:
 
-  * settings-tp - A settings family transaction processor written in Python
+  * settings-tp - A Settings family transaction processor written in Python
 
-  * intkey-tp-go - An intkey transaction processor written in Go
+  * intkey-tp-go - An IntegerKey transaction processor written in Go
 
-  * intkey-tp-java - An intkey transaction processor written in Java
+  * intkey-tp-java - An IntegerKey transaction processor written in Java
 
-  * intkey-tp-javascript - An intkey transaction processor written in JavaScript
+  * intkey-tp-javascript - An IntegerKey transaction processor written in JavaScript
     (requires node.js)
 
   * poet-validator-registry-tp - A transaction family used by the PoET consensus
@@ -342,8 +343,8 @@ settings change.
 The JSON array used tells the validator or validator network to accept
 transactions of the following types:
 
-* intkey
-* sawtooth_settings
+* ``intkey`` (IntegerKey transaction family)
+* ``sawtooth_settings`` (Settings transaction family)
 
 To create and submit the batch containing the new settings, enter the
 following commands at a Linux command-line prompt:
