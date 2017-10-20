@@ -38,6 +38,7 @@ save_usage sawtooth config proposal list
 save_usage sawtooth config proposal vote
 save_usage sawtooth config settings
 save_usage sawtooth config settings list
+save_usage sawtooth keygen
 save_usage sawtooth identity
 save_usage sawtooth identity policy
 save_usage sawtooth identity policy create
