@@ -38,46 +38,49 @@ class TestXoSmoke(unittest.TestCase):
         wait_for_rest_apis([REST_API])
 
     def test_xo_smoke(self):
-        _send_xo_cmd('sawtooth keygen')
+        for username in ('nunzio', 'tony'):
+            _send_cmd('sawtooth keygen {}'.format(username))
 
         game_cmds = (
-            'xo create nunzio',
-            'xo take nunzio 1',
-            'xo take nunzio 4',
-            'xo take nunzio 2',
-            'xo take nunzio 2',
-            'xo take nunzio 5',
-            'xo create tony',
-            'xo take tony 9',
-            'xo take tony 8',
-            'xo take nunzio 3',
-            'xo take nunzio 7',
-            'xo take tony 6',
-            'xo create wait',
+            'xo create game-1 --username nunzio',
+            'xo take game-1 1 --username nunzio',
+            'xo take game-1 4 --username tony',
+            'xo take game-1 2 --username nunzio',
+            'xo take game-1 2 --username tony',
+            'xo take game-1 5 --username tony',
+            'xo create game-2 --username tony',
+            'xo take game-2 9 --username nunzio',
+            'xo take game-2 8 --username tony',
+            'xo take game-1 3 --username tony',
+            'xo take game-1 3 --username nunzio',
+            'xo take game-1 7 --username tony',
+            'xo take game-2 6 --username nunzio',
+            'xo create blank --username tony',
         )
 
         for cmd in game_cmds:
-            _send_xo_cmd(
+            _send_cmd(
                 '{} --url {} --wait {}'.format(
                     cmd,
                     self.client.url,
                     WAIT))
 
-        self.verify_game('nunzio', 'XXXOO----', 'P1-WIN')
-        self.verify_game('tony', '-----X-OX', 'P2-NEXT')
-        self.verify_game('wait', '---------', 'P1-NEXT')
+        self.verify_game('game-1', 'XXXOO----', 'P1-WIN')
+        self.verify_game('game-2', '-----X-OX', 'P2-NEXT')
+        self.verify_game('blank', '---------', 'P1-NEXT')
 
         LOGGER.info(
             "Verifying that XO CLI commands don't blow up (but nothing else)")
 
         cli_cmds = (
             'xo list',
-            'xo show nunzio',
-            'xo show tony',
+            'xo show game-1',
+            'xo show game-2',
+            'xo show blank',
         )
 
         for cmd in cli_cmds:
-            _send_xo_cmd(
+            _send_cmd(
                 '{} --url {}'.format(
                     cmd,
                     self.client.url))
@@ -100,7 +103,7 @@ class TestXoSmoke(unittest.TestCase):
                 expected_turn, turn))
 
 
-def _send_xo_cmd(cmd_str):
+def _send_cmd(cmd_str):
     LOGGER.info('Sending %s', cmd_str)
 
     subprocess.run(

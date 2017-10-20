@@ -149,9 +149,14 @@ def create_parent_parser(prog_name):
         help='the url of the REST API')
 
     parent_parser.add_argument(
-        '--keyfile',
+        '--username',
         type=str,
-        help='the file in which the user\'s private key is stored')
+        help="the name of the user's private key file")
+
+    parent_parser.add_argument(
+        '--key-dir',
+        type=str,
+        help="the directory of the user's private key file")
 
     parent_parser.add_argument(
         '--auth-user',
@@ -187,10 +192,9 @@ def create_parser(prog_name):
 
 def do_list(args):
     url = _get_url(args)
-    keyfile = _get_keyfile(args)
     auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url, keyfile=keyfile)
+    client = XoClient(base_url=url, keyfile=None)
 
     game_list = [
         game.split(',')
@@ -215,10 +219,9 @@ def do_show(args):
     name = args.name
 
     url = _get_url(args)
-    keyfile = _get_keyfile(args)
     auth_user, auth_password = _get_auth_info(args)
 
-    client = XoClient(base_url=url, keyfile=keyfile)
+    client = XoClient(base_url=url, keyfile=None)
 
     data = client.show(name, auth_user=auth_user, auth_password=auth_password)
 
@@ -301,14 +304,11 @@ def _get_url(args):
 
 
 def _get_keyfile(args):
-    if args.keyfile is not None:
-        return args.keyfile
-
-    real_user = getpass.getuser()
+    username = getpass.getuser() if args.username is None else args.username
     home = os.path.expanduser("~")
     key_dir = os.path.join(home, ".sawtooth", "keys")
 
-    return '{}/{}.priv'.format(key_dir, real_user)
+    return '{}/{}.priv'.format(key_dir, username)
 
 
 def _get_auth_info(args):
