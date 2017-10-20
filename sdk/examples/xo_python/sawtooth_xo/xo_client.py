@@ -44,12 +44,10 @@ class XoClient:
             with open(keyfile) as fd:
                 self._private_key = fd.read().strip()
                 fd.close()
-        except FileNotFoundError:
+        except OSError as err:
             raise XoException(
-                'Could not find private key file {}; '
-                'try running `sawtooth keygen`'.format(keyfile))
-        except OSError:
-            raise XoException("Failed to read keys.")
+                'Failed to read private key {}: {}'.format(
+                    keyfile, str(err)))
 
         self._public_key = signing.generate_public_key(self._private_key)
 
@@ -143,10 +141,9 @@ class XoClient:
                 raise XoException("Error {}: {}".format(
                     result.status_code, result.reason))
 
-        except requests.ConnectionError:
+        except requests.ConnectionError as err:
             raise XoException(
-                'Could not connect at {}; is the REST API running?'.format(
-                    self._base_url))
+                'Failed to connect to {}: {}'.format(url, str(err)))
 
         except BaseException as err:
             raise XoException(err)
