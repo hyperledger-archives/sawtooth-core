@@ -36,9 +36,14 @@ def _sha512(data):
 
 
 class XoClient:
-    def __init__(self, base_url, keyfile):
+    def __init__(self, base_url, keyfile=None):
 
         self._base_url = base_url
+
+        if keyfile is None:
+            self._private_key = None
+            self._public_key = None
+            return
 
         try:
             with open(keyfile) as fd:
