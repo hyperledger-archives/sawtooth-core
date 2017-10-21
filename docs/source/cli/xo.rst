@@ -33,24 +33,10 @@ xo create
    :language: console
    :linenos:
 
-xo init
-=======
-
-.. literalinclude:: output/xo_init_usage.out
-   :language: console
-   :linenos:
-
 xo list
 =======
 
 .. literalinclude:: output/xo_list_usage.out
-   :language: console
-   :linenos:
-
-xo reset
-========
-
-.. literalinclude:: output/xo_reset_usage.out
    :language: console
    :linenos:
 

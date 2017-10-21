@@ -6,17 +6,17 @@ What is XO?
 ===========
 
 *XO* is an example transaction family contained within the Sawtooth SDK. It is an
-implementation of the popular game *Tic-tac-toe* (otherwise known as 
+implementation of the popular game *Tic-tac-toe* (otherwise known as
 *Noughts and Crosses* or *X's and O's*).
 
 *X's and O's*-style games have been played across the world for many centuries. The
 origin of this type of game is unclear; however, some historians believe that the first
 version of *Tic-tac-toe* may have originated in ancient Egypt. Others believe that the
-modern *Tic-tac-toe* is an evolution of a game known as *Terni Lapilli*, which was 
+modern *Tic-tac-toe* is an evolution of a game known as *Terni Lapilli*, which was
 popular within the Roman Empire.
 
 *Tic-tac-toe* also has historical significance within the field of Computer Science. In
-1952, it became the basis of one of the first-ever video games when 
+1952, it became the basis of one of the first-ever video games when
 `OXO <https://en.wikipedia.org/wiki/OXO>`_ was developed by Alexander S. Douglas at the
 University of Cambridge. More information regarding the origins and properties of
 *Tic-tac-toe* can be found `here <https://en.wikipedia.org/wiki/Tic-tac-toe>`_.
@@ -46,30 +46,16 @@ Playing XO using the command-line interface
 A command-line interface is provided for playing *XO* which handles the construction and
 submission of transactions. Instructions on how to use the CLI are detailed below:
 
-Start up a validator, *XO* transaction processor, and the REST API. For more information 
-on configuring and running Sawtooth components, see 
+Start up a validator, *XO* transaction processor, and the REST API. For more information
+on configuring and running Sawtooth components, see
 :doc:`/app_developers_guide/installing_sawtooth`.
-   
-Each player must initialize *XO* locally using the ``xo init`` command. This command
-generates a public and private key pair that is used to identify players on the network.
-It stores this information locally in a file. The ``xo init`` command has two options:
-``--username`` and ``--url``.
 
 - The ``--username`` option is used locally as a nickname for the key pair. If a
   ``--username`` is not specified, OS environment variables will be parsed to find
   a suitable value.
-- The ``--url`` option should be set to the URL of the REST API. The *XO* client 
-  will send requests to this URL in order to determine the validity of each move and
-  update the game state on the blockchain. If no URL is specified, the URL will 
-  default to ``http://127.0.0.1:8080``.
-  
-.. note::
-
-  A user can use the ``xo reset`` command to delete local *XO* data. This includes
-  the saved URL and username.
 
 A user creates a new game using the ``xo create [name]`` command.
-  
+
 - The *name* argument is the identifier for the new game to be created.
 
 Players take turns using the ``xo take [name] [space]`` command to mark spaces on
@@ -78,6 +64,12 @@ the grid.
 - The *name* argument is the identifier for an existing game.
 - The *space* argument is the space that is to be marked, which is an integer in the
   range of 1 through 9.
+
+``xo create`` and ``xo take`` each take ``--username`` and
+``--key-dir`` arguments. These are used to locate the user's private
+key file: ``<key-dir>/<username>.priv``. ``key-dir`` defaults to
+``~/.sawtooth/keys`` and ``username`` defaults to the name of the OS
+user.
 
 .. note::
 
@@ -105,14 +97,22 @@ These commands are ``xo show [game]`` and ``xo list``
 
 .. note::
 
-  The *XO* client optionally supports authentication. If the REST API is connected to
-  an authentication proxy, you can point the *XO* client at it during initialization.
-  You must enter your authentication information using the ``--auth-user [user]`` and
+  The *XO* client optionally supports authentication. If the REST API
+  is connected to an authentication proxy, you can point the *XO*
+  client at it with the ``--url`` argument. You must enter your
+  authentication information using the ``--auth-user [user]`` and
   ``--auth-password [password]`` options for each *XO* command.
 
-  *Note that the value of* ``--auth-user``
-  *is not the same username that is entered with the* ``--username``
-  *option during initialization*.
+  *Note that the value of the* ``--auth-user`` *argument is not the
+  same username that is entered with the* ``--username`` *argument*.
+
+URL
+---
+
+The ``xo`` commands all take a ``--url`` argument that defaults to
+``http://127.0.0.1:8080``. This should be set to the URL of the REST
+API. The *XO* client will send requests to update and query the
+blockchain to this URL.
 
 
 .. seealso::
@@ -136,38 +136,22 @@ To play *XO*, ensure that the following components are running and connected:
 Create Players
 --------------
 
-Create two players to play the game:
+Create keys for two players to play the game:
 
 .. code-block:: console
 
-    $ xo init --username jack
-    $ xo init --username jill
+    $ sawtooth keygen jack
+    $ sawtooth keygen jill
 
 
 The command produces output similar to the following for both players:
 
 .. code-block:: console
 
-    set username: jack
-    set url: http://127.0.0.1:8080
     writing file: /home/ubuntu/.sawtooth/keys/jack.priv
     writing file: /home/ubuntu/.sawtooth/keys/jack.addr
-    set username: jill
-    set url: http://127.0.0.1:8080
     writing file: /home/ubuntu/.sawtooth/keys/jill.priv
     writing file: /home/ubuntu/.sawtooth/keys/jill.addr
-
-
-If you are using the *XO* CLI to play a game on one machine, ``xo init`` can also be used
-to set the active player. If the above commands are run in the order shown, both players
-will be created, but "jill" will be the active player. To switch the active player,
-simply run the ``xo init`` command again with the name of thedesired player.
-
-Set "jack" as the active player now with:
-
-.. code-block:: console
-
-    $ xo init --username jack
 
 
 Create A Game
@@ -177,7 +161,7 @@ Create a game with the following command:
 
 .. code-block:: console
 
-    $ xo create game1
+    $ xo create game --username jack
 
 To see list of the created games, enter the following command:
 
@@ -190,7 +174,7 @@ The command outputs a list of the games that have been created:
 .. code-block:: console
 
     GAME            PLAYER 1        PLAYER 2        BOARD     STATE
-    game1                                           --------- P1-NEXT
+    game                                            --------- P1-NEXT
 
 
 Take A Space As Player One
@@ -200,7 +184,7 @@ Start playing by taking a space as the first player, "jack":
 
 .. code-block:: console
 
-    $ xo take game1 4
+    $ xo take game 5 --username jack
 
 .. note::
 
@@ -211,19 +195,11 @@ Start playing by taking a space as the first player, "jack":
 Take A Space As Player Two
 --------------------------
 
-To take a space on the board as *player two*, "jill" needs to be set as the
-active player. Run the following command:
-
-.. code-block:: console
-
-    $ xo init --username jill
-
-
 Now take a space on the board as player two:
 
 .. code-block:: console
 
-    $ xo take game1 3
+    $ xo take game 1 --username jill
 
 
 Show The Current State Of The Game Board
@@ -234,20 +210,20 @@ following command:
 
 .. code-block:: console
 
-    $ xo show game1
+    $ xo show game
 
 You will see the current state of the board displayed:
 
 .. code-block:: console
 
-    GAME:     : game1
-    PLAYER 1  : 024c8f
-    PLAYER 2  : 03f8f2
+    GAME:     : game
+    PLAYER 1  : 02403a
+    PLAYER 2  : 03729b
     STATE     : P1-NEXT
 
-        |   | O
+      O |   |
      ---|---|---
-      X |   |
+        | X |
      ---|---|---
         |   |
 
@@ -258,25 +234,19 @@ Continue Game
 You can continue the game until one of the players wins, or
 the game ends in a draw:
 
-.. warning::
-
-  Be sure to switch users before taking each move to simulate two distinct
-  users playing.
-
-
 .. code-block:: console
 
-    $ xo show game1
-    GAME:     : game1
-    PLAYER 1  : 024c8f
-    PLAYER 2  : 03f8f2
-    STATE     : P2-WIN
+    $ xo show game
+    GAME:     : game
+    PLAYER 1  : 02403a
+    PLAYER 2  : 03729b
+    STATE     : TIE
 
-      X |   | O
+      O | X | O
      ---|---|---
-      X | O |
+      X | X | O
      ---|---|---
-      O |   | X
+      X | O | X
 
 
 XO Transaction Family Specification
