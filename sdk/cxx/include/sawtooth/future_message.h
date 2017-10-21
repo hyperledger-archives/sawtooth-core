@@ -66,11 +66,10 @@ class FutureMessage final {
         }
         if (this->msg->message_type() != msg_type) {
             std::stringstream error;
-            error << "Error unexpected message reponse type Expected:"
+            error << "Error unexpected message response type Expected:"
                 << msg_type << " got: " << this->msg->message_type();
             throw std::runtime_error(error.str());
         }
-
         const std::string& msg_data = this->msg->content();
         proto->ParseFromArray(msg_data.c_str(), msg_data.length());
     }

@@ -19,10 +19,10 @@
 #include <string>
 
 #include <log4cxx/logger.h>
-
 #include "proto/state_context.pb.h"
 
 #include "sawtooth/global_state.h"
+#include "sawtooth/exceptions.h"
 
 namespace sawtooth {
 
@@ -68,6 +68,13 @@ void GlobalState::Get(
     FutureMessagePtr future = this->message_stream->SendMessage(
         Message::TP_STATE_GET_REQUEST, request);
     future->GetMessage(Message::TP_STATE_GET_RESPONSE, &response);
+
+    if(response.status() == TpStateGetResponse::AUTHORIZATION_ERROR){
+        std::stringstream error;
+        error << "State Get Authorization error. Check transaction inputs.";
+        throw sawtooth::InvalidTransaction(error.str());
+    }
+
     if ( response.entries_size() > 0 ) {
         for (const auto& entry : response.entries()) {
             out_values_ref[entry.address()] = entry.data();
@@ -93,6 +100,13 @@ void GlobalState::Set(const std::vector<KeyValue>& kv_pairs) const {
     FutureMessagePtr future = this->message_stream->SendMessage(
         Message::TP_STATE_SET_REQUEST, request);
     future->GetMessage(Message::TP_STATE_SET_RESPONSE, &response);
+
+    if(response.status() == TpStateSetResponse::AUTHORIZATION_ERROR){
+        std::stringstream error;
+        error << "State Set Authorization error. Check transaction outputs.";
+        throw sawtooth::InvalidTransaction(error.str());
+    }
+
 }
 
 

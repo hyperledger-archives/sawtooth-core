@@ -45,18 +45,33 @@ class MessageStream {
  public:
     virtual ~MessageStream() {}
 
-    // Send a message to the validator and get back the FutureMessage object
-    // that will receive the response.
-    FutureMessagePtr Send(Message::MessageType type,
-        const std::string& data);
-
     // This is a helper function that takes care of serializing a protobuffer
     // defined class and then sending the serialized results to the validator.
+    // Returns a FutureMessage object that will receive the response.
     template <typename T>
     FutureMessagePtr SendMessage(Message::MessageType type, const T& proto) {
         std::stringstream proto_stream;
         proto.SerializeToOstream(&proto_stream);
-        return this->Send(type, proto_stream.str());
+        std::string correlation_id = this->GenerateCorrelationId();
+        FutureMessagePtr future(new FutureMessage(correlation_id));
+        {
+            std::unique_lock<std::mutex> lock(this->future_message_mutex);
+            this->future_message_map[correlation_id] = future;
+        }
+        this->Send(type, proto_stream.str(), correlation_id);
+        return future;
+    }
+
+    // This is a helper function that takes care of serializing a protobuffer
+    // defined class and then sending the serialized results to the validator.
+    // It uses the correlation ID that the validator initiated.
+    template <typename T>
+    void SendResponseMessage(Message::MessageType type,
+            const T& proto,
+            const std::string& correlation_id) {
+        std::stringstream proto_stream;
+        proto.SerializeToOstream(&proto_stream);
+        this->Send(type, proto_stream.str(), correlation_id);
     }
 
  private:
@@ -64,6 +79,11 @@ class MessageStream {
     explicit MessageStream(zmqpp::context* context,
         std::unordered_map<std::string, std::shared_ptr<FutureMessage>>&,
         std::mutex& future_message_mutex);
+
+    // Send a message to the validator
+    void Send(Message::MessageType type,
+        const std::string& data,
+        const std::string& correlation_id);
 
     std::string GenerateCorrelationId() const;
 

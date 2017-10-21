@@ -81,9 +81,9 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
                 "Name is required");
         }
         std::string name = *name_it;
-        if (name.length() == 0 || name.length() >= 20) {
+        if (name.length() == 0 || name.length() > 20) {
             throw sawtooth::InvalidTransaction(
-                "Name is invalid, name muste be between" \
+                "Name is invalid, name must be between" \
                 " 1 and 20 characters in length");
         }
 
@@ -162,15 +162,15 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
             state_value_map = json::from_cbor(state_value_rep_v);
             if (state_value_map.find(name) == state_value_map.end()) {
                 std::stringstream error;
-                error << "Verb was 'Inc', but value does not exist: " <<
+                error << "Verb was 'Inc', but value does not exist for " <<
                         "Name: " << name;
                 throw sawtooth::InvalidTransaction(error.str());
             }
             LOG4CXX_DEBUG(logger, "found");
         } else {
             std::stringstream error;
-            error << "Verb was 'Inc', but value does not exist: " <<
-                        "Name: " << name;
+            error << "Verb was 'inc', but address not found in state for " <<
+                "Name: " << name;
             throw sawtooth::InvalidTransaction(error.str());
         }
         LOG4CXX_DEBUG(logger, "address received: " << address << "="
@@ -190,8 +190,8 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
     // stored in global state by a given value.
     void DoDec(const std::string& name, int value) {
         auto address = this->MakeAddress(name);
-        LOG4CXX_DEBUG(logger, "IntKeyApplicator::DoDec Name: " << name << " Value: " << value <<
-            " Address: " << address);
+        LOG4CXX_DEBUG(logger, "IntKeyApplicator::DoDec Name: " << name
+            << " Value: " << value << " Address: " << address);
 
         json state_value_map;
         std::string state_value_rep;
@@ -201,13 +201,13 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
 
             if (state_value_map.find(name) == state_value_map.end()) {
                 std::stringstream error;
-                error << "Verb was 'dec', but value does not exist exists: " <<
+                error << "Verb was 'dec', but value does not exist for " <<
                         "Name: " << name;
                 throw sawtooth::InvalidTransaction(error.str());
             }
         } else {
             std::stringstream error;
-            error << "Verb was 'dec', but value does not exist exists: " <<
+            error << "Verb was 'dec', but address not found in state for " <<
                         "Name: " << name;
             throw sawtooth::InvalidTransaction(error.str());
         }

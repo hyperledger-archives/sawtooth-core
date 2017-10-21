@@ -54,10 +54,35 @@ MessageDispatcher::MessageDispatcher():
         message_socket(this->context_, zmqpp::socket_type::dealer),
         processing_request_socket(this->context_, zmqpp::socket_type::dealer),
         dispatch_thread_socket(this->context_, zmqpp::socket_type::pair),
+        server_monitor_socket(this->context_, zmqpp::socket_type::pair),
         server_is_connected(false) {
     this->message_socket.bind("inproc://send_queue");
     this->processing_request_socket.bind("inproc://request_queue");
     this->dispatch_thread_socket.bind(MessageDispatcher::DISPATCH_THREAD_ENDPOINT);
+
+    // Start monitoring the server socket for the connect and disconnect events.
+    //
+    // In reality, what we would really like is to monitor at this time for
+    // connect and then when the state changes to connected, monitor solely for
+    // the disconnect event and vice versa.  That way we poll in the most
+    // efficient way as once we are in the disconnected state, the monitor will
+    // keep giving is disconnect events if we are monitoring them.  However,
+    // the problem seems to be that once we start monitoring, we are not allowed
+    // to change what we are monitoring for.  Would love if someone could solve
+    // this problem.
+    if (zmq_socket_monitor(
+            this->server_socket,
+            MessageDispatcher::SERVER_MONITOR_ENDPOINT.c_str(),
+            ZMQ_EVENT_CONNECTED | ZMQ_EVENT_DISCONNECTED)) {
+        LOG4CXX_ERROR(
+            logger,
+            "Error trying to monitor server socket: "
+                << zmq_errno());
+        throw std::runtime_error("Failed to monitor server socket events");
+    }
+    // Connect socket to the monitor
+    this->server_monitor_socket.connect(
+        MessageDispatcher::SERVER_MONITOR_ENDPOINT);
 
     // Start the thread to process incoming messages, and then wait for the
     // thread to indicate it is ready
@@ -175,6 +200,40 @@ void MessageDispatcher::SendMessage() {
     this->server_socket.send(message);
 }
 
+void MessageDispatcher::HandleConnectionChange(){
+    // Get the next event for the server socket
+    uint16_t event = this->GetServerSocketEvent(this->server_monitor_socket);
+
+    // If we are not connected to the server and the event was a
+    // connected event or we are connected and the event was a
+    // disconnected event, we need to let the transaction processor
+    // know so that it can perform the proper action.
+    if ((server_is_connected && (ZMQ_EVENT_DISCONNECTED & event)) ||
+        (!server_is_connected && (ZMQ_EVENT_CONNECTED & event))) {
+        // Set the server connection state appropriately
+        server_is_connected = ZMQ_EVENT_CONNECTED == event;
+        LOG4CXX_INFO(
+            logger,
+            "Server connection state changed to: "
+                << (server_is_connected ? "CONNECTED" : "DISCONNECTED"));
+
+        // Create a new message for the transaction processor and set
+        // its type to an appropriate event type value and queue up the
+        // message in the transaction processors queue.
+        Message msg;
+        msg.set_message_type(
+            ZMQ_EVENT_CONNECTED == event ?
+                SERVER_CONNECT_EVENT : SERVER_DISCONNECT_EVENT);
+
+        std::string msg_data;
+        msg.SerializeToString(&msg_data);
+
+        zmqpp::message zmsg;
+        zmsg.add(msg_data.data(), msg_data.length());
+        this->processing_request_socket.send(zmsg);
+    }
+}
+
 uint16_t MessageDispatcher::GetServerSocketEvent(
     zmqpp::socket& server_monitor_socket
     ) {
@@ -200,6 +259,7 @@ void MessageDispatcher::DispatchThread() {
     zmqpp::poller socket_poller;
     socket_poller.add(this->server_socket);
     socket_poller.add(this->message_socket);
+    socket_poller.add(this->server_monitor_socket);
 
     // Create a socket for inter-thread communication, connect with the other
     // side, let message dispatcher know that we are ready, then add the
@@ -208,32 +268,6 @@ void MessageDispatcher::DispatchThread() {
     dispatch_socket.connect(MessageDispatcher::DISPATCH_THREAD_ENDPOINT);
     dispatch_socket.send(std::string(MessageDispatcher::THREAD_READY_MESSAGE));
     socket_poller.add(dispatch_socket);
-
-    // Start monitoring the server socket for the connect and disconnect events.
-    //
-    // In reality, what we would really like is to monitor at this time for
-    // connect and then when the state changes to connected, monitor solely for
-    // the disconnect event and vice versa.  That way we poll in the most
-    // efficient way as once we are in the disconnected state, the monitor will
-    // keep giving is disconnect events if we are monitoring them.  However,
-    // the problem seems to be that once we start monitoring, we are not allowed
-    // to change what we are monitoring for.  Would love if someone could solve
-    // this problem.
-    if (zmq_socket_monitor(
-            this->server_socket,
-            MessageDispatcher::SERVER_MONITOR_ENDPOINT.c_str(),
-            ZMQ_EVENT_CONNECTED | ZMQ_EVENT_DISCONNECTED)) {
-        LOG4CXX_ERROR(
-            logger,
-            "Error trying to monitor server socket: "
-                << zmq_errno());
-        throw std::runtime_error("Failed to monitor server socket events");
-    }
-
-    // Create a socket for monitoring the server socket and add it to the poller
-    zmqpp::socket server_monitor_socket(this->context_, zmqpp::socket_type::pair);
-    server_monitor_socket.connect(MessageDispatcher::SERVER_MONITOR_ENDPOINT);
-    socket_poller.add(server_monitor_socket);
 
     bool threadShouldExit = false;
 
@@ -246,37 +280,7 @@ void MessageDispatcher::DispatchThread() {
             this->SendMessage();
         }
         if (socket_poller.has_input(server_monitor_socket)) {
-            // Get the next event for the server socket
-            uint16_t event = this->GetServerSocketEvent(server_monitor_socket);
-
-            // If we are not connected to the server and the event was a
-            // connected event or we are connected and the event was a
-            // disconnected event, we need to let the transaction processor
-            // know so that it can perform the proper action.
-            if ((server_is_connected && (ZMQ_EVENT_DISCONNECTED & event)) ||
-                (!server_is_connected && (ZMQ_EVENT_CONNECTED & event))) {
-                // Set the server connection state appropriately
-                server_is_connected = ZMQ_EVENT_CONNECTED == event;
-                LOG4CXX_INFO(
-                    logger,
-                    "Server connection state changed to: "
-                        << (server_is_connected ? "CONNECTED" : "DISCONNECTED"));
-
-                // Create a new message for the transaction processor and set
-                // its type to an appropriate event type value and queue up the
-                // message in the transaction processors queue.
-                Message msg;
-                msg.set_message_type(
-                    ZMQ_EVENT_CONNECTED == event ?
-                        SERVER_CONNECT_EVENT : SERVER_DISCONNECT_EVENT);
-
-                std::string msg_data;
-                msg.SerializeToString(&msg_data);
-
-                zmqpp::message zmsg;
-                zmsg.add(msg_data.data(), msg_data.length());
-                this->processing_request_socket.send(zmsg);
-            }
+            this->HandleConnectionChange();
         }
         if (socket_poller.has_input(dispatch_socket)) {
             std::string message;
@@ -288,7 +292,8 @@ void MessageDispatcher::DispatchThread() {
     // Stop monitoring the server socket.  The documentation doesn't mention
     // this, but it appears that passing NULL for the endpoint causes the
     // monitoring to stop.
-    server_monitor_socket.disconnect(MessageDispatcher::SERVER_MONITOR_ENDPOINT);
+    this->server_monitor_socket.disconnect(
+        MessageDispatcher::SERVER_MONITOR_ENDPOINT);
     zmq_socket_monitor(this->server_socket, nullptr, ZMQ_EVENT_ALL);
 }
 
