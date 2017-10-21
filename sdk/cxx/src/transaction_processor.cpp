@@ -25,7 +25,7 @@
 #include "proto/processor.pb.h"
 #include "proto/transaction.pb.h"
 
-
+#include "sawtooth/exceptions.h"
 #include "sawtooth/transaction_processor.h"
 
 namespace sawtooth {
@@ -57,7 +57,7 @@ void TransactionProcessor::Register() {
         for (auto version : versions) {
             LOG4CXX_DEBUG(logger, "Register Handler: "
                 << handler.second->transaction_family_name()
-                << "Version: "<< version);
+                << " Version: " << version);
             TpRegisterRequest request;
             request.set_family(handler.second->transaction_family_name());
             request.set_version(version);
@@ -80,7 +80,8 @@ void TransactionProcessor::Register() {
 }
 
 void TransactionProcessor::HandleProcessingRequest(const void* msg,
-    size_t msg_size) {
+        size_t msg_size,
+        const std::string& correlation_id) {
     TpProcessRequest request;
     TpProcessResponse response;
     try {
@@ -110,14 +111,15 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
                 try {
                     applicator->Apply();
                     response.set_status(TpProcessResponse::OK);
-                } catch (std::exception& e ) {
+                } catch (sawtooth::InvalidTransaction& e ) {
                     LOG4CXX_ERROR(logger, "applicator->Apply error"
                                 << e.what());
-                    response.set_status(TpProcessResponse::INTERNAL_ERROR);
+                    response.set_status(
+                        TpProcessResponse::INVALID_TRANSACTION);
                 } catch(...) {
                     LOG4CXX_ERROR(logger, "applicator->Apply unknown error");
                     response.set_status(
-                        TpProcessResponse::INVALID_TRANSACTION);
+                        TpProcessResponse::INTERNAL_ERROR);
                 }
             } catch (std::exception& e) {
                 response.set_status(
@@ -138,19 +140,15 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
         LOG4CXX_ERROR(logger, "TransactionProcessor -> Apply error unknown");
         response.set_status(TpProcessResponse::INTERNAL_ERROR);
     }
-    this->response_stream->SendMessage(
-        Message_MessageType_TP_PROCESS_RESPONSE, response);
+    this->response_stream->SendResponseMessage(
+        Message_MessageType_TP_PROCESS_RESPONSE, response, correlation_id);
 }
 
 void TransactionProcessor::Run() {
     try {
-        LOG4CXX_INFO(
-            logger,
-            "Create response stream");
         this->response_stream = this->message_dispatcher.CreateStream();
-
         zmqpp::socket socket(this->message_dispatcher.context(), zmqpp::socket_type::dealer);
-        LOG4CXX_INFO(
+        LOG4CXX_DEBUG(
             logger,
             "Connect to inproc://request_queue");
         socket.connect("inproc://request_queue");
@@ -175,7 +173,8 @@ void TransactionProcessor::Run() {
                 case Message::TP_PROCESS_REQUEST: {
                     this->HandleProcessingRequest(
                         validator_message.content().data(),
-                        validator_message.content().length());
+                        validator_message.content().length(),
+                        validator_message.correlation_id());
                     break;
                 }
                 case MessageDispatcher::SERVER_CONNECT_EVENT: {

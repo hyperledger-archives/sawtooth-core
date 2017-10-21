@@ -24,5 +24,7 @@ echo -e "\033[0;32m--- Building cxx sdk ---\n\033[0m"
 cd $top_dir/sdk/cxx
 mkdir -p build
 cd build
+# To build with debug symbols use:
+# cmake -DCMAKE_BUILD_TYPE=Debug ..
 cmake ..
 make

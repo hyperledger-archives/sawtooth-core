@@ -29,7 +29,7 @@
 
 namespace sawtooth {
 
-const size_t MERKLE_ADDRESS_LENGTH = 134;
+const size_t MERKLE_ADDRESS_LENGTH = 70;
 const size_t NAMESPACE_PREFIX_LENGTH = 6;
 
 static log4cxx::LoggerPtr  logger(log4cxx::Logger::getLogger
@@ -56,13 +56,13 @@ static bool IsHex(const std::string& str) {
 }
 
 // Checks if an address string meets the constraints of an address.
-// These are that it is exactly 134 characters long and contains only
+// These are that it is exactly 70 characters long and contains only
 // lowercase hexadecimal characters.
 static void CheckIfValidAddr(const std::string& addr) {
     if (addr.length() != MERKLE_ADDRESS_LENGTH) {
         std::stringstream out;
-        out << "Address does not contain 134 "
-            << "characters: " << addr.length() << " != 134";
+        out << "Address does not contain 70 "
+            << "characters: " << addr.length() << " != 70";
         throw AddressFormatError(out.str());
     } else if (!IsHex(addr)) {
         throw AddressFormatError("Address must contain only " \
@@ -87,7 +87,7 @@ AddressMapper::AddressMapper(const std::string& namespace_) :
     namespace_initialized(false), namespace_(namespace_) {}
 
 std::string AddressMapper::MapKey(const std::string& key) const {
-    return SHA512(key);
+    return SHA512(key).substr(64, 127);
 }
 
 std::string AddressMapper::MapNamespace(const std::string& namespace_) const {

@@ -41,7 +41,9 @@ class TransactionProcessor {
 
  private:
     void Register();
-    void HandleProcessingRequest(const void* msg, size_t msg_size);
+    void HandleProcessingRequest(const void* msg,
+        size_t msg_size,
+        const std::string& correlation_id);
 
     bool run;
     std::string connection_string;
