@@ -91,9 +91,9 @@ def _config_key_to_address(key):
 
 def _get_state(context, address, value_type):
     try:
-        entries_list = context.get([address], timeout=STATE_TIMEOUT_SEC)
+        entries_list = context.get_state([address], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
-        LOGGER.warning('Timeout occurred on context.get([%s])', address)
+        LOGGER.warning('Timeout occurred on context.get_state([%s])', address)
         raise InternalError('Unable to get {}'.format(address))
 
     value = value_type()
@@ -151,12 +151,13 @@ def _delete_address(context, address):
     try:
         remove_addresses = list()
         remove_addresses.append(address)
-        addresses = list(context.delete(remove_addresses,
-                                        timeout=STATE_TIMEOUT_SEC))
+        addresses = list(context.delete_state(
+            remove_addresses,
+            timeout=STATE_TIMEOUT_SEC))
 
     except FutureTimeoutError:
         LOGGER.warning(
-            'Timeout occurred on state.delete([%s, <value>])', address)
+            'Timeout occurred on state.delete_state([%s, <value>])', address)
         raise InternalError(
             'Failed to save value on address {}'.format(address))
 
@@ -169,14 +170,14 @@ def _delete_address(context, address):
 
 def _set_data(context, address, data):
     try:
-        addresses = list(context.set(
+        addresses = list(context.set_state(
             [StateEntry(address=address, data=data)],
             timeout=STATE_TIMEOUT_SEC)
         )
 
     except FutureTimeoutError:
         LOGGER.warning(
-            'Timeout occurred on context.set([%s, <value>])', address)
+            'Timeout occurred on context.set_state([%s, <value>])', address)
         raise InternalError(
             'Failed to save value on address {}'.format(address))
 
