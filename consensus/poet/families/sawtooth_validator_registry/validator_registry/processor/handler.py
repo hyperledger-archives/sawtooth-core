@@ -108,15 +108,12 @@ def _get_address(key):
     return address
 
 
-def _get_validator_state(context, validator_id=None):
-    if validator_id is None:
-        address = _get_address('validator_map')
-        value_type = ValidatorMap
-    else:
-        address = _get_address(validator_id)
-        value_type = ValidatorInfo
-
-    return _get_state(context=context, address=address, value_type=value_type)
+def _get_validator_map(context):
+    address = _get_address('validator_map')
+    return _get_state(
+        context=context,
+        address=address,
+        value_type=ValidatorMap)
 
 
 def _update_validator_state(context,
@@ -124,26 +121,50 @@ def _update_validator_state(context,
                             anti_sybil_id,
                             validator_info):
 
-    validator_map = _get_validator_state(context)
+    validator_map = _get_validator_map(context)
     updated_map = ValidatorMap()
     # Clean out old entries in ValidatorInfo and ValidatorMap
     # Protobuf doesn't offer delete item for ValidatorMap so create a new list
+    # Use the validator map to find all occurrences of an anti_sybil_id
+    # Use any such entry to find the associated validator id.
+    # Use that validator id as the key to remove the ValidatorInfo from the
+    # registry
     for entry in validator_map.entries:
         if anti_sybil_id == entry.key:
-            address = _get_address(entry.value)
-            _set_data(context, address, b'')
+            validator_info_address = _get_address(entry.value)
+            _delete_address(context, validator_info_address)
         else:
             updated_map.entries.add(key=entry.key, value=entry.value)
 
     # Add new state entries to ValidatorMap and ValidatorInfo
     updated_map.entries.add(key=anti_sybil_id, value=validator_id)
-    address_map = _get_address('validator_map')
-    _set_data(context, address_map, updated_map.SerializeToString())
+    validator_map_address = _get_address('validator_map')
+    _set_data(context, validator_map_address, updated_map.SerializeToString())
 
-    address = _get_address(validator_id)
-    _set_data(context, address, validator_info)
+    validator_info_address = _get_address(validator_id)
+    _set_data(context, validator_info_address, validator_info)
     LOGGER.info("Validator id %s was added to the validator_map and set.",
                 validator_id)
+
+
+def _delete_address(context, address):
+    try:
+        remove_addresses = list()
+        remove_addresses.append(address)
+        addresses = list(context.delete(remove_addresses,
+                                        timeout=STATE_TIMEOUT_SEC))
+
+    except FutureTimeoutError:
+        LOGGER.warning(
+            'Timeout occurred on state.delete([%s, <value>])', address)
+        raise InternalError(
+            'Failed to save value on address {}'.format(address))
+
+    if len(addresses) != 1:
+        LOGGER.warning(
+            'Failed to save value on address %s', address)
+        raise InternalError(
+            'Failed to save value on address {}'.format(address))
 
 
 def _set_data(context, address, data):
