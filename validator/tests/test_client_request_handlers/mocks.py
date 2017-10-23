@@ -36,11 +36,11 @@ def _increment_key(key, offset=1):
 def _make_mock_transaction(base_id='id', payload='payload'):
     txn_id = 't-' + base_id
     header = TransactionHeader(
-        batcher_pubkey='pubkey-' + base_id,
+        batcher_public_key='public_key-' + base_id,
         family_name='family',
         family_version='0.0',
         nonce=txn_id,
-        signer_pubkey='pubkey-' + base_id)
+        signer_public_key='public_key-' + base_id)
 
     return Transaction(
         header=header.SerializeToString(),
@@ -52,7 +52,7 @@ def make_mock_batch(base_id='id'):
     txn = _make_mock_transaction(base_id)
 
     header = BatchHeader(
-        signer_pubkey='pubkey-' + base_id,
+        signer_public_key='public_key-' + base_id,
         transaction_ids=[txn.header_signature])
 
     return Batch(
@@ -88,7 +88,7 @@ class MockBlockStore(BlockStore):
         header = BlockHeader(
             block_num=num,
             previous_block_id=previous_id,
-            signer_pubkey='pubkey-' + base_id,
+            signer_public_key='public_key-' + base_id,
             batch_ids=[block_id],
             consensus=b'consensus',
             state_root_hash=root)

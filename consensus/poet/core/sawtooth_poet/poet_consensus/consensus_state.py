@@ -181,7 +181,7 @@ class ConsensusState(object):
                     ValidatorRegistryView(state_view=state_view)
                 validator_info = \
                     validator_registry_view.get_validator_info(
-                        validator_id=block.header.signer_pubkey)
+                        validator_id=block.header.signer_public_key)
 
                 LOGGER.debug(
                     'We need to build consensus state for block: %s...%s',
@@ -380,7 +380,7 @@ class ConsensusState(object):
                         ConsensusState._EstimateInfo(
                             population_estimate=population_estimate,
                             previous_block_id=block.previous_block_id,
-                            validator_id=block.header.signer_pubkey)
+                            validator_id=block.header.signer_public_key)
                     ConsensusState._population_estimate_cache[block_id] = \
                         population_cache_entry
 

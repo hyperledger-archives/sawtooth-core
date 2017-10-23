@@ -207,7 +207,7 @@ an empty string if the action isn't 'take'). So our {% if language == 'JavaScrip
     const _unpackTransaction = (transaction) =>
       new Promise((resolve, reject) => {
         let header = TransactionHeader.decode(transaction.header)
-        let signer = header.signerPubkey
+        let signer = header.signerPublicKey
         try {
           let payload = _decodeData(transaction.payload)
           resolve({gameName: payload[0],
@@ -226,7 +226,7 @@ an empty string if the action isn't 'take'). So our {% if language == 'JavaScrip
 
     private TransactionData getUnpackedTransaction(TpProcessRequest transactionRequest)
         throws InvalidTransactionException {
-      String signer = transactionRequest.getHeader().getSignerPubkey();
+      String signer = transactionRequest.getHeader().getSignerPublicKey();
       ArrayList<String> payload
           = decodeData(transactionRequest.getPayload().toStringUtf8());
 

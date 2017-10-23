@@ -82,9 +82,9 @@ class BlockInfoTransactionHandler(object):
             raise InvalidTransaction("Invalid previous block id '{}'".format(
                 next_block.previous_block_id))
 
-        if not validate_hex(next_block.signer_pubkey, 66):
-            raise InvalidTransaction("Invalid signer pubkey '{}'".format(
-                next_block.signer_pubkey))
+        if not validate_hex(next_block.signer_public_key, 66):
+            raise InvalidTransaction("Invalid signer public_key '{}'".format(
+                next_block.signer_public_key))
 
         if not validate_hex(next_block.header_signature, 128):
             raise InvalidTransaction("Invalid header signature '{}'".format(

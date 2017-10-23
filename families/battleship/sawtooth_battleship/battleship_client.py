@@ -58,7 +58,7 @@ class BattleshipClient:
         except:
             raise IOError("Failed to read keys.")
 
-        self._public_key = signing.generate_pubkey(self._private_key)
+        self._public_key = signing.generate_public_key(self._private_key)
         self._transaction_family = "battleship"
         self._family_version = "1.0"
         self._wait = wait
@@ -87,14 +87,14 @@ class BattleshipClient:
         address = self._get_address(update['Name'])
 
         header = TransactionHeader(
-            signer_pubkey=self._public_key,
+            signer_public_key=self._public_key,
             family_name=self._transaction_family,
             family_version=self._family_version,
             inputs=[address],
             outputs=[address],
             dependencies=[],
             payload_sha512=self._sha512(payload),
-            batcher_pubkey=self._public_key,
+            batcher_public_key=self._public_key,
             nonce=time.time().hex().encode()
         ).SerializeToString()
 
@@ -210,7 +210,7 @@ class BattleshipClient:
         transaction_signatures = [t.header_signature for t in transactions]
 
         header = BatchHeader(
-            signer_pubkey=self._public_key,
+            signer_public_key=self._public_key,
             transaction_ids=transaction_signatures
         ).SerializeToString()
 

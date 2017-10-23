@@ -235,7 +235,7 @@ Create Agent
 ++++++++++++
 
 Register a signing participant that can update Records and Applications. The
-``signer_pubkey`` in the transaction header will be used as the Agent's public
+``signer_public_key`` in the transaction header will be used as the Agent's public
 key.
 
 .. code-block:: protobuf

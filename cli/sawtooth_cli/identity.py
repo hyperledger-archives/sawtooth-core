@@ -212,12 +212,12 @@ def _do_identity_policy_create(args):
     transactions in a BatchList instance. The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
-    pubkey, signing_key = _read_signing_keys(args.key)
+    public_key, signing_key = _read_signing_keys(args.key)
 
-    txns = [_create_policy_txn(pubkey, signing_key, args.name,
+    txns = [_create_policy_txn(public_key, signing_key, args.name,
             args.rule)]
 
-    batch = _create_batch(pubkey, signing_key, txns)
+    batch = _create_batch(public_key, signing_key, txns)
 
     batch_list = BatchList(batches=[batch])
 
@@ -329,11 +329,11 @@ def _do_identity_role_create(args):
     transactions in a BatchList instance. The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
-    pubkey, signing_key = _read_signing_keys(args.key)
-    txns = [_create_role_txn(pubkey, signing_key, args.name,
+    public_key, signing_key = _read_signing_keys(args.key)
+    txns = [_create_role_txn(public_key, signing_key, args.name,
             args.policy)]
 
-    batch = _create_batch(pubkey, signing_key, txns)
+    batch = _create_batch(public_key, signing_key, txns)
 
     batch_list = BatchList(batches=[batch])
 
@@ -426,7 +426,7 @@ def _do_identity_role_list(args):
         raise AssertionError('Unknown format {}'.format(args.format))
 
 
-def _create_policy_txn(pubkey, signing_key, policy_name, rules):
+def _create_policy_txn(public_key, signing_key, policy_name, rules):
     entries = []
     for rule in rules:
         rule = rule.split(" ")
@@ -445,7 +445,7 @@ def _create_policy_txn(pubkey, signing_key, policy_name, rules):
     policy_address = _policy_to_address(policy_name)
 
     header = TransactionHeader(
-        signer_pubkey=pubkey,
+        signer_public_key=public_key,
         family_name='sawtooth_identity',
         family_version='1.0',
         inputs=[_REQUIRED_INPUT, policy_address],
@@ -453,7 +453,7 @@ def _create_policy_txn(pubkey, signing_key, policy_name, rules):
         dependencies=[],
         payload_sha512=hashlib.sha512(
             payload.SerializeToString()).hexdigest(),
-        batcher_pubkey=pubkey,
+        batcher_public_key=public_key,
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
@@ -468,7 +468,7 @@ def _create_policy_txn(pubkey, signing_key, policy_name, rules):
     return transaction
 
 
-def _create_role_txn(pubkey, signing_key, role_name, policy_name):
+def _create_role_txn(public_key, signing_key, role_name, policy_name):
     role = Role(name=role_name, policy_name=policy_name)
     payload = IdentityPayload(type=IdentityPayload.ROLE,
                               data=role.SerializeToString())
@@ -477,7 +477,7 @@ def _create_role_txn(pubkey, signing_key, role_name, policy_name):
     role_address = _role_to_address(role_name)
 
     header = TransactionHeader(
-        signer_pubkey=pubkey,
+        signer_public_key=public_key,
         family_name='sawtooth_identity',
         family_version='1.0',
         inputs=[_REQUIRED_INPUT, policy_address, role_address],
@@ -485,7 +485,7 @@ def _create_role_txn(pubkey, signing_key, role_name, policy_name):
         dependencies=[],
         payload_sha512=hashlib.sha512(
             payload.SerializeToString()).hexdigest(),
-        batcher_pubkey=pubkey,
+        batcher_public_key=public_key,
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
@@ -523,19 +523,19 @@ def _read_signing_keys(key_filename):
     try:
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
-            pubkey = signing.generate_pubkey(signing_key)
+            public_key = signing.generate_public_key(signing_key)
 
-            return pubkey, signing_key
+            return public_key, signing_key
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))
 
 
-def _create_batch(pubkey, signing_key, transactions):
+def _create_batch(public_key, signing_key, transactions):
     """Creates a batch from a list of transactions and a public key, and signs
     the resulting batch with the given signing key.
 
     Args:
-        pubkey (str): The public key associated with the signing key.
+        public_key (str): The public key associated with the signing key.
         signing_key (str): The private key for signing the batch.
         transactions (list of `Transaction`): The transactions to add to the
             batch.
@@ -544,7 +544,7 @@ def _create_batch(pubkey, signing_key, transactions):
         `Batch`: The constructed and signed batch.
     """
     txn_ids = [txn.header_signature for txn in transactions]
-    batch_header = BatchHeader(signer_pubkey=pubkey,
+    batch_header = BatchHeader(signer_public_key=public_key,
                                transaction_ids=txn_ids).SerializeToString()
 
     return Batch(

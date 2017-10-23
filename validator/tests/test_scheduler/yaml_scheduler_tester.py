@@ -51,7 +51,7 @@ def create_transaction(payload, private_key, public_key, inputs=None,
         dependencies = []
 
     header = transaction_pb2.TransactionHeader(
-        signer_pubkey=public_key,
+        signer_public_key=public_key,
         family_name='scheduler_test',
         family_version='1.0',
         inputs=inputs,
@@ -59,7 +59,7 @@ def create_transaction(payload, private_key, public_key, inputs=None,
         dependencies=dependencies,
         nonce=str(time.time()),
         payload_sha512=hashlib.sha512(payload).hexdigest(),
-        batcher_pubkey=public_key)
+        batcher_public_key=public_key)
 
     header_bytes = header.SerializeToString()
 
@@ -77,7 +77,7 @@ def create_batch(transactions, private_key, public_key):
     transaction_ids = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer_pubkey=public_key,
+        signer_public_key=public_key,
         transaction_ids=transaction_ids)
 
     header_bytes = header.SerializeToString()
@@ -622,7 +622,7 @@ class SchedulerTester(object):
     def _create_batches(self):
         test_yaml = self._yaml_from_file()
         priv_key = signing.generate_privkey()
-        pub_key = signing.generate_pubkey(priv_key)
+        pub_key = signing.generate_public_key(priv_key)
 
         batches, batch_results = self._process_batches(
             yaml_batches=test_yaml,

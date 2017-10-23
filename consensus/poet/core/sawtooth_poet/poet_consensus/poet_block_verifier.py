@@ -112,14 +112,14 @@ class PoetBlockVerifier(BlockVerifierInterface):
         try:
             validator_info = \
                 validator_registry_view.get_validator_info(
-                    block_wrapper.header.signer_pubkey)
+                    block_wrapper.header.signer_public_key)
         except KeyError:
             LOGGER.error(
                 'Block %s rejected: Received block from an unregistered '
                 'validator %s...%s',
                 block_wrapper.identifier[:8],
-                block_wrapper.header.signer_pubkey[:8],
-                block_wrapper.header.signer_pubkey[-8:])
+                block_wrapper.header.signer_public_key[:8],
+                block_wrapper.header.signer_public_key[-8:])
             return False
 
         LOGGER.debug(

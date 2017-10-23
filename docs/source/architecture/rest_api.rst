@@ -200,7 +200,7 @@ specific to a single endpoint are not listed here.
        case of nested header keys; appending `.length` sorts by the length of
        the property; a minus-sign specifies descending order; multiple keys can
        be used if comma-separated. For example:
-       `?sort=header.signer_pubkey,-transaction_ids.length`
+       `?sort=header.signer_public_key,-transaction_ids.length`
    * - **wait**
      - For submission endpoints, instructs the REST API to wait until batches
        have been committed to the blockchain before responding to the client.

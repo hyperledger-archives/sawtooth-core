@@ -126,7 +126,7 @@ class TestNetworkPermissioning(unittest.TestCase):
 
         wait_for_consensus(self.clients, amount=2)
 
-        walter.set_pubkey_for_role(
+        walter.set_public_key_for_role(
             "non_genesis_out_of_network",
             "network",
             permit_keys=[genesis_key],
@@ -136,7 +136,7 @@ class TestNetworkPermissioning(unittest.TestCase):
         show_blocks(self.clients[0].block_list())
         show_blocks(self.clients[1].block_list())
 
-        walter.set_pubkey_for_role(
+        walter.set_public_key_for_role(
             "allow_all",
             "network",
             permit_keys=[genesis_key, non_genesis_key],
@@ -146,7 +146,7 @@ class TestNetworkPermissioning(unittest.TestCase):
         show_blocks(self.clients[0].block_list())
         show_blocks(self.clients[1].block_list())
 
-        walter.set_pubkey_for_role(
+        walter.set_public_key_for_role(
             "non_genesis_out_of_network",
             "network.consensus",
             permit_keys=[genesis_key],
@@ -156,7 +156,7 @@ class TestNetworkPermissioning(unittest.TestCase):
         show_blocks(self.clients[0].block_list())
         show_blocks(self.clients[1].block_list())
 
-        walter.set_pubkey_for_role(
+        walter.set_public_key_for_role(
             "allow_all_for_consensus",
             "network.consensus",
             permit_keys=[genesis_key, non_genesis_key],
@@ -240,7 +240,7 @@ class TestNetworkPermissioning(unittest.TestCase):
 
         wait_for_consensus(self.clients, amount=2)
 
-        walter.set_pubkey_for_role(
+        walter.set_public_key_for_role(
             "non_genesis_out_of_network",
             "network",
             permit_keys=[genesis_key],
@@ -250,7 +250,7 @@ class TestNetworkPermissioning(unittest.TestCase):
         show_blocks(self.clients[0].block_list())
         show_blocks(self.clients[1].block_list())
 
-        walter.set_pubkey_for_role(
+        walter.set_public_key_for_role(
             "allow_all_for_consensus",
             "network",
             permit_keys=[genesis_key, non_genesis_key],
@@ -260,7 +260,7 @@ class TestNetworkPermissioning(unittest.TestCase):
         show_blocks(self.clients[0].block_list())
         show_blocks(self.clients[1].block_list())
 
-        walter.set_pubkey_for_role(
+        walter.set_public_key_for_role(
             "non_genesis_out_of_network",
             "network.consensus",
             permit_keys=[genesis_key],
@@ -270,7 +270,7 @@ class TestNetworkPermissioning(unittest.TestCase):
         show_blocks(self.clients[0].block_list())
         show_blocks(self.clients[1].block_list())
 
-        walter.set_pubkey_for_role(
+        walter.set_public_key_for_role(
             "allow_all_for_consensus",
             "network.consensus",
             permit_keys=[genesis_key, non_genesis_key],
@@ -309,7 +309,7 @@ class Client(object):
 
     def __init__(self, rest_endpoint):
         self.priv_key = signer.generate_privkey()
-        self.pub_key = signer.generate_pubkey(self.priv_key)
+        self.pub_key = signer.generate_public_key(self.priv_key)
         self._namespace = hashlib.sha512('intkey'.encode()).hexdigest()[:6]
         self._factory = MessageFactory(
             'intkey',
@@ -332,7 +332,7 @@ class Client(object):
     def block_list(self):
         return [(item['header']['block_num'],
                  item['header_signature'],
-                 item['header']['signer_pubkey'])
+                 item['header']['signer_public_key'])
                 for item in self._rest.block_list()['data']]
 
 
@@ -340,7 +340,7 @@ class Admin(object):
 
     def __init__(self, rest_endpoint):
         self.priv_key = signer.generate_privkey()
-        self.pub_key = signer.generate_pubkey(self.priv_key)
+        self.pub_key = signer.generate_public_key(self.priv_key)
 
         self._priv_key_file = os.path.join("/tmp", uuid4().hex[:20])
         with open(self._priv_key_file, mode='w') as out:
@@ -348,7 +348,7 @@ class Admin(object):
 
         self._rest_endpoint = rest_endpoint
 
-    def set_pubkey_for_role(self, policy, role, permit_keys, deny_keys):
+    def set_public_key_for_role(self, policy, role, permit_keys, deny_keys):
         permits = ["PERMIT_KEY {}".format(key) for key in permit_keys]
         denies = ["DENY_KEY {}".format(key) for key in deny_keys]
         self._run_identity_commands(policy, role, denies + permits)

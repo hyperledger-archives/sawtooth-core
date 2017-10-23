@@ -71,9 +71,9 @@ def do_genesis(args):
     file, whose location is determined by the args.  The signup data, generated
     by the selected enclave, is also stored in a well-known location.
     """
-    pubkey, signing_key = _read_signing_keys(args.key)
+    public_key, signing_key = _read_signing_keys(args.key)
 
-    public_key_hash = sha256(pubkey.encode()).hexdigest()
+    public_key_hash = sha256(public_key.encode()).hexdigest()
 
     with PoetEnclaveModuleWrapper(
             enclave_module=args.enclave_module,
@@ -94,7 +94,7 @@ def do_genesis(args):
     poet_key_state_store = \
         PoetKeyStateStore(
             data_dir=config.get_data_dir(),
-            validator_id=pubkey)
+            validator_id=public_key)
     poet_key_state_store[signup_info.poet_public_key] = \
         PoetKeyState(
             sealed_signup_data=signup_info.sealed_signup_data,
@@ -104,8 +104,8 @@ def do_genesis(args):
     payload = \
         vr_pb.ValidatorRegistryPayload(
             verb='register',
-            name='validator-{}'.format(pubkey[:8]),
-            id=pubkey,
+            name='validator-{}'.format(public_key[:8]),
+            id=public_key,
             signup_info=vr_pb.SignUpInfo(
                 poet_public_key=signup_info.poet_public_key,
                 proof_data=signup_info.proof_data,
@@ -116,7 +116,7 @@ def do_genesis(args):
     # Create the address that will be used to look up this validator
     # registry transaction.  Seems like a potential for refactoring..
     validator_entry_address = \
-        VR_NAMESPACE + sha256(pubkey.encode()).hexdigest()
+        VR_NAMESPACE + sha256(public_key.encode()).hexdigest()
 
     # Create a transaction header and transaction for the validator
     # registry update amd then hand it off to the batch publisher to
@@ -131,14 +131,14 @@ def do_genesis(args):
 
     header = \
         txn_pb.TransactionHeader(
-            signer_pubkey=pubkey,
+            signer_public_key=public_key,
             family_name='sawtooth_validator_registry',
             family_version='1.0',
             inputs=input_addresses,
             outputs=output_addresses,
             dependencies=[],
             payload_sha512=sha512(serialized).hexdigest(),
-            batcher_pubkey=pubkey,
+            batcher_public_key=public_key,
             nonce=time.time().hex().encode()).SerializeToString()
     signature = signing.sign(header, signing_key)
 
@@ -148,7 +148,7 @@ def do_genesis(args):
             payload=serialized,
             header_signature=signature)
 
-    batch = _create_batch(pubkey, signing_key, [transaction])
+    batch = _create_batch(public_key, signing_key, [transaction])
     batch_list = batch_pb.BatchList(batches=[batch])
     try:
         print('Generating {}'.format(args.output))
@@ -159,12 +159,12 @@ def do_genesis(args):
             'Unable to write to batch file: {}'.format(str(e)))
 
 
-def _create_batch(pubkey, signing_key, transactions):
+def _create_batch(public_key, signing_key, transactions):
     """Creates a batch from a list of transactions and a public key, and signs
     the resulting batch with the given signing key.
 
     Args:
-        pubkey (str): The public key associated with the signing key.
+        public_key (str): The public key associated with the signing key.
         signing_key (str): The private key for signing the batch.
         transactions (list of `Transaction`): The transactions to add to the
             batch.
@@ -174,7 +174,7 @@ def _create_batch(pubkey, signing_key, transactions):
     """
     txn_ids = [txn.header_signature for txn in transactions]
     batch_header = batch_pb.BatchHeader(
-        signer_pubkey=pubkey,
+        signer_public_key=public_key,
         transaction_ids=txn_ids).SerializeToString()
 
     return batch_pb.Batch(
@@ -204,8 +204,8 @@ def _read_signing_keys(key_filename):
     try:
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
-            pubkey = signing.generate_pubkey(signing_key)
+            public_key = signing.generate_public_key(signing_key)
 
-            return pubkey, signing_key
+            return public_key, signing_key
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))

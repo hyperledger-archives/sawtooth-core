@@ -81,7 +81,7 @@ def do_keygen(args):
                 'files exist, rerun with --force to overwrite existing files')
 
     privkey = signing.generate_privkey()
-    pubkey = signing.generate_pubkey(privkey)
+    public_key = signing.generate_public_key(privkey)
 
     try:
         priv_exists = os.path.exists(priv_filename)
@@ -101,7 +101,7 @@ def do_keygen(args):
                     print('overwriting file: {}'.format(pub_filename))
                 else:
                     print('writing file: {}'.format(pub_filename))
-            pub_fd.write(pubkey)
+            pub_fd.write(public_key)
             pub_fd.write('\n')
 
     except IOError as ioe:

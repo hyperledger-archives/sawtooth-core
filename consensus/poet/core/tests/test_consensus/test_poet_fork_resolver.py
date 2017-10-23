@@ -85,7 +85,7 @@ class TestPoetForkResolver(TestCase):
         mock_cur_fork_header = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543210',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='2',
                 header_signature='00112233445566778899aabbccddeeff')
 
@@ -93,7 +93,7 @@ class TestPoetForkResolver(TestCase):
         mock_new_fork_header = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543211',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='2',
                 header_signature='00112233445566778899aabbccddeeff')
 
@@ -167,7 +167,7 @@ class TestPoetForkResolver(TestCase):
         mock_cur_fork_header = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543210',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='2',
                 header_signature='00112233445566778899aabbccddeeff')
 
@@ -175,7 +175,7 @@ class TestPoetForkResolver(TestCase):
         mock_new_fork_header = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543211',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='2',
                 header_signature='00112233445566778899aabbccddeeff')
 
@@ -284,7 +284,7 @@ class TestPoetForkResolver(TestCase):
         mock_cur_fork_header = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543210',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='2',
                 header_signature='00112233445566778899aabbccddeeff')
 
@@ -292,7 +292,7 @@ class TestPoetForkResolver(TestCase):
         mock_new_fork_header = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543211',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='2',
                 header_signature='00112233445566778899aabbccddeeff')
 
@@ -445,7 +445,7 @@ class TestPoetForkResolver(TestCase):
         mock_cur_fork_header = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543210',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='2',
                 header_signature='00112233445566778899aabbccddeeff')
 
@@ -453,7 +453,7 @@ class TestPoetForkResolver(TestCase):
         mock_new_fork_header = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543211',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='3',
                 header_signature='00112233445566778899aabbccddeeff')
 
@@ -575,7 +575,7 @@ class TestPoetForkResolver(TestCase):
         mock_smaller_header_signature = \
             mock.Mock(
                 identifier='0123456789abcdefedcba9876543211',
-                signer_pubkey='90834587139405781349807435098745',
+                signer_public_key='90834587139405781349807435098745',
                 previous_block_id='4',
                 header_signature='00112233445566778899aabbccddee')
 

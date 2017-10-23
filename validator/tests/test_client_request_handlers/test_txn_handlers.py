@@ -597,7 +597,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assertFalse(response.transactions)
 
     def test_txn_list_sorted_by_nested_key(self):
-        """Verifies txn list requests work sorted by header.signer_pubkey.
+        """Verifies txn list requests work sorted by header.signer_public_key.
 
         Queries the default mock block store:
             {
@@ -624,7 +624,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - the first item has a header_signature of 't-0'
             - the last item has a header_signature of 't-2'
         """
-        controls = self.make_sort_controls('header', 'signer_pubkey')
+        controls = self.make_sort_controls('header', 'signer_public_key')
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
@@ -663,7 +663,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - the first item has a header_signature of 't-0'
             - the last item has a header_signature of 't-2'
         """
-        controls = self.make_sort_controls('signer_pubkey')
+        controls = self.make_sort_controls('signer_public_key')
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
@@ -703,7 +703,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - the last item has a header_signature of 't-2'
         """
         controls = (self.make_sort_controls('family_name') +
-                    self.make_sort_controls('signer_pubkey'))
+                    self.make_sort_controls('signer_public_key'))
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)

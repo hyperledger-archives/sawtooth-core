@@ -210,7 +210,8 @@ class TestPoetBlockVerifier(TestCase):
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key = \
+            '90834587139405781349807435098745'
 
         with mock.patch('sawtooth_poet.poet_consensus.poet_block_verifier.'
                         'LOGGER') as mock_logger:

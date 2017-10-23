@@ -22,7 +22,7 @@ message ValidatorInfo {
     // The name of the endpoint. It should be a human readable name.
     string name = 1;
 
-    // The validator's public key (currently using signer_pubkey as this is
+    // The validator's public key (currently using signer_public_key as this is
     // stored in the transaction header)
     string id = 2;
 
@@ -73,7 +73,7 @@ message ValidatorRegistryPayload {
     // The name of the endpoint. It should be a human readable name.
     string name = 2;
 
-    // Validator's public key (currently using signer_pubkey as this is
+    // Validator's public key (currently using signer_public_key as this is
     // stored in the transaction header)
     string id = 3;
 

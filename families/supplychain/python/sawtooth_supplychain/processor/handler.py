@@ -67,7 +67,7 @@ class SupplyChainHandler(object):
         try:
             txn_header = TransactionHeader()
             txn_header.ParseFromString(transaction.header)
-            originator = txn_header.signer_pubkey
+            originator = txn_header.signer_public_key
             payload = SupplyChainPayload()
             payload.ParseFromString(transaction.payload)
 

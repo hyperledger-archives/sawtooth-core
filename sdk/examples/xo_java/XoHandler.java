@@ -109,7 +109,7 @@ public class XoHandler implements TransactionHandler {
     String player;
     try {
       TransactionHeader header = TransactionHeader.parseFrom(transactionRequest.getHeader());
-      player = header.getSignerPubkey();
+      player = header.getSignerPublicKey();
     } catch (InvalidProtocolBufferException e) {
       throw new InternalError("Protocol Buffer Error: " + e.toString());
     }

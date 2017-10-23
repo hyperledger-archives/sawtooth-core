@@ -59,27 +59,27 @@ class SettingsTransactionHandler(object):
 
         txn_header = TransactionHeader()
         txn_header.ParseFromString(transaction.header)
-        pubkey = txn_header.signer_pubkey
+        public_key = txn_header.signer_public_key
 
         auth_keys = _get_auth_keys(context)
-        if auth_keys and pubkey not in auth_keys:
+        if auth_keys and public_key not in auth_keys:
             raise InvalidTransaction(
-                '{} is not authorized to change settings'.format(pubkey))
+                '{} is not authorized to change settings'.format(public_key))
 
         settings_payload = SettingsPayload()
         settings_payload.ParseFromString(transaction.payload)
 
         if settings_payload.action == SettingsPayload.PROPOSE:
             return self._apply_proposal(
-                auth_keys, pubkey, settings_payload.data, context)
+                auth_keys, public_key, settings_payload.data, context)
         elif settings_payload.action == SettingsPayload.VOTE:
-            return self._apply_vote(pubkey, settings_payload.data,
+            return self._apply_vote(public_key, settings_payload.data,
                                     auth_keys, context)
         else:
             raise InvalidTransaction(
                 "'action' must be one of {PROPOSE, VOTE} in 'Ballot' mode")
 
-    def _apply_proposal(self, auth_keys, pubkey,
+    def _apply_proposal(self, auth_keys, public_key,
                         setting_proposal_data, context):
         setting_proposal = SettingProposal()
         setting_proposal.ParseFromString(setting_proposal_data)
@@ -105,7 +105,7 @@ class SettingsTransactionHandler(object):
                         setting_proposal.setting))
 
             record = SettingCandidate.VoteRecord(
-                public_key=pubkey,
+                public_key=public_key,
                 vote=SettingVote.ACCEPT)
             setting_candidates.candidates.add(
                 proposal_id=proposal_id,
@@ -122,7 +122,7 @@ class SettingsTransactionHandler(object):
                                setting_proposal.setting,
                                setting_proposal.value)
 
-    def _apply_vote(self, pubkey,
+    def _apply_vote(self, public_key,
                     settings_vote_data, authorized_keys, context):
         settings_vote = SettingVote()
         settings_vote.ParseFromString(settings_vote_data)
@@ -142,13 +142,13 @@ class SettingsTransactionHandler(object):
         approval_threshold = _get_approval_threshold(context)
 
         vote_record = _first(candidate.votes,
-                             lambda record: record.public_key == pubkey)
+                             lambda record: record.public_key == public_key)
         if vote_record is not None:
             raise InvalidTransaction(
-                '{} has already voted'.format(pubkey))
+                '{} has already voted'.format(public_key))
 
         candidate.votes.add(
-            public_key=pubkey,
+            public_key=public_key,
             vote=settings_vote.vote)
 
         accepted_count = 0

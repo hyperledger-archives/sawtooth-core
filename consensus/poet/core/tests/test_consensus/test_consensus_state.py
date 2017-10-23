@@ -699,14 +699,14 @@ class TestConsensusState(TestCase):
 
         mock_block = mock.Mock()
         mock_block.previous_block_id = 'block_000'
-        mock_block.header.signer_pubkey = 'validator_001_key'
+        mock_block.header.signer_public_key = 'validator_001_key'
 
         mock_block_cache = mock.MagicMock()
         mock_block_cache.__getitem__.return_value = mock_block
 
         validator_info = \
             ValidatorInfo(
-                id=mock_block.header.signer_pubkey,
+                id=mock_block.header.signer_public_key,
                 signup_info=SignUpInfo(
                     poet_public_key='key_002'))
 

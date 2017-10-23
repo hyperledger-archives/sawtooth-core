@@ -119,7 +119,7 @@ impl Account {
             alias: String::from(alias),
             private_key: key.as_hex(),
             public_key: pub_key.as_hex(),
-            address: pubkey_to_address(pub_key.as_slice()),
+            address: public_key_to_address(pub_key.as_slice()),
         })
     }
 
@@ -145,11 +145,11 @@ impl Account {
         &self.address
     }
 
-    pub fn pubkey(&self) -> &str {
+    pub fn public_key(&self) -> &str {
         &self.public_key
     }
 }
 
-pub fn pubkey_to_address(pub_key: &[u8]) -> String {
+pub fn public_key_to_address(pub_key: &[u8]) -> String {
     transform::bytes_to_hex_str(&tiny_keccak::keccak256(pub_key)[..20])
 }

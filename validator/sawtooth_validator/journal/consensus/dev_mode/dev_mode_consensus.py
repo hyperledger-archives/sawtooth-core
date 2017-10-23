@@ -108,7 +108,7 @@ class BlockPublisher(BlockPublisherInterface):
             Boolean: True if the candidate block_header should be claimed.
         """
         if self._valid_block_publishers\
-                and block_header.signer_pubkey \
+                and block_header.signer_public_key \
                 not in self._valid_block_publishers:
             return False
         elif self._min_wait_time == 0:
@@ -177,9 +177,9 @@ class ForkResolver(ForkResolverInterface):
             validator_id)
 
     @staticmethod
-    def hash_signer_pubkey(signer_pubkey, header_signature):
+    def hash_signer_public_key(signer_public_key, header_signature):
         m = hashlib.sha256()
-        m.update(signer_pubkey.encode())
+        m.update(signer_public_key.encode())
         m.update(header_signature.encode())
         digest = m.hexdigest()
         number = int(digest, 16)
@@ -226,11 +226,11 @@ class ForkResolver(ForkResolverInterface):
                         cur_fork_head.identifier[:8]))
 
         if new_fork_head.block_num == cur_fork_head.block_num:
-            cur_fork_hash = self.hash_signer_pubkey(
-                cur_fork_head.header.signer_pubkey,
+            cur_fork_hash = self.hash_signer_public_key(
+                cur_fork_head.header.signer_public_key,
                 cur_fork_head.header.previous_block_id)
-            new_fork_hash = self.hash_signer_pubkey(
-                new_fork_head.header.signer_pubkey,
+            new_fork_hash = self.hash_signer_public_key(
+                new_fork_head.header.signer_public_key,
                 new_fork_head.header.previous_block_id)
 
             result = new_fork_hash < cur_fork_hash

@@ -385,7 +385,7 @@ class BlockPublisher(object):
         self._squash_handler = squash_handler
         self._identity_signing_key = identity_signing_key
         self._identity_public_key = \
-            signing.generate_pubkey(self._identity_signing_key)
+            signing.generate_public_key(self._identity_signing_key)
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
@@ -436,7 +436,7 @@ class BlockPublisher(object):
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,
             previous_block_id=chain_head.header_signature,
-            signer_pubkey=self._identity_public_key)
+            signer_public_key=self._identity_public_key)
         block_builder = BlockBuilder(block_header)
         if not consensus.initialize_block(block_builder.block_header):
             LOGGER.debug("Consensus not ready to build candidate block.")

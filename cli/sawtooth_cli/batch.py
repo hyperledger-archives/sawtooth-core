@@ -156,7 +156,7 @@ def do_batch_list(args):
         return (
             batch['header_signature'],
             len(batch.get('transactions', [])),
-            batch['header']['signer_pubkey'])
+            batch['header']['signer_public_key'])
 
     if args.format == 'default':
         fmt.print_terminal_table(headers, batches, parse_batch_row)

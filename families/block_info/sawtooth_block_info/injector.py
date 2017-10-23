@@ -46,14 +46,14 @@ class BlockInfoInjector(BatchInjector):
     def create_batch(self, block_info):
         payload = BlockInfoTxn(block=block_info).SerializeToString()
         header = TransactionHeader(
-            signer_pubkey=self._public_key,
+            signer_public_key=self._public_key,
             family_name=FAMILY_NAME,
             family_version=FAMILY_VERSION,
             inputs=[CONFIG_ADDRESS, BLOCK_INFO_NAMESPACE],
             outputs=[CONFIG_ADDRESS, BLOCK_INFO_NAMESPACE],
             dependencies=[],
             payload_sha512=hashlib.sha512(payload).hexdigest(),
-            batcher_pubkey=self._public_key,
+            batcher_public_key=self._public_key,
         ).SerializeToString()
 
         transaction_signature = signing.sign(header, self._signing_key)
@@ -65,7 +65,7 @@ class BlockInfoInjector(BatchInjector):
         )
 
         header = BatchHeader(
-            signer_pubkey=self._public_key,
+            signer_public_key=self._public_key,
             transaction_ids=[transaction_signature],
         ).SerializeToString()
 
@@ -94,7 +94,7 @@ class BlockInfoInjector(BatchInjector):
         block_info = BlockInfo(
             block_num=previous_header.block_num,
             previous_block_id=previous_header.previous_block_id,
-            signer_pubkey=previous_header.signer_pubkey,
+            signer_public_key=previous_header.signer_public_key,
             header_signature=previous_block.header_signature,
             timestamp=int(time.time()))
 

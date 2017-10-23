@@ -70,7 +70,7 @@ class DefaultBatchInjectorFactory:
         self._block_store = block_store
         self._state_view_factory = state_view_factory
         self._signing_key = signing_key
-        self._public_key = signing.generate_pubkey(signing_key)
+        self._public_key = signing.generate_public_key(signing_key)
 
     def _read_injector_setting(self, block_id):
         state_view = self._state_view_factory.create_view(

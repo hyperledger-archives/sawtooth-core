@@ -59,15 +59,15 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         get_data_dir_fn.return_value = self._temp_dir
         get_key_dir_fn.return_value = self._temp_dir
 
-        pubkey = self._create_key()
+        public_key = self._create_key()
 
         main('poet',
              args=['genesis',
                    '-o', os.path.join(self._temp_dir, 'poet-genesis.batch')])
 
-        self._assert_validator_transaction(pubkey, 'poet-genesis.batch')
+        self._assert_validator_transaction(public_key, 'poet-genesis.batch')
 
-    def _assert_validator_transaction(self, pubkey, target_file):
+    def _assert_validator_transaction(self, public_key, target_file):
         filename = os.path.join(self._temp_dir, target_file)
         batch_list = batch_pb.BatchList()
         with open(filename, 'rb') as batch_file:
@@ -80,13 +80,13 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         batch_header = batch_pb.BatchHeader()
         batch_header.ParseFromString(batch.header)
 
-        self.assertEqual(pubkey, batch_header.signer_pubkey)
+        self.assertEqual(public_key, batch_header.signer_public_key)
 
         txn = batch.transactions[0]
         txn_header = txn_pb.TransactionHeader()
         txn_header.ParseFromString(txn.header)
 
-        self.assertEqual(pubkey, txn_header.signer_pubkey)
+        self.assertEqual(public_key, txn_header.signer_public_key)
         self.assertEqual('sawtooth_validator_registry', txn_header.family_name)
 
         payload = vr_pb.ValidatorRegistryPayload()
@@ -105,4 +105,4 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         with open(priv_file, 'w') as priv_fd:
             priv_fd.write(privkey)
 
-        return signing.generate_pubkey(privkey)
+        return signing.generate_public_key(privkey)

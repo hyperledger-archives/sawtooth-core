@@ -75,7 +75,7 @@ def create_intkey_transaction(verb, name, value, deps,
             processing this transaction
         private_key (str): the private key used to sign the transaction
         public_key (str): the public key associated with the private key -
-            the public key is included in the transaction as signer_pubkey
+            the public key is included in the transaction as signer_public_key
 
     Returns:
         transaction (transaction_pb2.Transaction): the signed intkey
@@ -89,14 +89,14 @@ def create_intkey_transaction(verb, name, value, deps,
     addr = make_intkey_address(name)
 
     header = transaction_pb2.TransactionHeader(
-        signer_pubkey=public_key,
+        signer_public_key=public_key,
         family_name='intkey',
         family_version='1.0',
         inputs=[addr],
         outputs=[addr],
         dependencies=deps,
         payload_sha512=payload.sha512(),
-        batcher_pubkey=public_key,
+        batcher_public_key=public_key,
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
@@ -115,7 +115,7 @@ def create_batch(transactions, private_key, public_key):
     transaction_signatures = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer_pubkey=public_key,
+        signer_public_key=public_key,
         transaction_ids=transaction_signatures)
 
     header_bytes = header.SerializeToString()
@@ -144,7 +144,7 @@ def generate_word_list(count):
 
 def do_populate(args, batches, keys):
     private_key = signing.generate_privkey()
-    public_key = signing.generate_pubkey(private_key)
+    public_key = signing.generate_public_key(private_key)
 
     total_txn_count = 0
     txns = []
@@ -173,7 +173,7 @@ def do_populate(args, batches, keys):
 
 def do_generate(args, batches, keys):
     private_key = signing.generate_privkey()
-    public_key = signing.generate_pubkey(private_key)
+    public_key = signing.generate_public_key(private_key)
 
     start = time.time()
     total_txn_count = 0

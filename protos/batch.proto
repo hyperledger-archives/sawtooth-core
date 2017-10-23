@@ -23,7 +23,7 @@ import "transaction.proto";
 
 message BatchHeader {
     // Public key for the client that signed the BatchHeader
-    string signer_pubkey = 1;
+    string signer_public_key = 1;
 
     // List of transaction.header_signatures that match the order of
     // transactions required for the batch

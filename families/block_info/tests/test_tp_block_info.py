@@ -32,14 +32,14 @@ from sawtooth_block_info.common import DEFAULT_TARGET_COUNT
 from sawtooth_block_info.common import create_block_address
 
 
-def create_block_info(block_num, signer_pubkey="2" * 66,
+def create_block_info(block_num, signer_public_key="2" * 66,
                       header_signature="1" * 128, timestamp=None,
                       previous_block_id="0" * 128):
     if timestamp is None:
         timestamp = int(time.time())
 
     return BlockInfo(
-        block_num=block_num, signer_pubkey=signer_pubkey,
+        block_num=block_num, signer_public_key=signer_public_key,
         header_signature=header_signature, timestamp=timestamp,
         previous_block_id=previous_block_id)
 

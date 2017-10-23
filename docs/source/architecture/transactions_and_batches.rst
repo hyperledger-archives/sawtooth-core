@@ -38,10 +38,10 @@ transaction) and the resulting signature is stored in header_signature.  The
 header is present in the serialized form so that the exact bytes can be
 verified against the signature upon receipt of the Transaction.
 
-The verification process verifies that the key in signer_pubkey signed the
+The verification process verifies that the key in signer_public_key signed the
 header bytes resulting in header_signature.
 
-The batcher_pubkey field must match the public key used to sign the batch in
+The batcher_public_key field must match the public key used to sign the batch in
 which this transaction is contained.
 
 
@@ -135,7 +135,7 @@ header_signature.  The header is present in the serialized form so that the
 exact bytes can be verified against the signature upon receipt of the Batch.
 
 The process of header_signature verification recovers the public key used
-during signing.  This public key must match the one stored in signer_pubkey or
+during signing.  This public key must match the one stored in signer_public_key or
 the transaction will be considered invalid.
 
 Transactions
@@ -183,7 +183,7 @@ multiple transactors into an atomic operation (the batch).
 
 There is an important restriction enforced between transactions and batches,
 which is that the transaction must contain the public key of the batch signer
-in the batcher_pubkey field.  This is to prevent transactions from being reused
+in the batcher_public_key field.  This is to prevent transactions from being reused
 separate from the intended batch.  So, for example, unless you have the
 batcher's private key, it is not possible to take transactions from a batch and
 repackage them into a new batch, omitting some of the transactions.

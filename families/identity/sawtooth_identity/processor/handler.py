@@ -126,19 +126,19 @@ def _check_allowed_transactor(transaction, context):
     if not entries_list:
         raise InvalidTransaction(
             "The transaction signer is not authorized to submit transactions: "
-            "{}".format(header.signer_pubkey))
+            "{}".format(header.signer_public_key))
 
     setting = Setting()
     setting.ParseFromString(entries_list[0].data)
     for entry in setting.entries:
         if entry.key == "sawtooth.identity.allowed_keys":
             allowed_signer = entry.value.split(",")
-            if header.signer_pubkey in allowed_signer:
+            if header.signer_public_key in allowed_signer:
                 return
 
     raise InvalidTransaction(
         "The transction signer is not authorized to submit transactions: "
-        "{}".format(header.signer_pubkey))
+        "{}".format(header.signer_public_key))
 
 
 def _set_policy(data, context):

@@ -117,7 +117,8 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_block_header with the following fields
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key = \
+            '90834587139405781349807435098745'
         mock_block.header.previous_block_id = '2'
         mock_block.header.block_num = 1
         mock_block.header.state_root_hash = '6'
@@ -224,7 +225,8 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_block_header with the following fields
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key = \
+            '90834587139405781349807435098745'
         mock_block.header.previous_block_id = '2'
         mock_block.header.block_num = 1
         mock_block.header.state_root_hash = '6'
@@ -347,7 +349,8 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_block_header with the following fields
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key = \
+            '90834587139405781349807435098745'
         mock_block.header.previous_block_id = '2'
         mock_block.header.block_num = 1
         mock_block.header.state_root_hash = '6'
@@ -460,7 +463,8 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_block_header with the following fields
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key =  \
+            '90834587139405781349807435098745'
         mock_block.header.previous_block_id = '2'
         mock_block.header.block_num = 1
         mock_block.header.state_root_hash = '6'
@@ -569,7 +573,8 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_block_header with the following fields
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key = \
+            '90834587139405781349807435098745'
         mock_block.header.previous_block_id = '2'
         mock_block.header.block_num = 1
         mock_block.header.state_root_hash = '6'
@@ -677,7 +682,8 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_block_header with the following fields
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key = \
+            '90834587139405781349807435098745'
         mock_block.header.previous_block_id = '2'
         mock_block.header.block_num = 1
         mock_block.header.state_root_hash = '6'
@@ -766,7 +772,8 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_block_header with the following fields
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key = \
+            '90834587139405781349807435098745'
         mock_block.header.previous_block_id = '2'
         mock_block.header.block_num = 1
         mock_block.header.state_root_hash = '6'
@@ -873,7 +880,8 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_block_header with the following fields
         mock_block = mock.Mock(identifier='0123456789abcdefedcba9876543210')
-        mock_block.header.signer_pubkey = '90834587139405781349807435098745'
+        mock_block.header.signer_public_key = \
+            '90834587139405781349807435098745'
         mock_block.header.previous_block_id = '2'
         mock_block.header.block_num = 1
         mock_block.header.state_root_hash = '6'

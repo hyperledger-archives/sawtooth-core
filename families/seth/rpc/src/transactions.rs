@@ -39,7 +39,7 @@ use client::{
     BlockKey,
 };
 use transform;
-use accounts::pubkey_to_address;
+use accounts::public_key_to_address;
 
 pub enum SethTransaction {
     CreateExternalAccount(CreateExternalAccountTxnPb),
@@ -93,7 +93,7 @@ pub enum TransactionKey {
 }
 
 pub struct Transaction {
-    signer_pubkey: String,
+    signer_public_key: String,
     signature: String,
     inner: SethTransaction,
 }
@@ -109,7 +109,7 @@ impl Transaction {
                 .map(|seth_txn_pb| SethTransaction::try_from(seth_txn_pb))?;
         match inner {
             Some(seth_txn) => Ok(Transaction{
-                signer_pubkey: header.take_signer_pubkey(),
+                signer_public_key: header.take_signer_public_key(),
                 signature: txn.take_header_signature(),
                 inner: seth_txn,
             }),
@@ -141,7 +141,7 @@ impl Transaction {
     }
 
     pub fn from_addr(&self) -> String {
-        pubkey_to_address(&transform::hex_str_to_bytes(&self.signer_pubkey).unwrap())
+        public_key_to_address(&transform::hex_str_to_bytes(&self.signer_public_key).unwrap())
     }
 
     pub fn to_addr(&self) -> Option<String> {

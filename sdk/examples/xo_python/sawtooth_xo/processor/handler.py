@@ -83,7 +83,7 @@ def _unpack_transaction(transaction):
     header.ParseFromString(transaction.header)
 
     # The transaction signer is the player
-    signer = header.signer_pubkey
+    signer = header.signer_public_key
 
     try:
         # The payload is csv utf-8 encoded string

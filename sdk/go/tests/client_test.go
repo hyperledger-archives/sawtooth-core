@@ -108,7 +108,7 @@ func TestEncoder(t *testing.T) {
     txn2 := encoder.NewTransaction(data, TransactionParams{
         Nonce: "456",
         Outputs: []string{"ghi"},
-        BatcherPubkey: pubstr,
+        BatcherPublicKey: pubstr,
     })
 
     // Test serialization

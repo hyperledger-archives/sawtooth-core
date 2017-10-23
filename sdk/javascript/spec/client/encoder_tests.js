@@ -36,7 +36,7 @@ describe('TransactionEncoder', () => {
 
   describe('create', () => {
     const headerTemplate = {
-      batcherPubkey: 'test',
+      batcherPublicKey: 'test',
       familyName: 'test',
       familyVersion: 'test',
       inputs: ['test'],
@@ -85,7 +85,7 @@ describe('TransactionEncoder', () => {
       const txn = transactor.create(payload)
 
       const header = TransactionHeader.decode(txn.header)
-      assert.equal('test', header.batcherPubkey)
+      assert.equal('test', header.batcherPublicKey)
       assert.equal('test', header.familyName)
       assert.equal('test', header.familyVersion)
       assert.deepEqual(['test'], header.inputs)
@@ -103,7 +103,7 @@ describe('TransactionEncoder', () => {
       const payload = randomBytes(100)
 
       const txn = transactor.create(payload, {
-        batcherPubkey: 'new',
+        batcherPublicKey: 'new',
         familyName: 'new',
         familyVersion: 'new',
         inputs: ['new'],
@@ -111,7 +111,7 @@ describe('TransactionEncoder', () => {
       })
 
       const header = TransactionHeader.decode(txn.header)
-      assert.equal('new', header.batcherPubkey)
+      assert.equal('new', header.batcherPublicKey)
       assert.equal('new', header.familyName)
       assert.equal('new', header.familyVersion)
       assert.deepEqual(['new'], header.inputs)
@@ -214,7 +214,7 @@ describe('BatchEncoder', () => {
 
     it('should create a Batch from a binary TransactionList', () => {
       const transactor = new TransactionEncoder(transactorKey, {
-        batcherPubkey: publicKey
+        batcherPublicKey: publicKey
       })
       const batcher = new BatchEncoder(privateKey)
 
@@ -238,7 +238,7 @@ describe('BatchEncoder', () => {
 
     it('should create a Batch from a base64 TransactionList', () => {
       const transactor = new TransactionEncoder(transactorKey, {
-        batcherPubkey: publicKey
+        batcherPublicKey: publicKey
       })
       const batcher = new BatchEncoder(privateKey)
 

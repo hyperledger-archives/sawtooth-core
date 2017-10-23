@@ -36,7 +36,7 @@ class TestCompleter(unittest.TestCase):
         self.completer._on_block_received = self._on_block_received
         self.completer._on_batch_received = self._on_batch_received
         self.private_key = signing.generate_privkey()
-        self.public_key = signing.generate_pubkey(self.private_key)
+        self.public_key = signing.generate_public_key(self.private_key)
         self.blocks = []
         self.batches = []
 
@@ -64,7 +64,7 @@ class TestCompleter(unittest.TestCase):
             payload_encode = hashlib.sha512(cbor.dumps(payload)).hexdigest()
 
             header = TransactionHeader(
-                signer_pubkey=self.public_key,
+                signer_public_key=self.public_key,
                 family_name='intkey',
                 family_version='1.0',
                 inputs=[addr],
@@ -100,7 +100,7 @@ class TestCompleter(unittest.TestCase):
                                                  missing_dep=missing_dep)
             txn_sig_list = [txn.header_signature for txn in txn_list]
 
-            batch_header = BatchHeader(signer_pubkey=self.public_key)
+            batch_header = BatchHeader(signer_public_key=self.public_key)
             batch_header.transaction_ids.extend(txn_sig_list)
 
             header_bytes = batch_header.SerializeToString()
@@ -134,7 +134,7 @@ class TestCompleter(unittest.TestCase):
                     NULL_BLOCK_IDENTIFIER)
 
             block_header = BlockHeader(
-                signer_pubkey=self.public_key,
+                signer_public_key=self.public_key,
                 batch_ids=batch_ids,
                 block_num=i,
                 previous_block_id= predecessor

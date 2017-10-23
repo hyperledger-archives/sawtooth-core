@@ -171,7 +171,7 @@ class TestGenesisDependencyValidation(unittest.TestCase):
 
     def make_batch(self, batch_sig, *txns):
         txn_ids = [txn.header_signature for txn in txns]
-        batch_header = BatchHeader(signer_pubkey='test_pubkey',
+        batch_header = BatchHeader(signer_public_key='test_public_key',
                                    transaction_ids=txn_ids).SerializeToString()
 
         batch = Batch(
@@ -191,14 +191,14 @@ class TestGenesisDependencyValidation(unittest.TestCase):
 
 def transaction(txn_sig, dependencies):
     header = TransactionHeader(
-        signer_pubkey='test_pubkey',
+        signer_public_key='test_public_key',
         family_name='test_family',
         family_version='1.0',
         inputs=[],
         outputs=[],
         dependencies=dependencies,
         payload_sha512='some_sha512',
-        batcher_pubkey='test_pubkey'
+        batcher_public_key='test_public_key'
     ).SerializeToString()
 
     return Transaction(

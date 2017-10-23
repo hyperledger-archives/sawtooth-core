@@ -75,8 +75,8 @@ def do_init(args, config):
                 os.makedirs(os.path.dirname(priv_filename))
 
             privkey = signing.generate_privkey()
-            pubkey = signing.generate_pubkey(privkey)
-            addr = signing.generate_identifier(pubkey)
+            public_key = signing.generate_public_key(privkey)
+            addr = signing.generate_identifier(public_key)
 
             with open(priv_filename, "w") as priv_fd:
                 print("writing file: {}".format(priv_filename))

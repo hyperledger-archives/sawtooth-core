@@ -235,9 +235,9 @@ def do_init(args, config):
 
     priv_filename = config.get('DEFAULT', 'key_file')
     if priv_filename.endswith(".priv"):
-        pubkey_filename = priv_filename[0:-len(".priv")] + ".pub"
+        public_key_filename = priv_filename[0:-len(".priv")] + ".pub"
     else:
-        pubkey_filename = priv_filename + ".pub"
+        public_key_filename = priv_filename + ".pub"
 
     if not os.path.exists(priv_filename):
         try:
@@ -245,17 +245,17 @@ def do_init(args, config):
                 os.makedirs(os.path.dirname(priv_filename))
 
             privkey = signing.generate_privkey()
-            pubkey = signing.generate_pubkey(privkey)
+            public_key = signing.generate_public_key(privkey)
 
             with open(priv_filename, "w") as priv_fd:
                 print("writing file: {}".format(priv_filename))
                 priv_fd.write(privkey)
                 priv_fd.write("\n")
 
-            with open(pubkey_filename, "w") as pubkey_fd:
-                print("writing file: {}".format(pubkey_filename))
-                pubkey_fd.write(pubkey)
-                pubkey_fd.write("\n")
+            with open(public_key_filename, "w") as public_key_fd:
+                print("writing file: {}".format(public_key_filename))
+                public_key_fd.write(public_key)
+                public_key_fd.write("\n")
         except IOError as ioe:
             raise BattleshipException("IOError: {}".format(str(ioe)))
 
@@ -407,18 +407,18 @@ def do_show(args, config):
     print("PLAYER 2  : {}".format(player2))
     print("STATE     : {}".format(game_state))
 
-    # figure out the proper user's target board, given the pubkey
+    # figure out the proper user's target board, given the public_key
     priv_filename = config.get('DEFAULT', 'key_file')
     if priv_filename.endswith(".priv"):
-        pubkey_filename = priv_filename[0:-len(".priv")] + ".pub"
+        public_key_filename = priv_filename[0:-len(".priv")] + ".pub"
     else:
-        pubkey_filename = priv_filename + ".pub"
-    pubkey_file = open(pubkey_filename, mode='r')
-    pubkey = pubkey_file.readline().rstrip('\n')
+        public_key_filename = priv_filename + ".pub"
+    public_key_file = open(public_key_filename, mode='r')
+    public_key = public_key_file.readline().rstrip('\n')
 
-    if 'Player1' in game and pubkey == game['Player1']:
+    if 'Player1' in game and public_key == game['Player1']:
         target_board_name = 'TargetBoard1'
-    elif 'Player2' in game and pubkey == game['Player2']:
+    elif 'Player2' in game and public_key == game['Player2']:
         target_board_name = 'TargetBoard2'
     else:
         raise BattleshipException("Player hasn't joined game.")

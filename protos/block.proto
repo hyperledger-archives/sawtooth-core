@@ -29,7 +29,7 @@ message BlockHeader {
 
     // Public key for the component internal to the validator that
     // signed the BlockHeader
-    string signer_pubkey = 3;
+    string signer_public_key = 3;
 
     // List of batch.header_signatures that match the order of batches
     // required for the block

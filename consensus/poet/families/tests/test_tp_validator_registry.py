@@ -111,7 +111,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
         # Respond with address for val_1
         # val_1 address is derived from the validators id
-        # val id is the same as the pubkey for the factory
+        # val id is the same as the public_key for the factory
         self.validator.respond(
             self.factory.create_set_response_validator_info(),
             received)
@@ -120,7 +120,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
     def test_valid_signup_info(self):
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
         self._test_valid_signup_info(signup_info)
 
         # Re-register the same validator. Expect success.
@@ -128,7 +128,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
     def test_out_of_date_tcb(self):
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000", "OUT_OF_DATE")
+            self.factory.public_key_hash, "000", "OUT_OF_DATE")
         self._test_valid_signup_info(signup_info)
 
     def test_invalid_name(self):
@@ -137,7 +137,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         transaction.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         # The name is longer the 64 characters
         payload = ValidatorRegistryPayload(
@@ -156,12 +156,12 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
     def test_invalid_id(self):
         """
         Test that a transaction with an id that does not match the
-        signer_pubkey returns an invalid transaction.
+        signer_public_key returns an invalid transaction.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
-        # The idea should match the signer_pubkey in the transaction_header
+        # The idea should match the signer_public_key in the transaction_header
         payload = ValidatorRegistryPayload(
             verb="reg",
             name="val_1",
@@ -175,13 +175,13 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
         self._expect_invalid_transaction()
 
-    def test_invalid_poet_pubkey(self):
+    def test_invalid_poet_public_key(self):
         """
         Test that a transaction without a poet_public_key returns an invalid
         transaction.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         signup_info.poet_public_key = "bad"
 
@@ -272,7 +272,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         an invalid transaction.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         # Verification Report is None
         proof_data = signup_info.proof_data
@@ -343,7 +343,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         invalid transaction.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         proof_data = signup_info.proof_data
         proof_data_dict = json.loads(proof_data)
@@ -432,7 +432,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         invalid transaction.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         proof_data = signup_info.proof_data
         proof_data_dict = json.loads(proof_data)
@@ -558,7 +558,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
 
         hash_input = \
             '{0}{1}'.format(
-                self.factory.pubkey_hash,
+                self.factory.public_key_hash,
                 "Not a valid PPK").encode()
         sgx_quote.report_body.report_data.d = \
             hashlib.sha256(hash_input).digest()
@@ -601,7 +601,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         PEM from the config setting.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,
@@ -629,7 +629,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         public key PEM from the config setting.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,
@@ -657,7 +657,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         measurements from the config setting.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,
@@ -694,7 +694,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         enclave measurements from the config setting.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,
@@ -732,7 +732,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         basenames from the config setting.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,
@@ -778,7 +778,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
         enclave basenames from the config setting.
         """
         signup_info = self.factory.create_signup_info(
-            self.factory.pubkey_hash, "000")
+            self.factory.public_key_hash, "000")
 
         payload = ValidatorRegistryPayload(
             verb="reg", name="val_1", id=self.factory.public_key,

@@ -46,7 +46,7 @@ class ValidationRuleEnforcer(object):
         for batch in block.batches:
             transactions += batch.transactions
 
-        expected_signer = block.header.signer_pubkey
+        expected_signer = block.header.signer_public_key
 
         rules = rules.split(";")
         valid = True
@@ -172,7 +172,7 @@ class ValidationRuleEnforcer(object):
             header = TransactionHeader()
             header.ParseFromString(txn.header)
 
-            if header.signer_pubkey != expected_signer:
+            if header.signer_public_key != expected_signer:
                 LOGGER.debug("Transaction at postion %s was not signed by the"
                              " same key as the block.", index)
                 return False

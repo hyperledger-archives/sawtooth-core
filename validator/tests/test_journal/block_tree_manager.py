@@ -105,7 +105,7 @@ class BlockTreeManager(object):
 
         self.state_view_factory = MockStateViewFactory(self.state_db)
         self.signing_key = signing.generate_privkey()
-        self.public_key = signing.generate_pubkey(self.signing_key)
+        self.public_key = signing.generate_public_key(self.signing_key)
 
         self.identity_signing_key = signing.generate_privkey()
         chain_head = None
@@ -151,7 +151,7 @@ class BlockTreeManager(object):
 
         header = BlockHeader(
             previous_block_id=previous.identifier,
-            signer_pubkey=self.public_key,
+            signer_public_key=self.public_key,
             block_num=previous.block_num+1)
 
         block_builder = BlockBuilder(header)
@@ -233,7 +233,7 @@ class BlockTreeManager(object):
                      previous_block_id=NULL_BLOCK_IDENTIFIER, block_num=0):
         header = BlockHeader(
             previous_block_id=previous_block_id,
-            signer_pubkey=self.public_key,
+            signer_public_key=self.public_key,
             block_num=block_num)
 
         block_builder = BlockBuilder(header)
@@ -328,7 +328,7 @@ class BlockTreeManager(object):
             txns[-1] = txn_missing_deps
 
         batch_header = BatchHeader(
-            signer_pubkey=self.public_key,
+            signer_public_key=self.public_key,
             transaction_ids=[txn.header_signature for txn in txns]
         ).SerializeToString()
 
@@ -346,12 +346,12 @@ class BlockTreeManager(object):
 
         txn_header = TransactionHeader(
             dependencies=([] if deps is None else deps),
-            batcher_pubkey=self.public_key,
+            batcher_public_key=self.public_key,
             family_name='test',
             family_version='1',
             nonce=_generate_id(16),
             payload_sha512=hasher.hexdigest().encode(),
-            signer_pubkey=self.public_key
+            signer_public_key=self.public_key
         ).SerializeToString()
 
         txn = Transaction(
@@ -365,7 +365,7 @@ class BlockTreeManager(object):
         txn = self.generate_transaction(payload)
 
         batch_header = BatchHeader(
-            signer_pubkey=self.public_key,
+            signer_public_key=self.public_key,
             transaction_ids=[txn.header_signature]
         ).SerializeToString()
 

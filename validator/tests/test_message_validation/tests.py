@@ -30,7 +30,7 @@ from sawtooth_validator.gossip import structure_verifier
 class TestMessageValidation(unittest.TestCase):
     def setUp(self):
         self.private_key = signing.generate_privkey()
-        self.public_key = signing.generate_pubkey(self.private_key)
+        self.public_key = signing.generate_public_key(self.private_key)
 
     def broadcast(self, msg):
         pass
@@ -55,7 +55,7 @@ class TestMessageValidation(unittest.TestCase):
             payload_encode = hashlib.sha512(cbor.dumps(payload)).hexdigest()
 
             header = TransactionHeader(
-                signer_pubkey=self.public_key,
+                signer_public_key=self.public_key,
                 family_name='intkey',
                 family_version='1.0',
                 inputs=[addr],
@@ -64,9 +64,9 @@ class TestMessageValidation(unittest.TestCase):
                 payload_sha512=payload_encode)
 
             if valid_batcher:
-                header.batcher_pubkey = self.public_key
+                header.batcher_public_key = self.public_key
             else:
-                header.batcher_pubkey = "bad_batcher"
+                header.batcher_public_key = "bad_batcher"
 
             header_bytes = header.SerializeToString()
 
@@ -107,7 +107,7 @@ class TestMessageValidation(unittest.TestCase):
             if not valid_structure:
                 txn_sig_list.pop()
 
-            batch_header = BatchHeader(signer_pubkey=self.public_key)
+            batch_header = BatchHeader(signer_public_key=self.public_key)
             batch_header.transaction_ids.extend(txn_sig_list)
 
             header_bytes = batch_header.SerializeToString()
@@ -136,7 +136,7 @@ class TestMessageValidation(unittest.TestCase):
                 batch_count, 2, valid_batch=valid_batch)
             batch_ids = [batch.header_signature for batch in batch_list]
 
-            block_header = BlockHeader(signer_pubkey=self.public_key,
+            block_header = BlockHeader(signer_public_key=self.public_key,
                                        batch_ids=batch_ids)
 
             header_bytes = block_header.SerializeToString()

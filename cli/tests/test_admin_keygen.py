@@ -70,9 +70,9 @@ class TestKeygen(unittest.TestCase):
         args = self._parse_keygen_command(self._key_name)
         keygen.do_keygen(args)
 
-        pubkey, signing_key = _read_signing_keys(self._priv_filename)
+        public_key, signing_key = _read_signing_keys(self._priv_filename)
 
-        self.assertIsNotNone(pubkey)
+        self.assertIsNotNone(public_key)
         self.assertIsNotNone(signing_key)
 
     def test_force_write(self):
@@ -85,9 +85,9 @@ class TestKeygen(unittest.TestCase):
         args = self._parse_keygen_command('--force', self._key_name)
         keygen.do_keygen(args)
 
-        pubkey, signing_key = _read_signing_keys(self._priv_filename)
+        public_key, signing_key = _read_signing_keys(self._priv_filename)
 
-        self.assertIsNotNone(pubkey)
+        self.assertIsNotNone(public_key)
         self.assertIsNotNone(signing_key)
 
     def remove_key_files(self):
@@ -118,8 +118,8 @@ def _read_signing_keys(key_filename):
     try:
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
-            pubkey = signing.generate_pubkey(signing_key)
+            public_key = signing.generate_public_key(signing_key)
 
-            return pubkey, signing_key
+            return public_key, signing_key
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))

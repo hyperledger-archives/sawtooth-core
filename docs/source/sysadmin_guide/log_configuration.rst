@@ -26,8 +26,8 @@ rarely be used.
 
 The name of the validator logs will look like the following:
 
-- validator-{first 8 characters of the validator's pubkey}-debug.log
-- validator-{first 8 characters of the validator's pubkey}-error.log
+- validator-{first 8 characters of the validator's public_key}-debug.log
+- validator-{first 8 characters of the validator's public_key}-error.log
 
 Examples:
 

@@ -202,7 +202,7 @@ class TestSettings(TransactionProcessorTestCase):
         )
         proposal_id = _to_hash(proposal.SerializeToString())
         record = SettingCandidate.VoteRecord(
-            public_key="some_other_pubkey",
+            public_key="some_other_public_key",
             vote=SettingVote.ACCEPT)
         candidate = SettingCandidate(
             proposal_id=proposal_id,
@@ -214,7 +214,7 @@ class TestSettings(TransactionProcessorTestCase):
         self._vote(proposal_id, 'my.config.setting', SettingVote.ACCEPT)
 
         self._expect_get('sawtooth.settings.vote.authorized_keys',
-                         self._public_key + ',some_other_pubkey')
+                         self._public_key + ',some_other_public_key')
         self._expect_get('sawtooth.settings.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_get('sawtooth.settings.vote.approval_threshold', '2')
@@ -242,7 +242,7 @@ class TestSettings(TransactionProcessorTestCase):
         )
         proposal_id = _to_hash(proposal.SerializeToString())
         record = SettingCandidate.VoteRecord(
-            public_key="some_other_pubkey",
+            public_key="some_other_public_key",
             vote=SettingVote.ACCEPT)
         candidate = SettingCandidate(
             proposal_id=proposal_id,
@@ -254,7 +254,8 @@ class TestSettings(TransactionProcessorTestCase):
         self._vote(proposal_id, 'my.config.setting', SettingVote.ACCEPT)
 
         self._expect_get('sawtooth.settings.vote.authorized_keys',
-                         self._public_key + ',some_other_pubkey,third_pubkey')
+                         self._public_key +
+                         ',some_other_public_key,third_public_key')
         self._expect_get('sawtooth.settings.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_get('sawtooth.settings.vote.approval_threshold', '3')
@@ -264,7 +265,7 @@ class TestSettings(TransactionProcessorTestCase):
                          base64.b64encode(candidates.SerializeToString()))
 
         record = SettingCandidate.VoteRecord(
-            public_key="some_other_pubkey",
+            public_key="some_other_public_key",
             vote=SettingVote.ACCEPT)
         new_record = SettingCandidate.VoteRecord(
             public_key=self._public_key,
@@ -296,10 +297,10 @@ class TestSettings(TransactionProcessorTestCase):
             proposal=proposal,
             votes=[
                 SettingCandidate.VoteRecord(
-                    public_key='some_other_pubkey',
+                    public_key='some_other_public_key',
                     vote=SettingVote.ACCEPT),
                 SettingCandidate.VoteRecord(
-                    public_key='a_rejectors_pubkey',
+                    public_key='a_rejectors_public_key',
                     vote=SettingVote.REJECT)
             ])
 
@@ -309,7 +310,7 @@ class TestSettings(TransactionProcessorTestCase):
 
         self._expect_get(
             'sawtooth.settings.vote.authorized_keys',
-            self._public_key + ',some_other_pubkey,a_rejectors_pubkey')
+            self._public_key + ',some_other_public_key,a_rejectors_public_key')
         self._expect_get('sawtooth.settings.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_get('sawtooth.settings.vote.approval_threshold', '2')
@@ -338,7 +339,7 @@ class TestSettings(TransactionProcessorTestCase):
             proposal=proposal,
             votes=[
                 SettingCandidate.VoteRecord(
-                    public_key='some_other_pubkey',
+                    public_key='some_other_public_key',
                     vote=SettingVote.ACCEPT),
             ])
 
@@ -347,7 +348,7 @@ class TestSettings(TransactionProcessorTestCase):
         self._vote(proposal_id, 'my.config.setting', SettingVote.REJECT)
 
         self._expect_get('sawtooth.settings.vote.authorized_keys',
-                         self._public_key + ',some_other_pubkey')
+                         self._public_key + ',some_other_public_key')
         self._expect_get('sawtooth.settings.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_get('sawtooth.settings.vote.approval_threshold', '2')

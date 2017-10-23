@@ -74,9 +74,9 @@ A *TransactionEncoder* stores your private key, and (optionally) default
 TransactionHeader values and a function to encode each payload. Once
 instantiated, multiple Transactions can be created using these common elements,
 and without any explicit hashing or signing. You will never need to specify the
-*nonce*, *signer pubkey*, or *payload Sha512* properties of a TransactionHeader,
+*nonce*, *signer public_key*, or *payload Sha512* properties of a TransactionHeader,
 as the SDK will generate these automatically. You will only need to set a
-*batcher pubkey* if a different private key will be used to sign Batches containing
+*batcher public_key* if a different private key will be used to sign Batches containing
 these Transactions (see below).
 
 
@@ -87,9 +87,9 @@ these Transactions (see below).
     const {TransactionEncoder} = require('sawtooth-sdk')
 
     const encoder = new TransactionEncoder(privateKey, {
-        // We don't want a batcher pubkey or dependencies for our example,
+        // We don't want a batcher public_key or dependencies for our example,
         // but this is what setting them might look like:
-        // batcherPubkey: '02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
+        // batcherPublicKey: '02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
         // dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         familyName: 'intkey',
         familyVersion: '1.0',
@@ -106,9 +106,9 @@ these Transactions (see below).
 
     encoder = TransactionEncoder(
         private_key,
-        # We don't want a batcher pubkey or dependencies for our example,
+        # We don't want a batcher public_key or dependencies for our example,
         # but this is what setting them might look like:
-        # batcherPubkey='02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
+        # batcherPublicKey='02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
         # dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         payload_encoder=cbor.dumps,
         family_name='intkey',
@@ -121,14 +121,14 @@ these Transactions (see below).
 
 .. note::
 
-   Remember that a *batcher pubkey* is the hex public key matching the private
+   Remember that a *batcher public_key* is the hex public key matching the private
    key that will later be used to sign a Transaction's Batch, and
    *dependencies* are the *header signatures* of Transactions that must be
    committed before this one (see *TransactionHeaders* in
    :doc:`/architecture/transactions_and_batches`).
 
    Although possible, it would be unusual to set these properties when
-   creating a *TransactionEncoder*. The default batcher pubkey will be valid
+   creating a *TransactionEncoder*. The default batcher public_key will be valid
    as long as the Transactions and Batches are signed by the same key, and
    dependencies are typically different from Transaction to Transaction.
 
@@ -335,7 +335,7 @@ can happen in one step.
 .. note::
 
    Note, if the transaction creator is using a different private key than the
-   batcher, the *batcher pubkey* must have been specified for every Transaction,
+   batcher, the *batcher public_key* must have been specified for every Transaction,
    and must have been generated from the private key being used to sign the
    Batch, or validation will fail.
 

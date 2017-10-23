@@ -27,19 +27,19 @@ import (
 )
 
 type TransactionParams struct {
-	FamilyName    string
-	FamilyVersion string
-	Nonce         string
-	BatcherPubkey string
-	Dependencies  []string
-	Inputs        []string
-	Outputs       []string
+	FamilyName       string
+	FamilyVersion    string
+	Nonce            string
+	BatcherPublicKey string
+	Dependencies     []string
+	Inputs           []string
+	Outputs          []string
 }
 
 type Encoder struct {
-	privkey  []byte
-	pubkey   string
-	defaults TransactionParams
+	privkey    []byte
+	public_key string
+	defaults   TransactionParams
 }
 
 // NewTransactionEncoder constructs a new encoder which can be used to generate
@@ -47,9 +47,9 @@ type Encoder struct {
 // REST API.
 func NewEncoder(privkey []byte, defaults TransactionParams) *Encoder {
 	return &Encoder{
-		privkey:  privkey,
-		pubkey:   hex.EncodeToString(GenPubKey(privkey)),
-		defaults: defaults,
+		privkey:    privkey,
+		public_key: hex.EncodeToString(GenPubKey(privkey)),
+		defaults:   defaults,
 	}
 }
 
@@ -60,18 +60,18 @@ func NewEncoder(privkey []byte, defaults TransactionParams) *Encoder {
 func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transaction {
 	h := &transaction_pb2.TransactionHeader{
 		// Load defaults
-		FamilyName:    self.defaults.FamilyName,
-		FamilyVersion: self.defaults.FamilyVersion,
-		Nonce:         self.defaults.Nonce,
-		BatcherPubkey: self.defaults.BatcherPubkey,
+		FamilyName:       self.defaults.FamilyName,
+		FamilyVersion:    self.defaults.FamilyVersion,
+		Nonce:            self.defaults.Nonce,
+		BatcherPublicKey: self.defaults.BatcherPublicKey,
 
 		Inputs:       self.defaults.Inputs,
 		Outputs:      self.defaults.Outputs,
 		Dependencies: self.defaults.Dependencies,
 
 		// Set unique fields
-		PayloadSha512: hex.EncodeToString(SHA512(payload)),
-		SignerPubkey:  self.pubkey,
+		PayloadSha512:   hex.EncodeToString(SHA512(payload)),
+		SignerPublicKey: self.public_key,
 	}
 
 	// Override defaults if set
@@ -84,8 +84,8 @@ func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transa
 	if p.Nonce != "" {
 		h.Nonce = p.Nonce
 	}
-	if p.BatcherPubkey != "" {
-		h.BatcherPubkey = p.BatcherPubkey
+	if p.BatcherPublicKey != "" {
+		h.BatcherPublicKey = p.BatcherPublicKey
 	}
 
 	if p.Inputs != nil {
@@ -103,9 +103,9 @@ func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transa
 		h.Nonce = fmt.Sprintf("%x", time.Now().UTC().UnixNano())
 	}
 
-	// If a BatcherPubkey hasn't been set yet, assume its our key
-	if h.BatcherPubkey == "" {
-		h.BatcherPubkey = self.pubkey
+	// If a BatcherPublicKey hasn't been set yet, assume its our key
+	if h.BatcherPublicKey == "" {
+		h.BatcherPublicKey = self.public_key
 	}
 
 	hb, err := proto.Marshal(h)
@@ -175,8 +175,8 @@ func (self *Encoder) NewBatch(transactions []*Transaction) *Batch {
 	}
 
 	h := &batch_pb2.BatchHeader{
-		SignerPubkey:   self.pubkey,
-		TransactionIds: txnIds,
+		SignerPublicKey: self.public_key,
+		TransactionIds:  txnIds,
 	}
 
 	hb, err := proto.Marshal(h)

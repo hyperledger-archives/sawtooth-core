@@ -73,7 +73,7 @@ class TestTransactorPermissioning(unittest.TestCase):
         # From local configuration Dave is denied from being a batch_signer,
         # and Chuck and Mallory are denied from all transactor permissions.
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             'deny_bob_allow_alice_walter',
             'transactor',
             permit_keys=[self.alice.public_key, self.walter.public_key],
@@ -89,7 +89,7 @@ class TestTransactorPermissioning(unittest.TestCase):
             (self.chuck, Families.INTKEY),
             (self.mallory, Families.INTKEY))
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             'deny_alice_allow_bob_walter',
             'transactor',
             permit_keys=[self.bob.public_key, self.walter.public_key],
@@ -105,7 +105,7 @@ class TestTransactorPermissioning(unittest.TestCase):
             (self.dave, Families.INTKEY),
             (self.mallory, Families.INTKEY))
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             "allow_all_transactors",
             "transactor",
             permit_keys=["*"],
@@ -117,7 +117,7 @@ class TestTransactorPermissioning(unittest.TestCase):
         # From local configuration both Alice and Bob are allowed batch_signers,
         # while Dave is denied.
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             "deny_alice_as_batcher_allow_bob",
             "transactor.batch_signer",
             permit_keys=[self.bob.public_key, self.walter.public_key],
@@ -143,7 +143,7 @@ class TestTransactorPermissioning(unittest.TestCase):
             daves_txns,
             (self.dave, Families.INTKEY))
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             "allow_all_batchers",
             "transactor.batch_signer",
             permit_keys=["*"],
@@ -156,7 +156,7 @@ class TestTransactorPermissioning(unittest.TestCase):
         # other transactor permissions, Mallory and Chuck are denied from all
         # transactor permissions.
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             "allow_carol_and_no_others",
             "transactor.transaction_signer",
             permit_keys=[self.carol.public_key, self.walter.public_key],
@@ -178,7 +178,7 @@ class TestTransactorPermissioning(unittest.TestCase):
             (self.mallory, Families.INTKEY),
             (self.mallory, Families.XO))
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             "allow_all_transaction_signers",
             "transactor.transaction_signer",
             permit_keys=["*"],
@@ -190,7 +190,7 @@ class TestTransactorPermissioning(unittest.TestCase):
         # From local configuration Dave is denied from being a batch_signer,
         # Mallory and Chuck are denied being transactors.
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             "deny_alice_from_xo_allow_bob",
             "transactor.transaction_signer.xo",
             permit_keys=[self.bob.public_key, self.dave.public_key],
@@ -204,7 +204,7 @@ class TestTransactorPermissioning(unittest.TestCase):
             (self.mallory, Families.XO),
             (self.dave, Families.XO))
 
-        self.walter.set_pubkey_for_role(
+        self.walter.set_public_key_for_role(
             "deny_bob_from_intkey_allow_dave_alice",
             "transactor.transaction_signer.intkey",
             permit_keys=[self.alice.public_key, self.dave.public_key],
@@ -373,7 +373,7 @@ class Transactor(object):
 
         self._client.send_batches(batch_list=batch_list)
 
-    def set_pubkey_for_role(self, policy, role, permit_keys, deny_keys):
+    def set_public_key_for_role(self, policy, role, permit_keys, deny_keys):
         permits = ["PERMIT_KEY {}".format(key) for key in permit_keys]
         denies = ["DENY_KEY {}".format(key) for key in deny_keys]
         self._run_identity_commands(policy, role, denies + permits)

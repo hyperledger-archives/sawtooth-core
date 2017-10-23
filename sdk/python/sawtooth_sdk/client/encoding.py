@@ -18,7 +18,7 @@ from random import randint
 from google.protobuf.message import DecodeError
 
 from sawtooth_signing.secp256k1_signer import sign
-from sawtooth_signing.secp256k1_signer import generate_pubkey
+from sawtooth_signing.secp256k1_signer import generate_public_key
 from sawtooth_sdk.protobuf.batch_pb2 import Batch
 from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
 from sawtooth_sdk.protobuf.batch_pb2 import BatchList
@@ -44,7 +44,8 @@ class TransactionEncoder(object):
         private_key (bytes): The private key to sign Transactions with
         payload_encoder (function, optional): Run on each payload before
             creating Transaction, must return bytes
-        batcher_pubkey (string or bytes, optional): Expected batcher public key
+        batcher_public_key (string or bytes, optional): Expected batcher public
+            key
         dependencies (list of str, optional): Transaction ids that must be
             committed before every Transaction from this encoder (unusual)
         family_name (str, optional): Name of the designated Transaction Family
@@ -60,21 +61,22 @@ class TransactionEncoder(object):
     def __init__(self,
                  private_key,
                  payload_encoder=lambda x: x,
-                 batcher_pubkey=None,
+                 batcher_public_key=None,
                  dependencies=None,
                  family_name=None,
                  family_version=None,
                  inputs=None,
                  outputs=None):
         self._private_key = private_key
-        self._public_key = generate_pubkey(private_key, privkey_format='bytes')
+        self._public_key = generate_public_key(
+            private_key, privkey_format='bytes')
 
         self.payload_encoder = payload_encoder
 
         # Set default headers as attributes so they can be modified later
-        self.batcher_pubkey = (self._public_key
-                               if batcher_pubkey is None
-                               else batcher_pubkey)
+        self.batcher_public_key = (self._public_key
+                                   if batcher_public_key is None
+                                   else batcher_public_key)
         self.dependencies = dependencies
         self.family_name = family_name
         self.family_version = family_version
@@ -83,7 +85,7 @@ class TransactionEncoder(object):
 
     def create(self,
                payload,
-               batcher_pubkey=None,
+               batcher_public_key=None,
                dependencies=None,
                family_name=None,
                family_version=None,
@@ -97,7 +99,7 @@ class TransactionEncoder(object):
         Args:
             payload (bytes): If no payload_encoder is set on the
                 TransactionEncoder, the payload must be byte-encoded
-            batcher_pubkey (string or bytes, optional): Batcher public key
+            batcher_public_key (string or bytes, optional): Batcher public key
             dependencies (list of str, optional): Transaction ids that must be
                 committed before this Transaction
             family_name (str, optional): Name of Transaction Family
@@ -135,13 +137,13 @@ class TransactionEncoder(object):
             family_version=resolve_required('family_version', family_version),
             inputs=resolve_required('inputs', inputs),
             outputs=resolve_required('outputs', outputs),
-            batcher_pubkey=(batcher_pubkey if batcher_pubkey is not None
-                            else self.batcher_pubkey),
+            batcher_public_key=(batcher_public_key if batcher_public_key is not
+                                None else self.batcher_public_key),
             dependencies=(dependencies if dependencies is not None
                           else self.dependencies),
             nonce=nonce if nonce is not None else str(randint(0, 100000000)),
             payload_sha512=payload_sha512,
-            signer_pubkey=self._public_key)
+            signer_public_key=self._public_key)
 
         header_bytes = txn_header.SerializeToString()
         return Transaction(
@@ -168,7 +170,7 @@ class TransactionEncoder(object):
 
     def create_encoded(self,
                        payload,
-                       batcher_pubkey=None,
+                       batcher_public_key=None,
                        dependencies=None,
                        family_name=None,
                        family_version=None,
@@ -183,7 +185,7 @@ class TransactionEncoder(object):
         Args:
             payload (bytes): If no payload_encoder is set on the
                 TransactionEncoder, the payload must be byte-encoded
-            batcher_pubkey (string or bytes, optional): Batcher public key
+            batcher_public_key (string or bytes, optional): Batcher public key
             dependencies (list of str, optional): Transaction ids that must be
                 committed before this Transaction
             family_name (str, optional): Name of Transaction Family
@@ -207,7 +209,7 @@ class TransactionEncoder(object):
             bytes: a serialized TransactionList
         """
         txn = self.create(payload,
-                          batcher_pubkey=batcher_pubkey,
+                          batcher_public_key=batcher_public_key,
                           dependencies=dependencies,
                           family_name=family_name,
                           family_version=family_version,
@@ -226,7 +228,8 @@ class BatchEncoder(object):
     """
     def __init__(self, private_key):
         self._private_key = private_key
-        self._public_key = generate_pubkey(private_key, privkey_format='bytes')
+        self._public_key = generate_public_key(
+            private_key, privkey_format='bytes')
 
     def create(self, transactions):
         """Creates and signs a new Batch message with one or more Transactions.
@@ -248,7 +251,7 @@ class BatchEncoder(object):
             transactions = _listify(transactions)
 
         batch_header = BatchHeader(
-            signer_pubkey=self._public_key,
+            signer_public_key=self._public_key,
             transaction_ids=[t.header_signature for t in transactions])
         header_bytes = batch_header.SerializeToString()
 
