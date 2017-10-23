@@ -16,7 +16,7 @@
 import logging
 import hashlib
 
-from sawtooth_sdk.processor.context import StateEntry
+
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
@@ -179,10 +179,8 @@ def _set_policy(data, context):
 
     # Store policy in a PolicyList incase of hash collisions
     new_policy_list = PolicyList(policies=policies)
-    addresses = context.set_state([
-        StateEntry(
-            address=address,
-            data=new_policy_list.SerializeToString())])
+    addresses = context.set_state(
+        {address: new_policy_list.SerializeToString()})
 
     if not addresses:
         LOGGER.warning('Failed to set policy %s at %s', new_policy.name,
@@ -240,10 +238,8 @@ def _set_role(data, context):
     roles = sorted(roles, key=lambda role: role.name)
 
     # set RoleList at the address above.
-    addresses = context.set_state([
-        StateEntry(
-            address=address,
-            data=RoleList(roles=roles).SerializeToString())])
+    addresses = context.set_state(
+        {address: RoleList(roles=roles).SerializeToString()})
 
     if not addresses:
         LOGGER.warning('Failed to set role %s at %s', role.name, address)

@@ -25,7 +25,6 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
 
 from sawtooth_sdk.processor.handler import TransactionHandler
-from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
@@ -171,7 +170,7 @@ def _delete_address(context, address):
 def _set_data(context, address, data):
     try:
         addresses = list(context.set_state(
-            [StateEntry(address=address, data=data)],
+            {address: data},
             timeout=STATE_TIMEOUT_SEC)
         )
 

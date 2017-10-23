@@ -430,12 +430,9 @@ updated state of the game and store it back at the address from which it came.
 
         encoded_game_data = self._encode_data(game_data)
 
-        addresses = context.set_state([
-            StateEntry(
-                address=game_address,
-                data=encoded_game_data
-            )
-        ])
+        addresses = context.set_state(
+            {game_address: encoded_game_data}
+        )
 
         if len(addresses) < 1:
             raise InternalError("State Error")

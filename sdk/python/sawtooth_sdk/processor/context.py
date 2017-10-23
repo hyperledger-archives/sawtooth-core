@@ -19,12 +19,6 @@ from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
 
-class StateEntry(object):
-    def __init__(self, address, data):
-        self.address = address
-        self.data = data
-
-
 class Context(object):
     """
     Attributes:
@@ -43,7 +37,7 @@ class Context(object):
             addressses (list): the addresss to fetch
             timeout: optional timeout, in seconds
         Returns:
-            results ((map): a map of address to StateEntry values, for the
+            results (list): a list of Entries (address, data), for the
             addresses that have a value
         """
         request = state_context_pb2.TpStateGetRequest(
@@ -59,15 +53,15 @@ class Context(object):
             raise InvalidTransaction(
                 'Tried to get unauthorized address: {}'.format(addresses))
         entries = response.entries if response is not None else []
-        results = [StateEntry(address=e.address, data=e.data)
-                   for e in entries if len(e.data) != 0]
+        results = [e for e in entries if len(e.data) != 0]
         return results
 
     def set_state(self, entries, timeout=None):
         """
         set an address to a value in the validator's merkle state
         Args:
-            entries (list): list of StateEntry
+            entries (dict): dictionary where addresses are the keys and data is
+                the value.
             timeout: optional timeout, in seconds
 
         Returns:
@@ -75,8 +69,8 @@ class Context(object):
 
         """
         state_entries = [state_context_pb2.Entry(
-            address=e.address,
-            data=e.data) for e in entries]
+            address=e,
+            data=entries[e]) for e in entries]
         request = state_context_pb2.TpStateSetRequest(
             entries=state_entries,
             context_id=self._context_id).SerializeToString()
@@ -95,7 +89,7 @@ class Context(object):
         """
         delete an address in the validator's merkle state
         Args:
-            entries (list): list of StateEntry
+            addresses (list): list of addresses
             timeout: optional timeout, in seconds
 
         Returns:

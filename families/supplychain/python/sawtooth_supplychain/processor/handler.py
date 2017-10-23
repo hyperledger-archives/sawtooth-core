@@ -15,7 +15,6 @@
 
 import logging
 
-from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
@@ -411,10 +410,9 @@ class SupplyChainHandler(object):
 
     @staticmethod
     def _set(state, items):
-        entries = []
+        entries = {}
         for (addr, container) in items:
-            entries.append(StateEntry(address=addr,
-                                      data=container.SerializeToString()))
+            entries.update({addr: container.SerializeToString()})
         result_addresses = state.set(entries)
         if result_addresses:
             for (addr, _) in items:

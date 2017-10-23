@@ -16,8 +16,9 @@
 import unittest
 from unittest.mock import Mock
 
+from collections import OrderedDict
+
 from sawtooth_sdk.processor.context import Context
-from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.messaging.future import Future
 from sawtooth_sdk.messaging.future import FutureResult
 
@@ -55,8 +56,11 @@ class ContextTest(unittest.TestCase):
         if protobuf:
             return [Entry(address=a, data=d)
                     for a, d in zip(self.addresses, self.data)]
-        return [StateEntry(address=a, data=d)
-                for a, d in zip(self.addresses, self.data)]
+
+        entries = OrderedDict()
+        for a, d in zip(self.addresses, self.data):
+            entries[a] = d
+        return entries
 
     def test_state_get(self):
         """Tests that State gets addresses correctly."""
