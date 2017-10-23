@@ -80,8 +80,8 @@ def do_keygen(args):
             raise CliException(
                 'files exist, rerun with --force to overwrite existing files')
 
-    privkey = signing.generate_privkey()
-    public_key = signing.generate_public_key(privkey)
+    private_key = signing.generate_private_key()
+    public_key = signing.generate_public_key(private_key)
 
     try:
         priv_exists = os.path.exists(priv_filename)
@@ -91,7 +91,7 @@ def do_keygen(args):
                     print('overwriting file: {}'.format(priv_filename))
                 else:
                     print('writing file: {}'.format(priv_filename))
-            priv_fd.write(privkey)
+            priv_fd.write(private_key)
             priv_fd.write('\n')
 
         pub_exists = os.path.exists(pub_filename)

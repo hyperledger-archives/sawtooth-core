@@ -40,8 +40,8 @@ func GenPrivKey() []byte {
 
 // GenPubKey generates a new public key from a given private key and returns it
 // using the 33 byte compressed format
-func GenPubKey(privkey []byte) []byte {
-	_, pub := ellcurv.PrivKeyFromBytes(ellcurv.S256(), privkey)
+func GenPubKey(private_key []byte) []byte {
+	_, pub := ellcurv.PrivKeyFromBytes(ellcurv.S256(), private_key)
 	return pub.SerializeCompressed()
 }
 
@@ -51,8 +51,8 @@ func GenPubKey(privkey []byte) []byte {
 // A sha256 hash of the data is first calculated and this is what is actually
 // signed. Returns the signature as bytes using the compact serialization
 // (which is just (r, s)).
-func Sign(data, privkey []byte) []byte {
-	priv, _ := ellcurv.PrivKeyFromBytes(ellcurv.S256(), privkey)
+func Sign(data, private_key []byte) []byte {
+	priv, _ := ellcurv.PrivKeyFromBytes(ellcurv.S256(), private_key)
 
 	hash := SHA256(data)
 

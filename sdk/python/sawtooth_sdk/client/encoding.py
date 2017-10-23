@@ -69,7 +69,7 @@ class TransactionEncoder(object):
                  outputs=None):
         self._private_key = private_key
         self._public_key = generate_public_key(
-            private_key, privkey_format='bytes')
+            private_key, private_key_format='bytes')
 
         self.payload_encoder = payload_encoder
 
@@ -150,7 +150,7 @@ class TransactionEncoder(object):
             header=header_bytes,
             header_signature=sign(header_bytes,
                                   self._private_key,
-                                  privkey_format='bytes'),
+                                  private_key_format='bytes'),
             payload=payload)
 
     def encode(self, transactions):
@@ -229,7 +229,7 @@ class BatchEncoder(object):
     def __init__(self, private_key):
         self._private_key = private_key
         self._public_key = generate_public_key(
-            private_key, privkey_format='bytes')
+            private_key, private_key_format='bytes')
 
     def create(self, transactions):
         """Creates and signs a new Batch message with one or more Transactions.
@@ -259,7 +259,7 @@ class BatchEncoder(object):
             header=header_bytes,
             header_signature=sign(header_bytes,
                                   self._private_key,
-                                  privkey_format='bytes'),
+                                  private_key_format='bytes'),
             transactions=transactions)
 
     def encode(self, batches):

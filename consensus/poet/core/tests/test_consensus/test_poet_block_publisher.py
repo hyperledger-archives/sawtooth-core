@@ -110,7 +110,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
-            identity_signing_key=signing.generate_privkey())
+            identity_signing_key=signing.generate_private_key())
 
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()
@@ -218,7 +218,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
-            identity_signing_key=signing.generate_privkey())
+            identity_signing_key=signing.generate_private_key())
 
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()
@@ -342,7 +342,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
-            identity_signing_key=signing.generate_privkey())
+            identity_signing_key=signing.generate_private_key())
 
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()
@@ -456,7 +456,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
-            identity_signing_key=signing.generate_privkey())
+            identity_signing_key=signing.generate_private_key())
 
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()
@@ -566,7 +566,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
-            identity_signing_key=signing.generate_privkey())
+            identity_signing_key=signing.generate_private_key())
 
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()
@@ -675,7 +675,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
-            identity_signing_key=signing.generate_privkey())
+            identity_signing_key=signing.generate_private_key())
 
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()
@@ -765,7 +765,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
-            identity_signing_key=signing.generate_privkey())
+            identity_signing_key=signing.generate_private_key())
 
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()
@@ -873,7 +873,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         mock_batch_publisher = mock.Mock(
-            identity_signing_key=signing.generate_privkey())
+            identity_signing_key=signing.generate_private_key())
 
         mock_block_cache = mock.MagicMock()
         mock_state_view_factory = mock.Mock()

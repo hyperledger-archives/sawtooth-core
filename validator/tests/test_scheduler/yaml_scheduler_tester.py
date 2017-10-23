@@ -621,7 +621,7 @@ class SchedulerTester(object):
 
     def _create_batches(self):
         test_yaml = self._yaml_from_file()
-        priv_key = signing.generate_privkey()
+        priv_key = signing.generate_private_key()
         pub_key = signing.generate_public_key(priv_key)
 
         batches, batch_results = self._process_batches(

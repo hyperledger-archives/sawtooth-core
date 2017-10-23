@@ -36,7 +36,7 @@ def random_name(length=16):
 
 
 def create_random_private_key():
-    return signing.generate_privkey()
+    return signing.generate_private_key()
 
 
 def create_random_public_key():

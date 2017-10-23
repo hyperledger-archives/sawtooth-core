@@ -44,9 +44,9 @@ def load_identity_signing_key(key_dir, key_name):
     LOGGER.info('Loading signing key: %s', key_path)
     try:
         with open(key_path, 'r') as key_file:
-            privkey = key_file.read().strip()
+            private_key = key_file.read().strip()
     except IOError as e:
         raise LocalConfigurationError(
             "Could not load key file: {}".format(str(e)))
 
-    return privkey
+    return private_key

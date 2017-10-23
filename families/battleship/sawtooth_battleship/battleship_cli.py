@@ -244,12 +244,12 @@ def do_init(args, config):
             if not os.path.exists(os.path.dirname(priv_filename)):
                 os.makedirs(os.path.dirname(priv_filename))
 
-            privkey = signing.generate_privkey()
-            public_key = signing.generate_public_key(privkey)
+            private_key = signing.generate_private_key()
+            public_key = signing.generate_public_key(private_key)
 
             with open(priv_filename, "w") as priv_fd:
                 print("writing file: {}".format(priv_filename))
-                priv_fd.write(privkey)
+                priv_fd.write(private_key)
                 priv_fd.write("\n")
 
             with open(public_key_filename, "w") as public_key_fd:

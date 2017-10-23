@@ -33,34 +33,36 @@ __CTX__ = __CONTEXTBASE__.ctx
 __PK__ = secp256k1.PublicKey(ctx=__CTX__)  # Cache object to use as factory
 
 
-def generate_privkey(privkey_format='wif'):
+def generate_private_key(private_key_format='wif'):
     """ Create a random private key
     Args:
-        privkey_format: the format to export the key ('wif', 'hex', or 'bytes')
+        private_key_format: the format to export the key ('wif', 'hex', or
+        'bytes')
     Returns:
         Serialized private key suitable for subsequent calls to e.g. sign().
     """
-    return _encode_privkey(secp256k1.PrivateKey(ctx=__CTX__), privkey_format)
+    return _encode_private_key(
+        secp256k1.PrivateKey(ctx=__CTX__), private_key_format)
 
 
-def _encode_privkey(privkey, encoding_format='wif'):
+def _encode_private_key(private_key, encoding_format='wif'):
     if encoding_format == 'bytes':
-        return privkey.private_key
+        return private_key.private_key
 
     try:  # check python3
-        priv = int.from_bytes(privkey.private_key, byteorder='big')
+        priv = int.from_bytes(private_key.private_key, byteorder='big')
     except AttributeError:
-        priv = binascii.hexlify(privkey.private_key)
+        priv = binascii.hexlify(private_key.private_key)
 
     encoded = pybitcointools.encode_privkey(priv, encoding_format)
 
     return encoded
 
 
-def _decode_privkey(encoded_privkey, encoding_format='wif'):
+def _decode_private_key(encoded_private_key, encoding_format='wif'):
     """
     Args:
-        encoded_privkey: an encoded private key string
+        encoded_private_key: an encoded private key string
         encoding_format: string indicating format such as 'wif'
 
     Returns:
@@ -68,7 +70,7 @@ def _decode_privkey(encoded_privkey, encoding_format='wif'):
     """
     if encoding_format == 'wif':
         # int to hex string
-        priv = pybitcointools.encode_privkey(encoded_privkey, 'hex')
+        priv = pybitcointools.encode_privkey(encoded_private_key, 'hex')
         # hex string to bytes
         try:  # check python 3
             priv = priv.to_bytes(32, byteorder='big')
@@ -76,27 +78,28 @@ def _decode_privkey(encoded_privkey, encoding_format='wif'):
             priv = binascii.unhexlify(priv)
     elif encoding_format == 'hex':
         try:
-            priv = encoded_privkey.to_bytes(32, byteorder='big')
+            priv = encoded_private_key.to_bytes(32, byteorder='big')
         except AttributeError:
-            priv = binascii.unhexlify(encoded_privkey)
+            priv = binascii.unhexlify(encoded_private_key)
     elif encoding_format == 'bytes':
-        priv = encoded_privkey
+        priv = encoded_private_key
     else:
         raise TypeError("unsupported private key format")
 
     return secp256k1.PrivateKey(priv, ctx=__CTX__)
 
 
-def generate_public_key(privkey, privkey_format='wif'):
+def generate_public_key(private_key, private_key_format='wif'):
     """ Generate the public key based on a given private key
     Args:
-        privkey: a serialized private key string
-        privkey_format: the format of the privkey ('wif', 'hex', or 'bytes')
+        private_key: a serialized private key string
+        private_key_format: the format of the private_key ('wif', 'hex', or
+            'bytes')
     Returns:
         public_key: a serialized public key string
      """
     return _encode_public_key(
-        _decode_privkey(privkey, privkey_format).pubkey, 'hex')
+        _decode_private_key(private_key, private_key_format).pubkey, 'hex')
 
 
 def _encode_public_key(public_key, encoding_format='hex'):
@@ -130,21 +133,22 @@ def generate_identifier(public_key):
     return hashlib.sha256(public_key.encode('utf-8')).hexdigest()
 
 
-def sign(message, privkey, privkey_format='wif'):
+def sign(message, private_key, private_key_format='wif'):
     """ Signs a message using the specified private key
     Args:
         message: Message string
-        privkey: A serialized private key string
-        privkey_format: the format of the privkey ('wif', 'hex', or 'bytes')
+        private_key: A serialized private key string
+        private_key_format: the format of the private_key ('wif', 'hex', or
+            'bytes')
 
     Returns:
         A compact signature (64 byte concatenation of R and S)
     """
-    privkey = _decode_privkey(privkey, privkey_format)
+    private_key = _decode_private_key(private_key, private_key_format)
     if isinstance(message, str):
         message = message.encode('utf-8')
-    sig = privkey.ecdsa_sign(message)
-    sig = privkey.ecdsa_serialize_compact(sig)
+    sig = private_key.ecdsa_sign(message)
+    sig = private_key.ecdsa_serialize_compact(sig)
     try:  # check python3
         sig = sig.hex()
     except AttributeError:

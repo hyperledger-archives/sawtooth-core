@@ -29,7 +29,7 @@ from sawtooth_validator.gossip import structure_verifier
 
 class TestMessageValidation(unittest.TestCase):
     def setUp(self):
-        self.private_key = signing.generate_privkey()
+        self.private_key = signing.generate_private_key()
         self.public_key = signing.generate_public_key(self.private_key)
 
     def broadcast(self, msg):

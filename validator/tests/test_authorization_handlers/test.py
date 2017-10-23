@@ -308,7 +308,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         Test the AuthorizationChallengeSubmitHandler returns an
         AuthorizationChallengeResult.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
         payload = os.urandom(10)
 
@@ -344,7 +344,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the last message
         was not AuthorizaitonChallengeRequest.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
         payload = os.urandom(10)
 
@@ -380,7 +380,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the signature
         is not verified.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
         payload = os.urandom(10)
 
@@ -416,7 +416,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the permission
         verifier does not permit the public_key.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
         payload = os.urandom(10)
 

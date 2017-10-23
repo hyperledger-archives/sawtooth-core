@@ -22,27 +22,27 @@ from sawtooth_signing import secp256k1_signer as signer
 class TestSecp256kSigner(unittest.TestCase):
     def test_basic_ops(self):
         msg = 'this is a message'
-        priv = signer.generate_privkey()
+        priv = signer.generate_private_key()
         pub = signer.generate_public_key(priv)
         sig = signer.sign(msg, priv)
         ver = signer.verify(msg, sig, pub)
         self.assertTrue(ver)
 
-    def test_privkey_serialization(self):
+    def test_private_key_serialization(self):
         # pylint: disable=protected-access
-        priv = signer.generate_privkey()
-        priv2 = signer._encode_privkey(signer._decode_privkey(priv))
+        priv = signer.generate_private_key()
+        priv2 = signer._encode_private_key(signer._decode_private_key(priv))
         self.assertTrue(priv == priv2)
 
-    def test_privkey_deserialization(self):
+    def test_private_key_deserialization(self):
         # pylint: disable=protected-access
         priv = '5KZeUdoHCRXxT3srGfkeXRNWCdn1XjzpJqFdNoehZ9gEEkLMKVD'
-        priv2 = signer._encode_privkey(signer._decode_privkey(priv))
+        priv2 = signer._encode_private_key(signer._decode_private_key(priv))
         self.assertTrue(priv == priv2)
 
     def test_public_key_serialization(self):
         # pylint: disable=protected-access
-        priv = signer.generate_privkey()
+        priv = signer.generate_private_key()
         pub = signer.generate_public_key(priv)
         raw_pub = signer._decode_public_key(pub, 'hex')
         pub2 = signer._encode_public_key(raw_pub, 'hex')
@@ -50,8 +50,8 @@ class TestSecp256kSigner(unittest.TestCase):
 
     def test_invalid_signature(self):
         msg = "This is a message"
-        priv = signer.generate_privkey()
-        priv2 = signer.generate_privkey()
+        priv = signer.generate_private_key()
+        priv2 = signer.generate_private_key()
         sig = signer.sign(msg, priv)
         pub = signer.generate_public_key(priv2)
         ver = signer.verify(msg, sig, pub)

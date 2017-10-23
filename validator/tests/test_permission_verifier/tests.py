@@ -37,7 +37,7 @@ from test_permission_verifier.mocks import make_policy
 
 class TestPermissionVerifier(unittest.TestCase):
     def setUp(self):
-        self.private_key = signing.generate_privkey()
+        self.private_key = signing.generate_private_key()
         self.public_key = signing.generate_public_key(self.private_key)
         self._identity_view_factory = MockIdentityViewFactory()
         self.permissions = {}

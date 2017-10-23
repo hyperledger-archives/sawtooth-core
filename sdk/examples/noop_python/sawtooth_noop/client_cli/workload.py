@@ -65,7 +65,7 @@ class NoopWorkload(Workload):
         self._urls = []
         self._lock = threading.Lock()
         self._delegate = delegate
-        self._private_key = signing.generate_privkey()
+        self._private_key = signing.generate_private_key()
         self._public_key = signing.generate_public_key(self._private_key)
 
     def on_will_start(self):

@@ -104,10 +104,10 @@ class BlockTreeManager(object):
             'sawtooth.consensus.algorithm', 'test_journal.mock_consensus')
 
         self.state_view_factory = MockStateViewFactory(self.state_db)
-        self.signing_key = signing.generate_privkey()
+        self.signing_key = signing.generate_private_key()
         self.public_key = signing.generate_public_key(self.signing_key)
 
-        self.identity_signing_key = signing.generate_privkey()
+        self.identity_signing_key = signing.generate_private_key()
         chain_head = None
         if with_genesis:
             self.genesis_block = self.generate_genesis_block()

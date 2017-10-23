@@ -125,7 +125,7 @@ def generate_word_list(count):
 
 
 def do_generate(args):
-    private_key = signing.generate_privkey()
+    private_key = signing.generate_private_key()
     public_key = signing.generate_public_key(private_key)
 
     words = generate_word_list(args.pool_size)

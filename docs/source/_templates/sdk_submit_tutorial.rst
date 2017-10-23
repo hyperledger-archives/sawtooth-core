@@ -32,9 +32,9 @@ key, and it is fairly simple to generate this using the SDK's *signer* module.
 
 .. code-block::  python
 
-    from sawtooth_signing.secp256k1_signer import generate_privkey
+    from sawtooth_signing.secp256k1_signer import generate_private_key
 
-    private_key = privkey = generate_privkey(privkey_format='bytes')
+    private_key = private_key = generate_private_key(private_key_format='bytes')
 
 
 {% endif %}

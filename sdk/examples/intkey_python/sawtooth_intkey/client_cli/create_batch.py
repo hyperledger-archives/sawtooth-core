@@ -143,7 +143,7 @@ def generate_word_list(count):
 
 
 def do_populate(args, batches, keys):
-    private_key = signing.generate_privkey()
+    private_key = signing.generate_private_key()
     public_key = signing.generate_public_key(private_key)
 
     total_txn_count = 0
@@ -172,7 +172,7 @@ def do_populate(args, batches, keys):
 
 
 def do_generate(args, batches, keys):
-    private_key = signing.generate_privkey()
+    private_key = signing.generate_private_key()
     public_key = signing.generate_public_key(private_key)
 
     start = time.time()
