@@ -39,7 +39,7 @@ class TestGenesisController(unittest.TestCase):
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
-        self._identity_key = signing.generate_privkey()
+        self._identity_key = signing.generate_private_key()
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)

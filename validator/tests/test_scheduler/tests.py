@@ -106,7 +106,7 @@ class TestSchedulers(unittest.TestCase):
 
         """
 
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         transaction_validity = {}
@@ -268,7 +268,7 @@ class TestSchedulers(unittest.TestCase):
              3. Assert that only txn A is run.
         """
 
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         transaction_validity = {}
@@ -381,7 +381,7 @@ class TestSchedulers(unittest.TestCase):
         This test should work for both a serial and parallel scheduler.
         """
 
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         txn, _ = create_transaction(
@@ -441,7 +441,7 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         txn, _ = create_transaction(
@@ -500,7 +500,7 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         # Create a basic transaction and batch.
@@ -610,7 +610,7 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         # 1)
@@ -732,7 +732,7 @@ class TestSchedulers(unittest.TestCase):
                is invalid and consequently has no state hash.
         """
 
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         # 1)
@@ -841,7 +841,7 @@ class TestSerialScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         txns = []
@@ -895,7 +895,7 @@ class TestSerialScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator, and the complete is true in the at the end.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         txns = []
@@ -956,7 +956,7 @@ class TestSerialScheduler(unittest.TestCase):
         since the first Transaction was marked as applied in the previous
         step.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         txns = []
@@ -1017,7 +1017,7 @@ class TestParallelScheduler(unittest.TestCase):
         The result is expected to be a SchedulerError, since adding a batch
         to a finalized scheduler is invalid.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         # Finalize prior to attempting to add a batch.
@@ -1047,7 +1047,7 @@ class TestParallelScheduler(unittest.TestCase):
         transaction without first causing it to be scheduled (by using an
         iterator or calling next_transaction()).
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         txn, _ = create_transaction(
@@ -1079,7 +1079,7 @@ class TestParallelScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         txns = []
@@ -1128,7 +1128,7 @@ class TestParallelScheduler(unittest.TestCase):
 
         Creates one batch with four transactions.
         """
-        private_key = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         public_key = signing.generate_public_key(private_key)
 
         txns = []

@@ -37,19 +37,19 @@ type TransactionParams struct {
 }
 
 type Encoder struct {
-	privkey    []byte
-	public_key string
-	defaults   TransactionParams
+	private_key []byte
+	public_key  string
+	defaults    TransactionParams
 }
 
 // NewTransactionEncoder constructs a new encoder which can be used to generate
 // transactions and batches, and to serialize batches for submitting to the
 // REST API.
-func NewEncoder(privkey []byte, defaults TransactionParams) *Encoder {
+func NewEncoder(private_key []byte, defaults TransactionParams) *Encoder {
 	return &Encoder{
-		privkey:    privkey,
-		public_key: hex.EncodeToString(GenPubKey(privkey)),
-		defaults:   defaults,
+		private_key: private_key,
+		public_key:  hex.EncodeToString(GenPubKey(private_key)),
+		defaults:    defaults,
 	}
 }
 
@@ -112,7 +112,7 @@ func (self *Encoder) NewTransaction(payload []byte, p TransactionParams) *Transa
 	if err != nil {
 		panic(err)
 	}
-	hs := hex.EncodeToString(Sign(hb, self.privkey))
+	hs := hex.EncodeToString(Sign(hb, self.private_key))
 
 	transaction := &transaction_pb2.Transaction{
 		Header:          hb,
@@ -184,7 +184,7 @@ func (self *Encoder) NewBatch(transactions []*Transaction) *Batch {
 		panic(err)
 	}
 
-	hs := hex.EncodeToString(Sign(hb, self.privkey))
+	hs := hex.EncodeToString(Sign(hb, self.private_key))
 
 	batch := &batch_pb2.Batch{
 		Header:          hb,

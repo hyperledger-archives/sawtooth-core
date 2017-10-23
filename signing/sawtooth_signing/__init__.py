@@ -24,7 +24,7 @@
         import sawtooth_signing as signing
 
         msg = 'this is a message'
-        priv = signing.generate_privkey()
+        priv = signing.generate_private_key()
         pub = signing.generate_public_key(priv)
         sig = signing.sign(msg, priv)
         ver = signing.verify(msg, sig, pub)

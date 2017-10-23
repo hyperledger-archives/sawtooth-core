@@ -26,7 +26,7 @@ class TestEnclaveSimulatorWaitTimer(unittest.TestCase):
 
     @classmethod
     def _create_random_key(cls):
-        return signing.generate_privkey()
+        return signing.generate_private_key()
 
     def test_create_wait_timer(self):
         wait_timer = \

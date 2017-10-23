@@ -308,7 +308,7 @@ def show_blocks(block_list):
 class Client(object):
 
     def __init__(self, rest_endpoint):
-        self.priv_key = signer.generate_privkey()
+        self.priv_key = signer.generate_private_key()
         self.pub_key = signer.generate_public_key(self.priv_key)
         self._namespace = hashlib.sha512('intkey'.encode()).hexdigest()[:6]
         self._factory = MessageFactory(
@@ -339,7 +339,7 @@ class Client(object):
 class Admin(object):
 
     def __init__(self, rest_endpoint):
-        self.priv_key = signer.generate_privkey()
+        self.priv_key = signer.generate_private_key()
         self.pub_key = signer.generate_public_key(self.priv_key)
 
         self._priv_key_file = os.path.join("/tmp", uuid4().hex[:20])

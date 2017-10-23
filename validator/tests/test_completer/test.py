@@ -35,7 +35,7 @@ class TestCompleter(unittest.TestCase):
         self.completer = Completer(self.block_store, self.gossip)
         self.completer._on_block_received = self._on_block_received
         self.completer._on_batch_received = self._on_batch_received
-        self.private_key = signing.generate_privkey()
+        self.private_key = signing.generate_private_key()
         self.public_key = signing.generate_public_key(self.private_key)
         self.blocks = []
         self.batches = []

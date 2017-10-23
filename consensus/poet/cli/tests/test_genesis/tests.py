@@ -100,9 +100,9 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         self.assertTrue(poet_public_key in self._store)
 
     def _create_key(self, key_name='validator.priv'):
-        privkey = signing.generate_privkey()
+        private_key = signing.generate_private_key()
         priv_file = os.path.join(self._temp_dir, key_name)
         with open(priv_file, 'w') as priv_fd:
-            priv_fd.write(privkey)
+            priv_fd.write(private_key)
 
-        return signing.generate_public_key(privkey)
+        return signing.generate_public_key(private_key)

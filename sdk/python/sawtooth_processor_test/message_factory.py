@@ -53,7 +53,7 @@ def is_valid_merkle_address(address):
 
 
 def _private():
-    return signing.generate_privkey()
+    return signing.generate_private_key()
 
 
 def _private_to_public(private):
