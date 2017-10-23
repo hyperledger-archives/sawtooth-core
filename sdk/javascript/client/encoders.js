@@ -48,7 +48,7 @@ class TransactionEncoder {
    * @param {string|Buffer} privateKey - 256-bit private key encoded as either
    *      a hex string or binary Buffer.
    * @param {Object} [template={}] - Default values for each Transaction.
-   * @param {string} [template.batcherPubkey] - Hex string encoded public key
+   * @param {string} [template.batcherPublicKey] - Hex string encoded public key
    *     of the batcher, if not the same as the transaction encoder.
    * @param {string[]} [template.dependencies=[]] - Ids of Transactions that
    *     must be committed before Transactions created by encoder (unusual).
@@ -69,7 +69,7 @@ class TransactionEncoder {
     this._payloadEncoder = template.payloadEncoder || (x => x)
 
     // TransactionHeader defaults can be modified after instantiation
-    this.batcherPubkey = template.batcherPubkey || this._publicKey
+    this.batcherPublicKey = template.batcherPublicKey || this._publicKey
     this.dependencies = template.dependencies || []
     this.familyName = template.familyName || ''
     this.familyVersion = template.familyVersion || ''
@@ -88,7 +88,7 @@ class TransactionEncoder {
    *     If no payloadEncoder was set, it must be a binary Buffer.
    * @param {Object} [settings={}] - Values for the header of the Transaction.
    *     Overrides any template values set during encoder instantiation.
-   * @param {string} [settings.batcherPubkey] - Hex string encoded public key
+   * @param {string} [settings.batcherPublicKey] - Hex string encoded public key
    *     of the batcher, if not the same as the transaction encoder.
    * @param {string[]} [settings.dependencies=[]] - Ids of Transactions that
    *     must be committed before this Transaction.
@@ -104,7 +104,7 @@ class TransactionEncoder {
     const payloadSha512 = createHash('sha512').update(payload).digest('hex')
 
     const header = TransactionHeader.encode({
-      batcherPubkey: settings.batcherPubkey || this.batcherPubkey,
+      batcherPublicKey: settings.batcherPublicKey || this.batcherPublicKey,
       dependencies: settings.dependencies || this.dependencies,
       familyName: settings.familyName || this.familyName,
       familyVersion: settings.familyVersion || this.familyVersion,
@@ -112,7 +112,7 @@ class TransactionEncoder {
       nonce: _generateNonce(),
       outputs: settings.outputs || this.outputs,
       payloadSha512: payloadSha512,
-      signerPubkey: this._publicKey
+      signerPublicKey: this._publicKey
     }).finish()
 
     return Transaction.create({
@@ -171,7 +171,7 @@ class BatchEncoder {
    * Creates and signs a new Batch from one or more Transactions.
    *
    * @param {Buffer|str|Transaction|Transaction[]} transactions - Transactions
-   *     to be combined into a single Batch. The `batcher_pubkey` property in
+   *     to be combined into a single Batch. The `batcher_public_key` property in
    *     every Transactions' header must match this BatchEncoder's public key,
    *     or this Batch will be rejected by the validator.
    *
@@ -195,7 +195,7 @@ class BatchEncoder {
     }
 
     const header = BatchHeader.encode({
-      signerPubkey: this._publicKey,
+      signerPublicKey: this._publicKey,
       transactionIds: transactions.map(t => t.headerSignature)
     }).finish()
 

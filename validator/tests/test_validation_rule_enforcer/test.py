@@ -32,20 +32,20 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
         self._validation_rule_enforcer = ValidationRuleEnforcer(
             self._settings_view_factory)
 
-    def _make_block(self, txns_family, signer_pubkey, same_pubkey=True):
+    def _make_block(self, txns_family, signer_public_key, same_public_key=True):
         transactions = []
         for family in txns_family:
             txn_header = TransactionHeader(
                 family_name=family,
-                signer_pubkey=signer_pubkey)
+                signer_public_key=signer_public_key)
             txn = Transaction(header=txn_header.SerializeToString())
             transactions.append(txn)
 
         batch = Batch(transactions=transactions)
-        if same_pubkey:
-            block_header = BlockHeader(signer_pubkey=signer_pubkey)
+        if same_public_key:
+            block_header = BlockHeader(signer_public_key=signer_public_key)
         else:
-            block_header = BlockHeader(signer_pubkey="other")
+            block_header = BlockHeader(signer_public_key="other")
         block = Block(header=block_header.SerializeToString(), batches=[batch])
         return BlockWrapper(block)
 

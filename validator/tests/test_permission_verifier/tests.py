@@ -38,7 +38,7 @@ from test_permission_verifier.mocks import make_policy
 class TestPermissionVerifier(unittest.TestCase):
     def setUp(self):
         self.private_key = signing.generate_privkey()
-        self.public_key = signing.generate_pubkey(self.private_key)
+        self.public_key = signing.generate_public_key(self.private_key)
         self._identity_view_factory = MockIdentityViewFactory()
         self.permissions = {}
         self._identity_cache = IdentityCache(
@@ -68,7 +68,7 @@ class TestPermissionVerifier(unittest.TestCase):
             payload_encode = hashlib.sha512(cbor.dumps(payload)).hexdigest()
 
             header = TransactionHeader(
-                signer_pubkey=self.public_key,
+                signer_public_key=self.public_key,
                 family_name='intkey',
                 family_version='1.0',
                 inputs=[addr],
@@ -76,7 +76,7 @@ class TestPermissionVerifier(unittest.TestCase):
                 dependencies=[],
                 payload_sha512=payload_encode)
 
-            header.batcher_pubkey = self.public_key
+            header.batcher_public_key = self.public_key
 
             header_bytes = header.SerializeToString()
 
@@ -101,7 +101,7 @@ class TestPermissionVerifier(unittest.TestCase):
             txn_list = self._create_transactions(txn_count)
             txn_sig_list = [txn.header_signature for txn in txn_list]
 
-            batch_header = BatchHeader(signer_pubkey=self.public_key)
+            batch_header = BatchHeader(signer_public_key=self.public_key)
             batch_header.transaction_ids.extend(txn_sig_list)
 
             header_bytes = batch_header.SerializeToString()

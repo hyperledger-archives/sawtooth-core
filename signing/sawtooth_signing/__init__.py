@@ -25,7 +25,7 @@
 
         msg = 'this is a message'
         priv = signing.generate_privkey()
-        pub = signing.generate_pubkey(priv)
+        pub = signing.generate_public_key(priv)
         sig = signing.sign(msg, priv)
         ver = signing.verify(msg, sig, pub)
 

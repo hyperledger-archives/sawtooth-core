@@ -71,14 +71,14 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
     addr = make_intkey_address(name)
 
     header = transaction_pb2.TransactionHeader(
-        signer_pubkey=public_key,
+        signer_public_key=public_key,
         family_name='intkey',
         family_version='1.0',
         inputs=[addr],
         outputs=[addr],
         dependencies=[],
         payload_sha512=payload.sha512(),
-        batcher_pubkey=public_key,
+        batcher_public_key=public_key,
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
@@ -97,7 +97,7 @@ def create_batch(transactions, private_key, public_key):
     transaction_ids = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer_pubkey=public_key,
+        signer_public_key=public_key,
         transaction_ids=transaction_ids)
 
     header_bytes = header.SerializeToString()
@@ -126,7 +126,7 @@ def generate_word_list(count):
 
 def do_populate(args):
     private_key = signing.generate_privkey()
-    public_key = signing.generate_pubkey(private_key)
+    public_key = signing.generate_public_key(private_key)
 
     words = generate_word_list(args.pool_size)
 

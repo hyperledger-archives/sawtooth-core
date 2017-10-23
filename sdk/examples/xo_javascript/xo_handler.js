@@ -276,7 +276,7 @@ class XOHandler extends TransactionHandler {
       .catch(_toInternalError)
       .then((update) => {
         let header = TransactionHeader.decode(transactionProcessRequest.header)
-        let player = header.signerPubkey
+        let player = header.signerPublicKey
         if (!update.name) {
           throw new InvalidTransaction('Name is required')
         }

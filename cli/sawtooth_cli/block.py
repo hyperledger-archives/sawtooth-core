@@ -80,7 +80,7 @@ def do_block(args):
                 block['header_signature'],
                 len(batches),
                 len(txns),
-                block['header']['signer_pubkey'])
+                block['header']['signer_public_key'])
 
         if args.format == 'default':
             fmt.print_terminal_table(headers, blocks, parse_block_row)

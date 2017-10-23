@@ -68,10 +68,10 @@ func Sign(data, privkey []byte) []byte {
 // created from the given data using the associated private key. A sha256 hash
 // of the data is calculated first and this is what is actually used to verify
 // the signature.
-func Verify(data, signature, pubkey []byte) bool {
+func Verify(data, signature, public_key []byte) bool {
 	sig := deserializeCompact(signature)
 	hash := SHA256(data)
-	pub, err := ellcurv.ParsePubKey(pubkey, ellcurv.S256())
+	pub, err := ellcurv.ParsePubKey(public_key, ellcurv.S256())
 	if err != nil {
 		panic(err.Error())
 	}

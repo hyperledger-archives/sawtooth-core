@@ -249,7 +249,7 @@ class Validator(object):
             max_incoming_connections=100,
             max_future_callback_workers=10,
             authorize=True,
-            public_key=signing.generate_pubkey(identity_signing_key),
+            public_key=signing.generate_public_key(identity_signing_key),
             priv_key=identity_signing_key,
             roles=roles,
             metrics_registry=metrics_registry)

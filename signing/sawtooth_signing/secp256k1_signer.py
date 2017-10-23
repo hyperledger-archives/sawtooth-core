@@ -87,47 +87,47 @@ def _decode_privkey(encoded_privkey, encoding_format='wif'):
     return secp256k1.PrivateKey(priv, ctx=__CTX__)
 
 
-def generate_pubkey(privkey, privkey_format='wif'):
+def generate_public_key(privkey, privkey_format='wif'):
     """ Generate the public key based on a given private key
     Args:
         privkey: a serialized private key string
         privkey_format: the format of the privkey ('wif', 'hex', or 'bytes')
     Returns:
-        pubkey: a serialized public key string
+        public_key: a serialized public key string
      """
-    return _encode_pubkey(
+    return _encode_public_key(
         _decode_privkey(privkey, privkey_format).pubkey, 'hex')
 
 
-def _encode_pubkey(pubkey, encoding_format='hex'):
+def _encode_public_key(public_key, encoding_format='hex'):
     with warnings.catch_warnings() as enc:  # squelch secp256k1 warning
         warnings.simplefilter('ignore')
-        enc = pubkey.serialize()
+        enc = public_key.serialize()
     if encoding_format == 'hex':
         enc = binascii.hexlify(enc).decode()
     elif encoding_format != 'bytes':
-        raise ValueError("Unrecognized pubkey encoding format")
+        raise ValueError("Unrecognized public_key encoding format")
     return enc
 
 
-def _decode_pubkey(serialized_pubkey, encoding_format='hex'):
+def _decode_public_key(serialized_public_key, encoding_format='hex'):
     if encoding_format == 'hex':
-        serialized_pubkey = binascii.unhexlify(serialized_pubkey)
+        serialized_public_key = binascii.unhexlify(serialized_public_key)
     elif encoding_format != 'bytes':
-        raise ValueError("Unrecognized pubkey encoding format")
-    pub = __PK__.deserialize(serialized_pubkey)
+        raise ValueError("Unrecognized public_key encoding format")
+    pub = __PK__.deserialize(serialized_public_key)
     return secp256k1.PublicKey(pub, ctx=__CTX__)
 
 
-def generate_identifier(pubkey):
+def generate_identifier(public_key):
     """ Generate an identifier based on the public key
     Args:
-        pubkey: a serialized public key string
+        public_key: a serialized public key string
 
     Returns:
         Returns a 32 byte identifier
     """
-    return hashlib.sha256(pubkey.encode('utf-8')).hexdigest()
+    return hashlib.sha256(public_key.encode('utf-8')).hexdigest()
 
 
 def sign(message, privkey, privkey_format='wif'):
@@ -152,19 +152,19 @@ def sign(message, privkey, privkey_format='wif'):
     return sig
 
 
-def verify(message, signature, pubkey):
-    """ Verification of signature based on message and pubkey
+def verify(message, signature, public_key):
+    """ Verification of signature based on message and public_key
     Args:
         message: Message string
         signature: A 64 byte compact signature
-        pubkey: A serialized Public Key string
+        public_key: A serialized Public Key string
 
     Returns:
         boolean True / False
     """
     verified = False
     try:
-        pubkey = _decode_pubkey(pubkey, 'hex')
+        public_key = _decode_public_key(public_key, 'hex')
         if isinstance(message, str):
             message = message.encode('utf-8')
         try:  # check python3
@@ -172,8 +172,8 @@ def verify(message, signature, pubkey):
         except (ValueError, AttributeError):
             signature = binascii.unhexlify(signature)
 
-        sig = pubkey.ecdsa_deserialize_compact(signature)
-        verified = pubkey.ecdsa_verify(message, sig)
+        sig = public_key.ecdsa_deserialize_compact(signature)
+        verified = public_key.ecdsa_verify(message, sig)
 
     # Fail Securely (even if it's not pythonic)
     # pylint: disable=broad-except
@@ -182,10 +182,10 @@ def verify(message, signature, pubkey):
     return verified
 
 
-def recover_pubkey(message, signature):
+def recover_public_key(message, signature):
     """
     No support yet for recoverable signatures.
     """
 
     raise NotImplementedError("Public key recovery is not yet supported.")
-    # return pubkey
+    # return public_key

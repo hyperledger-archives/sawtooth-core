@@ -58,7 +58,7 @@ class _PoetEnclaveSimulator(object):
     # The private key we generate to sign the certificate ID when creating
     # the random wait timeout value
     _seal_private_key = signing.generate_privkey()
-    _seal_public_key = signing.generate_pubkey(_seal_private_key)
+    _seal_public_key = signing.generate_public_key(_seal_private_key)
 
     # The basename and enclave measurement values we will put into and verify
     # are in the enclave quote in the attestation verification report.
@@ -177,7 +177,7 @@ class _PoetEnclaveSimulator(object):
             # Counter ID is a placeholder for a hardware counter in a TEE.
             poet_private_key = signing.generate_privkey()
             poet_public_key = \
-                signing.generate_pubkey(poet_private_key)
+                signing.generate_public_key(poet_private_key)
             counter_id = None
 
             # Simulate sealing (encrypting) the signup data.

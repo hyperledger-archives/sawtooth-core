@@ -68,7 +68,7 @@ func ecrecoverFunc(appState AppState, caller *Account, input []byte, gas *int64)
 	v := byte(input[32] - 27) // ignore input[33:64], v is small.
 	sig := append(input[64:], v)
 
-	recovered, err := secp256k1.RecoverPubkey(hash, sig)
+	recovered, err := secp256k1.RecoverPublicKey(hash, sig)
 	if err != nil {
 		return nil, err
 	}

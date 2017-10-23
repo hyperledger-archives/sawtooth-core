@@ -309,7 +309,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationChallengeResult.
         """
         private_key = signing.generate_privkey()
-        public_key = signing.generate_pubkey(private_key)
+        public_key = signing.generate_public_key(private_key)
         payload = os.urandom(10)
 
         signature = signing.sign(payload, private_key)
@@ -345,7 +345,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         was not AuthorizaitonChallengeRequest.
         """
         private_key = signing.generate_privkey()
-        public_key = signing.generate_pubkey(private_key)
+        public_key = signing.generate_public_key(private_key)
         payload = os.urandom(10)
 
         signature = signing.sign(payload, private_key)
@@ -381,7 +381,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         is not verified.
         """
         private_key = signing.generate_privkey()
-        public_key = signing.generate_pubkey(private_key)
+        public_key = signing.generate_public_key(private_key)
         payload = os.urandom(10)
 
         signature = signing.sign(payload, private_key)
@@ -417,7 +417,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         verifier does not permit the public_key.
         """
         private_key = signing.generate_privkey()
-        public_key = signing.generate_pubkey(private_key)
+        public_key = signing.generate_public_key(private_key)
         payload = os.urandom(10)
 
         signature = signing.sign(payload, private_key)

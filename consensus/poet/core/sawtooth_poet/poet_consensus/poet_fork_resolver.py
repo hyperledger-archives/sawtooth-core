@@ -258,7 +258,7 @@ class PoetForkResolver(ForkResolverInterface):
                 # fork head
                 validator_info = \
                     validator_registry_view.get_validator_info(
-                        new_fork_head.header.signer_pubkey)
+                        new_fork_head.header.signer_public_key)
 
                 # Get the consensus state for the new fork head's previous
                 # block, let the consensus state update itself appropriately
@@ -293,8 +293,8 @@ class PoetForkResolver(ForkResolverInterface):
                 LOGGER.error(
                     'New fork head claimed by validator not in validator '
                     'registry: %s...%s',
-                    new_fork_head.header.signer_pubkey[:8],
-                    new_fork_head.header.signer_pubkey[-8:])
+                    new_fork_head.header.signer_public_key[:8],
+                    new_fork_head.header.signer_public_key[-8:])
                 chosen_fork_head = cur_fork_head
 
         return chosen_fork_head == new_fork_head

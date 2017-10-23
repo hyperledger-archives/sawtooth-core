@@ -48,14 +48,14 @@ def create_noop_transaction(private_key, public_key):
     payload = NoopPayload()
 
     header = transaction_pb2.TransactionHeader(
-        signer_pubkey=public_key,
+        signer_public_key=public_key,
         family_name='noop',
         family_version='1.0',
         inputs=[],
         outputs=[],
         dependencies=[],
         payload_sha512=payload.sha512(),
-        batcher_pubkey=public_key,
+        batcher_public_key=public_key,
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
@@ -74,7 +74,7 @@ def create_batch(transactions, private_key, public_key):
     transaction_signatures = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer_pubkey=public_key,
+        signer_public_key=public_key,
         transaction_ids=transaction_signatures)
 
     header_bytes = header.SerializeToString()

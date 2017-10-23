@@ -432,7 +432,7 @@ shown):
 
     batches:
   - header:
-      signer_pubkey: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
+      signer_public_key: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
       transaction_ids:
       - c498c916da09450597053ada1938858a11d94e2ed5c18f92cd7d34b865af646144d180bdc121a48eb753b4abd326baa3ea26ee8a29b07119052320370d24ab84
       - c68de164421bbcfcc9ea60b725bae289aecd02ddde6f520e6e85b3227337e2971e89bbff468bdebe408e0facc343c612a32db98e5ac4da2296a7acf4033073cd
@@ -440,7 +440,7 @@ shown):
     header_signature: 2ff874edfa80a8e6b718e7d10e91970150fcc3fcfd46d38eb18f356e7a733baa40d9e816247985d7ea7ef2492c09cd9c1830267471c6e35dca0d19f5c6d2b61e
     transactions:
     - header:
-        batcher_pubkey: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
+        batcher_public_key: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
         dependencies:
         - 19ad647bd292c980e00f05eed6078b471ca2d603b842bc4eaecf301d61f15c0d3705a4ec8d915ceb646f35d443da43569f58c906faf3713853fe638c7a0ea410
         family_name: intkey
@@ -451,7 +451,7 @@ shown):
         outputs:
         - 1cf126c15b04cb20206d45c4d0e432d036420401dbd90f064683399fae55b99af1a543f7de79cfafa4f220a22fa248f8346fb1ad0343fcf8d7708565ebb8a3deaac09d
         payload_sha512: 942a09c0254c4a5712ffd152dc6218fc5453451726d935ac1ba67de93147b5e7be605da7ab91245f48029b41f493a1cc8dfc45bb090ac97420580eb1bdded01f
-        signer_pubkey: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
+        signer_public_key: 0380be3421629849b1d03af520d7fa2cdc24c2d2611771ddf946ef3aaae216be84
       header_signature: c498c916da09450597053ada1938858a11d94e2ed5c18f92cd7d34b865af646144d180bdc121a48eb753b4abd326baa3ea26ee8a29b07119052320370d24ab84
       payload: o2ROYW1lZnFrbGR1emVWYWx1ZQFkVmVyYmNpbmM=
 

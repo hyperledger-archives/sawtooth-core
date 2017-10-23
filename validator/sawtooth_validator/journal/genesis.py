@@ -76,7 +76,7 @@ class GenesisController(object):
         self._state_view_factory = state_view_factory
         self._identity_priv_key = identity_key
         self._identity_public_key = \
-            signing.generate_pubkey(self._identity_priv_key)
+            signing.generate_public_key(self._identity_priv_key)
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._chain_id_manager = chain_id_manager
@@ -261,7 +261,7 @@ class GenesisController(object):
         genesis_header = block_pb2.BlockHeader(
             block_num=0,
             previous_block_id=NULL_BLOCK_IDENTIFIER,
-            signer_pubkey=self._identity_public_key)
+            signer_public_key=self._identity_public_key)
 
         return BlockBuilder(genesis_header)
 

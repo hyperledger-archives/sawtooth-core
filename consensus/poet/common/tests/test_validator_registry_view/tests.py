@@ -34,7 +34,7 @@ class TestValidatorRegistryView(unittest.TestCase):
             to_address('my_id'): ValidatorInfo(
                 name='my_validator',
                 id='my_id',
-                signup_info=SignUpInfo(poet_public_key='my_pubkey',
+                signup_info=SignUpInfo(poet_public_key='my_public_key',
                                        proof_data='beleive me',
                                        anti_sybil_id='no sybil'),
                 transaction_id="signature"
@@ -46,7 +46,7 @@ class TestValidatorRegistryView(unittest.TestCase):
         self.assertEqual('my_id', info.id)
         self.assertEqual('my_validator', info.name)
         self.assertEqual("signature", info.transaction_id)
-        self.assertEqual('my_pubkey', info.signup_info.poet_public_key)
+        self.assertEqual('my_public_key', info.signup_info.poet_public_key)
         self.assertEqual('beleive me', info.signup_info.proof_data)
         self.assertEqual('no sybil', info.signup_info.anti_sybil_id)
 
@@ -69,7 +69,7 @@ class TestValidatorRegistryView(unittest.TestCase):
             to_address('my_id'): ValidatorInfo(
                 name='my_validator',
                 id='my_id',
-                signup_info=SignUpInfo(poet_public_key='my_pubkey',
+                signup_info=SignUpInfo(poet_public_key='my_public_key',
                                        proof_data='beleive me',
                                        anti_sybil_id='no sybil'),
                 transaction_id="signature"
@@ -99,7 +99,7 @@ class TestValidatorRegistryView(unittest.TestCase):
             to_address('my_id'): ValidatorInfo(
                 name='my_validator',
                 id='my_id',
-                signup_info=SignUpInfo(poet_public_key='my_pubkey',
+                signup_info=SignUpInfo(poet_public_key='my_public_key',
                                        proof_data='beleive me',
                                        anti_sybil_id='no sybil'),
                 transaction_id="signature"
@@ -107,7 +107,7 @@ class TestValidatorRegistryView(unittest.TestCase):
             to_address('another_id'): ValidatorInfo(
                 name='your_validator',
                 id='another_id',
-                signup_info=SignUpInfo(poet_public_key='your_pubkey',
+                signup_info=SignUpInfo(poet_public_key='your_public_key',
                                        proof_data='you betcha',
                                        anti_sybil_id='poor sybil'),
                 transaction_id="signature"

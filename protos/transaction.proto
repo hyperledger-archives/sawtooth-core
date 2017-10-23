@@ -21,7 +21,7 @@ option go_package = "transaction_pb2";
 
 message TransactionHeader {
     // Public key for the client who added this transaction to a batch
-    string batcher_pubkey = 1;
+    string batcher_public_key = 1;
 
     // A list of transaction signatures that describe the transactions that
     // must be processed before this transaction can be valid
@@ -51,7 +51,7 @@ message TransactionHeader {
     string payload_sha512 = 9;
 
     // Public key for the client that signed the TransactionHeader
-    string signer_pubkey = 10;
+    string signer_public_key = 10;
 }
 
 message Transaction {

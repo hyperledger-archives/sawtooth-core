@@ -23,7 +23,7 @@ class TestSecp256kSigner(unittest.TestCase):
     def test_basic_ops(self):
         msg = 'this is a message'
         priv = signer.generate_privkey()
-        pub = signer.generate_pubkey(priv)
+        pub = signer.generate_public_key(priv)
         sig = signer.sign(msg, priv)
         ver = signer.verify(msg, sig, pub)
         self.assertTrue(ver)
@@ -40,12 +40,12 @@ class TestSecp256kSigner(unittest.TestCase):
         priv2 = signer._encode_privkey(signer._decode_privkey(priv))
         self.assertTrue(priv == priv2)
 
-    def test_pubkey_serialization(self):
+    def test_public_key_serialization(self):
         # pylint: disable=protected-access
         priv = signer.generate_privkey()
-        pub = signer.generate_pubkey(priv)
-        raw_pub = signer._decode_pubkey(pub, 'hex')
-        pub2 = signer._encode_pubkey(raw_pub, 'hex')
+        pub = signer.generate_public_key(priv)
+        raw_pub = signer._decode_public_key(pub, 'hex')
+        pub2 = signer._encode_public_key(raw_pub, 'hex')
         self.assertTrue(str(pub) == str(pub2))
 
     def test_invalid_signature(self):
@@ -53,7 +53,7 @@ class TestSecp256kSigner(unittest.TestCase):
         priv = signer.generate_privkey()
         priv2 = signer.generate_privkey()
         sig = signer.sign(msg, priv)
-        pub = signer.generate_pubkey(priv2)
+        pub = signer.generate_public_key(priv2)
         ver = signer.verify(msg, sig, pub)
         self.assertFalse(ver)
 

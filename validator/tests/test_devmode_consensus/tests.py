@@ -33,8 +33,8 @@ class TestCheckPublishBlock(unittest.TestCase):
     def __init__(self, test_name):
         super().__init__(test_name)
 
-    def create_block_header(self, signer_pubkey=None):
-        return BlockHeader(signer_pubkey=signer_pubkey)
+    def create_block_header(self, signer_public_key=None):
+        return BlockHeader(signer_public_key=signer_public_key)
 
     def create_state_view_factory(self, values):
         state_db = {}

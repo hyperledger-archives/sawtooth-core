@@ -46,7 +46,7 @@ def is_valid_block(block):
 
     if not signing.verify(block.header,
                           block.header_signature,
-                          header.signer_pubkey):
+                          header.signer_public_key):
         LOGGER.debug("block failed signature validation: %s",
                      block.header_signature)
         return False
@@ -66,7 +66,7 @@ def is_valid_batch(batch):
 
     if not signing.verify(batch.header,
                           batch.header_signature,
-                          header.signer_pubkey):
+                          header.signer_public_key):
         LOGGER.debug("batch failed signature validation: %s",
                      batch.header_signature)
         return False
@@ -78,9 +78,9 @@ def is_valid_batch(batch):
 
         txn_header = TransactionHeader()
         txn_header.ParseFromString(txn.header)
-        if txn_header.batcher_pubkey != header.signer_pubkey:
-            LOGGER.debug("txn batcher pubkey does not match signer"
-                         "pubkey for batch: %s txn: %s",
+        if txn_header.batcher_public_key != header.signer_public_key:
+            LOGGER.debug("txn batcher public_key does not match signer"
+                         "public_key for batch: %s txn: %s",
                          batch.header_signature,
                          txn.header_signature)
             return False
@@ -95,7 +95,7 @@ def is_valid_transaction(txn):
 
     if not signing.verify(txn.header,
                           txn.header_signature,
-                          header.signer_pubkey):
+                          header.signer_public_key):
         LOGGER.debug("transaction signature invalid for txn: %s",
                      txn.header_signature)
         return False

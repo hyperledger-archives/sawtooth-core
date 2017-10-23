@@ -69,7 +69,7 @@ class SethRpcTest(unittest.TestCase):
         cls.txn_id = "c" * 64
         cls.gas = 456
         # account values
-        cls.pubkey = "036d7bb6ca0fd581eb037e91042320af97508003264f08545a9db134df215f373e"
+        cls.public_key = "036d7bb6ca0fd581eb037e91042320af97508003264f08545a9db134df215f373e"
         cls.account_address = "434d46456b6973a678b77382fca0252629f4389f"
         cls.contract_address = "f" * 20 * 2
         cls.contract_address_b = bytes([0xff] * 20)
@@ -1217,7 +1217,7 @@ class SethRpcTest(unittest.TestCase):
             transaction = Transaction(
                 header=TransactionHeader(
                     family_name="seth",
-                    signer_pubkey=self.pubkey,
+                    signer_public_key=self.public_key,
                 ).SerializeToString(),
                 header_signature=self.txn_id,
                 payload=SethTransaction(
@@ -1285,12 +1285,12 @@ class SethRpcTest(unittest.TestCase):
         batch = request.batches[0]
         batch_header = BatchHeader()
         batch_header.ParseFromString(batch.header)
-        self.assertEqual(batch_header.signer_pubkey, self.pubkey)
+        self.assertEqual(batch_header.signer_public_key, self.public_key)
 
         txn = batch.transactions[0]
         txn_header = TransactionHeader()
         txn_header.ParseFromString(txn.header)
-        self.assertEqual(txn_header.signer_pubkey, self.pubkey)
+        self.assertEqual(txn_header.signer_public_key, self.public_key)
         self.assertEqual(txn_header.family_name, "seth")
         self.assertEqual(txn_header.family_version, "1.0")
 
@@ -1309,7 +1309,7 @@ class SethRpcTest(unittest.TestCase):
         nonce = self.nonce
         block_id = self.block_id
         block_num = self.block_num
-        pub_key = self.pubkey
+        pub_key = self.public_key
         to = self.contract_address_b
         init = self.contract_init_b
         data = self.contract_call_b
@@ -1317,7 +1317,7 @@ class SethRpcTest(unittest.TestCase):
             Transaction(
                 header=TransactionHeader(
                     family_name="seth",
-                    signer_pubkey=pub_key,
+                    signer_public_key=pub_key,
                 ).SerializeToString(),
                 header_signature=txn_ids[i],
                 payload=txn.SerializeToString())

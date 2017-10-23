@@ -70,7 +70,7 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *p
 	if err != nil {
 		return err
 	}
-	player := header.GetSignerPubkey()
+	player := header.GetSignerPublicKey()
 
 	// The payload is sent to the transaction processor as bytes (just as it
 	// appears in the transaction constructed by the transactor).  We unpack

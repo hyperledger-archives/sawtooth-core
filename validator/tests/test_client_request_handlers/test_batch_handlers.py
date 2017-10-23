@@ -443,7 +443,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assertFalse(response.batches)
 
     def test_batch_list_sorted_by_nested_key(self):
-        """Verifies batch list requests work sorted by header.signer_pubkey.
+        """Verifies batch list requests work sorted by header.signer_public_key.
 
         Queries the default mock block store with three blocks:
             {header_signature: 'B-2', batches: [{header_signature: 'b-2' ...}] ...}
@@ -459,7 +459,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - the first item has a header_signature of 'b-0'
             - the last item has a header_signature of 'b-2'
         """
-        controls = self.make_sort_controls('header', 'signer_pubkey')
+        controls = self.make_sort_controls('header', 'signer_public_key')
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
@@ -487,7 +487,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - the first item has a header_signature of 'b-0'
             - the last item has a header_signature of 'b-2'
         """
-        controls = self.make_sort_controls('signer_pubkey')
+        controls = self.make_sort_controls('signer_public_key')
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)

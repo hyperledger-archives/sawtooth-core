@@ -237,12 +237,12 @@ def _do_config_proposal_create(args):
     """
     settings = [s.split('=', 1) for s in args.setting]
 
-    pubkey, signing_key = _read_signing_keys(args.key)
+    public_key, signing_key = _read_signing_keys(args.key)
 
-    txns = [_create_propose_txn(pubkey, signing_key, setting)
+    txns = [_create_propose_txn(public_key, signing_key, setting)
             for setting in settings]
 
-    batch = _create_batch(pubkey, signing_key, txns)
+    batch = _create_batch(public_key, signing_key, txns)
 
     batch_list = BatchList(batches=[batch])
 
@@ -313,7 +313,7 @@ def _do_config_proposal_vote(args):
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
-    pubkey, signing_key = _read_signing_keys(args.key)
+    public_key, signing_key = _read_signing_keys(args.key)
     rest_client = RestClient(args.url)
 
     proposals = _get_proposals(rest_client)
@@ -328,17 +328,17 @@ def _do_config_proposal_vote(args):
         raise CliException('No proposal exists with the given id')
 
     for vote_record in proposal.votes:
-        if vote_record.public_key == pubkey:
+        if vote_record.public_key == public_key:
             raise CliException(
                 'A vote has already been recorded with this signing key')
 
     txn = _create_vote_txn(
-        pubkey,
+        public_key,
         signing_key,
         args.proposal_id,
         proposal.proposal.setting,
         args.vote_value)
-    batch = _create_batch(pubkey, signing_key, [txn])
+    batch = _create_batch(public_key, signing_key, [txn])
 
     batch_list = BatchList(batches=[batch])
 
@@ -405,16 +405,17 @@ def _do_config_list(args):
 
 
 def _do_config_genesis(args):
-    pubkey, signing_key = _read_signing_keys(args.key)
+    public_key, signing_key = _read_signing_keys(args.key)
 
-    authorized_keys = args.authorized_key if args.authorized_key else [pubkey]
-    if pubkey not in authorized_keys:
-        authorized_keys.append(pubkey)
+    authorized_keys = args.authorized_key if args.authorized_key else \
+        [public_key]
+    if public_key not in authorized_keys:
+        authorized_keys.append(public_key)
 
     txns = []
 
     txns.append(_create_propose_txn(
-        pubkey, signing_key,
+        public_key, signing_key,
         ('sawtooth.settings.vote.authorized_keys',
          ','.join(authorized_keys))))
 
@@ -428,11 +429,11 @@ def _do_config_genesis(args):
                 'authorized keys')
 
         txns.append(_create_propose_txn(
-            pubkey, signing_key,
+            public_key, signing_key,
             ('sawtooth.settings.vote.approval_threshold',
              str(args.approval_threshold))))
 
-    batch = _create_batch(pubkey, signing_key, txns)
+    batch = _create_batch(public_key, signing_key, txns)
     batch_list = BatchList(batches=[batch])
 
     try:
@@ -490,19 +491,19 @@ def _read_signing_keys(key_filename):
     try:
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
-            pubkey = signing.generate_pubkey(signing_key)
+            public_key = signing.generate_public_key(signing_key)
 
-            return pubkey, signing_key
+            return public_key, signing_key
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))
 
 
-def _create_batch(pubkey, signing_key, transactions):
+def _create_batch(public_key, signing_key, transactions):
     """Creates a batch from a list of transactions and a public key, and signs
     the resulting batch with the given signing key.
 
     Args:
-        pubkey (str): The public key associated with the signing key.
+        public_key (str): The public key associated with the signing key.
         signing_key (str): The private key for signing the batch.
         transactions (list of `Transaction`): The transactions to add to the
             batch.
@@ -511,7 +512,7 @@ def _create_batch(pubkey, signing_key, transactions):
         `Batch`: The constructed and signed batch.
     """
     txn_ids = [txn.header_signature for txn in transactions]
-    batch_header = BatchHeader(signer_pubkey=pubkey,
+    batch_header = BatchHeader(signer_public_key=public_key,
                                transaction_ids=txn_ids).SerializeToString()
 
     return Batch(
@@ -521,7 +522,7 @@ def _create_batch(pubkey, signing_key, transactions):
     )
 
 
-def _create_propose_txn(pubkey, signing_key, setting_key_value):
+def _create_propose_txn(public_key, signing_key, setting_key_value):
     """Creates an individual sawtooth_settings transaction for the given key and
     value.
     """
@@ -534,10 +535,10 @@ def _create_propose_txn(pubkey, signing_key, setting_key_value):
     payload = SettingsPayload(data=proposal.SerializeToString(),
                               action=SettingsPayload.PROPOSE)
 
-    return _make_txn(pubkey, signing_key, setting_key, payload)
+    return _make_txn(public_key, signing_key, setting_key, payload)
 
 
-def _create_vote_txn(pubkey, signing_key,
+def _create_vote_txn(public_key, signing_key,
                      proposal_id, setting_key, vote_value):
     """Creates an individual sawtooth_settings transaction for voting on a
     proposal for a particular setting key.
@@ -551,22 +552,22 @@ def _create_vote_txn(pubkey, signing_key,
     payload = SettingsPayload(data=vote.SerializeToString(),
                               action=SettingsPayload.VOTE)
 
-    return _make_txn(pubkey, signing_key, setting_key, payload)
+    return _make_txn(public_key, signing_key, setting_key, payload)
 
 
-def _make_txn(pubkey, signing_key, setting_key, payload):
+def _make_txn(public_key, signing_key, setting_key, payload):
     """Creates and signs a sawtooth_settings transaction with with a payload.
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
-        signer_pubkey=pubkey,
+        signer_public_key=public_key,
         family_name='sawtooth_settings',
         family_version='1.0',
         inputs=_config_inputs(setting_key),
         outputs=_config_outputs(setting_key),
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
-        batcher_pubkey=pubkey
+        batcher_public_key=public_key
     ).SerializeToString()
 
     signature = signing.sign(header, signing_key)

@@ -134,7 +134,7 @@ class BlockValidator(object):
         self._squash_handler = squash_handler
         self._identity_signing_key = identity_signing_key
         self._identity_public_key = \
-            signing.generate_pubkey(self._identity_signing_key)
+            signing.generate_public_key(self._identity_signing_key)
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._result = {
@@ -575,7 +575,7 @@ class ChainController(object):
         self._squash_handler = squash_handler
         self._identity_signing_key = identity_signing_key
         self._identity_public_key = \
-            signing.generate_pubkey(self._identity_signing_key)
+            signing.generate_public_key(self._identity_signing_key)
         self._data_dir = data_dir
         self._config_dir = config_dir
 

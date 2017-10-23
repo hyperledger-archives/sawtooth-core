@@ -90,7 +90,7 @@ message PagingResponse {
 // Sorting controls to be sent with List requests. More than one can be sent.
 // If so, the first is used, and additional controls are tie-breakers.
 // Attributes:
-//     keys: Nested set of keys to sort by (i.e. ['header', 'signer_pubkey'])
+//     keys: Nested set of keys to sort by (i.e. ['header', 'signer_public_key'])
 //     reverse: Whether or not to reverse the sort (i.e. descending order)
 //     compare_length: Sorts by value length, rather than the property itself
 message SortControls {

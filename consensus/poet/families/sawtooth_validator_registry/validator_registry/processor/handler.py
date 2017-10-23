@@ -443,7 +443,7 @@ class ValidatorRegistryTransactionHandler(object):
     def apply(self, transaction, state):
         txn_header = TransactionHeader()
         txn_header.ParseFromString(transaction.header)
-        pubkey = txn_header.signer_pubkey
+        public_key = txn_header.signer_public_key
 
         val_reg_payload = ValidatorRegistryPayload()
         val_reg_payload.ParseFromString(transaction.payload)
@@ -456,12 +456,12 @@ class ValidatorRegistryTransactionHandler(object):
 
         # Check registering validator matches transaction signer.
         validator_id = val_reg_payload.id
-        if validator_id != pubkey:
+        if validator_id != public_key:
             raise InvalidTransaction(
                 'Signature mismatch on validator registration with validator'
-                ' {} signed by {}'.format(validator_id, pubkey))
+                ' {} signed by {}'.format(validator_id, public_key))
 
-        public_key_hash = hashlib.sha256(pubkey.encode()).hexdigest()
+        public_key_hash = hashlib.sha256(public_key.encode()).hexdigest()
         signup_info = val_reg_payload.signup_info
 
         try:

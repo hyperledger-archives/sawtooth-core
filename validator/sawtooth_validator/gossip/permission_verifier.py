@@ -87,14 +87,14 @@ class PermissionVerifier(object):
         if policy is None:
             allowed = True
         else:
-            allowed = self._allowed(header.signer_pubkey, policy)
+            allowed = self._allowed(header.signer_public_key, policy)
 
         if allowed:
             return self.is_transaction_signer_authorized(
                         batch.transactions,
                         state_root)
         LOGGER.debug("Batch Signer: %s is not permitted.",
-                     header.signer_pubkey)
+                     header.signer_public_key)
         return False
 
     def is_transaction_signer_authorized(self, transactions, state_root):
@@ -148,16 +148,16 @@ class PermissionVerifier(object):
                 family_policy = family_roles[header.family_name]
 
             if family_policy is not None:
-                if not self._allowed(header.signer_pubkey, family_policy):
+                if not self._allowed(header.signer_public_key, family_policy):
                     LOGGER.debug("Transaction Signer: %s is not permitted.",
-                                 header.signer_pubkey)
+                                 header.signer_public_key)
                     return False
             else:
                 if policy is not None:
-                    if not self._allowed(header.signer_pubkey, policy):
+                    if not self._allowed(header.signer_public_key, policy):
                         LOGGER.debug(
                             "Transaction Signer: %s is not permitted.",
-                            header.signer_pubkey)
+                            header.signer_public_key)
                         return False
         return True
 
@@ -190,13 +190,13 @@ class PermissionVerifier(object):
 
         allowed = True
         if policy is not None:
-            allowed = self._allowed(header.signer_pubkey, policy)
+            allowed = self._allowed(header.signer_public_key, policy)
 
         if allowed:
             return self.check_off_chain_transaction_roles(batch.transactions)
 
         LOGGER.debug("Batch Signer: %s is not permitted by local"
-                     " configuration.", header.signer_pubkey)
+                     " configuration.", header.signer_public_key)
         return False
 
     def check_off_chain_transaction_roles(self, transactions):
@@ -231,17 +231,17 @@ class PermissionVerifier(object):
                 family_policy = self._permissions[family_role]
 
             if family_policy is not None:
-                if not self._allowed(header.signer_pubkey, family_policy):
+                if not self._allowed(header.signer_public_key, family_policy):
                     LOGGER.debug("Transaction Signer: %s is not permitted"
                                  "by local configuration.",
-                                 header.signer_pubkey)
+                                 header.signer_public_key)
                     return False
 
             elif policy is not None:
-                if not self._allowed(header.signer_pubkey, policy):
+                if not self._allowed(header.signer_public_key, policy):
                     LOGGER.debug("Transaction Signer: %s is not permitted"
                                  "by local configuration.",
-                                 header.signer_pubkey)
+                                 header.signer_public_key)
                     return False
 
         return True
@@ -413,7 +413,7 @@ class NetworkConsensusPermissionHandler(Handler):
             block.ParseFromString(message.content)
             header = BlockHeader()
             header.ParseFromString(block.header)
-            if header.signer_pubkey == public_key:
+            if header.signer_public_key == public_key:
                 permitted = \
                     self._permission_verifier.check_network_consensus_role(
                         public_key)

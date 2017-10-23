@@ -70,7 +70,7 @@ def create_block(block_num=85,
 
 def create_chain(num=10):
     priv_key = signer.generate_privkey()
-    pub_key = signer.generate_pubkey(priv_key)
+    pub_key = signer.generate_public_key(priv_key)
 
     counter = 1
     previous_block_id = "0000000000000000"

@@ -84,16 +84,16 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, con
 
 	// Construct address of sender. This is the address used by the EVM to
 	// access the account.
-	pubkey, decodeErr := hex.DecodeString(header.GetSignerPubkey())
+	public_key, decodeErr := hex.DecodeString(header.GetSignerPublicKey())
 	if decodeErr != nil {
 		return &processor.InternalError{Msg: fmt.Sprintf(
 			"Couldn't decode public key",
 		)}
 	}
-	sender, err := PubToEvmAddr(pubkey)
+	sender, err := PubToEvmAddr(public_key)
 	if err != nil {
 		return &processor.InvalidTransactionError{Msg: fmt.Sprintf(
-			"Couldn't determine sender from public key: %v", header.GetSignerPubkey(),
+			"Couldn't determine sender from public key: %v", header.GetSignerPublicKey(),
 		)}
 	}
 
@@ -186,7 +186,7 @@ func unpackHeader(headerBytes []byte) (*transaction_pb2.TransactionHeader, error
 		}
 	}
 
-	if header.GetSignerPubkey() == "" {
+	if header.GetSignerPublicKey() == "" {
 		return nil, &processor.InvalidTransactionError{Msg: "Public Key not set"}
 	}
 

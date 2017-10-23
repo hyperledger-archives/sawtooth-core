@@ -438,7 +438,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assertFalse(response.blocks)
 
     def test_block_list_sorted_by_nested_key(self):
-        """Verifies block list requests work sorted by header.signer_pubkey.
+        """Verifies block list requests work sorted by header.signer_public_key.
 
         Queries the default mock block store with three blocks:
             {header: {block_num: 2 ...}, header_signature: 'B-2' ...},
@@ -454,7 +454,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - the first item has a header_signature of 'B-0'
             - the last item has a header_signature of 'B-2'
         """
-        controls = self.make_sort_controls('header', 'signer_pubkey')
+        controls = self.make_sort_controls('header', 'signer_public_key')
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
@@ -482,7 +482,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - the first item has a header_signature of 'B-0'
             - the last item has a header_signature of 'B-2'
         """
-        controls = self.make_sort_controls('signer_pubkey')
+        controls = self.make_sort_controls('signer_public_key')
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
@@ -511,7 +511,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - the last item has a header_signature of 'B-2'
         """
         controls = (self.make_sort_controls('consensus') +
-                    self.make_sort_controls('signer_pubkey'))
+                    self.make_sort_controls('signer_public_key'))
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)

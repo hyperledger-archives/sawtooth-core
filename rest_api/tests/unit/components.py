@@ -355,7 +355,7 @@ class BaseApiTest(AioHTTPTestCase):
         for batch, expected_id in zip(batches, expected_ids):
             self.assertEqual(expected_id, batch['header_signature'])
             self.assertIsInstance(batch['header'], dict)
-            self.assertEqual('pubkey', batch['header']['signer_pubkey'])
+            self.assertEqual('public_key', batch['header']['signer_public_key'])
 
             txns = batch['transactions']
             self.assertIsInstance(txns, list)
@@ -431,7 +431,7 @@ class Mocks(object):
             blk_header = BlockHeader(
                 block_num=len(blocks),
                 previous_block_id=blocks[-1].header_signature if blocks else '',
-                signer_pubkey='pubkey',
+                signer_public_key='public_key',
                 batch_ids=[b.header_signature for b in batches],
                 consensus=b'consensus',
                 state_root_hash='root_hash')
@@ -456,7 +456,7 @@ class Mocks(object):
             txns = cls.make_txns(batch_id)
 
             batch_header = BatchHeader(
-                signer_pubkey='pubkey',
+                signer_public_key='public_key',
                 transaction_ids=[t.header_signature for t in txns])
 
             batch = Batch(
@@ -477,11 +477,11 @@ class Mocks(object):
 
         for txn_id in txn_ids:
             txn_header = TransactionHeader(
-                batcher_pubkey='pubkey',
+                batcher_public_key='public_key',
                 family_name='family',
                 family_version='0.0',
                 nonce=txn_id,
-                signer_pubkey='pubkey')
+                signer_public_key='public_key')
 
             txn = Transaction(
                 header=txn_header.SerializeToString(),

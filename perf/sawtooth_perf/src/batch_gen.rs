@@ -142,10 +142,10 @@ impl<'a> SignedBatchProducer<'a> {
 
         let mut batch_header = BatchHeader::new();
 
-        // set signer_pubkey
+        // set signer_public_key
         let txn_ids = txns.iter().cloned().map(|mut txn| txn.take_header_signature()).collect();
         batch_header.set_transaction_ids(protobuf::RepeatedField::from_vec(txn_ids));
-        batch_header.set_signer_pubkey(self.public_key.clone());
+        batch_header.set_signer_public_key(self.public_key.clone());
 
         let header_bytes = batch_header.write_to_bytes().unwrap();
         let signature = try!(self.signer.sign(&header_bytes).map_err(BatchingError::SigningError));
@@ -332,10 +332,10 @@ mod tests {
     fn make_txn(sig: &str) -> Transaction {
         let mut txn_header = TransactionHeader::new();
 
-        txn_header.set_batcher_pubkey(String::from("some_pubkey"));
+        txn_header.set_batcher_public_key(String::from("some_public_key"));
         txn_header.set_family_name(String::from("test_family"));
         txn_header.set_family_version(String::from("1.0"));
-        txn_header.set_signer_pubkey(String::from("some_pubkey"));
+        txn_header.set_signer_public_key(String::from("some_public_key"));
         txn_header.set_payload_sha512(String::from("some_sha512_hash"));
 
         let mut txn = Transaction::new();

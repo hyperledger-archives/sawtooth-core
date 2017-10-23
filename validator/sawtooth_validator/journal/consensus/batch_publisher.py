@@ -33,7 +33,7 @@ class BatchPublisher(object):
         self._batch_sender = batch_sender
         self._identity_signing_key = identity_signing_key
         self._identity_public_key = \
-            signing.generate_pubkey(self._identity_signing_key)
+            signing.generate_public_key(self._identity_signing_key)
 
     def send(self, transactions):
         """ Package up transactions into a batch and send them to the
@@ -43,7 +43,7 @@ class BatchPublisher(object):
         """
         txn_signatures = [txn.header_signature for txn in transactions]
         header = BatchHeader(
-            signer_pubkey=self._identity_public_key,
+            signer_public_key=self._identity_public_key,
             transaction_ids=txn_signatures
         ).SerializeToString()
 

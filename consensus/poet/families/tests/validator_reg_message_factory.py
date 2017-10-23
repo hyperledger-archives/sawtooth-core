@@ -88,7 +88,7 @@ class ValidatorRegistryMessageFactory(object):
             private=private,
             public=public
         )
-        self.pubkey_hash = hashlib.sha256(public.encode()).hexdigest()
+        self.public_key_hash = hashlib.sha256(public.encode()).hexdigest()
         self._report_private_key = \
             serialization.load_pem_private_key(
                 self.__REPORT_PRIVATE_KEY_PEM__.encode(),
@@ -100,7 +100,7 @@ class ValidatorRegistryMessageFactory(object):
         self._poet_private_key = \
             "1f70fa2518077ad18483f48e77882d11983b537fa5f7cf158684d2c670fe4f1f"
         self.poet_public_key = \
-            signing.generate_pubkey(self._poet_private_key)
+            signing.generate_public_key(self._poet_private_key)
 
     @property
     def public_key(self):
@@ -231,7 +231,7 @@ class ValidatorRegistryMessageFactory(object):
     def create_set_request_validator_info(
             self, validator_name, transaction_id, signup_info=None):
         if signup_info is None:
-            signup_info = self.create_signup_info(self.pubkey_hash, "000")
+            signup_info = self.create_signup_info(self.public_key_hash, "000")
         data = ValidatorInfo(
             name=validator_name,
             id=self.public_key,
@@ -268,14 +268,16 @@ class ValidatorRegistryMessageFactory(object):
     def create_get_response_validator_map(self):
         address = self._key_to_address("validator_map")
         validator_map = ValidatorMap()
-        validator_map.entries.add(key=self.pubkey_hash, value=self.public_key)
+        validator_map.entries.add(key=self.public_key_hash,
+                                  value=self.public_key)
         data = validator_map.SerializeToString()
         return self._factory.create_get_response({address: data})
 
     def create_set_request_validator_map(self):
         address = self._key_to_address("validator_map")
         validator_map = ValidatorMap()
-        validator_map.entries.add(key=self.pubkey_hash, value=self.public_key)
+        validator_map.entries.add(key=self.public_key_hash,
+                                  value=self.public_key)
         data = validator_map.SerializeToString()
         return self._factory.create_set_request({address: data})
 

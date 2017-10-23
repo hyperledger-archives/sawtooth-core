@@ -124,7 +124,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # freshness as we need to account for non-PoET blocks.
         public_key_hash = \
             hashlib.sha256(
-                block_header.signer_pubkey.encode()).hexdigest()
+                block_header.signer_public_key.encode()).hexdigest()
         nonce = SignupInfo.block_id_to_nonce(block_header.previous_block_id)
         signup_info = \
             SignupInfo.create_signup_info(
@@ -136,8 +136,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
         payload = \
             vr_pb.ValidatorRegistryPayload(
                 verb='register',
-                name='validator-{}'.format(block_header.signer_pubkey[:8]),
-                id=block_header.signer_pubkey,
+                name='validator-{}'.format(block_header.signer_public_key[:8]),
+                id=block_header.signer_public_key,
                 signup_info=vr_pb.SignUpInfo(
                     poet_public_key=signup_info.poet_public_key,
                     proof_data=signup_info.proof_data,
@@ -150,7 +150,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # registry transaction.  Seems like a potential for refactoring..
         validator_entry_address = \
             PoetBlockPublisher._validator_registry_namespace + \
-            hashlib.sha256(block_header.signer_pubkey.encode()).hexdigest()
+            hashlib.sha256(block_header.signer_public_key.encode()).hexdigest()
 
         # Create a transaction header and transaction for the validator
         # registry update amd then hand it off to the batch publisher to
@@ -169,14 +169,14 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         header = \
             txn_pb.TransactionHeader(
-                signer_pubkey=block_header.signer_pubkey,
+                signer_public_key=block_header.signer_public_key,
                 family_name='sawtooth_validator_registry',
                 family_version='1.0',
                 inputs=input_addresses,
                 outputs=output_addresses,
                 dependencies=[],
                 payload_sha512=hashlib.sha512(serialized).hexdigest(),
-                batcher_pubkey=block_header.signer_pubkey,
+                batcher_public_key=block_header.signer_public_key,
                 nonce=time.time().hex().encode()).SerializeToString()
         signature = \
             signing.sign(header, self._batch_publisher.identity_signing_key)
@@ -253,7 +253,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         validator_info = None
 
         try:
-            validator_id = block_header.signer_pubkey
+            validator_id = block_header.signer_public_key
             validator_info = \
                 validator_registry_view.get_validator_info(
                     validator_id=validator_id)
@@ -459,7 +459,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
             WaitTimer.create_wait_timer(
                 poet_enclave_module=poet_enclave_module,
                 sealed_signup_data=sealed_signup_data,
-                validator_address=block_header.signer_pubkey,
+                validator_address=block_header.signer_public_key,
                 previous_certificate_id=previous_certificate_id,
                 consensus_state=consensus_state,
                 poet_settings_view=poet_settings_view)

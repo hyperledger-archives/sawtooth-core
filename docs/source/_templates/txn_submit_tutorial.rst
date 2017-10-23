@@ -46,7 +46,7 @@ Transaction.
 
 .. code-block:: python
 
-    public_key_bytes = key_handler.pubkey.serialize()
+    public_key_bytes = key_handler.public_key.serialize()
 
     public_key_hex = public_key_bytes.hex()
 
@@ -111,7 +111,7 @@ the right data into the right keys.
     from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
     txn_header = TransactionHeader(
-        batcher_pubkey=public_key_hex,
+        batcher_public_key=public_key_hex,
         # If we had any dependencies, this is what it might look like:
         # dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
         family_name='intkey',
@@ -120,7 +120,7 @@ the right data into the right keys.
         nonce=str(randint(0, 1000000000)),
         outputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
         payload_sha512=payload_sha512,
-        signer_pubkey=public_key_hex)
+        signer_public_key=public_key_hex)
 
     txn_header_bytes = txn_header.SerializeToString()
 
@@ -231,8 +231,8 @@ must be decoded before being wrapped in a batch. Here we assume you used a
 The process for creating a *BatchHeader* is very similar to a
 TransactionHeader. Compile the *batch.proto* file, and then instantiate the
 appropriate class with the appropriate values. This time, there
-are just two properties: a *signer pubkey*, and a set of *Transaction ids*.
-Just like with a TransactionHeader, the signer pubkey must have been generated
+are just two properties: a *signer public_key*, and a set of *Transaction ids*.
+Just like with a TransactionHeader, the signer public_key must have been generated
 from the private key used to sign the Batch. The Transaction ids are a list of
 the *header signatures* from the Transactions to be batched. They must be in
 the same order as the Transactions themselves.
@@ -242,7 +242,7 @@ the same order as the Transactions themselves.
     from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
 
     batch_header = BatchHeader(
-        signer_pubkey=public_key_hex,
+        signer_public_key=public_key_hex,
         transaction_ids=[txn.header_signature])
 
     batch_header_bytes = batch_header.SerializeToString()
@@ -267,7 +267,7 @@ steps may be handled automatically by the library you are using.
 
 .. note::
 
-   The *batcher pubkey* specified in every TransactionHeader must have been
+   The *batcher public_key* specified in every TransactionHeader must have been
    generated from the private key being used to sign the Batch, or validation
    will fail.
 

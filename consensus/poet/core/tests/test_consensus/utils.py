@@ -40,7 +40,7 @@ def create_random_private_key():
 
 
 def create_random_public_key():
-    return signing.generate_pubkey(create_random_private_key())
+    return signing.generate_public_key(create_random_private_key())
 
 
 def create_random_public_key_hash():

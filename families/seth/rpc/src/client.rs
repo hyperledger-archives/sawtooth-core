@@ -271,7 +271,7 @@ impl<S: MessageSender> ValidatorClient<S> {
                 Error::NoResource})?;
 
         let mut txn_header = TransactionHeader::new();
-        txn_header.set_batcher_pubkey(String::from(account.pubkey()));
+        txn_header.set_batcher_public_key(String::from(account.public_key()));
         txn_header.set_family_name(String::from("seth"));
         txn_header.set_family_version(String::from("1.0"));
         txn_header.set_inputs(protobuf::RepeatedField::from_vec(
@@ -284,7 +284,7 @@ impl<S: MessageSender> ValidatorClient<S> {
         let hash = sha.result_str();
         txn_header.set_payload_sha512(hash);
 
-        txn_header.set_signer_pubkey(String::from(account.pubkey()));
+        txn_header.set_signer_public_key(String::from(account.public_key()));
         let txn_header_bytes = protobuf::Message::write_to_bytes(&txn_header).map_err(|error|
             Error::ParseError(String::from(
                 format!("Error serializing transaction header: {:?}", error))))?;
@@ -297,7 +297,7 @@ impl<S: MessageSender> ValidatorClient<S> {
         txn.set_payload(payload);
 
         let mut batch_header = BatchHeader::new();
-        batch_header.set_signer_pubkey(String::from(account.pubkey()));
+        batch_header.set_signer_public_key(String::from(account.public_key()));
         batch_header.set_transaction_ids(protobuf::RepeatedField::from_vec(
             vec![txn_signature.clone()]));
         let batch_header_bytes = protobuf::Message::write_to_bytes(&batch_header).map_err(|error|

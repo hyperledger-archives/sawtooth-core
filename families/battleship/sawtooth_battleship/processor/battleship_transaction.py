@@ -47,7 +47,7 @@ class BattleshipTransaction:
             raise InvalidTransaction("Invalid payload serialization")
 
         LOGGER.debug("payload recieved by battleship tp: %s", repr(payload))
-        self._signer_pubkey = header.signer_pubkey
+        self._signer_public_key = header.signer_public_key
         self._name = payload['Name'] if 'Name' in payload else None
         self._action = payload['Action'] if 'Action' in payload else None
         self._board = payload['Board'] if 'Board' in payload else None
@@ -68,7 +68,8 @@ class BattleshipTransaction:
         self._size = 10
 
     def __str__(self):
-        oid = "unknown" if not self._signer_pubkey else self._signer_pubkey
+        oid = "unknown" if not self._signer_public_key else \
+            self._signer_public_key
 
         return "{} {} {}".format(oid, self._action, self._name) \
             if self._action == "CREATE" \
@@ -171,12 +172,12 @@ class BattleshipTransaction:
             if state == 'P1-NEXT':
                 player1_firing = True
                 player = store[self._name]['Player1']
-                if player != self._signer_pubkey:
+                if player != self._signer_public_key:
                     raise InvalidTransaction('invalid player 1')
             elif state == 'P2-NEXT':
                 player1_firing = False
                 player = store[self._name]['Player2']
-                if player != self._signer_pubkey:
+                if player != self._signer_public_key:
                     raise InvalidTransaction('invalid player 2')
             else:
                 raise InvalidTransaction(
@@ -247,12 +248,12 @@ class BattleshipTransaction:
                 game['HashedBoard1'] = self._board
                 size = len(self._board)
                 game['TargetBoard1'] = [['?'] * size for _ in range(size)]
-                game['Player1'] = self._signer_pubkey
+                game['Player1'] = self._signer_public_key
             else:
                 game['HashedBoard2'] = self._board
                 size = len(self._board)
                 game['TargetBoard2'] = [['?'] * size for _ in range(size)]
-                game['Player2'] = self._signer_pubkey
+                game['Player2'] = self._signer_public_key
 
                 # Move to 'P1-NEXT' as both boards have been entered.
                 game["State"] = 'P1-NEXT'

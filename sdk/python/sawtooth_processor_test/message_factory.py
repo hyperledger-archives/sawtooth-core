@@ -57,7 +57,7 @@ def _private():
 
 
 def _private_to_public(private):
-    return signing.generate_pubkey(private)
+    return signing.generate_public_key(private)
 
 
 def _sign(content, private):
@@ -128,14 +128,14 @@ class MessageFactory(object):
             nonce = ""
         pub_key = self._public if batcher_pub_key is None else batcher_pub_key
         header = TransactionHeader(
-            signer_pubkey=self._public,
+            signer_public_key=self._public,
             family_name=self.family_name,
             family_version=self.family_version,
             inputs=inputs,
             outputs=outputs,
             dependencies=deps,
             payload_sha512=self.sha512(payload),
-            batcher_pubkey=pub_key,
+            batcher_public_key=pub_key,
             nonce=nonce
         )
         return header.SerializeToString()
@@ -186,7 +186,7 @@ class MessageFactory(object):
             txn_signatures = [txn.signature for txn in transactions]
 
         header = BatchHeader(
-            signer_pubkey=self._public,
+            signer_public_key=self._public,
             transaction_ids=txn_signatures
         ).SerializeToString()
 

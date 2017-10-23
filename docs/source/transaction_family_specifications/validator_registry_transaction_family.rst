@@ -44,7 +44,7 @@ The following protocol buffers definition defines the validator info:
     // The name of the endpoint. It should be a human readable name.
     string name = 2;
 
-    // The validator's public key (currently using signer_pubkey as this is
+    // The validator's public key (currently using signer_public_key as this is
     // stored in the transaction header)
     string id = 3;
 
@@ -156,7 +156,7 @@ protocol buffers code:
     string name = 2;
 
 
-    // Validator's public key (currently using signer_pubkey as this is
+    // Validator's public key (currently using signer_public_key as this is
     // stored in the transaction header)
     string id = 3;
 
@@ -225,7 +225,7 @@ invalid. The current requirement is that the validator_name is 64 characters
 or less.
 
 If the validator_id does not match the transaction signer, the transaction is
-invalid. The validator_id should be the same as the signer_pubkey stored in the
+invalid. The validator_id should be the same as the signer_public_key stored in the
 transaction header.
 
 The signup info needs to be verified next. The signup info, public key hash, and

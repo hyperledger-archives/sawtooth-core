@@ -561,12 +561,12 @@ class BlockListTests(BaseApiTest):
 
         It should send a Protobuf request with:
             - empty paging controls
-            - sort controls with keys of 'header' and 'signer_pubkey'
+            - sort controls with keys of 'header' and 'signer_public_key'
 
         It should send back a JSON response with:
             - a status of 200
             - a head property of '2'
-            - a link ending in '/blocks?head=2&sort=header.signer_pubkey'
+            - a link ending in '/blocks?head=2&sort=header.signer_public_key'
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - and those dicts are full blocks with ids '0', '1', and '2'
@@ -576,16 +576,16 @@ class BlockListTests(BaseApiTest):
         self.connection.preset_response(head_id='2', paging=paging, blocks=blocks)
 
         response = await self.get_assert_200(
-            '/blocks?sort=header.signer_pubkey')
+            '/blocks?sort=header.signer_public_key')
         page_controls = Mocks.make_paging_controls()
-        sorting = Mocks.make_sort_controls('header', 'signer_pubkey')
+        sorting = Mocks.make_sort_controls('header', 'signer_public_key')
         self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response,
-            '/blocks?head=2&sort=header.signer_pubkey')
+            '/blocks?head=2&sort=header.signer_public_key')
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_blocks_well_formed(response['data'], '0', '1', '2')

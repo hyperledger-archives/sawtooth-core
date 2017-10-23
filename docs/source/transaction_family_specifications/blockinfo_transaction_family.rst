@@ -97,7 +97,7 @@ following protobuf message:
 
   	// Public key for the component internal to the validator that
   	// signed the BlockHeader
-  	string signer_pubkey = 3;
+  	string signer_public_key = 3;
 
   	// The signature derived from signing the header
   	string header_signature = 4;

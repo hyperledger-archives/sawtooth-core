@@ -535,7 +535,7 @@ parameters:
         - dot-notation indicates nested keys
         - starting a key with a minus-sign indicates descending order
         - ending a key with `.length` sorts by the length
-        - example: `sort=header.signer_pubkey,-transaction_ids.length`
+        - example: `sort=header.signer_public_key,-transaction_ids.length`
 
 definitions:
   Head:
@@ -615,7 +615,7 @@ definitions:
 
   TransactionHeader:
     properties:
-      batcher_pubkey:
+      batcher_public_key:
         type: string
         example: 02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758
       dependencies:
@@ -645,7 +645,7 @@ definitions:
       payload_sha512:
         type: string
         example: fb6135ef73f4fe77367f9384b3bbbb158f4b8603c9d612157108e5c271868fce2242ee4abd7a29397ba63780c3ccab13783dfd4d9f0167beda03cdb0e37b87f4
-      signer_pubkey:
+      signer_public_key:
         type: string
         example: 038bba5708acc262464c9fe30d3de9e905a9a5fa30cedd151dd9cd09ea26d46d00
   Transaction:
@@ -711,7 +711,7 @@ definitions:
 
   BatchHeader:
     properties:
-      signer_pubkey:
+      signer_public_key:
         type: string
         example: 038bba5708acc262464c9fe30d3de9e905a9a5fa30cedd151dd9cd09ea26d46d00
       transaction_ids:
@@ -745,7 +745,7 @@ definitions:
       previous_block_id:
         type: string
         example: 65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd
-      signer_pubkey:
+      signer_public_key:
         type: string
         example: 02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758
       batch_ids:

@@ -449,8 +449,8 @@ class _SendReceive(object):
                 if self._secured:
                     # Generate ephemeral certificates for this connection
 
-                    pubkey, secretkey = zmq.curve_keypair()
-                    self._socket.curve_publickey = pubkey
+                    public_key, secretkey = zmq.curve_keypair()
+                    self._socket.curve_publickey = public_key
                     self._socket.curve_secretkey = secretkey
                     self._socket.curve_serverkey = self._server_public_key
 
