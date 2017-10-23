@@ -18,7 +18,7 @@ import hashlib
 
 import cbor
 
-from sawtooth_sdk.processor.context import StateEntry
+
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
@@ -143,10 +143,7 @@ def _set_state_data(name, state, context):
 
     encoded = cbor.dumps(state)
 
-    addresses = context.set_state([
-        StateEntry(
-            address=address,
-            data=encoded)])
+    addresses = context.set_state({address: encoded})
 
     if not addresses:
         raise InternalError(

@@ -18,7 +18,7 @@ import hashlib
 import base64
 from functools import lru_cache
 
-from sawtooth_sdk.processor.context import StateEntry
+
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
@@ -264,8 +264,7 @@ def _set_setting_value(context, key, value):
 
     try:
         addresses = list(context.set_state(
-            [StateEntry(address=address,
-                        data=setting.SerializeToString())],
+            {address: setting.SerializeToString()},
             timeout=STATE_TIMEOUT_SEC))
     except FutureTimeoutError:
         LOGGER.warning(

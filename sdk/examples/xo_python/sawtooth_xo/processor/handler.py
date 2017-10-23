@@ -16,7 +16,7 @@
 import hashlib
 import logging
 
-from sawtooth_sdk.processor.context import StateEntry
+
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
@@ -193,12 +193,8 @@ def _store_state_data(
         for name, (board, state, player1, player2) in game_list.items()
     ])).encode()
 
-    addresses = context.set_state([
-        StateEntry(
-            address=_make_xo_address(namespace_prefix, name),
-            data=state_data
-        )
-    ])
+    addresses = context.set_state(
+        {_make_xo_address(namespace_prefix, name): state_data})
 
     if len(addresses) < 1:
         raise InternalError("State Error")

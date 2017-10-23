@@ -17,7 +17,6 @@ import logging
 import time
 
 from sawtooth_sdk.processor.handler import TransactionHandler
-from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
@@ -190,8 +189,8 @@ class BlockInfoTransactionHandler(TransactionHandler):
 
         if sets:
             addresses = set([k for k, _ in sets])
-            addresses_set = set(context.set_state([
-                StateEntry(address=k, data=v) for k, v in sets]))
+            addresses_set = set(context.set_state(
+                {k: v for k, v in sets}))
             if addresses != addresses_set:
                 raise InternalError("Failed to set addresses.")
 
