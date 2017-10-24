@@ -88,11 +88,11 @@ def _config_key_to_address(key):
     return _CONFIG_NAMESPACE + ''.join(addr_parts)
 
 
-def _get_state(state, address, value_type):
+def _get_state(context, address, value_type):
     try:
-        entries_list = state.get([address], timeout=STATE_TIMEOUT_SEC)
+        entries_list = context.get([address], timeout=STATE_TIMEOUT_SEC)
     except FutureTimeoutError:
-        LOGGER.warning('Timeout occurred on state.get([%s])', address)
+        LOGGER.warning('Timeout occurred on context.get([%s])', address)
         raise InternalError('Unable to get {}'.format(address))
 
     value = value_type()
@@ -107,7 +107,7 @@ def _get_address(key):
     return address
 
 
-def _get_validator_state(state, validator_id=None):
+def _get_validator_state(context, validator_id=None):
     if validator_id is None:
         address = _get_address('validator_map')
         value_type = ValidatorMap
@@ -115,46 +115,46 @@ def _get_validator_state(state, validator_id=None):
         address = _get_address(validator_id)
         value_type = ValidatorInfo
 
-    return _get_state(state=state, address=address, value_type=value_type)
+    return _get_state(context=context, address=address, value_type=value_type)
 
 
-def _update_validator_state(state,
+def _update_validator_state(context,
                             validator_id,
                             anti_sybil_id,
                             validator_info):
 
-    validator_map = _get_validator_state(state)
+    validator_map = _get_validator_state(context)
     updated_map = ValidatorMap()
     # Clean out old entries in ValidatorInfo and ValidatorMap
     # Protobuf doesn't offer delete item for ValidatorMap so create a new list
     for entry in validator_map.entries:
         if anti_sybil_id == entry.key:
             address = _get_address(entry.value)
-            _set_data(state, address, b'')
+            _set_data(context, address, b'')
         else:
             updated_map.entries.add(key=entry.key, value=entry.value)
 
     # Add new state entries to ValidatorMap and ValidatorInfo
     updated_map.entries.add(key=anti_sybil_id, value=validator_id)
     address_map = _get_address('validator_map')
-    _set_data(state, address_map, updated_map.SerializeToString())
+    _set_data(context, address_map, updated_map.SerializeToString())
 
     address = _get_address(validator_id)
-    _set_data(state, address, validator_info)
+    _set_data(context, address, validator_info)
     LOGGER.info("Validator id %s was added to the validator_map and set.",
                 validator_id)
 
 
-def _set_data(state, address, data):
+def _set_data(context, address, data):
     try:
-        addresses = list(state.set(
+        addresses = list(context.set(
             [StateEntry(address=address, data=data)],
             timeout=STATE_TIMEOUT_SEC)
         )
 
     except FutureTimeoutError:
         LOGGER.warning(
-            'Timeout occurred on state.set([%s, <value>])', address)
+            'Timeout occurred on context.set([%s, <value>])', address)
         raise InternalError(
             'Failed to save value on address {}'.format(address))
 
@@ -165,10 +165,10 @@ def _set_data(state, address, data):
             'Failed to save value on address {}'.format(address))
 
 
-def _get_config_setting(state, key):
+def _get_config_setting(context, key):
     setting = \
         _get_state(
-            state=state,
+            context=context,
             address=_config_key_to_address(key),
             value_type=Setting)
     for setting_entry in setting.entries:
@@ -198,7 +198,7 @@ class ValidatorRegistryTransactionHandler(object):
                             signup_info,
                             originator_public_key_hash,
                             val_reg_payload,
-                            state):
+                            context):
 
         # Verify the attestation verification report signature
         proof_data_dict = json.loads(signup_info.proof_data)
@@ -215,7 +215,7 @@ class ValidatorRegistryTransactionHandler(object):
         try:
             report_public_key_pem = \
                 _get_config_setting(
-                    state=state,
+                    context=context,
                     key='sawtooth.poet.report_public_key_pem')
             report_public_key = \
                 serialization.load_pem_public_key(
@@ -235,7 +235,7 @@ class ValidatorRegistryTransactionHandler(object):
         try:
             valid_measurements = \
                 _get_config_setting(
-                    state=state,
+                    context=context,
                     key='sawtooth.poet.valid_enclave_measurements')
             valid_enclave_mesaurements = \
                 [bytes.fromhex(m) for m in valid_measurements.split(',')]
@@ -255,7 +255,7 @@ class ValidatorRegistryTransactionHandler(object):
         try:
             valid_basenames = \
                 _get_config_setting(
-                    state=state,
+                    context=context,
                     key='sawtooth.poet.valid_enclave_basenames')
             valid_enclave_basenames = \
                 [bytes.fromhex(b) for b in valid_basenames.split(',')]
@@ -440,7 +440,7 @@ class ValidatorRegistryTransactionHandler(object):
                         nonce,
                         val_reg_payload.signup_info.nonce))
 
-    def apply(self, transaction, state):
+    def apply(self, transaction, context):
         txn_header = TransactionHeader()
         txn_header.ParseFromString(transaction.header)
         public_key = txn_header.signer_public_key
@@ -469,7 +469,7 @@ class ValidatorRegistryTransactionHandler(object):
                 signup_info=signup_info,
                 originator_public_key_hash=public_key_hash,
                 val_reg_payload=val_reg_payload,
-                state=state)
+                context=context)
 
         except ValueError as error:
             raise InvalidTransaction(
@@ -484,7 +484,7 @@ class ValidatorRegistryTransactionHandler(object):
             transaction_id=transaction.signature
         )
 
-        _update_validator_state(state,
+        _update_validator_state(context,
                                 validator_id,
                                 signup_info.anti_sybil_id,
                                 validator_info.SerializeToString())
