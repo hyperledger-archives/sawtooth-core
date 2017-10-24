@@ -25,7 +25,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: settings-tp -vv tcp://validator:4004
+    command: settings-tp -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   intkey-tp-python:
@@ -36,7 +36,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: intkey-tp-python -vv tcp://validator:4004
+    command: intkey-tp-python -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   block-info-tp:
@@ -47,7 +47,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: block-info-tp -vv tcp://validator:4004
+    command: block-info-tp -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:

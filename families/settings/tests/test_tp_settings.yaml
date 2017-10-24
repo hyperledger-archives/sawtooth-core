@@ -23,14 +23,14 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: settings-tp -vv tcp://test-tp-settings:4004
+    command: settings-tp -vv -C tcp://test-tp-settings:4004
     stop_signal: SIGKILL
 
   test-tp-settings:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose: 
+    expose:
       - 4004
     command: nose2-3
         -c /project/sawtooth-core/families/settings/nose2.cfg

@@ -134,7 +134,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python tcp://validator-0:4004
+    command: intkey-tp-python -C tcp://validator-0:4004
     stop_signal: SIGKILL
 
   intkey-tp-1:
@@ -143,7 +143,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python tcp://validator-1:4004
+    command: intkey-tp-python -C tcp://validator-1:4004
     stop_signal: SIGKILL
 
   intkey-tp-2:
@@ -152,7 +152,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python tcp://validator-2:4004
+    command: intkey-tp-python -C tcp://validator-2:4004
     stop_signal: SIGKILL
 
   settings-tp-0:
@@ -161,7 +161,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: settings-tp -v tcp://validator-0:4004
+    command: settings-tp -v -C tcp://validator-0:4004
     stop_signal: SIGKILL
 
   settings-tp-1:
@@ -170,7 +170,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: settings-tp -v tcp://validator-1:4004
+    command: settings-tp -v -C tcp://validator-1:4004
     stop_signal: SIGKILL
 
   settings-tp-2:
@@ -179,7 +179,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: settings-tp -v tcp://validator-2:4004
+    command: settings-tp -v -C tcp://validator-2:4004
     stop_signal: SIGKILL
 
   poet-validator-registry-tp-0:
@@ -188,7 +188,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: poet-validator-registry-tp -v tcp://validator-0:4004
+    command: poet-validator-registry-tp -v -C tcp://validator-0:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
@@ -199,7 +199,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: poet-validator-registry-tp -v tcp://validator-1:4004
+    command: poet-validator-registry-tp -v -C tcp://validator-1:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL
@@ -210,7 +210,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: poet-validator-registry-tp -v tcp://validator-2:4004
+    command: poet-validator-registry-tp -v -C tcp://validator-2:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
     stop_signal: SIGKILL

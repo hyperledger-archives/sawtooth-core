@@ -66,10 +66,10 @@ def create_parser(prog_name):
         prog=prog_name,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('endpoint',
-                        nargs='?',
-                        default='tcp://localhost:4004',
-                        help='Endpoint for the validator connection')
+    parser.add_argument(
+        '-C', '--connect',
+        default='tcp://localhost:4004',
+        help='Endpoint for the validator connection')
 
     parser.add_argument(
         '-v', '--verbose',
@@ -106,7 +106,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    processor = TransactionProcessor(url=args.endpoint)
+    processor = TransactionProcessor(url=args.connect)
 
     handler = SettingsTransactionHandler()
 

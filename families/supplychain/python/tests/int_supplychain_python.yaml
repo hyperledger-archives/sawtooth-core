@@ -37,7 +37,7 @@ services:
       - 4004
     depends_on:
       - validator
-    entrypoint: settings-tp -vv tcp://validator:4004
+    entrypoint: settings-tp -vv -C tcp://validator:4004
 
   validator:
     image: sawtooth-dev-python:$ISOLATION_ID
