@@ -15,13 +15,14 @@
 
 import logging
 
+from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_battleship.processor.battleship_transaction \
     import BattleshipTransaction
 
 LOGGER = logging.getLogger(__name__)
 
 
-class BattleshipTransactionHandler:
+class BattleshipTransactionHandler(TransactionHandler):
     def __init__(self, namespace_prefix):
         self._namespace_prefix = namespace_prefix
 

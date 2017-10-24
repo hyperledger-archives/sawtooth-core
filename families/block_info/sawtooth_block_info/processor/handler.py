@@ -16,6 +16,7 @@
 import logging
 import time
 
+from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
@@ -53,7 +54,7 @@ def validate_timestamp(timestamp, tolerance):
                 timestamp, now, tolerance))
 
 
-class BlockInfoTransactionHandler(object):
+class BlockInfoTransactionHandler(TransactionHandler):
     @property
     def family_name(self):
         return FAMILY_NAME

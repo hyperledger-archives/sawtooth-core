@@ -19,6 +19,7 @@ import base64
 from functools import lru_cache
 
 from sawtooth_sdk.processor.context import StateEntry
+from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
@@ -41,7 +42,7 @@ SETTINGS_NAMESPACE = '000000'
 STATE_TIMEOUT_SEC = 10
 
 
-class SettingsTransactionHandler(object):
+class SettingsTransactionHandler(TransactionHandler):
 
     @property
     def family_name(self):

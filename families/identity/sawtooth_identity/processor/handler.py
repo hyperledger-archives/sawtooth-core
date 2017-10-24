@@ -17,6 +17,7 @@ import logging
 import hashlib
 
 from sawtooth_sdk.processor.context import StateEntry
+from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
@@ -85,7 +86,7 @@ ALLOWED_SIGNER_ADDRESS = _setting_key_to_address(
     "sawtooth.identity.allowed_keys")
 
 
-class IdentityTransactionHandler(object):
+class IdentityTransactionHandler(TransactionHandler):
     @property
     def family_name(self):
         return 'sawtooth_identity'

@@ -17,6 +17,7 @@ import hashlib
 import logging
 
 from sawtooth_sdk.processor.context import StateEntry
+from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
@@ -24,7 +25,7 @@ from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 LOGGER = logging.getLogger(__name__)
 
 
-class XoTransactionHandler:
+class XoTransactionHandler(TransactionHandler):
     def __init__(self, namespace_prefix):
         self._namespace_prefix = namespace_prefix
 

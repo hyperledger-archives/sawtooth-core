@@ -24,6 +24,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
 
+from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.processor.context import StateEntry
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
@@ -178,7 +179,7 @@ def _get_config_setting(context, key):
     raise KeyError('Setting for {} not found'.format(key))
 
 
-class ValidatorRegistryTransactionHandler(object):
+class ValidatorRegistryTransactionHandler(TransactionHandler):
     def __init__(self):
         pass
 
