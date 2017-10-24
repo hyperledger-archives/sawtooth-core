@@ -18,7 +18,7 @@ version: "2.1"
 services:
 
   unit-seth:
-    image: sawtooth-dev-go:$ISOLATION_ID
+    image: sawtooth-dev-seth:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     working_dir: /project/sawtooth-core/families/seth/tests

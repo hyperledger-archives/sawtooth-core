@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"sawtooth_seth/client"
+	"strconv"
 )
 
 type PermissionsSet struct {
@@ -30,8 +31,8 @@ type PermissionsSet struct {
 	} `positional-args:"true"`
 	Address     string `short:"a" long:"address" required:"true" description:"Address of account whose permissions are being changed; 'global' may be used to refer to the zero address"`
 	Permissions string `short:"p" long:"permissions" required:"true" description:"New permissions for the account"`
-	Nonce       uint64 `short:"n" long:"nonce" description:"Current nonce of the moderator account" default:"1"`
-	Wait        int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed" default:"0" optional:"true" optional-value:"60"`
+	Nonce       string `short:"n" long:"nonce" description:"Current nonce of the moderator account; If not passed, the current value will be retrieved"`
+	Wait        int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed; If flag passed, default is 60 seconds; If no flag passed, do not wait" optional:"true" optional-value:"60"`
 }
 
 func (args *PermissionsSet) Name() string {
@@ -70,7 +71,20 @@ func (args *PermissionsSet) Run(config *Config) error {
 		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
 	}
 
-	err = client.SetPermissions(mod, addr, perms, args.Nonce, args.Wait)
+	var nonce uint64
+	if args.Nonce == "" {
+		nonce, err = client.LookupAccountNonce(mod)
+		if err != nil {
+			return err
+		}
+	} else {
+		nonce, err = strconv.ParseUint(args.Nonce, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Invalid nonce `%v`: ", args.Nonce, err)
+		}
+	}
+
+	err = client.SetPermissions(mod, addr, perms, nonce, args.Wait)
 	if err != nil {
 		return fmt.Errorf("Problem submitting transaction to change permissions: %v", err)
 	}

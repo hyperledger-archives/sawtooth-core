@@ -40,6 +40,7 @@ func (args *Contract) Register(parent *flags.Command) error {
 	args.Subs = []Command{
 		&ContractCreate{},
 		&ContractCall{},
+		&ContractList{},
 	}
 	for _, sub := range args.Subs {
 		err := sub.Register(args.Cmd)

@@ -105,6 +105,23 @@ func (c *Client) Get(address []byte) (*EvmEntry, error) {
 	return entry, nil
 }
 
+func (c *Client) LookupAccountNonce(priv []byte) (uint64, error) {
+	addr, err := PrivToEvmAddr(priv)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"Coudn't construct address from private key: %v", err,
+		)
+	}
+	entry, err := c.Get(addr.Bytes())
+	if err != nil {
+		return 0, fmt.Errorf(
+			"Coudn't determine nonce for account with address `%v`: %v",
+			addr, err,
+		)
+	}
+	return uint64(entry.Account.Nonce), nil
+}
+
 // CreateExternalAccount submits a transaction to create the account with the
 // given private key. If moderator is not nil, the account associated with that
 // key will be used to create the new account. If perms is not nil, the new

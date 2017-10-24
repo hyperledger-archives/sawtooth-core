@@ -19,7 +19,7 @@
 set -e
 
 # Default args
-LANGUAGES=""
+TARGETS=""
 EXCLUDE=""
 
 MOUNTED="mounted"
@@ -31,9 +31,10 @@ usage() {
     echo "  $0 [-l Language] [-x Language] {$MOUNTED,$INSTALLED,$DEBS}"
     echo
     echo "Options:"
-    echo "  -h            print usage and exit"
-    echo "  -l Language   only build the specified language(s)"
-    echo "  -x Language   exclude the specified language(s)"
+    echo "  -h                 print usage and exit"
+    echo "  -l Language        only build the specified language(s)"
+    echo "  -t Target          only build the specified target(s)"
+    echo "  -x Language/Module exclude the specified language(s)/target(s)"
 }
 
 info() {
@@ -44,7 +45,7 @@ warn() {
     echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
 }
 
-while getopts :x:l:h opt
+while getopts :x:t:l:h opt
 do
     case $opt in
         h)
@@ -52,7 +53,10 @@ do
             exit 0
             ;;
         l)
-            LANGUAGES="$LANGUAGES $OPTARG"
+            TARGETS="$TARGETS $OPTARG"
+            ;;
+        t)
+            TARGETS="$TARGETS $OPTARG"
             ;;
         x)
             EXCLUDE="$EXCLUDE $OPTARG"
@@ -82,16 +86,17 @@ else
 fi
 
 # If no '-m' flags are passed, run these modules
-if [[ $LANGUAGES = "" ]]
+if [[ $TARGETS = "" ]]
 then
-    LANGUAGES="
-        ext
+    TARGETS="
         cxx
+        ext
         go
         java
         javascript
         python
         rust
+        seth
 "
 fi
 
@@ -110,7 +115,7 @@ main() {
         build_debs
     fi
 
-    for language in $LANGUAGES
+    for language in $TARGETS
     do
 
         # Check if we are skipping this module
@@ -151,6 +156,9 @@ main() {
                 rust)
                     build_rust
                     ;;
+                seth)
+                    build_seth
+                    ;;
                 *)
                     warn "Module '$language' not found."
                     ;;
@@ -168,10 +176,17 @@ docker_run() {
         tag=$image:$ISOLATION_ID
     fi
 
+    if [ -z $CARGO_REGISTRY ]; then
+      cargo_registry_flag=""
+    else
+      cargo_registry_flag="-v $CARGO_REGISTRY:/root/.cargo/registry"
+    fi
+
     info "Running $image"
     if [ -z $BUILD_TAG ]
     then
         docker run -t --rm -v $top_dir:/project/sawtooth-core \
+            $cargo_registry_flag \
             --env https_proxy=$https_proxy \
             --env http_proxy=$http_proxy \
             --env HTTPS_PROXY=$HTTPS_PROXY \
@@ -179,6 +194,7 @@ docker_run() {
             $tag
     else
         docker run --rm -v $top_dir:/project/sawtooth-core \
+            $cargo_registry_flag \
             --env https_proxy=$https_proxy \
             --env http_proxy=$http_proxy \
             --env HTTPS_PROXY=$HTTPS_PROXY \
@@ -217,6 +233,11 @@ build_external() {
         sawtooth-stats-influxdb
 }
 
+build_seth() {
+    docker_build docker/sawtooth-dev-seth docker/ sawtooth-dev-seth
+    docker_run sawtooth-dev-seth
+}
+
 build_debs() {
     build_dir=/tmp/build-docker$ISOLATION_ID
     rm -rf $build_dir
@@ -239,7 +260,6 @@ then
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-intkey-tp-go
-        docker_build docker/sawtooth-dev-go docker/ sawtooth-seth-tp
         docker_build docker/sawtooth-dev-go docker/ sawtooth-xo-tp-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-smallbank-tp-go
         docker_run sawtooth-dev-go
@@ -300,9 +320,6 @@ then
         cp $top_dir/docker/sawtooth-int-smallbank-tp-go $build_dir
         cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
             $build_dir
-        cp $top_dir/docker/sawtooth-int-seth-tp $build_dir
-        cp $top_dir/families/seth/bin/seth-tp \
-            $build_dir
         cp $top_dir/sdk/examples/xo_go/bin/xo-tp-go \
             $build_dir
         cp $top_dir/families/smallbank/smallbank_go/bin/smallbank-tp-go \
@@ -311,8 +328,6 @@ then
 
         docker_build $build_dir/sawtooth-int-intkey-tp-go $build_dir/ \
             sawtooth-intkey-tp-go
-        docker_build $build_dir/sawtooth-int-seth-tp $build_dir/ \
-            sawtooth-seth-tp
         docker_build $build_dir/sawtooth-int-xo-tp-go $build_dir/ \
             sawtooth-xo-tp-go
         docker_build $build_dir/sawtooth-int-smallbank-tp-go $build_dir/ \

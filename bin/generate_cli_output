@@ -61,6 +61,8 @@ save_usage seth contract call
 save_usage seth contract create
 save_usage seth permissions
 save_usage seth permissions set
+save_usage seth-tp
+save_usage seth-rpc
 
 save_usage poet
 save_usage poet genesis

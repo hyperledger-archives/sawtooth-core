@@ -335,7 +335,7 @@ pub fn sign<T>(params: Params, client: ValidatorClient<T>) -> Result<Value, Erro
 }
 
 pub fn call<T>(_params: Params, mut _client: ValidatorClient<T>) -> Result<Value, Error> where T: MessageSender {
-    info!("eth_estimateGas");
+    info!("eth_call");
     // Implementing this requires running the EVM, which is not possible within the RPC.
     Err(error::not_implemented())
 }

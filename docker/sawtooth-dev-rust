@@ -62,4 +62,4 @@ RUN mkdir -p /project/sawtooth-core/ \
 
 WORKDIR /
 
-CMD build_rust && build_seth_rust
+CMD build_rust

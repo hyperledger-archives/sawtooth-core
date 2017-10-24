@@ -23,6 +23,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"sawtooth_seth/client"
 	. "sawtooth_seth/protobuf/seth_pb2"
+	"strconv"
 )
 
 type ContractCreate struct {
@@ -31,9 +32,9 @@ type ContractCreate struct {
 		Init  string `positional-arg-name:"init" required:"true" description:"Initialization code to be executed on deployment"`
 	} `positional-args:"true"`
 	Permissions string `short:"p" long:"permissions" description:"Permissions for new account; see 'seth permissions -h' for more info"`
-	Gas         uint64 `short:"g" long:"gas" description:"Gas limit for contract creation" default:"0"`
-	Nonce       uint64 `short:"n" long:"nonce" description:"Current nonce of moderator account" default:"0"`
-	Wait        int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed" default:"0" optional:"true" optional-value:"60"`
+	Gas         uint64 `short:"g" long:"gas" description:"Gas limit for contract creation" default:"90000"`
+	Nonce       string `short:"n" long:"nonce" description:"Current nonce of the moderator account; if not passed, the current value will be retrieved"`
+	Wait        int    `short:"w" long:"wait" description:"Number of seconds Seth client will wait for transaction to be committed; if flag passed, default is 60 seconds; if no flag passed, do not wait" optional:"true" optional-value:"60"`
 }
 
 func (args *ContractCreate) Name() string {
@@ -76,7 +77,20 @@ func (args *ContractCreate) Run(config *Config) error {
 		return fmt.Errorf("Invalid wait specified: %v. Must be a positive integer", args.Wait)
 	}
 
-	clientResult, err := client.CreateContractAccount(priv, init, perms, args.Nonce, args.Gas, args.Wait)
+	var nonce uint64
+	if args.Nonce == "" {
+		nonce, err = client.LookupAccountNonce(priv)
+		if err != nil {
+			return err
+		}
+	} else {
+		nonce, err = strconv.ParseUint(args.Nonce, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Invalid nonce `%v`: ", args.Nonce, err)
+		}
+	}
+
+	clientResult, err := client.CreateContractAccount(priv, init, perms, nonce, args.Gas, args.Wait)
 	if err != nil {
 		return fmt.Errorf("Problem submitting account creation transaction: %v", err)
 	}

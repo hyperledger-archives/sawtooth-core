@@ -110,6 +110,7 @@ pub fn get_transaction_count<T>(params: Params, client: ValidatorClient<T>) -> R
 }
 
 fn get_account<T, F>(params: Params, mut client: ValidatorClient<T>, f: F) -> Result<Value, Error> where T: MessageSender, F: Fn(EvmStateAccount) -> Value {
+    info!("eth_getAccount");
     let (address, block): (String, String) = match params.parse() {
         Ok(t) => t,
         Err(_) => {

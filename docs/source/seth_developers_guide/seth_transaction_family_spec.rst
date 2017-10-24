@@ -22,7 +22,7 @@ Overview
 The Seth transaction family enables the creation and execution
 of smart contracts within the Hyperledger Sawtooth framework. It integrates the
 Hyperledger Burrow implementation of the Ethereum Virtual Machine (EVM) into
-the Hyperledger Sawtooth framework using the Sawtooth Go SDK.
+the Hyperledger Sawtooth framework using the Sawtooth Transaction Processor SDK.
 
 The primary problems to solve in order to integrate the Burrow EVM into
 Sawtooth are:
@@ -76,8 +76,8 @@ defined:
 * Contract Accounts (CAs)
 
 EOAs are accounts that are owned by an external actor (ultimately a person).
-They are created implicitly whenever a private key is generated. Upon
-submission of the first transaction by an EOA, the account is initialized in
+They are created implicitly whenever a private key is generated but an account
+creation transaction must be submitted to initialize the contract in global
 state.
 
 CAs are created and owned by other accounts (either an EOA or another CA). All
@@ -123,7 +123,7 @@ using the following protobuf message format:
     }
 
 The following fields defined above shall be ignored for this version of the
-spec, but will be used in later versions:
+spec:
 
 * balance - Since this version of the spec does not include an incentive system
   or associated cryptocurrency, maintaining a balance isn’t meaningful.
@@ -162,10 +162,8 @@ to form a valid global state address.::
 Transaction Payload
 ===================
 
-The transaction payload closely follows the structure as defined by the EVM
-yellow paper, section 4.3 (“The Transaction”). In the Seth
-Transaction Family, the transaction payload shall be represented using the
-following protobuf message:
+In the Seth Transaction Family, the transaction payload shall be represented
+using the following protobuf message:
 
 .. code-block:: protobuf
 
@@ -301,7 +299,7 @@ Transaction execution shall follow a simplified version of the Ethereum model
 described below:
 
 1. The payload will be unpacked and validated. If the payload is missing or the
-   payload is malformed in anyway, the transaction is invalid.
+   payload is malformed in any way, the transaction is invalid.
 2. The header of the transaction is checked. If the header is malformed or does
    not have a public key, the transaction is invalid.
 3. The sender address shall be calculated by taking the rightmost 160 bits of
@@ -419,3 +417,66 @@ described below:
 
 
 9. If an error occurs while the EVM is executing, the transaction is invalid.
+
+Receipts
+========
+
+Seth transaction receipts contain the following serialized protobuf message in
+the opaque data field.
+
+.. code-block:: protobuf
+
+  message EvmTransactionReceipt {
+      bytes contract_address = 1; // A contract address, if created
+      uint64 gas_used = 2; // The gas consumed by this transaction
+      bytes return_value = 3; // The return value of the contract execution
+  }
+
+The fields of this message are:
+
+- ``contract_address``: If a contract was created during execution of the
+  transaction, the EVM address of the contract created. Otherwise, nil.
+- ``gas_used``: The quantity of gas used during the execution of the
+  transaction.
+- ``return_value``: The bytes returned by the EVM after executing the contract
+  call or contract initialization data. Otherwise, nil.
+
+The Ethereum specification defines a transaction receipt with additional fields.
+However, within Sawtooth, receipt data for a given transaction is limited to
+what can be computed during the execution of a transaction. Given that a
+transaction processor’s knowledge is limited to that of the transaction itself
+and current state, the values that can be included in the Seth receipt are
+limited to the above. Additional contextual information that may be required can
+be computed later by inspecting the block that the transaction was executed in.
+
+Events
+------
+
+Ethereum defines a set of LOGX for X in [0, 4] instructions that allow contracts
+to log off-chain data. Solidity uses these instructions to implement an event
+subscription system. To make Seth compatible with both, the LOGX instructions
+generate :doc:`Sawtooth Events
+</architecture/events_and_transactions_receipts>`. Like Seth's transaction
+receipts, these events contain only the data that is available during
+transaction execution.
+
+The ``event_type`` field is set to ``“seth_log_event”``. The ``event_data``
+field contains a copy of the data argument passed to the EVM LOGX instruction.
+an individual transaction contains the following protobuf message. The
+``attributes`` field contains:
+
+- An attribute with the key ``"address"`` and the address of the contract that
+  generated the event as its value.
+- For each topic Y in [1..X], and attribute with the key ``"topicY"`` and the
+  topic data for that topic as its value.
+
+.. code-block:: protobuf
+
+  Event {
+  	event_type = "seth_log_event",
+  	event_data = <data passed to LOGX>,
+    attributes = [
+      Attribute { "address": <contract address> },
+      Attribute { "topicX": <topic data> },
+  	],
+  }

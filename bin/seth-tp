@@ -7,5 +7,5 @@ if [ -e $bin ]
 then
     $bin $*
 else
-    echo "Please build Seth-TP first with 'build_all -l go' or 'build_seth'"
+    echo "Please build Seth-TP first with 'build_all -l go' or 'build_seth_go'"
 fi
