@@ -23,14 +23,14 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python -vv tcp://test-tp-intkey-python:4004
+    command: intkey-tp-python -vv -C tcp://test-tp-intkey-python:4004
     stop_signal: SIGKILL
 
   test-tp-intkey-python:
     image: sawtooth-dev-python:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
-    expose: 
+    expose:
       - 4004
     command: nose2-3
         -c /project/sawtooth-core/sdk/examples/intkey_python/nose2.cfg

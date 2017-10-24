@@ -25,7 +25,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: settings-tp -vv tcp://validator:4004
+    command: settings-tp -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   xo-tp-python:

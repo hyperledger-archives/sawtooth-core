@@ -23,7 +23,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: block-info-tp -vv tcp://test-tp-block-info:4004
+    command: block-info-tp -vv -C tcp://test-tp-block-info:4004
     stop_signal: SIGKILL
 
   test-tp-block-info:

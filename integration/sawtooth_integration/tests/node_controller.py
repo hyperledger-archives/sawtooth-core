@@ -272,7 +272,7 @@ def processor_cmds(num, processor_func):
     processors = processor_func(num)
 
     processor_cmds = [
-        '{p} {v} {a}'.format(
+        '{p} {v} -C {a}'.format(
             p=processor,
             v=(processor_verbosity(processor)),
             a=connection_address(num))
@@ -338,4 +338,3 @@ def start_process(cmd):
     LOGGER.debug('Running command {}'.format(cmd))
     return subprocess.Popen(
         shlex.split(cmd))
-

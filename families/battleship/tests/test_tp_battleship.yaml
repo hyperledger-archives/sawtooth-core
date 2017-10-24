@@ -23,7 +23,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: battleship-tp-python -vv tcp://test-tp-battleship:4004
+    command: battleship-tp-python -vv -C tcp://test-tp-battleship:4004
     stop_signal: SIGKILL
 
   test-tp-battleship:
