@@ -19,6 +19,7 @@ import hashlib
 import cbor
 
 from sawtooth_sdk.processor.context import StateEntry
+from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
@@ -43,7 +44,7 @@ def make_intkey_address(name):
         name.encode('utf-8')).hexdigest()[-64:]
 
 
-class IntkeyTransactionHandler:
+class IntkeyTransactionHandler(TransactionHandler):
     @property
     def family_name(self):
         return FAMILY_NAME
