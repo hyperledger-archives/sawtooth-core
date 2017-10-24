@@ -105,6 +105,10 @@ def main():
             exit_status = 0
             timer.start()
 
+            test_service_uppercase = test_service.upper()
+
+            LOGGER.info('Starting test %s', test_service_uppercase)
+
             LOGGER.info("Bringing up with %s", str(compose_up))
 
             try:
@@ -120,12 +124,12 @@ def main():
                 exit(1)
 
             except subprocess.CalledProcessError as err:
-                LOGGER.error("Test error")
+                LOGGER.error("Test error in %s", test_service_uppercase)
                 LOGGER.exception(err)
                 exit_status = 1
 
             except subprocess.TimeoutExpired as err:
-                LOGGER.error("Test timed out.")
+                LOGGER.error("Test %s timed out.", test_service_uppercase)
                 LOGGER.exception(err)
                 exit_status = 1
 
@@ -133,10 +137,10 @@ def main():
                 LOGGER.info("Getting result with: %s", str(inspect))
                 try:
                     # 2. Get the exit code of the test container
-                    exit_status = subprocess.run(
+                    exit_status = int(subprocess.run(
                         inspect, stdout=subprocess.PIPE,
                         timeout=timer.remaining(), check=True
-                    ).stdout.decode().strip()
+                    ).stdout.decode().strip())
 
                 except FileNotFoundError as err:
                     LOGGER.error("Bad docker inspect or ps command")
@@ -204,7 +208,10 @@ def main():
                 " see what was left behind or use `run_docker_test --clean`!"
             )
 
-        exit(int(exit_status))
+        if exit_status != 0:
+            LOGGER.error('Test %s failed', test_service_uppercase)
+
+        exit(exit_status)
 
     except KeyboardInterrupt:
         subprocess.run(
