@@ -1,13 +1,13 @@
-***************************************
-Private UTXO Transaction Family
-***************************************
+*********************************************
+Private UTXO Transaction Family Specification
+*********************************************
 
 Overview
 ========
 
-This document describes a Transaction Family that allows for assets to be
+The Private UTXO transaction family allows for assets to be
 tracked and traded on the Ledger as well as to be held off the Ledger. This
-off-Ledger processing allows assets to be traded in a a  manner that enforces
+off-Ledger processing allows assets to be traded in a manner that enforces
 the Ledger rules governing the Asset and allows transactional privacy for the
 owner of the asset.
 
@@ -63,7 +63,7 @@ has.
 UTXO
 ----
 
-UTXO are stored in the state, The key uniquely identifies the UTXO. Since there
+UTXO are stored in the state. The key uniquely identifies the UTXO. Since there
 is no value associated with UTXO, the Key is stored as the value. The value and
 details of the UTXO are described by the UtxoDocument held off chain.
 
@@ -247,36 +247,36 @@ the items to be dispatched to the correct handling logic.
     :language: protobuf
     :lines: 19-36
 
-Issue Asset
------------
+Issue Asset Payload
+-------------------
 
 .. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
     :language: protobuf
     :lines: 37-43
 
-Transfer Asset
---------------
+Transfer Asset Payload
+----------------------
 
 .. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
     :language: protobuf
     :lines: 44-50
 
-Convert To UTXO
----------------
+Convert To UTXO Payload
+-----------------------
 
 .. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
     :language: protobuf
     :lines: 51-57
 
-Convert From UTXO
------------------
+Convert From UTXO Payload
+-------------------------
 
 .. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
     :language: protobuf
     :lines: 59-63
 
-Transfer UTXO
--------------
+Transfer UTXO Payload
+---------------------
 
 .. literalinclude:: ../../../../families/private_utxo/protos/payload.proto
     :language: protobuf
@@ -286,15 +286,15 @@ Transfer UTXO
 Execution
 =========
 
-Holdings
---------
+Participant Holdings
+--------------------
 
-Participant Holdings are created when written to. If a Participants holdings
+Participant Holdings are created when written to. If a participant's holdings
 are being read and the Holding for that participant does not exist, the
-particpant's holding of that asset are zero.
+particpant's holding of that asset is zero.
 
-Issue Asset
------------
+Issue Asset Transactions
+------------------------
 
 **Issue Asset** transactions create new assets for trading. This can either be
 in the form of creating a new AssetType entry or adding to the amount of an
@@ -319,8 +319,8 @@ from the transaction and the signers holdings for that AssetType are set to
 the transaction amount.
 
 
-Transfer Asset
---------------
+Transfer Asset Transactions
+---------------------------
 
 **Transfer Asset** transactions are used to move assets from one participant's
 holdings to another participant's holdings.
@@ -337,8 +337,8 @@ If the above validation steps pass, then the transaction amount is removed from
 the signers holdings and added to the transaction recipients holdings.
 
 
-Convert To UTXO
----------------
+Convert To UTXO Transactions
+----------------------------
 
 **Convert To UTXO** transactions are used to move assets from ledger holdings
 to an off-Ledger UtxoDocument for private trading.
@@ -364,8 +364,8 @@ If the above validation steps pass, then the transaction amount is removed from
 the signer's holdings and the transaction `output_utxo` address is added
 to the UTXO store.
 
-Convert From UTXO
------------------
+Convert From UTXO Transactions
+------------------------------
 
 **Convert From UTXO** transactions are used to move off-Ledger assets held in
 UtxoDocuments to on-Ledger holdings.
@@ -384,8 +384,8 @@ If the above validation steps pass, then the document amount is added to
 the signer's holdings and the UtxoDocument address is removed
 from the UTXO store.
 
-Transfer UTXO
------------------
+Transfer UTXO Transactions
+--------------------------
 
 **Transfer UTXO** transactions to facilitate off-Ledger trading.
 
