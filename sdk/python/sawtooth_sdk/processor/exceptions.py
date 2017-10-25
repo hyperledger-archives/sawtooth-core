@@ -36,3 +36,7 @@ class InvalidTransaction(_TpResponseError):
 
 class InternalError(_TpResponseError):
     pass
+
+
+class AuthorizationException(Exception):
+    pass
