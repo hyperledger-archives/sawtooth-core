@@ -36,3 +36,12 @@ type InternalError struct {
 func (err *InternalError) Error() string {
 	return fmt.Sprint("Internal error: ", err.Msg)
 }
+
+type AuthorizationException struct {
+	Msg          string
+	ExtendedData []byte
+}
+
+func (err *AuthorizationException) Error() string {
+	return fmt.Sprint("Authorization exception: ", err.Msg)
+}

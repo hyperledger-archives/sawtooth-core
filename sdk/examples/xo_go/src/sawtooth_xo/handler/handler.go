@@ -273,7 +273,7 @@ func loadGame(name string, context *processor.Context) (*Game, error) {
 
 	results, err := context.GetState([]string{address})
 	if err != nil {
-		return nil, &processor.InternalError{Msg: fmt.Sprint("Error getting state:", err)}
+		return nil, err
 	}
 
 	if len(string(results[address])) > 0 {
@@ -303,7 +303,7 @@ func saveGame(game *Game, context *processor.Context) error {
 		address: data,
 	})
 	if err != nil {
-		return &processor.InternalError{Msg: fmt.Sprint("Failed to set new Value:", err)}
+		return err
 	}
 	if len(addresses) == 0 {
 		return &processor.InternalError{Msg: "No addresses in set response"}

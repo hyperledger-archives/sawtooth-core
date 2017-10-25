@@ -85,6 +85,11 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 				response.Status = processor_pb2.TpProcessResponse_INTERNAL_ERROR
 				response.Message = e.Msg
 				response.ExtendedData = e.ExtendedData
+			case *AuthorizationException:
+				logger.Warnf("(%v) %v", id, e)
+				response.Status = processor_pb2.TpProcessResponse_INVALID_TRANSACTION
+				response.Message = e.Msg
+				response.ExtendedData = e.ExtendedData
 			default:
 				logger.Errorf("(%v) Unknown error: %v", id, err)
 				response.Status = processor_pb2.TpProcessResponse_INTERNAL_ERROR
