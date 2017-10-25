@@ -90,94 +90,66 @@ class Validator(object):
             config_dir (str): path to the config directory
             identity_signing_key (str): key validator uses for signing
         """
-        db_filename = os.path.join(data_dir,
-                                   'merkle-{}.lmdb'.format(
-                                       bind_network[-2:]))
-        LOGGER.debug('database file is %s', db_filename)
 
-        merkle_db = LMDBNoLockDatabase(db_filename, 'c')
+        # -- Setup Global State Database and Factory -- #
+        global_state_db_filename = os.path.join(
+            data_dir, 'merkle-{}.lmdb'.format(bind_network[-2:]))
+        LOGGER.debug(
+            'global state database file is %s', global_state_db_filename)
+        global_state_db = LMDBNoLockDatabase(global_state_db_filename, 'c')
+        state_view_factory = StateViewFactory(global_state_db)
 
-        delta_db_filename = os.path.join(data_dir,
-                                         'state-deltas-{}.lmdb'.format(
-                                             bind_network[-2:]))
+        # -- Setup State Delta Store -- #
+        delta_db_filename = os.path.join(
+            data_dir, 'state-deltas-{}.lmdb'.format(bind_network[-2:]))
         LOGGER.debug('state delta store file is %s', delta_db_filename)
         state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
+        state_delta_store = StateDeltaStore(state_delta_db)
 
+        # -- Setup Receipt Store -- #
         receipt_db_filename = os.path.join(
             data_dir, 'txn_receipts-{}.lmdb'.format(bind_network[-2:]))
         LOGGER.debug('txn receipt store file is %s', receipt_db_filename)
         receipt_db = LMDBNoLockDatabase(receipt_db_filename, 'c')
-
-        state_delta_store = StateDeltaStore(state_delta_db)
         receipt_store = TransactionReceiptStore(receipt_db)
 
-        context_manager = ContextManager(merkle_db, state_delta_store)
-        self._context_manager = context_manager
-
-        state_view_factory = StateViewFactory(merkle_db)
-
-        block_db_filename = os.path.join(data_dir, 'block-{}.lmdb'.format(
-                                         bind_network[-2:]))
+        # -- Setup Block Store -- #
+        block_db_filename = os.path.join(
+            data_dir, 'block-{}.lmdb'.format(bind_network[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
-
         block_db = LMDBNoLockDatabase(block_db_filename, 'c')
         block_store = BlockStore(block_db)
 
-        batch_tracker = BatchTracker(block_store)
-
-        # setup network
-        self._dispatcher = Dispatcher(metrics_registry=metrics_registry)
-
-        thread_pool = ThreadPoolExecutor(max_workers=10)
+        # -- Setup Thread Pools -- #
+        component_thread_pool = ThreadPoolExecutor(max_workers=10)
+        network_thread_pool = ThreadPoolExecutor(max_workers=10)
         sig_pool = ThreadPoolExecutor(max_workers=3)
 
-        self._thread_pool = thread_pool
-        self._sig_pool = sig_pool
+        # -- Setup Dispatchers -- #
+        component_dispatcher = Dispatcher(metrics_registry=metrics_registry)
+        network_dispatcher = Dispatcher(metrics_registry=metrics_registry)
 
-        self._service = Interconnect(bind_component,
-                                     self._dispatcher,
-                                     secured=False,
-                                     heartbeat=False,
-                                     max_incoming_connections=20,
-                                     monitor=True,
-                                     max_future_callback_workers=10,
-                                     metrics_registry=metrics_registry)
-
-        executor = TransactionExecutor(
-            service=self._service,
-            context_manager=context_manager,
-            settings_view_factory=SettingsViewFactory(
-                StateViewFactory(merkle_db)),
-            scheduler_type=scheduler_type,
-            invalid_observers=[batch_tracker],
+        # -- Setup Services -- #
+        component_service = Interconnect(
+            bind_component,
+            component_dispatcher,
+            secured=False,
+            heartbeat=False,
+            max_incoming_connections=20,
+            monitor=True,
+            max_future_callback_workers=10,
             metrics_registry=metrics_registry)
-
-        self._executor = executor
-        self._service.set_check_connections(executor.check_connections)
-
-        state_delta_processor = StateDeltaProcessor(self._service,
-                                                    state_delta_store,
-                                                    block_store)
-        event_broadcaster = EventBroadcaster(self._service,
-                                             block_store,
-                                             receipt_store)
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
-
-        network_thread_pool = ThreadPoolExecutor(max_workers=10)
-        self._network_thread_pool = network_thread_pool
-
-        self._network_dispatcher = Dispatcher(
-            metrics_registry=metrics_registry)
 
         secure = False
         if network_public_key is not None and network_private_key is not None:
             secure = True
 
-        self._network = Interconnect(
+        network_service = Interconnect(
             bind_network,
-            dispatcher=self._network_dispatcher,
+            dispatcher=network_dispatcher,
             zmq_identity=zmq_identity,
             secured=secure,
             server_public_key=network_public_key,
@@ -193,27 +165,50 @@ class Validator(object):
             roles=roles,
             metrics_registry=metrics_registry)
 
-        self._gossip = Gossip(self._network,
-                              endpoint=endpoint,
-                              peering_mode=peering,
-                              initial_seed_endpoints=seeds_list,
-                              initial_peer_endpoints=peer_list,
-                              minimum_peer_connectivity=3,
-                              maximum_peer_connectivity=10,
-                              topology_check_frequency=1)
+        # -- Setup Transaction Execution Platform -- #
+        context_manager = ContextManager(global_state_db, state_delta_store)
 
-        completer = Completer(block_store, self._gossip)
+        batch_tracker = BatchTracker(block_store)
 
-        block_sender = BroadcastBlockSender(completer, self._gossip)
-        batch_sender = BroadcastBatchSender(completer, self._gossip)
+        executor = TransactionExecutor(
+            service=component_service,
+            context_manager=context_manager,
+            settings_view_factory=SettingsViewFactory(state_view_factory),
+            scheduler_type=scheduler_type,
+            invalid_observers=[batch_tracker],
+            metrics_registry=metrics_registry)
+
+        component_service.set_check_connections(executor.check_connections)
+
+        state_delta_processor = StateDeltaProcessor(
+            component_service, state_delta_store, block_store)
+        event_broadcaster = EventBroadcaster(
+            component_service, block_store, receipt_store)
+
+        # -- Setup P2P Networking -- #
+        gossip = Gossip(
+            network_service,
+            endpoint=endpoint,
+            peering_mode=peering,
+            initial_seed_endpoints=seeds_list,
+            initial_peer_endpoints=peer_list,
+            minimum_peer_connectivity=3,
+            maximum_peer_connectivity=10,
+            topology_check_frequency=1)
+
+        completer = Completer(block_store, gossip)
+
+        block_sender = BroadcastBlockSender(completer, gossip)
+        batch_sender = BroadcastBatchSender(completer, gossip)
         chain_id_manager = ChainIdManager(data_dir)
 
         identity_view_factory = IdentityViewFactory(
-            StateViewFactory(merkle_db))
+            StateViewFactory(global_state_db))
 
-        id_cache = IdentityCache(identity_view_factory,
-                                 block_store.chain_head_state_root)
+        id_cache = IdentityCache(
+            identity_view_factory, block_store.chain_head_state_root)
 
+        # -- Setup Permissioning -- #
         permission_verifier = PermissionVerifier(
             permissions,
             block_store.chain_head_state_root,
@@ -223,10 +218,10 @@ class Validator(object):
             to_update=id_cache.invalidate,
             forked=id_cache.forked)
 
-        # Create and configure journal
-        self._journal = Journal(
+        # -- Setup Journal -- #
+        journal = Journal(
             block_store=block_store,
-            state_view_factory=StateViewFactory(merkle_db),
+            state_view_factory=StateViewFactory(global_state_db),
             block_sender=block_sender,
             batch_sender=batch_sender,
             transaction_executor=executor,
@@ -247,10 +242,9 @@ class Validator(object):
                 batch_tracker,
                 identity_observer
             ],
-            metrics_registry=metrics_registry
-        )
+            metrics_registry=metrics_registry)
 
-        self._genesis_controller = GenesisController(
+        genesis_controller = GenesisController(
             context_manager=context_manager,
             transaction_executor=executor,
             completer=completer,
@@ -260,28 +254,45 @@ class Validator(object):
             data_dir=data_dir,
             config_dir=config_dir,
             chain_id_manager=chain_id_manager,
-            batch_sender=batch_sender
-        )
+            batch_sender=batch_sender)
 
         responder = Responder(completer)
 
-        completer.set_on_batch_received(self._journal.on_batch_received)
-        completer.set_on_block_received(self._journal.on_block_received)
+        completer.set_on_batch_received(journal.on_batch_received)
+        completer.set_on_block_received(journal.on_block_received)
 
+        # -- Register Message Handler -- #
         network_handlers.add(
-            self._network_dispatcher, self._network, self._gossip, completer,
+            network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool, permission_verifier)
 
         component_handlers.add(
-            self._dispatcher, self._gossip, context_manager, executor,
-            completer, self._journal.get_block_store(), batch_tracker,
-            merkle_db, self._journal.get_current_root, receipt_store,
+            component_dispatcher, gossip, context_manager, executor,
+            completer, journal.get_block_store(), batch_tracker,
+            global_state_db, journal.get_current_root, receipt_store,
             state_delta_processor, state_delta_store, event_broadcaster,
-            permission_verifier, thread_pool, sig_pool)
+            permission_verifier, component_thread_pool, sig_pool)
+
+        # -- Store Object References -- #
+        self._component_dispatcher = component_dispatcher
+        self._component_service = component_service
+        self._component_thread_pool = component_thread_pool
+
+        self._network_dispatcher = network_dispatcher
+        self._network_service = network_service
+        self._network_thread_pool = network_thread_pool
+
+        self._sig_pool = sig_pool
+
+        self._context_manager = context_manager
+        self._executor = executor
+        self._genesis_controller = genesis_controller
+        self._gossip = gossip
+        self._journal = journal
 
     def start(self):
-        self._dispatcher.start()
-        self._service.start()
+        self._component_dispatcher.start()
+        self._component_service.start()
         if self._genesis_controller.requires_genesis():
             self._genesis_controller.start(self._start)
         else:
@@ -289,7 +300,7 @@ class Validator(object):
 
     def _start(self):
         self._network_dispatcher.start()
-        self._network.start()
+        self._network_service.start()
 
         self._gossip.start()
         self._journal.start()
@@ -305,14 +316,14 @@ class Validator(object):
 
     def stop(self):
         self._gossip.stop()
-        self._dispatcher.stop()
+        self._component_dispatcher.stop()
         self._network_dispatcher.stop()
-        self._network.stop()
+        self._network_service.stop()
 
-        self._service.stop()
+        self._component_service.stop()
 
         self._network_thread_pool.shutdown(wait=True)
-        self._thread_pool.shutdown(wait=True)
+        self._component_thread_pool.shutdown(wait=True)
         self._sig_pool.shutdown(wait=True)
 
         self._executor.stop()
