@@ -18,7 +18,7 @@
 'use strict'
 
 const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, Message} = require('../protobuf')
-const {InvalidTransaction} = require('../processor/exceptions')
+const {AuthorizationException} = require('../processor/exceptions')
 
 const _timeoutPromise = (p, millis) => {
   if (millis !== null && millis !== undefined) {
@@ -55,7 +55,7 @@ class Context {
           results[entry.address] = entry.data
         })
         if (getResponse.status === TpStateGetResponse.Status.AUTHORIZATION_ERROR) {
-          throw new InvalidTransaction(`Tried to get unauthorized address ${addresses}`)
+          throw new AuthorizationException(`Tried to get unauthorized address ${addresses}`)
         }
         return results
       }),
@@ -81,7 +81,7 @@ class Context {
         let setResponse = TpStateSetResponse.decode(buffer)
         if (setResponse.status === TpStateSetResponse.Status.AUTHORIZATION_ERROR) {
           let addresses = Object.keys(addressValuePairs)
-          throw new InvalidTransaction(`Tried to set unauthorized address ${addresses}`)
+          throw new AuthorizationException(`Tried to set unauthorized address ${addresses}`)
         }
         return setResponse.addresses
       }),
