@@ -104,9 +104,7 @@ func (self *Context) GetState(addresses []string) (map[string][]byte, error) {
 	// Use a switch in case new Status values are added
 	switch response.Status {
 	case state_context_pb2.TpStateGetResponse_AUTHORIZATION_ERROR:
-		return nil, fmt.Errorf(
-			"Tried to get unauthorized address: %v", addresses,
-		)
+		return nil, &AuthorizationException{Msg: fmt.Sprint("Tried to get unauthorized address: ", addresses)}
 	}
 
 	// Construct and return a map
@@ -188,7 +186,7 @@ func (self *Context) SetState(pairs map[string][]byte) ([]string, error) {
 		for a, _ := range pairs {
 			addresses = append(addresses, a)
 		}
-		return nil, fmt.Errorf("Tried to set unauthorized address: %v", addresses)
+		return nil, &AuthorizationException{Msg: fmt.Sprint("Tried to set unauthorized address: ", addresses)}
 	}
 
 	return response.GetAddresses(), nil

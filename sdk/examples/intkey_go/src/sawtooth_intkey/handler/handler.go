@@ -115,7 +115,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, contex
 
 	results, err := context.GetState([]string{address})
 	if err != nil {
-		return &processor.InternalError{Msg: fmt.Sprint("Error getting state:", err)}
+		return err
 	}
 
 	var collisionMap map[string]int
@@ -177,7 +177,7 @@ func (self *IntkeyHandler) Apply(request *processor_pb2.TpProcessRequest, contex
 		address: data,
 	})
 	if err != nil {
-		return &processor.InternalError{Msg: fmt.Sprint("Failed to set new Value:", err)}
+		return err
 	}
 	if len(addresses) == 0 {
 		return &processor.InternalError{Msg: "No addresses in set response"}

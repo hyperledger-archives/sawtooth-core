@@ -287,7 +287,7 @@ func loadAccount(customer_id uint32, context *processor.Context) (*smallbank_pb2
 
 	results, err := context.GetState([]string{address})
 	if err != nil {
-		return nil, &processor.InternalError{Msg: fmt.Sprint("Error getting state:", err)}
+		return nil, err
 	}
 
 	if len(string(results[address])) > 0 {
@@ -312,7 +312,7 @@ func saveAccount(account *smallbank_pb2.Account, context *processor.Context) err
 		address: data,
 	})
 	if err != nil {
-		return &processor.InternalError{Msg: fmt.Sprint("Failed to set new Value:", err)}
+		return err
 	}
 
 	if len(addresses) == 0 {
