@@ -51,7 +51,15 @@ def add_config_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the config command and
     its subcommands.
     """
-    parser = subparsers.add_parser('config')
+    parser = subparsers.add_parser(
+        'config',
+        help='commands to modify on-chain settings',
+        description='Sawtooth supports storing settings on-chain. The '
+                    'subcommands provided here can be used to view the '
+                    'current proposals, create proposals and vote on existing '
+                    'proposals, and produce setting values that will be set '
+                    'in the genesis block.'
+    )
 
     config_parsers = parser.add_subparsers(title="subcommands",
                                            dest="subcommand")
@@ -60,7 +68,13 @@ def add_config_parser(subparsers, parent_parser):
     # The following parser is for the `genesis` subcommand.
     # This command creates a batch that contains all of the initial
     # transactions for on-chain settings
-    genesis_parser = config_parsers.add_parser('genesis')
+    genesis_parser = config_parsers.add_parser(
+        'genesis',
+        help='creates a genesis batch file of settings transactions',
+        description='Creates a Batch of settings proposals that can be '
+                    'consumed by "sawtooth admin genesis" and used '
+                    'during genesis block construction.'
+    )
     genesis_parser.add_argument(
         '-k', '--key',
         type=str,
@@ -90,7 +104,13 @@ def add_config_parser(subparsers, parent_parser):
     # immediately or placed in ballot mode, depending on the current on-chain
     # settings.
 
-    proposal_parser = config_parsers.add_parser('proposal')
+    proposal_parser = config_parsers.add_parser(
+        'proposal',
+        help='view, create or vote on settings change proposals',
+        description='sawtooth-settings supports a simple voting mechanism for '
+                    'applying changes to on-change settings.  These commands '
+                    'provide tools to view, create or vote on proposed '
+                    'settings')
     proposal_parsers = proposal_parser.add_subparsers(
         title='proposals',
         dest='proposal_cmd')
@@ -98,7 +118,11 @@ def add_config_parser(subparsers, parent_parser):
 
     create_parser = proposal_parsers.add_parser(
         'create',
-        help='creates batches of sawtooth-config transactions')
+        help='creates proposals for setting changes',
+        description='Create proposals for settings changes.  The change '
+                    'may be applied immediately or after a series of votes, '
+                    'depending on the vote threshold setting.'
+    )
 
     create_parser.add_argument(
         '-k', '--key',
@@ -125,7 +149,10 @@ def add_config_parser(subparsers, parent_parser):
 
     proposal_list_parser = proposal_parsers.add_parser(
         'list',
-        help='lists the current proposed, but not active, settings')
+        help='lists the currently proposed, but not active, settings',
+        description='Lists the currently proposed, but not active, settings. '
+                    'This list of proposals can be used to find proposals to '
+                    'vote on.')
 
     proposal_list_parser.add_argument(
         '--url',
@@ -153,7 +180,10 @@ def add_config_parser(subparsers, parent_parser):
 
     vote_parser = proposal_parsers.add_parser(
         'vote',
-        help='votes for specific setting change proposals')
+        help='votes for specific setting change proposals',
+        description='Votes for a specific settings change proposal. The '
+                    'proposal id can be found using "sawtooth config proposal '
+                    'list".')
 
     vote_parser.add_argument(
         '--url',
@@ -181,7 +211,11 @@ def add_config_parser(subparsers, parent_parser):
     # commands display information about the currently applied on-chain
     # settings.
 
-    settings_parser = config_parsers.add_parser('settings')
+    settings_parser = config_parsers.add_parser(
+        'settings',
+        help='list and show on-chain settings',
+        description='Displays the values of currently active on-chain '
+                    'settings.')
     settings_parsers = settings_parser.add_subparsers(
         title='settings',
         dest='settings_cmd')
@@ -189,7 +223,11 @@ def add_config_parser(subparsers, parent_parser):
 
     list_parser = settings_parsers.add_parser(
         'list',
-        help='list the current keys and values of sawtooth-config settings')
+        help='list the current keys and values of on-chain settings',
+        description='List the current keys and values of on-chain '
+                    'settings.  The content can be exported to various '
+                    'formats for external consumption.'
+    )
 
     list_parser.add_argument(
         '--url',
