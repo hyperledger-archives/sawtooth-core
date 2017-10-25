@@ -96,6 +96,13 @@ class TransactionProcessor {
                   })
                 } else if (e instanceof ValidatorConnectionError) {
                   console.log('Validator disconnected.  Ignoring.')
+                } else if (e instanceof AuthorizationException) {
+                  console.log(e)
+                  return TpProcessResponse.create({
+                    status: TpProcessResponse.Status.INVALID_TRANSACTION,
+                    message: e.message,
+                    extendedData: e.extendedData
+                  })
                 } else {
                   console.log('Unhandled exception, returning INTERNAL_ERROR', e)
                   return TpProcessResponse.create({

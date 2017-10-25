@@ -84,8 +84,25 @@ class ValidatorConnectionError extends Error {
   }
 }
 
+/**
+ * Thrown when a authorization error occurs
+ */
+class AuthorizationException extends Error {
+  /**
+   * Construcs a new AuthorizationException
+   *
+   * @param {string} [message] - an optional message, defaults to the empty
+   * string
+   */
+  constructor (message = '') {
+    super(message)
+    this.name = this.constructor.name
+  }
+}
+
 module.exports = {
   InvalidTransaction,
   InternalError,
-  ValidatorConnectionError
+  ValidatorConnectionError,
+  AuthorizationException
 }
