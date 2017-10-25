@@ -651,7 +651,7 @@ class Validator(object):
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
             structure_verifier.BatchListStructureVerifier(),
-            network_thread_pool)
+            thread_pool)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
