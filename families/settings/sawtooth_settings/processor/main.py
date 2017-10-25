@@ -64,6 +64,9 @@ def setup_loggers(verbose_level):
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
         prog=prog_name,
+        description='Starts a sawtooth-settings transaction processor.',
+        epilog='This process is required to apply any changes to on-chain '
+               'settings used by the Sawtooth platform.',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
