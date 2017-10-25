@@ -80,8 +80,11 @@ Private UTXO Transaction Family
 
 The Private UTXO Transaction Family is implemented by a Transaction Processor
 that manages representation in the Ledger.
-See :doc:`private_utxo_transaction_family` for more information.
 
+.. toctree::
+   :maxdepth: 2
+
+   private_utxo_transaction_family.rst
 
 Off-Ledger Trading
 ++++++++++++++++++
