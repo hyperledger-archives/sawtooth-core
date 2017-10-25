@@ -27,6 +27,7 @@ from sawtooth_sdk.messaging.stream import Stream
 from sawtooth_sdk.processor.context import Context
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
+from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterResponse
@@ -163,6 +164,22 @@ class TransactionProcessor(object):
             # nothing left to do but reconnect.
             LOGGER.warning("during handler.apply a future was resolved "
                            "with error status: %s", vce)
+        except AuthorizationException as ae:
+            LOGGER.warning("AuthorizationException: %s", ae)
+            try:
+                self._stream.send_back(
+                    message_type=Message.TP_PROCESS_RESPONSE,
+                    correlation_id=msg.correlation_id,
+                    content=TpProcessResponse(
+                        status=TpProcessResponse.INVALID_TRANSACTION,
+                        message=str(ae),
+                    ).SerializeToString())
+            except ValidatorConnectionError as vce:
+                # TP_PROCESS_REQUEST has made it through the
+                # handler.apply and an INVALID_TRANSACTION would have been
+                # sent back but the validator has disconnected and so it
+                # doesn't care about the response.
+                LOGGER.warning("during invalid transaction response: %s", vce)
 
     def _process_future(self, future, timeout=None, sigint=False):
         try:

@@ -15,8 +15,8 @@
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_sdk.protobuf import state_context_pb2
 from sawtooth_sdk.protobuf import events_pb2
-from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
+from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 
 class Context(object):
@@ -50,7 +50,7 @@ class Context(object):
         response.ParseFromString(response_string)
         if response.status == \
                 state_context_pb2.TpStateGetResponse.AUTHORIZATION_ERROR:
-            raise InvalidTransaction(
+            raise AuthorizationException(
                 'Tried to get unauthorized address: {}'.format(addresses))
         entries = response.entries if response is not None else []
         results = [e for e in entries if len(e.data) != 0]
@@ -81,7 +81,7 @@ class Context(object):
         if response.status == \
                 state_context_pb2.TpStateSetResponse.AUTHORIZATION_ERROR:
             addresses = [e.address for e in entries]
-            raise InvalidTransaction(
+            raise AuthorizationException(
                 'Tried to set unauthorized address: {}'.format(addresses))
         return response.addresses
 
@@ -105,7 +105,7 @@ class Context(object):
                               request).result(timeout).content)
         if response.status == \
                 state_context_pb2.TpStateDeleteResponse.AUTHORIZATION_ERROR:
-            raise InvalidTransaction(
+            raise AuthorizationException(
                 'Tried to delete unauthorized address: {}'.format(addresses))
         return response.addresses
 
