@@ -38,23 +38,21 @@ The following protocol buffers definition defines the validator info:
 .. code-block:: protobuf
 
   message ValidatorInfo {
-    // Used to check if the validator's signup has been revoked.
-    string registered = 1;
-
     // The name of the endpoint. It should be a human readable name.
-    string name = 2;
+    string name = 1;
 
     // The validator's public key (currently using signer_public_key as this is
     // stored in the transaction header)
-    string id = 3;
+    string id = 2;
 
     // This is the protocol buffer described below.
-    SignUpInfo signup_info = 4;
+    SignUpInfo signup_info = 3;
 
-    // The block number that this ValidatorInfo was set on.
-    // This is used as a form of time to help with the enforcement of the C test.
-    int32 block_num = 5;
+    // The header signature for the ValidatorRegistryPayload transaction. This
+    // will be used to look up the block the ValidatorInfo was committed on.
+    string transaction_id = 4;
   }
+
 
 The above ValidatorInfo includes the following protocol buffer:
 
@@ -72,6 +70,10 @@ The above ValidatorInfo includes the following protocol buffer:
     // A string corresponding to the anti-Sybil ID for the enclave that
     // generated the signup information.
     string anti_sybil_id = 3;
+
+    // The nonce associated with the signup info.  Note that this must match
+    // the nonce provided when the signup info was created.
+    string nonce = 4;
   }
 
 Currently the poet_enclave needs a way to check how many validators are
@@ -155,7 +157,6 @@ protocol buffers code:
     // The name of the endpoint. It should be a human readable name.
     string name = 2;
 
-
     // Validator's public key (currently using signer_public_key as this is
     // stored in the transaction header)
     string id = 3;
@@ -163,12 +164,7 @@ protocol buffers code:
     // This is the protocol buffer described above.
     SignUpInfo signup_info = 4;
 
-    // The header signature for the ValidatorRegistryPayload transaction. This
-    // will be used to look up the block the ValidatorInfo was committed on.
-    string transaction_id = 5;
-
   }
-
 
 
 Transaction Header
@@ -181,6 +177,9 @@ The inputs for validator registry family transactions must include:
 
 * the address of *validator_id*
 * the address of *validator_map*
+* the address of *sawtooth.poet.report_public_key_pem*
+* the address of *sawtooth.poet.valid_enclave_measurement*
+* the address of *sawtooth.poet.valid_enclave_basenames*
 
 The outputs for validator registry family transactions must include:
 
@@ -208,17 +207,11 @@ The encoding field must be set to "application/protobuf".
 Execution
 =========
 
-Untrusted python code, that is a part of the transaction processor, will verify
-the attestation verification report for the signup information. It is important to
-note, that the IAS report public key will need to be on the block chain and it will need to
-be set on configuration. This will allow both the simulator logic and real
-SGX logic to be the same.
-
-The validator_registry transaction will need to be injected into a block by
-poet_consensus. At this time, the block number for the block that poet_consensus
-is checking will be set into the transaction.
-
-The journal will need a new method to retrieve this information.
+Untrusted python code that is a part of the transaction processor will verify
+the attestation verification report for the signup information. It is important
+to note, that the IAS report public key will need to be on the block chain and
+it will need to be set on configuration. This will allow both the simulator
+logic and real SGX logic to be the same.
 
 If the validator_name does not match syntactic requirements, the transaction is
 invalid. The current requirement is that the validator_name is 64 characters
@@ -239,6 +232,3 @@ the address where the validator_info should be stored. Store the serialized
 ValidatorInfo protocol buffer in state at the address as mentioned above. If
 this validator is new (not updating its SignUpInfo), the validator’s id needs
 to be added to the validator_map.
-
-For any previous entries with the anti_sybil_id, the public key is revoked before
-resetting the new information.

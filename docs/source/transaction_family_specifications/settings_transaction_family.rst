@@ -250,7 +250,7 @@ None.
 Family
 ------
 
-- family_name: "sawtooth_config"
+- family_name: "sawtooth_settings"
 - family_version: "1.0"
 
 Encoding
