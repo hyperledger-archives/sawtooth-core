@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import sawtooth_validator.state.client_handlers as handlers
-from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_state_pb2
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import make_db_and_store
 
@@ -26,8 +26,8 @@ class TestStateCurrentRequests(ClientHandlerTestCase):
 
         self.initialize(
             handlers.StateCurrentRequest(mock_current_root),
-            client_pb2.ClientStateCurrentRequest,
-            client_pb2.ClientStateCurrentResponse)
+            client_state_pb2.ClientStateCurrentRequest,
+            client_state_pb2.ClientStateCurrentResponse)
 
     def test_state_current_request(self):
         """Verifies requests for the current merkle root work properly.
@@ -50,8 +50,8 @@ class TestStateListRequests(ClientHandlerTestCase):
         db, store, roots = make_db_and_store()
         self.initialize(
             handlers.StateListRequest(db, store),
-            client_pb2.ClientStateListRequest,
-            client_pb2.ClientStateListResponse,
+            client_state_pb2.ClientStateListRequest,
+            client_state_pb2.ClientStateListResponse,
             store=store,
             roots=roots)
 
@@ -76,7 +76,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual(b'3', self._find_value(response.entries, 'a'))
 
     def test_state_list_bad_request(self):
@@ -131,7 +131,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual(1, len(response.entries))
 
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('a', response.entries[0].address)
         self.assertEqual(b'1', response.entries[0].data)
 
@@ -171,7 +171,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual(2, len(response.entries))
 
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual(b'2', self._find_value(response.entries, 'a'))
 
     def test_state_list_with_bad_head(self):
@@ -211,7 +211,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual(1, len(response.entries))
 
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('c', response.entries[0].address)
         self.assertEqual(b'7', response.entries[0].data)
 
@@ -253,7 +253,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual(1, len(response.entries))
 
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('b', response.entries[0].address)
         self.assertEqual(b'4', response.entries[0].data)
 
@@ -295,7 +295,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response, next_id='c')
         self.assertEqual(2, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
 
     def test_state_list_paginated_by_start_id(self):
         """Verifies data list requests work paginated by count and start_id.
@@ -323,7 +323,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response, 'c', 'a', 1)
         self.assertEqual(1, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('b', response.entries[0].address)
         self.assertEqual(b'5', response.entries[0].data)
 
@@ -352,7 +352,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response, previous_id='a', start_index=1)
         self.assertEqual(2, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('c', response.entries[1].address)
         self.assertEqual(b'7', response.entries[1].data)
 
@@ -378,7 +378,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response, next_id='b')
         self.assertEqual(1, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('a', response.entries[0].address)
         self.assertEqual(b'3', response.entries[0].data)
 
@@ -426,7 +426,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response, '', 'a', 1, 2)
         self.assertEqual(1, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('b', response.entries[0].address)
         self.assertEqual(b'4', response.entries[0].data)
 
@@ -452,7 +452,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response, total=1)
         self.assertEqual(1, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('b', response.entries[0].address)
         self.assertEqual(b'5', response.entries[0].data)
 
@@ -481,7 +481,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
 
         self.assertEqual('a', response.entries[0].address)
         self.assertEqual(b'3', response.entries[0].data)
@@ -531,7 +531,7 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.entries))
         self.assert_all_instances(response.entries,
-                                  client_pb2.ClientStateListResponse.Entry)
+                                  client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('c', response.entries[0].address)
         self.assertEqual(b'7', response.entries[0].data)
         self.assertEqual('a', response.entries[2].address)
@@ -543,8 +543,8 @@ class TestStateGetRequests(ClientHandlerTestCase):
         db, store, roots = make_db_and_store()
         self.initialize(
             handlers.StateGetRequest(db, store),
-            client_pb2.ClientStateGetRequest,
-            client_pb2.ClientStateGetResponse,
+            client_state_pb2.ClientStateGetRequest,
+            client_state_pb2.ClientStateGetResponse,
             store=store,
             roots=roots)
 

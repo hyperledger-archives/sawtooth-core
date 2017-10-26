@@ -20,7 +20,7 @@ from base64 import b64decode
 
 from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2
-from sawtooth_rest_api.protobuf.client_pb2 import ClientStateListResponse
+from sawtooth_rest_api.protobuf.client_state_pb2 import ClientStateListResponse
 from sawtooth_rest_api.protobuf.client_list_control_pb2 \
     import ClientPagingControls
 from sawtooth_rest_api.protobuf.client_list_control_pb2 \

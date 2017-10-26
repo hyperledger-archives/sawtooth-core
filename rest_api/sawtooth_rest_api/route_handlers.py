@@ -33,6 +33,7 @@ from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf import client_list_control_pb2
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2
+from sawtooth_rest_api.protobuf import client_state_pb2
 from sawtooth_rest_api.protobuf import txn_receipt_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
@@ -251,7 +252,7 @@ class RouteHandler(object):
             paging: Paging info and nav, like total resources and a next link
         """
         paging_controls = self._get_paging_controls(request)
-        validator_query = client_pb2.ClientStateListRequest(
+        validator_query = client_state_pb2.ClientStateListRequest(
             head_id=request.url.query.get('head', None),
             address=request.url.query.get('address', None),
             sorting=self._get_sorting_message(request),
@@ -259,7 +260,7 @@ class RouteHandler(object):
 
         response = await self._query_validator(
             Message.CLIENT_STATE_LIST_REQUEST,
-            client_pb2.ClientStateListResponse,
+            client_state_pb2.ClientStateListResponse,
             validator_query)
 
         return self._wrap_paginated_response(
@@ -290,8 +291,9 @@ class RouteHandler(object):
 
         response = await self._query_validator(
             Message.CLIENT_STATE_GET_REQUEST,
-            client_pb2.ClientStateGetResponse,
-            client_pb2.ClientStateGetRequest(head_id=head, address=address),
+            client_state_pb2.ClientStateGetResponse,
+            client_state_pb2.ClientStateGetRequest(
+                head_id=head, address=address),
             error_traps)
 
         return self._wrap_response(

@@ -15,6 +15,7 @@
 
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2
+from sawtooth_rest_api.protobuf import client_state_pb2
 from sawtooth_rest_api.protobuf import txn_receipt_pb2
 import sawtooth_rest_api.exceptions as errors
 
@@ -66,7 +67,7 @@ class BatchInvalidTrap(_ErrorTrap):
 
 
 class InvalidAddressTrap(_ErrorTrap):
-    trigger = client_pb2.ClientStateGetResponse.INVALID_ADDRESS
+    trigger = client_state_pb2.ClientStateGetResponse.INVALID_ADDRESS
     error = errors.InvalidStateAddress
 
 
@@ -91,5 +92,5 @@ class ReceiptNotFoundTrap(_ErrorTrap):
 
 
 class StateNotFoundTrap(_ErrorTrap):
-    trigger = client_pb2.ClientStateGetResponse.NO_RESOURCE
+    trigger = client_state_pb2.ClientStateGetResponse.NO_RESOURCE
     error = errors.StateNotFound

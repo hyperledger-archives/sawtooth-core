@@ -29,6 +29,7 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_state_pb2
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf import client_list_control_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -609,8 +610,8 @@ class StateCurrentRequest(_ClientRequestHandler):
     def __init__(self, current_root_func):
         self._get_root = current_root_func
         super().__init__(
-            client_pb2.ClientStateCurrentRequest,
-            client_pb2.ClientStateCurrentResponse,
+            client_state_pb2.ClientStateCurrentRequest,
+            client_state_pb2.ClientStateCurrentResponse,
             validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
 
     def _respond(self, request):
@@ -620,8 +621,8 @@ class StateCurrentRequest(_ClientRequestHandler):
 class StateListRequest(_ClientRequestHandler):
     def __init__(self, database, block_store):
         super().__init__(
-            client_pb2.ClientStateListRequest,
-            client_pb2.ClientStateListResponse,
+            client_state_pb2.ClientStateListRequest,
+            client_state_pb2.ClientStateListResponse,
             validator_pb2.Message.CLIENT_STATE_LIST_RESPONSE,
             tree=MerkleDatabase(database),
             block_store=block_store)
@@ -631,7 +632,7 @@ class StateListRequest(_ClientRequestHandler):
 
         # Fetch entries and encode as protobuf
         entries = [
-            client_pb2.ClientStateListResponse.Entry(address=a, data=v)
+            client_state_pb2.ClientStateListResponse.Entry(address=a, data=v)
             for a, v in self._tree.leaves(request.address or '').items()]
 
         # Order entries, remove if tree.entries refactored to be ordered
@@ -662,8 +663,8 @@ class StateListRequest(_ClientRequestHandler):
 class StateGetRequest(_ClientRequestHandler):
     def __init__(self, database, block_store):
         super().__init__(
-            client_pb2.ClientStateGetRequest,
-            client_pb2.ClientStateGetResponse,
+            client_state_pb2.ClientStateGetRequest,
+            client_state_pb2.ClientStateGetResponse,
             validator_pb2.Message.CLIENT_STATE_GET_RESPONSE,
             tree=MerkleDatabase(database),
             block_store=block_store)
