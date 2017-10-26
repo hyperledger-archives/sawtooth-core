@@ -25,6 +25,7 @@ pub mod state_context;
 pub mod processor;
 pub mod genesis;
 pub mod client;
+pub mod client_block;
 pub mod client_state;
 pub mod client_batch_submit;
 pub mod client_list_control;
