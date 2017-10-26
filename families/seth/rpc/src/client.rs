@@ -37,12 +37,14 @@ use sawtooth_sdk::messages::client::{
     ClientBlockGetRequest,
     ClientBlockGetResponse,
     ClientBlockGetResponse_Status,
-    ClientStateGetRequest,
-    ClientStateGetResponse,
-    ClientStateGetResponse_Status,
     ClientTransactionGetRequest,
     ClientTransactionGetResponse,
     ClientTransactionGetResponse_Status,
+};
+use sawtooth_sdk::messages::client_state::{
+    ClientStateGetRequest,
+    ClientStateGetResponse,
+    ClientStateGetResponse_Status,
 };
 use sawtooth_sdk::messages::client_batch_submit::{
     ClientBatchSubmitRequest,

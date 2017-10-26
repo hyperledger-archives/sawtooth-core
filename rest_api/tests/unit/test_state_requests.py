@@ -17,7 +17,7 @@ from base64 import b64decode
 from aiohttp.test_utils import unittest_run_loop
 from components import Mocks, BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
-from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_state_pb2
 
 
 class StateListTests(BaseApiTest):
@@ -25,8 +25,8 @@ class StateListTests(BaseApiTest):
     async def get_application(self, loop):
         self.set_status_and_connection(
             Message.CLIENT_STATE_LIST_REQUEST,
-            client_pb2.ClientStateListRequest,
-            client_pb2.ClientStateListResponse)
+            client_state_pb2.ClientStateListRequest,
+            client_state_pb2.ClientStateListResponse)
 
         handlers = self.build_handlers(loop, self.connection)
         return self.build_app(loop, '/state', handlers.list_state)
@@ -707,8 +707,8 @@ class StateGetTests(BaseApiTest):
     async def get_application(self, loop):
         self.set_status_and_connection(
             Message.CLIENT_STATE_GET_REQUEST,
-            client_pb2.ClientStateGetRequest,
-            client_pb2.ClientStateGetResponse)
+            client_state_pb2.ClientStateGetRequest,
+            client_state_pb2.ClientStateGetResponse)
 
         handlers = self.build_handlers(loop, self.connection)
         return self.build_app(loop, '/state/{address}', handlers.fetch_state)
