@@ -18,42 +18,58 @@
 package main
 
 import (
-	"flag"
+	"fmt"
+	flags "github.com/jessevdk/go-flags"
+	"os"
 	intkey "sawtooth_intkey/handler"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"syscall"
 )
 
+type Opts struct {
+	Verbose []bool `short:"v" long:"verbose" description:"Increase verbosity"`
+	Connect string `short:"C" long:"connect" description:"Validator component endpoint to connect to" default:"tcp://localhost:4004"`
+}
+
 func main() {
-	v := flag.Bool("v", false, "Info level logging")
-	vv := flag.Bool("vv", false, "Debug level logging")
-	endpoint := "tcp://localhost:4004"
-
-	flag.Parse()
-	args := flag.Args()
-	if len(args) > 0 {
-		// Overwrite the default endpoint if specified
-		endpoint = args[0]
-	}
-
-	level := logging.WARN
-	if *v {
-		level = logging.INFO
-	}
-	if *vv {
-		level = logging.DEBUG
-	}
+	var opts Opts
 
 	logger := logging.Get()
-	logger.SetLevel(level)
+
+	parser := flags.NewParser(&opts, flags.Default)
+	remaining, err := parser.Parse()
+	if err != nil {
+		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			os.Exit(0)
+		} else {
+			logger.Errorf("Failed to parse args: %v", err)
+			os.Exit(2)
+		}
+	}
+
+	if len(remaining) > 0 {
+		fmt.Printf("Error: Unrecognized arguments passed: %v\n", remaining)
+		os.Exit(2)
+	}
+
+	endpoint := opts.Connect
+
+	switch len(opts.Verbose) {
+	case 2:
+		logger.SetLevel(logging.DEBUG)
+	case 1:
+		logger.SetLevel(logging.INFO)
+	default:
+		logger.SetLevel(logging.WARN)
+	}
 
 	prefix := intkey.Hexdigest("intkey")[:6]
 	handler := intkey.NewIntkeyHandler(prefix)
 	processor := processor.NewTransactionProcessor(endpoint)
 	processor.AddHandler(handler)
 	processor.ShutdownOnSignal(syscall.SIGINT, syscall.SIGTERM)
-	err := processor.Start()
+	err = processor.Start()
 	if err != nil {
 		logger.Error("Processor stopped: ", err)
 	}

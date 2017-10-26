@@ -28,14 +28,11 @@ import (
 )
 
 type Opts struct {
-	Verbose    []bool `short:"v" long:"verbose" description:"Increase verbosity"`
-	Positional struct {
-		Connect string `positional-arg-name:"connect" required:"false" description:"Validator component endpoint to connect to" default:"tcp://localhost:4004"`
-	} `positional-args:"true"`
+	Verbose []bool `short:"v" long:"verbose" description:"Increase verbosity"`
+	Connect string `short:"C" long:"connect" description:"Validator component endpoint to connect to" default:"tcp://localhost:4004"`
 }
 
 func main() {
-
 	var opts Opts
 
 	logger := logging.Get()
@@ -56,7 +53,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	endpoint := opts.Positional.Connect
+	endpoint := opts.Connect
 
 	switch len(opts.Verbose) {
 	case 2:

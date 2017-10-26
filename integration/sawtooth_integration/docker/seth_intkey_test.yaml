@@ -36,7 +36,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: seth-tp -vv tcp://validator:4004
+    command: seth-tp -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:

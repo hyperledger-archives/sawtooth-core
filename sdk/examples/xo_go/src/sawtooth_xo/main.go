@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	flags "github.com/jessevdk/go-flags"
 	"os"
 	"sawtooth_sdk/logging"
@@ -25,42 +26,42 @@ import (
 	"syscall"
 )
 
-var opts struct {
+type Opts struct {
 	Verbose []bool `short:"v" long:"verbose" description:"Increase verbosity"`
-	Args    struct {
-		Endpoint string
-	} `positional-args:"yes"`
+	Connect string `short:"C" long:"connect" description:"Validator component endpoint to connect to" default:"tcp://localhost:4004"`
 }
 
 func main() {
-	parser := flags.NewParser(&opts, flags.Default)
+	var opts Opts
 
-	_, err := parser.Parse()
+	logger := logging.Get()
+
+	parser := flags.NewParser(&opts, flags.Default)
+	remaining, err := parser.Parse()
 	if err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)
 		} else {
+			logger.Errorf("Failed to parse args: %v", err)
 			os.Exit(2)
 		}
 	}
 
-	endpoint := "tcp://localhost:4004"
-	if opts.Args.Endpoint != "" {
-		endpoint = opts.Args.Endpoint
+	if len(remaining) > 0 {
+		fmt.Printf("Error: Unrecognized arguments passed: %v\n", remaining)
+		os.Exit(2)
 	}
 
-	var loggingLevel int
+	endpoint := opts.Connect
+
 	switch len(opts.Verbose) {
-	case 0:
-		loggingLevel = logging.WARN
+	case 2:
+		logger.SetLevel(logging.DEBUG)
 	case 1:
-		loggingLevel = logging.INFO
+		logger.SetLevel(logging.INFO)
 	default:
-		loggingLevel = logging.DEBUG
+		logger.SetLevel(logging.WARN)
 	}
-
-	logger := logging.Get()
-	logger.SetLevel(loggingLevel)
 
 	logger.Debugf("command line arguments: %v", os.Args)
 	logger.Debugf("verbose = %v\n", len(opts.Verbose))
