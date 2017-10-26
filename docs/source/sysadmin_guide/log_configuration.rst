@@ -24,15 +24,10 @@ starts the validator, the log directory is `C:\\sawtooth\\logs\\`. The log
 directory can also be set in the path.toml file, however, this file should
 rarely be used.
 
-The name of the validator logs will look like the following:
+The validator logs names are:
 
-- validator-{first 8 characters of the validator's public_key}-debug.log
-- validator-{first 8 characters of the validator's public_key}-error.log
-
-Examples:
-
-- *validator-03aa0272-debug.log*
-- *validator-03aa0272-error.log*
+- validator-debug.log
+- validator-error.log
 
 For Python transaction processors, the author determines the name of the log
 file. It is highly encouraged that the file names are unique for each running
