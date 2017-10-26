@@ -17,9 +17,8 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
-option go_package = "txn_receipt_pb2";
+option go_package = "transaction_receipt_pb2";
 
-import "state_delta.proto";
 import "events.proto";
 
 
@@ -40,24 +39,15 @@ message TransactionReceipt {
   string transaction_id = 4;
 }
 
-// Fetches a specific txn by its id (header_signature) from the blockchain.
-message ClientReceiptGetRequest {
-    repeated string transaction_ids = 1;
-}
-
-// A response that returns the txn receipt specified by a
-// ClientTransactionReceiptGetRequest.
-//
-// Statuses:
-//   * OK - everything worked as expected, txn receipt has been fetched
-//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
-//   * NO_RESOURCE - no receipt exists for the transaction id specified
-message ClientReceiptGetResponse {
-    enum Status {
-        OK = 0;
-        INTERNAL_ERROR = 1;
-        NO_RESOURCE = 4;
+// A state change is an entry in a given delta set. StateChange objects
+// have the type of SET, which is either an insert or update, or
+// DELETE.  Items marked as a DELETE will have no byte value.
+message StateChange {
+    enum Type {
+        SET = 0;
+        DELETE = 1;
     }
-    Status status = 1;
-    repeated TransactionReceipt receipts = 2;
+    string address = 1;
+    bytes value = 2;
+    Type type = 3;
 }

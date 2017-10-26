@@ -21,15 +21,17 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 
-from sawtooth_validator.protobuf.events_pb2 import ClientEventsGetRequest
-from sawtooth_validator.protobuf.events_pb2 import ClientEventsGetResponse
-from sawtooth_validator.protobuf.events_pb2 \
+from sawtooth_validator.protobuf.client_event_pb2 \
+    import ClientEventsGetRequest
+from sawtooth_validator.protobuf.client_event_pb2 \
+    import ClientEventsGetResponse
+from sawtooth_validator.protobuf.client_event_pb2 \
     import ClientEventsSubscribeRequest
-from sawtooth_validator.protobuf.events_pb2 \
+from sawtooth_validator.protobuf.client_event_pb2 \
     import ClientEventsSubscribeResponse
-from sawtooth_validator.protobuf.events_pb2 \
+from sawtooth_validator.protobuf.client_event_pb2 \
     import ClientEventsUnsubscribeRequest
-from sawtooth_validator.protobuf.events_pb2 \
+from sawtooth_validator.protobuf.client_event_pb2 \
     import ClientEventsUnsubscribeResponse
 
 from sawtooth_validator.server.events.subscription import EventSubscription

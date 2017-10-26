@@ -42,6 +42,7 @@ from sawtooth_validator.server.events.subscription import EventFilterType
 from sawtooth_validator.execution.tp_state_handlers import TpEventAddHandler
 
 from sawtooth_validator.protobuf import events_pb2
+from sawtooth_validator.protobuf import client_event_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf import state_context_pb2
 from sawtooth_validator.protobuf import txn_receipt_pb2
@@ -157,7 +158,7 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
         mock_event_broadcaster = Mock()
         handler = \
             ClientEventsSubscribeValidationHandler(mock_event_broadcaster)
-        request = events_pb2.ClientEventsSubscribeRequest(
+        request = client_event_pb2.ClientEventsSubscribeRequest(
             subscriptions=[events_pb2.EventSubscription(
                 event_type="test_event",
                 filters=[
@@ -175,7 +176,7 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
                     FILTER_FACTORY.create(key="test", match_string="test")])],
             ["0" * 128])
         self.assertEqual(HandlerStatus.RETURN_AND_PASS, response.status)
-        self.assertEqual(events_pb2.ClientEventsSubscribeResponse.OK,
+        self.assertEqual(client_event_pb2.ClientEventsSubscribeResponse.OK,
                          response.message_out.status)
 
     def test_subscribe_bad_filter(self):
@@ -185,7 +186,7 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
         mock_event_broadcaster = Mock()
         handler = \
             ClientEventsSubscribeValidationHandler(mock_event_broadcaster)
-        request = events_pb2.ClientEventsSubscribeRequest(
+        request = client_event_pb2.ClientEventsSubscribeRequest(
             subscriptions=[events_pb2.EventSubscription(
                 event_type="test_event",
                 filters=[events_pb2.EventFilter(
@@ -199,7 +200,7 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
         mock_event_broadcaster.add_subscriber.assert_not_called()
         self.assertEqual(HandlerStatus.RETURN, response.status)
         self.assertEqual(
-            events_pb2.ClientEventsSubscribeResponse.INVALID_FILTER,
+            client_event_pb2.ClientEventsSubscribeResponse.INVALID_FILTER,
              response.message_out.status)
 
 
@@ -209,7 +210,7 @@ class ClientEventsSubscribeHandlersTest(unittest.TestCase):
         """Tests that the handler turns on the subscriber."""
         mock_event_broadcaster = Mock()
         handler = ClientEventsSubscribeHandler(mock_event_broadcaster)
-        request = events_pb2.ClientEventsSubscribeRequest()
+        request = client_event_pb2.ClientEventsSubscribeRequest()
 
         response = handler.handle("test_conn_id", request)
 
@@ -227,7 +228,7 @@ class ClientEventsUnsubscribeHandlerTest(unittest.TestCase):
         handler = ClientEventsUnsubscribeHandler(mock_event_broadcaster)
 
         request = \
-            events_pb2.ClientEventsUnsubscribeRequest().SerializeToString()
+            client_event_pb2.ClientEventsUnsubscribeRequest().SerializeToString()
 
         response = handler.handle('test_conn_id', request)
 
@@ -237,7 +238,7 @@ class ClientEventsUnsubscribeHandlerTest(unittest.TestCase):
             'test_conn_id')
 
         self.assertEqual(HandlerStatus.RETURN, response.status)
-        self.assertEqual(events_pb2.ClientEventsUnsubscribeResponse.OK,
+        self.assertEqual(client_event_pb2.ClientEventsUnsubscribeResponse.OK,
                          response.message_out.status)
 
 
@@ -267,7 +268,7 @@ class ClientEventsGetRequestHandlerTest(unittest.TestCase):
             block_store=self.block_store,
             receipt_store=self.receipt_store)
         for block_id, txn_ids in self._txn_ids_by_block_id.items():
-            request = events_pb2.ClientEventsGetRequest()
+            request = client_event_pb2.ClientEventsGetRequest()
             request.block_ids.extend([block_id])
             subscription = request.subscriptions.add()
             subscription.event_type = "block_commit"
@@ -297,7 +298,7 @@ class ClientEventsGetRequestHandlerTest(unittest.TestCase):
                 "Each Event has at least one attribute value that is the"
                 " block id for the block.")
             self.assertEqual(handler_output.message_out.status,
-                             events_pb2.ClientEventsGetResponse.OK)
+                             client_event_pb2.ClientEventsGetResponse.OK)
             self.assertTrue(len(handler_output.message_out.events) > 0)
 
 

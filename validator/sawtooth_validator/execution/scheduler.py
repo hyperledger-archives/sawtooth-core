@@ -249,8 +249,8 @@ class TxnExecutionResult:
         state_hash (str): The state hash against which the transaction was run.
         state_changes (list of :obj:`state_delta_pb2.StateChange`): The state
             changes that were a result of applying this transaction.
-        events (list of :obj:`events_pb2.Event`): The events that were returned
-            while executing this transaction.
+        events (list of :obj:`client_event_pb2.Event`): The events that were
+            returned while executing this transaction.
         data (list of (str, bytes)): Opaque data that was returned while
             executing this transaction.
         error_message (str): An error message that was returned while executing
