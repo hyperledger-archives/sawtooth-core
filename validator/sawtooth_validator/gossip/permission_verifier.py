@@ -16,7 +16,7 @@ import logging
 
 from google.protobuf.message import DecodeError
 
-from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.validator_pb2 import Message
@@ -330,7 +330,7 @@ class BatchListPermissionVerifier(Handler):
         self._verifier = permission_verifier
 
     def handle(self, connection_id, message_content):
-        response_proto = client_pb2.ClientBatchSubmitResponse
+        response_proto = client_batch_submit_pb2.ClientBatchSubmitResponse
 
         def make_response(out_status):
             return HandlerResult(
@@ -338,7 +338,7 @@ class BatchListPermissionVerifier(Handler):
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
         try:
-            request = client_pb2.ClientBatchSubmitRequest()
+            request = client_batch_submit_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)
             for batch in request.batches:
                 if batch.trace:

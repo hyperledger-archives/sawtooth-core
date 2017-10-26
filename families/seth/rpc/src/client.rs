@@ -43,6 +43,8 @@ use sawtooth_sdk::messages::client::{
     ClientTransactionGetRequest,
     ClientTransactionGetResponse,
     ClientTransactionGetResponse_Status,
+};
+use sawtooth_sdk::messages::client_batch_submit::{
     ClientBatchSubmitRequest,
     ClientBatchSubmitResponse,
     ClientBatchSubmitResponse_Status,

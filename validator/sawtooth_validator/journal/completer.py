@@ -24,7 +24,8 @@ from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.protobuf.client_pb2 import ClientBatchSubmitRequest
+from sawtooth_validator.protobuf.client_batch_submit_pb2 \
+    import ClientBatchSubmitRequest
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
