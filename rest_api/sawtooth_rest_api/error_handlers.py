@@ -13,7 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_transaction_pb2
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2
 from sawtooth_rest_api.protobuf import client_state_pb2
 from sawtooth_rest_api.protobuf import client_block_pb2
@@ -84,7 +84,7 @@ class BatchNotFoundTrap(_ErrorTrap):
 
 
 class TransactionNotFoundTrap(_ErrorTrap):
-    trigger = client_pb2.ClientTransactionGetResponse.NO_RESOURCE
+    trigger = client_transaction_pb2.ClientTransactionGetResponse.NO_RESOURCE
     error = errors.TransactionNotFound
 
 

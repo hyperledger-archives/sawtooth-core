@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import sawtooth_validator.state.client_handlers as handlers
-from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_transaction_pb2
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import MockBlockStore
@@ -25,8 +25,8 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         store = MockBlockStore()
         self.initialize(
             handlers.TransactionListRequest(store),
-            client_pb2.ClientTransactionListRequest,
-            client_pb2.ClientTransactionListResponse,
+            client_transaction_pb2.ClientTransactionListRequest,
+            client_transaction_pb2.ClientTransactionListResponse,
             store=store)
 
     def test_txn_list_request(self):
@@ -802,8 +802,8 @@ class TestTransactionGetRequests(ClientHandlerTestCase):
         store = MockBlockStore()
         self.initialize(
             handlers.TransactionGetRequest(store),
-            client_pb2.ClientTransactionGetRequest,
-            client_pb2.ClientTransactionGetResponse)
+            client_transaction_pb2.ClientTransactionGetRequest,
+            client_transaction_pb2.ClientTransactionGetResponse)
 
     def test_txn_get_request(self):
         """Verifies requests for a specific txn by id work properly.
