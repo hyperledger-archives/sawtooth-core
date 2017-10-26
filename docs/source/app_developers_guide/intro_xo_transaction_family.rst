@@ -50,10 +50,6 @@ Start up a validator, *XO* transaction processor, and the REST API. For more inf
 on configuring and running Sawtooth components, see
 :doc:`/app_developers_guide/installing_sawtooth`.
 
-- The ``--username`` option is used locally as a nickname for the key pair. If a
-  ``--username`` is not specified, OS environment variables will be parsed to find
-  a suitable value.
-
 A user creates a new game using the ``xo create [name]`` command.
 
 - The *name* argument is the identifier for the new game to be created.
@@ -65,6 +61,12 @@ the grid.
 - The *space* argument is the space that is to be marked, which is an integer in the
   range of 1 through 9.
 
+.. note::
+
+  The first player to issue an ``xo take`` command to a newly created game is
+  recorded by their username as *player one*. The second player to issue a ``take``
+  command is recorded by their username as *player two*.
+
 ``xo create`` and ``xo take`` each take ``--username`` and
 ``--key-dir`` arguments. These are used to locate the user's private
 key file: ``<key-dir>/<username>.priv``. ``key-dir`` defaults to
@@ -73,17 +75,21 @@ user.
 
 .. note::
 
-  The first player to issue an ``xo take`` command to a newly created game is
-  recorded by their username as *player one*. The second player to issue a ``take``
-  command is recorded by their username as *player two*.
+  All ``xo`` commands also support ``--auth-user`` and ``--auth-password``,
+  but these options are not used in this example.
 
-  Each time a user attempts to take a space, the transaction processor will verify
-  that their username matches the name of the player whose turn it is. This ensures
-  that no player is able to mark a space out of turn.
+Each time a user attempts to take a space, the transaction processor will verify
+that their username matches the name of the player whose turn it is. This ensures
+that no player is able to mark a space out of turn.
 
 The *XO* transaction processor will scan for winning or draw board conditions after
 each turn. If either condition occurs, further ``take`` actions on the finished game
 will not be allowed.
+
+.. note::
+
+  Either user can use the ``xo reset`` command to delete their local *XO* data.
+  This includes the saved URL and username.
 
 Viewing the game state
 ----------------------
