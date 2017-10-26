@@ -32,6 +32,7 @@ import sawtooth_rest_api.error_handlers as error_handlers
 from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf import client_list_control_pb2
+from sawtooth_rest_api.protobuf import client_batch_submit_pb2
 from sawtooth_rest_api.protobuf import txn_receipt_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
@@ -150,13 +151,13 @@ class RouteHandler(object):
 
         # Query validator
         error_traps = [error_handlers.BatchInvalidTrap]
-        validator_query = client_pb2.ClientBatchSubmitRequest(
+        validator_query = client_batch_submit_pb2.ClientBatchSubmitRequest(
             batches=batch_list.batches)
 
         with self._post_batches_validator_time.time():
             await self._query_validator(
                 Message.CLIENT_BATCH_SUBMIT_REQUEST,
-                client_pb2.ClientBatchSubmitResponse,
+                client_batch_submit_pb2.ClientBatchSubmitResponse,
                 validator_query,
                 error_traps)
 
@@ -212,12 +213,14 @@ class RouteHandler(object):
                 raise errors.StatusIdQueryInvalid()
 
         # Query validator
-        validator_query = client_pb2.ClientBatchStatusRequest(batch_ids=ids)
+        validator_query = \
+            client_batch_submit_pb2.ClientBatchStatusRequest(
+                batch_ids=ids)
         self._set_wait(request, validator_query)
 
         response = await self._query_validator(
             Message.CLIENT_BATCH_STATUS_REQUEST,
-            client_pb2.ClientBatchStatusResponse,
+            client_batch_submit_pb2.ClientBatchStatusResponse,
             validator_query,
             error_traps)
 

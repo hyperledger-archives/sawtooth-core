@@ -29,6 +29,7 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf import client_list_control_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
@@ -491,14 +492,15 @@ def _format_batch_statuses(statuses, batch_ids, tracker):
     proto_statuses = []
 
     for batch_id in batch_ids:
-        if statuses[batch_id] == client_pb2.ClientBatchStatus.INVALID:
+        if statuses[batch_id] == \
+           client_batch_submit_pb2.ClientBatchStatus.INVALID:
             invalid_txns = tracker.get_invalid_txn_info(batch_id)
             for txn_info in invalid_txns:
                 txn_info['transaction_id'] = txn_info.pop('id')
         else:
             invalid_txns = None
 
-        proto_statuses.append(client_pb2.ClientBatchStatus(
+        proto_statuses.append(client_batch_submit_pb2.ClientBatchStatus(
             batch_id=batch_id,
             status=statuses[batch_id],
             invalid_transactions=invalid_txns))
@@ -565,8 +567,8 @@ class BatchSubmitFinisher(_ClientRequestHandler):
     def __init__(self, batch_tracker):
         self._batch_tracker = batch_tracker
         super().__init__(
-            client_pb2.ClientBatchSubmitRequest,
-            client_pb2.ClientBatchSubmitResponse,
+            client_batch_submit_pb2.ClientBatchSubmitRequest,
+            client_batch_submit_pb2.ClientBatchSubmitResponse,
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
     def _respond(self, request):
@@ -582,8 +584,8 @@ class BatchStatusRequest(_ClientRequestHandler):
     def __init__(self, batch_tracker):
         self._batch_tracker = batch_tracker
         super().__init__(
-            client_pb2.ClientBatchStatusRequest,
-            client_pb2.ClientBatchStatusResponse,
+            client_batch_submit_pb2.ClientBatchStatusRequest,
+            client_batch_submit_pb2.ClientBatchStatusResponse,
             validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE)
 
     def _respond(self, request):

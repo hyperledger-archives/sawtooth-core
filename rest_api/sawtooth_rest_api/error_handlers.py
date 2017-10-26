@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_batch_submit_pb2
 from sawtooth_rest_api.protobuf import txn_receipt_pb2
 import sawtooth_rest_api.exceptions as errors
 
@@ -55,12 +56,12 @@ class _ErrorTrap(object):
 
 
 class StatusResponseMissing(_ErrorTrap):
-    trigger = client_pb2.ClientBatchStatusResponse.NO_RESOURCE
+    trigger = client_batch_submit_pb2.ClientBatchStatusResponse.NO_RESOURCE
     error = errors.StatusResponseMissing
 
 
 class BatchInvalidTrap(_ErrorTrap):
-    trigger = client_pb2.ClientBatchSubmitResponse.INVALID_BATCH
+    trigger = client_batch_submit_pb2.ClientBatchSubmitResponse.INVALID_BATCH
     error = errors.SubmittedBatchesInvalid
 
 

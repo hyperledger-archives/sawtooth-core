@@ -19,7 +19,7 @@ from aiohttp.test_utils import AioHTTPTestCase
 from base64 import b64decode
 
 from sawtooth_rest_api.route_handlers import RouteHandler
-from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_batch_submit_pb2
 from sawtooth_rest_api.protobuf.client_pb2 import ClientStateListResponse
 from sawtooth_rest_api.protobuf.client_list_control_pb2 \
     import ClientPagingControls
@@ -313,8 +313,9 @@ class BaseApiTest(AioHTTPTestCase):
         self.assertEqual(len(proto_statuses), len(json_statuses))
         for pb_status, js_status in zip(proto_statuses, json_statuses):
             self.assertEqual(pb_status.batch_id, js_status['id'])
-            pb_enum_name = client_pb2.ClientBatchStatus.Status.Name(
-                    pb_status.status)
+            pb_enum_name = \
+               client_batch_submit_pb2.ClientBatchStatus.Status.Name(
+                   pb_status.status)
             self.assertEqual(pb_enum_name, js_status['status'])
 
             if pb_status.invalid_transactions:

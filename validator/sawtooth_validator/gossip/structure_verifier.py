@@ -18,7 +18,7 @@ import logging
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
-from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
@@ -150,7 +150,7 @@ class GossipBatchResponseStructureVerifier(Handler):
 
 class BatchListStructureVerifier(Handler):
     def handle(self, connection_id, message_content):
-        response_proto = client_pb2.ClientBatchSubmitResponse
+        response_proto = client_batch_submit_pb2.ClientBatchSubmitResponse
 
         def make_response(out_status):
             return HandlerResult(
@@ -158,7 +158,7 @@ class BatchListStructureVerifier(Handler):
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
         try:
-            request = client_pb2.ClientBatchSubmitRequest()
+            request = client_batch_submit_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)
         except DecodeError:
             return make_response(response_proto.INTERNAL_ERROR)

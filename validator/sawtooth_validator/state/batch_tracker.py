@@ -19,7 +19,8 @@ from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.chain import ChainObserver
 from sawtooth_validator.execution.executor import InvalidTransactionObserver
 from sawtooth_validator.journal.publisher import PendingBatchObserver
-from sawtooth_validator.protobuf.client_pb2 import ClientBatchStatus
+from sawtooth_validator.protobuf.client_batch_submit_pb2 \
+    import ClientBatchStatus
 
 
 # By default invalid batch info will be kept for one hour

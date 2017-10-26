@@ -17,8 +17,9 @@ from threading import Thread
 from time import time, sleep
 
 import sawtooth_validator.state.client_handlers as handlers
-from sawtooth_validator.protobuf import client_pb2
-from sawtooth_validator.protobuf.client_pb2 import ClientBatchStatus
+from sawtooth_validator.protobuf import client_batch_submit_pb2
+from sawtooth_validator.protobuf.client_batch_submit_pb2 \
+    import ClientBatchStatus
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import make_mock_batch
 from test_client_request_handlers.mocks import make_store_and_tracker
@@ -30,8 +31,8 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
 
         self.initialize(
             handlers.BatchSubmitFinisher(tracker),
-            client_pb2.ClientBatchSubmitRequest,
-            client_pb2.ClientBatchSubmitResponse,
+            client_batch_submit_pb2.ClientBatchSubmitRequest,
+            client_batch_submit_pb2.ClientBatchSubmitResponse,
             store=store,
             tracker=tracker)
 
@@ -63,8 +64,8 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.initialize(
             handlers.BatchStatusRequest(tracker),
-            client_pb2.ClientBatchStatusRequest,
-            client_pb2.ClientBatchStatusResponse,
+            client_batch_submit_pb2.ClientBatchStatusRequest,
+            client_batch_submit_pb2.ClientBatchStatusResponse,
             store=store,
             tracker=tracker)
 
