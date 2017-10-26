@@ -31,11 +31,6 @@ use sawtooth_sdk::messages::txn_receipt::{
     ClientReceiptGetResponse,
     ClientReceiptGetResponse_Status,
 };
-use sawtooth_sdk::messages::client::{
-    ClientTransactionGetRequest,
-    ClientTransactionGetResponse,
-    ClientTransactionGetResponse_Status,
-};
 use sawtooth_sdk::messages::client_block::{
     ClientBlockListRequest,
     ClientBlockListResponse,
@@ -47,6 +42,11 @@ use sawtooth_sdk::messages::client_state::{
     ClientStateGetRequest,
     ClientStateGetResponse,
     ClientStateGetResponse_Status,
+};
+use sawtooth_sdk::messages::client_transaction::{
+    ClientTransactionGetRequest,
+    ClientTransactionGetResponse,
+    ClientTransactionGetResponse_Status,
 };
 use sawtooth_sdk::messages::client_batch_submit::{
     ClientBatchSubmitRequest,

@@ -30,7 +30,7 @@ from sawtooth_rest_api.protobuf.validator_pb2 import Message
 import sawtooth_rest_api.exceptions as errors
 import sawtooth_rest_api.error_handlers as error_handlers
 from sawtooth_rest_api.messaging import DisconnectError
-from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_transaction_pb2
 from sawtooth_rest_api.protobuf import client_list_control_pb2
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2
 from sawtooth_rest_api.protobuf import client_state_pb2
@@ -433,7 +433,7 @@ class RouteHandler(object):
             paging: Paging info and nav, like total resources and a next link
         """
         paging_controls = self._get_paging_controls(request)
-        validator_query = client_pb2.ClientTransactionListRequest(
+        validator_query = client_transaction_pb2.ClientTransactionListRequest(
             head_id=request.url.query.get('head', None),
             transaction_ids=self._get_filter_ids(request),
             sorting=self._get_sorting_message(request),
@@ -441,7 +441,7 @@ class RouteHandler(object):
 
         response = await self._query_validator(
             Message.CLIENT_TRANSACTION_LIST_REQUEST,
-            client_pb2.ClientTransactionListResponse,
+            client_transaction_pb2.ClientTransactionListResponse,
             validator_query)
 
         data = [self._expand_transaction(t) for t in response['transactions']]
@@ -469,8 +469,9 @@ class RouteHandler(object):
 
         response = await self._query_validator(
             Message.CLIENT_TRANSACTION_GET_REQUEST,
-            client_pb2.ClientTransactionGetResponse,
-            client_pb2.ClientTransactionGetRequest(transaction_id=txn_id),
+            client_transaction_pb2.ClientTransactionGetResponse,
+            client_transaction_pb2.ClientTransactionGetRequest(
+                transaction_id=txn_id),
             error_traps)
 
         return self._wrap_response(

@@ -16,7 +16,7 @@
 from aiohttp.test_utils import unittest_run_loop
 from components import Mocks, BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
-from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_transaction_pb2
 
 
 class TransactionListTests(BaseApiTest):
@@ -24,8 +24,8 @@ class TransactionListTests(BaseApiTest):
     async def get_application(self, loop):
         self.set_status_and_connection(
             Message.CLIENT_TRANSACTION_LIST_REQUEST,
-            client_pb2.ClientTransactionListRequest,
-            client_pb2.ClientTransactionListResponse)
+            client_transaction_pb2.ClientTransactionListRequest,
+            client_transaction_pb2.ClientTransactionListResponse)
 
         handlers = self.build_handlers(loop, self.connection)
         app = self.build_app(loop, '/transactions', handlers.list_transactions)
@@ -737,8 +737,8 @@ class TransactionGetTests(BaseApiTest):
     async def get_application(self, loop):
         self.set_status_and_connection(
             Message.CLIENT_TRANSACTION_GET_REQUEST,
-            client_pb2.ClientTransactionGetRequest,
-            client_pb2.ClientTransactionGetResponse)
+            client_transaction_pb2.ClientTransactionGetRequest,
+            client_transaction_pb2.ClientTransactionGetResponse)
 
         handlers = self.build_handlers(loop, self.connection)
         return self.build_app(

@@ -25,8 +25,10 @@ from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetRequest
 from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetResponse
 from sawtooth_sdk.protobuf.client_state_pb2 import ClientStateGetRequest
 from sawtooth_sdk.protobuf.client_state_pb2 import ClientStateGetResponse
-from sawtooth_sdk.protobuf.client_pb2 import ClientTransactionGetRequest
-from sawtooth_sdk.protobuf.client_pb2 import ClientTransactionGetResponse
+from sawtooth_sdk.protobuf.client_transaction_pb2 import \
+    ClientTransactionGetRequest
+from sawtooth_sdk.protobuf.client_transaction_pb2 import \
+    ClientTransactionGetResponse
 from sawtooth_sdk.protobuf.client_batch_submit_pb2 import \
     ClientBatchSubmitRequest
 from sawtooth_sdk.protobuf.client_batch_submit_pb2 import \

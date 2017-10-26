@@ -28,10 +28,10 @@ from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
-from sawtooth_validator.protobuf import client_pb2
 from sawtooth_validator.protobuf import client_batch_pb2
 from sawtooth_validator.protobuf import client_block_pb2
 from sawtooth_validator.protobuf import client_state_pb2
+from sawtooth_validator.protobuf import client_transaction_pb2
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf import client_list_control_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -810,8 +810,8 @@ class BatchGetRequest(_ClientRequestHandler):
 class TransactionListRequest(_ClientRequestHandler):
     def __init__(self, block_store):
         super().__init__(
-            client_pb2.ClientTransactionListRequest,
-            client_pb2.ClientTransactionListResponse,
+            client_transaction_pb2.ClientTransactionListRequest,
+            client_transaction_pb2.ClientTransactionListResponse,
             validator_pb2.Message.CLIENT_TRANSACTION_LIST_RESPONSE,
             block_store=block_store)
 
@@ -850,8 +850,8 @@ class TransactionListRequest(_ClientRequestHandler):
 class TransactionGetRequest(_ClientRequestHandler):
     def __init__(self, block_store):
         super().__init__(
-            client_pb2.ClientTransactionGetRequest,
-            client_pb2.ClientTransactionGetResponse,
+            client_transaction_pb2.ClientTransactionGetRequest,
+            client_transaction_pb2.ClientTransactionGetResponse,
             validator_pb2.Message.CLIENT_TRANSACTION_GET_RESPONSE,
             block_store=block_store)
 
