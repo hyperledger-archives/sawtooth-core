@@ -1,0 +1,60 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "client_list_control_pb2";
+
+// Paging controls to be sent with List requests.
+// Attributes:
+//     start_id: The id of a resource to start the page with
+//     end_id: The id of a resource to end the page with
+//     min_index: A resource index relative to the query, the newest being 0
+//     count: The number of results per page, defaults to and maxes out at 1000
+message ClientPagingControls {
+    oneof location_marker {
+        string start_id = 1;
+        string end_id = 2;
+        int32 start_index = 3;
+    }
+    int32 count = 4;
+}
+
+// Information about the pagination used, sent back with List responses.
+// Attributes:
+//     next_id: The id of the first resource in the next page
+//     previous_id: The id of the last resource in the previous page
+//     start_index: The index of the first resource in this page
+//     total_resources: The total resources available from the requested query
+message ClientPagingResponse {
+    string next_id = 1;
+    string previous_id = 2;
+    int32 start_index = 3;
+    int32 total_resources = 4;
+}
+
+// Sorting controls to be sent with List requests. More than one can be sent.
+// If so, the first is used, and additional controls are tie-breakers.
+// Attributes:
+//     keys: Nested set of keys to sort by (i.e. ['header', 'signer_public_key'])
+//     reverse: Whether or not to reverse the sort (i.e. descending order)
+//     compare_length: Sorts by value length, rather than the property itself
+message ClientSortControls {
+    repeated string keys = 1;
+    bool reverse = 2;
+    bool compare_length = 3;
+}

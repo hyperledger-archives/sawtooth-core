@@ -25,6 +25,7 @@ pub mod state_context;
 pub mod processor;
 pub mod genesis;
 pub mod client;
+pub mod client_list_control;
 pub mod network;
 pub mod events;
 pub mod authorization;

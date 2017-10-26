@@ -26,6 +26,7 @@ from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.messaging import ConnectionEvent
 from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_list_control_pb2
 from sawtooth_rest_api.protobuf import state_delta_pb2
 
 
@@ -267,7 +268,8 @@ class StateDeltaSubscriberHandler:
         resp = await self._connection.send(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client_pb2.ClientBlockListRequest(
-                paging=client_pb2.PagingControls(count=1)).SerializeToString())
+                paging=client_list_control_pb2.ClientPagingControls(count=1)
+            ).SerializeToString())
 
         block_list_resp = client_pb2.ClientBlockListResponse()
         block_list_resp.ParseFromString(resp.content)

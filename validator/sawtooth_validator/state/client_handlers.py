@@ -29,6 +29,7 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_list_control_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -294,7 +295,8 @@ class _Pager(object):
         """
         if not resources:
             return (resources,
-                    client_pb2.ClientPagingResponse(total_resources=0))
+                    client_list_control_pb2.ClientPagingResponse(
+                        total_resources=0))
 
         paging = request.paging
         count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
@@ -316,7 +318,7 @@ class _Pager(object):
 
         paged_resources = resources[start_index: start_index + count]
 
-        paging_response = client_pb2.ClientPagingResponse(
+        paging_response = client_list_control_pb2.ClientPagingResponse(
             next_id=cls.id_by_index(start_index + count, resources),
             previous_id=cls.id_by_index(start_index - 1, resources),
             start_index=start_index,

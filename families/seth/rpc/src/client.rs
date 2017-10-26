@@ -40,13 +40,15 @@ use sawtooth_sdk::messages::client::{
     ClientStateGetRequest,
     ClientStateGetResponse,
     ClientStateGetResponse_Status,
-    ClientPagingControls,
     ClientTransactionGetRequest,
     ClientTransactionGetResponse,
     ClientTransactionGetResponse_Status,
     ClientBatchSubmitRequest,
     ClientBatchSubmitResponse,
     ClientBatchSubmitResponse_Status,
+};
+use sawtooth_sdk::messages::client_list_control::{
+    ClientPagingControls,
 };
 use sawtooth_sdk::messages::transaction::{Transaction as TransactionPb, TransactionHeader};
 use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
