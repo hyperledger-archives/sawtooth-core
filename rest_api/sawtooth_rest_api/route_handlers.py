@@ -31,6 +31,7 @@ import sawtooth_rest_api.exceptions as errors
 import sawtooth_rest_api.error_handlers as error_handlers
 from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_list_control_pb2
 from sawtooth_rest_api.protobuf import txn_receipt_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
@@ -888,7 +889,7 @@ class RouteHandler(object):
         else:
             start_index = controls.get('start_index', None)
 
-        return client_pb2.ClientPagingControls(
+        return client_list_control_pb2.ClientPagingControls(
             start_id=controls.get('start_id', None),
             end_id=controls.get('end_id', None),
             start_index=start_index,
@@ -919,7 +920,7 @@ class RouteHandler(object):
             else:
                 compare_length = False
 
-            control_list.append(client_pb2.ClientSortControls(
+            control_list.append(client_list_control_pb2.ClientSortControls(
                 keys=keys,
                 reverse=reverse,
                 compare_length=compare_length))

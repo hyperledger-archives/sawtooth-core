@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_list_control_pb2
 
 
 class ClientHandlerTestCase(unittest.TestCase):
@@ -42,14 +42,14 @@ class ClientHandlerTestCase(unittest.TestCase):
         """
         paging_keys = ['start_id', 'end_id', 'start_index', 'count']
         paging_args = {k: kwargs.pop(k) for k in paging_keys if k in kwargs}
-        paging_request = client_pb2.ClientPagingControls(**paging_args)
+        paging_request = client_list_control_pb2.ClientPagingControls(**paging_args)
         return self.make_request(paging=paging_request, **kwargs)
 
     def make_sort_controls(self, *keys, reverse=False, compare_length=False):
         """Creates a ClientSortControls object and returns it in a list. Use
         concatenation to combine multiple ClientSortControls.
         """
-        return [client_pb2.ClientSortControls(
+        return [client_list_control_pb2.ClientSortControls(
             keys=keys,
             reverse=reverse,
             compare_length=compare_length)]
@@ -91,7 +91,7 @@ class ClientHandlerTestCase(unittest.TestCase):
         """Checks that a response's ClientPagingResponse is set properly.
         Defaults to expecting a single page with all mock resources.
         """
-        self.assertIsInstance(response.paging, client_pb2.ClientPagingResponse)
+        self.assertIsInstance(response.paging, client_list_control_pb2.ClientPagingResponse)
         self.assertEqual(response.paging.next_id, next_id)
         self.assertEqual(response.paging.previous_id, previous_id)
         self.assertEqual(response.paging.start_index, start_index)
