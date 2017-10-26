@@ -36,7 +36,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: intkey-tp-go -v tcp://validator:4004
+    command: intkey-tp-go -v -C tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:

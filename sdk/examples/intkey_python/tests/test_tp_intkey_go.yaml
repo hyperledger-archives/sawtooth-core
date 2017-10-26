@@ -23,7 +23,7 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-go tcp://test-tp-intkey-go:4004
+    command: intkey-tp-go -C tcp://test-tp-intkey-go:4004
     stop_signal: SIGKILL
 
   test-tp-intkey-go:
