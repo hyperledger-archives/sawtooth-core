@@ -16,6 +16,7 @@
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2
 from sawtooth_rest_api.protobuf import client_state_pb2
+from sawtooth_rest_api.protobuf import client_block_pb2
 from sawtooth_rest_api.protobuf import txn_receipt_pb2
 import sawtooth_rest_api.exceptions as errors
 
@@ -72,7 +73,7 @@ class InvalidAddressTrap(_ErrorTrap):
 
 
 class BlockNotFoundTrap(_ErrorTrap):
-    trigger = client_pb2.ClientBlockGetResponse.NO_RESOURCE
+    trigger = client_block_pb2.ClientBlockGetResponse.NO_RESOURCE
     error = errors.BlockNotFound
 
 

@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import sawtooth_validator.state.client_handlers as handlers
-from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_block_pb2
 from sawtooth_validator.protobuf.block_pb2 import Block
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import MockBlockStore
@@ -25,8 +25,8 @@ class TestBlockListRequests(ClientHandlerTestCase):
         store = MockBlockStore()
         self.initialize(
             handlers.BlockListRequest(store),
-            client_pb2.ClientBlockListRequest,
-            client_pb2.ClientBlockListResponse,
+            client_block_pb2.ClientBlockListRequest,
+            client_block_pb2.ClientBlockListResponse,
             store=store)
 
     def test_block_list_request(self):
@@ -588,8 +588,8 @@ class TestBlockGetRequests(ClientHandlerTestCase):
         store = MockBlockStore()
         self.initialize(
             handlers.BlockGetRequest(store),
-            client_pb2.ClientBlockGetRequest,
-            client_pb2.ClientBlockGetResponse)
+            client_block_pb2.ClientBlockGetRequest,
+            client_block_pb2.ClientBlockGetResponse)
 
     def test_block_get_request(self):
         """Verifies requests for a specific block by id work properly.

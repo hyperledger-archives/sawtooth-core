@@ -19,10 +19,10 @@ from rpc_client import RpcClient
 from mock_validator import MockValidator
 
 from sawtooth_sdk.protobuf.validator_pb2 import Message
-from sawtooth_sdk.protobuf.client_pb2 import ClientBlockListRequest
-from sawtooth_sdk.protobuf.client_pb2 import ClientBlockListResponse
-from sawtooth_sdk.protobuf.client_pb2 import ClientBlockGetRequest
-from sawtooth_sdk.protobuf.client_pb2 import ClientBlockGetResponse
+from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockListRequest
+from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockListResponse
+from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetRequest
+from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetResponse
 from sawtooth_sdk.protobuf.client_state_pb2 import ClientStateGetRequest
 from sawtooth_sdk.protobuf.client_state_pb2 import ClientStateGetResponse
 from sawtooth_sdk.protobuf.client_pb2 import ClientTransactionGetRequest
