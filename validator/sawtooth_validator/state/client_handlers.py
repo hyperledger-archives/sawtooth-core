@@ -29,6 +29,7 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_batch_pb2
 from sawtooth_validator.protobuf import client_block_pb2
 from sawtooth_validator.protobuf import client_state_pb2
 from sawtooth_validator.protobuf import client_batch_submit_pb2
@@ -752,8 +753,8 @@ class BlockGetRequest(_ClientRequestHandler):
 class BatchListRequest(_ClientRequestHandler):
     def __init__(self, block_store):
         super().__init__(
-            client_pb2.ClientBatchListRequest,
-            client_pb2.ClientBatchListResponse,
+            client_batch_pb2.ClientBatchListRequest,
+            client_batch_pb2.ClientBatchListResponse,
             validator_pb2.Message.CLIENT_BATCH_LIST_RESPONSE,
             block_store=block_store)
 
@@ -792,8 +793,8 @@ class BatchListRequest(_ClientRequestHandler):
 class BatchGetRequest(_ClientRequestHandler):
     def __init__(self, block_store):
         super().__init__(
-            client_pb2.ClientBatchGetRequest,
-            client_pb2.ClientBatchGetResponse,
+            client_batch_pb2.ClientBatchGetRequest,
+            client_batch_pb2.ClientBatchGetResponse,
             validator_pb2.Message.CLIENT_BATCH_GET_RESPONSE,
             block_store=block_store)
 

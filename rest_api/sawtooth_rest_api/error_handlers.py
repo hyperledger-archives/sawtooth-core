@@ -17,6 +17,7 @@ from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2
 from sawtooth_rest_api.protobuf import client_state_pb2
 from sawtooth_rest_api.protobuf import client_block_pb2
+from sawtooth_rest_api.protobuf import client_batch_pb2
 from sawtooth_rest_api.protobuf import txn_receipt_pb2
 import sawtooth_rest_api.exceptions as errors
 
@@ -78,7 +79,7 @@ class BlockNotFoundTrap(_ErrorTrap):
 
 
 class BatchNotFoundTrap(_ErrorTrap):
-    trigger = client_pb2.ClientBatchGetResponse.NO_RESOURCE
+    trigger = client_batch_pb2.ClientBatchGetResponse.NO_RESOURCE
     error = errors.BatchNotFound
 
 

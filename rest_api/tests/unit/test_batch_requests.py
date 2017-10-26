@@ -16,7 +16,7 @@
 from aiohttp.test_utils import unittest_run_loop
 from components import Mocks, BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
-from sawtooth_rest_api.protobuf import client_pb2
+from sawtooth_rest_api.protobuf import client_batch_pb2
 
 
 class BatchListTests(BaseApiTest):
@@ -24,8 +24,8 @@ class BatchListTests(BaseApiTest):
     async def get_application(self, loop):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_LIST_REQUEST,
-            client_pb2.ClientBatchListRequest,
-            client_pb2.ClientBatchListResponse)
+            client_batch_pb2.ClientBatchListRequest,
+            client_batch_pb2.ClientBatchListResponse)
 
         handlers = self.build_handlers(loop, self.connection)
         return self.build_app(loop, '/batches', handlers.list_batches)
@@ -718,8 +718,8 @@ class BatchGetTests(BaseApiTest):
     async def get_application(self, loop):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_GET_REQUEST,
-            client_pb2.ClientBatchGetRequest,
-            client_pb2.ClientBatchGetResponse)
+            client_batch_pb2.ClientBatchGetRequest,
+            client_batch_pb2.ClientBatchGetResponse)
 
         handlers = self.build_handlers(loop, self.connection)
         return self.build_app(loop, '/batches/{batch_id}', handlers.fetch_batch)
