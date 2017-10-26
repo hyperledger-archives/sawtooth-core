@@ -453,7 +453,7 @@ transactions.  Any failure of a transaction in genesis.batch will fail to
 produce the genesis block, and the validator will treat this as a fatal error.
 
 Second, it will use a genesis consensus, to determine block validity. At the
-start of the genesis block creation process, the merkel state will be empty.
+start of the genesis block creation process, the Merkle state will be empty.
 Given that the consensus mechanism is specified by a configuration setting in
 the state, this will return None.  As a result, the genesis consensus mechanism
 will be used. This will produce a block with an empty consensus field.

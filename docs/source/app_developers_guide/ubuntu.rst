@@ -121,7 +121,7 @@ The following output appears:
 
 .. note::
 
-  If you need to delete previously existing block-chain data before running a
+  If you need to delete previously existing blockchain data before running a
   validator, simply remove all files from /var/lib/sawtooth.
 
 
@@ -153,7 +153,7 @@ output includes something similar to this:
 
   If you want to stop the validator, enter CTRL-c in the validator's terminal
   window.  You can stop any other running Sawtooth component by entering
-  CTRL-c in the apprpriate window.
+  CTRL-c in the appropriate window.
 
 .. note::
 
