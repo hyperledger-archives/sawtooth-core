@@ -28,6 +28,7 @@ from sawtooth_intkey.processor.handler import make_intkey_address
 from sawtooth_sdk.messaging.stream import Stream
 
 from sawtooth_sdk.protobuf import events_pb2
+from sawtooth_sdk.protobuf import client_event_pb2
 from sawtooth_sdk.protobuf import validator_pb2
 from sawtooth_sdk.protobuf import batch_pb2
 from sawtooth_sdk.protobuf import txn_receipt_pb2
@@ -112,7 +113,7 @@ class TestEventsAndReceipts(unittest.TestCase):
             subscriptions = [
                 events_pb2.EventSubscription(event_type="block_commit"),
             ]
-        request = events_pb2.ClientEventsSubscribeRequest(
+        request = client_event_pb2.ClientEventsSubscribeRequest(
             subscriptions=subscriptions)
         response = self.stream.send(
             validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
@@ -120,7 +121,7 @@ class TestEventsAndReceipts(unittest.TestCase):
         return response
 
     def _unsubscribe(self):
-        request = events_pb2.ClientEventsUnsubscribeRequest()
+        request = client_event_pb2.ClientEventsUnsubscribeRequest()
         response = self.stream.send(
             validator_pb2.Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
             request.SerializeToString()).result()
@@ -160,24 +161,24 @@ class TestEventsAndReceipts(unittest.TestCase):
             msg.message_type,
             validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_RESPONSE)
 
-        subscription_response = events_pb2.ClientEventsSubscribeResponse()
+        subscription_response = client_event_pb2.ClientEventsSubscribeResponse()
         subscription_response.ParseFromString(msg.content)
 
         self.assertEqual(
             subscription_response.status,
-            events_pb2.ClientEventsSubscribeResponse.OK)
+            client_event_pb2.ClientEventsSubscribeResponse.OK)
 
     def assert_unsubscribe_response(self, msg):
         self.assertEqual(
             msg.message_type,
             validator_pb2.Message.CLIENT_EVENTS_UNSUBSCRIBE_RESPONSE)
 
-        subscription_response = events_pb2.ClientEventsUnsubscribeResponse()
+        subscription_response = client_event_pb2.ClientEventsUnsubscribeResponse()
         subscription_response.ParseFromString(msg.content)
 
         self.assertEqual(
             subscription_response.status,
-            events_pb2.ClientEventsUnsubscribeResponse.OK)
+            client_event_pb2.ClientEventsUnsubscribeResponse.OK)
 
 
 class BatchSubmitter:

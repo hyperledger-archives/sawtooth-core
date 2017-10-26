@@ -32,5 +32,6 @@ pub mod client_batch_submit;
 pub mod client_list_control;
 pub mod network;
 pub mod events;
+pub mod client_event;
 pub mod authorization;
 pub mod txn_receipt;
