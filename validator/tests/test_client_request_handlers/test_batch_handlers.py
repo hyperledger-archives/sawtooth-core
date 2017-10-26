@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import sawtooth_validator.state.client_handlers as handlers
-from sawtooth_validator.protobuf import client_pb2
+from sawtooth_validator.protobuf import client_batch_pb2
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import MockBlockStore
@@ -25,8 +25,8 @@ class TestBatchListRequests(ClientHandlerTestCase):
         store = MockBlockStore()
         self.initialize(
             handlers.BatchListRequest(store),
-            client_pb2.ClientBatchListRequest,
-            client_pb2.ClientBatchListResponse,
+            client_batch_pb2.ClientBatchListRequest,
+            client_batch_pb2.ClientBatchListResponse,
             store=store)
 
     def test_batch_list_request(self):
@@ -564,8 +564,8 @@ class TestBatchGetRequests(ClientHandlerTestCase):
         store = MockBlockStore()
         self.initialize(
             handlers.BatchGetRequest(store),
-            client_pb2.ClientBatchGetRequest,
-            client_pb2.ClientBatchGetResponse)
+            client_batch_pb2.ClientBatchGetRequest,
+            client_batch_pb2.ClientBatchGetResponse)
 
     def test_batch_get_request(self):
         """Verifies requests for a specific batch by id work properly.
