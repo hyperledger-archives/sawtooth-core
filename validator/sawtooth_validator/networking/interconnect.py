@@ -224,14 +224,17 @@ class _SendReceive(object):
                                              message.SerializeToString()]
                             yield from self._send_message_frame(message_frame)
                 elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
-                    if self._last_message_time:
-                        if self._is_connection_lost(self._last_message_time):
-                            LOGGER.debug("No response from %s in %s seconds"
-                                         " - removing connection.",
-                                         self._connection,
-                                         self._connection_timeout)
-                            self._ready.clear()
-                            yield from self._stop()
+                    if self._last_message_time and \
+                            self._is_connection_lost(self._last_message_time):
+                        LOGGER.debug("No response from %s in %s seconds"
+                                     " - removing connection.",
+                                     self._connection,
+                                     self._connection_timeout)
+                        connection_id = hashlib.sha512(
+                            self.connection.encode()).hexdigest()
+                        if connection_id in self._connections:
+                            del self._connections[connection_id]
+                        yield from self._stop()
                 yield from asyncio.sleep(self._heartbeat_interval)
             except CancelledError:
                 # The concurrent.futures.CancelledError is caught by asyncio
