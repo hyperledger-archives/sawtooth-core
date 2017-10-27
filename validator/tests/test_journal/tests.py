@@ -299,7 +299,6 @@ class TestBlockPublisher(unittest.TestCase):
         # with a batch limit
         addr, value = CreateSetting(
             'sawtooth.publisher.max_batches_per_block', 1)
-        print('test', addr)
         self.state_view_factory = MockStateViewFactory(
             {addr: value})
 
