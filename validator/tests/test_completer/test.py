@@ -41,11 +41,9 @@ class TestCompleter(unittest.TestCase):
         self.batches = []
 
     def _on_block_received(self, block):
-        print("Block received")
         return self.blocks.append(block.header_signature)
 
     def _on_batch_received(self, batch):
-        print("Batch received")
         return self.batches.append(batch.header_signature)
 
     def _create_transactions(self, count, missing_dep=False):
