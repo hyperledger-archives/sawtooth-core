@@ -31,7 +31,7 @@ from sawtooth_sdk.protobuf import events_pb2
 from sawtooth_sdk.protobuf import client_event_pb2
 from sawtooth_sdk.protobuf import validator_pb2
 from sawtooth_sdk.protobuf import batch_pb2
-from sawtooth_sdk.protobuf import txn_receipt_pb2
+from sawtooth_sdk.protobuf import client_receipt_pb2
 from sawtooth_sdk.protobuf import state_delta_pb2
 
 LOGGER = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class TestEventsAndReceipts(unittest.TestCase):
     def _get_receipt(self, n):
         txn_id = \
             self.batch_submitter.batches[n].transactions[0].header_signature
-        request = txn_receipt_pb2.ClientReceiptGetRequest(
+        request = client_receipt_pb2.ClientReceiptGetRequest(
             transaction_ids=[txn_id])
         response = self.stream.send(
             validator_pb2.Message.CLIENT_RECEIPT_GET_REQUEST,
@@ -147,12 +147,12 @@ class TestEventsAndReceipts(unittest.TestCase):
             msg.message_type,
             validator_pb2.Message.CLIENT_RECEIPT_GET_RESPONSE)
 
-        receipt_response = txn_receipt_pb2.ClientReceiptGetResponse()
+        receipt_response = client_receipt_pb2.ClientReceiptGetResponse()
         receipt_response.ParseFromString(msg.content)
 
         self.assertEqual(
             receipt_response.status,
-            txn_receipt_pb2.ClientReceiptGetResponse.OK)
+            client_receipt_pb2.ClientReceiptGetResponse.OK)
 
         return receipt_response.receipts
 

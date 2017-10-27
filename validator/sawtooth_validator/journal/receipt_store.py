@@ -13,9 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
-from sawtooth_validator.protobuf.txn_receipt_pb2 import \
+from sawtooth_validator.protobuf.client_receipt_pb2 import \
     ClientReceiptGetRequest
-from sawtooth_validator.protobuf.txn_receipt_pb2 import \
+from sawtooth_validator.protobuf.client_receipt_pb2 import \
     ClientReceiptGetResponse
 
 from sawtooth_validator.networking.dispatch import Handler

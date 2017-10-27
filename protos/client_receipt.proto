@@ -17,25 +17,28 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
-option go_package = "txn_receipt_pb2";
+option go_package = "client_receipt_pb2";
 
-import "state_delta.proto";
-import "events.proto";
+import "txn_receipt.proto";
 
+// Fetches a specific txn by its id (header_signature) from the blockchain.
+message ClientReceiptGetRequest {
+    repeated string transaction_ids = 1;
+}
 
-message TransactionReceipt {
-  message Data {
-    // Interpretation left to transaction family
-    string data_type = 1;
-    bytes data = 2;
-  }
-  // State changes made by this transaction
-  // StateChange is already defined in protos/state_delta.proto
-  repeated StateChange state_changes = 1;
-  // Events fired by this transaction
-  repeated Event events = 2;
-  // Transaction family defined data
-  repeated Data data = 3;
-
-  string transaction_id = 4;
+// A response that returns the txn receipt specified by a
+// ClientTransactionReceiptGetRequest.
+//
+// Statuses:
+//   * OK - everything worked as expected, txn receipt has been fetched
+//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
+//   * NO_RESOURCE - no receipt exists for the transaction id specified
+message ClientReceiptGetResponse {
+    enum Status {
+        OK = 0;
+        INTERNAL_ERROR = 1;
+        NO_RESOURCE = 4;
+    }
+    Status status = 1;
+    repeated TransactionReceipt receipts = 2;
 }

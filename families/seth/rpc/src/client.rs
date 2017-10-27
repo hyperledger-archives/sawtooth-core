@@ -26,7 +26,7 @@ use crypto::sha2::Sha512;
 use sawtooth_sdk::messaging::stream::*;
 use sawtooth_sdk::messages::validator::Message_MessageType;
 use sawtooth_sdk::messages::block::{Block};
-use sawtooth_sdk::messages::txn_receipt::{
+use sawtooth_sdk::messages::client_receipt::{
     ClientReceiptGetRequest,
     ClientReceiptGetResponse,
     ClientReceiptGetResponse_Status,
