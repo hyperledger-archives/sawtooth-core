@@ -36,7 +36,7 @@ from sawtooth_rest_api.protobuf import client_batch_submit_pb2
 from sawtooth_rest_api.protobuf import client_state_pb2
 from sawtooth_rest_api.protobuf import client_block_pb2
 from sawtooth_rest_api.protobuf import client_batch_pb2
-from sawtooth_rest_api.protobuf import txn_receipt_pb2
+from sawtooth_rest_api.protobuf import client_receipt_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
@@ -520,13 +520,13 @@ class RouteHandler(object):
 
         # Query validator
         validator_query = \
-            txn_receipt_pb2.ClientReceiptGetRequest(
+            client_receipt_pb2.ClientReceiptGetRequest(
                 transaction_ids=ids)
         self._set_wait(request, validator_query)
 
         response = await self._query_validator(
             Message.CLIENT_RECEIPT_GET_REQUEST,
-            txn_receipt_pb2.ClientReceiptGetResponse,
+            client_receipt_pb2.ClientReceiptGetResponse,
             validator_query,
             error_traps)
 
