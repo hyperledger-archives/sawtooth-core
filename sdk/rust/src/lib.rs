@@ -28,3 +28,4 @@ extern crate zmq;
 pub mod messages;
 pub mod messaging;
 pub mod signing;
+pub mod processor;

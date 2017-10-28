@@ -14,9 +14,10 @@
  * limitations under the License.
  * -----------------------------------------------------------------------------
  */
-
+use std;
 use messages::validator::Message;
 use messages::validator::Message_MessageType;
+use std::error::Error;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::RecvError;
 
@@ -57,6 +58,37 @@ pub enum SendError {
     UnknownError
 }
 
+impl std::error::Error for SendError {
+    fn description(&self) -> &str {
+        match *self {
+            SendError::DisconnectedError => "DisconnectedError",
+            SendError::TimeoutError => "TimeoutError",
+            SendError::UnknownError  => "UnknownError"
+        }
+    }
+
+    fn cause(&self) -> Option<&std::error::Error> {
+        match *self {
+            SendError::DisconnectedError => None,
+            SendError::TimeoutError => None,
+            SendError::UnknownError => None
+        }
+    }
+}
+
+impl std::fmt::Display for SendError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            SendError::DisconnectedError =>
+                write!(f, "DisconnectedError"),
+            SendError::TimeoutError =>
+                write!(f,"TimeoutError"),
+            SendError::UnknownError =>
+                write!(f, "UnknownError")
+        }
+    }
+}
+
 /// Errors that occur on receiving a message.
 #[derive(Debug, Clone)]
 pub enum ReceiveError {
@@ -64,6 +96,32 @@ pub enum ReceiveError {
     ChannelError(RecvError),
 }
 
+impl std::error::Error for ReceiveError {
+    fn description(&self) -> &str {
+        match *self {
+            ReceiveError::TimeoutError => "TimeoutError",
+            ReceiveError::ChannelError(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&std::error::Error> {
+        match *self {
+            ReceiveError::TimeoutError => None,
+            ReceiveError::ChannelError(ref err) => Some(err),
+        }
+    }
+}
+
+impl std::fmt::Display for ReceiveError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            ReceiveError::TimeoutError =>
+                write!(f,"TimeoutError"),
+            ReceiveError::ChannelError(ref err) =>
+                write!(f, "ChannelError: {}", err.description()),
+        }
+    }
+}
 /// MessageFuture is a promise for the reply to a sent message on connection.
 pub struct MessageFuture {
     inner:  Receiver<MessageResult>,
