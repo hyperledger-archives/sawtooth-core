@@ -7,6 +7,7 @@ services="
 validator
 rest-api
 intkey-tp-python
+xo-tp-python
 settings-tp
 identity-tp
 poet-validator-registry-tp
@@ -20,7 +21,7 @@ fi
 for serv in $services
 do
     # 1. Create a docker container running systemd
-    image=sawtooth-$serv:$ISOLATION_ID 
+    image=sawtooth-$serv:$ISOLATION_ID
     container=${ISOLATION_ID}_systemd_test_$serv
     service=sawtooth-$serv
     echo "Starting container '$container' from '$image'..."
