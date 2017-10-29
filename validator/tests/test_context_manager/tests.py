@@ -23,7 +23,7 @@ from sawtooth_validator.database import dict_database
 from sawtooth_validator.execution import context_manager
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
-from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.txn_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.events_pb2 import Event
 
 

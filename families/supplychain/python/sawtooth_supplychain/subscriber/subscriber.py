@@ -33,7 +33,7 @@ from sawtooth_sdk.protobuf.state_delta_pb2 import \
 from sawtooth_sdk.protobuf.state_delta_pb2 import \
     StateDeltaUnsubscribeRequest
 from sawtooth_sdk.protobuf.state_delta_pb2 import StateDeltaEvent
-from sawtooth_sdk.protobuf.state_delta_pb2 import StateChange
+from sawtooth_sdk.protobuf.txn_receipt_pb2 import StateChange
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 
 from sawtooth_supplychain.common.addressing import Addressing
