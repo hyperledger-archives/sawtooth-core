@@ -29,11 +29,11 @@ from sawtooth_validator.execution.tp_state_handlers import TpReceiptAddDataHandl
 
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.txn_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.client_receipt_pb2 import \
     ClientReceiptGetRequest
 from sawtooth_validator.protobuf.client_receipt_pb2 import \
     ClientReceiptGetResponse
-from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.state_context_pb2 import TpReceiptAddDataRequest
 

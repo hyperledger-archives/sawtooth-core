@@ -22,7 +22,7 @@ from threading import Thread
 from queue import Queue
 
 from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.txn_receipt_pb2 import StateChange
 
 from sawtooth_validator.execution.execution_context \
     import AuthorizationException

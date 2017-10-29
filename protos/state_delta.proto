@@ -18,19 +18,8 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 option go_package = "state_delta_pb2";
 
+import "txn_receipt.proto";
 
-// A state change is an entry in a given delta set. StateChange objects 
-// have the type of SET, which is either an insert or update, or
-// DELETE.  Items marked as a DELETE will have no byte value.
-message StateChange {
-    enum Type {
-        SET = 0;
-        DELETE = 1;
-    }
-    string address = 1;
-    bytes value = 2;
-    Type type = 3;
-}
 
 // A collection of state changes.
 message StateDeltaSet {

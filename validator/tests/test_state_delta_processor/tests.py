@@ -35,7 +35,7 @@ from sawtooth_validator.state.state_delta_processor import \
 from sawtooth_validator.state.state_delta_processor import \
     StateDeltaGetEventsHandler
 
-from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.txn_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaEvent
 from sawtooth_validator.protobuf.state_delta_pb2 import \
     StateDeltaSubscribeRequest

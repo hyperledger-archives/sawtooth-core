@@ -18,7 +18,7 @@ import unittest
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.state_delta_store import StateDeltaStore
 
-from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
+from sawtooth_validator.protobuf.txn_receipt_pb2 import StateChange
 
 
 class StateDeltaStoreTest(unittest.TestCase):
