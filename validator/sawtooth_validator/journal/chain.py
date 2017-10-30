@@ -33,7 +33,8 @@ from sawtooth_validator.journal.validation_rule_enforcer import \
     ValidationRuleEnforcer
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
+    TransactionReceipt
 from sawtooth_validator.metrics.wrappers import CounterWrapper
 from sawtooth_validator.metrics.wrappers import GaugeWrapper
 

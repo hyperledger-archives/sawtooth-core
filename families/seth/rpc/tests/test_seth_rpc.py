@@ -41,7 +41,7 @@ from sawtooth_sdk.protobuf.transaction_pb2 import Transaction
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.protobuf.client_receipt_pb2 import ClientReceiptGetRequest
 from sawtooth_sdk.protobuf.client_receipt_pb2 import ClientReceiptGetResponse
-from sawtooth_sdk.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_sdk.protobuf.transaction_receipt_pb2 import TransactionReceipt
 from sawtooth_sdk.protobuf.events_pb2 import Event
 from protobuf.seth_pb2 import SethTransactionReceipt
 from protobuf.seth_pb2 import EvmEntry

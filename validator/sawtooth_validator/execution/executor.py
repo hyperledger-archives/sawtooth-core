@@ -24,7 +24,7 @@ from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.protobuf import txn_receipt_pb2
+from sawtooth_validator.protobuf import transaction_receipt_pb2
 
 from sawtooth_validator.execution.context_manager import \
     CreateContextException
@@ -109,13 +109,14 @@ class TransactionExecutorThread(object):
                 self._context_manager.get_execution_results(req.context_id)
 
             state_changes = [
-                txn_receipt_pb2.StateChange(
+                transaction_receipt_pb2.StateChange(
                     address=addr, value=value,
-                    type=txn_receipt_pb2.StateChange.SET)
+                    type=transaction_receipt_pb2.StateChange.SET)
                 for addr, value in state_sets.items()
             ] + [
-                txn_receipt_pb2.StateChange(
-                    address=addr, type=txn_receipt_pb2.StateChange.DELETE)
+                transaction_receipt_pb2.StateChange(
+                    address=addr,
+                    type=transaction_receipt_pb2.StateChange.DELETE)
                 for addr in state_deletes
             ]
 

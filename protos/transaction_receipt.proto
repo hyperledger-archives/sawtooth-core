@@ -17,7 +17,7 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
-option go_package = "transaction_receipt_pb2";
+option go_package = "txn_receipt_pb2";
 
 import "events.proto";
 

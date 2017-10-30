@@ -26,7 +26,7 @@ from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import TransactionReceipt
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import IdentityCache
