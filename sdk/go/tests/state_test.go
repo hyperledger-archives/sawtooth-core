@@ -108,14 +108,14 @@ func TestReceiptData(t *testing.T) {
   connection = mock_connection
   context := processor.NewContext(connection, "qwerty")
 
-  request := &state_context_pb2.TpAddReceiptDataRequest{
+  request := &state_context_pb2.TpReceiptAddDataRequest{
     ContextId: "qwerty",
     DataType: "test",
     Data: []byte("receiptdata"),
   }
   bytes, _ := proto.Marshal(request)
 
-  mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_ADD_RECEIPT_DATA_REQUEST, bytes)
+  mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_RECEIPT_ADD_DATA_REQUEST, bytes)
   mock_connection.EXPECT().RecvMsgWithId("")
 
   context.AddReceiptData("test", []byte("receiptdata"))

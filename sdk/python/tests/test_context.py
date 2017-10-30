@@ -30,8 +30,8 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteResponse
-from sawtooth_sdk.protobuf.state_context_pb2 import TpAddReceiptDataRequest
-from sawtooth_sdk.protobuf.state_context_pb2 import TpAddReceiptDataResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpReceiptAddDataRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpReceiptAddDataResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventResponse
 from sawtooth_sdk.protobuf.events_pb2 import Event
@@ -113,15 +113,15 @@ class ContextTest(unittest.TestCase):
     def test_add_receipt_data(self):
         """Tests that State adds receipt data correctly."""
         self.mock_stream.send.return_value = self._make_future(
-            message_type=Message.TP_ADD_RECEIPT_DATA_RESPONSE,
-            content=TpAddReceiptDataResponse(
-                status=TpAddReceiptDataResponse.OK).SerializeToString())
+            message_type=Message.TP_RECEIPT_ADD_DATA_RESPONSE,
+            content=TpReceiptAddDataResponse(
+                status=TpReceiptAddDataResponse.OK).SerializeToString())
 
         self.context.add_receipt_data("test", b"test")
 
         self.mock_stream.send.assert_called_with(
-            Message.TP_ADD_RECEIPT_DATA_REQUEST,
-            TpAddReceiptDataRequest(
+            Message.TP_RECEIPT_ADD_DATA_REQUEST,
+            TpReceiptAddDataRequest(
                 context_id=self.context_id,
                 data_type="test",
                 data=b"test").SerializeToString())

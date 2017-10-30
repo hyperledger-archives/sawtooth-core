@@ -137,7 +137,7 @@ class TpStateDeleteHandler(Handler):
             validator_pb2.Message.TP_STATE_DELETE_RESPONSE)
 
 
-class TpAddReceiptDataHandler(Handler):
+class TpReceiptAddDataHandler(Handler):
     def __init__(self, context_manager):
         """
 
@@ -148,7 +148,7 @@ class TpAddReceiptDataHandler(Handler):
         self._context_manager = context_manager
 
     def handle(self, connection_id, message_content):
-        add_receipt_data_request = state_context_pb2.TpAddReceiptDataRequest()
+        add_receipt_data_request = state_context_pb2.TpReceiptAddDataRequest()
         add_receipt_data_request.ParseFromString(message_content)
 
         success = self._context_manager.add_execution_data(
@@ -156,7 +156,7 @@ class TpAddReceiptDataHandler(Handler):
             add_receipt_data_request.data_type,
             add_receipt_data_request.data)
 
-        ack = state_context_pb2.TpAddReceiptDataResponse()
+        ack = state_context_pb2.TpReceiptAddDataResponse()
         if success:
             ack.status = ack.OK
         else:
@@ -165,7 +165,7 @@ class TpAddReceiptDataHandler(Handler):
         return HandlerResult(
             status=HandlerStatus.RETURN,
             message_out=ack,
-            message_type=validator_pb2.Message.TP_ADD_RECEIPT_DATA_RESPONSE)
+            message_type=validator_pb2.Message.TP_RECEIPT_ADD_DATA_RESPONSE)
 
 
 class TpAddEventHandler(Handler):

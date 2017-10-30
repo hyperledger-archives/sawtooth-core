@@ -59,9 +59,9 @@ message Message {
         // State delete response from the validator/context_manager to the transaction processor
         TP_STATE_DELETE_RESPONSE = 12;
         // Message to append data to a transaction receipt
-        TP_ADD_RECEIPT_DATA_REQUEST = 13;
+        TP_RECEIPT_ADD_DATA_REQUEST = 13;
         // Response from validator to tell transaction processor that data has been appended
-        TP_ADD_RECEIPT_DATA_RESPONSE = 14;
+        TP_RECEIPT_ADD_DATA_RESPONSE = 14;
         // Message to add event
         TP_ADD_EVENT_REQUEST = 15;
         // Response from validator to tell transaction processor that event has been created

@@ -202,7 +202,7 @@ func (self *Context) Set(pairs map[string][]byte) ([]string, error) {
 
 func (self *Context) AddReceiptData(data_type string, data []byte) error {
 	// Append the data to the transaction receipt and set the type
-	request := &state_context_pb2.TpAddReceiptDataRequest{
+	request := &state_context_pb2.TpReceiptAddDataRequest{
 		ContextId: self.contextId,
 		DataType:  data_type,
 		Data:      data,
@@ -214,7 +214,7 @@ func (self *Context) AddReceiptData(data_type string, data []byte) error {
 
 	// Send the message and get the response
 	corrId, err := self.connection.SendNewMsg(
-		validator_pb2.Message_TP_ADD_RECEIPT_DATA_REQUEST, bytes,
+		validator_pb2.Message_TP_RECEIPT_ADD_DATA_REQUEST, bytes,
 	)
 	if err != nil {
 		return fmt.Errorf("Failed to add receipt data: %v", err)
@@ -228,22 +228,22 @@ func (self *Context) AddReceiptData(data_type string, data []byte) error {
 		)
 	}
 
-	if msg.GetMessageType() != validator_pb2.Message_TP_ADD_RECEIPT_DATA_RESPONSE {
+	if msg.GetMessageType() != validator_pb2.Message_TP_RECEIPT_ADD_DATA_RESPONSE {
 		return fmt.Errorf(
-			"Expected TP_ADD_RECEIPT_DATA_RESPONSE but got %v", msg.GetMessageType(),
+			"Expected TP_RECEIPT_ADD_DATA_RESPONSE but got %v", msg.GetMessageType(),
 		)
 	}
 
 	// Parse the result
-	response := &state_context_pb2.TpAddReceiptDataResponse{}
+	response := &state_context_pb2.TpReceiptAddDataResponse{}
 	err = proto.Unmarshal(msg.Content, response)
 	if err != nil {
-		return fmt.Errorf("Failed to unmarshal TpAddReceiptDataResponse: %v", err)
+		return fmt.Errorf("Failed to unmarshal TpReceiptAddDataResponse: %v", err)
 	}
 
 	// Use a switch in case new Status values are added
 	switch response.GetStatus() {
-	case state_context_pb2.TpAddReceiptDataResponse_ERROR:
+	case state_context_pb2.TpReceiptAddDataResponse_ERROR:
 		return fmt.Errorf("Failed to add receipt data")
 	}
 
