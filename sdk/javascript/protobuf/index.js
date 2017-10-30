@@ -36,6 +36,9 @@ TpStateSetResponse.Status = TpStateSetResponse.nested.Status.values
 const TpStateGetResponse = root.lookup('TpStateGetResponse')
 TpStateGetResponse.Status = TpStateGetResponse.nested.Status.values
 
+const TpStateDeleteResponse = root.lookup('TpStateDeleteResponse')
+TpStateDeleteResponse.Status = TpStateDeleteResponse.nested.Status.values
+
 const PingResponse = root.lookup('PingResponse')
 
 const Message = root.lookup('Message')
@@ -78,6 +81,10 @@ module.exports = {
   TpStateSetRequest: root.lookup('TpStateSetRequest'),
 
   TpStateSetResponse,
+
+  TpStateDeleteRequest: root.lookup('TpStateDeleteRequest'),
+
+  TpStateDeleteResponse,
 
   //
   // Transactions

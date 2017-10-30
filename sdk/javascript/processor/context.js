@@ -17,7 +17,7 @@
 
 'use strict'
 
-const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, Message} = require('../protobuf')
+const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, TpStateDeleteRequest, TpStateDeleteResponse, Message} = require('../protobuf')
 const {AuthorizationException} = require('../processor/exceptions')
 
 const _timeoutPromise = (p, millis) => {
@@ -84,6 +84,27 @@ class Context {
           throw new AuthorizationException(`Tried to set unauthorized address ${addresses}`)
         }
         return setResponse.addresses
+      }),
+      timeout)
+  }
+
+  /**
+   * @param {string[]} addresses -  an array of addresses
+   * @param {number} [timeout] - an optional timeout
+   * @return a promise for the adddresses successfully deleted.
+   */
+  deleteState (addresses, timeout = null) {
+    let getRequest = TpStateDeleteRequest.create({addresses, contextId: this._contextId})
+    let future = this._stream.send(Message.MessageType.TP_STATE_DELETE_REQUEST,
+                                   TpStateDeleteRequest.encode(getRequest).finish())
+    return _timeoutPromise(
+      future.then((buffer) => {
+        let deleteResponse = TpStateDeleteResponse.decode(buffer)
+
+        if (deleteResponse.status === TpStateDeleteResponse.Status.AUTHORIZATION_ERROR) {
+          throw new AuthorizationException(`Tried to delete unauthorized address ${addresses}`)
+        }
+        return deleteResponse.addresses
       }),
       timeout)
   }
