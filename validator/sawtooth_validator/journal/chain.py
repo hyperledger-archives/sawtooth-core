@@ -16,7 +16,9 @@
 from abc import ABCMeta
 from abc import abstractmethod
 import logging
+import queue
 from threading import RLock
+from threading import Thread
 
 import sawtooth_signing as signing
 
@@ -511,6 +513,35 @@ class ChainObserver(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
 
+class _ChainThread(Thread):
+    def __init__(self, chain_controller, block_queue, block_cache):
+        Thread.__init__(self, name='_ChainThread')
+        self._chain_controller = chain_controller
+        self._block_queue = block_queue
+        self._block_cache = block_cache
+        self._exit = False
+
+    def run(self):
+        try:
+            while True:
+                try:
+                    block = self._block_queue.get(timeout=1)
+                    self._chain_controller.on_block_received(block)
+                except queue.Empty:
+                    # If getting a block times out, just try again.
+                    pass
+
+                if self._exit:
+                    return
+        # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.exception(exc)
+            LOGGER.critical("ChainController thread exited with error.")
+
+    def stop(self):
+        self._exit = True
+
+
 class ChainController(object):
     """
     To evaluating new blocks to determine if they should extend or replace
@@ -519,6 +550,7 @@ class ChainController(object):
     def __init__(self,
                  block_cache,
                  block_sender,
+                 block_queue,
                  state_view_factory,
                  executor,
                  transaction_executor,
@@ -567,6 +599,7 @@ class ChainController(object):
         self._chain_head_lock = chain_head_lock
         self._block_cache = block_cache
         self._block_store = block_cache.block_store
+        self._block_queue = block_queue
         self._state_view_factory = state_view_factory
         self._block_sender = block_sender
         self._executor = executor
@@ -612,6 +645,21 @@ class ChainController(object):
         else:
             self._committed_transactions_count = CounterWrapper()
             self._block_num_gauge = GaugeWrapper()
+
+        self._block_queue = block_queue
+        self._chain_thread = None
+
+    def start(self):
+        self._chain_thread = _ChainThread(
+            chain_controller=self,
+            block_queue=self._block_queue,
+            block_cache=self._block_cache)
+        self._chain_thread.start()
+
+    def stop(self):
+        if self._chain_thread is not None:
+            self._chain_thread.stop()
+            self._chain_thread = None
 
     @property
     def chain_head(self):

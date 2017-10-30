@@ -13,11 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import abc
 from concurrent.futures import ThreadPoolExecutor
 import logging
 import queue
-from threading import Thread
 import time
 
 from sawtooth_validator.journal.publisher import BlockPublisher
@@ -38,34 +36,6 @@ class Journal(object):
     2) Claiming new blocks. Handled by the BlockPublisher.
     This object provides the threading and event queue for the processors.
     """
-    class _ChainThread(Thread):
-        def __init__(self, chain_controller, block_queue, block_cache):
-            Thread.__init__(self, name='_ChainThread')
-            self._chain_controller = chain_controller
-            self._block_queue = block_queue
-            self._block_cache = block_cache
-            self._exit = False
-
-        def run(self):
-            try:
-                while True:
-                    try:
-                        block = self._block_queue.get(timeout=1)
-                        self._chain_controller.on_block_received(block)
-                    except queue.Empty:
-                        pass  # this exception only happens if the
-                        # wait on an empty queue after it times out.
-
-                    if self._exit:
-                        return
-            # pylint: disable=broad-except
-            except Exception as exc:
-                LOGGER.exception(exc)
-                LOGGER.critical("ChainController thread exited with error.")
-
-        def stop(self):
-            self._exit = True
-
     def __init__(self,
                  block_store,
                  state_view_factory,
@@ -138,7 +108,6 @@ class Journal(object):
         self._executor_threadpool = ThreadPoolExecutor(1)
         self._chain_controller = None
         self._block_queue = queue.Queue()
-        self._chain_thread = None
         self._chain_id_manager = chain_id_manager
         self._data_dir = data_dir
         self._config_dir = config_dir
@@ -175,6 +144,7 @@ class Journal(object):
         self._chain_controller = ChainController(
             block_sender=self._block_sender,
             block_cache=self._block_cache,
+            block_queue=self._block_queue,
             state_view_factory=self._state_view_factory,
             executor=self._executor_threadpool,
             transaction_executor=self._transaction_executor,
@@ -189,10 +159,6 @@ class Journal(object):
             chain_observers=self._chain_observers,
             metrics_registry=self._metrics_registry
         )
-        self._chain_thread = self._ChainThread(
-            chain_controller=self._chain_controller,
-            block_queue=self._block_queue,
-            block_cache=self._block_cache)
 
     # FXM: this is an inaccurate name.
     def get_current_root(self):
@@ -202,11 +168,11 @@ class Journal(object):
         return self._block_store
 
     def start(self):
-        if self._block_publisher is None and self._chain_thread is None:
+        if self._block_publisher is None and self._chain_controller is None:
             self._init_subprocesses()
 
         self._block_publisher.start()
-        self._chain_thread.start()
+        self._chain_controller.start()
 
     def stop(self):
         # time to murder the child threads. First ask politely for
@@ -217,9 +183,9 @@ class Journal(object):
             self._block_publisher.stop()
             self._block_publisher = None
 
-        if self._chain_thread is not None:
-            self._chain_thread.stop()
-            self._chain_thread = None
+        if self._chain_controller is not None:
+            self._chain_controller.stop()
+            self._chain_controller = None
 
     def on_block_received(self, block):
         """
