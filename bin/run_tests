@@ -368,6 +368,8 @@ test_integration() {
     copy_coverage .coverage.test_transactor_permissioning
     run_docker_test test_network_permissioning --timeout 800
     copy_coverage .coverage.test_network_permissioning
+    run_docker_test test_poet_liveness
+    copy_coverage .coverage.test_poet_liveness
 }
 
 test_deployment() {
