@@ -66,45 +66,6 @@ class Journal(object):
         def stop(self):
             self._exit = True
 
-    class _PublisherThread(Thread):
-        def __init__(self, block_publisher, batch_queue,
-                     check_publish_block_frequency):
-            Thread.__init__(self, name='_PublisherThread')
-            self._block_publisher = block_publisher
-            self._batch_queue = batch_queue
-            self._check_publish_block_frequency = \
-                check_publish_block_frequency
-            self._exit = False
-
-        def run(self):
-            try:
-                # make sure we don't check to publish the block
-                # to frequently.
-                next_check_publish_block_time = time.time() + \
-                    self._check_publish_block_frequency
-                while True:
-                    try:
-                        batch = self._batch_queue.get(
-                            timeout=self._check_publish_block_frequency)
-                        self._block_publisher.on_batch_received(batch)
-                    except queue.Empty:
-                        pass  # this exception only happens if the
-                        # wait on an empty queue after it times out.
-
-                    if next_check_publish_block_time < time.time():
-                        self._block_publisher.on_check_publish_block()
-                        next_check_publish_block_time = time.time() + \
-                            self._check_publish_block_frequency
-                    if self._exit:
-                        return
-            # pylint: disable=broad-except
-            except Exception as exc:
-                LOGGER.exception(exc)
-                LOGGER.critical("BlockPublisher thread exited with error.")
-
-        def stop(self):
-            self._exit = True
-
     def __init__(self,
                  block_store,
                  state_view_factory,
@@ -173,7 +134,6 @@ class Journal(object):
         self._check_publish_block_frequency = check_publish_block_frequency
         self._batch_queue = queue.Queue()
         self._batch_obs = [] if batch_observers is None else batch_observers
-        self._publisher_thread = None
 
         self._executor_threadpool = ThreadPoolExecutor(1)
         self._chain_controller = None
@@ -200,19 +160,17 @@ class Journal(object):
             state_view_factory=self._state_view_factory,
             block_sender=self._block_sender,
             batch_sender=self._batch_sender,
+            batch_queue=self._batch_queue,
             squash_handler=self._squash_handler,
             chain_head=self._block_store.chain_head,
             identity_signing_key=self._identity_signing_key,
             data_dir=self._data_dir,
             config_dir=self._config_dir,
             permission_verifier=self._permission_verifier,
+            check_publish_block_frequency=self._check_publish_block_frequency,
+            batch_observers=self._batch_obs,
             batch_injector_factory=batch_injector_factory,
             metrics_registry=self._metrics_registry
-        )
-        self._publisher_thread = self._PublisherThread(
-            block_publisher=self._block_publisher,
-            batch_queue=self._batch_queue,
-            check_publish_block_frequency=self._check_publish_block_frequency
         )
         self._chain_controller = ChainController(
             block_sender=self._block_sender,
@@ -244,10 +202,10 @@ class Journal(object):
         return self._block_store
 
     def start(self):
-        if self._publisher_thread is None and self._chain_thread is None:
+        if self._block_publisher is None and self._chain_thread is None:
             self._init_subprocesses()
 
-        self._publisher_thread.start()
+        self._block_publisher.start()
         self._chain_thread.start()
 
     def stop(self):
@@ -255,9 +213,9 @@ class Journal(object):
         # suicide
         self._executor_threadpool.shutdown(wait=True)
 
-        if self._publisher_thread is not None:
-            self._publisher_thread.stop()
-            self._publisher_thread = None
+        if self._block_publisher is not None:
+            self._block_publisher.stop()
+            self._block_publisher = None
 
         if self._chain_thread is not None:
             self._chain_thread.stop()
@@ -278,19 +236,3 @@ class Journal(object):
         self._batch_queue.put(batch)
         for observer in self._batch_obs:
             observer.notify_batch_pending(batch)
-
-
-class PendingBatchObserver(metaclass=abc.ABCMeta):
-    """An interface class for components wishing to be notified when a Batch
-    has begun being processed.
-    """
-    @abc.abstractmethod
-    def notify_batch_pending(self, batch):
-        """This method will be called when a Batch has passed initial
-        validation and is queued to be processed by the Publisher.
-
-        Args:
-            batch (Batch): The Batch that has been added to the Publisher
-        """
-        raise NotImplementedError('PendingBatchObservers must have a '
-                                  '"notify_batch_pending" method')
