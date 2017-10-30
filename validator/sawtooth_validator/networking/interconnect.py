@@ -785,7 +785,7 @@ class Interconnect(object):
                   connect_message.SerializeToString(),
                   connection_id,
                   callback=partial(self._inbound_connection_request_callback,
-                                   connection=connection_id
+                                   connection_id=connection_id
                                    ))
 
     def _connect_callback(self, request, result,
@@ -830,14 +830,14 @@ class Interconnect(object):
                             connection=connection))
 
     def _inbound_connection_request_callback(self, request, result,
-                                             connection=None):
+                                             connection_id=None):
         connection_response = ConnectionResponse()
         connection_response.ParseFromString(result.content)
         if connection_response.status == connection_response.ERROR:
             LOGGER.debug("Received an error response to the NETWORK_CONNECT "
                          "we sent. Removing connection: %s",
-                         connection.connection_id)
-            self.remove_connection(connection.connection_id)
+                         connection_id)
+            self.remove_connection(connection_id)
 
         # Send correct Authorization Request for network role
         auth_type = {"trust": [], "challenge": []}
@@ -854,7 +854,7 @@ class Interconnect(object):
             self.send(
                 validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
                 auth_trust_request.SerializeToString(),
-                connection
+                connection_id
                 )
 
         if auth_type["challenge"]:
@@ -862,10 +862,10 @@ class Interconnect(object):
             self.send(
                 validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
                 auth_challenge_request.SerializeToString(),
-                connection,
+                connection_id,
                 callback=partial(
                     self._inbound_challenge_authorization_callback,
-                    connection=connection)
+                    connection_id=connection_id)
                 )
 
     def _challenge_authorization_callback(self, request, result,
@@ -892,7 +892,7 @@ class Interconnect(object):
             auth_challenge_submit.SerializeToString())
 
     def _inbound_challenge_authorization_callback(self, request, result,
-                                                  connection=None):
+                                                  connection_id=None):
         if result.message_type != \
                 validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESPONSE:
             LOGGER.debug("Unable to complete Challenge Authorization.")
@@ -912,7 +912,7 @@ class Interconnect(object):
         self.send(
             validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
             auth_challenge_submit.SerializeToString(),
-            connection
+            connection_id
             )
 
     def send(self, message_type, data, connection_id, callback=None):
