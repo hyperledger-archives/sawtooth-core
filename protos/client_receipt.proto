@@ -19,7 +19,7 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 option go_package = "client_receipt_pb2";
 
-import "txn_receipt.proto";
+import "transaction_receipt.proto";
 
 // Fetches a specific txn by its id (header_signature) from the blockchain.
 message ClientReceiptGetRequest {

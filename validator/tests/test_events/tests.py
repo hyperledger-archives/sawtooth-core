@@ -45,7 +45,7 @@ from sawtooth_validator.protobuf import events_pb2
 from sawtooth_validator.protobuf import client_event_pb2
 from sawtooth_validator.protobuf import block_pb2
 from sawtooth_validator.protobuf import state_context_pb2
-from sawtooth_validator.protobuf import txn_receipt_pb2
+from sawtooth_validator.protobuf import transaction_receipt_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
 import sawtooth_signing as signer
@@ -112,7 +112,7 @@ def create_receipt(txn_id, key_values):
         attribute.value = value
         events.append(event)
 
-    receipt = txn_receipt_pb2.TransactionReceipt(transaction_id=txn_id)
+    receipt = transaction_receipt_pb2.TransactionReceipt(transaction_id=txn_id)
     receipt.events.extend(events)
     return receipt
 

@@ -34,5 +34,5 @@ pub mod network;
 pub mod events;
 pub mod client_event;
 pub mod authorization;
-pub mod txn_receipt;
+pub mod transaction_receipt;
 pub mod client_receipt;

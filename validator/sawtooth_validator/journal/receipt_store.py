@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
+    TransactionReceipt
 from sawtooth_validator.protobuf.client_receipt_pb2 import \
     ClientReceiptGetRequest
 from sawtooth_validator.protobuf.client_receipt_pb2 import \

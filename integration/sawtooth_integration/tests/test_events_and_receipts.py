@@ -32,7 +32,7 @@ from sawtooth_sdk.protobuf import client_event_pb2
 from sawtooth_sdk.protobuf import validator_pb2
 from sawtooth_sdk.protobuf import batch_pb2
 from sawtooth_sdk.protobuf import client_receipt_pb2
-from sawtooth_sdk.protobuf import txn_receipt_pb2
+from sawtooth_sdk.protobuf import transaction_receipt_pb2
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
@@ -77,7 +77,7 @@ class TestEventsAndReceipts(unittest.TestCase):
         state_change = receipts[0].state_changes[0]
         self.assertEqual(
             state_change.type,
-            txn_receipt_pb2.StateChange.SET)
+            transaction_receipt_pb2.StateChange.SET)
         self.assertEqual(
             state_change.value,
             cbor.dumps({str(n): 0}))

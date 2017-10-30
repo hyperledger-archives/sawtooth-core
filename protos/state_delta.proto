@@ -18,7 +18,7 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 option go_package = "state_delta_pb2";
 
-import "txn_receipt.proto";
+import "transaction_receipt.proto";
 
 
 // A collection of state changes.

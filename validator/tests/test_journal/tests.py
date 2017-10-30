@@ -44,10 +44,10 @@ from sawtooth_validator.server.events.subscription import EventFilterFactory
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventList
-from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
-from sawtooth_validator.protobuf.txn_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaSet
 
 from sawtooth_validator.state.merkle import MerkleDatabase

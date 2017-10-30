@@ -31,7 +31,7 @@ use sawtooth_sdk::messages::transaction::{
     Transaction as TransactionPb,
     TransactionHeader,
 };
-use sawtooth_sdk::messages::txn_receipt::{TransactionReceipt, TransactionReceipt_Data};
+use sawtooth_sdk::messages::transaction_receipt::{TransactionReceipt, TransactionReceipt_Data};
 use sawtooth_sdk::messages::events::{Event, Event_Attribute};
 
 use client::{
