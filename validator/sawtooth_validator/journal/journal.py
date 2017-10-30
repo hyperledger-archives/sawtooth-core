@@ -109,6 +109,7 @@ class Journal(object):
         self._chain_controller = None
         self._block_queue = queue.Queue()
         self._chain_id_manager = chain_id_manager
+
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
@@ -117,12 +118,11 @@ class Journal(object):
 
         self._metrics_registry = metrics_registry
 
-    def _init_subprocesses(self):
         batch_injector_factory = DefaultBatchInjectorFactory(
             block_store=self._block_store,
             state_view_factory=self._state_view_factory,
-            signing_key=self._identity_signing_key,
-        )
+            signing_key=self._identity_signing_key)
+
         self._block_publisher = BlockPublisher(
             transaction_executor=self._transaction_executor,
             block_cache=self._block_cache,
@@ -139,8 +139,8 @@ class Journal(object):
             check_publish_block_frequency=self._check_publish_block_frequency,
             batch_observers=self._batch_obs,
             batch_injector_factory=batch_injector_factory,
-            metrics_registry=self._metrics_registry
-        )
+            metrics_registry=self._metrics_registry)
+
         self._chain_controller = ChainController(
             block_sender=self._block_sender,
             block_cache=self._block_cache,
@@ -157,8 +157,7 @@ class Journal(object):
             config_dir=self._config_dir,
             permission_verifier=self._permission_verifier,
             chain_observers=self._chain_observers,
-            metrics_registry=self._metrics_registry
-        )
+            metrics_registry=self._metrics_registry)
 
     # FXM: this is an inaccurate name.
     def get_current_root(self):
@@ -168,9 +167,6 @@ class Journal(object):
         return self._block_store
 
     def start(self):
-        if self._block_publisher is None and self._chain_controller is None:
-            self._init_subprocesses()
-
         self._block_publisher.start()
         self._chain_controller.start()
 
