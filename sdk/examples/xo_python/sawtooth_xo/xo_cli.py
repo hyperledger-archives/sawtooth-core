@@ -124,6 +124,22 @@ def add_take_parser(subparsers, parent_parser):
         help='wait for take to commit, set an integer to specify a timeout')
 
 
+def add_delete_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('delete', parents=[parent_parser])
+
+    parser.add_argument(
+        'name',
+        type=str,
+        help='the identifier for the game to be deleted')
+
+    parser.add_argument(
+        '--wait',
+        nargs='?',
+        const=sys.maxsize,
+        type=int,
+        help='wait for take to commit, set an integer to specify a timeout')
+
+
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
     parent_parser.add_argument(
@@ -186,6 +202,7 @@ def create_parser(prog_name):
     add_list_parser(subparsers, parent_parser)
     add_show_parser(subparsers, parent_parser)
     add_take_parser(subparsers, parent_parser)
+    add_delete_parser(subparsers, parent_parser)
 
     return parser
 
@@ -299,6 +316,28 @@ def do_take(args):
     print("Response: {}".format(response))
 
 
+def do_delete(args):
+    name = args.name
+
+    url = _get_url(args)
+    keyfile = _get_keyfile(args)
+    auth_user, auth_password = _get_auth_info(args)
+
+    client = XoClient(base_url=url, keyfile=keyfile)
+
+    if args.wait and args.wait > 0:
+        response = client.delete(
+            name, wait=args.wait,
+            auth_user=auth_user,
+            auth_password=auth_password)
+    else:
+        response = client.delete(
+            name, auth_user=auth_user,
+            auth_password=auth_password)
+
+    print("Response: {}".format(response))
+
+
 def _get_url(args):
     return DEFAULT_URL if args.url is None else args.url
 
@@ -341,6 +380,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
         do_show(args)
     elif args.command == 'take':
         do_take(args)
+    elif args.command == 'delete':
+        do_delete(args)
     else:
         raise XoException("invalid command: {}".format(args.command))
 
