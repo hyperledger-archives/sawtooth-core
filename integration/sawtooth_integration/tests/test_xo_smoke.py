@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import os
 import shlex
 import logging
 import unittest
@@ -65,6 +66,8 @@ class TestXoSmoke(unittest.TestCase):
                     self.client.url,
                     WAIT))
 
+        self.assert_number_of_games(3)
+
         self.verify_game('game-1', 'XXXOO----', 'P1-WIN')
         self.verify_game('game-2', '-----X-OX', 'P2-NEXT')
         self.verify_game('blank', '---------', 'P1-NEXT')
@@ -85,6 +88,31 @@ class TestXoSmoke(unittest.TestCase):
                     cmd,
                     self.client.url))
 
+        if not _tp_supports_delete():
+            LOGGER.warning('TP does not support state delete')
+            return
+
+        delete_cmds = (
+            'xo delete game-1 --username nunzio',
+            'xo delete blank --username tony',
+        )
+
+        for cmd in delete_cmds:
+            _send_cmd(
+                '{} --url {} --wait {}'.format(
+                    cmd,
+                    self.client.url,
+                    WAIT))
+
+        _send_cmd('xo list --url {}'.format(self.client.url))
+
+        self.assert_number_of_games(1)
+
+        self.verify_game('game-2', '-----X-OX', 'P2-NEXT')
+
+        self.assert_no_game('game-1')
+        self.assert_no_game('blank')
+
     def verify_game(self, game_name, expected_board, expected_turn):
         LOGGER.info('Verifying game: %s', game_name)
 
@@ -102,6 +130,15 @@ class TestXoSmoke(unittest.TestCase):
             'Wrong turn -- expected: {} -- actual: {}'.format(
                 expected_turn, turn))
 
+    def assert_number_of_games(self, number):
+        self.assertEqual(
+            len(self.client.get_data()),
+            number)
+
+    def assert_no_game(self, game_name):
+        with self.assertRaises(Exception):
+            self.client.get_game(game_name)
+
 
 def _send_cmd(cmd_str):
     LOGGER.info('Sending %s', cmd_str)
@@ -109,3 +146,9 @@ def _send_cmd(cmd_str):
     subprocess.run(
         shlex.split(cmd_str),
         check=True)
+
+
+def _tp_supports_delete():
+    supported_langs = 'python',
+
+    return os.getenv('TP_LANG', False) in supported_langs

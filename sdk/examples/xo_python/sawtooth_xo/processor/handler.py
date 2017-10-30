@@ -56,6 +56,10 @@ class XoTransactionHandler(TransactionHandler):
             board, state, player1, player2)
 
         # 4. Apply the transaction
+        if action == 'delete':
+            _delete_game(context, name, self._namespace_prefix)
+            return
+
         upd_board, upd_state, upd_player1, upd_player2 = _play_xo(
             action, space, signer,
             board, state,
@@ -110,7 +114,7 @@ def _validate_transaction(name, action, space):
     if not action:
         raise InvalidTransaction('Action is required')
 
-    if action not in ('create', 'take'):
+    if action not in ('create', 'take', 'delete'):
         raise InvalidTransaction('Invalid action: {}'.format(action))
 
     if action == 'take':
@@ -143,6 +147,11 @@ def _validate_game_data(action, space, signer, board, state, player1, player2):
         if board[space - 1] != '-':
             raise InvalidTransaction(
                 'Invalid Action: space {} already taken'.format(space))
+
+    elif action == 'delete':
+        if board is None:
+            raise InvalidTransaction(
+                'Invalid action: game does not exist')
 
 
 def _make_xo_address(namespace_prefix, name):
@@ -198,6 +207,17 @@ def _store_state_data(
 
     if len(addresses) < 1:
         raise InternalError("State Error")
+
+
+def _delete_game(context, name, namespace_prefix):
+    LOGGER.warning('Deleting game %s', name)
+
+    address = _make_xo_address(namespace_prefix, name)
+
+    addresses = context.delete_state([address])
+
+    if not addresses:
+        raise InternalError('State delete error')
 
 
 def _play_xo(action, space, signer, board, state, player1, player2):
