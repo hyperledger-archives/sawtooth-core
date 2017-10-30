@@ -18,14 +18,14 @@ from unittest.mock import Mock
 
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.execution.tp_state_handlers import \
-    TpAddReceiptDataHandler
+    TpReceiptAddDataHandler
 from sawtooth_validator.journal.receipt_store import TransactionReceiptStore
 from sawtooth_validator.journal.receipt_store import \
     ClientReceiptGetRequestHandler
 
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
-from sawtooth_validator.execution.tp_state_handlers import TpAddReceiptDataHandler
+from sawtooth_validator.execution.tp_state_handlers import TpReceiptAddDataHandler
 
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf.txn_receipt_pb2 import TransactionReceipt
@@ -35,7 +35,7 @@ from sawtooth_validator.protobuf.txn_receipt_pb2 import \
     ClientReceiptGetResponse
 from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.state_context_pb2 import TpAddReceiptDataRequest
+from sawtooth_validator.protobuf.state_context_pb2 import TpReceiptAddDataRequest
 
 
 class ReceiptStoreTest(unittest.TestCase):
@@ -127,11 +127,11 @@ class TransactionReceiptGetRequestHandlerTest(unittest.TestCase):
         self.assertEqual(ClientReceiptGetResponse.NO_RESOURCE,
                          response.message_out.status)
 
-class TpAddReceiptDataHandlerTest(unittest.TestCase):
+class TpReceiptAddDataHandlerTest(unittest.TestCase):
     def test_add_event(self):
         mock_add_receipt_data = Mock()
-        handler = TpAddReceiptDataHandler(mock_add_receipt_data)
-        request = TpAddReceiptDataRequest(
+        handler = TpReceiptAddDataHandler(mock_add_receipt_data)
+        request = TpReceiptAddDataRequest(
             data_type="test").SerializeToString()
 
         response = handler.handle("test_conn_id", request)

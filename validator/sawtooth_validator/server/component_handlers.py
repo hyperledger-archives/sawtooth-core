@@ -64,8 +64,8 @@ def add(
 
     # -- Transaction Processor -- #
     dispatcher.add_handler(
-        validator_pb2.Message.TP_ADD_RECEIPT_DATA_REQUEST,
-        tp_state_handlers.TpAddReceiptDataHandler(context_manager),
+        validator_pb2.Message.TP_RECEIPT_ADD_DATA_REQUEST,
+        tp_state_handlers.TpReceiptAddDataHandler(context_manager),
         thread_pool)
 
     dispatcher.add_handler(

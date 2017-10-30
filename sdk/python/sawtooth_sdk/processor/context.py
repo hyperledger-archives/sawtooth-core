@@ -116,16 +116,16 @@ class Context(object):
             data_type (str): Transparent hint for decoding the data.
             data (bytes): The data to add.
         """
-        request = state_context_pb2.TpAddReceiptDataRequest(
+        request = state_context_pb2.TpReceiptAddDataRequest(
             context_id=self._context_id,
             data_type=data_type,
             data=data).SerializeToString()
-        response = state_context_pb2.TpAddReceiptDataResponse()
+        response = state_context_pb2.TpReceiptAddDataResponse()
         response.ParseFromString(
             self._stream.send(
-                Message.TP_ADD_RECEIPT_DATA_REQUEST,
+                Message.TP_RECEIPT_ADD_DATA_REQUEST,
                 request).result(timeout).content)
-        if response.status == state_context_pb2.TpAddReceiptDataResponse.ERROR:
+        if response.status == state_context_pb2.TpReceiptAddDataResponse.ERROR:
             raise InternalError(
                 "Failed to add receipt data: {}".format((data_type, data)))
 
