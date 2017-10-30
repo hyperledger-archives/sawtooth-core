@@ -153,14 +153,14 @@ class Context(object):
             ],
             data=data,
         )
-        request = state_context_pb2.TpAddEventRequest(
+        request = state_context_pb2.TpEventAddRequest(
             context_id=self._context_id, event=event).SerializeToString()
-        response = state_context_pb2.TpAddEventResponse()
+        response = state_context_pb2.TpEventAddResponse()
         response.ParseFromString(
             self._stream.send(
-                Message.TP_ADD_EVENT_REQUEST,
+                Message.TP_EVENT_ADD_REQUEST,
                 request).result(timeout).content)
-        if response.status == state_context_pb2.TpAddEventResponse.ERROR:
+        if response.status == state_context_pb2.TpEventAddResponse.ERROR:
             raise InternalError(
                 "Failed to add event: ({}, {}, {})".format(
                     event_type, attributes, data))

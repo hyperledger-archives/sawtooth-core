@@ -32,8 +32,8 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpReceiptAddDataRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpReceiptAddDataResponse
-from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventRequest
-from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpEventAddRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpEventAddResponse
 from sawtooth_sdk.protobuf.events_pb2 import Event
 
 
@@ -129,15 +129,15 @@ class ContextTest(unittest.TestCase):
     def test_add_event(self):
         """Tests that State adds events correctly."""
         self.mock_stream.send.return_value = self._make_future(
-            message_type=Message.TP_ADD_EVENT_RESPONSE,
-            content=TpAddEventResponse(
-                status=TpAddEventResponse.OK).SerializeToString())
+            message_type=Message.TP_EVENT_ADD_RESPONSE,
+            content=TpEventAddResponse(
+                status=TpEventAddResponse.OK).SerializeToString())
 
         self.context.add_event("test", [("test", "test")], b"test")
 
         self.mock_stream.send.assert_called_with(
-            Message.TP_ADD_EVENT_REQUEST,
-            TpAddEventRequest(
+            Message.TP_EVENT_ADD_REQUEST,
+            TpEventAddRequest(
                 context_id=self.context_id,
                 event=Event(
                     event_type="test",

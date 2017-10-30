@@ -98,12 +98,12 @@ message TpReceiptAddDataResponse {
     Status status = 2;
 }
 
-message TpAddEventRequest {
+message TpEventAddRequest {
     string context_id = 1;
     Event event = 2;
 }
 
-message TpAddEventResponse {
+message TpEventAddResponse {
     enum Status {
       OK = 0;
       ERROR = 1;
