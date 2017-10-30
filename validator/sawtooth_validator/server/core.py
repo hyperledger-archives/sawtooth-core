@@ -17,7 +17,6 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import logging
 import os
-import queue
 import signal
 import time
 import threading
@@ -231,8 +230,6 @@ class Validator(object):
             state_view_factory=state_view_factory,
             signing_key=identity_signing_key)
 
-        block_queue = queue.Queue()
-
         block_publisher = BlockPublisher(
             transaction_executor=executor,
             block_cache=block_cache,
@@ -250,13 +247,10 @@ class Validator(object):
             batch_injector_factory=batch_injector_factory,
             metrics_registry=metrics_registry)
 
-        executor_threadpool = ThreadPoolExecutor(1)
         chain_controller = ChainController(
             block_sender=block_sender,
             block_cache=block_cache,
-            block_queue=block_queue,
             state_view_factory=state_view_factory,
-            executor=executor_threadpool,
             transaction_executor=executor,
             chain_head_lock=block_publisher.chain_head_lock,
             on_chain_updated=block_publisher.on_chain_updated,
@@ -290,7 +284,7 @@ class Validator(object):
         responder = Responder(completer)
 
         completer.set_on_batch_received(block_publisher.queue_batch)
-        completer.set_on_block_received(self.on_block_received)
+        completer.set_on_block_received(chain_controller.queue_block)
 
         # -- Register Message Handler -- #
         network_handlers.add(
@@ -320,8 +314,6 @@ class Validator(object):
         self._genesis_controller = genesis_controller
         self._gossip = gossip
 
-        self._block_queue = block_queue
-        self._executor_threadpool = executor_threadpool
         self._block_publisher = block_publisher
         self._chain_controller = chain_controller
 
@@ -365,8 +357,6 @@ class Validator(object):
         self._executor.stop()
         self._context_manager.stop()
 
-        self._executor_threadpool.shutdown(wait=True)
-
         self._block_publisher.stop()
         self._chain_controller.stop()
 
@@ -394,10 +384,3 @@ class Validator(object):
 
     def get_chain_head_state_root_hash(self):
         return self._chain_controller.chain_head.state_root_hash
-
-    def on_block_received(self, block):
-        """
-        New block has been received, queue it with the chain controller
-        for processing.
-        """
-        self._block_queue.put(block)

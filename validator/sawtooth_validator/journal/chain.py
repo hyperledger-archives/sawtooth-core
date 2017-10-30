@@ -15,6 +15,7 @@
 
 from abc import ABCMeta
 from abc import abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import queue
 from threading import RLock
@@ -550,9 +551,7 @@ class ChainController(object):
     def __init__(self,
                  block_cache,
                  block_sender,
-                 block_queue,
                  state_view_factory,
-                 executor,
                  transaction_executor,
                  chain_head_lock,
                  on_chain_updated,
@@ -563,7 +562,8 @@ class ChainController(object):
                  config_dir,
                  permission_verifier,
                  chain_observers,
-                 metrics_registry):
+                 thread_pool=None,
+                 metrics_registry=None):
         """Initialize the ChainController
         Args:
             block_cache: The cache of all recent blocks and the processing
@@ -571,7 +571,6 @@ class ChainController(object):
             block_sender: an interface object used to send blocks to the
                 network.
             state_view_factory: The factory object to create
-            executor: The thread pool to process block validations.
             transaction_executor: The TransactionExecutor used to produce
                 schedulers for batch validation.
             chain_head_lock: Lock to hold while the chain head is being
@@ -599,10 +598,8 @@ class ChainController(object):
         self._chain_head_lock = chain_head_lock
         self._block_cache = block_cache
         self._block_store = block_cache.block_store
-        self._block_queue = block_queue
         self._state_view_factory = state_view_factory
         self._block_sender = block_sender
-        self._executor = executor
         self._transaction_executor = transaction_executor
         self._notify_on_chain_updated = on_chain_updated
         self._squash_handler = squash_handler
@@ -620,6 +617,7 @@ class ChainController(object):
         self._chain_id_manager = chain_id_manager
 
         self._chain_head = None
+        self._set_chain_head_from_block_store()
 
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
@@ -636,10 +634,12 @@ class ChainController(object):
             self._committed_transactions_count = CounterWrapper()
             self._block_num_gauge = GaugeWrapper()
 
-        self._block_queue = block_queue
+        self._block_queue = queue.Queue()
+        self._thread_pool = \
+            ThreadPoolExecutor(1) if thread_pool is None else thread_pool
         self._chain_thread = None
 
-    def start(self):
+    def _set_chain_head_from_block_store(self):
         try:
             self._chain_head = self._block_store.chain_head
             if self._chain_head is not None:
@@ -650,6 +650,9 @@ class ChainController(object):
                          "be determined")
             LOGGER.exception(exc)
             raise
+
+    def start(self):
+        self._set_chain_head_from_block_store()
         self._notify_on_chain_updated(self._chain_head)
 
         self._chain_thread = _ChainThread(
@@ -662,6 +665,16 @@ class ChainController(object):
         if self._chain_thread is not None:
             self._chain_thread.stop()
             self._chain_thread = None
+
+        if self._thread_pool is not None:
+            self._thread_pool.shutdown(wait=True)
+
+    def queue_block(self, block):
+        """
+        New block has been received, queue it with the chain controller
+        for processing.
+        """
+        self._block_queue.put(block)
 
     @property
     def chain_head(self):
@@ -690,7 +703,7 @@ class ChainController(object):
                 config_dir=self._config_dir,
                 permission_verifier=self._permission_verifier)
             self._blocks_processing[blkw.block.header_signature] = validator
-            self._executor.submit(validator.run)
+            self._thread_pool.submit(validator.run)
 
     def on_block_validated(self, commit_new_block, result):
         """Message back from the block validator, that the validation is
