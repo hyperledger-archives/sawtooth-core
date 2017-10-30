@@ -125,7 +125,7 @@ class TpStateDeleteHandler(Handler):
             return HandlerResult(
                 HandlerStatus.RETURN,
                 response,
-                validator_pb2.Message.TP_STATE_DEL_RESPONSE)
+                validator_pb2.Message.TP_STATE_DELETE_RESPONSE)
 
         LOGGER.debug("DELETE: %s", return_values)
         response = state_context_pb2.TpStateDeleteResponse(
@@ -134,7 +134,7 @@ class TpStateDeleteHandler(Handler):
         return HandlerResult(
             HandlerStatus.RETURN,
             response,
-            validator_pb2.Message.TP_STATE_DEL_RESPONSE)
+            validator_pb2.Message.TP_STATE_DELETE_RESPONSE)
 
 
 class TpAddReceiptDataHandler(Handler):

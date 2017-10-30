@@ -101,7 +101,7 @@ class Context(object):
             addresses=addresses).SerializeToString()
         response = state_context_pb2.TpStateDeleteResponse()
         response.ParseFromString(
-            self._stream.send(Message.TP_STATE_DEL_REQUEST,
+            self._stream.send(Message.TP_STATE_DELETE_REQUEST,
                               request).result(timeout).content)
         if response.status == \
                 state_context_pb2.TpStateDeleteResponse.AUTHORIZATION_ERROR:

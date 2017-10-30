@@ -97,7 +97,7 @@ class ContextTest(unittest.TestCase):
     def test_state_delete(self):
         """Tests that State deletes addresses correctly."""
         self.mock_stream.send.return_value = self._make_future(
-            message_type=Message.TP_STATE_DEL_RESPONSE,
+            message_type=Message.TP_STATE_DELETE_RESPONSE,
             content=TpStateDeleteResponse(
                 status=TpStateDeleteResponse.OK,
                 addresses=self.addresses).SerializeToString())
@@ -105,7 +105,7 @@ class ContextTest(unittest.TestCase):
         self.context.delete_state(self.addresses)
 
         self.mock_stream.send.assert_called_with(
-            Message.TP_STATE_DEL_REQUEST,
+            Message.TP_STATE_DELETE_REQUEST,
             TpStateDeleteRequest(
                 context_id=self.context_id,
                 addresses=self.addresses).SerializeToString())
