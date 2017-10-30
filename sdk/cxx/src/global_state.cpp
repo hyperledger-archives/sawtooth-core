@@ -125,8 +125,8 @@ void GlobalState::Delete(const std::vector<std::string>& addresses) const {
     }
 
     FutureMessagePtr future = this->message_stream->SendMessage(
-        Message::TP_STATE_DEL_REQUEST, request);
-    future->GetMessage(Message::TP_STATE_DEL_RESPONSE, &response);
+        Message::TP_STATE_DELETE_REQUEST, request);
+    future->GetMessage(Message::TP_STATE_DELETE_RESPONSE, &response);
 }
 
 }  // namespace sawtooth

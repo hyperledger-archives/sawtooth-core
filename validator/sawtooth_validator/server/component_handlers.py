@@ -74,7 +74,7 @@ def add(
         thread_pool)
 
     dispatcher.add_handler(
-        validator_pb2.Message.TP_STATE_DEL_REQUEST,
+        validator_pb2.Message.TP_STATE_DELETE_REQUEST,
         tp_state_handlers.TpStateDeleteHandler(context_manager),
         thread_pool)
 
