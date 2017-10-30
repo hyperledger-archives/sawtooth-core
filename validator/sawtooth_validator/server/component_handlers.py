@@ -69,8 +69,8 @@ def add(
         thread_pool)
 
     dispatcher.add_handler(
-        validator_pb2.Message.TP_ADD_EVENT_REQUEST,
-        tp_state_handlers.TpAddEventHandler(context_manager),
+        validator_pb2.Message.TP_EVENT_ADD_REQUEST,
+        tp_state_handlers.TpEventAddHandler(context_manager),
         thread_pool)
 
     dispatcher.add_handler(

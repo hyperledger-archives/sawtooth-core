@@ -39,7 +39,7 @@ from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 from sawtooth_validator.server.events.subscription import EventFilterType
 
-from sawtooth_validator.execution.tp_state_handlers import TpAddEventHandler
+from sawtooth_validator.execution.tp_state_handlers import TpEventAddHandler
 
 from sawtooth_validator.protobuf import events_pb2
 from sawtooth_validator.protobuf import block_pb2
@@ -360,12 +360,12 @@ class EventBroadcasterTest(unittest.TestCase):
             event_list, connection_id="test_conn_id")
 
 
-class TpAddEventHandlerTest(unittest.TestCase):
+class TpEventAddHandlerTest(unittest.TestCase):
     def test_add_event(self):
         event = events_pb2.Event(event_type="add_event")
         mock_context_manager = Mock()
-        handler = TpAddEventHandler(mock_context_manager)
-        request = state_context_pb2.TpAddEventRequest(event=event).SerializeToString()
+        handler = TpEventAddHandler(mock_context_manager)
+        request = state_context_pb2.TpEventAddRequest(event=event).SerializeToString()
 
         response = handler.handle("test_conn_id", request)
 

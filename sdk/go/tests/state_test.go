@@ -70,22 +70,22 @@ func TestAddEvent(t *testing.T) {
     Data: []byte("data"),
   }
 
-  request := &state_context_pb2.TpAddEventRequest {
+  request := &state_context_pb2.TpEventAddRequest {
     ContextId: "asdf",
     Event: event,
   }
   request_bytes, _ := proto.Marshal(request)
 
-  response_bytes, err := proto.Marshal(&state_context_pb2.TpAddEventResponse{
-    Status: state_context_pb2.TpAddEventResponse_OK,
+  response_bytes, err := proto.Marshal(&state_context_pb2.TpEventAddResponse{
+    Status: state_context_pb2.TpEventAddResponse_OK,
     })
 
-  mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_ADD_EVENT_REQUEST, request_bytes)
+  mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_EVENT_ADD_REQUEST, request_bytes)
   mock_connection.EXPECT().RecvMsgWithId("").
     Return(
       "",
       &validator_pb2.Message{
-        MessageType: validator_pb2.Message_TP_ADD_EVENT_RESPONSE,
+        MessageType: validator_pb2.Message_TP_EVENT_ADD_RESPONSE,
         CorrelationId: "",
         Content: response_bytes,
       },

@@ -263,7 +263,7 @@ func (self *Context) AddEvent(event_type string, attributes []Attribute, event_d
 	}
 
 	// Construct message
-	request := &state_context_pb2.TpAddEventRequest{
+	request := &state_context_pb2.TpEventAddRequest{
 		ContextId: self.contextId,
 		Event:     event,
 	}
@@ -274,7 +274,7 @@ func (self *Context) AddEvent(event_type string, attributes []Attribute, event_d
 
 	// Send the message and get the response
 	corrId, err := self.connection.SendNewMsg(
-		validator_pb2.Message_TP_ADD_EVENT_REQUEST, bytes,
+		validator_pb2.Message_TP_EVENT_ADD_REQUEST, bytes,
 	)
 	if err != nil {
 		return fmt.Errorf("Failed to add event: %v", err)
@@ -288,22 +288,22 @@ func (self *Context) AddEvent(event_type string, attributes []Attribute, event_d
 		)
 	}
 
-	if msg.GetMessageType() != validator_pb2.Message_TP_ADD_EVENT_RESPONSE {
+	if msg.GetMessageType() != validator_pb2.Message_TP_EVENT_ADD_RESPONSE {
 		return fmt.Errorf(
-			"Expected TP_ADD_EVENT_RESPONSE but got %v", msg.GetMessageType(),
+			"Expected TP_EVENT_ADD_RESPONSE but got %v", msg.GetMessageType(),
 		)
 	}
 
 	// Parse the result
-	response := &state_context_pb2.TpAddEventResponse{}
+	response := &state_context_pb2.TpEventAddResponse{}
 	err = proto.Unmarshal(msg.Content, response)
 	if err != nil {
-		return fmt.Errorf("Failed to unmarshal TpAddEventResponse: %v", err)
+		return fmt.Errorf("Failed to unmarshal TpEventAddResponse: %v", err)
 	}
 
 	// Use a switch in case new Status values are added
 	switch response.GetStatus() {
-	case state_context_pb2.TpAddEventResponse_ERROR:
+	case state_context_pb2.TpEventAddResponse_ERROR:
 		return fmt.Errorf("Failed to add event")
 	}
 

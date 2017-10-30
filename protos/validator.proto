@@ -63,9 +63,9 @@ message Message {
         // Response from validator to tell transaction processor that data has been appended
         TP_RECEIPT_ADD_DATA_RESPONSE = 14;
         // Message to add event
-        TP_ADD_EVENT_REQUEST = 15;
+        TP_EVENT_ADD_REQUEST = 15;
         // Response from validator to tell transaction processor that event has been created
-        TP_ADD_EVENT_RESPONSE = 16;
+        TP_EVENT_ADD_RESPONSE = 16;
 
         // Submission of a batchlist from the web api or another client to the validator
         CLIENT_BATCH_SUBMIT_REQUEST = 100;

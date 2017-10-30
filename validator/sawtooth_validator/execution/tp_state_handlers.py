@@ -168,7 +168,7 @@ class TpReceiptAddDataHandler(Handler):
             message_type=validator_pb2.Message.TP_RECEIPT_ADD_DATA_RESPONSE)
 
 
-class TpAddEventHandler(Handler):
+class TpEventAddHandler(Handler):
     def __init__(self, context_manager):
         """
 
@@ -179,14 +179,14 @@ class TpAddEventHandler(Handler):
         self._context_manager = context_manager
 
     def handle(self, connection_id, message_content):
-        add_event_request = state_context_pb2.TpAddEventRequest()
+        add_event_request = state_context_pb2.TpEventAddRequest()
         add_event_request.ParseFromString(message_content)
 
         success = self._context_manager.add_execution_event(
             add_event_request.context_id,
             add_event_request.event)
 
-        ack = state_context_pb2.TpAddEventResponse()
+        ack = state_context_pb2.TpEventAddResponse()
         if success:
             ack.status = ack.OK
         else:
@@ -195,4 +195,4 @@ class TpAddEventHandler(Handler):
         return HandlerResult(
             status=HandlerStatus.RETURN,
             message_out=ack,
-            message_type=validator_pb2.Message.TP_ADD_EVENT_RESPONSE)
+            message_type=validator_pb2.Message.TP_EVENT_ADD_RESPONSE)

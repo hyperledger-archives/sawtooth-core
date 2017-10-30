@@ -36,8 +36,8 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteRequest
-from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventRequest
-from sawtooth_sdk.protobuf.state_context_pb2 import TpAddEventResponse
+from sawtooth_sdk.protobuf.state_context_pb2 import TpEventAddRequest
+from sawtooth_sdk.protobuf.state_context_pb2 import TpEventAddResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import Entry
 
 from sawtooth_sdk.protobuf.events_pb2 import Event
@@ -266,12 +266,12 @@ class MessageFactory(object):
         for attribute in attributes:
             attribute_list.append(
                 Event.Attribute(key=attribute[0], value=attribute[1]))
-        return TpAddEventRequest(
+        return TpEventAddRequest(
             event=Event(
                 event_type=event_type,
                 attributes=attribute_list,
                 data=data))
 
     def create_add_event_response(self):
-        return TpAddEventResponse(
-            status=TpAddEventResponse.OK)
+        return TpEventAddResponse(
+            status=TpEventAddResponse.OK)
