@@ -619,18 +619,8 @@ class ChainController(object):
         # scheduled for validation.
         self._chain_id_manager = chain_id_manager
 
-        try:
-            self._chain_head = self._block_store.chain_head
-            if self._chain_head is not None:
-                LOGGER.info("Chain controller initialized with chain head: %s",
-                            self._chain_head)
-        except Exception as exc:
-            LOGGER.error("Invalid block store. Head of the block chain cannot "
-                         "be determined")
-            LOGGER.exception(exc)
-            raise
+        self._chain_head = None
 
-        self._notify_on_chain_updated(self._chain_head)
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
         self._chain_head_gauge = \
@@ -650,6 +640,18 @@ class ChainController(object):
         self._chain_thread = None
 
     def start(self):
+        try:
+            self._chain_head = self._block_store.chain_head
+            if self._chain_head is not None:
+                LOGGER.info("Chain controller initialized with chain head: %s",
+                            self._chain_head)
+        except Exception as exc:
+            LOGGER.error("Invalid block store. Head of the block chain cannot "
+                         "be determined")
+            LOGGER.exception(exc)
+            raise
+        self._notify_on_chain_updated(self._chain_head)
+
         self._chain_thread = _ChainThread(
             chain_controller=self,
             block_queue=self._block_queue,
