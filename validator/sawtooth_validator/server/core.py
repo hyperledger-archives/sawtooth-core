@@ -232,8 +232,6 @@ class Validator(object):
             signing_key=identity_signing_key)
 
         block_queue = queue.Queue()
-        batch_queue = queue.Queue()
-        batch_observers = [batch_tracker]
 
         block_publisher = BlockPublisher(
             transaction_executor=executor,
@@ -241,7 +239,6 @@ class Validator(object):
             state_view_factory=state_view_factory,
             block_sender=block_sender,
             batch_sender=batch_sender,
-            batch_queue=batch_queue,
             squash_handler=context_manager.get_squash_handler(),
             chain_head=block_store.chain_head,
             identity_signing_key=identity_signing_key,
@@ -249,7 +246,7 @@ class Validator(object):
             config_dir=config_dir,
             permission_verifier=permission_verifier,
             check_publish_block_frequency=0.1,
-            batch_observers=batch_observers,
+            batch_observers=[batch_tracker],
             batch_injector_factory=batch_injector_factory,
             metrics_registry=metrics_registry)
 
@@ -292,7 +289,7 @@ class Validator(object):
 
         responder = Responder(completer)
 
-        completer.set_on_batch_received(self.on_batch_received)
+        completer.set_on_batch_received(block_publisher.queue_batch)
         completer.set_on_block_received(self.on_block_received)
 
         # -- Register Message Handler -- #
@@ -324,8 +321,6 @@ class Validator(object):
         self._gossip = gossip
 
         self._block_queue = block_queue
-        self._batch_queue = batch_queue
-        self._batch_observers = batch_observers
         self._executor_threadpool = executor_threadpool
         self._block_publisher = block_publisher
         self._chain_controller = chain_controller
@@ -406,12 +401,3 @@ class Validator(object):
         for processing.
         """
         self._block_queue.put(block)
-
-    def on_batch_received(self, batch):
-        """
-        New batch has been received, queue it with the BlockPublisher for
-        inclusion in the next block.
-        """
-        self._batch_queue.put(batch)
-        for observer in self._batch_observers:
-            observer.notify_batch_pending(batch)

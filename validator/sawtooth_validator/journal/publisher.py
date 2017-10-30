@@ -397,7 +397,6 @@ class BlockPublisher(object):
                  state_view_factory,
                  block_sender,
                  batch_sender,
-                 batch_queue,
                  squash_handler,
                  chain_head,
                  identity_signing_key,
@@ -459,7 +458,8 @@ class BlockPublisher(object):
             metrics_registry.gauge('pending_batch_gauge') \
             if metrics_registry else None
 
-        self._batch_queue = batch_queue
+        self._batch_queue = queue.Queue()
+        self._batch_observers = batch_observers
         self._check_publish_block_frequency = check_publish_block_frequency
         self._publisher_thread = None
 
@@ -475,6 +475,14 @@ class BlockPublisher(object):
             self._publisher_thread.stop()
             self._publisher_thread = None
 
+    def queue_batch(self, batch):
+        """
+        New batch has been received, queue it with the BlockPublisher for
+        inclusion in the next block.
+        """
+        self._batch_queue.put(batch)
+        for observer in self._batch_observers:
+            observer.notify_batch_pending(batch)
 
     @property
     def chain_head_lock(self):
