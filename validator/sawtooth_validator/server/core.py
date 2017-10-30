@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import logging
 import os
+import queue
 import signal
 import time
 import threading
@@ -25,13 +26,17 @@ import sawtooth_signing as signing
 
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
+from sawtooth_validator.journal.publisher import BlockPublisher
+from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.genesis import GenesisController
-from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.responder import Responder
+from sawtooth_validator.journal.batch_injector import \
+    DefaultBatchInjectorFactory
 from sawtooth_validator.networking.dispatch import Dispatcher
 from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
@@ -119,6 +124,8 @@ class Validator(object):
         LOGGER.debug('block store file is %s', block_db_filename)
         block_db = LMDBNoLockDatabase(block_db_filename, 'c')
         block_store = BlockStore(block_db)
+        block_cache = BlockCache(
+            block_store, keep_time=300, purge_frequency=30)
 
         # -- Setup Thread Pools -- #
         component_thread_pool = ThreadPoolExecutor(max_workers=10)
@@ -219,22 +226,49 @@ class Validator(object):
             forked=id_cache.forked)
 
         # -- Setup Journal -- #
-        journal = Journal(
+        batch_injector_factory = DefaultBatchInjectorFactory(
             block_store=block_store,
-            state_view_factory=StateViewFactory(global_state_db),
+            state_view_factory=state_view_factory,
+            signing_key=identity_signing_key)
+
+        block_queue = queue.Queue()
+        batch_queue = queue.Queue()
+        batch_observers = [batch_tracker]
+
+        block_publisher = BlockPublisher(
+            transaction_executor=executor,
+            block_cache=block_cache,
+            state_view_factory=state_view_factory,
             block_sender=block_sender,
             batch_sender=batch_sender,
-            transaction_executor=executor,
+            batch_queue=batch_queue,
             squash_handler=context_manager.get_squash_handler(),
+            chain_head=block_store.chain_head,
             identity_signing_key=identity_signing_key,
-            chain_id_manager=chain_id_manager,
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier,
             check_publish_block_frequency=0.1,
-            block_cache_purge_frequency=30,
-            block_cache_keep_time=300,
-            batch_observers=[batch_tracker],
+            batch_observers=batch_observers,
+            batch_injector_factory=batch_injector_factory,
+            metrics_registry=metrics_registry)
+
+        executor_threadpool = ThreadPoolExecutor(1)
+        chain_controller = ChainController(
+            block_sender=block_sender,
+            block_cache=block_cache,
+            block_queue=block_queue,
+            state_view_factory=state_view_factory,
+            executor=executor_threadpool,
+            transaction_executor=executor,
+            chain_head_lock=block_publisher.chain_head_lock,
+            on_chain_updated=block_publisher.on_chain_updated,
+            squash_handler=context_manager.get_squash_handler(),
+            chain_id_manager=chain_id_manager,
+            identity_signing_key=identity_signing_key,
+            data_dir=data_dir,
+            config_dir=config_dir,
+            permission_verifier=permission_verifier,
             chain_observers=[
                 state_delta_processor,
                 event_broadcaster,
@@ -258,8 +292,8 @@ class Validator(object):
 
         responder = Responder(completer)
 
-        completer.set_on_batch_received(journal.on_batch_received)
-        completer.set_on_block_received(journal.on_block_received)
+        completer.set_on_batch_received(self.on_batch_received)
+        completer.set_on_block_received(self.on_block_received)
 
         # -- Register Message Handler -- #
         network_handlers.add(
@@ -267,9 +301,9 @@ class Validator(object):
             responder, network_thread_pool, sig_pool, permission_verifier)
 
         component_handlers.add(
-            component_dispatcher, gossip, context_manager, executor,
-            completer, journal.get_block_store(), batch_tracker,
-            global_state_db, journal.get_current_root, receipt_store,
+            component_dispatcher, gossip, context_manager, executor, completer,
+            block_store, batch_tracker, global_state_db,
+            self.get_chain_head_state_root_hash, receipt_store,
             state_delta_processor, state_delta_store, event_broadcaster,
             permission_verifier, component_thread_pool, sig_pool)
 
@@ -288,7 +322,13 @@ class Validator(object):
         self._executor = executor
         self._genesis_controller = genesis_controller
         self._gossip = gossip
-        self._journal = journal
+
+        self._block_queue = block_queue
+        self._batch_queue = batch_queue
+        self._batch_observers = batch_observers
+        self._executor_threadpool = executor_threadpool
+        self._block_publisher = block_publisher
+        self._chain_controller = chain_controller
 
     def start(self):
         self._component_dispatcher.start()
@@ -303,7 +343,8 @@ class Validator(object):
         self._network_service.start()
 
         self._gossip.start()
-        self._journal.start()
+        self._block_publisher.start()
+        self._chain_controller.start()
 
         signal_event = threading.Event()
 
@@ -329,7 +370,10 @@ class Validator(object):
         self._executor.stop()
         self._context_manager.stop()
 
-        self._journal.stop()
+        self._executor_threadpool.shutdown(wait=True)
+
+        self._block_publisher.stop()
+        self._chain_controller.stop()
 
         threads = threading.enumerate()
 
@@ -352,3 +396,22 @@ class Validator(object):
                     time.sleep(1)
 
         LOGGER.info("All threads have been stopped and joined")
+
+    def get_chain_head_state_root_hash(self):
+        return self._chain_controller.chain_head.state_root_hash
+
+    def on_block_received(self, block):
+        """
+        New block has been received, queue it with the chain controller
+        for processing.
+        """
+        self._block_queue.put(block)
+
+    def on_batch_received(self, batch):
+        """
+        New batch has been received, queue it with the BlockPublisher for
+        inclusion in the next block.
+        """
+        self._batch_queue.put(batch)
+        for observer in self._batch_observers:
+            observer.notify_batch_pending(batch)
