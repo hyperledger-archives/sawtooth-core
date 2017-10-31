@@ -107,7 +107,7 @@ describe('TransactionEncoder', () => {
         familyName: 'new',
         familyVersion: 'new',
         inputs: ['new'],
-        outputs: ['new'],
+        outputs: ['new']
       })
 
       const header = TransactionHeader.decode(txn.header)

@@ -30,6 +30,7 @@ const {
 
 const {
   InternalError,
+  AuthorizationException,
   InvalidTransaction,
   ValidatorConnectionError
 } = require('./exceptions')
