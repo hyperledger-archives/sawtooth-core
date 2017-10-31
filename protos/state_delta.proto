@@ -63,16 +63,17 @@ message StateDeltaSubscribeRequest {
 // The response to a StateDeltaSubscribeRequest
 message StateDeltaSubscribeResponse {
     enum Status {
+        STATUS_UNSET = 0;
         // returned on successful registration
-        OK = 0;
+        OK = 1;
         // returned on a failed registration, due to
         // an internal validator error
-        INTERNAL_ERROR = 1;
+        INTERNAL_ERROR = 2;
         // returned on a failed registration, due to all
         // last_known_block_ids being unknown.  This could imply
         // that a fork had occurred and been resolved since last
         // unregistration.
-        UNKNOWN_BLOCK = 2;
+        UNKNOWN_BLOCK = 3;
     }
 
     Status status = 1;
@@ -87,11 +88,12 @@ message StateDeltaUnsubscribeRequest {
 
 message StateDeltaUnsubscribeResponse {
     enum Status {
+        STATUS_UNSET = 0;
         // returned on successful registration
-        OK = 0;
+        OK = 1;
         // returned on a failed registration, due to
         // an internal validator error
-        INTERNAL_ERROR = 1;
+        INTERNAL_ERROR = 2;
     }
     Status status = 1;
 }
@@ -114,13 +116,14 @@ message StateDeltaGetEventsRequest {
 // to the validator will result in events.
 message StateDeltaGetEventsResponse {
     enum Status {
+        STATUS_UNSET = 0;
         // returned on a successful request
-        OK = 0;
+        OK = 1;
         // returned on a failed request, due to an internal validator error.
-        INTERNAL_ERROR = 1;
+        INTERNAL_ERROR = 2;
         // return on a bad request, where no block id was provided in the
         // request.
-        NO_VALID_BLOCKS_SPECIFIED = 2;
+        NO_VALID_BLOCKS_SPECIFIED = 3;
     }
     Status status = 1;
     // the events returned for the request.  This may contain only a subset of

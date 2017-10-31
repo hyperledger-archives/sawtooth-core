@@ -32,9 +32,10 @@ message ClientEventsSubscribeRequest {
 
 message ClientEventsSubscribeResponse {
     enum Status {
-         OK = 0;
-         INVALID_FILTER = 1;
-         UNKNOWN_BLOCK = 2;
+         STATUS_UNSET = 0;
+         OK = 1;
+         INVALID_FILTER = 2;
+         UNKNOWN_BLOCK = 3;
     }
     Status status = 1;
     // Additional information about the response status
@@ -45,8 +46,9 @@ message ClientEventsUnsubscribeRequest {}
 
 message ClientEventsUnsubscribeResponse {
     enum Status {
-         OK = 0;
-         INTERNAL_ERROR = 1;
+         STATUS_UNSET = 0;
+         OK = 1;
+         INTERNAL_ERROR = 2;
     }
     Status status = 1;
 }
@@ -58,10 +60,11 @@ message ClientEventsGetRequest {
 
 message ClientEventsGetResponse {
     enum Status {
-        OK = 0;
-        INTERNAL_ERROR = 1;
-        INVALID_FILTER = 2;
-        UNKNOWN_BLOCK = 3;
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        INVALID_FILTER = 3;
+        UNKNOWN_BLOCK = 4;
     }
     Status status = 1;
     repeated Event events = 2;

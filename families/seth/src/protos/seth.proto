@@ -56,7 +56,7 @@ message EvmStorage {
 
 message SethTransaction {
     enum TransactionType {
-      DEFAULT = 0;
+      TRANSACTION_TYPE_UNSET = 0;
       CREATE_EXTERNAL_ACCOUNT = 1;
       CREATE_CONTRACT_ACCOUNT = 2;
       MESSAGE_CALL = 3;

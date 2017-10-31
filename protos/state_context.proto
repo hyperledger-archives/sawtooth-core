@@ -36,8 +36,9 @@ message TpStateGetRequest {
 // A response from the contextmanager/validator with a series of State entries
 message TpStateGetResponse {
     enum Status {
-        OK = 0;
-        AUTHORIZATION_ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        AUTHORIZATION_ERROR = 2;
     }
 
     repeated Entry entries = 1;
@@ -53,8 +54,9 @@ message TpStateSetRequest {
 // A response from the contextmanager/validator with the addresses that were set
 message TpStateSetResponse {
   enum Status {
-      OK = 0;
-      AUTHORIZATION_ERROR = 1;
+      STATUS_UNSET = 0;
+      OK = 1;
+      AUTHORIZATION_ERROR = 2;
   }
 
     repeated string addresses = 1;
@@ -70,8 +72,9 @@ message TpStateDeleteRequest {
 // A response form the contextmanager/validator with the addresses that were deleted
 message TpStateDeleteResponse {
     enum Status {
-        OK = 0;
-        AUTHORIZATION_ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        AUTHORIZATION_ERROR = 2;
     }
 
     repeated string addresses = 1;
@@ -91,8 +94,9 @@ message TpReceiptAddDataRequest {
 // data has been appended to a transaction receipt
 message TpReceiptAddDataResponse {
     enum Status {
-        OK = 0;
-        ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
     }
 
     Status status = 2;
@@ -105,8 +109,9 @@ message TpEventAddRequest {
 
 message TpEventAddResponse {
     enum Status {
-      OK = 0;
-      ERROR = 1;
+      STATUS_UNSET = 0;
+      OK = 1;
+      ERROR = 2;
     }
     Status status = 2;
 }

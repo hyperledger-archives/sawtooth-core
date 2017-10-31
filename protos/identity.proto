@@ -21,8 +21,9 @@ option java_package = "sawtooth.identity.protobuf";
 message Policy {
 
   enum Type {
-    PERMIT_KEY = 0;
-    DENY_KEY = 1;
+    TYPE_UNSET = 0;
+    PERMIT_KEY = 1;
+    DENY_KEY = 2;
   }
 
   message Entry {

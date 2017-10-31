@@ -19,11 +19,12 @@ syntax = "proto3";
 message PrivateUtxoPayload {
     // The action indicates data is contained within this payload
     enum Action {
-        ISSUE_ASSET = 0;
-        TRANSFER_ASSET = 1;
-        CONVERT_TO_UTXO = 2;
-        CONVERT_FROM_ASSET = 3;
-        UTXO_TRANSFER = 4;
+        ACTION_UNSET = 0;
+        ISSUE_ASSET = 1;
+        TRANSFER_ASSET = 2;
+        CONVERT_TO_UTXO = 3;
+        CONVERT_FROM_ASSET = 4;
+        UTXO_TRANSFER = 5;
     }
 
     // The action of this payload

@@ -24,13 +24,14 @@ message SupplyChainPayload {
     // Describes the action this payload is initiating.
     // Used to "route" the data to the proper handler.
     enum Action {
-        AGENT_CREATE = 0;
-        APPLICATION_CREATE = 1;
-        APPLICATION_ACCEPT = 2;
-        APPLICATION_REJECT = 3;
-        APPLICATION_CANCEL = 4;
-        RECORD_CREATE = 5;
-        RECORD_FINALIZE = 6;
+        ACTION_UNSET = 0;
+        AGENT_CREATE = 1;
+        APPLICATION_CREATE = 2;
+        APPLICATION_ACCEPT = 3;
+        APPLICATION_REJECT = 4;
+        APPLICATION_CANCEL = 5;
+        RECORD_CREATE = 6;
+        RECORD_FINALIZE = 7;
     }
 
     Action action = 1;
