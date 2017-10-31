@@ -266,6 +266,10 @@ const _handleTake = (context, address, update, player) => (possibleAddressValues
   return _setEntry(context, address, setValue)
 }
 
+const _handleDelete = (context, address) => {
+  return context.deleteState([address])
+}
+
 class XOHandler extends TransactionHandler {
   constructor () {
     super(XO_FAMILY, '1.0', [XO_NAMESPACE])
@@ -296,6 +300,8 @@ class XOHandler extends TransactionHandler {
           handlerFn = _handleCreate
         } else if (update.action === 'take') {
           handlerFn = _handleTake
+        } else if (update.action == 'delete') {
+          handlerFn = _handleDelete
         } else {
           throw new InvalidTransaction(`Action must be create or take not ${update.action}`)
         }
