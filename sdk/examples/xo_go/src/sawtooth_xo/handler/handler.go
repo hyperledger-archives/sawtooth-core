@@ -86,6 +86,8 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *p
 	switch payload.Action {
 	case "create":
 		return applyCreate(payload.Name, context)
+	case "delete":
+		return applyDelete(payload.Name, context)
 	case "take":
 		return applyTake(payload.Name, payload.Space, player, context)
 	default:
@@ -112,6 +114,18 @@ func applyCreate(name string, context *processor.Context) error {
 	}
 
 	return saveGame(game, context)
+}
+
+func applyDelete(name string, context *processor.Context) error {
+	game, err := loadGame(name, context)
+	if err != nil {
+		return err
+	}
+	if game == nil {
+		return &processor.InvalidTransactionError{Msg: "Delete requires an existing game"}
+	}
+
+	return deleteGame(name, context)
 }
 
 func applyTake(name string, space int, player string, context *processor.Context) error {
@@ -307,6 +321,19 @@ func saveGame(game *Game, context *processor.Context) error {
 	}
 	if len(addresses) == 0 {
 		return &processor.InternalError{Msg: "No addresses in set response"}
+	}
+	return nil
+}
+
+func deleteGame(name string, context *processor.Context) error {
+	address := namespace + hexdigest(name)[:64]
+
+	addresses, err := context.DeleteState([]string{address})
+	if err != nil {
+		return err
+	}
+	if len(addresses) == 0 {
+		return &processor.InternalError{Msg: "No addresses in delete response"}
 	}
 	return nil
 }

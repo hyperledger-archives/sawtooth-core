@@ -88,6 +88,7 @@ services:
         test_xo_smoke.TestXoSmoke
     stop_signal: SIGKILL
     environment:
+      TP_LANG: "go"
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/xo_python:\
         /project/sawtooth-core/integration:\
