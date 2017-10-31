@@ -18,12 +18,12 @@ import time
 import random
 import os
 import binascii
-from threading import Thread
 from threading import Lock
 from functools import partial
 from collections import namedtuple
 from enum import Enum
 
+from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.protobuf.network_pb2 import DisconnectMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchByBatchIdRequest
@@ -347,7 +347,7 @@ class Gossip(object):
             self._topology.stop()
 
 
-class ConnectionManager(Thread):
+class ConnectionManager(InstrumentedThread):
     def __init__(self, gossip, network, endpoint,
                  initial_peer_endpoints, initial_seed_endpoints,
                  peering_mode, min_peers=3, max_peers=10,

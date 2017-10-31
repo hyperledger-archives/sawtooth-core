@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import logging
 import os
@@ -23,6 +22,8 @@ import threading
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.concurrent.threadpool import \
+    InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.publisher import BlockPublisher
@@ -127,9 +128,12 @@ class Validator(object):
             block_store, keep_time=300, purge_frequency=30)
 
         # -- Setup Thread Pools -- #
-        component_thread_pool = ThreadPoolExecutor(max_workers=10)
-        network_thread_pool = ThreadPoolExecutor(max_workers=10)
-        sig_pool = ThreadPoolExecutor(max_workers=3)
+        component_thread_pool = InstrumentedThreadPoolExecutor(
+            max_workers=10, name='Component')
+        network_thread_pool = InstrumentedThreadPoolExecutor(
+            max_workers=10, name='Network')
+        sig_pool = InstrumentedThreadPoolExecutor(
+            max_workers=3, name='Signature')
 
         # -- Setup Dispatchers -- #
         component_dispatcher = Dispatcher(metrics_registry=metrics_registry)

@@ -15,14 +15,15 @@
 
 from abc import ABCMeta
 from abc import abstractmethod
-from concurrent.futures import ThreadPoolExecutor
 import logging
 import queue
 from threading import RLock
-from threading import Thread
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.concurrent.thread import InstrumentedThread
+from sawtooth_validator.concurrent.threadpool import \
+    InstrumentedThreadPoolExecutor
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -514,9 +515,9 @@ class ChainObserver(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class _ChainThread(Thread):
+class _ChainThread(InstrumentedThread):
     def __init__(self, chain_controller, block_queue, block_cache):
-        Thread.__init__(self, name='_ChainThread')
+        super().__init__(name='_ChainThread')
         self._chain_controller = chain_controller
         self._block_queue = block_queue
         self._block_cache = block_cache
@@ -636,7 +637,8 @@ class ChainController(object):
 
         self._block_queue = queue.Queue()
         self._thread_pool = \
-            ThreadPoolExecutor(1) if thread_pool is None else thread_pool
+            InstrumentedThreadPoolExecutor(1) \
+            if thread_pool is None else thread_pool
         self._chain_thread = None
 
     def _set_chain_head_from_block_store(self):

@@ -16,11 +16,11 @@ import abc
 import enum
 import logging
 from threading import Condition
-from threading import Thread
 import queue
 import uuid
 import functools
 
+from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.metrics.wrappers import TimerWrapper
@@ -32,7 +32,7 @@ def _gen_message_id():
     return uuid.uuid4().hex.encode()
 
 
-class Dispatcher(Thread):
+class Dispatcher(InstrumentedThread):
     def __init__(self, timeout=10, metrics_registry=None):
         super().__init__(name='Dispatcher')
         self._timeout = timeout

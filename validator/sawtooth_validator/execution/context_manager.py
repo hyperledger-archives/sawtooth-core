@@ -18,9 +18,9 @@ import re
 
 from collections import deque
 from threading import Lock
-from threading import Thread
 from queue import Queue
 
+from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.protobuf.state_delta_pb2 import StateChange
 
@@ -476,7 +476,7 @@ class ContextManager(object):
                 context.get_execution_data().copy())
 
 
-class _ContextReader(Thread):
+class _ContextReader(InstrumentedThread):
     """
     Attributes:
         _in_condition (threading.Condition): threading object for notification
@@ -509,7 +509,7 @@ class _ContextReader(Thread):
             self._inflated_addresses.put((c_id, return_values))
 
 
-class _ContextWriter(Thread):
+class _ContextWriter(InstrumentedThread):
     """Reads off of a shared queue from _ContextReader and writes values
     to the contexts shared with the ContextManager.
 

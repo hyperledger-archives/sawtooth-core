@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from concurrent.futures import ThreadPoolExecutor
 import abc
 import json
 import logging
@@ -26,6 +25,8 @@ from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf import state_delta_pb2
 
+from sawtooth_validator.concurrent.threadpool import \
+    InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import \
     CreateContextException
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
@@ -158,8 +159,9 @@ class TransactionExecutorThread(object):
     def execute_thread(self):
         try:
             self._execute_schedule()
-        except Exception:  # pylint: disable=broad-except
-            LOGGER.exception("Unhandled exception while executing schedule")
+        except Exception as exc:  # pylint: disable=broad-except
+            LOGGER.exception(
+                "Unhandled exception while executing schedule: %s", exc)
 
     def _execute_schedule(self):
         for txn_info in self._scheduler:
@@ -344,8 +346,10 @@ class TransactionExecutor(object):
         self.processors = processor_iterator.ProcessorIteratorCollection(
             processor_iterator.RoundRobinProcessorIterator)
         self._settings_view_factory = settings_view_factory
-        self._waiting_threadpool = ThreadPoolExecutor(max_workers=3)
-        self._executing_threadpool = ThreadPoolExecutor(max_workers=5)
+        self._waiting_threadpool = \
+            InstrumentedThreadPoolExecutor(max_workers=3, name='Waiting')
+        self._executing_threadpool = \
+            InstrumentedThreadPoolExecutor(max_workers=5, name='Executing')
         self._alive_threads = []
         self._lock = threading.Lock()
 

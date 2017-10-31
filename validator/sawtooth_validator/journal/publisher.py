@@ -16,11 +16,11 @@ import abc
 import logging
 import queue
 from threading import RLock
-from threading import Thread
 import time
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
 from sawtooth_validator.journal.block_builder import BlockBuilder
@@ -57,10 +57,10 @@ class PendingBatchObserver(metaclass=abc.ABCMeta):
                                   '"notify_batch_pending" method')
 
 
-class _PublisherThread(Thread):
+class _PublisherThread(InstrumentedThread):
     def __init__(self, block_publisher, batch_queue,
                  check_publish_block_frequency):
-        Thread.__init__(self, name='_PublisherThread')
+        super().__init__(name='_PublisherThread')
         self._block_publisher = block_publisher
         self._batch_queue = batch_queue
         self._check_publish_block_frequency = \

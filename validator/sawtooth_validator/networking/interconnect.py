@@ -15,7 +15,6 @@
 
 import asyncio
 from concurrent.futures import CancelledError
-from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import hashlib
 import logging
@@ -23,7 +22,6 @@ import queue
 import sys
 from threading import Event
 from threading import Lock
-from threading import Thread
 import time
 import uuid
 from collections import namedtuple
@@ -36,6 +34,9 @@ import zmq.asyncio
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.concurrent.threadpool import \
+    InstrumentedThreadPoolExecutor
+from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking import future
@@ -633,8 +634,9 @@ class Interconnect(object):
         """
         self._endpoint = endpoint
         self._public_endpoint = public_endpoint
-        self._future_callback_threadpool = ThreadPoolExecutor(
-            max_workers=max_future_callback_workers)
+        self._future_callback_threadpool = InstrumentedThreadPoolExecutor(
+            max_workers=max_future_callback_workers,
+            name='FutureCallback')
         self._futures = future.FutureCollection(
             resolving_threadpool=self._future_callback_threadpool)
         self._dispatcher = dispatcher
@@ -957,8 +959,9 @@ class Interconnect(object):
 
     def start(self):
         complete_or_error_queue = queue.Queue()
-        self._thread = Thread(target=self._send_receive_thread.setup,
-                              args=(zmq.ROUTER, complete_or_error_queue))
+        self._thread = InstrumentedThread(
+            target=self._send_receive_thread.setup,
+            args=(zmq.ROUTER, complete_or_error_queue))
         self._thread.name = self.__class__.__name__ + self._thread.name
         self._thread.start()
         # Blocking in startup until the background thread has made it to
@@ -1242,8 +1245,9 @@ class OutboundConnection(object):
 
     def start(self):
         complete_or_error_queue = queue.Queue()
-        self._thread = Thread(target=self._send_receive_thread.setup,
-                              args=(zmq.DEALER, complete_or_error_queue))
+        self._thread = InstrumentedThread(
+            target=self._send_receive_thread.setup,
+            args=(zmq.DEALER, complete_or_error_queue))
         self._thread.name = self.__class__.__name__ + self._thread.name
 
         self._thread.start()
