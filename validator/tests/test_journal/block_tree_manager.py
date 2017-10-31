@@ -30,7 +30,7 @@ from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.journal import BlockPublisher
+from sawtooth_validator.journal.publisher import BlockPublisher
 
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -125,7 +125,9 @@ class BlockTreeManager(object):
             identity_signing_key=self.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=MockPermissionVerifier())
+            permission_verifier=MockPermissionVerifier(),
+            check_publish_block_frequency=0.1,
+            batch_observers=[])
 
     @property
     def chain_head(self):
