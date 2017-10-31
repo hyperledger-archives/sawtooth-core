@@ -653,11 +653,12 @@ class ConnectionManager(Thread):
                     if endpoint in self._temp_endpoints:
                         del self._temp_endpoints[endpoint]
 
+                    self._temp_endpoints[endpoint] = EndpointInfo(
+                        EndpointStatus.TOPOLOGY,
+                        time.time(),
+                        INITIAL_RETRY_FREQUENCY)
+
                 self._network.add_outbound_connection(endpoint)
-                self._temp_endpoints[endpoint] = EndpointInfo(
-                    EndpointStatus.TOPOLOGY,
-                    time.time(),
-                    INITIAL_RETRY_FREQUENCY)
 
             # If the connection does exist, request peers.
             if conn_id is not None:
@@ -699,10 +700,11 @@ class ConnectionManager(Thread):
             # if the connection uri wasn't found in the network's
             # connections, it raises a KeyError and we need to add
             # a new outbound connection
-            self._temp_endpoints[endpoint] = EndpointInfo(
-                EndpointStatus.PEERING,
-                time.time(),
-                INITIAL_RETRY_FREQUENCY)
+            with self._lock:
+                self._temp_endpoints[endpoint] = EndpointInfo(
+                    EndpointStatus.PEERING,
+                    time.time(),
+                    INITIAL_RETRY_FREQUENCY)
             self._network.add_outbound_connection(endpoint)
 
     def _reset_candidate_peer_endpoints(self):
@@ -766,17 +768,16 @@ class ConnectionManager(Thread):
 
         elif endpoint_info.status == EndpointStatus.PEERING:
             self._connect_success_peering(connection_id, endpoint)
-            del self._temp_endpoints[endpoint]
 
         elif endpoint_info.status == EndpointStatus.TOPOLOGY:
             self._connect_success_topology(connection_id)
-            del self._temp_endpoints[endpoint]
 
         else:
             LOGGER.debug("Endpoint has unknown status: %s", endpoint)
-            with self._lock:
-                if endpoint in self._temp_endpoints:
-                    del self._temp_endpoints[endpoint]
+
+        with self._lock:
+            if endpoint in self._temp_endpoints:
+                del self._temp_endpoints[endpoint]
 
     def _connect_success_peering(self, connection_id, endpoint):
         LOGGER.debug("Connection to %s succeeded", connection_id)
