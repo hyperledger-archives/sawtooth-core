@@ -6,6 +6,6 @@
 
 The *Sawtooth SDK* provides a number of useful components that simplify developing JavaScript applications which interface with the Sawtooth platform. These include modules to create and sign Transactions, read state, and  create Transaction Processors. For full usage and installation instructions please reference the official Sawtooth documentation below:
 
-  * [Hyperledger Sawtooth Official Documentation](http://intelledger.github.io/)
-  * [Sawtooth Application Developer's Guide](http://intelledger.github.io/app_developers_guide.html)
-  * [Sawtooth JavaScript SDK Guide](http://intelledger.github.io/app_developers_guide/javascript_sdk.html)
+  * [Hyperledger Sawtooth Official Documentation](https://sawtooth.hyperledger.org/docs/)
+  * [Sawtooth Application Developer's Guide](https://sawtooth.hyperledger.org/docs/core/releases/latest/app_developers_guide.html)
+  * [Sawtooth JavaScript SDK Guide](https://sawtooth.hyperledger.org/docs/core/releases/latest/app_developers_guide/javascript_sdk.html)
