@@ -28,17 +28,19 @@ message Application {
 
     // Whether this Application is a request for ownership or custodianship
     enum Type {
-        OWNER = 0;
-        CUSTODIAN = 1;
+        TYPE_UNSET = 0;
+        OWNER = 1;
+        CUSTODIAN = 2;
     }
     Type type = 4;
 
     // The current acceptance status
     enum Status {
-        OPEN = 0;
-        CANCELED = 1;
-        REJECTED = 2;
-        ACCEPTED = 3;
+        STATUS_UNSET = 0;
+        OPEN = 1;
+        CANCELED = 2;
+        REJECTED = 3;
+        ACCEPTED = 4;
     }
     Status status = 5;
 
@@ -51,5 +53,3 @@ message ApplicationContainer {
     // List of Applications - more than one implies a state address collision
     repeated Application entries = 1;
 }
-
-

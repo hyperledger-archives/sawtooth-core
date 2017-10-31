@@ -48,10 +48,11 @@ message EventFilter {
     string match_string = 2;
 
     enum FilterType {
-      SIMPLE_ANY = 0;
-      SIMPLE_ALL = 1;
-      REGEX_ANY  = 2;
-      REGEX_ALL  = 3;
+      FILTER_TYPE_UNSET = 0;
+      SIMPLE_ANY = 1;
+      SIMPLE_ALL = 2;
+      REGEX_ANY  = 3;
+      REGEX_ALL  = 4;
     }
     FilterType filter_type = 3;
 }

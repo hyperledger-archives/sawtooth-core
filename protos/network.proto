@@ -53,8 +53,9 @@ message GossipMessage {
 // receipt
 message NetworkAcknowledgement {
     enum Status {
-        OK = 0;
-        ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
     }
 
     Status status = 1;

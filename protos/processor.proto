@@ -41,8 +41,9 @@ message TpRegisterRequest {
 // acknowledging the registration
 message TpRegisterResponse {
     enum Status {
-        OK = 0;
-        ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
     }
 
     Status status = 1;
@@ -59,8 +60,9 @@ message TpUnregisterRequest {
 // acknowledging the unregistration
 message TpUnregisterResponse {
     enum Status {
-        OK = 0;
-        ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
     }
 
     Status status = 1;
@@ -81,9 +83,10 @@ message TpProcessRequest {
 // used to respond about the validity of a transaction
 message TpProcessResponse {
     enum Status {
-        OK = 0;
-        INVALID_TRANSACTION = 1;
-        INTERNAL_ERROR = 2;
+        STATUS_UNSET = 0;
+        OK = 1;
+        INVALID_TRANSACTION = 2;
+        INTERNAL_ERROR = 3;
     }
 
     Status status = 1;

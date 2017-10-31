@@ -44,8 +44,9 @@ message TransactionReceipt {
 // DELETE.  Items marked as a DELETE will have no byte value.
 message StateChange {
     enum Type {
-        SET = 0;
-        DELETE = 1;
+        TYPE_UNSET = 0;
+        SET = 1;
+        DELETE = 2;
     }
     string address = 1;
     bytes value = 2;

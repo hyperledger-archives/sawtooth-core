@@ -23,11 +23,13 @@ option java_package = "sawtooth.settings.protobuf";
 message SettingsPayload {
     // The action indicates data is contained within this payload
     enum Action {
+        ACTION_UNSET = 0;
+
         // A proposal action - data will be a SettingProposal
-        PROPOSE = 0;
+        PROPOSE = 1;
 
         // A vote action - data will be a SettingVote
-        VOTE = 1;
+        VOTE = 2;
     }
     // The action of this payload
     Action action = 1;
@@ -58,8 +60,9 @@ message SettingProposal {
 // by its id.
 message SettingVote {
     enum Vote {
-        ACCEPT = 0;
-        REJECT = 1;
+        VOTE_UNSET = 0;
+        ACCEPT = 1;
+        REJECT = 2;
     }
 
     // The id of the proposal, as found in the

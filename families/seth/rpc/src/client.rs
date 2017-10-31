@@ -261,6 +261,7 @@ impl<S: MessageSender> ValidatorClient<S> {
             self.send_request(Message_MessageType::CLIENT_BATCH_SUBMIT_REQUEST, &request)?;
 
         match response.status {
+            ClientBatchSubmitResponse_Status::STATUS_UNSET => Err(Error::ValidatorError),
             ClientBatchSubmitResponse_Status::OK => Ok(txn_signature),
             ClientBatchSubmitResponse_Status::INTERNAL_ERROR => Err(Error::ValidatorError),
             ClientBatchSubmitResponse_Status::INVALID_BATCH => Err(Error::InvalidTransaction),
@@ -357,6 +358,9 @@ impl<S: MessageSender> ValidatorClient<S> {
             self.send_request(Message_MessageType::CLIENT_RECEIPT_GET_REQUEST, &request)?;
 
         let receipts = match response.status {
+            ClientReceiptGetResponse_Status::STATUS_UNSET => {
+                return Err(Error::ValidatorError);
+            },
             ClientReceiptGetResponse_Status::OK => response.receipts,
             ClientReceiptGetResponse_Status::INTERNAL_ERROR => {
                 return Err(Error::ValidatorError);
@@ -394,6 +398,9 @@ impl<S: MessageSender> ValidatorClient<S> {
                 };
 
                 match response.status {
+                    ClientTransactionGetResponse_Status::STATUS_UNSET => {
+                        Err(Error::ValidatorError)
+                    },
                     ClientTransactionGetResponse_Status::INTERNAL_ERROR => {
                         Err(Error::ValidatorError)
                     },
@@ -438,6 +445,9 @@ impl<S: MessageSender> ValidatorClient<S> {
             self.send_request(Message_MessageType::CLIENT_BLOCK_GET_REQUEST, &request)?;
 
         match response.status {
+            ClientBlockGetResponse_Status::STATUS_UNSET=> {
+                Err(Error::ValidatorError)
+            },
             ClientBlockGetResponse_Status::INTERNAL_ERROR => {
                 Err(Error::ValidatorError)
             },
@@ -480,6 +490,9 @@ impl<S: MessageSender> ValidatorClient<S> {
             self.request(Message_MessageType::CLIENT_STATE_GET_REQUEST, &request)?;
 
         let state_data = match response.status {
+            ClientStateGetResponse_Status::STATUS_UNSET => {
+                return Err(String::from("Internal error"));
+            },
             ClientStateGetResponse_Status::OK => response.value,
             ClientStateGetResponse_Status::NO_RESOURCE => {
                 return Ok(None);
