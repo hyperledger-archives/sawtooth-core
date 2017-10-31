@@ -76,9 +76,9 @@ class TransactionProcessor {
 
           if (handler) {
             handler.apply(request, context)
-              .then(() => TpProcessResponse.encode({
+              .then(() => TpProcessResponse.create({
                 status: TpProcessResponse.Status.OK
-              }).finish())
+              }))
               .catch((e) => {
                 if (e instanceof InvalidTransaction) {
                   console.log(e)
