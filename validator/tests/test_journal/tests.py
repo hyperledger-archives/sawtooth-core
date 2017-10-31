@@ -28,13 +28,14 @@ from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.chain import BlockValidator
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
-from sawtooth_validator.journal.journal import Journal
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.journal.event_extractors \
     import BlockEventExtractor
 from sawtooth_validator.journal.event_extractors \
     import ReceiptEventExtractor
+from sawtooth_validator.journal.batch_injector import \
+    DefaultBatchInjectorFactory
 
 from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterType
@@ -129,6 +130,8 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
+            check_publish_block_frequency=0.1,
+            batch_observers=[],
             permission_verifier=self.permission_verifier)
 
         self.init_chain_head = self.block_tree_manager.chain_head
@@ -283,6 +286,8 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
+            check_publish_block_frequency=0.1,
+            batch_observers=[],
             permission_verifier=self.permission_verifier)
 
         self.receive_batches()
@@ -313,6 +318,8 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
+            check_publish_block_frequency=0.1,
+            batch_observers=[],
             permission_verifier=self.permission_verifier)
 
         self.assert_no_block_published()
@@ -365,6 +372,8 @@ class TestBlockPublisher(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
+            check_publish_block_frequency=0.1,
+            batch_observers=[],
             batch_injector_factory=MockBatchInjectorFactory(injected_batch))
 
         self.receive_batches()
@@ -822,7 +831,7 @@ class TestChainController(unittest.TestCase):
             state_view_factory=MockStateViewFactory(
                 self.block_tree_manager.state_db),
             block_sender=self.block_sender,
-            executor=self.executor,
+            thread_pool=self.executor,
             transaction_executor=MockTransactionExecutor(
                 batch_execution_result=None),
             chain_head_lock=self._chain_head_lock,
@@ -1137,7 +1146,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             state_view_factory=MockStateViewFactory(
                 self.block_tree_manager.state_db),
             block_sender=self.block_sender,
-            executor=self.executor,
+            thread_pool=self.executor,
             transaction_executor=MockTransactionExecutor(),
             chain_head_lock=self.chain_head_lock,
             on_chain_updated=chain_updated,
@@ -1223,45 +1232,68 @@ class TestJournal(unittest.TestCase):
         # gossip layer.
 
         btm = BlockTreeManager()
-        journal = None
+        block_publisher = None
+        chain_controller = None
         try:
-            journal = Journal(
-                block_store=btm.block_store,
+            block_publisher = BlockPublisher(
+                transaction_executor=self.txn_executor,
                 block_cache=btm.block_cache,
                 state_view_factory=MockStateViewFactory(btm.state_db),
                 block_sender=self.block_sender,
                 batch_sender=self.batch_sender,
-                transaction_executor=self.txn_executor,
                 squash_handler=None,
+                chain_head=btm.block_store.chain_head,
                 identity_signing_key=btm.identity_signing_key,
+                data_dir=None,
+                config_dir=None,
+                permission_verifier=self.permission_verifier,
+                check_publish_block_frequency=0.1,
+                batch_observers=[],
+                batch_injector_factory=DefaultBatchInjectorFactory(
+                    block_store=btm.block_store,
+                    state_view_factory=MockStateViewFactory(btm.state_db),
+                    signing_key=btm.identity_signing_key))
+
+            chain_controller = ChainController(
+                block_sender=self.block_sender,
+                block_cache=btm.block_cache,
+                state_view_factory=MockStateViewFactory(btm.state_db),
+                transaction_executor=self.txn_executor,
+                chain_head_lock=block_publisher.chain_head_lock,
+                on_chain_updated=block_publisher.on_chain_updated,
+                squash_handler=None,
                 chain_id_manager=None,
+                identity_signing_key=btm.identity_signing_key,
                 data_dir=None,
                 config_dir=None,
                 permission_verifier=self.permission_verifier,
                 chain_observers=[self.state_delta_processor])
 
-            self.gossip.on_batch_received = journal.on_batch_received
-            self.gossip.on_block_received = journal.on_block_received
+            self.gossip.on_batch_received = block_publisher.queue_batch
+            self.gossip.on_block_received = chain_controller.queue_block
 
-            journal.start()
+            block_publisher.start()
+            chain_controller.start()
 
             # feed it a batch
             batch = Batch()
-            journal.on_batch_received(batch)
+            block_publisher.queue_batch(batch)
 
             wait_until(lambda: self.block_sender.new_block is not None, 2)
             self.assertTrue(self.block_sender.new_block is not None)
 
             block = BlockWrapper(self.block_sender.new_block)
-            journal.on_block_received(block)
+            chain_controller.queue_block(block)
 
             # wait for the chain_head to be updated.
             wait_until(lambda: btm.chain_head.identifier ==
                        block.identifier, 2)
             self.assertTrue(btm.chain_head.identifier == block.identifier)
         finally:
-            if journal is not None:
-                journal.stop()
+            if block_publisher is not None:
+                block_publisher.stop()
+            if chain_controller is not None:
+                chain_controller.stop()
 
 
 class TestTimedCache(unittest.TestCase):

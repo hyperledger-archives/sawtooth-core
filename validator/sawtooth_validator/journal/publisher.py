@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+import abc
 import logging
+import queue
 from threading import RLock
+from threading import Thread
+import time
 
 import sawtooth_signing as signing
 
@@ -35,6 +39,62 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
+
+
+class PendingBatchObserver(metaclass=abc.ABCMeta):
+    """An interface class for components wishing to be notified when a Batch
+    has begun being processed.
+    """
+    @abc.abstractmethod
+    def notify_batch_pending(self, batch):
+        """This method will be called when a Batch has passed initial
+        validation and is queued to be processed by the Publisher.
+
+        Args:
+            batch (Batch): The Batch that has been added to the Publisher
+        """
+        raise NotImplementedError('PendingBatchObservers must have a '
+                                  '"notify_batch_pending" method')
+
+
+class _PublisherThread(Thread):
+    def __init__(self, block_publisher, batch_queue,
+                 check_publish_block_frequency):
+        Thread.__init__(self, name='_PublisherThread')
+        self._block_publisher = block_publisher
+        self._batch_queue = batch_queue
+        self._check_publish_block_frequency = \
+            check_publish_block_frequency
+        self._exit = False
+
+    def run(self):
+        try:
+            # make sure we don't check to publish the block
+            # to frequently.
+            next_check_publish_block_time = time.time() + \
+                self._check_publish_block_frequency
+            while True:
+                try:
+                    batch = self._batch_queue.get(
+                        timeout=self._check_publish_block_frequency)
+                    self._block_publisher.on_batch_received(batch)
+                except queue.Empty:
+                    # If getting a batch times out, just try again.
+                    pass
+
+                if next_check_publish_block_time < time.time():
+                    self._block_publisher.on_check_publish_block()
+                    next_check_publish_block_time = time.time() + \
+                        self._check_publish_block_frequency
+                if self._exit:
+                    return
+        # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.exception(exc)
+            LOGGER.critical("BlockPublisher thread exited with error.")
+
+    def stop(self):
+        self._exit = True
 
 
 class _CandidateBlock(object):
@@ -343,6 +403,8 @@ class BlockPublisher(object):
                  data_dir,
                  config_dir,
                  permission_verifier,
+                 check_publish_block_frequency,
+                 batch_observers,
                  batch_injector_factory=None,
                  metrics_registry=None):
         """
@@ -395,6 +457,32 @@ class BlockPublisher(object):
         self._pending_batch_gauge = \
             metrics_registry.gauge('pending_batch_gauge') \
             if metrics_registry else None
+
+        self._batch_queue = queue.Queue()
+        self._batch_observers = batch_observers
+        self._check_publish_block_frequency = check_publish_block_frequency
+        self._publisher_thread = None
+
+    def start(self):
+        self._publisher_thread = _PublisherThread(
+            block_publisher=self,
+            batch_queue=self._batch_queue,
+            check_publish_block_frequency=self._check_publish_block_frequency)
+        self._publisher_thread.start()
+
+    def stop(self):
+        if self._publisher_thread is not None:
+            self._publisher_thread.stop()
+            self._publisher_thread = None
+
+    def queue_batch(self, batch):
+        """
+        New batch has been received, queue it with the BlockPublisher for
+        inclusion in the next block.
+        """
+        self._batch_queue.put(batch)
+        for observer in self._batch_observers:
+            observer.notify_batch_pending(batch)
 
     @property
     def chain_head_lock(self):

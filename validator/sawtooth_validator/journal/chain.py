@@ -15,8 +15,11 @@
 
 from abc import ABCMeta
 from abc import abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 import logging
+import queue
 from threading import RLock
+from threading import Thread
 
 import sawtooth_signing as signing
 
@@ -511,6 +514,35 @@ class ChainObserver(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
 
+class _ChainThread(Thread):
+    def __init__(self, chain_controller, block_queue, block_cache):
+        Thread.__init__(self, name='_ChainThread')
+        self._chain_controller = chain_controller
+        self._block_queue = block_queue
+        self._block_cache = block_cache
+        self._exit = False
+
+    def run(self):
+        try:
+            while True:
+                try:
+                    block = self._block_queue.get(timeout=1)
+                    self._chain_controller.on_block_received(block)
+                except queue.Empty:
+                    # If getting a block times out, just try again.
+                    pass
+
+                if self._exit:
+                    return
+        # pylint: disable=broad-except
+        except Exception as exc:
+            LOGGER.exception(exc)
+            LOGGER.critical("ChainController thread exited with error.")
+
+    def stop(self):
+        self._exit = True
+
+
 class ChainController(object):
     """
     To evaluating new blocks to determine if they should extend or replace
@@ -520,7 +552,6 @@ class ChainController(object):
                  block_cache,
                  block_sender,
                  state_view_factory,
-                 executor,
                  transaction_executor,
                  chain_head_lock,
                  on_chain_updated,
@@ -531,7 +562,8 @@ class ChainController(object):
                  config_dir,
                  permission_verifier,
                  chain_observers,
-                 metrics_registry):
+                 thread_pool=None,
+                 metrics_registry=None):
         """Initialize the ChainController
         Args:
             block_cache: The cache of all recent blocks and the processing
@@ -539,7 +571,6 @@ class ChainController(object):
             block_sender: an interface object used to send blocks to the
                 network.
             state_view_factory: The factory object to create
-            executor: The thread pool to process block validations.
             transaction_executor: The TransactionExecutor used to produce
                 schedulers for batch validation.
             chain_head_lock: Lock to hold while the chain head is being
@@ -569,7 +600,6 @@ class ChainController(object):
         self._block_store = block_cache.block_store
         self._state_view_factory = state_view_factory
         self._block_sender = block_sender
-        self._executor = executor
         self._transaction_executor = transaction_executor
         self._notify_on_chain_updated = on_chain_updated
         self._squash_handler = squash_handler
@@ -586,18 +616,9 @@ class ChainController(object):
         # scheduled for validation.
         self._chain_id_manager = chain_id_manager
 
-        try:
-            self._chain_head = self._block_store.chain_head
-            if self._chain_head is not None:
-                LOGGER.info("Chain controller initialized with chain head: %s",
-                            self._chain_head)
-        except Exception as exc:
-            LOGGER.error("Invalid block store. Head of the block chain cannot "
-                         "be determined")
-            LOGGER.exception(exc)
-            raise
+        self._chain_head = None
+        self._set_chain_head_from_block_store()
 
-        self._notify_on_chain_updated(self._chain_head)
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
         self._chain_head_gauge = \
@@ -612,6 +633,48 @@ class ChainController(object):
         else:
             self._committed_transactions_count = CounterWrapper()
             self._block_num_gauge = GaugeWrapper()
+
+        self._block_queue = queue.Queue()
+        self._thread_pool = \
+            ThreadPoolExecutor(1) if thread_pool is None else thread_pool
+        self._chain_thread = None
+
+    def _set_chain_head_from_block_store(self):
+        try:
+            self._chain_head = self._block_store.chain_head
+            if self._chain_head is not None:
+                LOGGER.info("Chain controller initialized with chain head: %s",
+                            self._chain_head)
+        except Exception as exc:
+            LOGGER.error("Invalid block store. Head of the block chain cannot "
+                         "be determined")
+            LOGGER.exception(exc)
+            raise
+
+    def start(self):
+        self._set_chain_head_from_block_store()
+        self._notify_on_chain_updated(self._chain_head)
+
+        self._chain_thread = _ChainThread(
+            chain_controller=self,
+            block_queue=self._block_queue,
+            block_cache=self._block_cache)
+        self._chain_thread.start()
+
+    def stop(self):
+        if self._chain_thread is not None:
+            self._chain_thread.stop()
+            self._chain_thread = None
+
+        if self._thread_pool is not None:
+            self._thread_pool.shutdown(wait=True)
+
+    def queue_block(self, block):
+        """
+        New block has been received, queue it with the chain controller
+        for processing.
+        """
+        self._block_queue.put(block)
 
     @property
     def chain_head(self):
@@ -640,7 +703,7 @@ class ChainController(object):
                 config_dir=self._config_dir,
                 permission_verifier=self._permission_verifier)
             self._blocks_processing[blkw.block.header_signature] = validator
-            self._executor.submit(validator.run)
+            self._thread_pool.submit(validator.run)
 
     def on_block_validated(self, commit_new_block, result):
         """Message back from the block validator, that the validation is
