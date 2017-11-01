@@ -140,9 +140,13 @@ class Gossip(object):
             if self._endpoint:
                 peer_endpoints.append(self._endpoint)
             peers_response = GetPeersResponse(peer_endpoints=peer_endpoints)
-            self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
-                               peers_response.SerializeToString(),
-                               connection_id)
+            try:
+                self._network.send(
+                    validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
+                    peers_response.SerializeToString(),
+                    connection_id)
+            except ValueError:
+                LOGGER.debug("Connection disconnected: %s", connection_id)
 
     def add_candidate_peer_endpoints(self, peer_endpoints):
         """Adds candidate endpoints to the list of endpoints to
