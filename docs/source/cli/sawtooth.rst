@@ -245,6 +245,13 @@ sawtooth identity role list
   :language: console
   :linenos:
 
+sawtooth keygen
+===============
+
+.. literalinclude:: output/sawtooth_keygen_usage.out
+  :language: console
+  :linenos:
+
 sawtooth state
 ==============
 
