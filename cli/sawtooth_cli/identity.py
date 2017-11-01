@@ -58,22 +58,39 @@ def add_identity_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the identity command and
     its subcommands.
     """
-    parser = subparsers.add_parser('identity')
+    # identity
+    parser = subparsers.add_parser(
+        'identity',
+        help='Work with optional roles, policies, and permissions',
+        description='Provides subcommands to work with roles and policies.')
 
-    identity_parsers = parser.add_subparsers(title="subcommands",
-                                             dest="subcommand")
+    identity_parsers = parser.add_subparsers(
+        title="subcommands",
+        dest="subcommand")
+
     identity_parsers.required = True
 
-    policy_parser = identity_parsers.add_parser('policy')
+    # policy
+    policy_parser = identity_parsers.add_parser(
+        'policy',
+        help='Provides subcommands to display existing policies and create '
+        'new policies',
+        description='This subcommand is used to list the current policies '
+        'stored in state and to create new policies.')
+
     policy_parsers = policy_parser.add_subparsers(
         title='policy',
         dest='policy_cmd')
+
     policy_parsers.required = True
 
+    # policy create
     create_parser = policy_parsers.add_parser(
         'create',
         help='creates batches of sawtooth-identity transactions for setting a '
-        'policy')
+        'policy',
+        description='Creates a policy that can be set to a role or changes a '
+        'policy without resetting the role.')
 
     create_parser.add_argument(
         '-k', '--key',
@@ -81,6 +98,7 @@ def add_identity_parser(subparsers, parent_parser):
         help='the signing key for the resulting batches')
 
     create_target_group = create_parser.add_mutually_exclusive_group()
+
     create_target_group.add_argument(
         '-o', '--output',
         type=str,
@@ -111,9 +129,11 @@ def add_identity_parser(subparsers, parent_parser):
         help='Each rule should be in the following format "PERMIT_KEY <key>"'
         ' or "DENY_KEY <key>". Multiple "rule" arguments can be added.')
 
+    # policy list
     list_parser = policy_parsers.add_parser(
         'list',
-        help='list the current policies')
+        help='list the current policies',
+        description='Lists the policies that are currently set in state')
 
     list_parser.add_argument(
         '--url',
@@ -127,16 +147,26 @@ def add_identity_parser(subparsers, parent_parser):
         choices=['default', 'csv', 'json', 'yaml'],
         help='the format of the output')
 
-    role_parser = identity_parsers.add_parser('role')
+    # role
+    role_parser = identity_parsers.add_parser(
+        'role',
+        help='Provides subcommands to display existing roles and create '
+        'new roles',
+        description='This subcommand is used to list the current roles '
+        'stored in state and to create new roles.')
+
     role_parsers = role_parser.add_subparsers(
         title='role',
         dest='role_cmd')
+
     role_parsers.required = True
 
+    # role create
     create_parser = role_parsers.add_parser(
         'create',
-        help='creates batches of sawtooth-identity transactions for setting a '
-        'role')
+        help='creates a new role that can be used to enforce permissions',
+        description='Creates a new role that can be used to enforce '
+        'permissions.')
 
     create_parser.add_argument(
         '-k', '--key',
@@ -151,6 +181,7 @@ def add_identity_parser(subparsers, parent_parser):
              'the rest api.')
 
     create_target_group = create_parser.add_mutually_exclusive_group()
+
     create_target_group.add_argument(
         '-o', '--output',
         type=str,
@@ -172,9 +203,11 @@ def add_identity_parser(subparsers, parent_parser):
         type=str,
         help='the name of the policy the role will be restricted to.')
 
+    # role list
     list_parser = role_parsers.add_parser(
         'list',
-        help='list the current keys and values of roles')
+        help='list the current keys and values of roles',
+        description='Displays the roles that are currently set in state.')
 
     list_parser.add_argument(
         '--url',

@@ -63,6 +63,9 @@ def setup_loggers(verbose_level):
 
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
+        description='Starts a sawtooth-identity transaction processor.',
+        epilog='This process is required to apply any changes to on-chain '
+        'permissions used by the Sawtooth platform.',
         prog=prog_name,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 

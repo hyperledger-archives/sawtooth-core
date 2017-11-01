@@ -29,7 +29,20 @@ def add_keygen_parser(subparsers, parent_parser):
         parent_parser (:obj:`ArguementParser`): The parent of the subcomman
             parsers.
     """
-    parser = subparsers.add_parser('keygen', parents=[parent_parser])
+    description = 'Generates keys for the validator to use when signing blocks'
+
+    epilog = (
+        'The private and public key pair is stored in '
+        '/etc/sawtooth/keys/<key-name>.priv and '
+        '/etc/sawtooth/keys/<key-name>.pub.'
+    )
+
+    parser = subparsers.add_parser(
+        'keygen',
+        help=description,
+        description=description + '.',
+        epilog=epilog,
+        parents=[parent_parser])
 
     parser.add_argument(
         'key_name',

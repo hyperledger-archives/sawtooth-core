@@ -22,12 +22,19 @@ IntegerKey CLI
 intkey
 ======
 
+The IntegerKey transaction family allows users to set, increment, and
+decrement the value of entries stored in a state dictionary.
+
 .. literalinclude:: output/intkey_usage.out
    :language: console
    :linenos:
 
 intkey set
 ==========
+
+Sends a transaction to set ``<name>`` to ``<value>``. This transaction
+will fail if ``<value>`` is less than 0 or greater than 2\
+:sup:`32` - 1.
 
 .. literalinclude:: output/intkey_set_usage.out
    :language: console
@@ -36,12 +43,20 @@ intkey set
 intkey inc
 ==========
 
+Sends a transaction to increment ``<name>`` by ``<value>``. This
+transaction will fail if ``<name>`` is not set or if the resulting
+value would exceed 2\ :sup:`32` - 1.
+
 .. literalinclude:: output/intkey_inc_usage.out
    :language: console
    :linenos:
 
 intkey dec
 ==========
+
+Sends a transaction to increment ``<name>`` by ``<value>``. This
+transaction will fail if ``<name>`` is not set or if the resulting
+value would be less than 0.
 
 .. literalinclude:: output/intkey_dec_usage.out
    :language: console
@@ -50,6 +65,8 @@ intkey dec
 intkey show
 ===========
 
+Displays the value of the intkey entry ``<name>``.
+
 .. literalinclude:: output/intkey_show_usage.out
    :language: console
    :linenos:
@@ -57,48 +74,8 @@ intkey show
 intkey list
 ===========
 
+Displays the value of all intkey entries in state.
+
 .. literalinclude:: output/intkey_list_usage.out
-   :language: console
-   :linenos:
-
-intkey generate
-===============
-
-.. literalinclude:: output/intkey_generate_usage.out
-   :language: console
-   :linenos:
-
-intkey load
-===========
-
-.. literalinclude:: output/intkey_load_usage.out
-   :language: console
-   :linenos:
-
-intkey populate
-===============
-
-.. literalinclude:: output/intkey_populate_usage.out
-   :language: console
-   :linenos:
-
-intkey create_batch
-===================
-
-.. literalinclude:: output/intkey_create_batch_usage.out
-   :language: console
-   :linenos:
-
-intkey workload
-===============
-
-.. literalinclude:: output/intkey_workload_usage.out
-   :language: console
-   :linenos:
-
-intkey-tp-python
-================
-
-.. literalinclude:: output/intkey-tp-python_usage.out
    :language: console
    :linenos:

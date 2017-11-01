@@ -19,8 +19,18 @@
 PoET CLI
 ********
 
+The PoET CLI initializes the proof-of-elapsed-time consensus mechanism
+for Sawtooth by generating enclave setup information and creating a
+Batch for the genesis block. For more information, see
+:doc:`/architecture/poet`.
+
 poet
 ====
+
+The poet command generates information for configuring a node to use
+Sawtooth with the PoET consensus method. The genesis subcommand
+creates a Batch for the genesis block. The enclave subcommand
+generates enclave setup information.
 
 .. literalinclude:: output/poet_usage.out
    :language: console
@@ -29,12 +39,16 @@ poet
 poet genesis
 ============
 
+The ``poet genesis`` subcommand creates a Batch for the genesis Block.
+
 .. literalinclude:: output/poet_genesis_usage.out
    :language: console
    :linenos:
 
 poet enclave
 ============
+
+The ``poet enclave`` subcommand generates enclave setup information.
 
 .. literalinclude:: output/poet_enclave_usage.out
    :language: console

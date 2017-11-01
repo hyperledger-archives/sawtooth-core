@@ -87,9 +87,12 @@ def create_parent_parser(prog_name):
 
 
 def create_parser(prog_name):
-    parent_parser = create_parent_parser(prog_name)
+    parent_parser = create_parent_parser(
+        prog_name)
 
     parser = argparse.ArgumentParser(
+        description='Provides subcommands to generate PoET information '
+        'for configuring a node.',
         parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter)
 

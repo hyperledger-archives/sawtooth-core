@@ -53,7 +53,8 @@ def add_config_parser(subparsers, parent_parser):
     """
     parser = subparsers.add_parser(
         'config',
-        help='commands to modify on-chain settings',
+        help='Change genesis block settings and create, view, and '
+        'vote on settings proposals',
         description='Sawtooth supports storing settings on-chain. The '
                     'subcommands provided here can be used to view the '
                     'current proposals, create proposals and vote on existing '
@@ -70,7 +71,7 @@ def add_config_parser(subparsers, parent_parser):
     # transactions for on-chain settings
     genesis_parser = config_parsers.add_parser(
         'genesis',
-        help='creates a genesis batch file of settings transactions',
+        help='Create a genesis batch file of settings transactions',
         description='Creates a Batch of settings proposals that can be '
                     'consumed by "sawtooth admin genesis" and used '
                     'during genesis block construction.'
@@ -106,7 +107,7 @@ def add_config_parser(subparsers, parent_parser):
 
     proposal_parser = config_parsers.add_parser(
         'proposal',
-        help='view, create or vote on settings change proposals',
+        help='View, create or vote on settings change proposals',
         description='sawtooth-settings supports a simple voting mechanism for '
                     'applying changes to on-change settings.  These commands '
                     'provide tools to view, create or vote on proposed '
@@ -213,7 +214,7 @@ def add_config_parser(subparsers, parent_parser):
 
     settings_parser = config_parsers.add_parser(
         'settings',
-        help='list and show on-chain settings',
+        help='List and show on-chain settings',
         description='Displays the values of currently active on-chain '
                     'settings.')
     settings_parsers = settings_parser.add_subparsers(

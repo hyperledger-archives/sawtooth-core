@@ -29,42 +29,49 @@ def add_state_parser(subparsers, parent_parser):
             subparsers: Add parsers to this subparser object
             parent_parser: The parent argparse.ArgumentParser object
     """
-    parser = subparsers.add_parser('state')
+    parser = subparsers.add_parser(
+        'state',
+        help='Display information on the entries in state',
+        description='Provides subcommands to display information about the '
+        'state entries in the current blockchain state.')
 
-    grand_parsers = parser.add_subparsers(title='grandchildcommands',
-                                          dest='subcommand')
+    grand_parsers = parser.add_subparsers(
+        title='grandchildcommands',
+        dest='subcommand')
+
     grand_parsers.required = True
 
-    epilog = '''details:
-        Lists state in the form of leaves from the merkle tree. List can be
-    narrowed using the address of a subtree.
-    '''
     list_parser = grand_parsers.add_parser(
-        'list', epilog=epilog,
+        'list',
+        description='Lists all state entries in the current blockchain.',
         parents=[base_http_parser(), base_list_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
+
     list_parser.add_argument(
         'subtree',
         type=str,
         nargs='?',
         default=None,
         help='the address of a subtree to filter list by')
+
     list_parser.add_argument(
         '--head',
         action='store',
         default=None,
         help='the id of the block to set as the chain head')
 
-    epilog = '''details:
-        Shows the data for a single leaf on the merkle tree.
-    '''
     show_parser = grand_parsers.add_parser(
-        'show', epilog=epilog, parents=[base_http_parser()],
+        'show',
+        description='Displays information for the specified state address in '
+        'the current blockchain.',
+        parents=[base_http_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
+
     show_parser.add_argument(
         'address',
         type=str,
         help='the address of the leaf')
+
     show_parser.add_argument(
         '--head',
         action='store',

@@ -49,7 +49,10 @@ DISTRIBUTION_NAME = 'sawtooth-rest-api'
 def parse_args(args):
     """Parse command line flags added to `rest_api` command.
     """
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Starts the REST API application and connects to a '
+        'specified validator.')
+
     parser.add_argument('-B', '--bind',
                         help='The host and port for the api to run on.',
                         action='append')

@@ -69,7 +69,13 @@ def setup_loggers(verbose_level):
 
 
 def add_create_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('create', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'create',
+        help='creates a new xo game',
+        description='Sends a transaction to start an xo game with the '
+        'identifier <name>. This transaction will fail if a game already '
+        'exists with the name <name>.',
+        parents=[parent_parser])
 
     parser.add_argument(
         'name',
@@ -91,11 +97,21 @@ def add_create_parser(subparsers, parent_parser):
 
 
 def add_list_parser(subparsers, parent_parser):
-    subparsers.add_parser('list', parents=[parent_parser])
+    subparsers.add_parser(
+        'list',
+        help='displays information for all xo games',
+        description='Displays information for all xo games in state, showing '
+        'the players, the game state, and the board for each game.',
+        parents=[parent_parser])
 
 
 def add_show_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('show', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'show',
+        help='displays information about an xo game',
+        description='Displays the xo game <name>, showing the players, the '
+        'game state, and the board',
+        parents=[parent_parser])
 
     parser.add_argument(
         'name',
@@ -104,7 +120,13 @@ def add_show_parser(subparsers, parent_parser):
 
 
 def add_take_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('take', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'take',
+        help='takes a space in an xo game',
+        description='Sends a transaction to start an xo game with the '
+        'identifier <name>. This transaction will fail if a game already '
+        'exists with the name <name>.',
+        parents=[parent_parser])
 
     parser.add_argument(
         'name',
@@ -191,8 +213,9 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        parents=[parent_parser],
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        description='Provides subcommands to play tic-tac-toe (also known as '
+        'Noughts and Crosses) by sending XO transactions.',
+        parents=[parent_parser])
 
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 

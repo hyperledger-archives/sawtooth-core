@@ -24,7 +24,15 @@ import sawtooth_signing as signing
 
 
 def add_keygen_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('keygen', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'keygen',
+        help='Create user signing keys',
+        description='Generates keys with which the user can sign '
+        'transactions and batches.',
+        epilog='The private and public key files are stored in '
+        '<key-dir>/<key-name>.priv and <key-dir>/<key-name>.pub. '
+        '<key-dir> defaults to ~/.sawtooth and <key-name> defaults to $USER.',
+        parents=[parent_parser])
 
     parser.add_argument(
         'key_name',

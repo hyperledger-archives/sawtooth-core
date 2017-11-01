@@ -35,7 +35,11 @@ def add_batch_parser(subparsers, parent_parser):
             subparsers: Add parsers to this subparser object
             parent_parser: The parent argparse.ArgumentParser object
     """
-    parser = subparsers.add_parser('batch')
+    parser = subparsers.add_parser(
+        'batch',
+        help='Display information about batches and submit new batches',
+        description='Provides subcommands to display Batch information and '
+        'submit Batches to the validator via the REST API.')
 
     grand_parsers = parser.add_subparsers(title='grandchildcommands',
                                           dest='subcommand')
@@ -47,25 +51,25 @@ def add_batch_parser(subparsers, parent_parser):
 
 
 def add_batch_list_parser(subparsers, parent_parser):
-    epilog = '''details:
-        Lists committed batches from newest to oldest, including their id (i.e.
-    header signature), transaction count, and their signer's public key.
-    '''
+    description = (
+        'Displays all information about all committed Batches for '
+        'the specified validator, including the Batch id, public keys of all '
+        'signers, and number of transactions in each Batch.')
+
     subparsers.add_parser(
-        'list', epilog=epilog,
+        'list',
+        description=description,
         parents=[base_http_parser(), base_list_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
 
 def add_batch_show_parser(subparsers, parent_parser):
-    epilog = '''details:
-        Shows the data for a single batch, or for a particular property within
-    that batch or its header. Displays data in YAML (default), or JSON formats.
-    '''
     show_parser = subparsers.add_parser(
-        'show', epilog=epilog,
+        'show',
+        description='Displays information for the specified Batch.',
         parents=[base_http_parser(), base_show_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
+
     show_parser.add_argument(
         'batch_id',
         type=str,
@@ -73,11 +77,9 @@ def add_batch_show_parser(subparsers, parent_parser):
 
 
 def add_batch_status_parser(subparsers, parent_parser):
-    epilog = '''details:
-        Fetches the statuses for a set of batches.
-    '''
     status_parser = subparsers.add_parser(
-        'status', epilog=epilog,
+        'status',
+        description='Displays the status of the specified Batch id or ids.',
         parents=[base_http_parser()])
 
     status_parser.add_argument(
@@ -103,6 +105,10 @@ def add_batch_status_parser(subparsers, parent_parser):
 def add_batch_submit_parser(subparsers, parent_parser):
     submit_parser = subparsers.add_parser(
         'submit',
+        description='Sends Batches to the REST API to be submitted to the '
+        'validator. The input must be a binary file containing a '
+        'binary-encoded BatchList of one or more batches with any number '
+        'of transactions.',
         parents=[base_http_parser(), parent_parser])
 
     submit_parser.add_argument(

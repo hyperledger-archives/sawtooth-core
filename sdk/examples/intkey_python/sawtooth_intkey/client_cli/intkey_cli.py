@@ -130,7 +130,8 @@ def add_set_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'set',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Sets an intkey value')
 
     parser.add_argument(
         'name',
@@ -173,7 +174,8 @@ def add_inc_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'inc',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Increments an intkey value')
 
     parser.add_argument(
         'name',
@@ -216,7 +218,8 @@ def add_dec_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'dec',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Decrements an intkey value')
 
     parser.add_argument(
         'name',
@@ -259,7 +262,8 @@ def add_show_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'show',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Displays some intkey value')
 
     parser.add_argument(
         'name',
@@ -285,7 +289,8 @@ def add_list_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'list',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Displays all intkey values')
 
     parser.add_argument(
         '--url',

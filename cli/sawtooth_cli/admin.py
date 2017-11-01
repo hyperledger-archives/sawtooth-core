@@ -30,7 +30,12 @@ def do_admin(args):
 
 
 def add_admin_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('admin', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'admin',
+        help='Create validator keys and help create the genesis block',
+        description='Provides subcommands to create validator keys and '
+        'help create the genesis block',
+        parents=[parent_parser])
     admin_sub = parser.add_subparsers(title='subcommands', dest='subcommand')
     admin_sub.required = True
     add_genesis_parser(admin_sub, parent_parser)
