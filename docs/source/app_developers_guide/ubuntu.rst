@@ -253,10 +253,6 @@ in Python.
   * intkey-tp-javascript - An intkey transaction processor written in JavaScript
     (requires node.js)
 
-  * jvm-sc-tp - An intkey transaction processor implemented as a smart contract;
-    the bytecode to run a transaction is stored in state and the blockchain
-    (requires Java)
-
   * poet-validator-registry-tp - A transaction family used by the PoET consensus
     algorithm implementation to keep track of other validators
 
