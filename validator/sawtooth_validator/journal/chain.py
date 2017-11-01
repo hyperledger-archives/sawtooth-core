@@ -15,14 +15,15 @@
 
 from abc import ABCMeta
 from abc import abstractmethod
-from concurrent.futures import ThreadPoolExecutor
 import logging
 import queue
 from threading import RLock
-from threading import Thread
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.concurrent.thread import InstrumentedThread
+from sawtooth_validator.concurrent.threadpool import \
+    InstrumentedThreadPoolExecutor
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -318,8 +319,9 @@ class BlockValidator(object):
                 return valid
         except ChainHeadUpdated:
             raise
-        except Exception as exc:
-            LOGGER.exception(exc)
+        except Exception:
+            LOGGER.exception(
+                "Unhandled exception BlockPublisher.validate_block()")
             return False
 
     def _find_common_height(self, new_chain, cur_chain):
@@ -495,10 +497,10 @@ class BlockValidator(object):
         except ChainHeadUpdated:
             self._done_cb(False, self._result)
             return
-        except Exception as exc:  # pylint: disable=broad-except
-            LOGGER.error("Block validation failed with unexpected error: %s",
-                         self._new_block)
-            LOGGER.exception(exc)
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception(
+                "Block validation failed with unexpected error: %s",
+                self._new_block)
             # callback to clean up the block out of the processing list.
             self._done_cb(False, self._result)
 
@@ -515,9 +517,9 @@ class ChainObserver(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class _ChainThread(Thread):
+class _ChainThread(InstrumentedThread):
     def __init__(self, chain_controller, block_queue, block_cache):
-        Thread.__init__(self, name='_ChainThread')
+        super().__init__(name='_ChainThread')
         self._chain_controller = chain_controller
         self._block_queue = block_queue
         self._block_cache = block_cache
@@ -536,9 +538,8 @@ class _ChainThread(Thread):
                 if self._exit:
                     return
         # pylint: disable=broad-except
-        except Exception as exc:
-            LOGGER.exception(exc)
-            LOGGER.critical("ChainController thread exited with error.")
+        except Exception:
+            LOGGER.exception("ChainController thread exited with error.")
 
     def stop(self):
         self._exit = True
@@ -637,7 +638,8 @@ class ChainController(object):
 
         self._block_queue = queue.Queue()
         self._thread_pool = \
-            ThreadPoolExecutor(1) if thread_pool is None else thread_pool
+            InstrumentedThreadPoolExecutor(1) \
+            if thread_pool is None else thread_pool
         self._chain_thread = None
 
     def _set_chain_head_from_block_store(self):
@@ -646,10 +648,10 @@ class ChainController(object):
             if self._chain_head is not None:
                 LOGGER.info("Chain controller initialized with chain head: %s",
                             self._chain_head)
-        except Exception as exc:
-            LOGGER.error("Invalid block store. Head of the block chain cannot "
-                         "be determined")
-            LOGGER.exception(exc)
+        except Exception:
+            LOGGER.exception(
+                "Invalid block store. Head of the block chain cannot be"
+                " determined")
             raise
 
     def start(self):
@@ -837,8 +839,9 @@ class ChainController(object):
                     self._submit_blocks_for_verification(descendant_blocks)
 
         # pylint: disable=broad-except
-        except Exception as exc:
-            LOGGER.exception(exc)
+        except Exception:
+            LOGGER.exception(
+                "Unhandled exception in ChainController.on_block_validated()")
 
     def on_block_received(self, block):
         try:
@@ -875,8 +878,9 @@ class ChainController(object):
                     # schedule this block for validation.
                     self._submit_blocks_for_verification([block])
         # pylint: disable=broad-except
-        except Exception as exc:
-            LOGGER.exception(exc)
+        except Exception:
+            LOGGER.exception(
+                "Unhandled exception in ChainController.on_block_received()")
 
     def _set_genesis(self, block):
         # This is used by a non-genesis journal when it has received the
