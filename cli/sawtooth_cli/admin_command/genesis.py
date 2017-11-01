@@ -25,7 +25,20 @@ from sawtooth_cli.protobuf.transaction_pb2 import TransactionHeader
 def add_genesis_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the genesis command.
     """
-    parser = subparsers.add_parser('genesis', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'genesis',
+        help='Creates the genesis.batch file for initializing the validator',
+        description='Generates the genesis.batch file for '
+        'initializing the validator.',
+        epilog='This command generates a serialized GenesisData protobuf '
+        'message and stores it in the genesis.batch file. One or more input '
+        'files (optional) can contain serialized BatchList protobuf messages '
+        'to add to the GenesisData. The output shows the location of this '
+        'file. By default, the genesis.batch file is stored in '
+        '/var/lib/sawtooth. If $SAWTOOTH_HOME is set, the location is '
+        '$SAWTOOTH_HOME/data/genesis.batch. Use the --output option to change '
+        'the name of the file.',
+        parents=[parent_parser])
 
     parser.add_argument(
         '-o', '--output',

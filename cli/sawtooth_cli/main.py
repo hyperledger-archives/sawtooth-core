@@ -106,19 +106,21 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        parents=[parent_parser],
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        description='Provides subcommands to configure, manage, '
+        'and use Sawtooth components',
+        parents=[parent_parser],)
 
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
     subparsers.required = True
-    add_keygen_parser(subparsers, parent_parser)
+
     add_admin_parser(subparsers, parent_parser)
-    add_config_parser(subparsers, parent_parser)
-    add_block_parser(subparsers, parent_parser)
     add_batch_parser(subparsers, parent_parser)
-    add_transaction_parser(subparsers, parent_parser)
-    add_state_parser(subparsers, parent_parser)
+    add_block_parser(subparsers, parent_parser)
+    add_config_parser(subparsers, parent_parser)
     add_identity_parser(subparsers, parent_parser)
+    add_keygen_parser(subparsers, parent_parser)
+    add_state_parser(subparsers, parent_parser)
+    add_transaction_parser(subparsers, parent_parser)
 
     return parser
 
@@ -154,7 +156,7 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     elif args.command == 'identity':
         do_identity(args)
     else:
-        raise AssertionError("invalid command: {}".format(args.command))
+        raise CliException("invalid command: {}".format(args.command))
 
 
 def main_wrapper():

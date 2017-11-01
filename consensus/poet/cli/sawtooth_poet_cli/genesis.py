@@ -43,7 +43,12 @@ VALIDATOR_MAP_ADDRESS = \
 def add_genesis_parser(subparsers, parent_parser):
     """Add argument parser arguments for the `poet genesis` subcommand.
     """
-    parser = subparsers.add_parser('genesis')
+    description = 'Creates a Batch for the genesis block'
+
+    parser = subparsers.add_parser(
+        'genesis',
+        help=description,
+        description=description + '.')
 
     parser.add_argument(
         '--enclave-module',

@@ -45,6 +45,7 @@ DISTRIBUTION_NAME = 'sawtooth-validator'
 
 def parse_args(args):
     parser = argparse.ArgumentParser(
+        description='Configures and starts a Sawtooth validator.',
         formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('--config-dir',
