@@ -31,6 +31,9 @@ sys.path.insert(0, os.path.join(
     'consensus', 'poet', 'families'))
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'consensus', 'poet', 'common'))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
     'signing'))
 
 from sawtooth_validator_registry.validator_registry.processor.main import main
