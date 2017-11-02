@@ -1040,14 +1040,12 @@ class SethRpcTest(unittest.TestCase):
 
         receipts = [
             TransactionReceipt(
-                data=[TransactionReceipt.Data(
-                    data_type="seth_receipt",
-                    data=SethTransactionReceipt(
-                        gas_used=self.gas,
-                        return_value=self.return_value_b,
-                        contract_address=self.contract_address_b,
+                data=[SethTransactionReceipt(
+                    gas_used=self.gas,
+                    return_value=self.return_value_b,
+                    contract_address=self.contract_address_b,
                     ).SerializeToString(),
-                )],
+                ],
                 events=[Event(
                     event_type="seth_log_event",
                     attributes=[
@@ -1059,14 +1057,12 @@ class SethRpcTest(unittest.TestCase):
                 transaction_id=txn_ids[0],
             ),
             TransactionReceipt(
-                data=[TransactionReceipt.Data(
-                    data_type="seth_receipt",
-                    data=SethTransactionReceipt(
-                        gas_used=self.gas,
-                        return_value=self.return_value_b,
-                        contract_address=self.contract_address_b,
+                data=[SethTransactionReceipt(
+                    gas_used=self.gas,
+                    return_value=self.return_value_b,
+                    contract_address=self.contract_address_b,
                     ).SerializeToString(),
-                )],
+                ],
                 events=[Event(
                     event_type="seth_log_event",
                     attributes=[
@@ -1175,14 +1171,12 @@ class SethRpcTest(unittest.TestCase):
     def _send_receipts_back(self, msg, receipts=None):
         if receipts is None:
             receipts = [TransactionReceipt(
-                data=[TransactionReceipt.Data(
-                    data_type="seth_receipt",
-                    data=SethTransactionReceipt(
-                        gas_used=self.gas,
-                        return_value=self.return_value_b,
-                        contract_address=self.contract_address_b,
+                data=[SethTransactionReceipt(
+                    gas_used=self.gas,
+                    return_value=self.return_value_b,
+                    contract_address=self.contract_address_b,
                     ).SerializeToString(),
-                )],
+                ],
                 events=[Event(
                     event_type="seth_log_event",
                     attributes=[

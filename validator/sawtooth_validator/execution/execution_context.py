@@ -351,9 +351,9 @@ class ExecutionContext(object):
         if not any(address.startswith(ns) for ns in self._read_list):
             raise AuthorizationException(address=address)
 
-    def add_execution_data(self, data_type, data):
+    def add_execution_data(self, data):
         with self._lock:
-            self._execution_data.append((data_type, data))
+            self._execution_data.append(data)
 
     def get_execution_data(self):
         with self._lock:

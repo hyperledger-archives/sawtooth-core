@@ -117,13 +117,12 @@ class ContextTest(unittest.TestCase):
             content=TpReceiptAddDataResponse(
                 status=TpReceiptAddDataResponse.OK).SerializeToString())
 
-        self.context.add_receipt_data("test", b"test")
+        self.context.add_receipt_data(b"test")
 
         self.mock_stream.send.assert_called_with(
             Message.TP_RECEIPT_ADD_DATA_REQUEST,
             TpReceiptAddDataRequest(
                 context_id=self.context_id,
-                data_type="test",
                 data=b"test").SerializeToString())
 
     def test_add_event(self):

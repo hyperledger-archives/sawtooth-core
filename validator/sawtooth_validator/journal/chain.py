@@ -931,11 +931,7 @@ class ChainController(object):
         receipts = []
         for result in results:
             receipt = TransactionReceipt()
-            receipt.data.extend([
-                TransactionReceipt.Data(
-                    data_type=data_type, data=data)
-                for data_type, data in result.data
-            ])
+            receipt.data.extend([data for data in result.data])
             receipt.state_changes.extend(result.state_changes)
             receipt.events.extend(result.events)
             receipt.transaction_id = result.signature

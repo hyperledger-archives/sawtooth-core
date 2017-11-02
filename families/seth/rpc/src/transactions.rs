@@ -31,7 +31,7 @@ use sawtooth_sdk::messages::transaction::{
     Transaction as TransactionPb,
     TransactionHeader,
 };
-use sawtooth_sdk::messages::transaction_receipt::{TransactionReceipt, TransactionReceipt_Data};
+use sawtooth_sdk::messages::transaction_receipt::{TransactionReceipt};
 use sawtooth_sdk::messages::events::{Event, Event_Attribute};
 
 use client::{
@@ -206,10 +206,9 @@ pub struct SethReceipt {
 impl SethReceipt {
     pub fn from_receipt_pb(receipt: &TransactionReceipt) -> Result<SethReceipt, Error>{
         let seth_receipt_pbs: Vec<SethTransactionReceipt> = receipt.get_data().iter()
-            .filter(|d: &&TransactionReceipt_Data| d.data_type == "seth_receipt")
-            .map(|d: &TransactionReceipt_Data| {
+             .map(|d: &Vec<u8>| {
                 let r: Result<SethTransactionReceipt, Error> =
-                    protobuf::parse_from_bytes(d.data.as_slice())
+                    protobuf::parse_from_bytes(d.as_slice())
                         .map_err(|error|
                             Error::ParseError(format!(
                                 "Failed to deserialize Seth receipt: {:?}", error)));

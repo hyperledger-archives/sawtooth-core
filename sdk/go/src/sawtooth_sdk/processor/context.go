@@ -263,11 +263,10 @@ func (self *Context) Set(pairs map[string][]byte) ([]string, error) {
 	return self.SetState(pairs)
 }
 
-func (self *Context) AddReceiptData(data_type string, data []byte) error {
+func (self *Context) AddReceiptData(data []byte) error {
 	// Append the data to the transaction receipt and set the type
 	request := &state_context_pb2.TpReceiptAddDataRequest{
 		ContextId: self.contextId,
-		DataType:  data_type,
 		Data:      data,
 	}
 	bytes, err := proto.Marshal(request)
