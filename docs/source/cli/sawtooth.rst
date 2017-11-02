@@ -231,10 +231,17 @@ sawtooth identity policy list
   :language: console
   :linenos:
 
+sawtooth identity role
+======================
+
+.. literalinclude:: output/sawtooth_identity_role_usage.out
+  :language: console
+  :linenos:
+
 sawtooth identity role create
 =============================
 
-.. literalinclude:: output/sawtooth_identity_policy_create_usage.out
+.. literalinclude:: output/sawtooth_identity_role_create_usage.out
   :language: console
   :linenos:
 
