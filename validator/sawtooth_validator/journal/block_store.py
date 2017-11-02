@@ -16,8 +16,6 @@
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 
-from sawtooth_validator.exceptions import PossibleForkDetectedError
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.block_pb2 import Block
@@ -49,7 +47,7 @@ class BlockStore(MutableMapping):
         return x in self._block_store
 
     def __iter__(self):
-        return _BlockPredecessorIterator(self, start_block=self.chain_head)
+        return self.get_block_iter()
 
     def __len__(self):
         # Required by abstract base class, but implementing is non-trivial
@@ -149,20 +147,58 @@ class BlockStore(MutableMapping):
         return self._block_store
 
     def get_predecessor_iter(self, starting_block=None):
-        """Returns an iterator that traverses blocks via their
-        previous_block_ids.
+        """Returns an iterator that traverses block via its predecesssors.
 
         Args:
             starting_block (:obj:`BlockWrapper`): the block from which
                 traversal begins
 
         Returns:
-            An iterator
+            An iterator of block wrappers
         """
-        if not starting_block:
-            return _BlockPredecessorIterator(self, start_block=self.chain_head)
+        return self.get_block_iter(start_block=starting_block)
 
-        return _BlockPredecessorIterator(self, start_block=starting_block)
+    def get_block_iter(self, start_block=None, start_block_num=None,
+                       reverse=True):
+        """Returns an iterator that traverses blocks in block number order.
+
+        Args:
+            start_block (:obj:`BlockWrapper`): the block from which traversal
+                begins
+            start_block_num (str): a starting block number, in hex, from where
+                traversal begins; only used if no starting_block is provided
+
+            reverse (bool): If True, traverse the blocks in from most recent
+                to oldest block. Otherwise, it traverse the blocks in the
+                opposite order.
+
+        Returns:
+            An iterator of block wrappers
+
+        Raises:
+            ValueError: If start_block or start_block_num do not specify a
+                valid block
+        """
+        with self._block_store.cursor(index='block_num') as curs:
+            if start_block:
+                start_block_num = BlockStore.block_num_to_hex(
+                    start_block.block_num)
+                if not curs.seek(start_block_num):
+                    raise ValueError('block {} is not a valid block'.format(
+                        start_block))
+            elif start_block_num:
+                if not curs.seek(start_block_num):
+                    raise ValueError('Block number {} does not reference a '
+                                     'valid block'.format(start_block_num))
+
+            iterator = None
+            if reverse:
+                iterator = curs.iter_rev()
+            else:
+                iterator = curs.iter()
+
+            for block in iterator:
+                yield block
 
     @staticmethod
     def _batch_index_keys(block):
@@ -277,43 +313,3 @@ class BlockStore(MutableMapping):
         for txn in batch.transactions:
             if txn.header_signature == transaction_id:
                 return txn
-
-
-class _BlockPredecessorIterator(object):
-    """An Iterator for traversing blocks via a block's previous_block_id
-    """
-
-    def __init__(self, block_store, start_block):
-        """Iterates from a starting block, through its predecessors.
-
-        Args:
-            block_store (:obj:`BlockStore`): the block store, from which
-                the predecessors are found
-            start_block (:obj:`BlockWrapper`): the starting block, from which
-                the predecessors will be iterated over.
-        """
-        self._block_store = block_store
-        if start_block:
-            self._current_block_id = start_block.identifier
-        else:
-            self._current_block_id = None
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if not self._current_block_id:
-            raise StopIteration()
-
-        try:
-            block = self._block_store[self._current_block_id]
-        except KeyError:
-            raise PossibleForkDetectedError(
-                'Block {} is no longer in the block store'.format(
-                    self._current_block_id[:8]))
-
-        self._current_block_id = block.header.previous_block_id
-        if self._current_block_id == NULL_BLOCK_IDENTIFIER:
-            self._current_block_id = None
-
-        return block

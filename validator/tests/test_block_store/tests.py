@@ -257,26 +257,6 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
 
         self.assertEqual([], [b for b in block_store.get_predecessor_iter()])
 
-    def test_fork_detection_on_iteration(self):
-        """Given a block store where a fork occurred while using the predecessor
-        iterator, it should throw a PossibleForkDetectedError.
-
-        The fork occurrance will be simulated.
-        """
-        block_store = BlockStore(DictDatabase(
-            indexes=BlockStore.create_index_configuration()))
-        chain = self._create_chain(5)
-        block_store.update_chain(chain)
-
-        iterator = block_store.get_predecessor_iter()
-
-        self.assertEqual('abcd4', next(iterator).identifier)
-
-        del block_store['abcd3']
-
-        with self.assertRaises(PossibleForkDetectedError):
-            next(iterator)
-
     def _create_chain(self, length):
         chain = []
         previous_block_id = NULL_BLOCK_IDENTIFIER
