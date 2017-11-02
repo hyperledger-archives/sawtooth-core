@@ -619,7 +619,6 @@ class ChainController(object):
         self._chain_id_manager = chain_id_manager
 
         self._chain_head = None
-        self._set_chain_head_from_block_store()
 
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
@@ -642,12 +641,17 @@ class ChainController(object):
             if thread_pool is None else thread_pool
         self._chain_thread = None
 
+        # Only run this after all member variables have been bound
+        self._set_chain_head_from_block_store()
+
     def _set_chain_head_from_block_store(self):
         try:
             self._chain_head = self._block_store.chain_head
             if self._chain_head is not None:
                 LOGGER.info("Chain controller initialized with chain head: %s",
                             self._chain_head)
+                self._chain_head_gauge.set_value(
+                    self._chain_head.identifier[:8])
         except Exception:
             LOGGER.exception(
                 "Invalid block store. Head of the block chain cannot be"
