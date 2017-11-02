@@ -267,19 +267,21 @@ class BlockListTests(BaseApiTest):
             - a data property that is a list of 1 dict
             - and that dict is a full block with the id 'c'
         """
-        paging = Mocks.make_paging_response(1, 4)
+        # Block list only returns a next id
+        paging = Mocks.make_paging_response(None, 4, next_id='0x0002')
         blocks = Mocks.make_blocks('c')
-        self.connection.preset_response(head_id='d', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='d', paging=paging,
+                                        blocks=blocks)
 
-        response = await self.get_assert_200('/blocks?min=1&count=1')
-        controls = Mocks.make_paging_controls(1, start_index=1)
+        response = await self.get_assert_200('/blocks?min=0x0003&count=1')
+        controls = Mocks.make_paging_controls(1, start_id='0x0003')
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/blocks?head=d&min=1&count=1')
+        self.assert_has_valid_link(response,
+                                   '/blocks?head=d&min=0x0003&count=1')
         self.assert_has_valid_paging(response, paging,
-                                     '/blocks?head=d&min=2&count=1',
-                                     '/blocks?head=d&min=0&count=1')
+                                     '/blocks?head=d&min=0x0002&count=1')
         self.assert_has_valid_data_list(response, 1)
         self.assert_blocks_well_formed(response['data'], 'c')
 
@@ -311,7 +313,6 @@ class BlockListTests(BaseApiTest):
 
         self.assert_has_valid_error(response, 54)
 
-
     @unittest_run_loop
     async def test_block_list_paginated_with_just_count(self):
         """Verifies GET /blocks paginated just by count works properly.
@@ -332,9 +333,11 @@ class BlockListTests(BaseApiTest):
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids 'd' and 'c'
         """
-        paging = Mocks.make_paging_response(0, 4)
+        # Block list only returns a next id
+        paging = Mocks.make_paging_response(None, 4, next_id='0x0002')
         blocks = Mocks.make_blocks('d', 'c')
-        self.connection.preset_response(head_id='d', paging=paging, blocks=blocks)
+        self.connection.preset_response(head_id='d', paging=paging,
+                                        blocks=blocks)
 
         response = await self.get_assert_200('/blocks?count=2')
         controls = Mocks.make_paging_controls(2)
@@ -343,7 +346,7 @@ class BlockListTests(BaseApiTest):
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/blocks?head=d&count=2')
         self.assert_has_valid_paging(response, paging,
-                                     '/blocks?head=d&min=2&count=2')
+                                     '/blocks?head=d&min=0x0002&count=2')
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], 'd', 'c')
 
