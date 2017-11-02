@@ -623,16 +623,16 @@ class ChainController(object):
 
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
-        self._chain_head_gauge = \
-            metrics_registry.gauge('chain_head', default='no chain head') \
-            if metrics_registry else None
 
         if metrics_registry:
+            self._chain_head_gauge = GaugeWrapper(
+                metrics_registry.gauge('chain_head', default='no chain head'))
             self._committed_transactions_count = CounterWrapper(
                 metrics_registry.counter('committed_transactions_count'))
             self._block_num_gauge = GaugeWrapper(
                 metrics_registry.gauge('block_num'))
         else:
+            self._chain_head_gauge = GaugeWrapper()
             self._committed_transactions_count = CounterWrapper()
             self._block_num_gauge = GaugeWrapper()
 
@@ -771,9 +771,8 @@ class ChainController(object):
                             "Chain head updated to: %s",
                             self._chain_head)
 
-                        if self._chain_head_gauge:
-                            self._chain_head_gauge.set_value(
-                                self._chain_head.identifier[:8])
+                        self._chain_head_gauge.set_value(
+                            self._chain_head.identifier[:8])
 
                         self._committed_transactions_count.inc(
                             result["num_transactions"])
