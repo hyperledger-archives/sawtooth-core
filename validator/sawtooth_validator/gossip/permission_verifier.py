@@ -406,7 +406,7 @@ class NetworkConsensusPermissionHandler(Handler):
     def handle(self, connection_id, message_content):
         message = GossipMessage()
         message.ParseFromString(message_content)
-        if message.content_type == "BLOCK":
+        if message.content_type == GossipMessage.BLOCK:
             public_key = \
                 self._network.connection_id_to_public_key(connection_id)
             block = Block()
