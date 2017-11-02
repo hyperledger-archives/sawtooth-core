@@ -18,6 +18,9 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 option go_package = "processor_pb2";
 
+import "transaction.proto";
+
+
 // The registration request from the transaction processor to the
 // validator/executor
 message TpRegisterRequest {
@@ -72,7 +75,7 @@ message TpUnregisterResponse {
 // The request from the validator/executor of the transaction processor
 // to verify a transaction.
 message TpProcessRequest {
-    bytes header = 1;  // The transaction header
+    TransactionHeader header = 1;  // The transaction header
     bytes payload = 2;  // The transaction payload
     string signature = 3;  // The transaction header_signature
     string context_id = 4; // The context_id for state requests.

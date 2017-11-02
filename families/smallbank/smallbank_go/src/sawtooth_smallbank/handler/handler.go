@@ -26,7 +26,6 @@ import (
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
-	"sawtooth_sdk/protobuf/transaction_pb2"
 	"strings"
 )
 
@@ -260,16 +259,6 @@ func unpackPayload(payloadData []byte) (*smallbank_pb2.SmallbankTransactionPaylo
 			Msg: fmt.Sprint("Failed to unmarshal SmallbankTransaction: %v", err)}
 	}
 	return payload, nil
-}
-
-func unpackHeader(headerData []byte) (*transaction_pb2.TransactionHeader, error) {
-	header := &transaction_pb2.TransactionHeader{}
-	err := proto.Unmarshal(headerData, header)
-	if err != nil {
-		return nil, &processor.InternalError{
-			Msg: fmt.Sprint("Failed to unmarshal TransactionHeader: %v", err)}
-	}
-	return header, nil
 }
 
 func unpackAccount(accountData []byte) (*smallbank_pb2.Account, error) {

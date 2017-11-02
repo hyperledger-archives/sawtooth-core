@@ -24,7 +24,6 @@ const {
   TpProcessRequest,
   TpProcessResponse,
   PingResponse,
-  TransactionHeader,
   Message
 } = require('../protobuf')
 
@@ -69,7 +68,7 @@ class TransactionProcessor {
         const context = new Context(this._stream, request.contextId)
 
         if (this._handlers.length > 0) {
-          let txnHeader = TransactionHeader.decode(request.header)
+          let txnHeader = request.header
 
           let handler = this._handlers.find((candidate) =>
              candidate.transactionFamilyName === txnHeader.familyName &&

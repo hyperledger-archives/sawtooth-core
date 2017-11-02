@@ -69,7 +69,7 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, con
 	}
 
 	// Unpack and validate header
-	header, err := unpackHeader(request.GetHeader())
+	header, err := unpackHeader(request)
 	if err != nil {
 		return err
 	}
@@ -177,14 +177,8 @@ func unpackPayload(payload []byte) (*SethTransaction, error) {
 	return transaction, nil
 }
 
-func unpackHeader(headerBytes []byte) (*transaction_pb2.TransactionHeader, error) {
-	header := &transaction_pb2.TransactionHeader{}
-	err := proto.Unmarshal(headerBytes, header)
-	if err != nil {
-		return nil, &processor.InvalidTransactionError{
-			Msg: "Malformed request header",
-		}
-	}
+func unpackHeader(request *processor_pb2.TpProcessRequest) (*transaction_pb2.TransactionHeader, error) {
+	header := request.GetHeader()
 
 	if header.GetSignerPublicKey() == "" {
 		return nil, &processor.InvalidTransactionError{Msg: "Public Key not set"}

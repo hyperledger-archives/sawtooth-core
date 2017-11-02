@@ -18,7 +18,6 @@
 'use strict'
 
 const {TransactionHandler} = require('sawtooth-sdk/processor')
-const {TransactionHeader} = require('sawtooth-sdk/protobuf')
 const {InvalidTransaction, InternalError} = require('sawtooth-sdk/processor/exceptions')
 
 const crypto = require('crypto')
@@ -279,7 +278,7 @@ class XOHandler extends TransactionHandler {
     return _decodeRequest(transactionProcessRequest.payload)
       .catch(_toInternalError)
       .then((update) => {
-        let header = TransactionHeader.decode(transactionProcessRequest.header)
+        let header = transactionProcessRequest.header
         let player = header.signerPublicKey
         if (!update.name) {
           throw new InvalidTransaction('Name is required')

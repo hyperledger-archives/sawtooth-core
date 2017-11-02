@@ -107,12 +107,9 @@ public class XoHandler implements TransactionHandler {
 
     // The transaction signer is the player
     String player;
-    try {
-      TransactionHeader header = TransactionHeader.parseFrom(transactionRequest.getHeader());
-      player = header.getSignerPublicKey();
-    } catch (InvalidProtocolBufferException e) {
-      throw new InternalError("Protocol Buffer Error: " + e.toString());
-    }
+    TransactionHeader header = transactionRequest.getHeader();
+    player = header.getSignerPublicKey();
+
     if (transactionData.gameName.equals("")) {
       throw new InvalidTransactionException("Name is required");
     }
@@ -233,7 +230,7 @@ public class XoHandler implements TransactionHandler {
       }
       stateEntry = StringUtils.join(dataList, "|");
     }
-    
+
     ByteString csvByteString = ByteString.copyFromUtf8(stateEntry);
     Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<>(address, csvByteString);
     Collection<Map.Entry<String, ByteString>> addressValues = Collections.singletonList(entry);

@@ -18,7 +18,6 @@ import re
 import json
 import hashlib
 
-from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
@@ -36,8 +35,7 @@ class BattleshipTransaction:
             transaction: Dictionary of values for transaction fields.
         """
 
-        header = TransactionHeader()
-        header.ParseFromString(transaction.header)
+        header = transaction.header
 
         try:
             payload = json.loads(
