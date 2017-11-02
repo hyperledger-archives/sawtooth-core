@@ -232,27 +232,36 @@ class BlockStore(MutableMapping):
 
         return BlockWrapper.wrap(value)
 
+    def get_blocks(self, block_ids):
+        return [block for _, block in self._block_store.get_multi(block_ids)]
+
     def get_block_by_transaction_id(self, txn_id):
-        try:
-            return self._block_store.get(txn_id, index='transaction')
-        except KeyError:
+        block = self._block_store.get(txn_id, index='transaction')
+        if not block:
             raise ValueError('Transaction "%s" not in BlockStore', txn_id)
 
+        return block
+
     def get_block_by_number(self, block_num):
-        try:
-            return self._block_store.get(
-                BlockStore.block_num_to_hex(block_num), index='block_num')
-        except KeyError:
+        block = self._block_store.get(
+            BlockStore.block_num_to_hex(block_num), index='block_num')
+        if not block:
             raise KeyError('Block number "%s" not in BlockStore', block_num)
+
+        return block
 
     def has_transaction(self, txn_id):
         return self._block_store.contains_key(txn_id, index='transaction')
 
     def get_block_by_batch_id(self, batch_id):
-        try:
-            return self._block_store.get(batch_id, index='batch')
-        except KeyError:
+        block = self._block_store.get(batch_id, index='batch')
+        if not block:
             raise ValueError('Batch "%s" not in BlockStore', batch_id)
+
+        return block
+
+    def get_blocks_by_batch_ids(self, batch_ids):
+        return self._block_store.get_multi(batch_ids, index='batch')
 
     def has_batch(self, batch_id):
         return self._block_store.contains_key(batch_id, index='batch')
@@ -289,12 +298,23 @@ class BlockStore(MutableMapping):
         The batch with the batch_id.
         """
         block = self.get_block_by_batch_id(batch_id)
-        if block is None:
-            return None
+        return BlockStore._get_batch_from_block(block, batch_id)
 
+    def get_batches(self, batch_ids):
+        blocks = self._block_store.get_multi(batch_ids, index='batch')
+
+        return [BlockStore._get_batch_from_block(block, batch_id)
+                for batch_id, block in blocks]
+
+    @staticmethod
+    def _get_batch_from_block(block, batch_id):
         for batch in block.batches:
             if batch.header_signature == batch_id:
                 return batch
+
+        raise ValueError(
+            'Batch {} not in block {}: possible index mismatch'.format(
+                batch_id, block.identifier))
 
     def get_transaction(self, transaction_id):
         """Returns a Transaction object from the block store by its id.
@@ -308,8 +328,23 @@ class BlockStore(MutableMapping):
         Raises:
             ValueError: The transaction is not in the block store
         """
-        batch = self.get_batch_by_transaction(transaction_id)
-        # Find transaction in batch
-        for txn in batch.transactions:
-            if txn.header_signature == transaction_id:
-                return txn
+        block = self.get_block_by_transaction_id(transaction_id)
+        return BlockStore._get_txn_from_block(block, transaction_id)
+
+    def get_transactions(self, transaction_ids):
+        blocks = self._block_store.get_multi(
+            transaction_ids, index='transaction')
+
+        return [BlockStore._get_txn_from_block(block, txn_id)
+                for txn_id, block in blocks]
+
+    @staticmethod
+    def _get_txn_from_block(block, txn_id):
+        for batch in block.batches:
+            for txn in batch.transactions:
+                if txn.header_signature == txn_id:
+                    return txn
+
+        raise ValueError(
+            'Transaction {} not in block {}: possible index mismatch'.format(
+                txn_id, block.identifier))
