@@ -677,12 +677,8 @@ definitions:
       data:
         type: array
         items:
-          properties:
-            data_type:
-              type: string
-            data:
-              type: string
-              format: binary
+          type: string
+          format: binary
   TransactionReceipts:
     type: array
     items:

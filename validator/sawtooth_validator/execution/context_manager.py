@@ -428,7 +428,7 @@ class ContextManager(object):
         self._address_queue.put_nowait(_SHUTDOWN_SENTINEL)
         self._inflated_addresses.put_nowait(_SHUTDOWN_SENTINEL)
 
-    def add_execution_data(self, context_id, data_type, data):
+    def add_execution_data(self, context_id, data):
         """Within a context, append data to the execution result.
 
         Args:
@@ -445,7 +445,7 @@ class ContextManager(object):
             return False
 
         context = self._contexts.get(context_id)
-        context.add_execution_data(data_type, data)
+        context.add_execution_data(data)
         return True
 
     def add_execution_event(self, context_id, event):

@@ -84,9 +84,8 @@ message TpStateDeleteResponse {
 // The request from the transaction processor to the validator append data
 // to a transaction receipt
 message TpReceiptAddDataRequest {
-    // The context id that references a context in the contextmanager
+    // The context id that references a context in the context manager
     string context_id = 1;
-    string data_type = 2;
     bytes data = 3;
 }
 

@@ -109,16 +109,14 @@ class Context(object):
                 'Tried to delete unauthorized address: {}'.format(addresses))
         return response.addresses
 
-    def add_receipt_data(self, data_type, data, timeout=None):
+    def add_receipt_data(self, data, timeout=None):
         """Add a blob to the execution result for this transaction.
 
         Args:
-            data_type (str): Transparent hint for decoding the data.
             data (bytes): The data to add.
         """
         request = state_context_pb2.TpReceiptAddDataRequest(
             context_id=self._context_id,
-            data_type=data_type,
             data=data).SerializeToString()
         response = state_context_pb2.TpReceiptAddDataResponse()
         response.ParseFromString(
@@ -127,7 +125,7 @@ class Context(object):
                 request).result(timeout).content)
         if response.status == state_context_pb2.TpReceiptAddDataResponse.ERROR:
             raise InternalError(
-                "Failed to add receipt data: {}".format((data_type, data)))
+                "Failed to add receipt data: {}".format((data)))
 
     def add_event(self, event_type, attributes=None, data=None, timeout=None):
         """Add a new event to the execution result for this transaction.

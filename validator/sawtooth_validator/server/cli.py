@@ -287,7 +287,6 @@ def main(args=None):
         LOGGER.error("Initialization errors occurred (see previous log "
                      "ERROR messages), shutting down.")
         sys.exit(1)
-
     bind_network = validator_config.bind_network
     bind_component = validator_config.bind_component
 

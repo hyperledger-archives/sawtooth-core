@@ -121,7 +121,7 @@ func (self *BurrowEVMHandler) Apply(request *processor_pb2.TpProcessRequest, con
 			"Couldn't marshal receipt: %v", err,
 		)}
 	}
-	err = context.AddReceiptData("seth_receipt", bytes)
+	err = context.AddReceiptData(bytes)
 	if err != nil {
 		return &processor.InternalError{Msg: fmt.Sprintf(
 			"Couldn't set receipt data: %v", err,

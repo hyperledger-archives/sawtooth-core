@@ -153,7 +153,6 @@ class TpReceiptAddDataHandler(Handler):
 
         success = self._context_manager.add_execution_data(
             add_receipt_data_request.context_id,
-            add_receipt_data_request.data_type,
             add_receipt_data_request.data)
 
         ack = state_context_pb2.TpReceiptAddDataResponse()

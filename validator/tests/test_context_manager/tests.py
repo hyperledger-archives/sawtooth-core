@@ -200,7 +200,7 @@ class TestContextManager(unittest.TestCase):
             attributes=[Event.Attribute(key=teststr, value=teststr)],
             data=teststr.encode()) for teststr in ("test1", "test2")]
         deletes = {addr2: None}
-        data = [(teststr, teststr.encode()) for teststr in ("test1", "test2")]
+        data = [(teststr.encode()) for teststr in ("test1", "test2")]
 
         self.context_manager.set(context_id, [sets])
         for event in events:
@@ -209,7 +209,7 @@ class TestContextManager(unittest.TestCase):
         self.context_manager.delete(context_id, deletes)
         for datum in data:
             self.context_manager.add_execution_data(
-                context_id, datum[0], datum[1])
+                context_id, datum)
 
 
         results = self.context_manager.get_execution_results(context_id)

@@ -99,10 +99,7 @@ type TransactionReceipt struct {
 		Address string
 	}
 	Events []Event
-	Data   []struct {
-		Data     string
-		DataType string
-	}
+	Data   []string
 }
 type Event struct {
 	EventType  string

@@ -480,7 +480,7 @@ func (c *Client) GetEvents(txnID string) (*ClientResult, error) {
 
 func (c *Client) parseTransactionReceipt(receipt *TransactionReceipt) (*SethTransactionReceipt, []Event) {
 	sethReceipt := &SethTransactionReceipt{}
-	buf, err := base64.StdEncoding.DecodeString(receipt.Data[0].Data)
+	buf, err := base64.StdEncoding.DecodeString(receipt.Data[0])
 	if err != nil {
 		logger.Debugf("Receipt not available")
 		sethReceipt = nil

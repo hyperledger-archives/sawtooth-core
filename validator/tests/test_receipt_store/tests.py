@@ -66,9 +66,7 @@ class ReceiptStoreTest(unittest.TestCase):
                     event_type="test",
                     data=byte,
                     attributes=[Event.Attribute(key=string, value=string)]))
-                data.append(TransactionReceipt.Data(
-                    data_type="test",
-                    data=byte))
+                data.append(byte)
 
             receipts.append(TransactionReceipt(
                 state_changes=state_changes,
@@ -101,8 +99,7 @@ class TransactionReceiptGetRequestHandlerTest(unittest.TestCase):
         receipt_store = TransactionReceiptStore(DictDatabase())
 
         receipt = TransactionReceipt(
-            data=[TransactionReceipt.Data(
-                data_type="dead", data="beef".encode())])
+            data=["beef".encode()])
 
         receipt_store.put("deadbeef", receipt)
 
@@ -131,8 +128,7 @@ class TpReceiptAddDataHandlerTest(unittest.TestCase):
     def test_add_event(self):
         mock_add_receipt_data = Mock()
         handler = TpReceiptAddDataHandler(mock_add_receipt_data)
-        request = TpReceiptAddDataRequest(
-            data_type="test").SerializeToString()
+        request = TpReceiptAddDataRequest().SerializeToString()
 
         response = handler.handle("test_conn_id", request)
 
