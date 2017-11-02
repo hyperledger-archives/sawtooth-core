@@ -20,7 +20,6 @@ import logging
 from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
-from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
 LOGGER = logging.getLogger(__name__)
 
@@ -84,8 +83,7 @@ class XoTransactionHandler(TransactionHandler):
 
 
 def _unpack_transaction(transaction):
-    header = TransactionHeader()
-    header.ParseFromString(transaction.header)
+    header = transaction.header
 
     # The transaction signer is the player
     signer = header.signer_public_key

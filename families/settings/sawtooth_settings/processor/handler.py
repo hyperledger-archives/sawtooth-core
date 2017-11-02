@@ -23,7 +23,6 @@ from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
-from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
 from sawtooth_settings.protobuf.settings_pb2 import SettingsPayload
 from sawtooth_settings.protobuf.settings_pb2 import SettingProposal
@@ -58,8 +57,7 @@ class SettingsTransactionHandler(TransactionHandler):
 
     def apply(self, transaction, context):
 
-        txn_header = TransactionHeader()
-        txn_header.ParseFromString(transaction.header)
+        txn_header = transaction.header
         public_key = txn_header.signer_public_key
 
         auth_keys = _get_auth_keys(context)

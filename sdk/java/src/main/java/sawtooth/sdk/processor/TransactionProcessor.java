@@ -177,8 +177,7 @@ public class TransactionProcessor implements Runnable {
     try {
       TpProcessRequest transactionRequest = TpProcessRequest
               .parseFrom(this.currentMessage.getContent());
-      TransactionHeader header = TransactionHeader
-              .parseFrom(transactionRequest.getHeader());
+      TransactionHeader header = transactionRequest.getHeader();
       for (int  i = 0; i < this.handlers.size(); i++) {
         TransactionHandler handler = this.handlers.get(i);
         if (header.getFamilyName().equals(handler.transactionFamilyName())

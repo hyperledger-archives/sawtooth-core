@@ -87,15 +87,17 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
     try {
         request.ParseFromArray(msg, msg_size);
 
-        StringPtr header_data(request.release_header());
+        TransactionHeader* txn_header(request.release_header());
+
         StringPtr payload_data(request.release_payload());
         StringPtr signature_data(request.release_signature());
 
-        TransactionUPtr txn(new Transaction( header_data,
+        TransactionUPtr txn(new Transaction( txn_header,
             payload_data,
             signature_data));
-        const TransactionHeader& txn_header = txn->header();
-        const std::string& family = txn_header.family_name();
+
+        const std::string& family = txn_header->family_name();
+
         auto iter = this->handlers.find(family);
         if (iter != this->handlers.end()) {
             // TBD match version
@@ -216,4 +218,3 @@ void TransactionProcessor::Run() {
 }
 
 }  // namespace sawtooth
-

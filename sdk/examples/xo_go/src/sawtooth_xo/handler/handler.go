@@ -22,11 +22,9 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
-	"sawtooth_sdk/protobuf/transaction_pb2"
 	"strconv"
 	"strings"
 )
@@ -66,10 +64,7 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *p
 	// The xo player is defined as the signer of the transaction, so we unpack
 	// the transaction header to obtain the signer's public key, which will be
 	// used as the player's identity.
-	header, err := unpackHeader(request.Header)
-	if err != nil {
-		return err
-	}
+	header := request.GetHeader()
 	player := header.GetSignerPublicKey()
 
 	// The payload is sent to the transaction processor as bytes (just as it
@@ -229,16 +224,6 @@ func unpackPayload(payloadData []byte) (*XoPayload, error) {
 	}
 
 	return &payload, nil
-}
-
-func unpackHeader(headerData []byte) (*transaction_pb2.TransactionHeader, error) {
-	header := &transaction_pb2.TransactionHeader{}
-	err := proto.Unmarshal(headerData, header)
-	if err != nil {
-		return nil, &processor.InternalError{
-			Msg: fmt.Sprint("Failed to unmarshal TransactionHeader: %v", err)}
-	}
-	return header, nil
 }
 
 func unpackGame(gameData []byte) (*Game, error) {

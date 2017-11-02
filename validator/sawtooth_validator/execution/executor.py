@@ -241,7 +241,7 @@ class TransactionExecutorThread(object):
                     context_id=None)
                 continue
             content = processor_pb2.TpProcessRequest(
-                header=txn.header,
+                header=header,
                 payload=txn.payload,
                 signature=txn.header_signature,
                 context_id=context_id).SerializeToString()

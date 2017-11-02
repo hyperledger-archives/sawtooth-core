@@ -28,7 +28,6 @@ from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
-from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.protobuf.setting_pb2 import Setting
 
 from sawtooth_poet_common import sgx_structs
@@ -463,8 +462,7 @@ class ValidatorRegistryTransactionHandler(TransactionHandler):
                         val_reg_payload.signup_info.nonce))
 
     def apply(self, transaction, context):
-        txn_header = TransactionHeader()
-        txn_header.ParseFromString(transaction.header)
+        txn_header = transaction.header
         public_key = txn_header.signer_public_key
 
         val_reg_payload = ValidatorRegistryPayload()

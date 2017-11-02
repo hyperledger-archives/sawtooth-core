@@ -138,7 +138,7 @@ class MessageFactory(object):
             batcher_public_key=pub_key,
             nonce=nonce
         )
-        return header.SerializeToString()
+        return header
 
     def _create_signature(self, header):
         return _sign(header, self._private)
@@ -147,7 +147,7 @@ class MessageFactory(object):
                                set_nonce=True, batcher=None):
         header = self._create_transaction_header(
             payload, inputs, outputs, deps, set_nonce, batcher)
-        signature = self._create_signature(header)
+        signature = self._create_signature(header.SerializeToString())
         return header, signature
 
     def create_transaction(self, payload, inputs, outputs, deps,
@@ -156,7 +156,7 @@ class MessageFactory(object):
             payload, inputs, outputs, deps, batcher=batcher)
 
         return Transaction(
-            header=header,
+            header=header.SerializeToString(),
             payload=payload,
             header_signature=signature)
 
