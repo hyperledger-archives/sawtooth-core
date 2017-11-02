@@ -169,13 +169,13 @@ class GossipBroadcastHandler(Handler):
         exclude = [connection_id]
         gossip_message = GossipMessage()
         gossip_message.ParseFromString(message_content)
-        if gossip_message.content_type == "BATCH":
+        if gossip_message.content_type == GossipMessage.BATCH:
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
             # If we already have this batch, don't forward it
             if not self._completer.get_batch(batch.header_signature):
                 self._gossip.broadcast_batch(batch, exclude)
-        elif gossip_message.content_type == "BLOCK":
+        elif gossip_message.content_type == GossipMessage.BLOCK:
             block = Block()
             block.ParseFromString(gossip_message.content)
             # If we already have this block, don't forward it

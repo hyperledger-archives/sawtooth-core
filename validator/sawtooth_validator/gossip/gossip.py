@@ -210,7 +210,7 @@ class Gossip(object):
 
     def broadcast_block(self, block, exclude=None):
         gossip_message = GossipMessage(
-            content_type="BLOCK",
+            content_type=GossipMessage.BLOCK,
             content=block.SerializeToString())
 
         self.broadcast(
@@ -234,7 +234,7 @@ class Gossip(object):
 
     def broadcast_batch(self, batch, exclude=None):
         gossip_message = GossipMessage(
-            content_type="BATCH",
+            content_type=GossipMessage.BATCH,
             content=batch.SerializeToString())
 
         self.broadcast(
