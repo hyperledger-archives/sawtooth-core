@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import itertools
 import sys
 import csv
 import json
@@ -70,16 +71,19 @@ def print_terminal_table(headers, data_list, parse_row_fn):
             Expected return:
                 cols (tuple): The properties to display in each column
     """
+    data_iter = iter(data_list)
     try:
-        example_row = parse_row_fn(data_list[0])
-    except IndexError:
+        example = next(data_iter)
+        example_row = parse_row_fn(example)
+        data_iter = itertools.chain([example], data_iter)
+    except StopIteration:
         example_row = [''] * len(headers)
 
     format_string = format_terminal_row(headers, example_row)
 
     top_row = format_string.format(*headers)
     print(top_row[0:-3] if top_row.endswith('...') else top_row)
-    for data in data_list:
+    for data in data_iter:
         print(format_string.format(*parse_row_fn(data)))
 
 

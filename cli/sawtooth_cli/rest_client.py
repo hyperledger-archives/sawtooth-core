@@ -35,19 +35,19 @@ class RestClient(object):
             self._auth_header = None
 
     def list_blocks(self):
-        return self._get('/blocks')['data']
+        return self._get_data('/blocks')
 
     def get_block(self, block_id):
         return self._get('/blocks/' + block_id)['data']
 
     def list_batches(self):
-        return self._get('/batches')['data']
+        return self._get_data('/batches')
 
     def get_batch(self, batch_id):
         return self._get('/batches/' + batch_id)['data']
 
     def list_transactions(self):
-        return self._get('/transactions')['data']
+        return self._get_data('/transactions')
 
     def get_transaction(self, transaction_id):
         return self._get('/transactions/' + transaction_id)['data']
@@ -106,6 +106,26 @@ class RestClient(object):
                                format(path.split('/')[-1]))
         else:
             raise CliException("({}): {}".format(code, json_result))
+
+    def _get_data(self, path, **queries):
+        url = self._base_url + path
+        while url:
+            code, json_result = self._submit_request(
+                url,
+                params=self._format_queries(queries),
+            )
+
+            if code == 404:
+                raise CliException(
+                    'There is no resource with the identifier "{}"'.
+                    format(path.split('/')[-1]))
+            elif code != 200:
+                raise CliException("({}): {}".format(code, json_result))
+
+            for item in json_result.get('data', []):
+                yield item
+
+            url = json_result['paging'].get('next', None)
 
     def _post(self, path, data, **queries):
         if isinstance(data, bytes):
