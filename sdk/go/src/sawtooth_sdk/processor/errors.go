@@ -24,6 +24,7 @@ type InvalidTransactionError struct {
 	ExtendedData []byte
 }
 
+// Raised for an Invalid Transaction.
 func (err *InvalidTransactionError) Error() string {
 	return fmt.Sprint("Invalid transaction: ", err.Msg)
 }
@@ -33,6 +34,7 @@ type InternalError struct {
 	ExtendedData []byte
 }
 
+// Raised when an internal error occurs during transaction processing.
 func (err *InternalError) Error() string {
 	return fmt.Sprint("Internal error: ", err.Msg)
 }
@@ -42,6 +44,7 @@ type AuthorizationException struct {
 	ExtendedData []byte
 }
 
+// Raised when a authorization error occurs.
 func (err *AuthorizationException) Error() string {
 	return fmt.Sprint("Authorization exception: ", err.Msg)
 }

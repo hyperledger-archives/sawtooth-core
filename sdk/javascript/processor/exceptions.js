@@ -69,7 +69,7 @@ class InternalError extends _TransactionProcessorError {
 
 /**
  * Thrown when a connection error occurs between the validator and the
- * transaction processor
+ * transaction processor.
  */
 class ValidatorConnectionError extends Error {
   /**
@@ -85,7 +85,7 @@ class ValidatorConnectionError extends Error {
 }
 
 /**
- * Thrown when a authorization error occurs
+ * Thrown when a authorization error occurs.
  */
 class AuthorizationException extends Error {
   /**

@@ -46,15 +46,15 @@ import (
 // used by the processor to route processing requests to the handler.
 type TransactionHandler interface {
 	// FamilyName should return the name of the transaction family that this
-	// handler can process. Eg., "intkey"
+	// handler can process, e.g. "intkey"
 	FamilyName() string
 
 	// FamilyVersion should return the version of the transaction family that
-	// this handler can process. Eg., "1.0"
+	// this handler can process, e.g. "1.0"
 	FamilyVersion() string
 
 	// Namespaces should return a slice containing all the handler's
-	// namespaces. Eg., []string{"abcdef"}
+	// namespaces, e.g. []string{"abcdef"}
 	Namespaces() []string
 
 	// Apply is the single method where all the business logic for a
