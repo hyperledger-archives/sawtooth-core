@@ -168,6 +168,8 @@ def main_wrapper():
         sys.exit(1)
     except KeyboardInterrupt:
         pass
+    except BrokenPipeError:
+        sys.stderr.close()
     except SystemExit as e:
         raise e
     except:
