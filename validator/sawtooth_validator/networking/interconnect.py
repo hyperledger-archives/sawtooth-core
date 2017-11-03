@@ -788,12 +788,13 @@ class Interconnect(object):
         the validator to be authorized by the incoming connection.
         """
         connect_message = ConnectionRequest(endpoint=self._public_endpoint)
-        self.send(validator_pb2.Message.NETWORK_CONNECT,
-                  connect_message.SerializeToString(),
-                  connection_id,
-                  callback=partial(self._inbound_connection_request_callback,
-                                   connection_id=connection_id
-                                   ))
+        self._safe_send(validator_pb2.Message.NETWORK_CONNECT,
+                        connect_message.SerializeToString(),
+                        connection_id,
+                        callback=partial(
+                            self._inbound_connection_request_callback,
+                            connection_id=connection_id
+                            ))
 
     def _connect_callback(self, request, result,
                           connection=None):
@@ -858,7 +859,7 @@ class Interconnect(object):
             auth_trust_request = AuthorizationTrustRequest(
                 roles=[RoleType.Value("NETWORK")],
                 public_key=self._public_key)
-            self.send(
+            self._safe_send(
                 validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
                 auth_trust_request.SerializeToString(),
                 connection_id
@@ -866,7 +867,7 @@ class Interconnect(object):
 
         if auth_type["challenge"]:
             auth_challenge_request = AuthorizationChallengeRequest()
-            self.send(
+            self._safe_send(
                 validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
                 auth_challenge_request.SerializeToString(),
                 connection_id,
@@ -916,7 +917,7 @@ class Interconnect(object):
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
-        self.send(
+        self._safe_send(
             validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
             auth_challenge_submit.SerializeToString(),
             connection_id
@@ -1141,6 +1142,17 @@ class Interconnect(object):
                 ConnectionType.OUTBOUND_CONNECTION:
             return True
         return False
+
+    def _safe_send(self, message_type, message, connection_id, callback=None):
+        try:
+            self.send(
+                message_type,
+                message,
+                connection_id,
+                callback=callback
+                )
+        except ValueError:
+            LOGGER.debug("Connection disconnected: %s", connection_id)
 
 
 class OutboundConnection(object):

@@ -675,10 +675,13 @@ class ConnectionManager(InstrumentedThread):
                         # Endpoint is not yet authorized, do not request peers
                         continue
 
-                    self._network.send(
-                        validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
-                        get_peers_request.SerializeToString(),
-                        conn_id)
+                    try:
+                        self._network.send(
+                            validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                            get_peers_request.SerializeToString(),
+                            conn_id)
+                    except ValueError:
+                        LOGGER.debug("Connection disconnected: %s", conn_id)
 
     def _attempt_to_peer_with_endpoint(self, endpoint):
         LOGGER.debug("Attempting to connect/peer with %s", endpoint)
@@ -743,9 +746,12 @@ class ConnectionManager(InstrumentedThread):
         if status == PeerStatus.TEMP:
             LOGGER.debug("Closing connection to %s", connection_id)
             msg = DisconnectMessage()
-            self._network.send(validator_pb2.Message.NETWORK_DISCONNECT,
-                               msg.SerializeToString(),
-                               connection_id)
+            try:
+                self._network.send(validator_pb2.Message.NETWORK_DISCONNECT,
+                                   msg.SerializeToString(),
+                                   connection_id)
+            except ValueError:
+                pass
             del self._connection_statuses[connection_id]
             self._network.remove_connection(connection_id)
         elif status == PeerStatus.PEER:
@@ -789,13 +795,15 @@ class ConnectionManager(InstrumentedThread):
         register_request = PeerRegisterRequest(
             endpoint=self._endpoint)
         self._connection_statuses[connection_id] = PeerStatus.TEMP
-
-        self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
-                           register_request.SerializeToString(),
-                           connection_id,
-                           callback=partial(self._peer_callback,
-                                            connection_id=connection_id,
-                                            endpoint=endpoint))
+        try:
+            self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
+                               register_request.SerializeToString(),
+                               connection_id,
+                               callback=partial(self._peer_callback,
+                                                connection_id=connection_id,
+                                                endpoint=endpoint))
+        except ValueError:
+            LOGGER.debug("Connection disconnected: %s", connection_id)
 
     def _connect_success_topology(self, connection_id):
         LOGGER.debug("Connection to %s succeeded for topology request",
@@ -806,8 +814,10 @@ class ConnectionManager(InstrumentedThread):
         def callback(request, result):
             # request, result are ignored, but required by the callback
             self._remove_temporary_connection(connection_id)
-
-        self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
-                           get_peers_request.SerializeToString(),
-                           connection_id,
-                           callback=callback)
+        try:
+            self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                               get_peers_request.SerializeToString(),
+                               connection_id,
+                               callback=callback)
+        except ValueError:
+            LOGGER.debug("Connection disconnected: %s", connection_id)
