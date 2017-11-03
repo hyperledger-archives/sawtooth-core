@@ -21,9 +21,14 @@ from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 class Context(object):
     """
+    Context provides an interface for getting, setting, and deleting
+    validator state. All validator interactions by a handler should be
+    through a Context instance.
+
     Attributes:
         _stream (sawtooth.client.stream.Stream): client grpc communication
         _context_id (str): the context_id passed in from the validator
+
     """
     def __init__(self, stream, context_id):
         self._stream = stream
@@ -31,14 +36,19 @@ class Context(object):
 
     def get_state(self, addresses, timeout=None):
         """
-        Get the value at a given list of address in the validator's merkle
-        state.
+        get_state queries the validator state for data at each of the
+        addresses in the given list. The addresses that have been set
+        are returned in a list.
+
         Args:
-            addressses (list): the addresss to fetch
+            addresses (list): the addresses to fetch
             timeout: optional timeout, in seconds
         Returns:
             results (list): a list of Entries (address, data), for the
             addresses that have a value
+
+        Raises:
+            AuthorizationException
         """
         request = state_context_pb2.TpStateGetRequest(
             context_id=self._context_id,
@@ -58,7 +68,10 @@ class Context(object):
 
     def set_state(self, entries, timeout=None):
         """
-        set an address to a value in the validator's merkle state
+        set_state requests that each address in the provided dictionary be
+        set in validator state to its corresponding value. A list is
+        returned containing the successfully set addresses.
+
         Args:
             entries (dict): dictionary where addresses are the keys and data is
                 the value.
@@ -67,6 +80,8 @@ class Context(object):
         Returns:
             addresses (list): a list of addresses that were set
 
+        Raises:
+            AuthorizationException
         """
         state_entries = [state_context_pb2.TpStateEntry(
             address=e,
@@ -87,14 +102,19 @@ class Context(object):
 
     def delete_state(self, addresses, timeout=None):
         """
-        delete an address in the validator's merkle state
+        delete_state requests that each of the provided addresses be unset
+        in validator state. A list of successfully deleted addresses
+        is returned.
+
         Args:
-            addresses (list): list of addresses
+            addresses (list): list of addresses to delete
             timeout: optional timeout, in seconds
 
         Returns:
             addresses (list): a list of addresses that were deleted
 
+        Raises:
+            AuthorizationException
         """
         request = state_context_pb2.TpStateDeleteRequest(
             context_id=self._context_id,

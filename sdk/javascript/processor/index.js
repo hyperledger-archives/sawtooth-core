@@ -38,16 +38,36 @@ const Context = require('./context')
 
 const {Stream} = require('../messaging/stream')
 
+/**
+ * TransactionProcessor is a generic class for communicating with a
+ * validator and routing transaction processing requests to a
+ * registered handler. It uses ZMQ and channels to handle requests
+ * concurrently.
+ *
+ * @param {string} url - the URL of the validator
+ */
 class TransactionProcessor {
   constructor (url) {
     this._stream = new Stream(url)
     this._handlers = []
   }
 
+  /**
+   * addHandler adds the given handler to the transaction processor so
+   * it can receive transaction processing requests. All handlers must
+   * be added prior to starting the processor.
+   *
+   * @param {TransactionHandler} handler - a handler to be added
+   */
   addHandler (handler) {
     this._handlers.push(handler)
   }
 
+  /**
+   * start connects the transaction processor to a validator and
+   * starts listening for requests and routing them to an appropriate
+   * handler.
+   */
   start () {
     this._stream.connect(() => {
       this._stream.onReceive(message => {
@@ -164,13 +184,41 @@ const _readOnlyProperty = (instance, propertyName, value) =>
       congigurable: true,
       value})
 
+/**
+ * TransactionHandler is the interface that defines the business logic
+ * for a new transaction family. This is the only interface that needs
+ * to be implemented to create a new transaction family.
+ *
+ * The transactionFamilyName, version, and namespaces properties are
+ * used by the processor to route processing requests to the handler.
+ */
 class TransactionHandler {
+  /**
+   * @param {string} transactionFamilyName - the name of the
+   * transaction family that this handler can process, e.g. "intkey"
+   * @param {string} version - the version of the transaction family
+   * that this handler can process, e.g. "1.0"
+   * @param {string[]} namespaces - a list containing all of the
+   * handler's namespaces, e.g. ["abcdef"]
+   */
   constructor (transactionFamilyName, version, namespaces) {
     _readOnlyProperty(this, 'transactionFamilyName', transactionFamilyName)
     _readOnlyProperty(this, 'version', version)
     _readOnlyProperty(this, 'namespaces', namespaces)
   }
 
+  /**
+   * Apply is the single method where all the business logic for a
+   * transaction family is defined. The method will be called by the
+   * transaction processor upon receiving a TpProcessRequest that the
+   * handler understands and will pass in the TpProcessRequest and an
+   * initialized instance of the Context type.
+   *
+   * @param {TpProcessRequest} transactionProcessRequest - the
+   * transaction to be processed
+   * @param {Context} context - the context the handler can use to
+   * access state
+   */
   apply (transactionProcessRequest, context) {
     throw new Error('apply(TpProcessRequest, context) not implemented')
   }

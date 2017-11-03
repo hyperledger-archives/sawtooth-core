@@ -43,7 +43,15 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TransactionProcessor(object):
+    """TransactionProcessor is a generic class for communicating with a
+    validator and routing transaction processing requests to a registered
+    handler. It uses ZMQ and channels to handle requests concurrently.
+    """
     def __init__(self, url):
+        """
+        Args:
+            url (string): The URL of the validator
+        """
         self._stream = Stream(url)
         self._url = url
         self._handlers = []
@@ -53,8 +61,9 @@ class TransactionProcessor(object):
         return self._stream.zmq_id
 
     def add_handler(self, handler):
-        """Add a transaction family handler
-        :param handler:
+        """Adds a transaction family handler
+        Args:
+            handler (TransactionHandler): the handler to be added
         """
         self._handlers.append(handler)
 
@@ -239,6 +248,10 @@ class TransactionProcessor(object):
                         vce)
 
     def start(self):
+        """Connects the transaction processor to a validator and starts
+        listening for requests and routing them to an appropriate
+        transaction handler.
+        """
         fut = None
         try:
             self._register()
@@ -271,4 +284,7 @@ class TransactionProcessor(object):
                 pass
 
     def stop(self):
+        """Closes the connection between the TransactionProcessor and the
+        validator.
+        """
         self._stream.close()

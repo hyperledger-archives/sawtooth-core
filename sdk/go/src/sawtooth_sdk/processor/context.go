@@ -255,6 +255,7 @@ func (self *Context) DeleteState(addresses []string) ([]string, error) {
 	return response.GetAddresses(), nil
 }
 
+// Add a blob to the execution result for this transaction.
 func (self *Context) AddReceiptData(data []byte) error {
 	// Append the data to the transaction receipt and set the type
 	request := &state_context_pb2.TpReceiptAddDataRequest{
@@ -304,6 +305,7 @@ func (self *Context) AddReceiptData(data []byte) error {
 	return nil
 }
 
+// Add a new event to the execution result for this transaction.
 func (self *Context) AddEvent(event_type string, attributes []Attribute, event_data []byte) error {
 	event_attributes := make([]*events_pb2.Event_Attribute, 0, len(attributes))
 	for _, attribute := range attributes {
