@@ -180,15 +180,15 @@ Optionally, you may pass in header properties in order to override any defaults 
 
    Remember that *inputs* and *outputs* are the state addresses a Transaction
    is allowed to read from or write to. When initializing our
-   *TransactionEncoder* we used only the six character IntKey prefix, allowing
-   Transactions which don't specify inputs/outputs to access any IntKey
-   address. With ``txn`` above, we referenced the specific address where the
-   value of  ``'foo'`` is stored. Whenever possible, specific addresses should
-   be used, as this will allow the validator to better schedule Transaction
-   processing.
+   *TransactionEncoder* we used only the six-character IntegerKey prefix
+   (intkey), allowing Transactions which don't specify inputs/outputs to access
+   any IntegerKey address. With ``txn`` above, we referenced the specific
+   address where the value of  ``'foo'`` is stored. Whenever possible, specific
+   addresses should be used, as this will allow the validator to better schedule
+   Transaction processing.
 
    Note that the methods for assigning and validating addresses are entirely up
-   to the Transaction Processor. In the case of IntKey, there are `specific
+   to the Transaction Processor. In the case of IntegerKey, there are `specific
    rules to generate valid addresses <../transaction_family_specifications
    /integerkey_transaction_family.html#addressing>`_, which must be followed or
    Transactions will be rejected. You will need to know and follow the

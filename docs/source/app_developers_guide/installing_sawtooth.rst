@@ -7,7 +7,7 @@ need to set up and run a local validator to test your application against. Once
 running, you will be able to submit new transactions and fetch the resulting
 state and block data from the blockchain using HTTP and the Sawtooth
 :doc:`REST API <../architecture/rest_api>`. The methods detailed here will apply
-to the included example transaction families, *IntKey* and *XO*, as well
+to the included example transaction families, *IntegerKey* and *XO*, as well
 as any transaction families you might write yourself.
 
 Sawtooth validators can be run from prebuilt

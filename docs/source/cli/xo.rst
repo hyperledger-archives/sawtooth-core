@@ -15,9 +15,9 @@
 
 .. _xo-cli-reference-label:
 
-**************
-xo Family CLIs
-**************
+******
+XO CLI
+******
 
 xo
 ==

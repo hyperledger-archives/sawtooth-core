@@ -271,10 +271,10 @@ Creating and Submitting Transactions with intkey
 ------------------------------------------------
 
 The ``intkey`` CLI command is provided to create sample transactions of the
-intkey transaction type for testing purposes. This step uses ``intkey`` to
-prepare batches of intkey transactions which set a few keys to random values,
-then randomly increment and decrement those values. These batches are saved
-locally, then submitted to the validator.
+intkey (IntegerKey) transaction type for testing purposes. This step uses
+``intkey`` to prepare batches of intkey transactions which set a few keys
+to random values, then randomly increment and decrement those values. These
+batches are saved locally, then submitted to the validator.
 
 Run the following commands from the client container:
 
@@ -284,7 +284,7 @@ Run the following commands from the client container:
   $ intkey load -f batches.intkey -U http://rest-api:8080
 
 The terminal window in which you ran the ``docker-compose`` command will begin
-logging output as the validator and ``intkey`` transaction processor handle the
+logging output as the validator and IntegerKey transaction processor handle the
 transactions just submitted:
 
 .. code-block:: console
@@ -307,7 +307,7 @@ Submitting Transactions with sawtooth batch submit
 --------------------------------------------------
 
 Instead of using ``intkey load``, you can also submit transactions,
-including intkey transactions, with the ``sawtooth batch submit`` command.
+including IntegerKey transactions, with the ``sawtooth batch submit`` command.
 
 For example, you can submit the transactions in the file ``batches.intkey``
 as generated above with this command:
@@ -653,8 +653,8 @@ configuration change.
 The submitted JSON array tells the validator or validator network to accept
 transactions of the following types:
 
-* intkey
-* sawtooth_settings
+* intkey (IntegerKey transaction family)
+* sawtooth_settings (Sawtooth transaction family)
 
 To create and submit the batch containing the new setting, enter the following
 commands.

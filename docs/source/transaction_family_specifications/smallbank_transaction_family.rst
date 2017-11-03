@@ -200,7 +200,8 @@ The outputs for Smallbank family transactions must include:
 
 Dependencies
 ------------
-* A list of transaction *header_signatures* which are required dependencies
+
+* List of transaction *header_signatures* that are required dependencies
   and must be processed prior to processing this transaction
 
 .. note:: While any CreateAccount transaction signatures should probably

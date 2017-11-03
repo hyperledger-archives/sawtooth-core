@@ -82,12 +82,6 @@ Sawtooth functionality\:
     * Supply Chain - Provides the infrastructure for tracking
       physical objects in a real-world supply chain on the Sawtooth Ledger.
 
-    * Track and Trade - Provides a methodology for users to track goods
-      as they move through a supply chain.
-      This transaction family includes the history of ownership and
-      custodianship, as well as histories for a variety of properties
-      such as temperature and location.
-
 Consensus
 =========
 
@@ -127,60 +121,16 @@ from transaction semantics. The interface supports plugging in various
 consensus implementations. Sawtooth provides two such implementations:
 dev_mode and PoET.
 
-Dev_mode is a simplified random leader algorithm that is useful
-for developers and test networks that require only crash fault tolerance.
+  * Dev_mode is a simplified random leader algorithm that is useful
+    for developers and test networks that require only crash fault tolerance.
 
-PoET, short for “Proof of Elapsed Time" is a Nakamoto-style consensus algorithm.
-It is designed to be a production-grade protocol capable of supporting large
-network populations.
-
-
-Proof of Elapsed Time (PoET)
-============================
-
-For the purpose of achieving distributed consensus efficiently,
-a good lottery function has several characteristics:
-
-    * Fairness: The function should distribute leader election
-      across the broadest possible population of participants.
-
-    * Investment: The cost of controlling the leader election
-      process should be proportional to the value gained from it.
-
-    * Verification: It should be relatively simple for all participants
-      to verify that the leader was legitimately selected.
-
-PoET is designed to achieve these goals using new secure CPU instructions
-which are becoming widely available in consumer and enterprise processors.
-PoET uses these features to ensure the safety and randomness of the leader
-election process without requiring the costly investment of power and specialized
-hardware inherent in most “proof” algorithms.
-
-We include an implementation which simulates the secure instructions.
-This should make it easier for the community to work with the software but
-also forgoes byzantine fault tolerance.
-
-PoET essentially works as follows...
-Every validator requests a wait time from an enclave(a trusted function).
-The validator with the shortest wait time for a particular transaction
-block is elected the leader. One function, say “CreateTimer” creates
-a timer for a transaction block that is guaranteed to have been created
-by the enclave. Another function, say “CheckTimer” verifies that the timer
-was created by the enclave and, if it has expired, creates an attestation
-that can be used to verify that validator did, in fact, wait the allotted
-time before claiming the leadership role.
-
-The PoET leader election algorithm meets the criteria for a good lottery
-algorithm. It randomly distributes leadership election across the entire
-population of validators with distribution that is similar to what is
-provided by other lottery algorithms. The probability of election
-is proportional to the resources contributed (in this case, resources
-are general purpose processors with a trusted execution environment).
-An attestation of execution provides information for verifying that the
-certificate was created within the enclave (and that the validator waited
-the allotted time). Further, the low cost of participation increases the
-likelihood that the population of validators will be large, increasing
-the robustness of the consensus algorithm.
+  * PoET, short for “Proof of Elapsed Time" is a Nakamoto-style consensus
+    algorithm. It is designed to be a production-grade protocol capable of
+    supporting large network populations. Sawtooth includes an implementation
+    which simulates the secure instructions. This should make it easier for
+    the community to work with the software but also forgoes Byzantine fault
+    tolerance.  For more information, see
+    :doc:`PoET 1.0 Specification <../architecture/poet>`.
 
 
 Getting Sawtooth

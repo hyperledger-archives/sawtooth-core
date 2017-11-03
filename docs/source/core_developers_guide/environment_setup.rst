@@ -43,11 +43,8 @@ Sawtooth development.  A new developer with installed copies of Vagrant and
 VirtualBox can clone the sawtooth-core repository and have a functional VM
 which can run validators within a few minutes.
 
-A quick introduction to using dev tools is available as a
-quickstart in this Developer's Guide.
 
-
-Layout of Dev Tools 
+Layout of Dev Tools
 ===================
 
 The dev tools directory is structured as follows:
@@ -58,43 +55,27 @@ The dev tools directory is structured as follows:
     bootstrap.d/
     guest-files/
     plugins/
-    scripts/
-    tests/
+    package_groups/
     Vagrantfile
 
-
-Vagrantfile
-  Vagrantfile is the main configuration file for Vagrant.  It is ruby
-  code executed by Vagrant and is executed every time a Vagrant command is
-  executed.
-
-bootstrap.d
-  The bootstrap.d directory contains a set of bash scripts which are
+* bootstrap.d - Contains a set of bash scripts which are
   executed in order during the provisioning step of 'vagrant up'.  These
   scripts are always executed.
 
-guest-files
-  The guest-files directory contains configuration files which are used by
+* guest-files Configuration files which are used by
   the bootstrap.d scripts.
 
-  There is also a local-env.sh script which contains environment specific
-  variables for Sawtooth  development, such as PYTHONPATH.
+  There is also a ``local-env.sh`` script which contains environment specific
+  variables for Sawtooth development, such as ``PYTHONPATH``.
 
-plugins
-  The plugins directory contains bash scripts which can be easily configured
+* plugins - Contains bash scripts which can be easily configured
   to execute during the provisioning step of 'vagrant up'.  These scripts
-  run after bootstrap.d scripts.
+  run after ``bootstrap.d`` scripts.
 
-scripts
-  This scripts directory contains scripts which are sometimes useful to the
-  developer after provisioning has been completed and the developer has a
-  shell in the virtual machine.  For example, there are scripts which
-  help build Ubuntu packages.
+* package_groups - Contains package-group information for plugins and tools.
 
-tests
-  The tests directory includes tests run within the Vagrant environment. These are
-  in addition to the unit and integration tests found in the tests directory of
-  sawtooth-core and sawtooth-validator.
+* Vagrantfile - Main configuration file for Vagrant. This ruby code is executed
+  by Vagrant every time a Vagrant command is executed.
 
 
 Layout in the Virtual Machine
@@ -112,20 +93,19 @@ Step One: Clone Repository
 ==========================
 
 You'll need to have git installed in order to clone the Sawtooth source
-code repository. You can find up-to-date installation instructions here:
+code repository. You can find up-to-date installation instructions
+at `Getting Started Installing Git https://git-scm.com/book/en/v2/Getting-Started-Installing-Git`.
 
-* `Git install instructions <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_
-
-.. note:: 
+.. note::
 
   When checking out Sawtooth on Windows for use with Vagrant, you should
   take steps to ensure that Windows-style CRLF line endings are not added to
   the code. The bash scripts used by your Vagrant VM will not run correctly
   with CRLF line endings. Git uses a configuration setting, *core.autocrlf*,
   to control whether or not LF-style line endings are automatically converted
-  to CRLF-style line endings. `This setting should be set so that 
-  CRLFs are not introduced into your repository 
-  <https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration>`_.
+  to CRLF-style line endings. `This setting should be set so that
+  CRLFs are not introduced into your repository; see
+  `Customizing Git` https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration`.
 
 Open up a terminal and run the following:
 

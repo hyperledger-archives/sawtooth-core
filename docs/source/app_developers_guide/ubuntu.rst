@@ -121,7 +121,7 @@ The following output appears:
 
 .. note::
 
-  If you need to delete previously existing block-chain data before running a
+  If you need to delete previously existing blockchain data before running a
   validator, simply remove all files from /var/lib/sawtooth.
 
 
@@ -153,7 +153,7 @@ output includes something similar to this:
 
   If you want to stop the validator, enter CTRL-c in the validator's terminal
   window.  You can stop any other running Sawtooth component by entering
-  CTRL-c in the apprpriate window.
+  CTRL-c in the appropriate window.
 
 .. note::
 
@@ -244,13 +244,13 @@ in Python.
   includes additional transaction processors written in several languages.
   The following lists the processors that are included:
 
-  * settings-tp - A settings family transaction processor written in Python
+  * settings-tp - A Settings family transaction processor written in Python
 
-  * intkey-tp-go - An intkey transaction processor written in Go
+  * intkey-tp-go - An IntegerKey transaction processor written in Go
 
-  * intkey-tp-java - An intkey transaction processor written in Java
+  * intkey-tp-java - An IntegerKey transaction processor written in Java
 
-  * intkey-tp-javascript - An intkey transaction processor written in JavaScript
+  * intkey-tp-javascript - An IntegerKey transaction processor written in JavaScript
     (requires node.js)
 
   * poet-validator-registry-tp - A transaction family used by the PoET consensus
@@ -317,8 +317,8 @@ settings change.
 The JSON array used tells the validator or validator network to accept
 transactions of the following types:
 
-* intkey
-* sawtooth_settings
+* intkey (IntegerKey transaction family)
+* sawtooth_settings (Settings transaction family)
 
 To create and submit the batch containing the new settings, open a new
 terminal window and enter the following commands:
@@ -344,7 +344,7 @@ The ``intkey`` command creates sample transactions of the ``intkey``
 
 This section guides you through the following tasks:
 
-1. Preparing a batch of intkey transactions that set the keys to random values.
+1. Preparing a batch of IntegerKey transactions that set the keys to random values.
 
 2. Generating *inc* (increment) and *dec* (decrement) transactions to apply to
    the existing state stored in the blockchain.
@@ -361,7 +361,7 @@ Open a new terminal window and run the following commands:
   $ intkey load
   batches: 2 batch/sec: 135.96900883377907
 
-You can watch the processing of the intkey transactions by observing the
+You can watch the processing of the transactions by observing the
 logging output of the ``intkey`` transaction processor. A truncated example of
 this output is shown below:
 

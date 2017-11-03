@@ -44,6 +44,13 @@ header bytes resulting in header_signature.
 The batcher_public_key field must match the public key used to sign the batch in
 which this transaction is contained.
 
+The resulting serialized document is signed with the transactor's private
+ECDSA key using the secp256k1 curve.
+
+The validator expects a 64 byte "compact" signature. This is a concatenation
+of the R and S fields of the signature. Some libraries will include an
+additional header byte, recovery ID field, or provide DER encoded signatures.
+Sawtooth will reject the signature if it is anything other than 64 bytes.
 
 .. note::
 
@@ -134,9 +141,13 @@ private key (not sent with the batch) and the resulting signature is stored in
 header_signature.  The header is present in the serialized form so that the
 exact bytes can be verified against the signature upon receipt of the Batch.
 
-The process of header_signature verification recovers the public key used
-during signing.  This public key must match the one stored in signer_public_key or
-the transaction will be considered invalid.
+The resulting serialized document is signed with the transactor's private
+ECDSA key using the secp256k1 curve.
+
+The validator expects a 64 byte "compact" signature. This is a concatenation
+of the R and S fields of the signature. Some libraries will include an
+additional header byte, recovery ID field, or provide DER encoded signatures.
+Sawtooth will reject the signature if it is anything other than 64 bytes.
 
 Transactions
 ------------

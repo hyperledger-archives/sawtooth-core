@@ -12,11 +12,12 @@ involved discussion.
 
 Hyperledger Sawtooth discussions are located at:
 
-	`#sawtoothlake <https://chat.hyperledger.org/channel/sawtoothlake>`_
+	`#sawtooth <https://chat.hyperledger.org/channel/sawtooth>`_
 
 Hyperledger Sawtooth Consensus discussions are located at:
 	
-	`#sawtooth consensus <https://chat.hyperledger.org/channel/sawtooth-consensus>`_
+	`#sawtooth-consensus <https://chat.hyperledger.org/channel/sawtooth-consensus>`_
+
 
 Mailing Lists
 =============
