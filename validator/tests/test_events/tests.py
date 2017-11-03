@@ -156,6 +156,8 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
         """
 
         mock_event_broadcaster = Mock()
+        mock_event_broadcaster.get_latest_known_block_id.return_value = \
+            "0" * 128
         handler = \
             ClientEventsSubscribeValidationHandler(mock_event_broadcaster)
         request = client_event_pb2.ClientEventsSubscribeRequest(
@@ -174,7 +176,7 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
                 event_type="test_event",
                 filters=[
                     FILTER_FACTORY.create(key="test", match_string="test")])],
-            ["0" * 128])
+            "0" * 128)
         self.assertEqual(HandlerStatus.RETURN_AND_PASS, response.status)
         self.assertEqual(client_event_pb2.ClientEventsSubscribeResponse.OK,
                          response.message_out.status)
