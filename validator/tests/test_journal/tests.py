@@ -46,9 +46,9 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import TransactionReceipt
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventList
-from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaSet
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 
@@ -62,7 +62,6 @@ from test_journal.mock import MockBlockSender
 from test_journal.mock import MockBatchSender
 from test_journal.mock import MockNetwork
 from test_journal.mock import MockStateViewFactory, CreateSetting
-from test_journal.mock import MockStateDeltaProcessor
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import MockPermissionVerifier
 from test_journal.mock import SynchronousExecutor
@@ -819,7 +818,6 @@ class TestChainController(unittest.TestCase):
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
         self._chain_head_lock = RLock()
-        self.state_delta_processor = MockStateDeltaProcessor()
         self.permission_verifier = MockPermissionVerifier()
 
         def chain_updated(head, committed_batches=None,
@@ -842,7 +840,7 @@ class TestChainController(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
-            chain_observers=[self.state_delta_processor],
+            chain_observers=[],
             metrics_registry=None)
 
         init_root = self.chain_ctrl.chain_head
@@ -859,8 +857,6 @@ class TestChainController(unittest.TestCase):
         new_block = self.generate_block(self.init_head)
         self.receive_and_process_blocks(new_block)
         self.assert_is_chain_head(new_block)
-        # validate that the deltas for the new block are published
-        self.assertEqual(new_block, self.state_delta_processor.block)
 
     def test_alternate_genesis(self):
         '''Tests a fork extending an alternate genesis block
@@ -1133,7 +1129,6 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
-        self.state_delta_processor = MockStateDeltaProcessor()
         self.chain_head_lock = RLock()
         self.permission_verifier = MockPermissionVerifier()
 
@@ -1156,7 +1151,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
-            chain_observers=[self.state_delta_processor],
+            chain_observers=[],
             metrics_registry=None)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
@@ -1219,7 +1214,6 @@ class TestJournal(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
-        self.state_delta_processor = MockStateDeltaProcessor()
         self.permission_verifier = MockPermissionVerifier()
 
     def test_publish_block(self):
@@ -1267,7 +1261,7 @@ class TestJournal(unittest.TestCase):
                 data_dir=None,
                 config_dir=None,
                 permission_verifier=self.permission_verifier,
-                chain_observers=[self.state_delta_processor])
+                chain_observers=[])
 
             self.gossip.on_batch_received = block_publisher.queue_batch
             self.gossip.on_block_received = chain_controller.queue_block
@@ -1564,7 +1558,7 @@ class TestReceiptEventExtractor(unittest.TestCase):
                 Event.Attribute(key="address", value=address)
                 for address in ["e", "d", "a", "b"]
             ],
-            data=StateDeltaSet(state_changes=[
+            data=StateChangeList(state_changes=[
                 change_sets[2][0], change_sets[1][1],
                 change_sets[1][0], change_sets[0][1],
             ]).SerializeToString(),

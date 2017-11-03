@@ -46,9 +46,7 @@ def _get_address_from_txn(txn_info):
 class TestSchedulers(unittest.TestCase):
 
     def setUp(self):
-        self._context_manager = ContextManager(
-            dict_database.DictDatabase(),
-            state_delta_store=Mock())
+        self._context_manager = ContextManager(dict_database.DictDatabase())
 
     def tearDown(self):
         self._context_manager.stop()
@@ -818,8 +816,7 @@ class TestSchedulers(unittest.TestCase):
 
 class TestSerialScheduler(unittest.TestCase):
     def setUp(self):
-        self.context_manager = ContextManager(dict_database.DictDatabase(),
-                                              state_delta_store=Mock())
+        self.context_manager = ContextManager(dict_database.DictDatabase())
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
         self.scheduler = SerialScheduler(squash_handler,
@@ -999,8 +996,7 @@ class TestSerialScheduler(unittest.TestCase):
 
 class TestParallelScheduler(unittest.TestCase):
     def setUp(self):
-        self.context_manager = ContextManager(dict_database.DictDatabase(),
-                                              state_delta_store=Mock())
+        self.context_manager = ContextManager(dict_database.DictDatabase())
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
         self.scheduler = ParallelScheduler(squash_handler,

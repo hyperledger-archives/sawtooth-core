@@ -29,7 +29,7 @@ message TransactionReceipt {
     bytes data = 2;
   }
   // State changes made by this transaction
-  // StateChange is already defined in protos/state_delta.proto
+  // StateChange is defined in protos/transaction_receipt.proto
   repeated StateChange state_changes = 1;
   // Events fired by this transaction
   repeated Event events = 2;
@@ -39,9 +39,8 @@ message TransactionReceipt {
   string transaction_id = 4;
 }
 
-// A state change is an entry in a given delta set. StateChange objects
-// have the type of SET, which is either an insert or update, or
-// DELETE.  Items marked as a DELETE will have no byte value.
+//  StateChange objects have the type of SET, which is either an insert or
+//  update, or DELETE. Items marked as a DELETE will have no byte value.
 message StateChange {
     enum Type {
         TYPE_UNSET = 0;
@@ -51,4 +50,9 @@ message StateChange {
     string address = 1;
     bytes value = 2;
     Type type = 3;
+}
+
+// A collection of state changes.
+message StateChangeList {
+    repeated StateChange state_changes = 1;
 }

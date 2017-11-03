@@ -20,7 +20,6 @@ pub mod transaction;
 pub mod batch;
 pub mod block;
 pub mod setting;
-pub mod state_delta;
 pub mod state_context;
 pub mod processor;
 pub mod genesis;
