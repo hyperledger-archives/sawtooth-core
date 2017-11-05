@@ -55,5 +55,5 @@ RUN mkdir -p /project/sawtooth-core/ \
 ENV PATH=$PATH:/project/sawtooth-core/sdk/cxx/build/bin
 
 WORKDIR /project/sawtooth-core
-CMD ["intkey_cxx", "tcp://validator:4004"]
+CMD ["intkey_cxx", "-C", "tcp://validator:4004"]
 

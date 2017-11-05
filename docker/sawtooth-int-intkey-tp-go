@@ -37,4 +37,4 @@ COPY intkey-tp-go /usr/bin/intkey-tp-go
 
 EXPOSE 4004/tcp
 
-CMD ["intkey-tp-go", "tcp://validator:4004"]
+CMD ["intkey-tp-go", "-C", "tcp://validator:4004"]
