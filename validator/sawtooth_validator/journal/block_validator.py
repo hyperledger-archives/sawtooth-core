@@ -344,46 +344,53 @@ class BlockValidator(object):
                 "Unhandled exception BlockPublisher.validate_block()")
             return False
 
-    def _find_common_height(self, new_chain, cur_chain):
-        """
-        Walk back on the longest chain until we find a predecessor that is the
-        same height as the other chain.
-        The blocks are recorded in the corresponding lists
-        and the blocks at the same height are returned
-        """
-        new_blkw = self._new_block
-        cur_blkw = self._chain_head
-        # 1) find the common ancestor of this block in the current chain
-        # Walk back until we have both chains at the same length
+    @staticmethod
+    def compare_chain_height(head_a, head_b):
+        """Returns True if head_a is taller, False if head_b is taller, and True
+        if the heights are the same."""
+        return head_a.block_num - head_b.block_num >= 0
 
-        # Walk back the new chain to find the block that is the
-        # same height as the current head.
-        if new_blkw.block_num > cur_blkw.block_num:
-            # new chain is longer
-            # walk the current chain back until we find the block that is the
-            # same height as the current chain.
-            while new_blkw.block_num > cur_blkw.block_num and \
-                    new_blkw.previous_block_id != NULL_BLOCK_IDENTIFIER:
-                new_chain.append(new_blkw)
-                try:
-                    new_blkw = self._block_cache[new_blkw.previous_block_id]
-                except KeyError:
-                    LOGGER.info(
-                        "Block %s rejected due to missing predecessor %s",
-                        new_blkw,
-                        new_blkw.previous_block_id)
-                    for b in new_chain:
-                        b.status = BlockStatus.Invalid
-                    raise BlockValidationAborted()
-        elif new_blkw.block_num < cur_blkw.block_num:
-            # current chain is longer
-            # walk the current chain back until we find the block that is the
-            # same height as the new chain.
-            while (cur_blkw.block_num > new_blkw.block_num
-                   and new_blkw.previous_block_id != NULL_BLOCK_IDENTIFIER):
-                cur_chain.append(cur_blkw)
-                cur_blkw = self._block_cache[cur_blkw.previous_block_id]
-        return (new_blkw, cur_blkw)
+    def build_fork_diff_to_common_height(self, head_long, head_short):
+        """Returns a list of blocks on the longer chain since the greatest
+        common height between the two chains. Note that the chains may not
+        have the same block id at the greatest common height.
+
+        Args:
+            head_long (BlockWrapper)
+            head_short (BlockWrapper)
+
+        Returns:
+            (list of BlockWrapper) All blocks in the longer chain since the
+            last block in the shorter chain. Ordered newest to oldest.
+
+        Raises:
+            BlockValidationAborted
+                The block is missing a predecessor. Note that normally this
+                shouldn't happen because of the completer."""
+        fork_diff = []
+
+        last = head_short.block_num
+        blk = head_long
+
+        while blk.block_num > last:
+            if blk.previous_block_id == NULL_BLOCK_IDENTIFIER:
+                break
+
+            fork_diff.append(blk)
+            try:
+                blk = self._block_cache[blk.previous_block_id]
+            except KeyError:
+                LOGGER.debug(
+                    "Failed to build fork diff due to missing predecessor: %s",
+                    blk)
+
+                # Mark all blocks in the longer chain since the invalid block
+                # as invalid.
+                for blk in fork_diff:
+                    blk.status = BlockStatus.Invalid
+                raise BlockValidationAborted()
+
+        return blk, fork_diff
 
     def _find_common_ancestor(self, new_blkw, cur_blkw, new_chain, cur_chain):
         """ Finds a common ancestor of the two chains.
@@ -453,19 +460,28 @@ class BlockValidator(object):
         """
         try:
             LOGGER.info("Starting block validation of : %s", self._new_block)
-            cur_chain = self._result.current_chain  # ordered list of the
-            # current chain blocks
-            new_chain = self._result.new_chain  # ordered list of the new
-            # chain blocks
 
-            # get the current chain_head.
+            # Get the current chain_head and store it in the result
             self._chain_head = self._block_cache.block_store.chain_head
             self._result.chain_head = self._chain_head
 
-            # 1) Find the common ancestor block, the root of the fork.
-            # walk back till both chains are the same height
-            (new_blkw, cur_blkw) = self._find_common_height(new_chain,
-                                                            cur_chain)
+            # Get the heads of the current chain and the new chain
+            cur_blkw = self._chain_head
+            new_blkw = self._new_block
+
+            # Get all the blocks since the greatest common height from the
+            # longer chain.
+            if self.compare_chain_height(cur_blkw, new_blkw):
+                cur_blkw, self._result.current_chain =\
+                    self.build_fork_diff_to_common_height(cur_blkw, new_blkw)
+            else:
+                new_blkw, self._result.new_chain =\
+                    self.build_fork_diff_to_common_height(new_blkw, cur_blkw)
+
+            # blocks in the current chain, since the greatest common height
+            cur_chain = self._result.current_chain
+            # blocks in the new chain, since the greatest common height
+            new_chain = self._result.new_chain
 
             # 2) Walk back until we find the common ancestor
             self._find_common_ancestor(new_blkw, cur_blkw,
