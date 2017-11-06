@@ -166,12 +166,14 @@ class BlockValidator(object):
 
         return self._block_cache[blkw.previous_block_id].state_root_hash
 
-    def _verify_batch_transactions(self, batch):
-        """Verify that all transactions in are unique and that all
-        transactions dependencies in this batch have been satisfied, ie
-        already committed by this block or prior block in the chain.
+    @staticmethod
+    def verify_batch_transactions(batch, chain_commit_state):
+        """Verify that all transactions in this batch are unique and that all
+        transaction dependencies in this batch have been satisfied.
 
         :param batch: the batch to verify
+        :param chain_commit_state: the current chain commit state to verify the
+            batch against
         :return:
         Boolean: True if all dependencies are present and all transactions
         are unique.
@@ -179,20 +181,19 @@ class BlockValidator(object):
         for txn in batch.transactions:
             txn_hdr = TransactionHeader()
             txn_hdr.ParseFromString(txn.header)
-            if self._chain_commit_state. \
-                    has_transaction(txn.header_signature):
-                LOGGER.debug("Block rejected due to duplicate" +
-                             " transaction, transaction: %s",
-                             txn.header_signature[:8])
-                raise InvalidBatch()
+            if chain_commit_state.has_transaction(txn.header_signature):
+                LOGGER.debug(
+                    "Batch invalid due to duplicate transaction: %s",
+                    txn.header_signature[:8])
+                return False
             for dep in txn_hdr.dependencies:
-                if not self._chain_commit_state.has_transaction(dep):
-                    LOGGER.debug("Block rejected due to missing "
-                                 "transaction dependency, transaction %s "
-                                 "depends on %s",
-                                 txn.header_signature[:8], dep[:8])
-                    raise InvalidBatch()
-            self._chain_commit_state.add_txn(txn.header_signature)
+                if not chain_commit_state.has_transaction(dep):
+                    LOGGER.debug(
+                        "Batch invalid due to missing transaction dependency;"
+                        " transaction %s depends on %s",
+                        txn.header_signature[:8], dep[:8])
+                    return False
+        return True
 
     def _verify_block_batches(self, blkw):
         if blkw.block.batches:
@@ -209,9 +210,17 @@ class BlockValidator(object):
                                      batch.header_signature[:8])
                         raise InvalidBatch()
 
-                    self._verify_batch_transactions(batch)
-                    self._chain_commit_state.add_batch(
-                        batch, add_transactions=False)
+                    # Verify dependencies and uniqueness
+                    if self.verify_batch_transactions(
+                        batch, self._chain_commit_state
+                    ):
+                        # Only add transactions to commit state if all
+                        # transactions in the batch are good.
+                        self._chain_commit_state.add_batch(
+                            batch, add_transactions=True)
+                    else:
+                        raise InvalidBatch()
+
                     if has_more:
                         scheduler.add_batch(batch)
                     else:
