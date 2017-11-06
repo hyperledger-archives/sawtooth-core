@@ -18,7 +18,7 @@ version: "2.1"
 services:
 
   settings-tp:
-    image: hyperledger/sawtooth-tp_settings:latest
+    image: hyperledger/sawtooth-tp_settings:0.8
     container_name: sawtooth-settings-tp-default
     expose:
       - 4004
@@ -27,7 +27,7 @@ services:
     entrypoint: settings-tp -vv tcp://validator:4004
 
   intkey-tp-python:
-    image: hyperledger/sawtooth-tp_intkey_python:latest
+    image: hyperledger/sawtooth-tp_intkey_python:0.8
     container_name: sawtooth-intkey-tp-python-default
     expose:
       - 4004
@@ -36,7 +36,7 @@ services:
     entrypoint: intkey-tp-python -vv tcp://validator:4004
 
   xo-tp-python:
-    image: hyperledger/sawtooth-tp_xo_python:latest
+    image: hyperledger/sawtooth-tp_xo_python:0.8
     container_name: sawtooth-xo-tp-python-default
     expose:
       - 4004
@@ -45,7 +45,7 @@ services:
     entrypoint: xo-tp-python -vv tcp://validator:4004
 
   validator:
-    image: hyperledger/sawtooth-validator:latest
+    image: hyperledger/sawtooth-validator:0.8
     container_name: sawtooth-validator-default
     expose:
       - 4004
@@ -64,7 +64,7 @@ services:
         \""
 
   rest-api:
-    image: hyperledger/sawtooth-rest_api:latest
+    image: hyperledger/sawtooth-rest_api:0.8
     container_name: sawtooth-rest-api-default
     expose:
       - 4004
@@ -76,7 +76,7 @@ services:
     entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8080
 
   client:
-    image: hyperledger/sawtooth-all:latest
+    image: hyperledger/sawtooth-all:0.8
     container_name: sawtooth-client-default
     expose:
       - 8080
