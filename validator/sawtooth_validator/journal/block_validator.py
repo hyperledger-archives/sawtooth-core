@@ -167,16 +167,11 @@ class BlockValidator(object):
         else:
             self._moved_to_fork_count = CounterWrapper()
 
-    def _get_previous_block_root_state_hash(self, blkw):
+    def _get_previous_block_state_root(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
             return INIT_ROOT_KEY
 
         return self._block_cache[blkw.previous_block_id].state_root_hash
-
-    def _txn_header(self, txn):
-        txn_hdr = TransactionHeader()
-        txn_hdr.ParseFromString(txn.header)
-        return txn_hdr
 
     def _verify_batch_transactions(self, batch):
         """Verify that all transactions in are unique and that all
@@ -189,7 +184,8 @@ class BlockValidator(object):
         are unique.
         """
         for txn in batch.transactions:
-            txn_hdr = self._txn_header(txn)
+            txn_hdr = TransactionHeader()
+            txn_hdr.ParseFromString(txn.header)
             if self._chain_commit_state.has_transaction(txn.header_signature):
                 LOGGER.debug("Block rejected due to duplicate" +
                              " transaction, transaction: %s",
@@ -206,9 +202,9 @@ class BlockValidator(object):
 
     def _verify_block_batches(self, blkw):
         if blkw.block.batches:
-            prev_state = self._get_previous_block_root_state_hash(blkw)
+            prev_state_root = self._get_previous_block_state_root(blkw)
             scheduler = self._executor.create_scheduler(
-                self._squash_handler, prev_state)
+                self._squash_handler, prev_state_root)
             self._executor.execute(scheduler)
             try:
                 for batch, has_more in look_ahead(blkw.block.batches):
@@ -269,7 +265,7 @@ class BlockValidator(object):
         """
         if blkw.block_num != 0:
             try:
-                state_root = self._get_previous_block_root_state_hash(blkw)
+                prev_state_root = self._get_previous_block_state_root(blkw)
             except KeyError:
                 LOGGER.info(
                     "Block rejected due to missing predecessor: %s", blkw)
@@ -289,12 +285,13 @@ class BlockValidator(object):
         """
         if blkw.block_num != 0:
             try:
-                state_root = self._get_previous_block_root_state_hash(blkw)
+                prev_state_root = self._get_previous_block_state_root(blkw)
             except KeyError:
                 LOGGER.debug(
                     "Block rejected due to missing" + " predecessor: %s", blkw)
                 return False
-            return self._validation_rule_enforcer.validate(blkw, state_root)
+            return self._validation_rule_enforcer.validate(
+                blkw, prev_state_root)
         return True
 
     def validate_block(self, blkw):
@@ -413,8 +410,8 @@ class BlockValidator(object):
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
 
-    def _test_commit_new_chain(self):
-        """ Compare the two chains and determine which should be the head.
+    def _compare_forks_consensus(self, chain_head, new_block):
+        """Ask the consensus module which fork to choose.
         """
         public_key = self._identity_signer.get_public_key().as_hex()
         fork_resolver = self._consensus_module.\
@@ -424,11 +421,13 @@ class BlockValidator(object):
                          config_dir=self._config_dir,
                          validator_id=public_key)
 
-        return fork_resolver.compare_forks(self._chain_head, self._new_block)
+        return fork_resolver.compare_forks(chain_head, new_block)
 
-    def _compute_batch_change(self, new_chain, cur_chain):
+    @staticmethod
+    def get_batch_commit_changes(new_chain, cur_chain):
         """
-        Compute the batch change sets.
+        Get all the batches that should be committed from the new chain and
+        all the batches that should be uncommitted from the current chain.
         """
         committed_batches = []
         for blkw in new_chain:
@@ -509,13 +508,15 @@ class BlockValidator(object):
                     "Fork comparison at height %s is between %s and %s",
                     num, cur, new)
 
-            commit_new_chain = self._test_commit_new_chain()
+            commit_new_chain = self._compare_forks_consensus(
+                self._chain_head, self._new_block)
 
             # 5) Consensus to compute batch sets (only if we are switching).
             if commit_new_chain:
-                (self._result.committed_batches,
-                 self._result.uncommitted_batches) =\
-                    self._compute_batch_change(new_chain, cur_chain)
+                commit, uncommit =\
+                    self.get_batch_commit_changes(new_chain, cur_chain)
+                self._result.committed_batches = commit
+                self._result.uncommitted_batches = uncommit
 
                 if new_chain[0].previous_block_id != \
                         self._chain_head.identifier:
