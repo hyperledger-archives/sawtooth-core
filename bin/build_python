@@ -35,7 +35,6 @@ pkgs="
     consensus/poet/core
     consensus/poet/families
     consensus/poet/simulator
-    families/supplychain/python
 "
 
 for pkg in $pkgs

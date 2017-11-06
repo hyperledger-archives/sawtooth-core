@@ -151,7 +151,7 @@ class StateDeltaSubscriberHandler:
             'block_id': event.block_id,
             'block_num': event.block_num,
             'previous_block_id': event.previous_block_id,
-            'state_changes': StateDeltaSubscriberHandler._client_deltas(
+            'state_changes': self._client_deltas(
                 event.state_changes, addr_prefixes)
         }))
 
@@ -201,8 +201,7 @@ class StateDeltaSubscriberHandler:
             resp = await self._connection.send(
                 Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
                 client_event_pb2.ClientEventsSubscribeRequest(
-                    subscriptions=\
-                        StateDeltaSubscriberHandler._make_subscriptions(),
+                    subscriptions=self._make_subscriptions(),
                     last_known_block_ids=[last_known_block_id],
                 ).SerializeToString())
 
@@ -248,7 +247,7 @@ class StateDeltaSubscriberHandler:
             'block_id': event.block_id,
             'block_num': event.block_num,
             'previous_block_id': event.previous_block_id,
-            'state_changes': StateDeltaSubscriberHandler._client_deltas(
+            'state_changes': self._client_deltas(
                 event.state_changes, addr_prefixes)
         }))
 
@@ -256,8 +255,7 @@ class StateDeltaSubscriberHandler:
         resp = await self._connection.send(
             Message.CLIENT_EVENTS_GET_REQUEST,
             client_event_pb2.ClientEventsGetRequest(
-                subscriptions=\
-                    StateDeltaSubscriberHandler._make_subscriptions(),
+                subscriptions=self._make_subscriptions(),
                 block_ids=[block_id]).SerializeToString(),
             timeout=DEFAULT_TIMEOUT)
 
@@ -326,9 +324,8 @@ class StateDeltaSubscriberHandler:
                 LOGGER.debug('Updating %s subscribers', len(self._subscribers))
 
                 for (web_sock, addr_prefixes) in self._subscribers:
-                    base_event['state_changes'] = \
-                        StateDeltaSubscriberHandler._client_deltas(
-                            state_delta_event.state_changes, addr_prefixes)
+                    base_event['state_changes'] = self._client_deltas(
+                        state_delta_event.state_changes, addr_prefixes)
                     try:
                         await web_sock.send_str(json.dumps(base_event))
                     except asyncio.CancelledError:

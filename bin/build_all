@@ -287,7 +287,6 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-block-info-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-battleship-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-supplychain-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator

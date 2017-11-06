@@ -46,7 +46,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def add(
-    dispatcher, gossip,  context_manager, executor, completer, block_store,
+    dispatcher, gossip, context_manager, executor, completer, block_store,
     batch_tracker, merkle_db, get_current_root, receipt_store,
     event_broadcaster, permission_verifier, thread_pool, sig_pool,
 ):

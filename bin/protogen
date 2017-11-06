@@ -73,11 +73,6 @@ def main(args=None):
             "consensus/poet/families/sawtooth_validator_registry/protos")
     protoc(proto_dir, "consensus/poet/common", "sawtooth_poet_common/protobuf")
 
-    # 4. Generate supplychain protos
-    proto_dir = JOIN(TOP_DIR, "families/supplychain/protos")
-    protoc(proto_dir, "families/supplychain/python",
-        "sawtooth_supplychain/protobuf")
-
     # 5. Generate identity protos
     proto_dir = JOIN(TOP_DIR, "families/identity/protos")
     protoc(proto_dir, "families/identity", "sawtooth_identity/protobuf")
