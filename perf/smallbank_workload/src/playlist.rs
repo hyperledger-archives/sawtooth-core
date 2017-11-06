@@ -161,9 +161,11 @@ fn make_addresses(payload: &SmallbankTransactionPayload) -> Vec<String> {
         SBPayloadType::SEND_PAYMENT =>
             vec![customer_id_address(payload.get_send_payment().get_source_customer_id()),
                  customer_id_address(payload.get_send_payment().get_dest_customer_id())],
-        SBPayloadType::AMALGAMATE=>
+        SBPayloadType::AMALGAMATE =>
             vec![customer_id_address(payload.get_amalgamate().get_source_customer_id()),
                  customer_id_address(payload.get_amalgamate().get_dest_customer_id())],
+        SBPayloadType::PAYLOAD_TYPE_UNSET =>
+            panic!("Payload type was not set: {:?}", payload)
     }
 }
 
@@ -352,6 +354,8 @@ impl From<SmallbankTransactionPayload> for Yaml {
                     "source_customer_id" => Yaml::Integer(data.source_customer_id as i64),
                     "dest_customer_id" => Yaml::Integer(data.dest_customer_id as i64)}
             },
+            SBPayloadType::PAYLOAD_TYPE_UNSET =>
+                panic!("Unset payload type: {:?}", payload)
         }
     }
 }
