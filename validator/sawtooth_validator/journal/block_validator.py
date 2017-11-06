@@ -53,6 +53,33 @@ class InvalidBatch(Exception):
     pass
 
 
+class BlockValidationResult:
+    def __init__(self, block):
+        self.block = block
+        self.chain_head = None
+        self.new_chain = []
+        self.current_chain = []
+        self.committed_batches = []
+        self.uncommitted_batches = []
+        # NOTE: The following are for all blocks validated in order to validate
+        # this block, i.e., all blocks on this block's fork
+        self.execution_results = []
+        self.transaction_count = 0
+
+    def __bool__(self):
+        return self.block.status == BlockStatus.Valid
+
+    def __str__(self):
+        keys = ("block", "valid", "chain_head", "new_chain", "current_chain",
+                "committed_batches", "uncommitted_batches",
+                "execution_results", "transaction_count")
+
+        out = "{"
+        for key in keys:
+            out += "%s: %s," % (key, self.__getattribute(key))
+        return out[:-1] + "}"
+
+
 def look_ahead(iterable):
     """Pass through all values from the given iterable, augmented by the
     information if there are more values to come after the current one
@@ -128,16 +155,7 @@ class BlockValidator(object):
         self._identity_signer = identity_signer
         self._data_dir = data_dir
         self._config_dir = config_dir
-        self._result = {
-            'new_block': new_block,
-            'chain_head': None,
-            'new_chain': [],
-            'cur_chain': [],
-            'committed_batches': [],
-            'uncommitted_batches': [],
-            'execution_results': [],
-            'num_transactions': 0
-        }
+        self._result = BlockValidationResult(new_block)
         self._permission_verifier = permission_verifier
 
         self._validation_rule_enforcer = \
@@ -433,14 +451,14 @@ class BlockValidator(object):
         """
         try:
             LOGGER.info("Starting block validation of : %s", self._new_block)
-            cur_chain = self._result["cur_chain"]  # ordered list of the
+            cur_chain = self._result.current_chain  # ordered list of the
             # current chain blocks
-            new_chain = self._result["new_chain"]  # ordered list of the new
+            new_chain = self._result.new_chain  # ordered list of the new
             # chain blocks
 
             # get the current chain_head.
             self._chain_head = self._block_cache.block_store.chain_head
-            self._result['chain_head'] = self._chain_head
+            self._result.chain_head = self._chain_head
 
             # 1) Find the common ancestor block, the root of the fork.
             # walk back till both chains are the same height
@@ -463,7 +481,7 @@ class BlockValidator(object):
                     if not self.validate_block(block):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
-                    self._result["num_transactions"] += block.num_transactions
+                    self._result.transaction_count += block.num_transactions
                 else:
                     LOGGER.info(
                         "Block marked invalid (invalid predecessor): %s",
@@ -495,8 +513,8 @@ class BlockValidator(object):
 
             # 5) Consensus to compute batch sets (only if we are switching).
             if commit_new_chain:
-                (self._result["committed_batches"],
-                 self._result["uncommitted_batches"]) =\
+                (self._result.committed_batches,
+                 self._result.uncommitted_batches) =\
                     self._compute_batch_change(new_chain, cur_chain)
 
                 if new_chain[0].previous_block_id != \
