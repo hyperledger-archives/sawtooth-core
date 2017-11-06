@@ -25,15 +25,6 @@ from sawtooth_validator.gossip import structure_verifier
 from sawtooth_validator.execution import processor_handlers
 from sawtooth_validator.state import client_handlers
 
-from sawtooth_validator.state.state_delta_processor import \
-    StateDeltaAddSubscriberHandler
-from sawtooth_validator.state.state_delta_processor import \
-    StateDeltaSubscriberValidationHandler
-from sawtooth_validator.state.state_delta_processor import \
-    StateDeltaUnsubscriberHandler
-from sawtooth_validator.state.state_delta_processor import \
-    StateDeltaGetEventsHandler
-
 from sawtooth_validator.gossip import signature_verifier
 
 from sawtooth_validator.gossip.permission_verifier import \
@@ -55,11 +46,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 def add(
-    dispatcher, gossip,
-    context_manager, executor, completer, block_store, batch_tracker,
-    merkle_db, get_current_root, receipt_store, state_delta_processor,
-    state_delta_store, event_broadcaster, permission_verifier, thread_pool,
-    sig_pool,
+    dispatcher, gossip, context_manager, executor, completer, block_store,
+    batch_tracker, merkle_db, get_current_root, receipt_store,
+    event_broadcaster, permission_verifier, thread_pool, sig_pool,
 ):
 
     # -- Transaction Processor -- #
@@ -213,25 +202,4 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_EVENTS_GET_REQUEST,
         ClientEventsGetRequestHandler(event_broadcaster),
-        thread_pool)
-
-    # -- State Delta -- #
-    dispatcher.add_handler(
-        validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
-        StateDeltaSubscriberValidationHandler(state_delta_processor),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.STATE_DELTA_SUBSCRIBE_REQUEST,
-        StateDeltaAddSubscriberHandler(state_delta_processor),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
-        StateDeltaUnsubscriberHandler(state_delta_processor),
-        thread_pool)
-
-    dispatcher.add_handler(
-        validator_pb2.Message.STATE_DELTA_GET_EVENTS_REQUEST,
-        StateDeltaGetEventsHandler(block_store, state_delta_store),
         thread_pool)

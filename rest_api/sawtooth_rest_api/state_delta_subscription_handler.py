@@ -27,7 +27,9 @@ from sawtooth_rest_api.messaging import ConnectionEvent
 from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_list_control_pb2
 from sawtooth_rest_api.protobuf import client_block_pb2
-from sawtooth_rest_api.protobuf import state_delta_pb2
+from sawtooth_rest_api.protobuf import client_event_pb2
+from sawtooth_rest_api.protobuf import events_pb2
+from sawtooth_rest_api.protobuf import transaction_receipt_pb2
 
 
 LOGGER = logging.getLogger(__name__)
@@ -149,7 +151,7 @@ class StateDeltaSubscriberHandler:
             'block_id': event.block_id,
             'block_num': event.block_num,
             'previous_block_id': event.previous_block_id,
-            'state_changes': StateDeltaSubscriberHandler._client_deltas(
+            'state_changes': self._client_deltas(
                 event.state_changes, addr_prefixes)
         }))
 
@@ -197,17 +199,18 @@ class StateDeltaSubscriberHandler:
                          last_known_block_id[:8])
 
             resp = await self._connection.send(
-                Message.STATE_DELTA_SUBSCRIBE_REQUEST,
-                state_delta_pb2.StateDeltaSubscribeRequest(
-                    last_known_block_ids=[last_known_block_id]
+                Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
+                client_event_pb2.ClientEventsSubscribeRequest(
+                    subscriptions=self._make_subscriptions(),
+                    last_known_block_ids=[last_known_block_id],
                 ).SerializeToString())
 
-            subscription = state_delta_pb2.\
-                StateDeltaSubscribeResponse()
+            subscription = client_event_pb2.\
+                ClientEventsSubscribeResponse()
             subscription.ParseFromString(resp.content)
 
             if subscription.status != \
-                    state_delta_pb2.StateDeltaSubscribeResponse.OK:
+                    client_event_pb2.ClientEventsSubscribeResponse.OK:
                 LOGGER.error('unable to subscribe!')
 
             self._listening = True
@@ -223,9 +226,9 @@ class StateDeltaSubscriberHandler:
             self._delta_task = None
 
             LOGGER.info('Unsubscribing for state delta events')
-            req = state_delta_pb2.StateDeltaUnsubscribeRequest()
+            req = client_event_pb2.ClientEventsUnsubscribeRequest()
             await self._connection.send(
-                Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
+                Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
                 req.SerializeToString(),
                 timeout=DEFAULT_TIMEOUT)
 
@@ -244,23 +247,28 @@ class StateDeltaSubscriberHandler:
             'block_id': event.block_id,
             'block_num': event.block_num,
             'previous_block_id': event.previous_block_id,
-            'state_changes': StateDeltaSubscriberHandler._client_deltas(
+            'state_changes': self._client_deltas(
                 event.state_changes, addr_prefixes)
         }))
 
     async def _get_block_deltas(self, block_id):
         resp = await self._connection.send(
-            Message.STATE_DELTA_GET_EVENTS_REQUEST,
-            state_delta_pb2.StateDeltaGetEventsRequest(
+            Message.CLIENT_EVENTS_GET_REQUEST,
+            client_event_pb2.ClientEventsGetRequest(
+                subscriptions=self._make_subscriptions(),
                 block_ids=[block_id]).SerializeToString(),
             timeout=DEFAULT_TIMEOUT)
 
-        state_deltas_resp = state_delta_pb2.StateDeltaGetEventsResponse()
-        state_deltas_resp.ParseFromString(resp.content)
+        events_resp = client_event_pb2.ClientEventsGetResponse()
+        events_resp.ParseFromString(resp.content)
 
-        if state_deltas_resp.status == \
-                state_delta_pb2.StateDeltaGetEventsResponse.OK:
-            return state_deltas_resp.events[0]
+        if events_resp.status == \
+                client_event_pb2.ClientEventsGetResponse.OK:
+            events = list(events_resp.events)
+            try:
+                return StateDeltaEvent(events)
+            except KeyError as err:
+                LOGGER.warning("Received unexpected event list: %s", err)
 
         return None
 
@@ -290,9 +298,14 @@ class StateDeltaSubscriberHandler:
 
             # Note: if there are other messages that the REST API will listen
             # for, a way of splitting the incoming messages will be needed.
-            if msg.message_type == Message.STATE_DELTA_EVENT:
-                state_delta_event = state_delta_pb2.StateDeltaEvent()
-                state_delta_event.ParseFromString(msg.content)
+            if msg.message_type == Message.CLIENT_EVENTS:
+                event_list = events_pb2.EventList()
+                event_list.ParseFromString(msg.content)
+                events = list(event_list.events)
+                try:
+                    state_delta_event = StateDeltaEvent(events)
+                except KeyError as err:
+                    LOGGER.warning("Received unexpected event list: %s", err)
 
                 LOGGER.debug('Received event %s: %s changes',
                              state_delta_event.block_id[:8],
@@ -311,9 +324,8 @@ class StateDeltaSubscriberHandler:
                 LOGGER.debug('Updating %s subscribers', len(self._subscribers))
 
                 for (web_sock, addr_prefixes) in self._subscribers:
-                    base_event['state_changes'] = \
-                        StateDeltaSubscriberHandler._client_deltas(
-                            state_delta_event.state_changes, addr_prefixes)
+                    base_event['state_changes'] = self._client_deltas(
+                        state_delta_event.state_changes, addr_prefixes)
                     try:
                         await web_sock.send_str(json.dumps(base_event))
                     except asyncio.CancelledError:
@@ -338,6 +350,61 @@ class StateDeltaSubscriberHandler:
                 return True
 
         return False
+
+    @staticmethod
+    def _make_subscriptions(address_prefixes=None):
+        return [
+            events_pb2.EventSubscription(event_type="state_delta"),
+            events_pb2.EventSubscription(event_type="block_commit"),
+        ]
+
+    @staticmethod
+    def _make_state_delta_event(event_list):
+        """State deltas and block commits are separate now, this function
+        merges them back together for compatibility.
+        """
+
+
+class StateDeltaEvent:
+    def __init__(self, event_list):
+        """
+        Convert an event list into an object that is similar to the previous
+        state delta event for compatibility.
+
+        Raises
+            KeyError
+                An event was missing from the event list or an attribute was
+                missing from an event.
+        """
+        block_commit = self._get_event("block_commit", event_list)
+        self.block_id = self._get_attr(block_commit, "block_id")
+        self.block_num = self._get_attr(block_commit, "block_num")
+        self.previous_block_id = self._get_attr(
+            block_commit, "previous_block_id")
+
+        state_delta = self._get_event("state_delta", event_list)
+        state_change_list = transaction_receipt_pb2.StateChangeList()
+        state_change_list.ParseFromString(state_delta.data)
+        self.state_changes = state_change_list.state_changes
+
+    @staticmethod
+    def _get_attr(event, key):
+        attrs = list(filter(
+            lambda attr: attr.key == key,
+            event.attributes))
+        if attrs:
+            return attrs[0].value
+        raise KeyError("Key '%s' not found in event attributes" % key)
+
+    @staticmethod
+    def _get_event(event_type, event_list):
+        events = list(filter(
+            lambda event: event.event_type == event_type,
+            event_list,
+        ))
+        if events:
+            return events[0]
+        raise KeyError("Event type '%s' not found" % event_type)
 
 
 def _message_to_dict(message):

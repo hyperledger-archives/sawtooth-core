@@ -22,7 +22,6 @@ from queue import Queue
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 
 from sawtooth_validator.execution.execution_context \
     import AuthorizationException
@@ -45,16 +44,14 @@ _SHUTDOWN_SENTINEL = -1
 
 class ContextManager(object):
 
-    def __init__(self, database, state_delta_store):
+    def __init__(self, database):
         """
 
         Args:
             database (database.Database subclass): the subclass/implementation
                 of the Database
-            state_delta_store (StateDeltaStore): the store for state deltas
         """
         self._database = database
-        self._state_delta_store = state_delta_store
         self._first_merkle_root = None
         self._contexts = _ThreadsafeContexts()
 
@@ -407,17 +404,6 @@ class ContextManager(object):
             else:
                 virtual = not persist
                 state_hash = tree.update(updates, deletes, virtual=virtual)
-                if persist:
-                    # save the state changes to the state_delta_store
-                    changes = [StateChange(address=addr,
-                                           value=value,
-                                           type=StateChange.SET)
-                               for addr, value in updates.items()] +\
-                              [StateChange(address=addr,
-                                           type=StateChange.DELETE)
-                               for addr in deletes]
-                    self._state_delta_store.save_state_deltas(
-                        state_hash, changes)
 
             if clean_up:
                 self.delete_contexts(context_ids_already_searched)

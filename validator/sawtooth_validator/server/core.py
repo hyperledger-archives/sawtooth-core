@@ -43,8 +43,6 @@ from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.identity_view import IdentityViewFactory
-from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
-from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import IdentityCache
@@ -103,13 +101,6 @@ class Validator(object):
             'global state database file is %s', global_state_db_filename)
         global_state_db = LMDBNoLockDatabase(global_state_db_filename, 'c')
         state_view_factory = StateViewFactory(global_state_db)
-
-        # -- Setup State Delta Store -- #
-        delta_db_filename = os.path.join(
-            data_dir, 'state-deltas-{}.lmdb'.format(bind_network[-2:]))
-        LOGGER.debug('state delta store file is %s', delta_db_filename)
-        state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
-        state_delta_store = StateDeltaStore(state_delta_db)
 
         # -- Setup Receipt Store -- #
         receipt_db_filename = os.path.join(
@@ -176,7 +167,7 @@ class Validator(object):
             metrics_registry=metrics_registry)
 
         # -- Setup Transaction Execution Platform -- #
-        context_manager = ContextManager(global_state_db, state_delta_store)
+        context_manager = ContextManager(global_state_db)
 
         batch_tracker = BatchTracker(block_store)
 
@@ -190,8 +181,6 @@ class Validator(object):
 
         component_service.set_check_connections(executor.check_connections)
 
-        state_delta_processor = StateDeltaProcessor(
-            component_service, state_delta_store, block_store)
         event_broadcaster = EventBroadcaster(
             component_service, block_store, receipt_store)
 
@@ -265,7 +254,6 @@ class Validator(object):
             config_dir=config_dir,
             permission_verifier=permission_verifier,
             chain_observers=[
-                state_delta_processor,
                 event_broadcaster,
                 receipt_store,
                 batch_tracker,
@@ -299,8 +287,8 @@ class Validator(object):
             component_dispatcher, gossip, context_manager, executor, completer,
             block_store, batch_tracker, global_state_db,
             self.get_chain_head_state_root_hash, receipt_store,
-            state_delta_processor, state_delta_store, event_broadcaster,
-            permission_verifier, component_thread_pool, sig_pool)
+            event_broadcaster, permission_verifier, component_thread_pool,
+            sig_pool)
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher

@@ -15,7 +15,7 @@
 
 from sawtooth_validator.server.events.extractor import EventExtractor
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaSet
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 
 
 class BlockEventExtractor(EventExtractor):
@@ -82,13 +82,13 @@ class ReceiptEventExtractor(EventExtractor):
                         Event.Attribute(key="address", value=address))
                     squashed_changes.append(state_change)
 
-        state_delta_set = StateDeltaSet()
-        state_delta_set.state_changes.extend(squashed_changes)
+        state_change_list = StateChangeList()
+        state_change_list.state_changes.extend(squashed_changes)
 
         event = Event(
             event_type="state_delta",
             attributes=attributes,
-            data=state_delta_set.SerializeToString())
+            data=state_change_list.SerializeToString())
 
         for subscription in subscriptions:
             if event in subscription:

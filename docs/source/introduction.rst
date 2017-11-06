@@ -79,8 +79,11 @@ Sawtooth functionality\:
     * XO - Allows users to play Tic-Tac-Toe, also known as
       "noughts and crosses" or "Xs and Os".
 
-    * Supply Chain - Provides the infrastructure for tracking
-      physical objects in a real-world supply chain on the Sawtooth Ledger.
+    * Track and Trade - Provides a methodology for users to track goods
+      as they move through a supply chain.
+      This transaction family includes the history of ownership and
+      custodianship, as well as histories for a variety of properties
+      such as temperature and location.
 
 Consensus
 =========
