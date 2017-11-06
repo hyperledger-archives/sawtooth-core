@@ -254,7 +254,7 @@ class ChainController(object):
         """
         try:
             with self._lock:
-                new_block = result["new_block"]
+                new_block = result.block
                 LOGGER.info("on_block_validated: %s", new_block)
 
                 # remove from the processing list
@@ -266,12 +266,12 @@ class ChainController(object):
                     self._blocks_pending.pop(new_block.identifier, [])
 
                 # if the head has changed, since we started the work.
-                if result["chain_head"].identifier !=\
+                if result.chain_head.identifier !=\
                         self._chain_head.identifier:
                     LOGGER.info(
                         'Chain head updated from %s to %s while processing '
                         'block: %s',
-                        result["chain_head"],
+                        result.chain_head,
                         self._chain_head,
                         new_block)
 
@@ -298,8 +298,8 @@ class ChainController(object):
                         self._chain_head = new_block
 
                         # update the the block store to have the new chain
-                        self._block_store.update_chain(result["new_chain"],
-                                                       result["cur_chain"])
+                        self._block_store.update_chain(result.new_chain,
+                                                       result.current_chain)
 
                         LOGGER.info(
                             "Chain head updated to: %s",
@@ -310,7 +310,7 @@ class ChainController(object):
                                 self._chain_head.identifier[:8])
 
                         self._committed_transactions_count.inc(
-                            result["num_transactions"])
+                            result.transaction_count)
 
                         self._block_num_gauge.set_value(
                             self._chain_head.block_num)
@@ -318,8 +318,8 @@ class ChainController(object):
                         # tell the BlockPublisher else the chain is updated
                         self._notify_on_chain_updated(
                             self._chain_head,
-                            result["committed_batches"],
-                            result["uncommitted_batches"])
+                            result.committed_batches,
+                            result.uncommitted_batches)
 
                         for batch in new_block.batches:
                             if batch.trace:
@@ -334,7 +334,7 @@ class ChainController(object):
                         [block.identifier[:8] for block in descendant_blocks])
                     self._submit_blocks_for_verification(descendant_blocks)
 
-                    receipts = self._make_receipts(result["execution_results"])
+                    receipts = self._make_receipts(result.execution_results)
                     # Update all chain observers
                     for observer in self._chain_observers:
                         observer.chain_update(new_block, receipts)

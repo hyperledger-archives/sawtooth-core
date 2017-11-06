@@ -752,13 +752,13 @@ class TestBlockValidator(unittest.TestCase):
     def assert_new_block_committed(self):
         self.assert_handler_has_result()
         self.assertTrue(
-            self.block_validation_handler.result["commit_new_block"],
+            self.block_validation_handler.commit_new_block,
             "New block not committed, should be")
 
     def assert_new_block_not_committed(self):
         self.assert_handler_has_result()
         self.assertFalse(
-            self.block_validation_handler.result["commit_new_block"],
+            self.block_validation_handler.commit_new_block,
             "New block committed, shouldn't be")
 
     def assert_handler_has_result(self):
@@ -790,14 +790,15 @@ class TestBlockValidator(unittest.TestCase):
 
     class BlockValidationHandler(object):
         def __init__(self):
+            self.commit_new_block = None
             self.result = None
 
         def on_block_validated(self, commit_new_block, result):
-            result["commit_new_block"] = commit_new_block
+            self.commit_new_block = commit_new_block
             self.result = result
 
         def has_result(self):
-            return self.result is not None
+            return not (self.result is None or self.commit_new_block is None)
 
     # block tree manager interface
 
