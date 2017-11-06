@@ -32,12 +32,12 @@ class SynchronousExecutor(Executor):
     def __init__(self):
         self._work_queue = []
 
-    def submit(self, job):
-        self._work_queue.append(job)
+    def submit(self, job, *args, **kwargs):
+        self._work_queue.append((job, args, kwargs))
 
     def process_next(self):
         job = self._work_queue.pop()
-        job()
+        job[0](*job[1], **job[2])
 
     def process_all(self):
         while len(self._work_queue):
