@@ -195,9 +195,8 @@ class BlockValidator(object):
                     return False
         return True
 
-    def _verify_block_batches(self, blkw):
+    def _verify_block_batches(self, blkw, prev_state_root):
         if blkw.block.batches:
-            prev_state_root = self._get_previous_block_state_root(blkw)
             scheduler = self._executor.create_scheduler(
                 self._squash_handler, prev_state_root)
             self._executor.execute(scheduler)
@@ -259,7 +258,7 @@ class BlockValidator(object):
                 return False
         return True
 
-    def _validate_permissions(self, blkw):
+    def validate_permissions(self, blkw, prev_state_root):
         """
         Validate that all of the batch signers and transaction signer for the
         batches in the block are permitted by the transactor permissioning
@@ -267,21 +266,19 @@ class BlockValidator(object):
         found to not be permitted, the block is invalid.
         """
         if blkw.block_num != 0:
-            prev_state_root = self._get_previous_block_state_root(blkw)
             for batch in blkw.batches:
                 if not self._permission_verifier.is_batch_signer_authorized(
                         batch, prev_state_root):
                     return False
         return True
 
-    def _validate_on_chain_rules(self, blkw):
+    def validate_on_chain_rules(self, blkw, prev_state_root):
         """
         Validate that the block conforms to all validation rules stored in
         state. If the block breaks any of the stored rules, the block is
         invalid.
         """
         if blkw.block_num != 0:
-            prev_state_root = self._get_previous_block_state_root(blkw)
             return self._validation_rule_enforcer.validate(
                 blkw, prev_state_root)
         return True
@@ -296,7 +293,8 @@ class BlockValidator(object):
             else:
                 valid = True
 
-                valid = self._validate_permissions(blkw)
+                prev_state_root = self._get_previous_block_state_root(blkw)
+                valid = self.validate_permissions(blkw, prev_state_root)
 
                 consensus = self._consensus_module.\
                     BlockVerifier(block_cache=self._block_cache,
@@ -305,10 +303,10 @@ class BlockValidator(object):
                                   config_dir=self._config_dir,
                                   validator_id=self._identity_public_key)
                 if valid:
-                    valid = self._validate_on_chain_rules(blkw)
+                    valid = self.validate_on_chain_rules(blkw, prev_state_root)
 
                 if valid:
-                    valid = self._verify_block_batches(blkw)
+                    valid = self._verify_block_batches(blkw, prev_state_root)
 
                 if valid:
                     valid = consensus.verify_block(blkw)
