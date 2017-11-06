@@ -60,15 +60,15 @@ sawtooth.validator.max_transactions_per_block 1000
 
 The settings transaction family uses the following settings for its own configuration:
 
-+-------------------------------------------+------------------------------------------------------------+
-| Setting (Settings)                        | Value Description                                          |
-+===========================================+============================================================+
-| sawtooth.settings.vote.authorized_keys    | List of public keys allowed to vote.                       |
-+-------------------------------------------+------------------------------------------------------------+
-| sawtooth.settings.vote.approval_threshold | Percentage of keys required for a proposal to be accepted. |
-+-------------------------------------------+------------------------------------------------------------+
-| sawtooth.settings.vote.proposals          | A list of proposals to make settings changes (see note)    |
-+-------------------------------------------+------------------------------------------------------------+
++-------------------------------------------+------------------------------------------------------------------------------+
+| Setting (Settings)                        | Value Description                                                            |
++===========================================+==============================================================================+
+| sawtooth.settings.vote.authorized_keys    | List of public keys allowed to vote                                          |
++-------------------------------------------+------------------------------------------------------------------------------+
+| sawtooth.settings.vote.approval_threshold | Minimum number of votes required to accept or reject a proposal (default: 1) |
++-------------------------------------------+------------------------------------------------------------------------------+
+| sawtooth.settings.vote.proposals          | A list of proposals to make settings changes (see note)                      |
++-------------------------------------------+------------------------------------------------------------------------------+
 
 .. note::
 	*sawtooth.settings.vote.proposals* is a base64 encoded string of the
@@ -283,20 +283,21 @@ with one "accept" vote counted.  The transaction processor outputs a
 
 A Vote action is validated, checking to see if *proposal_id* exists, and
 the public key of the transaction has not already voted.  The value of
-*sawtooth.settings.vote.approval_threshold* is read from the state.  If the
-"accept" vote count is equal to or above the approval threshold, the proposal
-is applied to the state. This results in the above INFO message being
-logged. The proposal is deleted from the *SettingProposals* record.
+*sawtooth.settings.vote.approval_threshold* is read from the state.
 
-If the "reject" vote count is equal to or above the approval threshold, then it
-is deleted from *sawtooth.settings.vote.proposals* and an appropriate debug
-logging message logged.
+- If the "accept" vote count is equal to or above the approval threshold,
+  the proposal is applied to the state. This results in the above INFO message
+  being logged. The proposal is deleted from the *SettingProposals* record.
+
+- If the "reject" vote count is equal to or above the approval threshold, then
+  it is deleted from *sawtooth.settings.vote.proposals* and an appropriate debug
+  logging message logged.
 
 Otherwise, the vote is recorded in the list of *sawtooth.settings.vote.proposals*
 by the public key and vote pair.
 
 Validation of configuration settings is as follows:
 
-- *sawtooth.settings.vote.approval_threshold* must be a positive integer and must
-  be between 1 and the number of authorized keys, inclusive
+- *sawtooth.settings.vote.approval_threshold* must be a positive integer and
+  must be between 1 (the default) and the number of authorized keys, inclusive
 - *sawtooth.settings.vote.proposals* may not be set by a proposal
