@@ -127,7 +127,7 @@ pub fn process_smallbank_playlist(output: &mut Write,
 
         let mut sha = Sha512::new();
         sha.input(&payload_bytes);
-        let mut hash: &mut [u8] = & mut [0; 64];
+        let hash: &mut [u8] = & mut [0; 64];
         sha.result(hash);
 
         txn_header.set_payload_sha512(bytes_to_hex_str(hash));
@@ -172,7 +172,7 @@ fn make_addresses(payload: &SmallbankTransactionPayload) -> Vec<String> {
 fn customer_id_address(customer_id: u32) -> String {
     let mut sha = Sha512::new();
     sha.input(customer_id.to_string().as_bytes());
-    let mut hash: &mut [u8] = & mut [0; 64];
+    let hash: &mut [u8] = & mut [0; 64];
     sha.result(hash);
 
     let hex = bytes_to_hex_str(hash);
@@ -571,7 +571,7 @@ impl<'a> FmtWriter<'a> {
 
 impl<'a> fmt::Write for FmtWriter<'a> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        let mut w = &mut *self.writer;
+        let w = &mut *self.writer;
         w.write_all(s.as_bytes()).map_err(|_| fmt::Error::default())
     }
 }
