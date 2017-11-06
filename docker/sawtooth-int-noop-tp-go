@@ -37,4 +37,4 @@ COPY noop-tp-go /usr/bin/noop-tp-go
 
 EXPOSE 4004/tcp
 
-CMD ["noop-tp-go", "tcp://validator:4004"]
+CMD ["noop-tp-go", "-C", "tcp://validator:4004"]

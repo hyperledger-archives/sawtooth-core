@@ -48,4 +48,4 @@ RUN apt-get install -y -q --allow-unauthenticated \
 
 EXPOSE 4004/tcp
 
-CMD ["intkey-tp-python", "tcp://validator:4004"]
+CMD ["intkey-tp-python", "-C", "tcp://validator:4004"]

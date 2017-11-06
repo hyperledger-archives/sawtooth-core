@@ -36,4 +36,4 @@ COPY smallbank-tp-go /usr/bin/smallbank-tp-go
 
 EXPOSE 4004/tcp
 
-CMD ["smallbank-tp-go", "tcp://validator:4004"]
+CMD ["smallbank-tp-go", "-C", "tcp://validator:4004"]

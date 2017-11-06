@@ -48,4 +48,4 @@ RUN apt-get install -y -q --allow-unauthenticated \
 
 EXPOSE 4004/tcp
 
-CMD ["settings-tp", "tcp://validator:4004"]
+CMD ["settings-tp", "-C", "tcp://validator:4004"]

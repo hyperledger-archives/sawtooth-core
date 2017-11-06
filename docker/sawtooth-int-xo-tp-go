@@ -37,4 +37,4 @@ COPY xo-tp-go /usr/bin/xo-tp-go
 
 EXPOSE 4004/tcp
 
-CMD ["xo-tp-go", "tcp://validator:4004"]
+CMD ["xo-tp-go", "-C", "tcp://validator:4004"]
