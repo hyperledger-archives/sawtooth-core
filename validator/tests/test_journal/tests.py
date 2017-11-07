@@ -794,14 +794,14 @@ class TestBlockValidator(unittest.TestCase):
     # block validation
 
     def validate_block(self, block):
-        validator = self.create_block_validator(block)
+        validator = self.create_block_validator()
         validator.run(
+            block,
             mock_consensus,
             self.block_validation_handler.on_block_validated)
 
-    def create_block_validator(self, new_block):
+    def create_block_validator(self):
         return BlockValidator(
-            new_block=new_block,
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
             executor=MockTransactionExecutor(batch_execution_result=None),
