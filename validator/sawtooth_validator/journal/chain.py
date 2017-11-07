@@ -177,6 +177,17 @@ class ChainController(object):
         )
         self._chain_thread = None
 
+        self._block_validator = BlockValidator(
+            block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
+            executor=self._transaction_executor,
+            squash_handler=self._squash_handler,
+            identity_signer=self._identity_signer,
+            data_dir=self._data_dir,
+            config_dir=self._config_dir,
+            permission_verifier=self._permission_verifier,
+            metrics_registry=self._metrics_registry)
+
         # Only run this after all member variables have been bound
         self._set_chain_head_from_block_store()
 
@@ -233,19 +244,11 @@ class ChainController(object):
                     self.chain_head.header_signature,
                     state_view)
 
-            validator = BlockValidator(
-                block_cache=self._block_cache,
-                state_view_factory=self._state_view_factory,
-                executor=self._transaction_executor,
-                squash_handler=self._squash_handler,
-                identity_signer=self._identity_signer,
-                data_dir=self._data_dir,
-                config_dir=self._config_dir,
-                permission_verifier=self._permission_verifier,
-                metrics_registry=self._metrics_registry)
-            self._blocks_processing[blkw.block.header_signature] = validator
+            self._blocks_processing[blkw.block.header_signature] =\
+                self._block_validator
             self._thread_pool.submit(
-                validator.run, blkw, consensus_module, self.on_block_validated)
+                self._block_validator.run,
+                blkw, consensus_module, self.on_block_validated)
 
     def on_block_validated(self, commit_new_block, result):
         """Message back from the block validator, that the validation is
@@ -457,18 +460,8 @@ class ChainController(object):
                         NULL_BLOCK_IDENTIFIER,
                         state_view)
 
-                validator = BlockValidator(
-                    block_cache=self._block_cache,
-                    state_view_factory=self._state_view_factory,
-                    executor=self._transaction_executor,
-                    squash_handler=self._squash_handler,
-                    identity_signer=self._identity_signer,
-                    data_dir=self._data_dir,
-                    config_dir=self._config_dir,
-                    permission_verifier=self._permission_verifier,
-                    metrics_registry=self._metrics_registry)
-
-                valid = validator.validate_block(block, consensus_module)
+                valid = self._block_validator.validate_block(
+                    block, consensus_module)
                 if valid:
                     if chain_id is None:
                         self._chain_id_manager.save_block_chain_id(
