@@ -492,9 +492,8 @@ class BlockValidator(object):
                 new_blkw, cur_blkw,
                 self._result.new_chain, self._result.current_chain)
 
-            # 3) Determine the validity of the new fork
-            # build the transaction cache to simulate the state of the
-            # chain at the common root.
+            # Determine the validity of the new fork and build the transaction
+            # cache to simulate the state of the chain at the common root.
             self._chain_commit_state = ChainCommitState(
                 self._block_cache.block_store, cur_chain)
 
@@ -515,8 +514,7 @@ class BlockValidator(object):
                 self._done_cb(False, self._result)
                 return
 
-            # 4) Evaluate the 2 chains to see if the new chain should be
-            # committed
+            # Ask consensus if the new chain should be committed
             LOGGER.info(
                 "Comparing current chain head '%s' against new block '%s'",
                 self._chain_head, self._new_block)
@@ -535,7 +533,10 @@ class BlockValidator(object):
             commit_new_chain = self._compare_forks_consensus(
                 self._chain_head, self._new_block)
 
-            # 5) Consensus to compute batch sets (only if we are switching).
+            # If committing the new chain, get the list of committed batches
+            # from the current chain that need to be uncommitted and the list
+            # of uncommitted batches from the new chain that need to be
+            # committed.
             if commit_new_chain:
                 commit, uncommit =\
                     self.get_batch_commit_changes(new_chain, cur_chain)
@@ -546,12 +547,9 @@ class BlockValidator(object):
                         self._chain_head.identifier:
                     self._moved_to_fork_count.inc()
 
-            # 6) Tell the journal we are done.
+            # Pass the results to the callback function
             self._done_cb(commit_new_chain, self._result)
-
-            LOGGER.info(
-                "Finished block validation of: %s",
-                self._new_block)
+            LOGGER.info("Finished block validation of: %s", self._new_block)
         except BlockValidationAborted:
             self._done_cb(False, self._result)
             return
