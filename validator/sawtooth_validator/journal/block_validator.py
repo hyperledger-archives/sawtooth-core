@@ -137,8 +137,6 @@ class BlockValidator(object):
         """
         self._consensus_module = consensus_module
         self._block_cache = block_cache
-        self._chain_commit_state = ChainCommitState(
-            self._block_cache.block_store, [])
         self._new_block = new_block
 
         # Set during execution of the of the  BlockValidation to the current
@@ -195,14 +193,14 @@ class BlockValidator(object):
                     return False
         return True
 
-    def _verify_block_batches(self, blkw, prev_state_root):
+    def _verify_block_batches(self, blkw, prev_state_root, chain_commit_state):
         if blkw.block.batches:
             scheduler = self._executor.create_scheduler(
                 self._squash_handler, prev_state_root)
             self._executor.execute(scheduler)
             try:
                 for batch, has_more in look_ahead(blkw.block.batches):
-                    if self._chain_commit_state.has_batch(
+                    if chain_commit_state.has_batch(
                             batch.header_signature):
                         LOGGER.debug("Block(%s) rejected due to duplicate "
                                      "batch, batch: %s", blkw,
@@ -211,11 +209,11 @@ class BlockValidator(object):
 
                     # Verify dependencies and uniqueness
                     if self.verify_batch_transactions(
-                        batch, self._chain_commit_state
+                        batch, chain_commit_state
                     ):
                         # Only add transactions to commit state if all
                         # transactions in the batch are good.
-                        self._chain_commit_state.add_batch(
+                        chain_commit_state.add_batch(
                             batch, add_transactions=True)
                     else:
                         raise InvalidBatch()
@@ -283,9 +281,16 @@ class BlockValidator(object):
                 blkw, prev_state_root)
         return True
 
-    def validate_block(self, blkw):
+    def validate_block(self, blkw, cur_chain=None):
         # pylint: disable=broad-except
         try:
+            # Determine the validity of the new fork and build the transaction
+            # cache to simulate the state of the chain at the common root.
+            if cur_chain is None:
+                cur_chain = []
+            chain_commit_state = ChainCommitState(
+                self._block_cache.block_store, cur_chain)
+
             if blkw.status == BlockStatus.Valid:
                 return True
             elif blkw.status == BlockStatus.Invalid:
@@ -306,7 +311,8 @@ class BlockValidator(object):
                     valid = self.validate_on_chain_rules(blkw, prev_state_root)
 
                 if valid:
-                    valid = self._verify_block_batches(blkw, prev_state_root)
+                    valid = self._verify_block_batches(
+                        blkw, prev_state_root, chain_commit_state)
 
                 if valid:
                     valid = consensus.verify_block(blkw)
@@ -476,15 +482,10 @@ class BlockValidator(object):
                 new_blkw, cur_blkw,
                 self._result.new_chain, self._result.current_chain)
 
-            # Determine the validity of the new fork and build the transaction
-            # cache to simulate the state of the chain at the common root.
-            self._chain_commit_state = ChainCommitState(
-                self._block_cache.block_store, cur_chain)
-
             valid = True
             for block in reversed(new_chain):
                 if valid:
-                    if not self.validate_block(block):
+                    if not self.validate_block(block, cur_chain):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
                 else:
