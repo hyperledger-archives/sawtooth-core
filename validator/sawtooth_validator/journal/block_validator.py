@@ -133,11 +133,6 @@ class BlockValidator(object):
             None
         """
         self._block_cache = block_cache
-
-        # Set during execution of the of the  BlockValidation to the current
-        # chain_head at that time.
-        self._chain_head = None
-
         self._state_view_factory = state_view_factory
         self._executor = executor
         self._squash_handler = squash_handler
@@ -278,13 +273,16 @@ class BlockValidator(object):
                 blkw, prev_state_root)
         return True
 
-    def validate_block(self, blkw, consensus, chain=None):
+    def validate_block(self, blkw, consensus, chain_head=None, chain=None):
         # pylint: disable=broad-except
         try:
             if chain is None:
                 chain = []
             chain_commit_state = ChainCommitState(
                 self._block_cache.block_store, chain)
+
+            if chain_head is None:
+                chain_head = self._block_cache.block_store.chain_head
 
             if blkw.status == BlockStatus.Valid:
                 return True
@@ -323,8 +321,8 @@ class BlockValidator(object):
                 # since changes to the chain-head can change the state of the
                 # blocks in BlockStore we have to revalidate this block.
                 block_store = self._block_cache.block_store
-                if self._chain_head is not None and\
-                        self._chain_head.identifier !=\
+                if chain_head is not None and\
+                        chain_head.identifier !=\
                         block_store.chain_head.identifier:
                     raise ChainHeadUpdated()
 
@@ -461,11 +459,11 @@ class BlockValidator(object):
             LOGGER.info("Starting block validation of : %s", new_block)
 
             # Get the current chain_head and store it in the result
-            self._chain_head = self._block_cache.block_store.chain_head
-            result.chain_head = self._chain_head
+            chain_head = self._block_cache.block_store.chain_head
+            result.chain_head = chain_head
 
             # Get the heads of the current chain and the new chain
-            cur_blkw = self._chain_head
+            cur_blkw = chain_head
             new_blkw = new_block
 
             # Get all the blocks since the greatest common height from the
@@ -490,7 +488,9 @@ class BlockValidator(object):
             valid = True
             for block in reversed(new_chain):
                 if valid:
-                    if not self.validate_block(block, consensus, cur_chain):
+                    if not self.validate_block(
+                        block, consensus, chain_head, cur_chain
+                    ):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
                     result.transaction_count += block.num_transactions
@@ -507,7 +507,7 @@ class BlockValidator(object):
             # Ask consensus if the new chain should be committed
             LOGGER.info(
                 "Comparing current chain head '%s' against new block '%s'",
-                self._chain_head, new_block)
+                chain_head, new_block)
             for i in range(max(len(new_chain), len(cur_chain))):
                 cur = new = num = "-"
                 if i < len(cur_chain):
@@ -521,7 +521,7 @@ class BlockValidator(object):
                     num, cur, new)
 
             commit_new_chain = self._compare_forks_consensus(
-                consensus, self._chain_head, new_block)
+                consensus, chain_head, new_block)
 
             # If committing the new chain, get the list of committed batches
             # from the current chain that need to be uncommitted and the list
@@ -533,8 +533,7 @@ class BlockValidator(object):
                 result.committed_batches = commit
                 result.uncommitted_batches = uncommit
 
-                if new_chain[0].previous_block_id != \
-                        self._chain_head.identifier:
+                if new_chain[0].previous_block_id != chain_head.identifier:
                     self._moved_to_fork_count.inc()
 
             # Pass the results to the callback function
