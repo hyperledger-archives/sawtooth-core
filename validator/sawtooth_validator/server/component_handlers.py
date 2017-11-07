@@ -149,8 +149,13 @@ def add(
         thread_pool)
 
     dispatcher.add_handler(
-        validator_pb2.Message.CLIENT_BLOCK_GET_REQUEST,
-        client_handlers.BlockGetRequest(block_store),
+        validator_pb2.Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
+        client_handlers.BlockGetByIdRequest(block_store),
+        thread_pool)
+
+    dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_BLOCK_GET_BY_NUM_REQUEST,
+        client_handlers.BlockGetByNumRequest(block_store),
         thread_pool)
 
     # Batches

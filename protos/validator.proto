@@ -74,7 +74,7 @@ message Message {
         // A request to list blocks from the web api/client to the validator
         CLIENT_BLOCK_LIST_REQUEST = 102;
         CLIENT_BLOCK_LIST_RESPONSE = 103;
-        CLIENT_BLOCK_GET_REQUEST = 104;
+        CLIENT_BLOCK_GET_BY_ID_REQUEST = 104;
         CLIENT_BLOCK_GET_RESPONSE = 105;
         CLIENT_BATCH_LIST_REQUEST = 106;
         CLIENT_BATCH_LIST_RESPONSE = 107;
@@ -104,6 +104,7 @@ message Message {
         CLIENT_RECEIPT_GET_REQUEST= 122;
         // A response with the receipts
         CLIENT_RECEIPT_GET_RESPONSE= 123;
+        CLIENT_BLOCK_GET_BY_NUM_REQUEST = 124;
 
         // Message types for events
         CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;

@@ -583,12 +583,12 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assertEqual('B-longest', response.blocks[4].header_signature)
 
 
-class TestBlockGetRequests(ClientHandlerTestCase):
+class TestBlockGetByIdRequests(ClientHandlerTestCase):
     def setUp(self):
         store = MockBlockStore()
         self.initialize(
-            handlers.BlockGetRequest(store),
-            client_block_pb2.ClientBlockGetRequest,
+            handlers.BlockGetByIdRequest(store),
+            client_block_pb2.ClientBlockGetByIdRequest,
             client_block_pb2.ClientBlockGetResponse)
 
     def test_block_get_request(self):

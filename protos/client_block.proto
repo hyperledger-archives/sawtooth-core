@@ -64,12 +64,18 @@ message ClientBlockListResponse {
 
 // A request to return a specific block from the validator. The block must be
 // specified by its unique id, in this case the block's header signature
-message ClientBlockGetRequest {
+message ClientBlockGetByIdRequest {
     string block_id = 1;
-    uint64 block_num = 2;
 }
 
-// A response that returns the block specified by a ClientBlockGetRequest.
+// A request to return a specific block from the validator. The block must be
+// specified by its block number
+message ClientBlockGetByNumRequest {
+    uint64 block_num = 1;
+}
+
+// A response that returns the block specified by a ClientBlockGetByIdRequest
+// or  ClientBlockGetByNumRequest.
 //
 // Statuses:
 //   * OK - everything worked as expected

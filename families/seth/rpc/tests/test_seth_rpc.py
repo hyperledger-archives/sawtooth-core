@@ -21,7 +21,8 @@ from mock_validator import MockValidator
 from sawtooth_sdk.protobuf.validator_pb2 import Message
 from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockListRequest
 from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockListResponse
-from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetRequest
+from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetByIdRequest
+from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetByNumRequest
 from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetResponse
 from sawtooth_sdk.protobuf.client_state_pb2 import ClientStateGetRequest
 from sawtooth_sdk.protobuf.client_state_pb2 import ClientStateGetResponse
@@ -135,7 +136,7 @@ class SethRpcTest(unittest.TestCase):
         block id."""
         self.rpc.acall(
             "eth_getBlockTransactionCountByHash", ["0x" + self.block_id])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_id()
         self.assertEqual(request.block_id, self.block_id)
 
         self._send_block_back(msg)
@@ -160,7 +161,7 @@ class SethRpcTest(unittest.TestCase):
         bad_id = "1" * 128
         self.rpc.acall(
             "eth_getBlockTransactionCountByHash", ["0x" + bad_id])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_id()
         self.assertEqual(request.block_id, bad_id)
 
         self._send_block_no_resource(msg)
@@ -173,7 +174,7 @@ class SethRpcTest(unittest.TestCase):
         block number."""
         self.rpc.acall(
             "eth_getBlockTransactionCountByNumber", [hex(self.block_num)])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
         self.assertEqual(request.block_num, self.block_num)
 
         self._send_block_back(msg)
@@ -199,7 +200,7 @@ class SethRpcTest(unittest.TestCase):
         bad_num = 2
         self.rpc.acall(
             "eth_getBlockTransactionCountByNumber", [hex(bad_num)])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
         self.assertEqual(request.block_num, bad_num)
 
         self._send_block_no_resource(msg)
@@ -210,7 +211,7 @@ class SethRpcTest(unittest.TestCase):
     def test_get_block_by_hash(self):
         """Test that a block is retrieved correctly, given a block hash."""
         self.rpc.acall("eth_getBlockByHash", ["0x" + self.block_id, False])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_id()
         self.assertEqual(request.block_id, self.block_id)
 
         self._send_block_back(msg)
@@ -241,7 +242,7 @@ class SethRpcTest(unittest.TestCase):
         """
         bad_id = "1" * 128
         self.rpc.acall("eth_getBlockByHash", ["0x" + bad_id, False])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_id()
         self.assertEqual(request.block_id, bad_id)
 
         self._send_block_no_resource(msg)
@@ -251,7 +252,7 @@ class SethRpcTest(unittest.TestCase):
     def test_get_block_by_number(self):
         """Test that a block is retrieved correctly, given a block number."""
         self.rpc.acall("eth_getBlockByNumber", [hex(self.block_num), False])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
         self.assertEqual(request.block_num, self.block_num)
 
         self._send_block_back(msg)
@@ -282,7 +283,7 @@ class SethRpcTest(unittest.TestCase):
         """
         bad_num = 2
         self.rpc.acall("eth_getBlockByNumber", [hex(bad_num), False])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
         self.assertEqual(request.block_num, bad_num)
 
         self._send_block_no_resource(msg)
@@ -427,8 +428,9 @@ class SethRpcTest(unittest.TestCase):
             "eth_getBalance", ["0x" + account_address, hex(block_num)])
 
         msg = self.validator.receive()
-        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
-        request = ClientBlockGetRequest()
+        self.assertEqual(msg.message_type,
+                         Message.CLIENT_BLOCK_GET_BY_NUM_REQUEST)
+        request = ClientBlockGetByNumRequest()
         request.ParseFromString(msg.content)
         self.assertEqual(request.block_num, block_num)
 
@@ -496,7 +498,7 @@ class SethRpcTest(unittest.TestCase):
 
         self._send_transaction_response(msg, block.batches[1].transactions[1])
 
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_id()
 
         self._send_block_back(msg, block)
 
@@ -536,7 +538,7 @@ class SethRpcTest(unittest.TestCase):
         self.rpc.acall(
             "eth_getTransactionByBlockHashAndIndex",
             ["0x" + self.block_id, hex(txn_idx)])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_id()
 
         self.assertEqual(request.block_id, self.block_id)
 
@@ -581,7 +583,7 @@ class SethRpcTest(unittest.TestCase):
             "eth_getTransactionByBlockNumberAndIndex",
             [hex(self.block_num), hex(txn_idx)])
 
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
 
         self.assertEqual(request.block_num, self.block_num)
 
@@ -636,7 +638,7 @@ class SethRpcTest(unittest.TestCase):
             "eth_getTransactionByBlockNumberAndIndex",
             [hex(block_num), hex(txn_idx)])
 
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
 
         self.assertEqual(request.block_num, block_num)
 
@@ -657,8 +659,9 @@ class SethRpcTest(unittest.TestCase):
             ["0x" + block_id, hex(txn_idx)])
 
         msg = self.validator.receive()
-        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
-        request = ClientBlockGetRequest()
+        self.assertEqual(msg.message_type,
+                         Message.CLIENT_BLOCK_GET_BY_ID_REQUEST)
+        request = ClientBlockGetByIdRequest()
         request.ParseFromString(msg.content)
         self.assertEqual(request.block_id, block_id)
 
@@ -732,7 +735,7 @@ class SethRpcTest(unittest.TestCase):
 
         msg, request = self._receive_transaction_request()
         self._send_transaction_response(msg)
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_id()
         block = Block(
             header=BlockHeader(block_num=self.block_num).SerializeToString(),
             header_signature=self.block_id,
@@ -858,14 +861,14 @@ class SethRpcTest(unittest.TestCase):
 
         self.rpc.acall("eth_getLogs", [log_filter])
 
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
         self.assertEqual(request.block_num, self.block_num)
         self._send_block_back(msg)
 
         msg, request = self._receive_receipt_request()
         self._send_receipts_back(msg)
 
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
         self.assertEqual(request.block_num, self.block_num + 1)
         self._send_block_no_resource(msg)
 
@@ -900,14 +903,14 @@ class SethRpcTest(unittest.TestCase):
         filter_id = self.rpc.get_result()
 
         self.rpc.acall("eth_getFilterLogs", [filter_id])
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
         self.assertEqual(request.block_num, self.block_num)
         self._send_block_back(msg)
 
         msg, request = self._receive_receipt_request()
         self._send_receipts_back(msg)
 
-        msg, request = self._receive_block_request()
+        msg, request = self._receive_block_request_num()
         self.assertEqual(request.block_num, self.block_num + 1)
         self._send_block_no_resource(msg)
 
@@ -1245,10 +1248,19 @@ class SethRpcTest(unittest.TestCase):
         return msg, request
 
 
-    def _receive_block_request(self):
+    def _receive_block_request_id(self):
         msg = self.validator.receive()
-        self.assertEqual(msg.message_type, Message.CLIENT_BLOCK_GET_REQUEST)
-        request = ClientBlockGetRequest()
+        self.assertEqual(msg.message_type,
+                         Message.CLIENT_BLOCK_GET_BY_ID_REQUEST)
+        request = ClientBlockGetByIdRequest()
+        request.ParseFromString(msg.content)
+        return msg, request
+
+    def _receive_block_request_num(self):
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type,
+                         Message.CLIENT_BLOCK_GET_BY_NUM_REQUEST)
+        request = ClientBlockGetByNumRequest()
         request.ParseFromString(msg.content)
         return msg, request
 
@@ -1295,7 +1307,7 @@ class SethRpcTest(unittest.TestCase):
         return msg, txn
 
     def _block_get_exchange(self, block=None):
-        msg, _ = self._receive_block_request()
+        msg, _ = self._receive_block_request_num()
         self._send_block_back(msg, block)
 
     def _block_list_exchange(self, blocks=None):

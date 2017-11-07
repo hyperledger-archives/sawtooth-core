@@ -350,9 +350,9 @@ class RouteHandler(object):
         block_id = request.match_info.get('block_id', '')
 
         response = await self._query_validator(
-            Message.CLIENT_BLOCK_GET_REQUEST,
+            Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
             client_block_pb2.ClientBlockGetResponse,
-            client_block_pb2.ClientBlockGetRequest(block_id=block_id),
+            client_block_pb2.ClientBlockGetByIdRequest(block_id=block_id),
             error_traps)
 
         return self._wrap_response(
