@@ -392,8 +392,11 @@ class BlockValidator(object):
 
         return blk, fork_diff
 
-    def _find_common_ancestor(self, new_blkw, cur_blkw, new_chain, cur_chain):
-        """ Finds a common ancestor of the two chains.
+    def extend_fork_diff_to_common_ancestor(
+        self, new_blkw, cur_blkw, new_chain, cur_chain
+    ):
+        """ Finds a common ancestor of the two chains. new_blkw and cur_blkw
+        must be at the same height, or this will always fail.
         """
         while cur_blkw.identifier != new_blkw.identifier:
             if (cur_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER
@@ -405,6 +408,7 @@ class BlockValidator(object):
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
                 raise BlockValidationAborted()
+
             new_chain.append(new_blkw)
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
@@ -478,14 +482,15 @@ class BlockValidator(object):
                 new_blkw, self._result.new_chain =\
                     self.build_fork_diff_to_common_height(new_blkw, cur_blkw)
 
-            # blocks in the current chain, since the greatest common height
+            # Create local bindings
             cur_chain = self._result.current_chain
-            # blocks in the new chain, since the greatest common height
             new_chain = self._result.new_chain
 
-            # 2) Walk back until we find the common ancestor
-            self._find_common_ancestor(new_blkw, cur_blkw,
-                                       new_chain, cur_chain)
+            # Add blocks to the two chains until a common ancestor is found
+            # or raise an exception if no common ancestor is found
+            self.extend_fork_diff_to_common_ancestor(
+                new_blkw, cur_blkw,
+                self._result.new_chain, self._result.current_chain)
 
             # 3) Determine the validity of the new fork
             # build the transaction cache to simulate the state of the
