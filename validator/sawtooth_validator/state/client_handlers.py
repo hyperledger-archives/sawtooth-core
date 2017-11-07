@@ -727,21 +727,37 @@ class BlockListRequest(_ClientRequestHandler):
             blocks=blocks)
 
 
-class BlockGetRequest(_ClientRequestHandler):
+class BlockGetByIdRequest(_ClientRequestHandler):
     def __init__(self, block_store):
         super().__init__(
-            client_block_pb2.ClientBlockGetRequest,
+            client_block_pb2.ClientBlockGetByIdRequest,
             client_block_pb2.ClientBlockGetResponse,
             validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
             block_store=block_store)
 
     def _respond(self, request):
         try:
-            if request.block_id != "":
-                block = self._block_store[request.block_id].block
-            else:
-                block = self._block_store.get_block_by_number(
-                    request.block_num).block
+            block = self._block_store[request.block_id].block
+
+        except KeyError as e:
+            LOGGER.debug(e)
+            return self._status.NO_RESOURCE
+
+        return self._wrap_response(block=block)
+
+
+class BlockGetByNumRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_block_pb2.ClientBlockGetByNumRequest,
+            client_block_pb2.ClientBlockGetResponse,
+            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        try:
+            block = self._block_store.get_block_by_number(
+                request.block_num).block
 
         except KeyError as e:
             LOGGER.debug(e)

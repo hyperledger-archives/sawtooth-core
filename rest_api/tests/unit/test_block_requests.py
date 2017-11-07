@@ -717,8 +717,8 @@ class BlockGetTests(BaseApiTest):
 
     async def get_application(self, loop):
         self.set_status_and_connection(
-            Message.CLIENT_BLOCK_GET_REQUEST,
-            client_block_pb2.ClientBlockGetRequest,
+            Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
+            client_block_pb2.ClientBlockGetByIdRequest,
             client_block_pb2.ClientBlockGetResponse)
 
         handlers = self.build_handlers(loop, self.connection)

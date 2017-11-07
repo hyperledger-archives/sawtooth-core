@@ -34,7 +34,8 @@ use sawtooth_sdk::messages::client_receipt::{
 use sawtooth_sdk::messages::client_block::{
     ClientBlockListRequest,
     ClientBlockListResponse,
-    ClientBlockGetRequest,
+    ClientBlockGetByIdRequest,
+    ClientBlockGetByNumRequest,
     ClientBlockGetResponse,
     ClientBlockGetResponse_Status,
 };
@@ -431,18 +432,30 @@ impl<S: MessageSender> ValidatorClient<S> {
     }
 
     pub fn get_block(&mut self, block_key: BlockKey) -> Result<Block, Error> {
-        let mut request = ClientBlockGetRequest::new();
+        let response: ClientBlockGetResponse;
         match block_key {
-            BlockKey::Signature(block_id) => request.set_block_id(block_id),
-            BlockKey::Number(block_num) => request.set_block_num(block_num),
+            BlockKey::Signature(block_id) => {
+                let mut request = ClientBlockGetByIdRequest::new();
+                let message_type: Message_MessageType = Message_MessageType::CLIENT_BLOCK_GET_BY_ID_REQUEST;
+                request.set_block_id(block_id);
+                response = self.send_request(message_type, &request)?;
+            },
+            BlockKey::Number(block_num) => {
+                let mut request = ClientBlockGetByNumRequest::new();
+                let message_type: Message_MessageType = Message_MessageType::CLIENT_BLOCK_GET_BY_NUM_REQUEST;
+                request.set_block_num(block_num);
+                response = self.send_request(message_type, &request)?;
+            },
             BlockKey::Latest => {
                 return self.get_current_block();
             },
-            BlockKey::Earliest => request.set_block_id(String::from("0000000000000000")),
+            BlockKey::Earliest => {
+                let mut request = ClientBlockGetByIdRequest::new();
+                let message_type: Message_MessageType = Message_MessageType::CLIENT_BLOCK_GET_BY_ID_REQUEST;
+                request.set_block_id(String::from("0000000000000000"));
+                response = self.send_request(message_type, &request)?;
+            },
         };
-
-        let response: ClientBlockGetResponse =
-            self.send_request(Message_MessageType::CLIENT_BLOCK_GET_REQUEST, &request)?;
 
         match response.status {
             ClientBlockGetResponse_Status::STATUS_UNSET=> {
