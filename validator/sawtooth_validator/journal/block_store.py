@@ -223,6 +223,15 @@ class BlockStore(MutableMapping):
 
     @staticmethod
     def block_num_to_hex(block_num):
+        """Converts a block number to a hex string.
+        This is used for proper index ordering and lookup.
+
+        Args:
+            block_num: uint64
+
+        Returns:
+            A hex-encoded str
+        """
         return "{0:#0{1}x}".format(block_num, 18)
 
     def _get_block(self, key):
@@ -233,9 +242,30 @@ class BlockStore(MutableMapping):
         return BlockWrapper.wrap(value)
 
     def get_blocks(self, block_ids):
+        """Returns all blocks with the given set of block_ids.
+        If a block id in the provided iterable does not exist in the block
+        store, it is ignored.
+
+        Args:
+            block_ids (:iterable:str): an iterable of block ids
+
+        Returns
+            list of block wrappers found for the given block ids
+        """
         return [block for _, block in self._block_store.get_multi(block_ids)]
 
     def get_block_by_transaction_id(self, txn_id):
+        """Returns the block that contains the given transaction id.
+
+        Args:
+            txn_id (str): a transaction id
+
+        Returns:
+            a block wrapper of the containing block
+
+        Raises:
+            ValueError if no block containing the transaction is found
+        """
         block = self._block_store.get(txn_id, index='transaction')
         if not block:
             raise ValueError('Transaction "%s" not in BlockStore', txn_id)
@@ -243,6 +273,17 @@ class BlockStore(MutableMapping):
         return block
 
     def get_block_by_number(self, block_num):
+        """Returns the block that contains the given transaction id.
+
+        Args:
+            block_num (uint64): a block number
+
+        Returns:
+            a block wrapper of the containing block
+
+        Raises:
+            KeyError if no block with the given number is found
+        """
         block = self._block_store.get(
             BlockStore.block_num_to_hex(block_num), index='block_num')
         if not block:
@@ -251,9 +292,29 @@ class BlockStore(MutableMapping):
         return block
 
     def has_transaction(self, txn_id):
+        """Returns True if the transaction is contained in a block in the
+        block store.
+
+        Args:
+            txn_id (str): a transaction id
+
+        Returns:
+            True if it is contained in a committed block, False otherwise
+        """
         return self._block_store.contains_key(txn_id, index='transaction')
 
     def get_block_by_batch_id(self, batch_id):
+        """Returns the block that contains the given batch id.
+
+        Args:
+            batch_id (str): a batch id
+
+        Returns:
+            a block wrapper of the containing block
+
+        Raises:
+            ValueError if no block containing the batch is found
+        """
         block = self._block_store.get(batch_id, index='batch')
         if not block:
             raise ValueError('Batch "%s" not in BlockStore', batch_id)
@@ -261,9 +322,29 @@ class BlockStore(MutableMapping):
         return block
 
     def get_blocks_by_batch_ids(self, batch_ids):
+        """Returns the block that contains the given batch id.
+
+        Args:
+            batch_id (str): a batch id
+
+        Returns:
+            a block wrapper of the containing block
+
+        Raises:
+            ValueError if no block containing the batch is found
+        """
         return self._block_store.get_multi(batch_ids, index='batch')
 
     def has_batch(self, batch_id):
+        """Returns True if the batch is contained in a block in the
+        block store.
+
+        Args:
+            batch_id (str): a batch id
+
+        Returns:
+            True if it is contained in a committed block, False otherwise
+        """
         return self._block_store.contains_key(batch_id, index='batch')
 
     def get_batch_by_transaction(self, transaction_id):
@@ -301,6 +382,15 @@ class BlockStore(MutableMapping):
         return BlockStore._get_batch_from_block(block, batch_id)
 
     def get_batches(self, batch_ids):
+        """Returns a list of committed batches from a iterable of batch ids.
+        Any batch id that does not exist in a committed block is ignored.
+
+        Args:
+            batch_ids (:iterable:str): the batch ids to find
+
+        Returns:
+            A list of the batches found by the given batch ids
+        """
         blocks = self._block_store.get_multi(batch_ids, index='batch')
 
         return [BlockStore._get_batch_from_block(block, batch_id)
