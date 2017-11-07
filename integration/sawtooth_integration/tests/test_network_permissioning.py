@@ -31,7 +31,10 @@ from sawtooth_integration.tests.integration_tools import SetSawtoothHome
 from sawtooth_integration.tests import node_controller as NodeController
 from sawtooth_integration.tests.integration_tools import RestClient
 
-import sawtooth_signing as signer
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
+from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 
 import time
 
@@ -304,15 +307,19 @@ def show_blocks(block_list):
 class Client(object):
 
     def __init__(self, rest_endpoint):
-        self.priv_key = signer.generate_private_key()
-        self.pub_key = signer.generate_public_key(self.priv_key)
+        context = create_context('secp256k1')
+        private_key = Secp256k1PrivateKey.new_random()
+        self.priv_key = private_key.as_hex()
+        self.pub_key = context.get_public_key(private_key).as_hex()
+
+        self.signer = CryptoFactory(context).new_signer(private_key)
         self._namespace = hashlib.sha512('intkey'.encode()).hexdigest()[:6]
         self._factory = MessageFactory(
             'intkey',
             '1.0',
-            self._namespace)
+            self._namespace,
+            signer=self.signer)
         self._rest = RestClient(rest_endpoint)
-
 
     def send(self):
         name = uuid4().hex[:20]
@@ -335,8 +342,10 @@ class Client(object):
 class Admin(object):
 
     def __init__(self, rest_endpoint):
-        self.priv_key = signer.generate_private_key()
-        self.pub_key = signer.generate_public_key(self.priv_key)
+        context = create_context('secp256k1')
+        private_key = Secp256k1PrivateKey.new_random()
+        self.priv_key = private_key.as_hex()
+        self.pub_key = context.get_public_key(private_key).as_hex()
 
         self._priv_key_file = os.path.join("/tmp", uuid4().hex[:20])
         with open(self._priv_key_file, mode='w') as out:

@@ -20,8 +20,6 @@ import signal
 import time
 import threading
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
@@ -65,7 +63,7 @@ class Validator(object):
 
     def __init__(self, bind_network, bind_component, endpoint,
                  peering, seeds_list, peer_list, data_dir, config_dir,
-                 identity_signing_key, scheduler_type, permissions,
+                 identity_signer, scheduler_type, permissions,
                  network_public_key=None, network_private_key=None,
                  roles=None,
                  metrics_registry=None
@@ -92,7 +90,8 @@ class Validator(object):
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
             config_dir (str): path to the config directory
-            identity_signing_key (str): key validator uses for signing
+            identity_signer (str): cryptographic signer the validator uses for
+                signing
         """
 
         # -- Setup Global State Database and Factory -- #
@@ -167,8 +166,7 @@ class Validator(object):
             max_incoming_connections=100,
             max_future_callback_workers=10,
             authorize=True,
-            public_key=signing.generate_public_key(identity_signing_key),
-            priv_key=identity_signing_key,
+            signer=identity_signer,
             roles=roles,
             metrics_registry=metrics_registry)
 
@@ -227,7 +225,7 @@ class Validator(object):
         batch_injector_factory = DefaultBatchInjectorFactory(
             block_store=block_store,
             state_view_factory=state_view_factory,
-            signing_key=identity_signing_key)
+            signer=identity_signer)
 
         block_publisher = BlockPublisher(
             transaction_executor=executor,
@@ -237,7 +235,7 @@ class Validator(object):
             batch_sender=batch_sender,
             squash_handler=context_manager.get_squash_handler(),
             chain_head=block_store.chain_head,
-            identity_signing_key=identity_signing_key,
+            identity_signer=identity_signer,
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier,
@@ -255,7 +253,7 @@ class Validator(object):
             on_chain_updated=block_publisher.on_chain_updated,
             squash_handler=context_manager.get_squash_handler(),
             chain_id_manager=chain_id_manager,
-            identity_signing_key=identity_signing_key,
+            identity_signer=identity_signer,
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier,
@@ -273,7 +271,7 @@ class Validator(object):
             completer=completer,
             block_store=block_store,
             state_view_factory=state_view_factory,
-            identity_key=identity_signing_key,
+            identity_signer=identity_signer,
             data_dir=data_dir,
             config_dir=config_dir,
             chain_id_manager=chain_id_manager,

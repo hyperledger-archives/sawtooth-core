@@ -13,8 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 
@@ -23,17 +21,18 @@ class BatchPublisher(object):
     """ Utility class to help BlockPublisher provide transaction publishing
     services to the consensus implementations.
     """
-    def __init__(self, identity_signing_key, batch_sender):
+    def __init__(self, identity_signer, batch_sender):
         """Initialize the BatchPublisher.
-        :param identity_signing_key: the validator's signing key.
+        :param identity_signer: the validator's cryptographic signer.
         :param batch_sender: interface to an object that will post the built
         batch to the network.
         """
-        self.identity_signing_key = identity_signing_key
         self._batch_sender = batch_sender
-        self._identity_signing_key = identity_signing_key
-        self._identity_public_key = \
-            signing.generate_public_key(self._identity_signing_key)
+        self._identity_signer = identity_signer
+
+    @property
+    def identity_signer(self):
+        return self._identity_signer
 
     def send(self, transactions):
         """ Package up transactions into a batch and send them to the
@@ -43,11 +42,11 @@ class BatchPublisher(object):
         """
         txn_signatures = [txn.header_signature for txn in transactions]
         header = BatchHeader(
-            signer_public_key=self._identity_public_key,
+            signer_public_key=self._identity_signer.get_public_key().as_hex(),
             transaction_ids=txn_signatures
         ).SerializeToString()
 
-        signature = signing.sign(header, self._identity_signing_key)
+        signature = self._identity_signer.sign(header)
         batch = Batch(
             header=header,
             transactions=transactions,

@@ -17,7 +17,6 @@ import abc
 import importlib
 
 from sawtooth_validator.state.settings_view import SettingsView
-import sawtooth_signing as signing
 
 
 class BatchInjectorFactory(object, metaclass=abc.ABCMeta):
@@ -57,20 +56,18 @@ class UnknownBatchInjectorError(Exception):
 
 
 class DefaultBatchInjectorFactory:
-    def __init__(self, block_store, state_view_factory, signing_key):
+    def __init__(self, block_store, state_view_factory, signer):
         """
         Args:
             block_store (:obj:`BlockStore`): The block store, for passing to
                 batch injectors that require it.
             state_view_factory (:obj:`StateViewFactory`): The state view
                 factory, for passing to injectors that require it.
-            signing_key (str): The signing key of the validator.
-            public_key (str): The public key of the validator.
+            signer (:obj:`Signer`): The cryptographic signer of the validator.
         """
         self._block_store = block_store
         self._state_view_factory = state_view_factory
-        self._signing_key = signing_key
-        self._public_key = signing.generate_public_key(signing_key)
+        self._signer = signer
 
     def _read_injector_setting(self, block_id):
         state_view = self._state_view_factory.create_view(
@@ -92,7 +89,6 @@ class DefaultBatchInjectorFactory:
                 "sawtooth_block_info.injector")
 
             return block_info_injector.BlockInfoInjector(
-                self._block_store, self._state_view_factory, self._signing_key,
-                self._public_key)
+                self._block_store, self._state_view_factory, self._signer)
 
         raise UnknownBatchInjectorError(injector)

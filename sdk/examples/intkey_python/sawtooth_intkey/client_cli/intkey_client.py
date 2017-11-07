@@ -20,7 +20,10 @@ import requests
 import yaml
 import cbor
 
-import sawtooth_signing.secp256k1_signer as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.protobuf.transaction_pb2 import Transaction
@@ -42,13 +45,23 @@ class IntkeyClient:
         if keyfile is not None:
             try:
                 with open(keyfile) as fd:
-                    self._private_key = fd.read().strip()
+                    private_key_str = fd.read().strip()
                     fd.close()
             except OSError as err:
                 raise IntkeyClientException(
                     'Failed to read private key: {}'.format(str(err)))
 
-            self._public_key = signing.generate_public_key(self._private_key)
+            try:
+                private_key = Secp256k1PrivateKey.from_hex(private_key_str)
+            except ParseError:
+                try:
+                    private_key = Secp256k1PrivateKey.from_wif(private_key_str)
+                except ParseError as e:
+                    raise IntkeyClientException(
+                        'Unable to load private key: {}'.format(str(e)))
+
+            self._signer = CryptoFactory(
+                create_context('secp256k1')).new_signer(private_key)
 
     def set(self, name, value, wait=None):
         return self._send_transaction('set', name, value, wait=wait)
@@ -148,18 +161,18 @@ class IntkeyClient:
         address = self._get_address(name)
 
         header = TransactionHeader(
-            signer_public_key=self._public_key,
+            signer_public_key=self._signer.get_public_key().as_hex(),
             family_name="intkey",
             family_version="1.0",
             inputs=[address],
             outputs=[address],
             dependencies=[],
             payload_sha512=_sha512(payload),
-            batcher_public_key=self._public_key,
+            batcher_public_key=self._signer.get_public_key().as_hex(),
             nonce=time.time().hex().encode()
         ).SerializeToString()
 
-        signature = signing.sign(header, self._private_key)
+        signature = self._signer.sign(header)
 
         transaction = Transaction(
             header=header,
@@ -198,11 +211,11 @@ class IntkeyClient:
         transaction_signatures = [t.header_signature for t in transactions]
 
         header = BatchHeader(
-            signer_public_key=self._public_key,
+            signer_public_key=self._signer.get_public_key().as_hex(),
             transaction_ids=transaction_signatures
         ).SerializeToString()
 
-        signature = signing.sign(header, self._private_key)
+        signature = self._signer.sign(header)
 
         batch = Batch(
             header=header,

@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,37 +12,83 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+from sawtooth_signing.core import NoSuchAlgorithmError
+from sawtooth_signing.core import ParseError
+from sawtooth_signing.core import SigningError
 
-""" Sawtooth Signing API
+from sawtooth_signing.secp256k1 import Secp256k1Context
 
-    This module provides an interface to signing operations that insulates
-    the caller from decisions on the underlying crypto system.
-    All keys are returned as serialized strings.
-    All methods expect that serialized format.
 
-    Basic Usage:
-        import sawtooth_signing as signing
+class Signer:
+    """A convenient wrapper of Context and PrivateKey
+    """
+    def __init__(self, context, private_key):
+        """
+        """
+        self._context = context
+        self._private_key = private_key
+        self._public_key = None
 
-        msg = 'this is a message'
-        priv = signing.generate_private_key()
-        pub = signing.generate_public_key(priv)
-        sig = signing.sign(msg, priv)
-        ver = signing.verify(msg, sig, pub)
+    def sign(self, message):
+        """Signs the given message
 
-        # Store Private Key
-        keyfile = open(filename, 'w')
-        keyfile.write(priv)
-        keyfile.close()
+        Args:
+            message (bytes): the message bytes
 
-        # Retrieve Private Key
-        keyfile = open(filename, 'r')
-        priv = keyfile.readline()
+        Returns:
+            The signature in a hex-encoded string
 
-    As new crypto packages are implemented this package serves as a build
-    time switch to select the crypto package for that sawtooth network.
+        Raises:
+            SigningError: if any error occurs during the signing process
+        """
+        return self._context.sign(message, self._private_key)
 
-    For example 'from ed25519_signer import *' would change sawtooth's
-    crypto selection without requiring changes to the API consumers.
-"""
-# pylint: disable=wildcard-import
-from sawtooth_signing.secp256k1_signer import *
+    def get_public_key(self):
+        """Return the public key for this Signer instance.
+        """
+        # Lazy-eval the public key
+        if self._public_key is None:
+            self._public_key = self._context.get_public_key(self._private_key)
+        return self._public_key
+
+
+class CryptoFactory:
+    """Factory for generating Signers.
+    """
+    def __init__(self, context):
+        self._context = context
+
+    @property
+    def context(self):
+        """Return the context that backs this factory instance
+        """
+        return self._context
+
+    def new_signer(self, private_key):
+        """Create a new signer for the given private key.
+
+        Args:
+            private_key (:obj:`PrivateKey`): a private key
+
+        Returns:
+            (:obj:`Signer`): a signer instance
+        """
+        return Signer(self._context, private_key)
+
+
+def create_context(algorithm_name):
+    """Returns an algorithm instance by name.
+
+    Args:
+        algorithm_name (str): the algorithm name
+
+    Returns:
+        (:obj:`Context`): a context instance for the given algorithm
+
+    Raises:
+        NoSuchAlgorithmError if the algorithm is unknown
+    """
+    if algorithm_name == 'secp256k1':
+        return Secp256k1Context()
+
+    raise NoSuchAlgorithmError("no such algorithm: {}".format(algorithm_name))

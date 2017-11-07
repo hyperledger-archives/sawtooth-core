@@ -20,6 +20,9 @@ from uuid import uuid4
 
 import cbor
 
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_processor_test.message_factory import MessageFactory
 
 from sawtooth_integration.tests.integration_tools import RestClient
@@ -309,11 +312,10 @@ class Transactor(object):
             if rest_endpoint.startswith("http://") \
             else "http://{}".format(rest_endpoint)
         with open('/root/.sawtooth/keys/{}.priv'.format(name)) as priv_file:
-            private_key = priv_file.read().strip('\n')
-        self._private_key = private_key
-        with open('/root/.sawtooth/keys/{}.pub'.format(name)) as pub_file:
-            public_key = pub_file.read().strip('\n')
-        self._public_key = public_key
+            private_key = Secp256k1PrivateKey.from_hex(
+                priv_file.read().strip('\n'))
+        self._signer = CryptoFactory(create_context('secp256k1')) \
+            .new_signer(private_key)
         self._factories = {}
         self._client = RestClient(url=self._rest_endpoint)
 
@@ -322,7 +324,7 @@ class Transactor(object):
 
     @property
     def public_key(self):
-        return self._public_key
+        return self._signer.get_public_key().as_hex()
 
     def _add_transaction_family_factory(self, family_name):
         """Add a MessageFactory for the specified family.
@@ -337,8 +339,7 @@ class Transactor(object):
             family_name=family_config['family_name'],
             family_version=family_config['family_version'],
             namespace=family_config['namespace'],
-            private=self._private_key,
-            public=self._public_key)
+            signer=self._signer)
 
     def create_txn(self, family_name, batcher=None):
         unique_value = uuid4().hex[:20]

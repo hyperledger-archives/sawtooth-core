@@ -24,7 +24,6 @@ import random
 import string
 import time
 import cbor
-import sawtooth_signing as signing
 
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
@@ -35,7 +34,7 @@ LOGGER = logging.getLogger(__name__)
 
 class NoopPayload(object):
     def __init__(self):
-        self.nonce = binascii.b2a_hex(random.getrandbits(8*8).to_bytes(8, byteorder='little'))
+        self.nonce = binascii.b2a_hex(random.getrandbits(8*8).to_bytes(8,hbyteorder='little'))
         self._sha512 = None
 
     def sha512(self):
@@ -44,23 +43,23 @@ class NoopPayload(object):
         return self._sha512
 
 
-def create_noop_transaction(private_key, public_key):
+def create_noop_transaction(signer):
     payload = NoopPayload()
 
     header = transaction_pb2.TransactionHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         family_name='noop',
         family_version='1.0',
         inputs=[],
         outputs=[],
         dependencies=[],
         payload_sha512=payload.sha512(),
-        batcher_public_key=public_key,
+        batcher_public_key=signer.get_public_key().as_hex(),
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
 
-    signature = signing.sign(header_bytes, private_key)
+    signature = signer.sign(header_bytes)
 
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
@@ -70,16 +69,16 @@ def create_noop_transaction(private_key, public_key):
     return transaction
 
 
-def create_batch(transactions, private_key, public_key):
+def create_batch(transactions, signer):
     transaction_signatures = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         transaction_ids=transaction_signatures)
 
     header_bytes = header.SerializeToString()
 
-    signature = signing.sign(header_bytes, private_key)
+    signature = signer.sign(header_bytes)
 
     batch = batch_pb2.Batch(
         header=header_bytes,

@@ -19,8 +19,6 @@ import logging
 import queue
 from threading import RLock
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
@@ -98,7 +96,7 @@ class BlockValidator(object):
                  done_cb,
                  executor,
                  squash_handler,
-                 identity_signing_key,
+                 identity_signer,
                  data_dir,
                  config_dir,
                  permission_verifier):
@@ -115,7 +113,7 @@ class BlockValidator(object):
              executor: The thread pool to process block validations.
              squash_handler: A parameter passed when creating transaction
              schedulers.
-             identity_signing_key: Private key for signing blocks.
+             identity_signer: A cryptographic signer for signing blocks.
              data_dir: Path to location where persistent data for the
              consensus module can be stored.
              config_dir: Path to location where config data for the
@@ -137,9 +135,7 @@ class BlockValidator(object):
         self._done_cb = done_cb
         self._executor = executor
         self._squash_handler = squash_handler
-        self._identity_signing_key = identity_signing_key
-        self._identity_public_key = \
-            signing.generate_public_key(self._identity_signing_key)
+        self._identity_signer = identity_signer
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._result = {
@@ -292,12 +288,14 @@ class BlockValidator(object):
                 valid = self._validate_permissions(blkw)
 
                 if valid:
+                    public_key = \
+                        self._identity_signer.get_public_key().as_hex()
                     consensus = self._consensus_module.BlockVerifier(
                         block_cache=self._block_cache,
                         state_view_factory=self._state_view_factory,
                         data_dir=self._data_dir,
                         config_dir=self._config_dir,
-                        validator_id=self._identity_public_key)
+                        validator_id=public_key)
                     valid = consensus.verify_block(blkw)
 
                 if valid:
@@ -402,12 +400,13 @@ class BlockValidator(object):
     def _test_commit_new_chain(self):
         """ Compare the two chains and determine which should be the head.
         """
+        public_key = self._identity_signer.get_public_key().as_hex()
         fork_resolver = self._consensus_module.\
             ForkResolver(block_cache=self._block_cache,
                          state_view_factory=self._state_view_factory,
                          data_dir=self._data_dir,
                          config_dir=self._config_dir,
-                         validator_id=self._identity_public_key)
+                         validator_id=public_key)
 
         return fork_resolver.compare_forks(self._chain_head, self._new_block)
 
@@ -559,7 +558,7 @@ class ChainController(object):
                  on_chain_updated,
                  squash_handler,
                  chain_id_manager,
-                 identity_signing_key,
+                 identity_signer,
                  data_dir,
                  config_dir,
                  permission_verifier,
@@ -586,7 +585,7 @@ class ChainController(object):
                  squash_handler: a parameter passed when creating transaction
                  schedulers.
             chain_id_manager: The ChainIdManager instance.
-            identity_signing_key: Private key for signing blocks.
+            identity_signer: Private key for signing blocks.
             data_dir: path to location where persistent data for the
                 consensus module can be stored.
             config_dir: path to location where config data for the
@@ -605,9 +604,7 @@ class ChainController(object):
         self._transaction_executor = transaction_executor
         self._notify_on_chain_updated = on_chain_updated
         self._squash_handler = squash_handler
-        self._identity_signing_key = identity_signing_key
-        self._identity_public_key = \
-            signing.generate_public_key(self._identity_signing_key)
+        self._identity_signer = identity_signer
         self._data_dir = data_dir
         self._config_dir = config_dir
 
@@ -705,7 +702,7 @@ class ChainController(object):
                 done_cb=self.on_block_validated,
                 executor=self._transaction_executor,
                 squash_handler=self._squash_handler,
-                identity_signing_key=self._identity_signing_key,
+                identity_signer=self._identity_signer,
                 data_dir=self._data_dir,
                 config_dir=self._config_dir,
                 permission_verifier=self._permission_verifier)
@@ -926,7 +923,7 @@ class ChainController(object):
                     done_cb=self.on_block_validated,
                     executor=self._transaction_executor,
                     squash_handler=self._squash_handler,
-                    identity_signing_key=self._identity_signing_key,
+                    identity_signer=self._identity_signer,
                     data_dir=self._data_dir,
                     config_dir=self._config_dir,
                     permission_verifier=self._permission_verifier)

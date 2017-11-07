@@ -15,7 +15,8 @@
 
 import unittest
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_poet_simulator.poet_enclave_simulator.enclave_wait_timer \
     import EnclaveWaitTimer
@@ -26,7 +27,7 @@ from sawtooth_poet_simulator.poet_enclave_simulator.enclave_wait_certificate \
 class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
     @classmethod
     def _create_random_key(cls):
-        return signing.generate_private_key()
+        return Secp256k1PrivateKey.new_random()
 
     def test_create_wait_certificate(self):
         wait_timer = \
@@ -131,9 +132,9 @@ class TestEnclaveSimulatorWaitCertificate(unittest.TestCase):
                 block_hash='Indigestion. Pepto Bismol.')
 
         serialized = wait_certificate.serialize()
-        signing_key = self._create_random_key()
+        private_key = self._create_random_key()
         wait_certificate.signature = \
-            signing.sign(serialized, signing_key)
+            create_context('secp256k1').sign(serialized.encode(), private_key)
 
         copy_wait_certificate = \
             EnclaveWaitCertificate.wait_certificate_from_serialized(

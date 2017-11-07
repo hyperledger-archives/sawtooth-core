@@ -19,7 +19,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_poet_cli.main import main
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb
@@ -101,9 +102,9 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         self.assertTrue(poet_public_key in self._store)
 
     def _create_key(self, key_name='validator.priv'):
-        private_key = signing.generate_private_key()
+        private_key = Secp256k1PrivateKey.new_random()
         priv_file = os.path.join(self._temp_dir, key_name)
         with open(priv_file, 'w') as priv_fd:
-            priv_fd.write(private_key)
+            priv_fd.write(private_key.as_hex())
 
-        return signing.generate_public_key(private_key)
+        return create_context('secp256k1').get_public_key(private_key).as_hex()

@@ -18,8 +18,6 @@ import queue
 from threading import RLock
 import time
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
@@ -267,22 +265,23 @@ class _CandidateBlock(object):
         return self._consensus.check_publish_block(
             self._block_builder.block_header)
 
-    def _sign_block(self, block, identity_signing_key):
+    def _sign_block(self, block, identity_signer):
         """ The block should be complete and the final
         signature from the publishing validator(this validator) needs to
         be added.
         :param block: the Block to sign.
-        :param identity_signing_key: the key to sign the block with.
+        :param identity_signer: the singer to sign the block with.
         """
         header_bytes = block.block_header.SerializeToString()
-        signature = signing.sign(header_bytes, identity_signing_key)
+        signature = identity_signer.sign(header_bytes)
         block.set_signature(signature)
 
-    def finalize_block(self, identity_signing_key, pending_batches):
+    def finalize_block(self, identity_signer, pending_batches):
         """Compose the final Block to publish. This involves flushing
         the scheduler, having consensus bless the block, and signing
         the block.
-        :param identity_signing_key: the key to sign the block with.
+        :param identity_signer: the cryptographic signer to sign the block
+            with.
         :param pending_batches: list to receive any batches that were
         submitted to add to the block but were not validated before this
         call.
@@ -382,7 +381,7 @@ class _CandidateBlock(object):
             return None
 
         builder.set_state_hash(state_hash)
-        self._sign_block(builder, identity_signing_key)
+        self._sign_block(builder, identity_signer)
         return builder.build_block()
 
 
@@ -399,7 +398,7 @@ class BlockPublisher(object):
                  batch_sender,
                  squash_handler,
                  chain_head,
-                 identity_signing_key,
+                 identity_signer,
                  data_dir,
                  config_dir,
                  permission_verifier,
@@ -421,7 +420,8 @@ class BlockPublisher(object):
             squash_handler (function): Squash handler function for merging
                 contexts.
             chain_head (:obj:`BlockWrapper`): The initial chain head.
-            identity_signing_key (str): Private key for signing blocks
+            identity_signer (:obj:`Signer`): Cryptographic signer for signing
+                blocks
             data_dir (str): path to location where persistent data for the
                 consensus module can be stored.
             config_dir (str): path to location where configuration can be
@@ -438,17 +438,14 @@ class BlockPublisher(object):
         self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
-        self._batch_publisher = BatchPublisher(identity_signing_key,
-                                               batch_sender)
+        self._batch_publisher = BatchPublisher(identity_signer, batch_sender)
         self._pending_batches = []  # batches we are waiting for validation,
         # arranged in the order of batches received.
         self._pending_batch_ids = []
 
         self._chain_head = chain_head  # block (BlockWrapper)
         self._squash_handler = squash_handler
-        self._identity_signing_key = identity_signing_key
-        self._identity_public_key = \
-            signing.generate_public_key(self._identity_signing_key)
+        self._identity_signer = identity_signer
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
@@ -510,13 +507,14 @@ class BlockPublisher(object):
             'sawtooth.publisher.max_batches_per_block',
             default_value=0, value_type=int)
 
+        public_key = self._identity_signer.get_public_key().as_hex()
         consensus = consensus_module.\
             BlockPublisher(block_cache=self._block_cache,
                            state_view_factory=self._state_view_factory,
                            batch_publisher=self._batch_publisher,
                            data_dir=self._data_dir,
                            config_dir=self._config_dir,
-                           validator_id=self._identity_public_key)
+                           validator_id=public_key)
 
         batch_injectors = []
         if self._batch_injector_factory is not None:
@@ -527,7 +525,7 @@ class BlockPublisher(object):
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,
             previous_block_id=chain_head.header_signature,
-            signer_public_key=self._identity_public_key)
+            signer_public_key=public_key)
         block_builder = BlockBuilder(block_header)
         if not consensus.initialize_block(block_builder.block_header):
             LOGGER.debug("Consensus not ready to build candidate block.")
@@ -669,7 +667,7 @@ class BlockPublisher(object):
                     # that were not added to the block
                     last_batch = self._candidate_block.last_batch
                     block = self._candidate_block.finalize_block(
-                        self._identity_signing_key,
+                        self._identity_signer,
                         pending_batches)
                     self._candidate_block = None
                     # Update the _pending_batches to reflect what we learned.
