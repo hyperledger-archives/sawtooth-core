@@ -103,7 +103,6 @@ class BlockValidator(object):
     """
 
     def __init__(self,
-                 consensus_module,
                  block_cache,
                  new_block,
                  state_view_factory,
@@ -115,7 +114,6 @@ class BlockValidator(object):
                  permission_verifier):
         """Initialize the BlockValidator
         Args:
-             consensus_module: The consensus module that contains
              implementation of the consensus algorithm to use for block
              validation.
              block_cache: The cache of all recent blocks and the processing
@@ -133,7 +131,6 @@ class BlockValidator(object):
         Returns:
             None
         """
-        self._consensus_module = consensus_module
         self._block_cache = block_cache
         self._new_block = new_block
 
@@ -278,15 +275,13 @@ class BlockValidator(object):
                 blkw, prev_state_root)
         return True
 
-    def validate_block(self, blkw, cur_chain=None):
+    def validate_block(self, blkw, consensus, chain=None):
         # pylint: disable=broad-except
         try:
-            # Determine the validity of the new fork and build the transaction
-            # cache to simulate the state of the chain at the common root.
-            if cur_chain is None:
-                cur_chain = []
+            if chain is None:
+                chain = []
             chain_commit_state = ChainCommitState(
-                self._block_cache.block_store, cur_chain)
+                self._block_cache.block_store, chain)
 
             if blkw.status == BlockStatus.Valid:
                 return True
@@ -298,12 +293,6 @@ class BlockValidator(object):
                 prev_state_root = self._get_previous_block_state_root(blkw)
                 valid = self.validate_permissions(blkw, prev_state_root)
 
-                consensus = self._consensus_module.\
-                    BlockVerifier(block_cache=self._block_cache,
-                                  state_view_factory=self._state_view_factory,
-                                  data_dir=self._data_dir,
-                                  config_dir=self._config_dir,
-                                  validator_id=self._identity_public_key)
                 if valid:
                     valid = self.validate_on_chain_rules(blkw, prev_state_root)
 
@@ -312,7 +301,13 @@ class BlockValidator(object):
                         blkw, prev_state_root, chain_commit_state)
 
                 if valid:
-                    valid = consensus.verify_block(blkw)
+                    block_verifier = consensus.BlockVerifier(
+                        block_cache=self._block_cache,
+                        state_view_factory=self._state_view_factory,
+                        data_dir=self._data_dir,
+                        config_dir=self._config_dir,
+                        validator_id=self._identity_public_key)
+                    valid = block_verifier.verify_block(blkw)
 
                 # since changes to the chain-head can change the state of the
                 # blocks in BlockStore we have to revalidate this block.
@@ -416,15 +411,15 @@ class BlockValidator(object):
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
 
-    def _compare_forks_consensus(self, chain_head, new_block):
+    def _compare_forks_consensus(self, consensus, chain_head, new_block):
         """Ask the consensus module which fork to choose.
         """
-        fork_resolver = self._consensus_module.\
-            ForkResolver(block_cache=self._block_cache,
-                         state_view_factory=self._state_view_factory,
-                         data_dir=self._data_dir,
-                         config_dir=self._config_dir,
-                         validator_id=self._identity_public_key)
+        fork_resolver = consensus.ForkResolver(
+            block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
+            data_dir=self._data_dir,
+            config_dir=self._config_dir,
+            validator_id=self._identity_public_key)
 
         return fork_resolver.compare_forks(chain_head, new_block)
 
@@ -446,7 +441,7 @@ class BlockValidator(object):
 
         return (committed_batches, uncommitted_batches)
 
-    def run(self, callback):
+    def run(self, consensus, callback):
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
@@ -487,7 +482,7 @@ class BlockValidator(object):
             valid = True
             for block in reversed(new_chain):
                 if valid:
-                    if not self.validate_block(block, cur_chain):
+                    if not self.validate_block(block, consensus, cur_chain):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
                 else:
@@ -501,7 +496,7 @@ class BlockValidator(object):
 
             # Ask consensus if the new chain should be committed
             commit_new_chain = self._compare_forks_consensus(
-                self._chain_head, self._new_block)
+                consensus, self._chain_head, self._new_block)
 
             # If committing the new chain, get the list of committed batches
             # from the current chain that need to be uncommitted and the list
