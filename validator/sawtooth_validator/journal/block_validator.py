@@ -104,7 +104,6 @@ class BlockValidator(object):
 
     def __init__(self,
                  block_cache,
-                 new_block,
                  state_view_factory,
                  executor,
                  squash_handler,
@@ -118,7 +117,6 @@ class BlockValidator(object):
              validation.
              block_cache: The cache of all recent blocks and the processing
              state associated with them.
-             new_block: The block to validate.
              state_view_factory: The factory object to create.
              executor: The thread pool to process block validations.
              squash_handler: A parameter passed when creating transaction
@@ -132,7 +130,6 @@ class BlockValidator(object):
             None
         """
         self._block_cache = block_cache
-        self._new_block = new_block
 
         # Set during execution of the of the  BlockValidation to the current
         # chain_head at that time.
@@ -445,7 +442,7 @@ class BlockValidator(object):
 
         return (committed_batches, uncommitted_batches)
 
-    def run(self, consensus, callback):
+    def run(self, new_block, consensus, callback):
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
@@ -453,9 +450,8 @@ class BlockValidator(object):
         so that the change over can be made if necessary.
         """
         try:
-            result = BlockValidationResult(self._new_block)
-            LOGGER.info("Starting block validation of : %s",
-                        self._new_block)
+            result = BlockValidationResult(new_block)
+            LOGGER.info("Starting block validation of : %s", new_block)
 
             # Get the current chain_head and store it in the result
             self._chain_head = self._block_cache.block_store.chain_head
@@ -463,7 +459,7 @@ class BlockValidator(object):
 
             # Get the heads of the current chain and the new chain
             cur_blkw = self._chain_head
-            new_blkw = self._new_block
+            new_blkw = new_block
 
             # Get all the blocks since the greatest common height from the
             # longer chain.
@@ -503,7 +499,7 @@ class BlockValidator(object):
 
             # Ask consensus if the new chain should be committed
             commit_new_chain = self._compare_forks_consensus(
-                consensus, self._chain_head, self._new_block)
+                consensus, self._chain_head, new_block)
 
             # If committing the new chain, get the list of committed batches
             # from the current chain that need to be uncommitted and the list
@@ -517,7 +513,7 @@ class BlockValidator(object):
 
             # Pass the results to the callback function
             callback(commit_new_chain, result)
-            LOGGER.info("Finished block validation of: %s", self._new_block)
+            LOGGER.info("Finished block validation of: %s", new_block)
 
         except BlockValidationAborted:
             callback(False, result)
@@ -527,7 +523,6 @@ class BlockValidator(object):
             return
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
-                "Block validation failed with unexpected error: %s",
-                self._new_block)
+                "Block validation failed with unexpected error: %s", new_block)
             # callback to clean up the block out of the processing list.
             callback(False, result)
