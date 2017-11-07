@@ -768,19 +768,15 @@ class TestBlockValidator(unittest.TestCase):
     # block validation
 
     def validate_block(self, block):
-        validator = self.create_block_validator(
-            block,
-            self.block_validation_handler.on_block_validated)
+        validator = self.create_block_validator(block)
+        validator.run(self.block_validation_handler.on_block_validated)
 
-        validator.run()
-
-    def create_block_validator(self, new_block, on_block_validated):
+    def create_block_validator(self, new_block):
         return BlockValidator(
             consensus_module=mock_consensus,
             new_block=new_block,
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
-            done_cb=on_block_validated,
             executor=MockTransactionExecutor(batch_execution_result=None),
             squash_handler=None,
             identity_signing_key=self.block_tree_manager.identity_signing_key,

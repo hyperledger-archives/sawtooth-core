@@ -107,7 +107,6 @@ class BlockValidator(object):
                  block_cache,
                  new_block,
                  state_view_factory,
-                 done_cb,
                  executor,
                  squash_handler,
                  identity_signing_key,
@@ -123,7 +122,6 @@ class BlockValidator(object):
              state associated with them.
              new_block: The block to validate.
              state_view_factory: The factory object to create.
-             done_cb: The method to call when block validation completed
              executor: The thread pool to process block validations.
              squash_handler: A parameter passed when creating transaction
              schedulers.
@@ -144,7 +142,6 @@ class BlockValidator(object):
         self._chain_head = None
 
         self._state_view_factory = state_view_factory
-        self._done_cb = done_cb
         self._executor = executor
         self._squash_handler = squash_handler
         self._identity_signing_key = identity_signing_key
@@ -444,7 +441,7 @@ class BlockValidator(object):
 
         return (committed_batches, uncommitted_batches)
 
-    def run(self):
+    def run(self, callback):
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
@@ -494,7 +491,7 @@ class BlockValidator(object):
                     block.status = BlockStatus.Invalid
 
             if not valid:
-                self._done_cb(False, self._result)
+                callback(False, self._result)
                 return
 
             # Ask consensus if the new chain should be committed
@@ -512,18 +509,18 @@ class BlockValidator(object):
                 self._result.uncommitted_batches = uncommit
 
             # Pass the results to the callback function
-            self._done_cb(commit_new_chain, self._result)
+            callback(commit_new_chain, self._result)
             LOGGER.info("Finished block validation of: %s", self._new_block)
 
         except BlockValidationAborted:
-            self._done_cb(False, self._result)
+            callback(False, self._result)
             return
         except ChainHeadUpdated:
-            self._done_cb(False, self._result)
+            callback(False, self._result)
             return
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "Block validation failed with unexpected error: %s",
                 self._new_block)
             # callback to clean up the block out of the processing list.
-            self._done_cb(False, self._result)
+            callback(False, self._result)
