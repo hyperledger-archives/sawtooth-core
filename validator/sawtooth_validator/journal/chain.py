@@ -804,7 +804,11 @@ class ChainController(object):
                     pending_blocks = \
                         self._blocks_pending.get(block.previous_block_id,
                                                  [])
-                    pending_blocks.append(block)
+                    # Though rare, the block may already be in the
+                    # pending_block list and should not be re-added.
+                    if block not in pending_blocks:
+                        pending_blocks.append(block)
+
                     self._blocks_pending[block.previous_block_id] = \
                         pending_blocks
                 else:
