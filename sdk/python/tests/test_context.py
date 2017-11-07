@@ -23,7 +23,7 @@ from sawtooth_sdk.messaging.future import Future
 from sawtooth_sdk.messaging.future import FutureResult
 
 from sawtooth_sdk.protobuf.validator_pb2 import Message
-from sawtooth_sdk.protobuf.state_context_pb2 import Entry
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateEntry
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
@@ -54,7 +54,7 @@ class ContextTest(unittest.TestCase):
 
     def _make_entries(self, protobuf=True):
         if protobuf:
-            return [Entry(address=a, data=d)
+            return [TpStateEntry(address=a, data=d)
                     for a, d in zip(self.addresses, self.data)]
 
         entries = OrderedDict()

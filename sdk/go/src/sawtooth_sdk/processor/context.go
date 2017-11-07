@@ -133,9 +133,9 @@ func (self *Context) GetState(addresses []string) (map[string][]byte, error) {
 //
 func (self *Context) SetState(pairs map[string][]byte) ([]string, error) {
 	// Construct the message
-	entries := make([]*state_context_pb2.Entry, 0, len(pairs))
+	entries := make([]*state_context_pb2.TpStateEntry, 0, len(pairs))
 	for address, data := range pairs {
-		entries = append(entries, &state_context_pb2.Entry{
+		entries = append(entries, &state_context_pb2.TpStateEntry{
 			Address: address,
 			Data:    data,
 		})

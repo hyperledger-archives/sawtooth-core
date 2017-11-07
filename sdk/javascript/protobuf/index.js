@@ -72,7 +72,7 @@ module.exports = {
 
   //
   // State
-  Entry: root.lookup('Entry'),
+  TpStateEntry: root.lookup('TpStateEntry'),
 
   TpStateGetRequest: root.lookup('TpStateGetRequest'),
 
