@@ -437,7 +437,7 @@ class BlockValidator(object):
 
         return (committed_batches, uncommitted_batches)
 
-    def run(self, new_block, consensus, callback):
+    def run(self, block, consensus, callback):
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
@@ -445,48 +445,48 @@ class BlockValidator(object):
         so that the change over can be made if necessary.
         """
         try:
-            result = BlockValidationResult(new_block)
-            LOGGER.info("Starting block validation of : %s", new_block)
+            result = BlockValidationResult(block)
+            LOGGER.info("Starting block validation of : %s", block)
 
             # Get the current chain_head and store it in the result
             chain_head = self._block_cache.block_store.chain_head
             result.chain_head = chain_head
 
-            # Get the heads of the current chain and the new chain
-            cur_blkw = chain_head
-            new_blkw = new_block
+            # Create new local variables for current and new block, since
+            # these variables get modified later
+            current_block = chain_head
+            new_block = block
 
             # Get all the blocks since the greatest common height from the
             # longer chain.
-            if self.compare_chain_height(cur_blkw, new_blkw):
-                cur_blkw, result.current_chain =\
-                    self.build_fork_diff_to_common_height(cur_blkw, new_blkw)
+            if self.compare_chain_height(current_block, new_block):
+                current_block, result.current_chain =\
+                    self.build_fork_diff_to_common_height(
+                        current_block, new_block)
             else:
-                new_blkw, result.new_chain =\
-                    self.build_fork_diff_to_common_height(new_blkw, cur_blkw)
-
-            # Create local bindings
-            cur_chain = result.current_chain
-            new_chain = result.new_chain
+                new_block, result.new_chain =\
+                    self.build_fork_diff_to_common_height(
+                        new_block, current_block)
 
             # Add blocks to the two chains until a common ancestor is found
             # or raise an exception if no common ancestor is found
             self.extend_fork_diff_to_common_ancestor(
-                new_blkw, cur_blkw,
+                new_block, current_block,
                 result.new_chain, result.current_chain)
 
             valid = True
-            for block in reversed(new_chain):
+            for blk in reversed(result.new_chain):
                 if valid:
                     if not self.validate_block(
-                        block, consensus, result, chain_head, cur_chain
+                        blk, consensus, result, chain_head,
+                        result.current_chain
                     ):
-                        LOGGER.info("Block validation failed: %s", block)
+                        LOGGER.info("Block validation failed: %s", blk)
                         valid = False
                 else:
-                    LOGGER.info("Block marked invalid(invalid predecessor): " +
-                                "%s", block)
-                    block.status = BlockStatus.Invalid
+                    LOGGER.info(
+                        "Block marked invalid(invalid predecessor): %s", blk)
+                    blk.status = BlockStatus.Invalid
 
             if not valid:
                 callback(False, result)
@@ -494,7 +494,7 @@ class BlockValidator(object):
 
             # Ask consensus if the new chain should be committed
             commit_new_chain = self._compare_forks_consensus(
-                consensus, chain_head, new_block)
+                consensus, chain_head, block)
 
             # If committing the new chain, get the list of committed batches
             # from the current chain that need to be uncommitted and the list
@@ -502,13 +502,14 @@ class BlockValidator(object):
             # committed.
             if commit_new_chain:
                 commit, uncommit =\
-                    self.get_batch_commit_changes(new_chain, cur_chain)
+                    self.get_batch_commit_changes(
+                        result.new_chain, result.current_chain)
                 result.committed_batches = commit
                 result.uncommitted_batches = uncommit
 
             # Pass the results to the callback function
             callback(commit_new_chain, result)
-            LOGGER.info("Finished block validation of: %s", new_block)
+            LOGGER.info("Finished block validation of: %s", block)
 
         except BlockValidationAborted:
             callback(False, result)
