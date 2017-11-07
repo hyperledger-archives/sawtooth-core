@@ -228,7 +228,6 @@ class ChainController(object):
                     state_view)
 
             validator = BlockValidator(
-                consensus_module=consensus_module,
                 new_block=blkw,
                 block_cache=self._block_cache,
                 state_view_factory=self._state_view_factory,
@@ -239,7 +238,8 @@ class ChainController(object):
                 config_dir=self._config_dir,
                 permission_verifier=self._permission_verifier)
             self._blocks_processing[blkw.block.header_signature] = validator
-            self._thread_pool.submit(validator.run, self.on_block_validated)
+            self._thread_pool.submit(
+                validator.run, consensus_module, self.on_block_validated)
 
     def on_block_validated(self, commit_new_block, result):
         """Message back from the block validator, that the validation is
@@ -432,7 +432,6 @@ class ChainController(object):
                         state_view)
 
                 validator = BlockValidator(
-                    consensus_module=consensus_module,
                     new_block=block,
                     block_cache=self._block_cache,
                     state_view_factory=self._state_view_factory,
@@ -443,7 +442,7 @@ class ChainController(object):
                     config_dir=self._config_dir,
                     permission_verifier=self._permission_verifier)
 
-                valid = validator.validate_block(block)
+                valid = validator.validate_block(block, consensus_module)
                 if valid:
                     if chain_id is None:
                         self._chain_id_manager.save_block_chain_id(
