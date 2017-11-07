@@ -31,8 +31,8 @@ from sawtooth_intkey.client_cli.create_batch import add_create_batch_parser
 from sawtooth_intkey.client_cli.create_batch import do_create_batch
 from sawtooth_intkey.client_cli.load import add_load_parser
 from sawtooth_intkey.client_cli.load import do_load
-from sawtooth_intkey.client_cli.workload import add_workload_parser
-from sawtooth_intkey.client_cli.workload import do_workload
+from sawtooth_intkey.client_cli.intkey_workload import add_workload_parser
+from sawtooth_intkey.client_cli.intkey_workload import do_workload
 
 from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
 from sawtooth_intkey.client_cli.exceptions import IntKeyCliException

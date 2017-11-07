@@ -25,11 +25,12 @@ from base64 import b64encode
 
 import requests
 import sawtooth_signing as signing
-from sawtooth_sdk.workload.workload_generator import WorkloadGenerator
-from sawtooth_sdk.workload.sawtooth_workload import Workload
-from sawtooth_sdk.protobuf import batch_pb2
+from sawtooth_intkey.client_cli.workload.workload_generator import \
+    WorkloadGenerator
+from sawtooth_intkey.client_cli.workload.sawtooth_workload import Workload
 from sawtooth_intkey.client_cli.create_batch import create_intkey_transaction
 from sawtooth_intkey.client_cli.create_batch import create_batch
+from sawtooth_sdk.protobuf import batch_pb2
 
 LOGGER = logging.getLogger(__name__)
 
