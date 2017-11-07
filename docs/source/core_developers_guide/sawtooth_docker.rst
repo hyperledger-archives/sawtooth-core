@@ -21,7 +21,6 @@ The docker subdirectory is structured as follows:
 .. code-block:: console
 
  ci/
-  sawtooth-all
   sawtooth-settings-tp
   sawtooth-intkey-tp-python
   ...
