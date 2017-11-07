@@ -147,7 +147,6 @@ class BlockValidator(object):
         self._identity_signer = identity_signer
         self._data_dir = data_dir
         self._config_dir = config_dir
-        self._result = BlockValidationResult(new_block)
         self._permission_verifier = permission_verifier
 
         self._validation_rule_enforcer = \
@@ -461,11 +460,12 @@ class BlockValidator(object):
         so that the change over can be made if necessary.
         """
         try:
+            result = BlockValidationResult(self._new_block)
             LOGGER.info("Starting block validation of : %s", self._new_block)
 
             # Get the current chain_head and store it in the result
             self._chain_head = self._block_cache.block_store.chain_head
-            self._result.chain_head = self._chain_head
+            result.chain_head = self._chain_head
 
             # Get the heads of the current chain and the new chain
             cur_blkw = self._chain_head
@@ -474,21 +474,21 @@ class BlockValidator(object):
             # Get all the blocks since the greatest common height from the
             # longer chain.
             if self.compare_chain_height(cur_blkw, new_blkw):
-                cur_blkw, self._result.current_chain =\
+                cur_blkw, result.current_chain =\
                     self.build_fork_diff_to_common_height(cur_blkw, new_blkw)
             else:
-                new_blkw, self._result.new_chain =\
+                new_blkw, result.new_chain =\
                     self.build_fork_diff_to_common_height(new_blkw, cur_blkw)
 
             # Create local bindings
-            cur_chain = self._result.current_chain
-            new_chain = self._result.new_chain
+            cur_chain = result.current_chain
+            new_chain = result.new_chain
 
             # Add blocks to the two chains until a common ancestor is found
             # or raise an exception if no common ancestor is found
             self.extend_fork_diff_to_common_ancestor(
                 new_blkw, cur_blkw,
-                self._result.new_chain, self._result.current_chain)
+                result.new_chain, result.current_chain)
 
             valid = True
             for block in reversed(new_chain):
@@ -496,7 +496,7 @@ class BlockValidator(object):
                     if not self.validate_block(block, consensus, cur_chain):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
-                    self._result.transaction_count += block.num_transactions
+                    result.transaction_count += block.num_transactions
                 else:
                     LOGGER.info(
                         "Block marked invalid (invalid predecessor): %s",
@@ -504,7 +504,7 @@ class BlockValidator(object):
                     block.status = BlockStatus.Invalid
 
             if not valid:
-                callback(False, self._result)
+                callback(False, result)
                 return
 
             # Ask consensus if the new chain should be committed
@@ -533,25 +533,25 @@ class BlockValidator(object):
             if commit_new_chain:
                 commit, uncommit =\
                     self.get_batch_commit_changes(new_chain, cur_chain)
-                self._result.committed_batches = commit
-                self._result.uncommitted_batches = uncommit
+                result.committed_batches = commit
+                result.uncommitted_batches = uncommit
 
                 if new_chain[0].previous_block_id != \
                         self._chain_head.identifier:
                     self._moved_to_fork_count.inc()
 
             # Pass the results to the callback function
-            callback(commit_new_chain, self._result)
+            callback(commit_new_chain, result)
             LOGGER.info("Finished block validation of: %s", self._new_block)
         except BlockValidationAborted:
-            callback(False, self._result)
+            callback(False, result)
             return
         except ChainHeadUpdated:
-            callback(False, self._result)
+            callback(False, result)
             return
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "Block validation failed with unexpected error: %s",
                 self._new_block)
             # callback to clean up the block out of the processing list.
-            callback(False, self._result)
+            callback(False, result)
