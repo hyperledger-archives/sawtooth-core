@@ -752,13 +752,13 @@ class TestBlockValidator(unittest.TestCase):
     def assert_new_block_committed(self):
         self.assert_handler_has_result()
         self.assertTrue(
-            self.block_validation_handler.result["commit_new_block"],
+            self.block_validation_handler.commit_new_block,
             "New block not committed, should be")
 
     def assert_new_block_not_committed(self):
         self.assert_handler_has_result()
         self.assertFalse(
-            self.block_validation_handler.result["commit_new_block"],
+            self.block_validation_handler.commit_new_block,
             "New block committed, shouldn't be")
 
     def assert_handler_has_result(self):
@@ -768,19 +768,16 @@ class TestBlockValidator(unittest.TestCase):
     # block validation
 
     def validate_block(self, block):
-        validator = self.create_block_validator(
+        validator = self.create_block_validator()
+        validator.run(
             block,
+            mock_consensus,
             self.block_validation_handler.on_block_validated)
 
-        validator.run()
-
-    def create_block_validator(self, new_block, on_block_validated):
+    def create_block_validator(self):
         return BlockValidator(
-            consensus_module=mock_consensus,
-            new_block=new_block,
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
-            done_cb=on_block_validated,
             executor=MockTransactionExecutor(batch_execution_result=None),
             squash_handler=None,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
@@ -790,14 +787,15 @@ class TestBlockValidator(unittest.TestCase):
 
     class BlockValidationHandler(object):
         def __init__(self):
+            self.commit_new_block = None
             self.result = None
 
         def on_block_validated(self, commit_new_block, result):
-            result["commit_new_block"] = commit_new_block
+            self.commit_new_block = commit_new_block
             self.result = result
 
         def has_result(self):
-            return self.result is not None
+            return not (self.result is None or self.commit_new_block is None)
 
     # block tree manager interface
 
