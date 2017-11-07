@@ -92,7 +92,7 @@ void GlobalState::Set(const std::vector<KeyValue>& kv_pairs) const {
     TpStateSetResponse response;
     request.set_context_id(this->context_id);
     for (auto kv : kv_pairs) {
-        Entry* ent = request.add_entries();
+        TpStateEntry* ent = request.add_entries();
         ent->set_address(kv.first);
         ent->set_data(kv.second);
     }

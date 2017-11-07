@@ -17,7 +17,7 @@
 
 'use strict'
 
-const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, TpStateDeleteRequest, TpStateDeleteResponse, Message} = require('../protobuf')
+const {TpStateEntry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, TpStateDeleteRequest, TpStateDeleteResponse, Message} = require('../protobuf')
 const {AuthorizationException} = require('../processor/exceptions')
 
 const _timeoutPromise = (p, millis) => {
@@ -70,7 +70,7 @@ class Context {
    */
   setState (addressValuePairs, timeout = null) {
     let entries = Object.keys(addressValuePairs).map((address) =>
-      Entry.create({address, data: addressValuePairs[address]}))
+      TpStateEntry.create({address, data: addressValuePairs[address]}))
 
     let setRequest = TpStateSetRequest.create({entries, contextId: this._contextId})
     let future = this._stream.send(Message.MessageType.TP_STATE_SET_REQUEST,

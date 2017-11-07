@@ -21,7 +21,7 @@ option go_package = "state_context_pb2";
 import "events.proto";
 
 // An entry in the State
-message Entry {
+message TpStateEntry {
     string address = 1;
     bytes data = 2;
 }
@@ -41,14 +41,14 @@ message TpStateGetResponse {
         AUTHORIZATION_ERROR = 2;
     }
 
-    repeated Entry entries = 1;
+    repeated TpStateEntry entries = 1;
     Status status = 2;
 }
 
 // A request from the handler/tp to put entries in the state of a context
 message TpStateSetRequest {
     string context_id = 1;
-    repeated Entry entries = 2;
+    repeated TpStateEntry entries = 2;
 }
 
 // A response from the contextmanager/validator with the addresses that were set

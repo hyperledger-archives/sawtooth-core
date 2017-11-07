@@ -38,7 +38,7 @@ from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateDeleteRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpEventAddRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpEventAddResponse
-from sawtooth_sdk.protobuf.state_context_pb2 import Entry
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateEntry
 
 from sawtooth_sdk.protobuf.events_pb2 import Event
 
@@ -209,19 +209,19 @@ class MessageFactory(object):
 
     def create_get_response(self, address_data_map):
 
-        # Each Entry has an address, and data.
+        # Each TpStateEntry has an address, and data.
         # Data can be anything, but transaction processors may assum a
         # certain data type. For example, intkey assumes a dictionary
         # with "Name" in it and stores the "Value". A dictionary is
         # used to deal with hash collisions.
 
-        # GetResponse object has a list of Entry objects
+        # GetResponse object has a list of TpStateEntry objects
 
         self._validate_addresses(
             [address for address, _ in address_data_map.items()])
 
         entries = [
-            Entry(address=address, data=data)
+            TpStateEntry(address=address, data=data)
             for address, data in address_data_map.items()
         ]
 
@@ -235,7 +235,7 @@ class MessageFactory(object):
             [address for address, _ in address_data_map.items()])
 
         entries = [
-            Entry(address=address, data=data)
+            TpStateEntry(address=address, data=data)
             for address, data in address_data_map.items()
         ]
 

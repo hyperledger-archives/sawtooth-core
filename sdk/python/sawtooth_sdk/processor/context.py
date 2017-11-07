@@ -68,7 +68,7 @@ class Context(object):
             addresses (list): a list of addresses that were set
 
         """
-        state_entries = [state_context_pb2.Entry(
+        state_entries = [state_context_pb2.TpStateEntry(
             address=e,
             data=entries[e]) for e in entries]
         request = state_context_pb2.TpStateSetRequest(
