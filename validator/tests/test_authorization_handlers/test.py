@@ -15,7 +15,9 @@
 import unittest
 import os
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_validator.networking.interconnect import AuthorizationType
 from sawtooth_validator.networking.interconnect import ConnectionStatus
@@ -119,7 +121,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         connect_message = ConnectionRequest(endpoint="endpoint")
         roles = {"network": AuthorizationType.TRUST}
         network = MockNetwork(roles,
-                              connection_status={"connection_id":"other"})
+                              connection_status={"connection_id": "other"})
         handler = ConnectHandler(network)
         handler_status = handler.handle("connection_id",
                                         connect_message.SerializeToString())
@@ -308,14 +310,17 @@ class TestAuthorizationHandlers(unittest.TestCase):
         Test the AuthorizationChallengeSubmitHandler returns an
         AuthorizationChallengeResult.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = Secp256k1PrivateKey.new_random()
+        context = create_context('secp256k1')
+        crypto_factory = CryptoFactory(context)
+        signer = crypto_factory.new_signer(private_key)
+
         payload = os.urandom(10)
 
-        signature = signing.sign(payload, private_key)
+        signature = signer.sign(payload)
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
-            public_key=public_key,
+            public_key=signer.get_public_key().as_hex(),
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
@@ -343,14 +348,17 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the last message
         was not AuthorizaitonChallengeRequest.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = Secp256k1PrivateKey.new_random()
+        context = create_context('secp256k1')
+        crypto_factory = CryptoFactory(context)
+        signer = crypto_factory.new_signer(private_key)
+
         payload = os.urandom(10)
 
-        signature = signing.sign(payload, private_key)
+        signature = signer.sign(payload)
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
-            public_key=public_key,
+            public_key=signer.get_public_key().as_hex(),
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
@@ -378,11 +386,14 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the signature
         is not verified.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = Secp256k1PrivateKey.new_random()
+        context = create_context('secp256k1')
+        crypto_factory = CryptoFactory(context)
+        signer = crypto_factory.new_signer(private_key)
+
         payload = os.urandom(10)
 
-        signature = signing.sign(payload, private_key)
+        signature = signer.sign(payload)
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
             public_key="other",
@@ -413,14 +424,17 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the permission
         verifier does not permit the public_key.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = Secp256k1PrivateKey.new_random()
+        context = create_context('secp256k1')
+        crypto_factory = CryptoFactory(context)
+        signer = crypto_factory.new_signer(private_key)
+
         payload = os.urandom(10)
 
-        signature = signing.sign(payload, private_key)
+        signature = signer.sign(payload)
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
-            public_key=public_key,
+            public_key=signer.get_public_key().as_hex(),
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 

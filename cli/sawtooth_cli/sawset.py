@@ -43,8 +43,10 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
 
-import sawtooth_signing as signing
-
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 DISTRIBUTION_NAME = 'sawset'
 
@@ -84,12 +86,12 @@ def _do_config_proposal_create(args):
     """
     settings = [s.split('=', 1) for s in args.setting]
 
-    public_key, signing_key = _read_signing_keys(args.key)
+    signer = _read_signer(args.key)
 
-    txns = [_create_propose_txn(public_key, signing_key, setting)
+    txns = [_create_propose_txn(signer, setting)
             for setting in settings]
 
-    batch = _create_batch(public_key, signing_key, txns)
+    batch = _create_batch(signer, txns)
 
     batch_list = BatchList(batches=[batch])
 
@@ -160,7 +162,7 @@ def _do_config_proposal_vote(args):
     in a BatchList instance.  The BatchList is file or submitted to a
     validator.
     """
-    public_key, signing_key = _read_signing_keys(args.key)
+    signer = _read_signer(args.key)
     rest_client = RestClient(args.url)
 
     proposals = _get_proposals(rest_client)
@@ -175,17 +177,16 @@ def _do_config_proposal_vote(args):
         raise CliException('No proposal exists with the given id')
 
     for vote_record in proposal.votes:
-        if vote_record.public_key == public_key:
+        if vote_record.public_key == signer.get_public_key().as_hex():
             raise CliException(
                 'A vote has already been recorded with this signing key')
 
     txn = _create_vote_txn(
-        public_key,
-        signing_key,
+        signer,
         args.proposal_id,
         proposal.proposal.setting,
         args.vote_value)
-    batch = _create_batch(public_key, signing_key, [txn])
+    batch = _create_batch(signer, [txn])
 
     batch_list = BatchList(batches=[batch])
 
@@ -193,7 +194,8 @@ def _do_config_proposal_vote(args):
 
 
 def _do_config_genesis(args):
-    public_key, signing_key = _read_signing_keys(args.key)
+    signer = _read_signer(args.key)
+    public_key = signer.get_public_key().as_hex()
 
     authorized_keys = args.authorized_key if args.authorized_key else \
         [public_key]
@@ -203,7 +205,7 @@ def _do_config_genesis(args):
     txns = []
 
     txns.append(_create_propose_txn(
-        public_key, signing_key,
+        signer,
         ('sawtooth.settings.vote.authorized_keys',
          ','.join(authorized_keys))))
 
@@ -217,11 +219,11 @@ def _do_config_genesis(args):
                 'authorized keys')
 
         txns.append(_create_propose_txn(
-            public_key, signing_key,
+            signer,
             ('sawtooth.settings.vote.approval_threshold',
              str(args.approval_threshold))))
 
-    batch = _create_batch(public_key, signing_key, txns)
+    batch = _create_batch(signer, txns)
     batch_list = BatchList(batches=[batch])
 
     try:
@@ -256,15 +258,15 @@ def _get_proposals(rest_client):
     return config_candidates
 
 
-def _read_signing_keys(key_filename):
-    """Reads the given file as a WIF formatted key.
+def _read_signer(key_filename):
+    """Reads the given file as a hex, or (as a fallback) a WIF formatted key.
 
     Args:
         key_filename: The filename where the key is stored. If None,
             defaults to the default key for the current user.
 
     Returns:
-        tuple (str, str): the public and private key pair
+        Signer: the signer
 
     Raises:
         CliException: If unable to read the file.
@@ -279,20 +281,28 @@ def _read_signing_keys(key_filename):
     try:
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
-            public_key = signing.generate_public_key(signing_key)
-
-            return public_key, signing_key
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))
 
+    try:
+        private_key = Secp256k1PrivateKey.from_hex(signing_key)
+    except ParseError:
+        try:
+            private_key = Secp256k1PrivateKey.from_wif(signing_key)
+        except ParseError:
+            raise CliException('Unable to read key in file: {}'.format(str(e)))
 
-def _create_batch(public_key, signing_key, transactions):
+    context = create_context('secp256k1')
+    crypto_factory = CryptoFactory(context)
+    return crypto_factory.new_signer(private_key)
+
+
+def _create_batch(signer, transactions):
     """Creates a batch from a list of transactions and a public key, and signs
     the resulting batch with the given signing key.
 
     Args:
-        public_key (str): The public key associated with the signing key.
-        signing_key (str): The private key for signing the batch.
+        signer (:obj:`Signer`): The cryptographic signer
         transactions (list of `Transaction`): The transactions to add to the
             batch.
 
@@ -300,17 +310,18 @@ def _create_batch(public_key, signing_key, transactions):
         `Batch`: The constructed and signed batch.
     """
     txn_ids = [txn.header_signature for txn in transactions]
-    batch_header = BatchHeader(signer_public_key=public_key,
-                               transaction_ids=txn_ids).SerializeToString()
+    batch_header = BatchHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        transaction_ids=txn_ids).SerializeToString()
 
     return Batch(
         header=batch_header,
-        header_signature=signing.sign(batch_header, signing_key),
+        header_signature=signer.sign(batch_header),
         transactions=transactions
     )
 
 
-def _create_propose_txn(public_key, signing_key, setting_key_value):
+def _create_propose_txn(signer, setting_key_value):
     """Creates an individual sawtooth_settings transaction for the given key and
     value.
     """
@@ -323,11 +334,10 @@ def _create_propose_txn(public_key, signing_key, setting_key_value):
     payload = SettingsPayload(data=proposal.SerializeToString(),
                               action=SettingsPayload.PROPOSE)
 
-    return _make_txn(public_key, signing_key, setting_key, payload)
+    return _make_txn(signer, setting_key, payload)
 
 
-def _create_vote_txn(public_key, signing_key,
-                     proposal_id, setting_key, vote_value):
+def _create_vote_txn(signer, proposal_id, setting_key, vote_value):
     """Creates an individual sawtooth_settings transaction for voting on a
     proposal for a particular setting key.
     """
@@ -340,29 +350,27 @@ def _create_vote_txn(public_key, signing_key,
     payload = SettingsPayload(data=vote.SerializeToString(),
                               action=SettingsPayload.VOTE)
 
-    return _make_txn(public_key, signing_key, setting_key, payload)
+    return _make_txn(signer, setting_key, payload)
 
 
-def _make_txn(public_key, signing_key, setting_key, payload):
+def _make_txn(signer, setting_key, payload):
     """Creates and signs a sawtooth_settings transaction with with a payload.
     """
     serialized_payload = payload.SerializeToString()
     header = TransactionHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         family_name='sawtooth_settings',
         family_version='1.0',
         inputs=_config_inputs(setting_key),
         outputs=_config_outputs(setting_key),
         dependencies=[],
         payload_sha512=hashlib.sha512(serialized_payload).hexdigest(),
-        batcher_public_key=public_key
+        batcher_public_key=signer.get_public_key().as_hex()
     ).SerializeToString()
-
-    signature = signing.sign(header, signing_key)
 
     return Transaction(
         header=header,
-        header_signature=signature,
+        header_signature=signer.sign(header),
         payload=serialized_payload)
 
 

@@ -18,13 +18,15 @@ import getpass
 import logging
 import random
 import threading
-from  base64 import b64encode
+from base64 import b64encode
 from collections import namedtuple
 from datetime import datetime
 from http.client import RemoteDisconnected
 
 import requests
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_sdk.workload.workload_generator import WorkloadGenerator
 from sawtooth_sdk.workload.sawtooth_workload import Workload
 from sawtooth_sdk.protobuf import batch_pb2
@@ -32,6 +34,7 @@ from sawtooth_noop.client_cli.create_batch import create_noop_transaction
 from sawtooth_noop.client_cli.create_batch import create_batch
 
 LOGGER = logging.getLogger(__name__)
+
 
 def post_batches(url, batches):
     data = batches.SerializeToString()
@@ -65,8 +68,8 @@ class NoopWorkload(Workload):
         self._urls = []
         self._lock = threading.Lock()
         self._delegate = delegate
-        self._private_key = signing.generate_private_key()
-        self._public_key = signing.generate_public_key(self._private_key)
+        self._signer = CryptoFactory(create_context('secp256k1')).new_signer(
+            Secp256k1PrivateKey.new_random())
 
     def on_will_start(self):
         pass
@@ -100,14 +103,11 @@ class NoopWorkload(Workload):
         if url is not None:
             txns = []
             for _ in range(0, 1):
-                txns.append(create_noop_transaction(
-                    private_key=self._private_key,
-                    public_key=self._public_key))
+                txns.append(create_noop_transaction(self._signer))
 
             batch = create_batch(
                 transactions=txns,
-                private_key=self._private_key,
-                public_key=self._public_key)
+                signer=self._signer)
 
             batch_id = batch.header_signature
 

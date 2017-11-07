@@ -18,7 +18,8 @@ import sys
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.admin_command.config import get_key_dir
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 
 def add_keygen_parser(subparsers, parent_parser):
@@ -91,8 +92,10 @@ def do_keygen(args):
             raise CliException(
                 'files exist, rerun with --force to overwrite existing files')
 
-    private_key = signing.generate_private_key()
-    public_key = signing.generate_public_key(private_key)
+    context = create_context('secp256k1')
+
+    private_key = Secp256k1PrivateKey.new_random()
+    public_key = context.get_public_key(private_key)
 
     try:
         priv_exists = os.path.exists(priv_filename)
@@ -102,7 +105,7 @@ def do_keygen(args):
                     print('overwriting file: {}'.format(priv_filename))
                 else:
                     print('writing file: {}'.format(priv_filename))
-            priv_fd.write(private_key)
+            priv_fd.write(private_key.as_hex())
             priv_fd.write('\n')
 
         pub_exists = os.path.exists(pub_filename)
@@ -112,7 +115,7 @@ def do_keygen(args):
                     print('overwriting file: {}'.format(pub_filename))
                 else:
                     print('writing file: {}'.format(pub_filename))
-            pub_fd.write(public_key)
+            pub_fd.write(public_key.as_hex())
             pub_fd.write('\n')
 
     except IOError as ioe:

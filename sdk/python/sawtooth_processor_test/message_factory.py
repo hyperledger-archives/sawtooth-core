@@ -17,7 +17,9 @@ import hashlib
 import string
 import time
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse
@@ -52,21 +54,14 @@ def is_valid_merkle_address(address):
         len(address) == 70
 
 
-def _private():
-    return signing.generate_private_key()
-
-
-def _private_to_public(private):
-    return signing.generate_public_key(private)
-
-
-def _sign(content, private):
-    return signing.sign(content, private)
+def _signer():
+    return CryptoFactory(create_context('secp256k1')).new_signer(
+        Secp256k1PrivateKey.new_random())
 
 
 class MessageFactory(object):
     def __init__(self, family_name, family_version,
-                 namespace, private=None, public=None):
+                 namespace, signer=None):
         self.family_name = family_name
         self.family_version = family_version
         if isinstance(namespace, (list)):
@@ -74,14 +69,10 @@ class MessageFactory(object):
         else:
             self.namespaces = [namespace]
 
-        if private is None:
-            private = _private()
+        if signer is None:
+            signer = _signer()
 
-        if public is None:
-            public = _private_to_public(private)
-
-        self._private = private
-        self._public = public
+        self._signer = signer
 
     @property
     def namespace(self):
@@ -96,10 +87,7 @@ class MessageFactory(object):
         return hashlib.sha256(content).hexdigest()
 
     def get_public_key(self):
-        return self._public
-
-    def get_private_key(self):
-        return self._private
+        return self._signer.get_public_key().as_hex()
 
     def create_tp_register(self):
         return TpRegisterRequest(
@@ -126,22 +114,25 @@ class MessageFactory(object):
             nonce = str(time.time())
         else:
             nonce = ""
-        pub_key = self._public if batcher_pub_key is None else batcher_pub_key
+        txn_pub_key = self._signer.get_public_key().as_hex()
+        if batcher_pub_key is None:
+            batcher_pub_key = txn_pub_key
+
         header = TransactionHeader(
-            signer_public_key=self._public,
+            signer_public_key=txn_pub_key,
             family_name=self.family_name,
             family_version=self.family_version,
             inputs=inputs,
             outputs=outputs,
             dependencies=deps,
             payload_sha512=self.sha512(payload),
-            batcher_public_key=pub_key,
+            batcher_public_key=batcher_pub_key,
             nonce=nonce
         )
         return header
 
     def _create_signature(self, header):
-        return _sign(header, self._private)
+        return self._signer.sign(header)
 
     def _create_header_and_sig(self, payload, inputs, outputs, deps,
                                set_nonce=True, batcher=None):
@@ -186,11 +177,11 @@ class MessageFactory(object):
             txn_signatures = [txn.signature for txn in transactions]
 
         header = BatchHeader(
-            signer_public_key=self._public,
+            signer_public_key=self._signer.get_public_key().as_hex(),
             transaction_ids=txn_signatures
         ).SerializeToString()
 
-        signature = _sign(header, self._private)
+        signature = self._signer.sign(header)
 
         batch = Batch(
             header=header,

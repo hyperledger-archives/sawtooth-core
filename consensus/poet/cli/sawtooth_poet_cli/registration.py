@@ -28,7 +28,10 @@ from sawtooth_poet.poet_consensus.poet_key_state_store \
     import PoetKeyStateStore
 import sawtooth_poet_common.protobuf.validator_registry_pb2 as vr_pb
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 import sawtooth_validator.protobuf.transaction_pb2 as txn_pb
@@ -109,7 +112,8 @@ def do_create(args):
     file, whose location is determined by the args.  The signup data, generated
     by the selected enclave, is also stored in a well-known location.
     """
-    public_key, signing_key = _read_signing_keys(args.key)
+    signer = _read_signer(args.key)
+    public_key = signer.get_public_key().as_hex()
 
     public_key_hash = sha256(public_key.encode()).hexdigest()
 
@@ -178,7 +182,7 @@ def do_create(args):
             payload_sha512=sha512(serialized).hexdigest(),
             batcher_public_key=public_key,
             nonce=time.time().hex().encode()).SerializeToString()
-    signature = signing.sign(header, signing_key)
+    signature = signer.sign(header)
 
     transaction = \
         txn_pb.Transaction(
@@ -186,7 +190,7 @@ def do_create(args):
             payload=serialized,
             header_signature=signature)
 
-    batch = _create_batch(public_key, signing_key, [transaction])
+    batch = _create_batch(signer, [transaction])
     batch_list = batch_pb.BatchList(batches=[batch])
     try:
         print('Generating {}'.format(args.output))
@@ -197,13 +201,12 @@ def do_create(args):
             'Unable to write to batch file: {}'.format(str(e)))
 
 
-def _create_batch(public_key, signing_key, transactions):
-    """Creates a batch from a list of transactions and a public key, and signs
+def _create_batch(signer, transactions):
+    """Creates a batch from a list of transactions and a signer, and signs
     the resulting batch with the given signing key.
 
     Args:
-        public_key (str): The public key associated with the signing key.
-        signing_key (str): The private key for signing the batch.
+        signer (:obj:`Signer`): Cryptographic signer to sign the batch
         transactions (list of `Transaction`): The transactions to add to the
             batch.
 
@@ -212,38 +215,47 @@ def _create_batch(public_key, signing_key, transactions):
     """
     txn_ids = [txn.header_signature for txn in transactions]
     batch_header = batch_pb.BatchHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         transaction_ids=txn_ids).SerializeToString()
 
     return batch_pb.Batch(
         header=batch_header,
-        header_signature=signing.sign(batch_header, signing_key),
+        header_signature=signer.sign(batch_header),
         transactions=transactions
     )
 
 
-def _read_signing_keys(key_filename):
-    """Reads the given file as a default-encoded private key
+def _read_signer(key_filename):
+    """Reads the given file as a hex, or (as a fallback) a WIF formatted key.
 
     Args:
         key_filename: The filename where the key is stored. If None,
-            defaults to the default key for the validator
+            defaults to the default key for the current user.
 
     Returns:
-        tuple (str, str): the public and private key pair
+        Signer: the signer
 
     Raises:
         CliException: If unable to read the file.
     """
     filename = key_filename
-    if key_filename is None:
+    if filename is None:
         filename = os.path.join(config.get_key_dir(), 'validator.priv')
 
     try:
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
-            public_key = signing.generate_public_key(signing_key)
-
-            return public_key, signing_key
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))
+
+    try:
+        private_key = Secp256k1PrivateKey.from_hex(signing_key)
+    except ParseError:
+        try:
+            private_key = Secp256k1PrivateKey.from_wif(signing_key)
+        except ParseError:
+            raise CliException('Unable to read key in file: {}'.format(str(e)))
+
+    context = create_context('secp256k1')
+    crypto_factory = CryptoFactory(context)
+    return crypto_factory.new_signer(private_key)

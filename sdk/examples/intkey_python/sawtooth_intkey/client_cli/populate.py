@@ -25,7 +25,10 @@ import time
 
 import cbor
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
+
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
 
@@ -62,7 +65,7 @@ class IntKeyPayload(object):
         return self._sha512
 
 
-def create_intkey_transaction(verb, name, value, private_key, public_key):
+def create_intkey_transaction(verb, name, value, signer):
     payload = IntKeyPayload(
         verb=verb, name=name, value=value)
 
@@ -71,19 +74,19 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
     addr = make_intkey_address(name)
 
     header = transaction_pb2.TransactionHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         family_name='intkey',
         family_version='1.0',
         inputs=[addr],
         outputs=[addr],
         dependencies=[],
         payload_sha512=payload.sha512(),
-        batcher_public_key=public_key,
+        batcher_public_key=signer.get_public_key().as_hex(),
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
 
-    signature = signing.sign(header_bytes, private_key)
+    signature = signer.sign(header_bytes)
 
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
@@ -93,16 +96,16 @@ def create_intkey_transaction(verb, name, value, private_key, public_key):
     return transaction
 
 
-def create_batch(transactions, private_key, public_key):
+def create_batch(transactions, signer):
     transaction_ids = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         transaction_ids=transaction_ids)
 
     header_bytes = header.SerializeToString()
 
-    signature = signing.sign(header_bytes, private_key)
+    signature = signer.sign(header_bytes)
 
     batch = batch_pb2.Batch(
         header=header_bytes,
@@ -125,8 +128,8 @@ def generate_word_list(count):
 
 
 def do_populate(args):
-    private_key = signing.generate_private_key()
-    public_key = signing.generate_public_key(private_key)
+    signer = CryptoFactory(create_context('secp256k1')).new_signer(
+        Secp256k1PrivateKey.new_random())
 
     words = generate_word_list(args.pool_size)
 
@@ -138,15 +141,13 @@ def do_populate(args):
             verb='set',
             name=words[i],
             value=random.randint(9000, 100000),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
         total_txn_count += 1
         txns.append(txn)
 
     batch = create_batch(
         transactions=txns,
-        private_key=private_key,
-        public_key=public_key)
+        signer=signer)
 
     batches.append(batch)
 

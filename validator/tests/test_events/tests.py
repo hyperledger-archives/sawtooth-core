@@ -48,7 +48,9 @@ from sawtooth_validator.protobuf import state_context_pb2
 from sawtooth_validator.protobuf import transaction_receipt_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
-import sawtooth_signing as signer
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from test_scheduler.yaml_scheduler_tester import create_batch
 from test_scheduler.yaml_scheduler_tester import create_transaction
@@ -70,8 +72,10 @@ def create_block(block_num=85,
 
 
 def create_chain(num=10):
-    priv_key = signer.generate_private_key()
-    pub_key = signer.generate_public_key(priv_key)
+    private_key = Secp256k1PrivateKey.new_random()
+    context = create_context('secp256k1')
+    crypto_factory = CryptoFactory(context)
+    signer = crypto_factory.new_signer(private_key)
 
     counter = 1
     previous_block_id = "0000000000000000"
@@ -80,14 +84,12 @@ def create_chain(num=10):
         current_block_id = uuid4().hex
         txns = [t[0] for t in [create_transaction(
                 payload=uuid4().hex.encode(),
-                private_key=priv_key,
-                public_key=pub_key) for _ in range(20)]]
+                signer=signer) for _ in range(20)]]
 
         txn_ids = [t.header_signature for t in txns]
         batch = create_batch(
             transactions=txns,
-            public_key=pub_key,
-            private_key=priv_key)
+            signer=signer)
 
         blk_w = create_block(
             counter,

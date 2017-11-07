@@ -17,7 +17,9 @@ import random
 import hashlib
 import cbor
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.journal.block_store import BlockStore
@@ -37,8 +39,12 @@ class TestCompleter(unittest.TestCase):
         self.completer = Completer(self.block_store, self.gossip)
         self.completer._on_block_received = self._on_block_received
         self.completer._on_batch_received = self._on_batch_received
-        self.private_key = signing.generate_private_key()
-        self.public_key = signing.generate_public_key(self.private_key)
+
+        private_key = Secp256k1PrivateKey.new_random()
+        context = create_context('secp256k1')
+        crypto_factory = CryptoFactory(context)
+        self.signer = crypto_factory.new_signer(private_key)
+
         self.blocks = []
         self.batches = []
 
@@ -64,12 +70,13 @@ class TestCompleter(unittest.TestCase):
             payload_encode = hashlib.sha512(cbor.dumps(payload)).hexdigest()
 
             header = TransactionHeader(
-                signer_public_key=self.public_key,
+                signer_public_key=self.signer.get_public_key().as_hex(),
                 family_name='intkey',
                 family_version='1.0',
                 inputs=[addr],
                 outputs=[addr],
                 dependencies=[],
+                batcher_public_key=self.signer.get_public_key().as_hex(),
                 payload_sha512=payload_encode)
 
             if missing_dep:
@@ -77,9 +84,7 @@ class TestCompleter(unittest.TestCase):
 
             header_bytes = header.SerializeToString()
 
-            signature = signing.sign(
-                header_bytes,
-                self.private_key)
+            signature = self.signer.sign(header_bytes)
 
             transaction = Transaction(
                 header=header_bytes,
@@ -100,15 +105,13 @@ class TestCompleter(unittest.TestCase):
                                                  missing_dep=missing_dep)
             txn_sig_list = [txn.header_signature for txn in txn_list]
 
-            batch_header = BatchHeader(signer_public_key=self.public_key)
+            batch_header = BatchHeader(
+                signer_public_key=self.signer.get_public_key().as_hex())
             batch_header.transaction_ids.extend(txn_sig_list)
 
             header_bytes = batch_header.SerializeToString()
 
-
-            signature = signing.sign(
-                header_bytes,
-                self.private_key)
+            signature = self.signer.sign(header_bytes)
 
             batch = Batch(header=header_bytes,
                           transactions=txn_list,
@@ -131,26 +134,22 @@ class TestCompleter(unittest.TestCase):
                 predecessor = "Missing"
             else:
                 predecessor = (block_list[i-1].header_signature if i > 0 else
-                    NULL_BLOCK_IDENTIFIER)
+                               NULL_BLOCK_IDENTIFIER)
 
             block_header = BlockHeader(
-                signer_public_key=self.public_key,
+                signer_public_key=self.signer.get_public_key().as_hex(),
                 batch_ids=batch_ids,
                 block_num=i,
-                previous_block_id= predecessor
-                    )
+                previous_block_id=predecessor)
 
             header_bytes = block_header.SerializeToString()
 
-            signature = signing.sign(
-                header_bytes,
-                self.private_key)
+            signature = self.signer.sign(header_bytes)
 
             if missing_batch:
                 if find_batch:
                     self.completer.add_batch(batch_list[-1])
                 batch_list = batch_list[:-1]
-
 
             block = Block(header=header_bytes,
                           batches=batch_list,

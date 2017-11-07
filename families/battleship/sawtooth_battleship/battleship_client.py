@@ -21,7 +21,10 @@ import time
 import yaml
 import requests
 
-import sawtooth_signing.secp256k1_signer as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_battleship.battleship_exceptions import BattleshipException
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
@@ -53,12 +56,22 @@ class BattleshipClient:
 
         try:
             with open(keyfile) as fd:
-                self._private_key = fd.read().strip()
-                fd.close()
-        except:
-            raise IOError("Failed to read keys.")
+                private_key_str = fd.read().strip()
+        except OSError as err:
+            raise IOError("Failed to read keys: {}.".format(str(err)))
 
-        self._public_key = signing.generate_public_key(self._private_key)
+        try:
+            private_key = Secp256k1PrivateKey.from_hex(private_key_str)
+        except ParseError:
+            try:
+                private_key = Secp256k1PrivateKey.from_wif(private_key_str)
+            except ParseError as e:
+                raise BattleshipException(
+                    'Unable to load private key: {}'.format(str(e)))
+
+        self._signer = CryptoFactory(
+            create_context('secp256k1')).new_signer(private_key)
+
         self._transaction_family = "battleship"
         self._family_version = "1.0"
         self._wait = wait
@@ -87,18 +100,18 @@ class BattleshipClient:
         address = self._get_address(update['Name'])
 
         header = TransactionHeader(
-            signer_public_key=self._public_key,
+            signer_public_key=self._signer.get_public_key().as_hex(),
             family_name=self._transaction_family,
             family_version=self._family_version,
             inputs=[address],
             outputs=[address],
             dependencies=[],
             payload_sha512=self._sha512(payload),
-            batcher_public_key=self._public_key,
+            batcher_public_key=self.signer.get_public_key().as_hex(),
             nonce=time.time().hex().encode()
         ).SerializeToString()
 
-        signature = signing.sign(header, self._private_key)
+        signature = self._signer.sign(header)
 
         transaction = Transaction(
             header=header,
@@ -210,11 +223,11 @@ class BattleshipClient:
         transaction_signatures = [t.header_signature for t in transactions]
 
         header = BatchHeader(
-            signer_public_key=self._public_key,
+            signer_public_key=self._signer.get_public_key().as_hex(),
             transaction_ids=transaction_signatures
         ).SerializeToString()
 
-        signature = signing.sign(header, self._private_key)
+        signature = self._signer.sign(header)
 
         batch = Batch(
             header=header,

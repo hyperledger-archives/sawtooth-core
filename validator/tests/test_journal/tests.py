@@ -44,7 +44,8 @@ from sawtooth_validator.server.events.subscription import EventFilterFactory
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.protobuf.transaction_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
+    TransactionReceipt
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
@@ -72,6 +73,7 @@ from test_journal import mock_consensus
 
 
 LOGGER = logging.getLogger(__name__)
+
 
 class TestBlockCache(unittest.TestCase):
     def test_load_from_block_store(self):
@@ -126,7 +128,7 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             check_publish_block_frequency=0.1,
@@ -282,7 +284,7 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             check_publish_block_frequency=0.1,
@@ -314,7 +316,7 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             check_publish_block_frequency=0.1,
@@ -367,7 +369,7 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
@@ -782,7 +784,7 @@ class TestBlockValidator(unittest.TestCase):
             done_cb=on_block_validated,
             executor=MockTransactionExecutor(batch_execution_result=None),
             squash_handler=None,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier)
@@ -836,7 +838,7 @@ class TestChainController(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
@@ -1147,7 +1149,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             on_chain_updated=chain_updated,
             squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
@@ -1237,7 +1239,7 @@ class TestJournal(unittest.TestCase):
                 batch_sender=self.batch_sender,
                 squash_handler=None,
                 chain_head=btm.block_store.chain_head,
-                identity_signing_key=btm.identity_signing_key,
+                identity_signer=btm.identity_signer,
                 data_dir=None,
                 config_dir=None,
                 permission_verifier=self.permission_verifier,
@@ -1246,7 +1248,7 @@ class TestJournal(unittest.TestCase):
                 batch_injector_factory=DefaultBatchInjectorFactory(
                     block_store=btm.block_store,
                     state_view_factory=MockStateViewFactory(btm.state_db),
-                    signing_key=btm.identity_signing_key))
+                    signer=btm.identity_signer))
 
             chain_controller = ChainController(
                 block_sender=self.block_sender,
@@ -1257,7 +1259,7 @@ class TestJournal(unittest.TestCase):
                 on_chain_updated=block_publisher.on_chain_updated,
                 squash_handler=None,
                 chain_id_manager=None,
-                identity_signing_key=btm.identity_signing_key,
+                identity_signer=btm.identity_signer,
                 data_dir=None,
                 config_dir=None,
                 permission_verifier=self.permission_verifier,

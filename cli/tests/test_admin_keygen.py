@@ -18,10 +18,11 @@ import os
 import unittest
 import sys
 
-import sawtooth_signing as signing
+
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
+
 from sawtooth_cli.admin_command import keygen
 from sawtooth_cli.admin_command.config import get_key_dir
-from sawtooth_cli.exceptions import CliException
 
 
 class TestKeygen(unittest.TestCase):
@@ -70,10 +71,9 @@ class TestKeygen(unittest.TestCase):
         args = self._parse_keygen_command(self._key_name)
         keygen.do_keygen(args)
 
-        public_key, signing_key = _read_signing_keys(self._priv_filename)
+        private_key = _read_signing_keys(self._priv_filename)
 
-        self.assertIsNotNone(public_key)
-        self.assertIsNotNone(signing_key)
+        self.assertIsNotNone(private_key)
 
     def test_force_write(self):
         """Write key files to be overwritten by test of --force option.
@@ -85,10 +85,9 @@ class TestKeygen(unittest.TestCase):
         args = self._parse_keygen_command('--force', self._key_name)
         keygen.do_keygen(args)
 
-        public_key, signing_key = _read_signing_keys(self._priv_filename)
+        private_key = _read_signing_keys(self._priv_filename)
 
-        self.assertIsNotNone(public_key)
-        self.assertIsNotNone(signing_key)
+        self.assertIsNotNone(private_key)
 
     def remove_key_files(self):
         '''Removes the key files.
@@ -115,11 +114,7 @@ def _read_signing_keys(key_filename):
 
     filename = key_filename
 
-    try:
-        with open(filename, 'r') as key_file:
-            signing_key = key_file.read().strip()
-            public_key = signing.generate_public_key(signing_key)
+    with open(filename, 'r') as key_file:
+        signing_key = key_file.read().strip()
 
-            return public_key, signing_key
-    except IOError as e:
-        raise CliException('Unable to read key file: {}'.format(str(e)))
+        return Secp256k1PrivateKey.from_hex(signing_key)

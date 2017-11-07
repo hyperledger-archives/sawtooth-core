@@ -24,7 +24,9 @@ import time
 import uuid
 import yaml
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
@@ -37,8 +39,8 @@ import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 LOGGER = logging.getLogger(__name__)
 
 
-def create_transaction(payload, private_key, public_key, inputs=None,
-                        outputs=None, dependencies=None):
+def create_transaction(payload, signer, inputs=None,
+                       outputs=None, dependencies=None):
     addr = '000000' + hashlib.sha512(payload).hexdigest()[:64]
 
     if inputs is None:
@@ -51,7 +53,7 @@ def create_transaction(payload, private_key, public_key, inputs=None,
         dependencies = []
 
     header = transaction_pb2.TransactionHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         family_name='scheduler_test',
         family_version='1.0',
         inputs=inputs,
@@ -59,11 +61,11 @@ def create_transaction(payload, private_key, public_key, inputs=None,
         dependencies=dependencies,
         nonce=str(time.time()),
         payload_sha512=hashlib.sha512(payload).hexdigest(),
-        batcher_public_key=public_key)
+        batcher_public_key=signer.get_public_key().as_hex())
 
     header_bytes = header.SerializeToString()
 
-    signature = signing.sign(header_bytes, private_key)
+    signature = signer.sign(header_bytes)
 
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
@@ -73,16 +75,16 @@ def create_transaction(payload, private_key, public_key, inputs=None,
     return transaction, header
 
 
-def create_batch(transactions, private_key, public_key):
+def create_batch(transactions, signer):
     transaction_ids = [t.header_signature for t in transactions]
 
     header = batch_pb2.BatchHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         transaction_ids=transaction_ids)
 
     header_bytes = header.SerializeToString()
 
-    signature = signing.sign(header_bytes, private_key)
+    signature = signer.sign(header_bytes)
 
     batch = batch_pb2.Batch(
         header=header_bytes,
@@ -126,6 +128,8 @@ class SchedulerTester(object):
             context_manager (context_manager.ContextManager): The context
                 manager holding state for this scheduler.
         """
+        context = create_context('secp256k1')
+        self._crypto_factory = CryptoFactory(context)
         self._yaml_file_name = file_name
         self._counter = itertools.count(0)
         self._referenced_txns_in_other_batches = {}
@@ -510,7 +514,7 @@ class SchedulerTester(object):
     def _contains_and_not_none(self, key, obj):
         return key in obj and obj[key] is not None
 
-    def _process_batches(self, yaml_batches, priv_key, pub_key):
+    def _process_batches(self, yaml_batches, signer):
         batches = []
         b_results = {}
         for batch in yaml_batches:
@@ -521,13 +525,11 @@ class SchedulerTester(object):
             txn_processing_result = self._process_txns(
                 batch=batch,
                 previous_batch_results=b_results.copy(),
-                priv_key=priv_key,
-                pub_key=pub_key)
+                signer=signer)
             txns, batch_is_valid = txn_processing_result
             batch_real = create_batch(
                 transactions=txns,
-                private_key=priv_key,
-                public_key=pub_key)
+                signer=signer)
             for txn in txns:
                 txn_id = txn.header_signature
                 batch_id = batch_real.header_signature
@@ -548,7 +550,7 @@ class SchedulerTester(object):
                     return False
         return True
 
-    def _process_txns(self, batch, previous_batch_results, priv_key, pub_key):
+    def _process_txns(self, batch, previous_batch_results, signer):
         txns = []
         referenced_txns = {}
         execution = {}
@@ -604,8 +606,7 @@ class SchedulerTester(object):
                 dependencies=dependencies,
                 inputs=inputs_real,
                 outputs=outputs_real,
-                private_key=priv_key,
-                public_key=pub_key)
+                signer=signer)
 
             if self._contains_and_not_none('name', transaction):
                 referenced_txns[transaction['name']] = txn.header_signature
@@ -621,13 +622,12 @@ class SchedulerTester(object):
 
     def _create_batches(self):
         test_yaml = self._yaml_from_file()
-        priv_key = signing.generate_private_key()
-        pub_key = signing.generate_public_key(priv_key)
+        private_key = Secp256k1PrivateKey.new_random()
+        signer = self._crypto_factory.new_signer(private_key)
 
         batches, batch_results = self._process_batches(
             yaml_batches=test_yaml,
-            priv_key=priv_key,
-            pub_key=pub_key)
+            signer=signer)
 
         self._batch_results = batch_results
         self._batches = batches

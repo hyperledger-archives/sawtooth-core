@@ -16,8 +16,6 @@
 import hashlib
 import time
 
-import sawtooth_signing.secp256k1_signer as signing
-
 from sawtooth_validator.journal.batch_injector import BatchInjector
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
@@ -36,27 +34,26 @@ from sawtooth_block_info.common import BLOCK_INFO_NAMESPACE
 
 class BlockInfoInjector(BatchInjector):
     """Inject BlockInfo transactions at the beginning of blocks."""
-    def __init__(self, block_store, state_view_factory, signing_key,
-                 public_key):
+    def __init__(self, block_store, state_view_factory, signer):
         self._block_store = block_store
         self._state_view_factory = state_view_factory
-        self._signing_key = signing_key
-        self._public_key = public_key
+        self._signer = signer
 
     def create_batch(self, block_info):
         payload = BlockInfoTxn(block=block_info).SerializeToString()
+        public_key = self._signer.get_public_key().as_hex()
         header = TransactionHeader(
-            signer_public_key=self._public_key,
+            signer_public_key=public_key,
             family_name=FAMILY_NAME,
             family_version=FAMILY_VERSION,
             inputs=[CONFIG_ADDRESS, BLOCK_INFO_NAMESPACE],
             outputs=[CONFIG_ADDRESS, BLOCK_INFO_NAMESPACE],
             dependencies=[],
             payload_sha512=hashlib.sha512(payload).hexdigest(),
-            batcher_public_key=self._public_key,
+            batcher_public_key=public_key,
         ).SerializeToString()
 
-        transaction_signature = signing.sign(header, self._signing_key)
+        transaction_signature = self._signer.sign(header)
 
         transaction = Transaction(
             header=header,
@@ -65,11 +62,11 @@ class BlockInfoInjector(BatchInjector):
         )
 
         header = BatchHeader(
-            signer_public_key=self._public_key,
+            signer_public_key=public_key,
             transaction_ids=[transaction_signature],
         ).SerializeToString()
 
-        batch_signature = signing.sign(header, self._signing_key)
+        batch_signature = self._signer.sign(header)
 
         return Batch(
             header=header,

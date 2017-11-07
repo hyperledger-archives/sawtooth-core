@@ -24,7 +24,9 @@ import getpass
 from base64 import b64encode
 
 import requests
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_intkey.client_cli.workload.workload_generator import \
     WorkloadGenerator
 from sawtooth_intkey.client_cli.workload.sawtooth_workload import Workload
@@ -86,8 +88,8 @@ class IntKeyWorkload(Workload):
         self._lock = threading.Lock()
         self._delegate = delegate
         self._deps = {}
-        self._private_key = signing.generate_private_key()
-        self._public_key = signing.generate_public_key(self._private_key)
+        self._signer = CryptoFactory(create_context('secp256k1')).new_signer(
+            Secp256k1PrivateKey.new_random())
 
     def on_will_start(self):
         pass
@@ -120,13 +122,11 @@ class IntKeyWorkload(Workload):
                     name=key.name,
                     value=1,
                     deps=[self._deps[key.name]],
-                    private_key=self._private_key,
-                    public_key=self._public_key)
+                    signer=self._signer)
 
                 batch = create_batch(
                     transactions=[txn],
-                    private_key=self._private_key,
-                    public_key=self._public_key)
+                    signer=self._signer)
 
                 batch_id = batch.header_signature
 
@@ -161,13 +161,11 @@ class IntKeyWorkload(Workload):
                 name=name,
                 value=0,
                 deps=[],
-                private_key=self._private_key,
-                public_key=self._public_key)
+                signer=self._signer)
 
             batch = create_batch(
                 transactions=[txn],
-                private_key=self._private_key,
-                public_key=self._public_key)
+                signer=self._signer)
 
             self._deps[name] = txn.header_signature
             batch_id = batch.header_signature

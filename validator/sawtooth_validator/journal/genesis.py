@@ -17,8 +17,6 @@ import logging
 import os
 from pathlib import Path
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.exceptions import InvalidGenesisStateError
 from sawtooth_validator.exceptions import InvalidGenesisConsensusError
 from sawtooth_validator.exceptions import UnknownConsensusModuleError
@@ -46,7 +44,7 @@ class GenesisController(object):
                  completer,
                  block_store,
                  state_view_factory,
-                 identity_key,
+                 identity_signer,
                  data_dir,
                  config_dir,
                  chain_id_manager,
@@ -62,7 +60,8 @@ class GenesisController(object):
             block_store (:obj:): The block store, with dict-like access.
             state_view_factory (:obj:`StateViewFactory`): The state view
                 factory for creating state views during processing.
-            identity_key (str): A private key used for signing blocks, in hex.
+            identity_signer (:obj:`Signer`): A cryptographic signer used for
+                signing blocks.
             data_dir (str): The directory for data files.
             config_dir (str): The directory for config files.
             chain_id_manager (ChainIdManager): utility class to manage the
@@ -74,9 +73,7 @@ class GenesisController(object):
         self._completer = completer
         self._block_store = block_store
         self._state_view_factory = state_view_factory
-        self._identity_priv_key = identity_key
-        self._identity_public_key = \
-            signing.generate_public_key(self._identity_priv_key)
+        self._identity_signer = identity_signer
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._chain_id_manager = chain_id_manager
@@ -250,7 +247,7 @@ class GenesisController(object):
                 batch_publisher=BatchPublisher(),
                 data_dir=self._data_dir,
                 config_dir=self._config_dir,
-                validator_id=self._identity_public_key)
+                validator_id=self._identity_signer.get_public_key().as_hex())
         except UnknownConsensusModuleError as e:
             raise InvalidGenesisStateError(e)
 
@@ -261,7 +258,7 @@ class GenesisController(object):
         genesis_header = block_pb2.BlockHeader(
             block_num=0,
             previous_block_id=NULL_BLOCK_IDENTIFIER,
-            signer_public_key=self._identity_public_key)
+            signer_public_key=self._identity_signer.get_public_key().as_hex())
 
         return BlockBuilder(genesis_header)
 
@@ -272,8 +269,6 @@ class GenesisController(object):
         """
         block_header = block.block_header
         header_bytes = block_header.SerializeToString()
-        signature = signing.sign(
-            header_bytes,
-            self._identity_priv_key)
+        signature = self._identity_signer.sign(header_bytes)
         block.set_signature(signature)
         return block

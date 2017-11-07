@@ -39,7 +39,10 @@ from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
 from sawtooth_cli.sawset import setting_key_to_address
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 
 IDENTITY_NAMESPACE = '00001d'
@@ -245,12 +248,12 @@ def _do_identity_policy_create(args):
     transactions in a BatchList instance. The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
-    public_key, signing_key = _read_signing_keys(args.key)
+    signer = _read_signer(args.key)
 
-    txns = [_create_policy_txn(public_key, signing_key, args.name,
+    txns = [_create_policy_txn(signer, args.name,
             args.rule)]
 
-    batch = _create_batch(public_key, signing_key, txns)
+    batch = _create_batch(signer, txns)
 
     batch_list = BatchList(batches=[batch])
 
@@ -362,11 +365,11 @@ def _do_identity_role_create(args):
     transactions in a BatchList instance. The BatchList is either stored to a
     file or submitted to a validator, depending on the supplied CLI arguments.
     """
-    public_key, signing_key = _read_signing_keys(args.key)
-    txns = [_create_role_txn(public_key, signing_key, args.name,
+    signer = _read_signer(args.key)
+    txns = [_create_role_txn(signer, args.name,
             args.policy)]
 
-    batch = _create_batch(public_key, signing_key, txns)
+    batch = _create_batch(signer, txns)
 
     batch_list = BatchList(batches=[batch])
 
@@ -459,7 +462,7 @@ def _do_identity_role_list(args):
         raise AssertionError('Unknown format {}'.format(args.format))
 
 
-def _create_policy_txn(public_key, signing_key, policy_name, rules):
+def _create_policy_txn(signer, policy_name, rules):
     entries = []
     for rule in rules:
         rule = rule.split(" ")
@@ -478,7 +481,7 @@ def _create_policy_txn(public_key, signing_key, policy_name, rules):
     policy_address = _policy_to_address(policy_name)
 
     header = TransactionHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         family_name='sawtooth_identity',
         family_version='1.0',
         inputs=[_REQUIRED_INPUT, policy_address],
@@ -486,22 +489,20 @@ def _create_policy_txn(public_key, signing_key, policy_name, rules):
         dependencies=[],
         payload_sha512=hashlib.sha512(
             payload.SerializeToString()).hexdigest(),
-        batcher_public_key=public_key,
+        batcher_public_key=signer.get_public_key().as_hex(),
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
 
-    signature = signing.sign(header_bytes, signing_key)
-
     transaction = Transaction(
         header=header_bytes,
         payload=payload.SerializeToString(),
-        header_signature=signature)
+        header_signature=signer.sign(header_bytes))
 
     return transaction
 
 
-def _create_role_txn(public_key, signing_key, role_name, policy_name):
+def _create_role_txn(signer, role_name, policy_name):
     role = Role(name=role_name, policy_name=policy_name)
     payload = IdentityPayload(type=IdentityPayload.ROLE,
                               data=role.SerializeToString())
@@ -510,7 +511,7 @@ def _create_role_txn(public_key, signing_key, role_name, policy_name):
     role_address = _role_to_address(role_name)
 
     header = TransactionHeader(
-        signer_public_key=public_key,
+        signer_public_key=signer.get_public_key().as_hex(),
         family_name='sawtooth_identity',
         family_version='1.0',
         inputs=[_REQUIRED_INPUT, policy_address, role_address],
@@ -518,30 +519,28 @@ def _create_role_txn(public_key, signing_key, role_name, policy_name):
         dependencies=[],
         payload_sha512=hashlib.sha512(
             payload.SerializeToString()).hexdigest(),
-        batcher_public_key=public_key,
+        batcher_public_key=signer.get_public_key().as_hex(),
         nonce=time.time().hex().encode())
 
     header_bytes = header.SerializeToString()
 
-    signature = signing.sign(header_bytes, signing_key)
-
     transaction = Transaction(
         header=header_bytes,
         payload=payload.SerializeToString(),
-        header_signature=signature)
+        header_signature=signer.sign(header_bytes))
 
     return transaction
 
 
-def _read_signing_keys(key_filename):
-    """Reads the given file as a WIF formatted key.
+def _read_signer(key_filename):
+    """Reads the given file as a hex, or (as a fallback) a WIF formatted key.
 
     Args:
         key_filename: The filename where the key is stored. If None,
             defaults to the default key for the current user.
 
     Returns:
-        tuple (str, str): the public and private key pair
+        Signer: the signer
 
     Raises:
         CliException: If unable to read the file.
@@ -556,20 +555,28 @@ def _read_signing_keys(key_filename):
     try:
         with open(filename, 'r') as key_file:
             signing_key = key_file.read().strip()
-            public_key = signing.generate_public_key(signing_key)
-
-            return public_key, signing_key
     except IOError as e:
         raise CliException('Unable to read key file: {}'.format(str(e)))
 
+    try:
+        private_key = Secp256k1PrivateKey.from_hex(signing_key)
+    except ParseError:
+        try:
+            private_key = Secp256k1PrivateKey.from_wif(signing_key)
+        except ParseError:
+            raise CliException('Unable to read key in file: {}'.format(str(e)))
 
-def _create_batch(public_key, signing_key, transactions):
+    context = create_context('secp256k1')
+    crypto_factory = CryptoFactory(context)
+    return crypto_factory.new_signer(private_key)
+
+
+def _create_batch(signer, transactions):
     """Creates a batch from a list of transactions and a public key, and signs
     the resulting batch with the given signing key.
 
     Args:
-        public_key (str): The public key associated with the signing key.
-        signing_key (str): The private key for signing the batch.
+        signer (:obj:`Signer`): The cryptographic signer
         transactions (list of `Transaction`): The transactions to add to the
             batch.
 
@@ -577,12 +584,13 @@ def _create_batch(public_key, signing_key, transactions):
         `Batch`: The constructed and signed batch.
     """
     txn_ids = [txn.header_signature for txn in transactions]
-    batch_header = BatchHeader(signer_public_key=public_key,
-                               transaction_ids=txn_ids).SerializeToString()
+    batch_header = BatchHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        transaction_ids=txn_ids).SerializeToString()
 
     return Batch(
         header=batch_header,
-        header_signature=signing.sign(batch_header, signing_key),
+        header_signature=signer.sign(batch_header),
         transactions=transactions
     )
 

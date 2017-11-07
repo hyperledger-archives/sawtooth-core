@@ -18,7 +18,9 @@ import hashlib
 import random
 import string
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
@@ -37,8 +39,10 @@ from test_permission_verifier.mocks import make_policy
 
 class TestPermissionVerifier(unittest.TestCase):
     def setUp(self):
-        self.private_key = signing.generate_private_key()
-        self.public_key = signing.generate_public_key(self.private_key)
+        context = create_context('secp256k1')
+        crypto_factory = CryptoFactory(context)
+        private_key = Secp256k1PrivateKey.new_random()
+        self.signer = crypto_factory.new_signer(private_key)
         self._identity_view_factory = MockIdentityViewFactory()
         self.permissions = {}
         self._identity_cache = IdentityCache(
@@ -49,6 +53,10 @@ class TestPermissionVerifier(unittest.TestCase):
                 permissions=self.permissions,
                 current_root_func=self._current_root_func,
                 identity_cache=self._identity_cache)
+
+    @property
+    def public_key(self):
+        return self.signer.get_public_key().as_hex()
 
     def _current_root_func(self):
         return "0000000000000000000000"
@@ -80,9 +88,7 @@ class TestPermissionVerifier(unittest.TestCase):
 
             header_bytes = header.SerializeToString()
 
-            signature = signing.sign(
-                header_bytes,
-                self.private_key)
+            signature = self.signer.sign(header_bytes)
 
             transaction = Transaction(
                 header=header_bytes,
@@ -101,14 +107,13 @@ class TestPermissionVerifier(unittest.TestCase):
             txn_list = self._create_transactions(txn_count)
             txn_sig_list = [txn.header_signature for txn in txn_list]
 
-            batch_header = BatchHeader(signer_public_key=self.public_key)
+            batch_header = BatchHeader(
+                signer_public_key=self.signer.get_public_key().as_hex())
             batch_header.transaction_ids.extend(txn_sig_list)
 
             header_bytes = batch_header.SerializeToString()
 
-            signature = signing.sign(
-                header_bytes,
-                self.private_key)
+            signature = self.signer.sign(header_bytes)
 
             batch = Batch(header=header_bytes,
                           transactions=txn_list,

@@ -19,7 +19,8 @@ import hashlib
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -45,9 +46,11 @@ def is_valid_block(block):
     header = BlockHeader()
     header.ParseFromString(block.header)
 
-    if not signing.verify(block.header,
-                          block.header_signature,
-                          header.signer_public_key):
+    context = create_context('secp256k1')
+    public_key = Secp256k1PublicKey.from_hex(header.signer_public_key)
+    if not context.verify(block.header_signature,
+                          block.header,
+                          public_key):
         LOGGER.debug("block failed signature validation: %s",
                      block.header_signature)
         return False
@@ -65,9 +68,11 @@ def is_valid_batch(batch):
     header = BatchHeader()
     header.ParseFromString(batch.header)
 
-    if not signing.verify(batch.header,
-                          batch.header_signature,
-                          header.signer_public_key):
+    context = create_context('secp256k1')
+    public_key = Secp256k1PublicKey.from_hex(header.signer_public_key)
+    if not context.verify(batch.header_signature,
+                          batch.header,
+                          public_key):
         LOGGER.debug("batch failed signature validation: %s",
                      batch.header_signature)
         return False
@@ -94,9 +99,11 @@ def is_valid_transaction(txn):
     header = TransactionHeader()
     header.ParseFromString(txn.header)
 
-    if not signing.verify(txn.header,
-                          txn.header_signature,
-                          header.signer_public_key):
+    context = create_context('secp256k1')
+    public_key = Secp256k1PublicKey.from_hex(header.signer_public_key)
+    if not context.verify(txn.header_signature,
+                          txn.header,
+                          public_key):
         LOGGER.debug("transaction signature invalid for txn: %s",
                      txn.header_signature)
         return False

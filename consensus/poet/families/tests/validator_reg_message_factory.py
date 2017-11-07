@@ -23,7 +23,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_processor_test.message_factory import MessageFactory
 
@@ -80,15 +81,15 @@ class ValidatorRegistryMessageFactory(object):
         'J13KkHoAZ9qd0rX7s37czb3O\n' \
         '-----END PRIVATE KEY-----'
 
-    def __init__(self, private=None, public=None):
+    def __init__(self, signer):
         self._factory = MessageFactory(
             family_name="sawtooth_validator_registry",
             family_version="1.0",
             namespace="6a4372",
-            private=private,
-            public=public
+            signer=signer
         )
-        self.public_key_hash = hashlib.sha256(public.encode()).hexdigest()
+        self.public_key_hash = hashlib.sha256(
+            signer.get_public_key().as_hex().encode()).hexdigest()
         self._report_private_key = \
             serialization.load_pem_private_key(
                 self.__REPORT_PRIVATE_KEY_PEM__.encode(),
@@ -97,10 +98,10 @@ class ValidatorRegistryMessageFactory(object):
 
         # First we need to create a public/private key pair for the PoET
         # enclave to use.
-        self._poet_private_key = \
-            "1f70fa2518077ad18483f48e77882d11983b537fa5f7cf158684d2c670fe4f1f"
-        self.poet_public_key = \
-            signing.generate_public_key(self._poet_private_key)
+        context = create_context('secp256k1')
+        self._poet_private_key = Secp256k1PrivateKey.from_hex(
+            "1f70fa2518077ad18483f48e77882d11983b537fa5f7cf158684d2c670fe4f1f")
+        self.poet_public_key = context.get_public_key(self._poet_private_key)
 
     @property
     def public_key(self):
@@ -142,8 +143,8 @@ class ValidatorRegistryMessageFactory(object):
 
         # We are going to fake out the sealing the signup data.
         signup_data = {
-            'poet_public_key': self.poet_public_key,
-            'poet_private_key': self._poet_private_key
+            'poet_public_key': self.poet_public_key.as_hex(),
+            'poet_private_key': self._poet_private_key.as_hex()
         }
 
         # Build up a fake SGX quote containing:
@@ -160,7 +161,7 @@ class ValidatorRegistryMessageFactory(object):
         hash_input = \
             '{0}{1}'.format(
                 originator_public_key_hash.upper(),
-                self.poet_public_key.upper()).encode()
+                self.poet_public_key.as_hex().upper()).encode()
         report_data = hashlib.sha256(hash_input).digest()
 
         sgx_report_data = sgx_structs.SgxReportData(d=report_data)
