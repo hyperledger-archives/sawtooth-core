@@ -151,3 +151,7 @@ def make_store_and_tracker(size=3):
     tracker.notify_txn_invalid('t-invalid', 'error message', b'error data')
 
     return store, tracker
+
+class MockGossip:
+    def get_peers(self):
+        return {"connection_id": "Peer1"}

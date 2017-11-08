@@ -32,11 +32,13 @@ import sawtooth_rest_api.error_handlers as error_handlers
 from sawtooth_rest_api.messaging import DisconnectError
 from sawtooth_rest_api.protobuf import client_pb2
 from sawtooth_rest_api.protobuf import txn_receipt_pb2
+from sawtooth_rest_api.protobuf import client_peers_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
+# pylint: disable=too-many-lines
 
 DEFAULT_TIMEOUT = 300
 LOGGER = logging.getLogger(__name__)
@@ -545,6 +547,25 @@ class RouteHandler(object):
             self._drop_empty_props(response['receipts']))
 
         return self._wrap_response(request, data=data, metadata=metadata)
+
+    async def fetch_peers(self, request):
+        """Fetches the peers from the validator.
+        Request:
+
+        Response:
+            data: JSON array of peer endpoints
+            link: The link to this exact query
+        """
+
+        response = await self._query_validator(
+            Message.CLIENT_PEERS_GET_REQUEST,
+            client_peers_pb2.ClientPeersGetResponse,
+            client_peers_pb2.ClientPeersGetRequest())
+
+        return self._wrap_response(
+            request,
+            data=response['peers'],
+            metadata=self._get_metadata(request, response))
 
     async def _query_validator(self, request_type, response_proto,
                                payload, error_traps=None):
