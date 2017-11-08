@@ -794,7 +794,7 @@ class TestBlockValidator(unittest.TestCase):
 
     def validate_block(self, block):
         validator = self.create_block_validator()
-        validator.run(
+        validator.process_block_verification(
             block,
             mock_consensus,
             self.block_validation_handler.on_block_validated)

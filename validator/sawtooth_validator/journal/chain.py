@@ -20,8 +20,6 @@ import queue
 from threading import RLock
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
-from sawtooth_validator.concurrent.threadpool import \
-    InstrumentedThreadPoolExecutor
 from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -171,10 +169,6 @@ class ChainController(object):
             self._blocks_considered_count = CounterWrapper()
 
         self._block_queue = queue.Queue()
-        self._thread_pool = (
-            InstrumentedThreadPoolExecutor(1)
-            if thread_pool is None else thread_pool
-        )
         self._chain_thread = None
 
         self._block_validator = BlockValidator(
@@ -186,7 +180,8 @@ class ChainController(object):
             data_dir=self._data_dir,
             config_dir=self._config_dir,
             permission_verifier=self._permission_verifier,
-            metrics_registry=self._metrics_registry)
+            metrics_registry=self._metrics_registry,
+            thread_pool=thread_pool)
 
         # Only run this after all member variables have been bound
         self._set_chain_head_from_block_store()
@@ -220,8 +215,7 @@ class ChainController(object):
             self._chain_thread.stop()
             self._chain_thread = None
 
-        if self._thread_pool is not None:
-            self._thread_pool.shutdown(wait=True)
+        self._block_validator.stop()
 
     def queue_block(self, block):
         """
@@ -235,20 +229,20 @@ class ChainController(object):
         return self._chain_head
 
     def _submit_blocks_for_verification(self, blocks):
-        for blkw in blocks:
-            state_view = BlockWrapper.state_view_for_block(
-                self.chain_head,
-                self._state_view_factory)
-            consensus_module = \
-                ConsensusFactory.get_configured_consensus_module(
-                    self.chain_head.header_signature,
-                    state_view)
+        state_view = BlockWrapper.state_view_for_block(
+            self.chain_head,
+            self._state_view_factory)
+        consensus_module = \
+            ConsensusFactory.get_configured_consensus_module(
+                self.chain_head.header_signature,
+                state_view)
 
+        for blkw in blocks:
             self._blocks_processing[blkw.block.header_signature] =\
                 self._block_validator
-            self._thread_pool.submit(
-                self._block_validator.run,
-                blkw, consensus_module, self.on_block_validated)
+
+        self._block_validator.submit_blocks_for_verification(
+            blocks, consensus_module, self.on_block_validated)
 
     def on_block_validated(self, commit_new_block, result):
         """Message back from the block validator, that the validation is
