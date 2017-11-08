@@ -400,6 +400,7 @@ class BlockPublisher(object):
                  squash_handler,
                  chain_head,
                  identity_signing_key,
+                 identity_public_key,
                  data_dir,
                  config_dir,
                  permission_verifier,
@@ -422,6 +423,7 @@ class BlockPublisher(object):
                 contexts.
             chain_head (:obj:`BlockWrapper`): The initial chain head.
             identity_signing_key (str): Private key for signing blocks
+            identity_public_key (str): Public key for the private key
             data_dir (str): path to location where persistent data for the
                 consensus module can be stored.
             config_dir (str): path to location where configuration can be
@@ -446,8 +448,7 @@ class BlockPublisher(object):
         self._chain_head = chain_head  # block (BlockWrapper)
         self._squash_handler = squash_handler
         self._identity_signing_key = identity_signing_key
-        self._identity_public_key = \
-            signing.generate_public_key(self._identity_signing_key)
+        self._identity_public_key = identity_public_key
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier

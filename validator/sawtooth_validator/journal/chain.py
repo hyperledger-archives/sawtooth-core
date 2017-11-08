@@ -19,8 +19,6 @@ import logging
 import queue
 from threading import RLock
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper

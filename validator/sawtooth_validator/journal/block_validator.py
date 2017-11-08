@@ -15,8 +15,6 @@
 
 import logging
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.journal.block_wrapper import BlockStatus
@@ -109,7 +107,7 @@ class BlockValidator(object):
                  state_view_factory,
                  transaction_executor,
                  squash_handler,
-                 identity_signing_key,
+                 identity_public_key,
                  data_dir,
                  config_dir,
                  permission_verifier):
@@ -124,7 +122,8 @@ class BlockValidator(object):
              process transactions.
              squash_handler: A parameter passed when creating transaction
              schedulers.
-             identity_signing_key: Private key for signing blocks.
+             identity_public_key: Public key used for this validator's
+             identity.
              data_dir: Path to location where persistent data for the
              consensus module can be stored.
              config_dir: Path to location where config data for the
@@ -136,9 +135,7 @@ class BlockValidator(object):
         self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
         self._squash_handler = squash_handler
-        self._identity_signing_key = identity_signing_key
-        self._identity_public_key = \
-            signing.generate_public_key(self._identity_signing_key)
+        self._identity_public_key = identity_public_key
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier

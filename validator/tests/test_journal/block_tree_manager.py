@@ -108,6 +108,8 @@ class BlockTreeManager(object):
         self.public_key = signing.generate_public_key(self.signing_key)
 
         self.identity_signing_key = signing.generate_private_key()
+        self.identity_public_key = signing.generate_public_key(
+            self.identity_signing_key)
         chain_head = None
         if with_genesis:
             self.genesis_block = self.generate_genesis_block()
@@ -123,6 +125,7 @@ class BlockTreeManager(object):
             squash_handler=None,
             chain_head=chain_head,
             identity_signing_key=self.identity_signing_key,
+            identity_public_key=self.identity_public_key,
             data_dir=None,
             config_dir=None,
             permission_verifier=MockPermissionVerifier(),

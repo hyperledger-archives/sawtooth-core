@@ -96,6 +96,8 @@ class Validator(object):
             config_dir (str): path to the config directory
             identity_signing_key (str): key validator uses for signing
         """
+        # Get the public key for the signing key
+        identity_public_key = signing.generate_public_key(identity_signing_key)
 
         # -- Setup Global State Database and Factory -- #
         global_state_db_filename = os.path.join(
@@ -171,7 +173,7 @@ class Validator(object):
             max_incoming_connections=100,
             max_future_callback_workers=10,
             authorize=True,
-            public_key=signing.generate_public_key(identity_signing_key),
+            public_key=identity_public_key,
             priv_key=identity_signing_key,
             roles=roles,
             metrics_registry=metrics_registry)
@@ -245,6 +247,7 @@ class Validator(object):
             squash_handler=context_manager.get_squash_handler(),
             chain_head=block_store.chain_head,
             identity_signing_key=identity_signing_key,
+            identity_public_key=identity_public_key,
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier,
@@ -258,7 +261,7 @@ class Validator(object):
             state_view_factory=state_view_factory,
             transaction_executor=transaction_executor,
             squash_handler=context_manager.get_squash_handler(),
-            identity_signing_key=identity_signing_key,
+            identity_public_key=identity_public_key,
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier)
@@ -287,7 +290,8 @@ class Validator(object):
             completer=completer,
             block_store=block_store,
             state_view_factory=state_view_factory,
-            identity_key=identity_signing_key,
+            identity_signing_key=identity_signing_key,
+            identity_public_key=identity_public_key,
             data_dir=data_dir,
             config_dir=config_dir,
             chain_id_manager=chain_id_manager,
