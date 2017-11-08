@@ -162,21 +162,3 @@ class Context(object):
             raise InternalError(
                 "Failed to add event: ({}, {}, {})".format(
                     event_type, attributes, data))
-
-    get = get_state
-    """
-    deprecated:
-     Use get_state instead.
-    """
-
-    set = set_state
-    """
-    deprecated:
-     Use set_state instead.
-    """
-
-    delete = delete_state
-    """
-    deprecated:
-     Use delete_state instead.
-    """

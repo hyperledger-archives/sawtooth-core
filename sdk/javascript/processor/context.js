@@ -109,15 +109,6 @@ class Context {
       timeout)
   }
 
-  // Deprecated: use getState instead
-  get (addresses, timeout = null) {
-    return this.getState(addresses, timeout)
-  }
-
-  // Deprecated: use setState instead
-  set (addressValuePairs, timeout = null) {
-    return this.setState(addressValuePairs, timeout)
-  }
 }
 
 module.exports = Context
