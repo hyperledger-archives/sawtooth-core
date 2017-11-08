@@ -115,14 +115,16 @@ func (self *TransactionProcessor) Start() error {
 	poller.Add(workers.Socket(), zmq.POLLIN)
 
 	// Register all handlers with the validator
-	for _, h := range self.handlers {
-		err := register(validator, h, queue)
-		if err != nil {
-			return fmt.Errorf(
-				"Error registering handler (%v, %v, %v): %v",
-				h.FamilyName(), h.FamilyVersion,
-				h.Namespaces(), err,
-			)
+	for _, handler := range self.handlers {
+		for _, version := range handler.FamilyVersions() {
+			err := register(validator, handler, version, queue)
+			if err != nil {
+				return fmt.Errorf(
+					"Error registering handler (%v, %v, %v): %v",
+					handler.FamilyName(), version,
+					handler.Namespaces(), err,
+				)
+			}
 		}
 	}
 
@@ -297,10 +299,10 @@ func receiveWorkers(ids map[string]string, validator, workers messaging.Connecti
 }
 
 // Register a handler with the validator
-func register(validator messaging.Connection, handler TransactionHandler, queue chan *validator_pb2.Message) error {
+func register(validator messaging.Connection, handler TransactionHandler, version string, queue chan *validator_pb2.Message) error {
 	regRequest := &processor_pb2.TpRegisterRequest{
 		Family:     handler.FamilyName(),
-		Version:    handler.FamilyVersion(),
+		Version:    version,
 		Namespaces: handler.Namespaces(),
 	}
 
@@ -348,7 +350,7 @@ func register(validator messaging.Connection, handler TransactionHandler, queue 
 	}
 	logger.Infof(
 		"Successfully registered handler (%v, %v, %v)",
-		handler.FamilyName(), handler.FamilyVersion,
+		handler.FamilyName(), version,
 		handler.Namespaces(),
 	)
 

@@ -52,8 +52,9 @@ type Game struct {
 func (self *XoHandler) FamilyName() string {
 	return "xo"
 }
-func (self *XoHandler) FamilyVersion() string {
-	return "1.0"
+
+func (self *XoHandler) FamilyVersions() []string {
+	return []string{"1.0"}
 }
 
 func (self *XoHandler) Namespaces() []string {

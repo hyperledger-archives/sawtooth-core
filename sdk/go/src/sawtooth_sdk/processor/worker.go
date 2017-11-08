@@ -129,7 +129,16 @@ func findHandler(handlers []TransactionHandler, header *transaction_pb2.Transact
 			break
 		}
 
-		if header.GetFamilyVersion() != handler.FamilyVersion() {
+		HeaderVersion := header.GetFamilyVersion()
+		HasVersion := false
+		for _, version := range handler.FamilyVersions() {
+			if version == HeaderVersion {
+				HasVersion = true
+				break
+			}
+		}
+
+		if !HasVersion {
 			break
 		}
 
