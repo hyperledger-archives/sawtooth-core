@@ -107,7 +107,7 @@ class BlockValidator(object):
     def __init__(self,
                  block_cache,
                  state_view_factory,
-                 executor,
+                 transaction_executor,
                  squash_handler,
                  identity_signing_key,
                  data_dir,
@@ -120,7 +120,8 @@ class BlockValidator(object):
              block_cache: The cache of all recent blocks and the processing
              state associated with them.
              state_view_factory: The factory object to create.
-             executor: The thread pool to process block validations.
+             transaction_executor: The transaction executor used to
+             process transactions.
              squash_handler: A parameter passed when creating transaction
              schedulers.
              identity_signing_key: Private key for signing blocks.
@@ -133,7 +134,7 @@ class BlockValidator(object):
         """
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
-        self._executor = executor
+        self._transaction_executor = transaction_executor
         self._squash_handler = squash_handler
         self._identity_signing_key = identity_signing_key
         self._identity_public_key = \
@@ -189,9 +190,9 @@ class BlockValidator(object):
         self, blkw, prev_state_root, chain_commit_state, result=None
     ):
         if blkw.block.batches:
-            scheduler = self._executor.create_scheduler(
+            scheduler = self._transaction_executor.create_scheduler(
                 self._squash_handler, prev_state_root)
-            self._executor.execute(scheduler)
+            self._transaction_executor.execute(scheduler)
             try:
                 for batch, has_more in look_ahead(blkw.block.batches):
                     if chain_commit_state.has_batch(
