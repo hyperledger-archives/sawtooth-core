@@ -803,7 +803,8 @@ class TestBlockValidator(unittest.TestCase):
         return BlockValidator(
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
-            executor=MockTransactionExecutor(batch_execution_result=None),
+            transaction_executor=MockTransactionExecutor(
+                batch_execution_result=None),
             squash_handler=None,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
@@ -851,7 +852,7 @@ class TestChainController(unittest.TestCase):
         self.block_validator = BlockValidator(
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
-            executor=self.transaction_executor,
+            transaction_executor=self.transaction_executor,
             squash_handler=None,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
@@ -1173,7 +1174,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.block_validator = BlockValidator(
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
-            executor=self.transaction_executor,
+            transaction_executor=self.transaction_executor,
             squash_handler=None,
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
@@ -1298,7 +1299,7 @@ class TestJournal(unittest.TestCase):
             block_validator = BlockValidator(
                 state_view_factory=MockStateViewFactory(btm.state_db),
                 block_cache=btm.block_cache,
-                executor=self.txn_executor,
+                transaction_executor=self.txn_executor,
                 squash_handler=None,
                 identity_signer=btm.identity_signer,
                 data_dir=None,
