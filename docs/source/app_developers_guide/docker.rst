@@ -142,7 +142,7 @@ registering and creating initial blocks, you can move on to the next step.
 
 .. code-block:: console
 
-  Attaching to sawtooth-validator-default, sawtooth-xo-tp-python-default, sawtooth-intkey-tp-python-default, sawtooth-rest-api-default, sawtooth-settings-tp-default, sawtooth-client-default
+  Attaching to sawtooth-validator-default, sawtooth-xo-tp-python-default, sawtooth-intkey-tp-python-default, sawtooth-rest-api-default, sawtooth-settings-tp-default, sawtooth-shell-default
   sawtooth-validator-default | writing file: /etc/sawtooth/keys/validator.priv
   sawtooth-validator-default | writing file: /etc/sawtooth/keys/validator.pub
   sawtooth-validator-default | creating key directory: /root/.sawtooth/keys
@@ -174,7 +174,7 @@ Sample output after pressing CTRL-c:
   Gracefully stopping... (press Ctrl+C again to force)
   Stopping sawtooth-xo-tp-python-default ... done
   Stopping sawtooth-settings-tp-default ... done
-  Stopping sawtooth-client-default... done
+  Stopping sawtooth-shell-default... done
   Stopping sawtooth-rest-api-default ... done
   Stopping sawtooth-intkey-tp-python-default ... done
   Stopping sawtooth-validator-default ... done
@@ -194,12 +194,12 @@ The client container is used to run sawtooth CLI commands, which is the usual
 way to interact with validators or validator networks.
 
 Log into the client container by opening a new terminal window and
-running the following command. Note that ``sawtooth-client-default`` specifies
+running the following command. Note that ``sawtooth-shell-default`` specifies
 the client container name.
 
 .. code-block:: console
 
-  % docker exec -it sawtooth-client-default bash
+  % docker exec -it sawtooth-shell-default bash
 
 
 .. Important::
@@ -484,7 +484,7 @@ The Client Container
 
 * Submits transactions
 * Runs ``sawtooth`` CLI commands
-* Container name: ``sawtooth-client-default``
+* Container name: ``sawtooth-shell-default``
 
 No Sawtooth components are automatically started in this container.
 
@@ -493,7 +493,7 @@ terminal window:
 
 .. code-block:: console
 
-  % docker exec -it sawtooth-client-default bash
+  % docker exec -it sawtooth-shell-default bash
 
 
 The Validator Container
