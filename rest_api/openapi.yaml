@@ -433,6 +433,22 @@ paths:
         503:
           $ref: "#/responses/503ServiceUnavailable"
 
+  /peers:
+    get:
+      summary: Fetches the endpoints of the authorized peers of the validator
+      responses:
+        200:
+          description: Successfully retrieved peers
+          schema:
+            data: List of peers endpoints
+            link:
+              $ref: "#/definitions/Link"
+        400:
+          $ref: "#/responses/400BadRequest"
+        500:
+          $ref: "#/responses/500ServerError"
+        503:
+          $ref: "#/responses/503ServiceUnavailable"
 
 responses:
   400BadRequest:
