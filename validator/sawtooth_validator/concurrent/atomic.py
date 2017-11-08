@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from threading import Lock
+from threading import RLock
 
 
 class Counter:
@@ -46,3 +47,21 @@ class Counter:
     def dec(self, step=1):
         with self._lock:
             self._value -= step
+
+
+class ConcurrentSet:
+    def __init__(self):
+        self._set = set()
+        self._lock = RLock()
+
+    def add(self, element):
+        with self._lock:
+            self._set.add(element)
+
+    def remove(self, element):
+        with self._lock:
+            self._set.remove(element)
+
+    def __contains__(self, element):
+        with self._lock:
+            return element in self._set
