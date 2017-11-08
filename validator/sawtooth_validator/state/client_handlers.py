@@ -36,6 +36,7 @@ from sawtooth_validator.protobuf import client_state_pb2
 from sawtooth_validator.protobuf import client_transaction_pb2
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf import client_list_control_pb2
+from sawtooth_validator.protobuf import client_peers_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -934,3 +935,18 @@ class TransactionGetRequest(_ClientRequestHandler):
             block_id = ""
 
         return self._wrap_response(transaction=txn, block_id=block_id)
+
+
+class PeersGetRequest(_ClientRequestHandler):
+    def __init__(self, gossip):
+        super().__init__(
+            client_peers_pb2.ClientPeersGetRequest,
+            client_peers_pb2.ClientPeersGetResponse,
+            validator_pb2.Message.CLIENT_PEERS_GET_RESPONSE
+            )
+        self._gossip = gossip
+
+    def _respond(self, request):
+        peers = self._gossip.get_peers()
+        endpoints = [peers[connection_id] for connection_id in peers]
+        return self._wrap_response(peers=endpoints)

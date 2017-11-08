@@ -101,10 +101,14 @@ message Message {
         // A response with the batch statuses
         CLIENT_BATCH_STATUS_RESPONSE = 121;
         // A request for one or more transaction receipts
-        CLIENT_RECEIPT_GET_REQUEST= 122;
+        CLIENT_RECEIPT_GET_REQUEST = 122;
         // A response with the receipts
-        CLIENT_RECEIPT_GET_RESPONSE= 123;
+        CLIENT_RECEIPT_GET_RESPONSE = 123;
         CLIENT_BLOCK_GET_BY_NUM_REQUEST = 124;
+        // A request for a validator's peers
+        CLIENT_PEERS_GET_REQUEST = 125;
+        // A response with the validator's peers
+        CLIENT_PEERS_GET_RESPONSE = 126;
 
         // Message types for events
         CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;

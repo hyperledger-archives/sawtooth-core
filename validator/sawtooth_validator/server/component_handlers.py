@@ -208,3 +208,8 @@ def add(
         validator_pb2.Message.CLIENT_EVENTS_GET_REQUEST,
         ClientEventsGetRequestHandler(event_broadcaster),
         thread_pool)
+
+    dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_PEERS_GET_REQUEST,
+        client_handlers.PeersGetRequest(gossip),
+        thread_pool)
