@@ -90,9 +90,10 @@ class TransactionProcessor {
         if (this._handlers.length > 0) {
           let txnHeader = request.header
 
-          let handler = this._handlers.find((candidate) =>
-             candidate.transactionFamilyName === txnHeader.familyName &&
-               candidate.version === txnHeader.familyVersion)
+          let handler = this._handlers.find(
+            (candidate) =>
+              candidate.transactionFamilyName === txnHeader.familyName &&
+              candidate.versions.includes(txnHeader.familyVersion))
 
           if (handler) {
             handler.apply(request, context)
@@ -144,26 +145,28 @@ class TransactionProcessor {
       })
 
       this._handlers.forEach(handler => {
-        this._stream.send(
-          Message.MessageType.TP_REGISTER_REQUEST,
-          TpRegisterRequest.encode({
-            family: handler.transactionFamilyName,
-            version: handler.version,
-            namespaces: handler.namespaces
-          }).finish()
-        )
-        .then(content => TpRegisterResponse.decode(content))
-        .then(ack => {
-          let {transactionFamilyName: familyName, version} = handler
-          let status = ack.status ===
-              TpRegisterResponse.Status.OK ? 'succeeded' : 'failed'
-          console.log(`Registration of [${familyName} ${version}] ${status}`)
-        })
-        .catch(e => {
-          let {transactionFamilyName: familyName, version} = handler
-          console.log(`Registration of [${familyName} ${version}] Failed!`, e)
+        handler.versions.forEach(version => {
+          this._stream.send(
+            Message.MessageType.TP_REGISTER_REQUEST,
+            TpRegisterRequest.encode({
+              family: handler.transactionFamilyName,
+              version: version,
+              namespaces: handler.namespaces
+            }).finish())
+            .then(content => TpRegisterResponse.decode(content))
+            .then(ack => {
+              let {transactionFamilyName: familyName} = handler
+              let status = ack.status ===
+                  TpRegisterResponse.Status.OK ? 'succeeded' : 'failed'
+              console.log(`Registration of [${familyName} ${version}] ${status}`)
+            })
+            .catch(e => {
+              let {transactionFamilyName: familyName} = handler
+              console.log(`Registration of [${familyName} ${version}] Failed!`, e)
+            })
         })
       })
+
     })
 
     process.on('SIGINT', () => this._handleShutdown())
@@ -190,21 +193,21 @@ const _readOnlyProperty = (instance, propertyName, value) =>
  * for a new transaction family. This is the only interface that needs
  * to be implemented to create a new transaction family.
  *
- * The transactionFamilyName, version, and namespaces properties are
+ * The transactionFamilyName, versions, and namespaces properties are
  * used by the processor to route processing requests to the handler.
  */
 class TransactionHandler {
   /**
    * @param {string} transactionFamilyName - the name of the
    * transaction family that this handler can process, e.g. "intkey"
-   * @param {string} version - the version of the transaction family
-   * that this handler can process, e.g. "1.0"
+   * @param {string[]} versions - the versions of the transaction
+   * family that this handler can process, e.g. ["1.0", "1.5"]
    * @param {string[]} namespaces - a list containing all of the
    * handler's namespaces, e.g. ["abcdef"]
    */
-  constructor (transactionFamilyName, version, namespaces) {
+  constructor (transactionFamilyName, versions, namespaces) {
     _readOnlyProperty(this, 'transactionFamilyName', transactionFamilyName)
-    _readOnlyProperty(this, 'version', version)
+    _readOnlyProperty(this, 'versions', versions)
     _readOnlyProperty(this, 'namespaces', namespaces)
   }
 
