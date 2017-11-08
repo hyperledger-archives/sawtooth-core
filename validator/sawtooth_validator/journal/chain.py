@@ -83,29 +83,20 @@ class ChainController(object):
     """
     def __init__(self,
                  block_cache,
-                 block_sender,
                  block_validator,
                  state_view_factory,
-                 transaction_executor,
                  chain_head_lock,
                  on_chain_updated,
-                 squash_handler,
                  chain_id_manager,
-                 identity_signing_key,
                  data_dir,
                  config_dir,
-                 permission_verifier,
                  chain_observers,
                  metrics_registry=None):
         """Initialize the ChainController
         Args:
             block_cache: The cache of all recent blocks and the processing
                 state associated with them.
-            block_sender: an interface object used to send blocks to the
-                network.
             state_view_factory: The factory object to create
-            transaction_executor: The TransactionExecutor used to produce
-                schedulers for batch validation.
             chain_head_lock: Lock to hold while the chain head is being
                 updated, this prevents other components that depend on the
                 chain head and the BlockStore from having the BlockStore change
@@ -114,10 +105,7 @@ class ChainController(object):
                 handle block not found errors from the BlockStore explicitly.
             on_chain_updated: The callback to call to notify the rest of the
                  system the head block in the chain has been changed.
-                 squash_handler: a parameter passed when creating transaction
-                 schedulers.
             chain_id_manager: The ChainIdManager instance.
-            identity_signing_key: Private key for signing blocks.
             data_dir: path to location where persistent data for the
                 consensus module can be stored.
             config_dir: path to location where config data for the
@@ -132,13 +120,7 @@ class ChainController(object):
         self._block_cache = block_cache
         self._block_store = block_cache.block_store
         self._state_view_factory = state_view_factory
-        self._block_sender = block_sender
-        self._transaction_executor = transaction_executor
         self._notify_on_chain_updated = on_chain_updated
-        self._squash_handler = squash_handler
-        self._identity_signing_key = identity_signing_key
-        self._identity_public_key = \
-            signing.generate_public_key(self._identity_signing_key)
         self._data_dir = data_dir
         self._config_dir = config_dir
 
@@ -152,7 +134,6 @@ class ChainController(object):
         self._chain_head = None
         self._set_chain_head_from_block_store()
 
-        self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
         self._chain_head_gauge = \
             metrics_registry.gauge('chain_head', default='no chain head') \

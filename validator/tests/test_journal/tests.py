@@ -842,19 +842,14 @@ class TestChainController(unittest.TestCase):
             pass
 
         self.chain_ctrl = ChainController(
-            block_sender=self.block_sender,
             block_cache=self.block_tree_manager.block_cache,
             block_validator=self.block_validator,
             state_view_factory=self.state_view_factory,
-            transaction_executor=self.transaction_executor,
             chain_head_lock=self._chain_head_lock,
             on_chain_updated=chain_updated,
-            squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=self.permission_verifier,
             chain_observers=[self.state_delta_processor],
             metrics_registry=None)
 
@@ -1172,19 +1167,14 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             pass
 
         self.chain_ctrl = ChainController(
-            block_sender=self.block_sender,
             block_cache=self.block_tree_manager.block_cache,
             block_validator=self.block_validator,
             state_view_factory=self.state_view_factory,
-            transaction_executor=self.transaction_executor,
             chain_head_lock=self.chain_head_lock,
             on_chain_updated=chain_updated,
-            squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=self.permission_verifier,
             chain_observers=[self.state_delta_processor],
             metrics_registry=None)
 
@@ -1294,19 +1284,14 @@ class TestJournal(unittest.TestCase):
                 permission_verifier=self.permission_verifier)
 
             chain_controller = ChainController(
-                block_sender=self.block_sender,
                 block_cache=btm.block_cache,
                 block_validator=block_validator,
                 state_view_factory=MockStateViewFactory(btm.state_db),
-                transaction_executor=self.txn_executor,
                 chain_head_lock=block_publisher.chain_head_lock,
                 on_chain_updated=block_publisher.on_chain_updated,
-                squash_handler=None,
                 chain_id_manager=None,
-                identity_signing_key=btm.identity_signing_key,
                 data_dir=None,
                 config_dir=None,
-                permission_verifier=self.permission_verifier,
                 chain_observers=[self.state_delta_processor])
 
             self.gossip.on_batch_received = block_publisher.queue_batch

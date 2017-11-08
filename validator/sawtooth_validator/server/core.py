@@ -263,19 +263,14 @@ class Validator(object):
             permission_verifier=permission_verifier)
 
         chain_controller = ChainController(
-            block_sender=block_sender,
             block_cache=block_cache,
             block_validator=block_validator,
             state_view_factory=state_view_factory,
-            transaction_executor=executor,
             chain_head_lock=block_publisher.chain_head_lock,
             on_chain_updated=block_publisher.on_chain_updated,
-            squash_handler=context_manager.get_squash_handler(),
             chain_id_manager=chain_id_manager,
-            identity_signing_key=identity_signing_key,
             data_dir=data_dir,
             config_dir=config_dir,
-            permission_verifier=permission_verifier,
             chain_observers=[
                 state_delta_processor,
                 event_broadcaster,
