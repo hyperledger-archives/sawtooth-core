@@ -38,8 +38,9 @@ type SmallbankHandler struct {
 func (self *SmallbankHandler) FamilyName() string {
 	return "smallbank"
 }
-func (self *SmallbankHandler) FamilyVersion() string {
-	return "1.0"
+
+func (self *SmallbankHandler) FamilyVersions() []string {
+	return []string{"1.0"}
 }
 
 func (self *SmallbankHandler) Namespaces() []string {

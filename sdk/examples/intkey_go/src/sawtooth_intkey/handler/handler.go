@@ -56,8 +56,9 @@ const (
 func (self *IntkeyHandler) FamilyName() string {
 	return FAMILY_NAME
 }
-func (self *IntkeyHandler) FamilyVersion() string {
-	return "1.0"
+
+func (self *IntkeyHandler) FamilyVersions() []string {
+	return []string{"1.0"}
 }
 
 func (self *IntkeyHandler) Namespaces() []string {

@@ -52,8 +52,9 @@ func NewBurrowEVMHandler() *BurrowEVMHandler {
 func (self *BurrowEVMHandler) FamilyName() string {
 	return FAMILY_NAME
 }
-func (self *BurrowEVMHandler) FamilyVersion() string {
-	return FAMILY_VERSION
+
+func (self *BurrowEVMHandler) FamilyVersions() []string {
+	return []string{FAMILY_VERSION}
 }
 
 func (self *BurrowEVMHandler) Namespaces() []string {
