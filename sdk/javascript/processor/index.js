@@ -155,7 +155,8 @@ class TransactionProcessor {
         .then(content => TpRegisterResponse.decode(content))
         .then(ack => {
           let {transactionFamilyName: familyName, version} = handler
-          let status = ack.status === 0 ? 'succeeded' : 'failed'
+          let status = ack.status ===
+              TpRegisterResponse.Status.OK ? 'succeeded' : 'failed'
           console.log(`Registration of [${familyName} ${version}] ${status}`)
         })
         .catch(e => {
