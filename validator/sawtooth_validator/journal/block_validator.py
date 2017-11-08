@@ -17,6 +17,8 @@ import logging
 
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
+from sawtooth_validator.concurrent.atomic import ConcurrentSet
+
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
@@ -144,6 +146,9 @@ class BlockValidator(object):
             SettingsViewFactory(state_view_factory))
 
         self._thread_pool = InstrumentedThreadPoolExecutor(1)
+
+        # Blocks that are currently being processed
+        self._blocks_processing = ConcurrentSet()
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)
@@ -450,10 +455,36 @@ class BlockValidator(object):
     def submit_blocks_for_verification(
         self, blocks, consensus, callback
     ):
+
         for block in blocks:
+            LOGGER.debug(
+                "Adding block %s for processing", block.identifier[:6])
+            # Add the block to the set of blocks being processed
+            self._blocks_processing.add(block.identifier)
+
+            # Internal cleanup after verification
+            def _wrapper(commit_new_block, result):
+                LOGGER.debug(
+                    "Removing block from processing %s",
+                    block.identifier[:6])
+                try:
+                    self._blocks_processing.remove(block.identifier)
+                except KeyError:
+                    LOGGER.warning(
+                        "Tried to remove block from in process but it"
+                        " wasn't in processes: %s",
+                        block.identifier)
+
+                callback(commit_new_block, result)
+
+            # Schedule the block for processing
             self._thread_pool.submit(
                 self.process_block_verification,
-                block, consensus, callback)
+                block, consensus, _wrapper)
+
+
+    def in_process(self, block_id):
+        return block_id in self._blocks_processing
 
     def process_block_verification(self, block, consensus, callback):
         """
