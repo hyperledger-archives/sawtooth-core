@@ -131,8 +131,6 @@ class ChainController(object):
         self._data_dir = data_dir
         self._config_dir = config_dir
 
-        self._blocks_processing = {}  # a set of blocks that are
-        # currently being processed.
         self._blocks_pending = {}  # set of blocks that the previous block
         # is being processed. Once that completes this block will be
         # scheduled for validation.
@@ -215,10 +213,6 @@ class ChainController(object):
                 self.chain_head.header_signature,
                 state_view)
 
-        for blkw in blocks:
-            self._blocks_processing[blkw.block.header_signature] =\
-                self._block_validator
-
         self._block_validator.submit_blocks_for_verification(
             blocks, consensus_module, self.on_block_validated)
 
@@ -236,9 +230,6 @@ class ChainController(object):
             with self._lock:
                 self._blocks_considered_count.inc()
                 new_block = result.block
-
-                # remove from the processing list
-                del self._blocks_processing[new_block.identifier]
 
                 # Remove this block from the pending queue, obtaining any
                 # immediate descendants of this block in the process.
@@ -370,14 +361,17 @@ class ChainController(object):
 
                 # If we are already currently processing this block, then
                 # don't bother trying to schedule it again.
-                if block.identifier in self._blocks_processing:
+                if self._block_validator.in_process(block.identifier):
                     return
 
                 self._block_cache[block.identifier] = block
                 self._blocks_pending[block.identifier] = []
                 LOGGER.debug("Block received: %s", block)
-                if (block.previous_block_id in self._blocks_processing
-                        or block.previous_block_id in self._blocks_pending):
+
+                if self._block_validator.in_process(
+                    block.previous_block_id) or \
+                        block.previous_block_id in self._blocks_pending:
+
                     LOGGER.debug('Block pending: %s', block)
                     # if the previous block is being processed, put it in a
                     # wait queue, Also need to check if previous block is
@@ -405,7 +399,7 @@ class ChainController(object):
             if block_id in self._block_cache:
                 return True
 
-            if block_id in self._blocks_processing:
+            if self._block_validator.in_process(block_id):
                 return True
 
             if block_id in self._blocks_pending:
