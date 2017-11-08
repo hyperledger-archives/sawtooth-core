@@ -192,7 +192,7 @@ class Validator(object):
             SettingsViewFactory(state_view_factory),
         )
 
-        executor = TransactionExecutor(
+        transaction_executor = TransactionExecutor(
             service=component_service,
             context_manager=context_manager,
             settings_view_factory=SettingsViewFactory(state_view_factory),
@@ -200,7 +200,8 @@ class Validator(object):
             invalid_observers=[batch_tracker],
             metrics_registry=metrics_registry)
 
-        component_service.set_check_connections(executor.check_connections)
+        component_service.set_check_connections(
+            transaction_executor.check_connections)
 
         event_broadcaster = EventBroadcaster(
             component_service, block_store, receipt_store)
@@ -252,7 +253,7 @@ class Validator(object):
             signer=identity_signer)
 
         block_publisher = BlockPublisher(
-            transaction_executor=executor,
+            transaction_executor=transaction_executor,
             block_cache=block_cache,
             state_view_factory=state_view_factory,
             settings_cache=settings_cache,
@@ -272,7 +273,7 @@ class Validator(object):
         block_validator = BlockValidator(
             block_cache=block_cache,
             state_view_factory=state_view_factory,
-            executor=executor,
+            transaction_executor=transaction_executor,
             squash_handler=context_manager.get_squash_handler(),
             identity_signer=identity_signer,
             data_dir=data_dir,
@@ -300,7 +301,7 @@ class Validator(object):
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
-            transaction_executor=executor,
+            transaction_executor=transaction_executor,
             completer=completer,
             block_store=block_store,
             state_view_factory=state_view_factory,
@@ -324,11 +325,12 @@ class Validator(object):
             permission_verifier, block_publisher)
 
         component_handlers.add(
-            component_dispatcher, gossip, context_manager, executor, completer,
-            block_store, batch_tracker, global_state_db,
-            self.get_chain_head_state_root_hash, receipt_store,
-            event_broadcaster, permission_verifier, component_thread_pool,
-            sig_pool, block_publisher, metrics_registry)
+            component_dispatcher, gossip, context_manager,
+            transaction_executor, completer, block_store, batch_tracker,
+            global_state_db, self.get_chain_head_state_root_hash,
+            receipt_store, event_broadcaster, permission_verifier,
+            component_thread_pool, sig_pool, block_publisher,
+            metrics_registry)
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher
@@ -342,7 +344,7 @@ class Validator(object):
         self._sig_pool = sig_pool
 
         self._context_manager = context_manager
-        self._executor = executor
+        self._transaction_executor = transaction_executor
         self._genesis_controller = genesis_controller
         self._gossip = gossip
 
@@ -387,7 +389,7 @@ class Validator(object):
         self._component_thread_pool.shutdown(wait=True)
         self._sig_pool.shutdown(wait=True)
 
-        self._executor.stop()
+        self._transaction_executor.stop()
         self._context_manager.stop()
 
         self._block_publisher.stop()
