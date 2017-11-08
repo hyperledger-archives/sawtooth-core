@@ -17,6 +17,8 @@ import logging
 
 import sawtooth_signing as signing
 
+from sawtooth_validator.concurrent.threadpool import \
+    InstrumentedThreadPoolExecutor
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
@@ -110,7 +112,8 @@ class BlockValidator(object):
                  identity_signing_key,
                  data_dir,
                  config_dir,
-                 permission_verifier):
+                 permission_verifier,
+                 thread_pool=None):
         """Initialize the BlockValidator
         Args:
              implementation of the consensus algorithm to use for block
@@ -140,8 +143,14 @@ class BlockValidator(object):
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
 
-        self._validation_rule_enforcer = \
-            ValidationRuleEnforcer(SettingsViewFactory(state_view_factory))
+        self._validation_rule_enforcer = ValidationRuleEnforcer(
+            SettingsViewFactory(state_view_factory))
+
+        self._thread_pool = InstrumentedThreadPoolExecutor(1) \
+            if thread_pool is None else thread_pool
+
+    def stop(self):
+        self._thread_pool.shutdown(wait=True)
 
     def _get_previous_block_state_root(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -442,7 +451,15 @@ class BlockValidator(object):
 
         return (committed_batches, uncommitted_batches)
 
-    def run(self, block, consensus, callback):
+    def submit_blocks_for_verification(
+        self, blocks, consensus, callback
+    ):
+        for block in blocks:
+            self._thread_pool.submit(
+                self.process_block_verification,
+                block, consensus, callback)
+
+    def process_block_verification(self, block, consensus, callback):
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
