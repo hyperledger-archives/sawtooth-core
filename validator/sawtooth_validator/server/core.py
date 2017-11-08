@@ -767,6 +767,11 @@ class Validator(object):
             ClientEventsGetRequestHandler(event_broadcaster),
             thread_pool)
 
+        self._dispatcher.add_handler(
+            validator_pb2.Message.CLIENT_PEERS_GET_REQUEST,
+            client_handlers.PeersGetRequest(self._gossip),
+            thread_pool)
+
     def start(self):
         self._dispatcher.start()
         self._service.start()
