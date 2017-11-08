@@ -112,8 +112,7 @@ class BlockValidator(object):
                  identity_signing_key,
                  data_dir,
                  config_dir,
-                 permission_verifier,
-                 thread_pool=None):
+                 permission_verifier):
         """Initialize the BlockValidator
         Args:
              implementation of the consensus algorithm to use for block
@@ -146,8 +145,7 @@ class BlockValidator(object):
         self._validation_rule_enforcer = ValidationRuleEnforcer(
             SettingsViewFactory(state_view_factory))
 
-        self._thread_pool = InstrumentedThreadPoolExecutor(1) \
-            if thread_pool is None else thread_pool
+        self._thread_pool = InstrumentedThreadPoolExecutor(1)
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)

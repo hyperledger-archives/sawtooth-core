@@ -26,6 +26,7 @@ from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
+from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.genesis import GenesisController
@@ -251,9 +252,20 @@ class Validator(object):
             batch_injector_factory=batch_injector_factory,
             metrics_registry=metrics_registry)
 
+        block_validator = BlockValidator(
+            block_cache=block_cache,
+            state_view_factory=state_view_factory,
+            executor=executor,
+            squash_handler=context_manager.get_squash_handler(),
+            identity_signing_key=identity_signing_key,
+            data_dir=data_dir,
+            config_dir=config_dir,
+            permission_verifier=permission_verifier)
+
         chain_controller = ChainController(
             block_sender=block_sender,
             block_cache=block_cache,
+            block_validator=block_validator,
             state_view_factory=state_view_factory,
             transaction_executor=executor,
             chain_head_lock=block_publisher.chain_head_lock,
@@ -320,6 +332,7 @@ class Validator(object):
 
         self._block_publisher = block_publisher
         self._chain_controller = chain_controller
+        self._block_validator = block_validator
 
     def start(self):
         self._component_dispatcher.start()
@@ -363,6 +376,7 @@ class Validator(object):
 
         self._block_publisher.stop()
         self._chain_controller.stop()
+        self._block_validator.stop()
 
         threads = threading.enumerate()
 
