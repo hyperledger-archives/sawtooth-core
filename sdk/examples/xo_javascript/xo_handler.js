@@ -17,7 +17,7 @@
 
 'use strict'
 
-const {TransactionHandler} = require('sawtooth-sdk/processor')
+const {TransactionHandler} = require('sawtooth-sdk/processor/handler')
 const {InvalidTransaction, InternalError} = require('sawtooth-sdk/processor/exceptions')
 
 const crypto = require('crypto')
