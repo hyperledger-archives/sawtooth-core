@@ -20,7 +20,6 @@ import queue
 from threading import RLock
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
-from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -84,6 +83,7 @@ class ChainController(object):
     def __init__(self,
                  block_cache,
                  block_sender,
+                 block_validator,
                  state_view_factory,
                  transaction_executor,
                  chain_head_lock,
@@ -95,7 +95,6 @@ class ChainController(object):
                  config_dir,
                  permission_verifier,
                  chain_observers,
-                 thread_pool=None,
                  metrics_registry=None):
         """Initialize the ChainController
         Args:
@@ -171,17 +170,7 @@ class ChainController(object):
         self._block_queue = queue.Queue()
         self._chain_thread = None
 
-        self._block_validator = BlockValidator(
-            block_cache=self._block_cache,
-            state_view_factory=self._state_view_factory,
-            executor=self._transaction_executor,
-            squash_handler=self._squash_handler,
-            identity_signer=self._identity_signer,
-            data_dir=self._data_dir,
-            config_dir=self._config_dir,
-            permission_verifier=self._permission_verifier,
-            metrics_registry=self._metrics_registry,
-            thread_pool=thread_pool)
+        self._block_validator = block_validator
 
         # Only run this after all member variables have been bound
         self._set_chain_head_from_block_store()
@@ -214,8 +203,6 @@ class ChainController(object):
         if self._chain_thread is not None:
             self._chain_thread.stop()
             self._chain_thread = None
-
-        self._block_validator.stop()
 
     def queue_block(self, block):
         """
