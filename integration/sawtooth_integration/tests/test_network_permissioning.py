@@ -553,8 +553,7 @@ def validator_genesis_init(sawtooth_home_genesis,
         '-o', os.path.join(sawtooth_home_genesis, 'data', 'config.batch')
     ], check=True)
 
-    subprocess.run(['poet',
-                    'genesis',
+    subprocess.run(['poet', 'registration', 'create',
                     '-k', priv,
                     '-o', os.path.join(
                         sawtooth_home_genesis, 'data', 'poet.batch')],

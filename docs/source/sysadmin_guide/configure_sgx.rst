@@ -263,7 +263,7 @@ Create a poet-genesis batch:
 
 .. code-block:: console
 
-    $ poet genesis -k /etc/sawtooth/keys/validator.priv \
+    $ poet registration create -k /etc/sawtooth/keys/validator.priv \
       --enclave-module sgx -o poet_genesis.batch
     Writing key state for PoET public key: 0387a451...9932a998
     Generating poet_genesis.batch
