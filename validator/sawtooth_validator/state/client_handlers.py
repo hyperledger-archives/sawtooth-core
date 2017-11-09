@@ -16,12 +16,14 @@
 import abc
 import logging
 from time import time
+import itertools
 from functools import cmp_to_key
 from threading import Condition
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
+from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchFinishObserver
 from sawtooth_validator.networking.dispatch import Handler
@@ -169,13 +171,13 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         """
         if request.head_id:
             try:
-                return self._block_store[request.head_id].block
+                return self._block_store[request.head_id]
             except KeyError as e:
                 LOGGER.debug('Unable to find block "%s" in store', e)
                 raise _ResponseFailed(self._status.NO_ROOT)
 
         elif self._block_store.chain_head:
-            return self._block_store.chain_head.block
+            return self._block_store.chain_head
 
         else:
             LOGGER.debug('Unable to get chain head from block store')
@@ -202,9 +204,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             head_id = None
         else:
             head = self._get_head_block(request)
-            header = BlockHeader()
-            header.ParseFromString(head.header)
-            root = header.state_root_hash
+            root = head.state_root_hash
             head_id = head.header_signature
 
         try:
@@ -696,35 +696,85 @@ class BlockListRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
-        head_id = self._get_head_block(request).header_signature
-        blocks = self._list_store_resources(
-            request,
-            head_id,
-            request.block_ids,
-            lambda filter_id: self._block_store[filter_id].block,
-            lambda block: [block])
+        head_block = self._get_head_block(request)
+        blocks = None
+        paging_response = None
+        if request.block_ids:
+            blocks = self._block_store.get_blocks(request.block_ids)
+            blocks = itertools.filterfalse(
+                lambda block: block.block_num > head_block.block_num,
+                blocks)
 
-        blocks = _Sorter.sort_resources(
-            request,
-            blocks,
-            self._status.INVALID_SORT,
-            BlockHeader)
+            # realize the iterator
+            blocks = list(map(lambda blkw: blkw.block, blocks))
 
-        blocks, paging = _Pager.paginate_resources(
-            request,
-            blocks,
-            self._status.INVALID_PAGING)
+            paging_response = client_list_control_pb2.ClientPagingResponse(
+                total_resources=len(blocks))
+        else:
+            paging = request.paging
+            sort_reverse = BlockListRequest.is_reverse(
+                request.sorting, self._status.INVALID_SORT)
+            count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
+            iterargs = {
+                'reverse': not sort_reverse
+            }
+
+            if paging.start_id:
+                iterargs['start_block_num'] = paging.start_id
+            elif not sort_reverse:
+                iterargs['start_block'] = head_block
+
+            block_iter = None
+            try:
+                block_iter = self._block_store.get_block_iter(**iterargs)
+                blocks = block_iter
+                if sort_reverse:
+                    blocks = itertools.takewhile(
+                        lambda block: block.block_num <= head_block.block_num,
+                        blocks)
+
+                blocks = itertools.islice(blocks, count)
+
+                # realize the result list, which will evaluate the underlying
+                # iterator
+                blocks = list(map(lambda blkw: blkw.block, blocks))
+
+                next_block = next(block_iter, None)
+                if next_block:
+                    next_block_num = BlockStore.block_num_to_hex(
+                        next_block.block_num)
+                else:
+                    next_block_num = None
+            except ValueError:
+                if paging.start_id:
+                    return self._status.INVALID_PAGING
+
+                return self._status.NO_ROOT
+
+            paging_response = client_list_control_pb2.ClientPagingResponse(
+                next_id=next_block_num,
+                total_resources=head_block.block_num + 1)
 
         if not blocks:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id,
-                paging=paging)
+                head_id=head_block.identifier,
+                paging=paging_response)
 
         return self._wrap_response(
-            head_id=head_id,
-            paging=paging,
+            head_id=head_block.identifier,
+            paging=paging_response,
             blocks=blocks)
+
+    @staticmethod
+    def is_reverse(sorting, fail_status):
+        if not sorting:
+            return False
+
+        if not sorting[0].keys == ['block_num']:
+            raise _ResponseFailed(fail_status)
+
+        return sorting[0].reverse
 
 
 class BlockGetByIdRequest(_ClientRequestHandler):

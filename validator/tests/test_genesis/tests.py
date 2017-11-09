@@ -22,8 +22,12 @@ from unittest.mock import patch
 
 import sawtooth_signing as signing
 from sawtooth_validator.database.dict_database import DictDatabase
+from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.genesis_pb2 import GenesisData
 from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.genesis import InvalidGenesisStateError
@@ -46,7 +50,8 @@ class TestGenesisController(unittest.TestCase):
 
     @staticmethod
     def make_block_store(data=None):
-        return BlockStore(DictDatabase(data))
+        return BlockStore(DictDatabase(
+            data, indexes=BlockStore.create_index_configuration()))
 
     def test_requires_genesis(self):
         self._with_empty_batch_file()
@@ -67,8 +72,9 @@ class TestGenesisController(unittest.TestCase):
         self.assertEqual(True, genesis_ctrl.requires_genesis())
 
     def test_does_not_require_genesis_block_exists(self):
+        block = self._create_block()
         block_store = self.make_block_store({
-            'chain_head_id': 'some_other_id'
+            block.header_signature: block
         })
 
         genesis_ctrl = GenesisController(
@@ -141,9 +147,9 @@ class TestGenesisController(unittest.TestCase):
         """
         self._with_empty_batch_file()
 
+        block = self._create_block()
         block_store = self.make_block_store({
-            'chain_head_id': 'some_other_id',
-            'some_other_id': b''
+            block.header_signature: block
         })
 
         genesis_ctrl = GenesisController(
@@ -259,3 +265,12 @@ class TestGenesisController(unittest.TestCase):
         block_chain_id_file = os.path.join(self._temp_dir, 'block-chain-id')
         with open(block_chain_id_file, 'r') as f:
             return f.read()
+
+    def _create_block(self):
+        return BlockWrapper.wrap(
+            Block(header_signature='some_block_id',
+                  batches=[],
+                  header=BlockHeader(
+                      block_num=0,
+                      previous_block_id=NULL_BLOCK_IDENTIFIER
+                  ).SerializeToString()))

@@ -16,15 +16,10 @@
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 
-from sawtooth_validator.exceptions import PossibleForkDetectedError
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
-
-CHAIN_HEAD_KEY = "chain_head_id"
 
 
 class BlockStore(MutableMapping):
@@ -40,8 +35,7 @@ class BlockStore(MutableMapping):
         if key != value.identifier:
             raise KeyError("Invalid key to store block under: {} expected {}".
                            format(key, value.identifier))
-        add_ops = self._build_add_block_ops(value)
-        self._block_store.set_batch(add_ops)
+        self._block_store.put(key, value)
 
     def __getitem__(self, key):
         return self._get_block(key)
@@ -53,7 +47,7 @@ class BlockStore(MutableMapping):
         return x in self._block_store
 
     def __iter__(self):
-        return _BlockPredecessorIterator(self, start_block=self.chain_head)
+        return self.get_block_iter()
 
     def __len__(self):
         # Required by abstract base class, but implementing is non-trivial
@@ -65,6 +59,46 @@ class BlockStore(MutableMapping):
             value = self._block_store[key]
             out.append(str(value))
         return ','.join(out)
+
+    @staticmethod
+    def create_index_configuration():
+        return {
+            'batch': BlockStore._batch_index_keys,
+            'transaction': BlockStore._transaction_index_keys,
+            'block_num': BlockStore._block_num_index_keys,
+        }
+
+    @staticmethod
+    def deserialize_block(value):
+        """
+        Deserialize a byte string into a BlockWrapper
+
+        Args:
+            value (bytes): the byte string to deserialze
+
+        Returns:
+            BlockWrapper: a block wrapper instance
+        """
+        # Block id strings are stored under batch/txn ids for reference.
+        # Only Blocks, not ids or Nones, should be returned by _get_block.
+        block = Block()
+        block.ParseFromString(value)
+        return BlockWrapper(
+            status=BlockStatus.Valid,
+            block=block)
+
+    @staticmethod
+    def serialize_block(blkw):
+        """
+        Given a block wrapper, produce a byte string
+
+        Args:
+            blkw: (:obj:`BlockWrapper`) a block wrapper to serialize
+
+        Returns:
+            bytes: the serialized bytes
+        """
+        return blkw.block.SerializeToString()
 
     def update_chain(self, new_chain, old_chain=None):
         """
@@ -79,27 +113,22 @@ class BlockStore(MutableMapping):
         :return:
         None
         """
-        add_pairs = []
-        del_keys = []
-        for blkw in new_chain:
-            add_pairs = add_pairs + self._build_add_block_ops(blkw)
-        if old_chain is not None:
-            for blkw in old_chain:
-                del_keys = del_keys + self._build_remove_block_ops(blkw)
-        add_pairs.append((CHAIN_HEAD_KEY, new_chain[0].identifier))
+        add_pairs = [(blkw.header_signature, blkw) for blkw in new_chain]
+        if old_chain:
+            del_keys = [blkw.header_signature for blkw in old_chain]
+        else:
+            del_keys = []
 
-        self._block_store.set_batch(add_pairs, del_keys)
+        self._block_store.update(add_pairs, del_keys)
 
     @property
     def chain_head(self):
         """
         Return the head block of the current chain.
         """
-        if CHAIN_HEAD_KEY not in self._block_store:
-            return None
-        if self._block_store[CHAIN_HEAD_KEY] in self._block_store:
-            return self._get_block(self._block_store[CHAIN_HEAD_KEY])
-        return None
+        with self._block_store.cursor(index='block_num') as curs:
+            curs.last()
+            return curs.value()
 
     def chain_head_state_root(self):
         """
@@ -118,110 +147,205 @@ class BlockStore(MutableMapping):
         return self._block_store
 
     def get_predecessor_iter(self, starting_block=None):
-        """Returns an iterator that traverses blocks via their
-        previous_block_ids.
+        """Returns an iterator that traverses block via its predecesssors.
 
         Args:
             starting_block (:obj:`BlockWrapper`): the block from which
                 traversal begins
 
         Returns:
-            An iterator
+            An iterator of block wrappers
         """
-        if not starting_block:
-            return _BlockPredecessorIterator(self, start_block=self.chain_head)
+        return self.get_block_iter(start_block=starting_block)
 
-        return _BlockPredecessorIterator(self, start_block=starting_block)
+    def get_block_iter(self, start_block=None, start_block_num=None,
+                       reverse=True):
+        """Returns an iterator that traverses blocks in block number order.
 
-    def _build_add_block_ops(self, blkw):
-        """Build the batch operations to add a block to the BlockStore.
+        Args:
+            start_block (:obj:`BlockWrapper`): the block from which traversal
+                begins
+            start_block_num (str): a starting block number, in hex, from where
+                traversal begins; only used if no starting_block is provided
 
-        :param blkw (BlockWrapper): Block to add BlockStore.
-        :return:
-        list of key value tuples to add to the BlockStore
+            reverse (bool): If True, traverse the blocks in from most recent
+                to oldest block. Otherwise, it traverse the blocks in the
+                opposite order.
+
+        Returns:
+            An iterator of block wrappers
+
+        Raises:
+            ValueError: If start_block or start_block_num do not specify a
+                valid block
         """
-        out = []
-        blk_id = blkw.identifier
-        out.append((blk_id, blkw.block.SerializeToString()))
-        for batch in blkw.batches:
-            out.append((batch.header_signature, blk_id))
-            for txn in batch.transactions:
-                out.append((txn.header_signature, blk_id))
-        out.append((str(blkw.block_num), blk_id))
-        return out
+        with self._block_store.cursor(index='block_num') as curs:
+            if start_block:
+                start_block_num = BlockStore.block_num_to_hex(
+                    start_block.block_num)
+                if not curs.seek(start_block_num):
+                    raise ValueError('block {} is not a valid block'.format(
+                        start_block))
+            elif start_block_num:
+                if not curs.seek(start_block_num):
+                    raise ValueError('Block number {} does not reference a '
+                                     'valid block'.format(start_block_num))
+
+            iterator = None
+            if reverse:
+                iterator = curs.iter_rev()
+            else:
+                iterator = curs.iter()
+
+            for block in iterator:
+                yield block
 
     @staticmethod
-    def _build_remove_block_ops(blkw):
-        """Build the batch operations to remove a block from the BlockStore.
+    def _batch_index_keys(block):
+        blkw = BlockWrapper.wrap(block)
+        return [batch.header_signature.encode()
+                for batch in blkw.batches]
 
-        :param blkw (BlockWrapper): Block to remove.
-        :return:
-        list of values to remove from the BlockStore
-        """
-        out = []
-        blk_id = blkw.identifier
-        out.append(blk_id)
+    @staticmethod
+    def _transaction_index_keys(block):
+        blkw = BlockWrapper.wrap(block)
+        keys = []
         for batch in blkw.batches:
-            out.append(batch.header_signature)
             for txn in batch.transactions:
-                out.append(txn.header_signature)
-        out.append(str(blkw.block_num))
-        return out
+                keys.append(txn.header_signature.encode())
+        return keys
+
+    @staticmethod
+    def _block_num_index_keys(block):
+        blkw = BlockWrapper.wrap(block)
+        # Format the number to a 64bit hex value, for natural ordering
+        return [BlockStore.block_num_to_hex(blkw.block_num).encode()]
+
+    @staticmethod
+    def block_num_to_hex(block_num):
+        """Converts a block number to a hex string.
+        This is used for proper index ordering and lookup.
+
+        Args:
+            block_num: uint64
+
+        Returns:
+            A hex-encoded str
+        """
+        return "{0:#0{1}x}".format(block_num, 18)
 
     def _get_block(self, key):
         value = self._block_store.get(key)
         if value is None:
             raise KeyError('Block "{}" not found in store'.format(key))
 
-        # Block id strings are stored under batch/txn ids for reference.
-        # Only Blocks, not ids or Nones, should be returned by _get_block.
-        if isinstance(value, bytes):
-            return self._decode_block(value)
-        raise KeyError('Block "{}" not found in store'.format(key))
+        return BlockWrapper.wrap(value)
 
-    def _get_block_indirect(self, key):
-        value = self._block_store.get_indirect(key)
-        if value is None:
-            raise KeyError('Block "{}" not found in store'.format(key))
+    def get_blocks(self, block_ids):
+        """Returns all blocks with the given set of block_ids.
+        If a block id in the provided iterable does not exist in the block
+        store, it is ignored.
 
-        # Block id strings are stored under batch/txn ids for reference.
-        # Only Blocks, not ids or Nones, should be returned by _get_block.
-        if isinstance(value, bytes):
-            return self._decode_block(value)
-        raise KeyError('Block "{}" not found in store'.format(key))
+        Args:
+            block_ids (:iterable:str): an iterable of block ids
 
-    def _decode_block(self, value):
-        # Block id strings are stored under batch/txn ids for reference.
-        # Only Blocks, not ids or Nones, should be returned by _get_block.
-        block = Block()
-        block.ParseFromString(value)
-        return BlockWrapper(
-            status=BlockStatus.Valid,
-            block=block)
+        Returns
+            list of block wrappers found for the given block ids
+        """
+        return [block for _, block in self._block_store.get_multi(block_ids)]
 
     def get_block_by_transaction_id(self, txn_id):
-        try:
-            return self._get_block_indirect(txn_id)
-        except KeyError:
+        """Returns the block that contains the given transaction id.
+
+        Args:
+            txn_id (str): a transaction id
+
+        Returns:
+            a block wrapper of the containing block
+
+        Raises:
+            ValueError if no block containing the transaction is found
+        """
+        block = self._block_store.get(txn_id, index='transaction')
+        if not block:
             raise ValueError('Transaction "%s" not in BlockStore', txn_id)
 
+        return block
+
     def get_block_by_number(self, block_num):
-        try:
-            return self._get_block_indirect(str(block_num))
-        except KeyError:
+        """Returns the block that contains the given transaction id.
+
+        Args:
+            block_num (uint64): a block number
+
+        Returns:
+            a block wrapper of the containing block
+
+        Raises:
+            KeyError if no block with the given number is found
+        """
+        block = self._block_store.get(
+            BlockStore.block_num_to_hex(block_num), index='block_num')
+        if not block:
             raise KeyError('Block number "%s" not in BlockStore', block_num)
 
+        return block
+
     def has_transaction(self, txn_id):
-        return txn_id in self._block_store
+        """Returns True if the transaction is contained in a block in the
+        block store.
+
+        Args:
+            txn_id (str): a transaction id
+
+        Returns:
+            True if it is contained in a committed block, False otherwise
+        """
+        return self._block_store.contains_key(txn_id, index='transaction')
 
     def get_block_by_batch_id(self, batch_id):
-        try:
-            return self._get_block_indirect(batch_id)
-        except KeyError:
+        """Returns the block that contains the given batch id.
+
+        Args:
+            batch_id (str): a batch id
+
+        Returns:
+            a block wrapper of the containing block
+
+        Raises:
+            ValueError if no block containing the batch is found
+        """
+        block = self._block_store.get(batch_id, index='batch')
+        if not block:
             raise ValueError('Batch "%s" not in BlockStore', batch_id)
 
+        return block
+
+    def get_blocks_by_batch_ids(self, batch_ids):
+        """Returns the block that contains the given batch id.
+
+        Args:
+            batch_id (str): a batch id
+
+        Returns:
+            a block wrapper of the containing block
+
+        Raises:
+            ValueError if no block containing the batch is found
+        """
+        return self._block_store.get_multi(batch_ids, index='batch')
+
     def has_batch(self, batch_id):
-        return batch_id in self._block_store
+        """Returns True if the batch is contained in a block in the
+        block store.
+
+        Args:
+            batch_id (str): a batch id
+
+        Returns:
+            True if it is contained in a committed block, False otherwise
+        """
+        return self._block_store.contains_key(batch_id, index='batch')
 
     def get_batch_by_transaction(self, transaction_id):
         """
@@ -236,12 +360,13 @@ class BlockStore(MutableMapping):
         The batch that has the transaction.
         """
         block = self.get_block_by_transaction_id(transaction_id)
+        if block is None:
+            return None
         # Find batch in block
         for batch in block.batches:
-            batch_header = BatchHeader()
-            batch_header.ParseFromString(batch.header)
-            if transaction_id in batch_header.transaction_ids:
-                return batch
+            for txn in batch.transactions:
+                if txn.header_signature == transaction_id:
+                    return batch
 
     def get_batch(self, batch_id):
         """
@@ -254,9 +379,32 @@ class BlockStore(MutableMapping):
         The batch with the batch_id.
         """
         block = self.get_block_by_batch_id(batch_id)
+        return BlockStore._get_batch_from_block(block, batch_id)
+
+    def get_batches(self, batch_ids):
+        """Returns a list of committed batches from a iterable of batch ids.
+        Any batch id that does not exist in a committed block is ignored.
+
+        Args:
+            batch_ids (:iterable:str): the batch ids to find
+
+        Returns:
+            A list of the batches found by the given batch ids
+        """
+        blocks = self._block_store.get_multi(batch_ids, index='batch')
+
+        return [BlockStore._get_batch_from_block(block, batch_id)
+                for batch_id, block in blocks]
+
+    @staticmethod
+    def _get_batch_from_block(block, batch_id):
         for batch in block.batches:
             if batch.header_signature == batch_id:
                 return batch
+
+        raise ValueError(
+            'Batch {} not in block {}: possible index mismatch'.format(
+                batch_id, block.identifier))
 
     def get_transaction(self, transaction_id):
         """Returns a Transaction object from the block store by its id.
@@ -270,48 +418,23 @@ class BlockStore(MutableMapping):
         Raises:
             ValueError: The transaction is not in the block store
         """
-        batch = self.get_batch_by_transaction(transaction_id)
-        # Find transaction in batch
-        for txn in batch.transactions:
-            if txn.header_signature == transaction_id:
-                return txn
+        block = self.get_block_by_transaction_id(transaction_id)
+        return BlockStore._get_txn_from_block(block, transaction_id)
 
+    def get_transactions(self, transaction_ids):
+        blocks = self._block_store.get_multi(
+            transaction_ids, index='transaction')
 
-class _BlockPredecessorIterator(object):
-    """An Iterator for traversing blocks via a block's previous_block_id
-    """
+        return [BlockStore._get_txn_from_block(block, txn_id)
+                for txn_id, block in blocks]
 
-    def __init__(self, block_store, start_block):
-        """Iterates from a starting block, through its predecessors.
+    @staticmethod
+    def _get_txn_from_block(block, txn_id):
+        for batch in block.batches:
+            for txn in batch.transactions:
+                if txn.header_signature == txn_id:
+                    return txn
 
-        Args:
-            block_store (:obj:`BlockStore`): the block store, from which
-                the predecessors are found
-            start_block (:obj:`BlockWrapper`): the starting block, from which
-                the predecessors will be iterated over.
-        """
-        self._block_store = block_store
-        if start_block:
-            self._current_block_id = start_block.identifier
-        else:
-            self._current_block_id = None
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if not self._current_block_id:
-            raise StopIteration()
-
-        try:
-            block = self._block_store[self._current_block_id]
-        except KeyError:
-            raise PossibleForkDetectedError(
-                'Block {} is no longer in the block store'.format(
-                    self._current_block_id[:8]))
-
-        self._current_block_id = block.header.previous_block_id
-        if self._current_block_id == NULL_BLOCK_IDENTIFIER:
-            self._current_block_id = None
-
-        return block
+        raise ValueError(
+            'Transaction {} not in block {}: possible index mismatch'.format(
+                txn_id, block.identifier))

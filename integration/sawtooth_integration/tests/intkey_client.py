@@ -42,7 +42,7 @@ class IntkeyClient(RestClient):
         return [block['header_signature'] for block in self.list_blocks()]
 
     def calculate_tolerance(self):
-        length = len(self.list_blocks())
+        length = len(list(self.list_blocks()))
         # the most recent nth of the chain, at least 2 blocks
         return max(
             2,

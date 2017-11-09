@@ -224,7 +224,7 @@ class BlockValidator(object):
                              blkw)
                 scheduler.cancel()
                 return False
-            except:
+            except Exception:
                 scheduler.cancel()
                 raise
 

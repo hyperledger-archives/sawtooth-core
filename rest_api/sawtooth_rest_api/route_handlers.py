@@ -692,7 +692,8 @@ class RouteHandler(object):
                                   min=min_pos, max=max_pos)
 
         # Build paging urls based on ids
-        if 'start_id' in controls or 'end_id' in controls:
+        if 'start_id' in controls or 'end_id' in controls or \
+                paging_response['next_id']:
             if paging_response['next_id']:
                 paging['next'] = build_pg_url(paging_response['next_id'])
             if paging_response['previous_id']:

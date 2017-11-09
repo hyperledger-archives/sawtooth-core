@@ -58,7 +58,7 @@ class TestWorkload(unittest.TestCase):
         # if workload is working, expect at least
         # MINIMUM_BLOCK_COUNT blocks to have been created
         self.assertGreaterEqual(
-            len(blocks),
+            len(list(blocks)),
             MINIMUM_BLOCK_COUNT,
             'Not enough blocks; something is probably wrong with workload')
 

@@ -19,6 +19,7 @@ import cbor
 
 import sawtooth_signing as signing
 from sawtooth_validator.journal.completer import Completer
+from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader, \
@@ -30,7 +31,8 @@ from test_completer.mock import MockGossip
 
 class TestCompleter(unittest.TestCase):
     def setUp(self):
-        self.block_store = BlockStore({})
+        self.block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
         self.gossip = MockGossip()
         self.completer = Completer(self.block_store, self.gossip)
         self.completer._on_block_received = self._on_block_received

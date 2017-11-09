@@ -93,7 +93,8 @@ class BlockTreeManager(object):
     def __init__(self, with_genesis=True):
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
-        self.block_store = BlockStore(DictDatabase())
+        self.block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
         self.block_cache = BlockCache(self.block_store)
         self.state_db = {}
 
