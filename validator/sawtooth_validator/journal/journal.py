@@ -279,6 +279,9 @@ class Journal(object):
         for observer in self._batch_obs:
             observer.notify_batch_pending(batch)
 
+    def has_block(self, block_id):
+        return self._chain_controller.has_block(block_id)
+
 
 class PendingBatchObserver(metaclass=abc.ABCMeta):
     """An interface class for components wishing to be notified when a Batch

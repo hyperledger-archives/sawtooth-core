@@ -779,7 +779,7 @@ class ChainController(object):
     def on_block_received(self, block):
         try:
             with self._lock:
-                if block.header_signature in self._block_store:
+                if self.has_block(block.header_signature):
                     # do we already have this block
                     return
 
@@ -817,6 +817,19 @@ class ChainController(object):
         # pylint: disable=broad-except
         except Exception as exc:
             LOGGER.exception(exc)
+
+    def has_block(self, block_id):
+        with self._lock:
+            if block_id in self._block_cache:
+                return True
+
+            if block_id in self._blocks_processing:
+                return True
+
+            if block_id in self._blocks_pending:
+                return True
+
+            return False
 
     def _set_genesis(self, block):
         # This is used by a non-genesis journal when it has received the

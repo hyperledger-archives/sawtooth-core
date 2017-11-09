@@ -82,6 +82,8 @@ from sawtooth_validator.gossip.gossip import Gossip
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
 from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import \
+    GossipMessageHaveBlockHandler
+from sawtooth_validator.gossip.gossip_handlers import \
     GossipBlockResponseHandler
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipBatchResponseHandler
@@ -461,6 +463,11 @@ class Validator(object):
             validator_pb2.Message.GOSSIP_MESSAGE,
             GossipMessageHandler(),
             network_thread_pool)
+
+        self._network_dispatcher.add_handler(
+            validator_pb2.Message.GOSSIP_MESSAGE,
+            GossipMessageHaveBlockHandler(completer, self._journal.has_block),
+            thread_pool)
 
         # GOSSIP_MESSAGE 2) Verify Network Permissions
         self._network_dispatcher.add_handler(

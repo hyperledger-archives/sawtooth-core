@@ -218,6 +218,7 @@ class BlockTreeManager(object):
 
         try:
             block_defs = [self._block_def(**params) for _ in range(blocks)]
+            block_defs[-1] = self._block_def()
         except TypeError:
             block_defs = blocks
 
