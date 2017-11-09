@@ -40,31 +40,31 @@ class GlobalState {
     // multiple values, it is encouraged to use the batch get overload defined
     // below. The function returns false if the value is not retrieved, true if
     // it is found in the GlobalStore, and throws an exception if an error occurs
-    bool Get(std::string* out_value, const std::string& address) const;
+    bool get_state(std::string* out_value, const std::string& address) const;
 
     // Retrieve multiple values from the global state. Values are returned in
     // the out_values map. If a value is not present then there will be no
     // entry in the returned map. So you must check for the presence of a
     // returned value prior to accessing it.
-    void Get(std::unordered_map<std::string, std::string>* out_values,
+    void get_state(std::unordered_map<std::string, std::string>* out_values,
         const std::vector<std::string>& addresses) const;
 
     // Set a single GlobalState value. Use the batch Set function defined
     // below if you are setting multiple items.
-    void Set(const std::string& address, const std::string& value) const;
+    void set_state(const std::string& address, const std::string& value) const;
     // Set multiple values in the global state. Each entry in the addresses
     // param is a std::pair, with the first value representing the address and
     // the second the value.
     //      std::vector<GlobalState::KeyValue> addresses;
     //      addresses.push(std::make_pair(address, value));
-    void Set(const std::vector<KeyValue>& addresses) const;
+    void set_state(const std::vector<KeyValue>& addresses) const;
 
     // Delete a single GlobalState value. Used the batch Delete function
     // defined below if you are deleting multiple items.
-    void Delete(const std::string& address) const;
+    void delete_state(const std::string& address) const;
 
     // Delete multiple entries from global state.
-    void Delete(const std::vector<std::string>& address) const;
+    void delete_state(const std::vector<std::string>& address) const;
 
  private:
     std::string context_id;

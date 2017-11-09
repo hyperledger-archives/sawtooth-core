@@ -211,7 +211,7 @@ public class IntegerKeyHandler implements TransactionHandler {
 
       if (verb.equals("set")) {
         // The ByteString is cbor encoded dict/hashmap
-        Map<String, ByteString> possibleAddressValues = state.get(Arrays.asList(address));
+        Map<String, ByteString> possibleAddressValues = state.getState(Arrays.asList(address));
         byte[] stateValueRep = possibleAddressValues.get(address).toByteArray();
         Map<String, Long> stateValue = null;
         if (stateValueRep.length > 0) {
@@ -230,10 +230,10 @@ public class IntegerKeyHandler implements TransactionHandler {
         Map.Entry<String, ByteString> entry = this.encodeState(address, name, value);
 
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
-        addresses = state.set(addressValues);
+        addresses = state.setState(addressValues);
       }
       if (verb.equals("inc")) {
-        Map<String, ByteString> possibleValues = state.get(Arrays.asList(address));
+        Map<String, ByteString> possibleValues = state.getState(Arrays.asList(address));
         byte[] stateValueRep = possibleValues.get(address).toByteArray();
         if (stateValueRep.length == 0) {
           throw new InvalidTransactionException("Verb is inc but Name is not in state");
@@ -250,10 +250,10 @@ public class IntegerKeyHandler implements TransactionHandler {
         Map.Entry<String, ByteString> entry =
             this.encodeState(address, name, stateValue.get(name) + value);
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
-        addresses = state.set(addressValues);
+        addresses = state.setState(addressValues);
       }
       if (verb.equals("dec")) {
-        Map<String, ByteString> possibleAddressResult = state.get(Arrays.asList(address));
+        Map<String, ByteString> possibleAddressResult = state.getState(Arrays.asList(address));
         byte[] stateValueRep = possibleAddressResult.get(address).toByteArray();
 
         if (stateValueRep.length == 0) {
@@ -273,7 +273,7 @@ public class IntegerKeyHandler implements TransactionHandler {
             this.encodeState(address, name, stateValue.get(name) - value);
 
         Collection<Map.Entry<String, ByteString>> addressValues = Arrays.asList(entry);
-        addresses = state.set(addressValues);
+        addresses = state.setState(addressValues);
       }
       // if the 'set', 'inc', or 'dec' set to state didn't work
       if (addresses.size() == 0) {
