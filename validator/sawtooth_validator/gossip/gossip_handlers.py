@@ -133,6 +133,32 @@ class GossipMessageHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
 
+class GossipMessageHaveBlockHandler(Handler):
+    def __init__(self, completer, has_block):
+        self._completer = completer
+        self._has_block = has_block
+
+    def handle(self, connection_id, message_content):
+        gossip_message = GossipMessage()
+        gossip_message.ParseFromString(message_content)
+        if gossip_message.content_type == "BLOCK":
+            block = Block()
+            block.ParseFromString(gossip_message.content)
+            has_block = False
+            if self._completer.get_block(block.header_signature) is not None:
+                has_block = True
+
+            if not has_block and self._has_block(block.header_signature):
+                has_block = True
+
+            if has_block:
+                LOGGER.debug("Drop duplicate block: %s",
+                             block.header_signature)
+                return HandlerResult(HandlerStatus.DROP)
+
+        return HandlerResult(HandlerStatus.PASS)
+
+
 class GossipBlockResponseHandler(Handler):
     def handle(self, connection_id, message_content):
         ack = NetworkAcknowledgement()
