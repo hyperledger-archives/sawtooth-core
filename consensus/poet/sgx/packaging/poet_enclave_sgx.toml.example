@@ -1,3 +1,7 @@
+#
+# Sawtooth -- PoET SGX Enclave Configuration
+#
+
 # spid is a 32-digit hex string tied to the enclave implementation
 
 spid = 'DEADBEEF00000000DEADBEEF00000000'

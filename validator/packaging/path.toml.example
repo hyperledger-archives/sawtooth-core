@@ -1,5 +1,5 @@
 #
-# Sawtooth Lake -- Path Configuration
+# Sawtooth -- Path Configuration
 #
 
 
@@ -54,7 +54,7 @@
 #   policy_dir  = base_dir\policy\
 
 #
-# For example, if Sawtooth Lake is installed in C:\sawtooth\, the validator
+# For example, if Sawtooth is installed in C:\sawtooth\, the validator
 # executable would be C:\sawtooth\bin\validator.exe and the data directory
 # would be C:\sawtooth\data\.
 
