@@ -191,16 +191,8 @@ class ChainController(object):
         return self._chain_head
 
     def _submit_blocks_for_verification(self, blocks):
-        state_view = BlockWrapper.state_view_for_block(
-            self.chain_head,
-            self._state_view_factory)
-        consensus_module = \
-            ConsensusFactory.get_configured_consensus_module(
-                self.chain_head.header_signature,
-                state_view)
-
         self._block_validator.submit_blocks_for_verification(
-            blocks, consensus_module, self.on_block_validated)
+            blocks, self.on_block_validated)
 
     def on_block_validated(self, commit_new_block, result):
         """Message back from the block validator, that the validation is
@@ -402,16 +394,8 @@ class ChainController(object):
                                "Cannot set initial chain head.: %s",
                                chain_id[:8], block.identifier[:8])
             else:
-                state_view = self._state_view_factory.create_view()
-                consensus_module = \
-                    ConsensusFactory.get_configured_consensus_module(
-                        NULL_BLOCK_IDENTIFIER,
-                        state_view)
 
-                valid = self._block_validator.validate_block(
-                    block, consensus_module)
-
-                if valid:
+                if self._block_validator.validate_block(block):
                     if chain_id is None:
                         self._chain_id_manager.save_block_chain_id(
                             block.identifier)
