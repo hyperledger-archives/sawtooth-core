@@ -36,6 +36,7 @@ use sawtooth_sdk::messages::client_block::{
     ClientBlockListResponse,
     ClientBlockGetByIdRequest,
     ClientBlockGetByNumRequest,
+    ClientBlockGetByTransactionIdRequest,
     ClientBlockGetResponse,
     ClientBlockGetResponse_Status,
 };
@@ -75,6 +76,7 @@ pub enum BlockKey {
     Earliest,
     Number(u64),
     Signature(String),
+    Transaction(String),
 }
 
 pub enum BlockKeyParseError {
@@ -391,11 +393,7 @@ impl<S: MessageSender> ValidatorClient<S> {
                         Message_MessageType::CLIENT_TRANSACTION_GET_REQUEST, &request)?;
 
                 let block = {
-                    if response.block_id == "" {
-                        None
-                    } else {
-                        self.get_block(BlockKey::Signature(response.block_id.clone())).ok()
-                    }
+                    self.get_block(BlockKey::Transaction(txn_id.clone())).ok()
                 };
 
                 match response.status {
@@ -455,6 +453,12 @@ impl<S: MessageSender> ValidatorClient<S> {
                 request.set_block_id(String::from("0000000000000000"));
                 response = self.send_request(message_type, &request)?;
             },
+            BlockKey::Transaction(transaction_id) => {
+                let mut request = ClientBlockGetByTransactionIdRequest::new();
+                let message_type: Message_MessageType = Message_MessageType::CLIENT_BLOCK_GET_BY_TRANSACTION_ID_REQUEST;
+                request.set_transaction_id(transaction_id);
+                response = self.send_request(message_type, &request)?;
+            },
         };
 
         match response.status {
@@ -490,6 +494,14 @@ impl<S: MessageSender> ValidatorClient<S> {
                 request.set_head_id(block_id);
             },
             BlockKey::Number(block_num) => match self.block_num_to_block_id(block_num) {
+                Ok(block_id) => {
+                    request.set_head_id(block_id);
+                },
+                Err(error) => {
+                    return Err(String::from(format!("{:?}", error)));
+                },
+            },
+            BlockKey::Transaction(transaction_id) => match self.transaction_to_block_id(transaction_id) {
                 Ok(block_id) => {
                     request.set_head_id(block_id);
                 },
@@ -610,6 +622,11 @@ impl<S: MessageSender> ValidatorClient<S> {
 
     fn block_num_to_block_id(&mut self, block_num: u64) -> Result<String, Error> {
         self.get_block(BlockKey::Number(block_num)).map(|block|
+            String::from(block.header_signature))
+    }
+
+    fn transaction_to_block_id(&mut self, transaction_id: String) -> Result<String, Error> {
+        self.get_block(BlockKey::Transaction(transaction_id)).map(|block|
             String::from(block.header_signature))
     }
 }
