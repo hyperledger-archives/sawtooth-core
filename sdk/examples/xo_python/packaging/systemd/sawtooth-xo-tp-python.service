@@ -7,6 +7,7 @@ User=sawtooth
 Group=sawtooth
 EnvironmentFile=-/etc/default/sawtooth-xo-tp-python
 ExecStart=/usr/bin/xo-tp-python $SAWTOOTH_XO_TP_PYTHON_ARGS
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
