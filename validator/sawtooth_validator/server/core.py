@@ -287,7 +287,8 @@ class Validator(object):
         # -- Register Message Handler -- #
         network_handlers.add(
             network_dispatcher, network_service, gossip, completer,
-            responder, network_thread_pool, sig_pool, permission_verifier)
+            responder, network_thread_pool, sig_pool,
+            chain_controller.has_block, permission_verifier)
 
         component_handlers.add(
             component_dispatcher, gossip, context_manager, executor, completer,
