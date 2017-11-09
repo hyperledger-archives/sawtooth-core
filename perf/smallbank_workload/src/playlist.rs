@@ -244,6 +244,7 @@ impl Iterator for SmallbankGeneratingIter {
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_account < self.num_accounts {
             let mut payload =  SmallbankTransactionPayload::new();
+            payload.set_payload_type(SBPayloadType::CREATE_ACCOUNT);
 
             let mut create_account = smallbank::SmallbankTransactionPayload_CreateAccountTransactionData::new();
             create_account.set_customer_id(self.current_account as u32);
