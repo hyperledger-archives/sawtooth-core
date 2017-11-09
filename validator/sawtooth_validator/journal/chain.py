@@ -291,20 +291,20 @@ class BlockValidator(object):
 
                 valid = self._validate_permissions(blkw)
 
-                consensus = self._consensus_module.\
-                    BlockVerifier(block_cache=self._block_cache,
-                                  state_view_factory=self._state_view_factory,
-                                  data_dir=self._data_dir,
-                                  config_dir=self._config_dir,
-                                  validator_id=self._identity_public_key)
+                if valid:
+                    consensus = self._consensus_module.BlockVerifier(
+                        block_cache=self._block_cache,
+                        state_view_factory=self._state_view_factory,
+                        data_dir=self._data_dir,
+                        config_dir=self._config_dir,
+                        validator_id=self._identity_public_key)
+                    valid = consensus.verify_block(blkw)
+
                 if valid:
                     valid = self._validate_on_chain_rules(blkw)
 
                 if valid:
                     valid = self._verify_block_batches(blkw)
-
-                if valid:
-                    valid = consensus.verify_block(blkw)
 
                 # since changes to the chain-head can change the state of the
                 # blocks in BlockStore we have to revalidate this block.
