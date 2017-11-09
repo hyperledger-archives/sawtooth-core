@@ -202,7 +202,7 @@ def validator_cmds(num,
         '-o {}'.format(os.path.join(sawtooth_home, 'data', 'config.batch'))
     ])
 
-    poet = 'poet genesis -k {} -o {}'.format(priv, os.path.join(
+    poet = 'poet registration create -k {} -o {}'.format(priv, os.path.join(
         sawtooth_home, 'data', 'poet.batch'))
 
     genesis = ' '.join([

@@ -22,8 +22,8 @@ import pkg_resources
 from colorlog import ColoredFormatter
 
 from sawtooth_poet_cli.exceptions import CliException
-from sawtooth_poet_cli.genesis import add_genesis_parser
-from sawtooth_poet_cli.genesis import do_genesis
+from sawtooth_poet_cli.registration import add_registration_parser
+from sawtooth_poet_cli.registration import do_registration
 from sawtooth_poet_cli.enclave import add_enclave_parser
 from sawtooth_poet_cli.enclave import do_enclave
 
@@ -99,7 +99,7 @@ def create_parser(prog_name):
     subparsers = parser.add_subparsers(title='subcommand', dest='command')
     subparsers.required = True
 
-    add_genesis_parser(subparsers, parent_parser)
+    add_registration_parser(subparsers, parent_parser)
     add_enclave_parser(subparsers, parent_parser)
 
     return parser
@@ -120,8 +120,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.command == 'genesis':
-        do_genesis(args)
+    if args.command == 'registration':
+        do_registration(args)
     elif args.command == 'enclave':
         do_enclave(args)
     else:

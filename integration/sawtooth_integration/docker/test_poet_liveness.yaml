@@ -75,7 +75,7 @@ services:
           sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
           sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
           -o config.batch && \
-        poet genesis -k /etc/sawtooth/keys/validator.priv -o poet.batch && \
+        poet registration create -k /etc/sawtooth/keys/validator.priv -o poet.batch && \
         sawtooth config proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           $$(/project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/poet-settings.sh) \

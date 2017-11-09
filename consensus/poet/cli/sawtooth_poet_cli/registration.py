@@ -40,13 +40,33 @@ VALIDATOR_MAP_ADDRESS = \
     VR_NAMESPACE + sha256('validator_map'.encode()).hexdigest()
 
 
-def add_genesis_parser(subparsers, parent_parser):
-    """Add argument parser arguments for the `poet genesis` subcommand.
+def add_registration_parser(subparsers, parent_parser):
+    """Add argument parser arguments for the `poet registration`
+    subcommand
     """
-    description = 'Creates a Batch for the genesis block'
+    description = 'Provides subcommands for creating PoET registration'
 
     parser = subparsers.add_parser(
-        'genesis',
+        'registration',
+        help=description,
+        description=description + '.')
+
+    registration_sub = parser.add_subparsers(
+        title='subcommands', dest='subcommand')
+    registration_sub.required = True
+
+    add_create_parser(registration_sub, parent_parser)
+
+
+def add_create_parser(subparsers, parent_parser):
+    """Add argument parser arguments for the `poet registration create`
+    subcommand.
+    """
+    description = \
+        'Creates a batch to enroll a validator in the validator registry'
+
+    parser = subparsers.add_parser(
+        'create',
         help=description,
         description=description + '.')
 
@@ -75,8 +95,15 @@ def add_genesis_parser(subparsers, parent_parser):
         help='the most recent block identifier to use as a sign-up nonce')
 
 
-def do_genesis(args):
-    """Executes the `poet genesis` subcommand.
+def do_registration(args):
+    if args.subcommand == 'create':
+        do_create(args)
+    else:
+        raise AssertionError('Invalid command: {}'.format(args.subcommand))
+
+
+def do_create(args):
+    """Executes the `poet registration` subcommand.
 
     This command generates a validator registry transaction and saves it to a
     file, whose location is determined by the args.  The signup data, generated

@@ -27,8 +27,8 @@ Batch for the genesis block. For more information, see
 poet
 ====
 
-The poet command generates information for configuring a node to use
-Sawtooth with the PoET consensus method. The genesis subcommand
+The ``poet`` command generates information for configuring a node to
+use Sawtooth with the PoET consensus method. The genesis subcommand
 creates a Batch for the genesis block. The enclave subcommand
 generates enclave setup information.
 
@@ -36,12 +36,24 @@ generates enclave setup information.
    :language: console
    :linenos:
 
-poet genesis
-============
+poet registration
+=================
 
-The ``poet genesis`` subcommand creates a Batch for the genesis Block.
+The ``poet registration`` subcommand provides a command to work with
+the PoET validator registry.
 
-.. literalinclude:: output/poet_genesis_usage.out
+.. literalinclude:: output/poet_registration_usage.out
+   :language: console
+   :linenos:
+
+poet registration create
+========================
+
+The ``poet registration create`` subcommand creates a batch to enroll
+a validator in the network's validator registry. It must be run from
+the validator host wishing to enroll.
+
+.. literalinclude:: output/poet_registration_create_usage.out
    :language: console
    :linenos:
 

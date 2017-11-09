@@ -40,9 +40,9 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
 
-    @patch('sawtooth_poet_cli.genesis.PoetKeyStateStore')
-    @patch('sawtooth_poet_cli.genesis.config.get_data_dir')
-    @patch('sawtooth_poet_cli.genesis.config.get_key_dir')
+    @patch('sawtooth_poet_cli.registration.PoetKeyStateStore')
+    @patch('sawtooth_poet_cli.registration.config.get_data_dir')
+    @patch('sawtooth_poet_cli.registration.config.get_key_dir')
     def test_run_simulator_genesis(self,
                                    get_key_dir_fn,
                                    get_data_dir_fn,
@@ -50,7 +50,8 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         """Test generating a Validator Registry transaction, which is written
         to a file.
 
-        This test executes the `poet genesis` command. The expected output is:
+        This test executes the `poet registration create` command. The
+        expected output is:
 
         - a BatchList written to a file at <temp_dir>/poet_genesis.batch
         - the serialized sealed signup data is written to the key state store
@@ -62,7 +63,7 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         public_key = self._create_key()
 
         main('poet',
-             args=['genesis',
+             args=['registration', 'create',
                    '-o', os.path.join(self._temp_dir, 'poet-genesis.batch')])
 
         self._assert_validator_transaction(public_key, 'poet-genesis.batch')

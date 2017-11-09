@@ -37,7 +37,7 @@ services:
           sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
           sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
           -o config.batch && \
-        poet genesis -o poet.batch && \
+        poet registration create -o poet.batch && \
         sawtooth admin genesis \
           config-genesis.batch config.batch poet.batch && \
         sawtooth-validator -v \
