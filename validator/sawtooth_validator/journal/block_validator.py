@@ -20,7 +20,10 @@ from sawtooth_validator.concurrent.threadpool import \
 from sawtooth_validator.concurrent.atomic import ConcurrentSet
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.consensus.consensus_factory import \
+    ConsensusFactory
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.validation_rule_enforcer import \
     ValidationRuleEnforcer
@@ -296,7 +299,7 @@ class BlockValidator(object):
                 blkw, prev_state_root)
         return True
 
-    def validate_block(self, blkw, consensus, chain_head=None, chain=None):
+    def validate_block(self, blkw, chain_head=None, chain=None):
         if blkw.status == BlockStatus.Valid:
             return
         elif blkw.status == BlockStatus.Invalid:
@@ -328,6 +331,12 @@ class BlockValidator(object):
                 raise BlockValidationError(
                     'Block {} failed permission validation'.format(blkw))
 
+            try:
+                prev_block = self._block_cache[blkw.previous_block_id]
+            except KeyError:
+                prev_block = None
+
+            consensus = self._load_consensus(prev_block)
             public_key = \
                 self._identity_signer.get_public_key().as_hex()
             consensus_block_verifier = consensus.BlockVerifier(
@@ -459,10 +468,11 @@ class BlockValidator(object):
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
 
-    def _compare_forks_consensus(self, consensus, chain_head, new_block):
+    def _compare_forks_consensus(self, chain_head, new_block):
         """Ask the consensus module which fork to choose.
         """
         public_key = self._identity_signer.get_public_key().as_hex()
+        consensus = self._load_consensus(chain_head)
         fork_resolver = consensus.ForkResolver(
             block_cache=self._block_cache,
             state_view_factory=self._state_view_factory,
@@ -471,6 +481,16 @@ class BlockValidator(object):
             validator_id=public_key)
 
         return fork_resolver.compare_forks(chain_head, new_block)
+
+    def _load_consensus(self, block):
+        """Load the consensus module using the state as of the given block."""
+        if block is not None:
+            return ConsensusFactory.get_configured_consensus_module(
+                block.header_signature,
+                BlockWrapper.state_view_for_block(
+                    block,
+                    self._state_view_factory))
+        return ConsensusFactory.get_consensus_module('genesis')
 
     @staticmethod
     def _get_batch_commit_changes(new_chain, cur_chain):
@@ -490,10 +510,7 @@ class BlockValidator(object):
 
         return (committed_batches, uncommitted_batches)
 
-    def submit_blocks_for_verification(
-        self, blocks, consensus, callback
-    ):
-
+    def submit_blocks_for_verification(self, blocks, callback):
         for block in blocks:
             LOGGER.debug(
                 "Adding block %s for processing", block.identifier)
@@ -503,7 +520,7 @@ class BlockValidator(object):
 
             # Schedule the block for processing
             self._thread_pool.submit(
-                self.process_block_verification, block, consensus,
+                self.process_block_verification, block,
                     self._wrap_callback(block, callback))
 
     def _wrap_callback(self, block, callback):
@@ -526,7 +543,7 @@ class BlockValidator(object):
     def in_process(self, block_id):
         return block_id in self._blocks_processing
 
-    def process_block_verification(self, block, consensus, callback):
+    def process_block_verification(self, block, callback):
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
@@ -573,7 +590,7 @@ class BlockValidator(object):
                 if valid:
                     try:
                         self.validate_block(
-                            blk, consensus, chain_head, result.current_chain)
+                            blk, chain_head, result.current_chain)
                     except BlockValidationError as err:
                         LOGGER.warning(
                             'Block %s failed validation: %s',
@@ -607,8 +624,7 @@ class BlockValidator(object):
                     "Fork comparison at height %s is between %s and %s",
                     num, cur, new)
 
-            commit_new_chain = self._compare_forks_consensus(
-                consensus, chain_head, block)
+            commit_new_chain = self._compare_forks_consensus(chain_head, block)
 
             # If committing the new chain, get the list of committed batches
             # from the current chain that need to be uncommitted and the list
