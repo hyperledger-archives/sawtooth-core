@@ -314,6 +314,7 @@ then
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir
         mkdir -p $build_dir
+
         cp $top_dir/docker/sawtooth-int-intkey-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-smallbank-tp-go $build_dir
@@ -393,6 +394,10 @@ then
     }
 
     build_rust() {
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
         cp $top_dir/docker/sawtooth-dev-rust $build_dir
         docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-dev-rust
         docker_run sawtooth-dev-rust
