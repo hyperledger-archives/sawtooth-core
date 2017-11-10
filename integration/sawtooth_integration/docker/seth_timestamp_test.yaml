@@ -59,10 +59,10 @@ services:
       - 8800
     command: "bash -c \"\
         sawtooth admin keygen && \
-        sawtooth config genesis \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth config proposal create \
+        sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.validator.batch_injectors=block_info \
           -o config.batch && \

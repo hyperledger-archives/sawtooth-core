@@ -13,16 +13,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import argparse
 import os
-import tempfile
+import shlex
 import shutil
+import subprocess
+import tempfile
 import unittest
 
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
-
-from sawtooth_cli import config
 
 
 TEST_WIF = '5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv'
@@ -32,7 +31,6 @@ class TestConfigBatchlist(unittest.TestCase):
     def __init__(self, test_name):
         super().__init__(test_name)
         self._temp_dir = None
-        self._parser = None
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
@@ -42,22 +40,8 @@ class TestConfigBatchlist(unittest.TestCase):
         with open(self._wif_file, 'wb') as wif:
             wif.write(TEST_WIF.encode())
 
-        self._parser = argparse.ArgumentParser()
-        subparsers = self._parser.add_subparsers(title='subcommands',
-                                                 dest='command')
-
-        config.add_config_parser(subparsers, self._parser)
-
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
-
-    def _parse_set_command(self, *settings):
-        cmd_args = ['config', 'proposal', 'create',
-                    '-k', self._wif_file,
-                    '-o', os.path.join(self._temp_dir, 'myconfig.batch')]
-        cmd_args += settings
-
-        return self._parser.parse_args(cmd_args)
 
     def _read_target_file_as(self, target_type):
         target_path = os.path.join(self._temp_dir, 'myconfig.batch')
@@ -68,8 +52,10 @@ class TestConfigBatchlist(unittest.TestCase):
             return output
 
     def test_set_value_creates_batch_list(self):
-        args = self._parse_set_command('x=1', 'y=1')
-        config.do_config(args)
+        subprocess.run(shlex.split(
+            'sawset proposal create -k {} -o {} x=1 y=1'.format(
+                self._wif_file,
+                os.path.join(self._temp_dir, 'myconfig.batch'))))
 
         batch_list = self._read_target_file_as(BatchList)
 

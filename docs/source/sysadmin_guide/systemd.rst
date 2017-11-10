@@ -44,7 +44,7 @@ the first validator can load:
 .. code-block:: console
 
   $ sawtooth keygen --key-dir ~ sawtooth
-  $ sawtooth config genesis --key ~/sawtooth.priv
+  $ sawset genesis --key ~/sawtooth.priv
   $ sawtooth admin genesis config-genesis.batch
 
 Running Sawtooth

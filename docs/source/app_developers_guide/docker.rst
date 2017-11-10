@@ -516,7 +516,7 @@ To see which components are running, use this command from the container:
 
   $ ps --pid 1 fw
     PID TTY      STAT   TIME COMMAND
-    1 ?        Ss     0:00 bash -c sawtooth admin keygen && sawtooth keygen my_key && sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && sawtooth admin genesis config-genesis.batch && sawtooth-validator -vv --endpoint
+    1 ?        Ss     0:00 bash -c sawtooth admin keygen && sawtooth keygen my_key && sawset genesis -k /root/.sawtooth/keys/my_key.priv && sawtooth admin genesis config-genesis.batch && sawtooth-validator -vv --endpoint
 
 .. note::
 
@@ -646,7 +646,7 @@ on-chain configuration settings, along with a Settings family transaction
 processor written in Python.
 
 One of the on-chain settings is the list of supported transaction families.
-In the example below, a JSON array is submitted to the ``sawtooth config``
+In the example below, a JSON array is submitted to the ``sawset``
 command, which creates and submits a batch of transactions containing the
 configuration change.
 
@@ -674,11 +674,11 @@ Then run the following command from the validator container:
 
 .. code-block:: console
 
-  $ sawtooth config proposal create \
+  $ sawset proposal create \
     --url http://rest-api:8080 \
     --key /root/.sawtooth/keys/my_key.priv \
     sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
-  $ sawtooth config settings list --url http://rest-api:8080
+  $ sawset settings list --url http://rest-api:8080
 
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,

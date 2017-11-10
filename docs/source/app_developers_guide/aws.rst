@@ -336,7 +336,7 @@ The next step describes how to configure this setting with a single command.
 Changing the Transaction Family Settings
 ----------------------------------------
 
-In the example below, a JSON array is submitted to the `sawtooth config`
+In the example below, a JSON array is submitted to the `sawset`
 command, which creates and submits a batch of transactions containing the
 settings change.
 
@@ -351,7 +351,7 @@ following commands at a Linux command-line prompt:
 
 .. code-block:: console
 
-  $ sawtooth config proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
+  $ sawset proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
 and output similar to the following appears in the ``validator-debug.log``

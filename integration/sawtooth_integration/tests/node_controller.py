@@ -159,7 +159,7 @@ def validator_cmds(num,
     priv = os.path.join(sawtooth_home, 'keys', 'validator.priv')
 
     config_genesis = ' '.join([
-        'sawtooth config genesis',
+        'sawset genesis',
         '-k {}'.format(priv),
         '-o {}'.format(os.path.join(
             sawtooth_home, 'data', 'config-genesis.batch'))
@@ -189,7 +189,7 @@ def validator_cmds(num,
     enclave_basename = result.stdout.decode('utf-8')
 
     config_proposal = ' '.join([
-        'sawtooth config proposal create',
+        'sawset proposal create',
         '-k {}'.format(priv),
         'sawtooth.consensus.algorithm=poet',
         'sawtooth.poet.report_public_key_pem="{}"'.format(public_key_pem),
