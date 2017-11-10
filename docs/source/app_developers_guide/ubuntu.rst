@@ -110,7 +110,7 @@ and run the following commands:
 
   $ sawtooth keygen
   $ sawset genesis
-  $ sudo -u sawtooth sawtooth admin genesis config-genesis.batch
+  $ sudo -u sawtooth sawadm genesis config-genesis.batch
 
 The following output appears:
 
@@ -133,7 +133,7 @@ following commands:
 
 .. code-block:: console
 
-   $ sudo sawtooth admin keygen
+   $ sudo sawadm keygen
    $ sudo -u sawtooth sawtooth-validator -vv
 
 .. note::

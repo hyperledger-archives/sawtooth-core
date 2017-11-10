@@ -20,10 +20,6 @@ mkdir -p source/cli/output
 
 save_usage sawtooth
 
-save_usage sawtooth admin
-save_usage sawtooth admin genesis
-save_usage sawtooth admin keygen
-
 save_usage sawtooth batch
 save_usage sawtooth batch list
 save_usage sawtooth batch show
@@ -61,6 +57,10 @@ save_usage sawset proposal
 save_usage sawset proposal create
 save_usage sawset proposal list
 save_usage sawset proposal vote
+
+save_usage sawadm
+save_usage sawadm genesis
+save_usage sawadm keygen
 
 save_usage sawtooth-validator
 save_usage sawtooth-rest-api

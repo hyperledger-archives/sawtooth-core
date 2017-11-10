@@ -496,7 +496,7 @@ def validator_genesis_init(sawtooth_home_genesis,
                            target_wait_time=5.0,
                            minimum_wait_time=1.0):
 
-    subprocess.run(['sawtooth', 'admin', 'keygen',
+    subprocess.run(['sawadm', 'keygen',
                     os.path.join(sawtooth_home_genesis, 'keys', 'validator')],
                    check=True)
 
@@ -580,9 +580,7 @@ def validator_genesis_init(sawtooth_home_genesis,
                    check=True)
 
     subprocess.run([
-        'sawtooth',
-        'admin',
-        'genesis',
+        'sawadm', 'genesis',
         os.path.join(sawtooth_home_genesis, 'data', 'config-genesis.batch'),
         os.path.join(sawtooth_home_genesis, 'data', 'config.batch'),
         os.path.join(sawtooth_home_genesis, 'data', 'poet.batch')
@@ -591,6 +589,6 @@ def validator_genesis_init(sawtooth_home_genesis,
 
 def validator_non_genesis_init(sawtooth_home):
     os.mkdir(os.path.join(sawtooth_home, 'keys'))
-    subprocess.run(['sawtooth', 'admin', 'keygen',
+    subprocess.run(['sawadm', 'keygen',
         os.path.join(sawtooth_home, 'keys', 'validator')],
                    check=True)

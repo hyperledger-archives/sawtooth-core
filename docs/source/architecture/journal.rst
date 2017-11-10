@@ -427,7 +427,7 @@ and specifies the appropriate settings:
           sawtooth.poet.target_wait_time=x \
           sawtooth.poet.minimum_wait_time=x \
           sawtooth.poet.population_estimate_sample_size=x \
-        sawtooth admin genesis \
+	  sawadm genesis \
           sawset.batch
 
 A genesis.batch file will written to the validator's data directory.

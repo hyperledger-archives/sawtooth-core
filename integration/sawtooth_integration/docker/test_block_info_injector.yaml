@@ -59,7 +59,7 @@ services:
       - 8800
     # start the validator with an empty genesis batch
     command: "bash -c \"\
-        sawtooth admin keygen && \
+        sawadm keygen && \
         sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
@@ -68,7 +68,7 @@ services:
           sawtooth.validator.batch_injectors=block_info \
           'sawtooth.validator.block_validation_rules=NofX:1,block_info;XatY:block_info,0;local:0' \
           -o config.batch && \
-        sawtooth admin genesis \
+        sawadm genesis \
           config-genesis.batch config.batch && \
         sawtooth-validator --endpoint tcp://validator:8800 -v \
             --bind component:tcp://eth0:4004 \

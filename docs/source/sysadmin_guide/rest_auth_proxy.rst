@@ -223,8 +223,8 @@ Start a validator, and the REST API.
 
 .. code-block:: console
 
-   $ sawtooth admin keygen
-   $ sawtooth admin genesis
+   $ sawadm keygen
+   $ sawadm genesis
    $ sawtooth-validator -v --endpoint localhost:8800
    $ sawtooth-rest-api -v
 

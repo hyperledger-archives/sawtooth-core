@@ -58,7 +58,7 @@ services:
       - 4004
       - 8800
     command: "bash -c \"\
-        sawtooth admin keygen && \
+        sawadm keygen && \
         sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
@@ -66,7 +66,7 @@ services:
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.validator.batch_injectors=block_info \
           -o config.batch && \
-        sawtooth admin genesis \
+        sawadm genesis \
           config-genesis.batch config.batch && \
         sawtooth-validator -v \
             --endpoint tcp://validator:8800 \

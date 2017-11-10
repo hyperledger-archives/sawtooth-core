@@ -144,7 +144,7 @@ def validator_cmds(num,
         peering_func (int -> str): a function of one argument n
             returning a string specifying the peers of the num-th node
     '''
-    keygen = 'sawtooth admin keygen {}'.format(
+    keygen = 'sawadm keygen {}'.format(
         os.path.join(sawtooth_home, 'keys', 'validator'))
 
     validator = ' '.join([
@@ -206,7 +206,7 @@ def validator_cmds(num,
         sawtooth_home, 'data', 'poet.batch'))
 
     genesis = ' '.join([
-        'sawtooth admin genesis',
+        'sawadm genesis',
         '{} {} {}'.format(
             os.path.join(sawtooth_home, 'data', 'config-genesis.batch'),
             os.path.join(sawtooth_home, 'data', 'config.batch'),
