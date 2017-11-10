@@ -35,11 +35,14 @@ class TestGenesisController(unittest.TestCase):
     def __init__(self, test_name):
         super().__init__(test_name)
         self._temp_dir = None
-        self._identity_key = None
+        self._identity_signing_key = None
+        self._identity_public_key = None
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
-        self._identity_key = signing.generate_private_key()
+        self._identity_signing_key = signing.generate_private_key()
+        self._identity_public_key = signing.generate_public_key(
+            self._identity_signing_key)
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
@@ -57,7 +60,8 @@ class TestGenesisController(unittest.TestCase):
             Mock('completer'),
             self.make_block_store(),  # Empty block store
             StateViewFactory(DictDatabase()),
-            self._identity_key,
+            self._identity_signing_key,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -77,7 +81,8 @@ class TestGenesisController(unittest.TestCase):
             Mock('completer'),
             block_store,
             StateViewFactory(DictDatabase()),
-            self._identity_key,
+            self._identity_signing_key,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -97,7 +102,8 @@ class TestGenesisController(unittest.TestCase):
             Mock('completer'),
             block_store,
             StateViewFactory(DictDatabase()),
-            self._identity_key,
+            self._identity_signing_key,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -122,7 +128,8 @@ class TestGenesisController(unittest.TestCase):
             Mock('completer'),
             block_store,
             StateViewFactory(DictDatabase()),
-            self._identity_key,
+            self._identity_signing_key,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -152,7 +159,8 @@ class TestGenesisController(unittest.TestCase):
             Mock('completer'),
             block_store,
             StateViewFactory(DictDatabase()),
-            self._identity_key,
+            self._identity_signing_key,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -181,7 +189,8 @@ class TestGenesisController(unittest.TestCase):
             Mock('completer'),
             block_store,
             StateViewFactory(DictDatabase()),
-            self._identity_key,
+            self._identity_signing_key,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -223,7 +232,8 @@ class TestGenesisController(unittest.TestCase):
             completer,
             block_store,
             StateViewFactory(state_database),
-            self._identity_key,
+            self._identity_signing_key,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),

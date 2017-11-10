@@ -25,7 +25,7 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 from sawtooth_validator.journal.block_store import BlockStore
-from sawtooth_validator.journal.chain import BlockValidator
+from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.publisher import BlockPublisher
@@ -128,6 +128,7 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             check_publish_block_frequency=0.1,
@@ -284,6 +285,7 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             check_publish_block_frequency=0.1,
@@ -316,6 +318,7 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             check_publish_block_frequency=0.1,
@@ -369,6 +372,7 @@ class TestBlockPublisher(unittest.TestCase):
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
             identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
@@ -752,13 +756,13 @@ class TestBlockValidator(unittest.TestCase):
     def assert_new_block_committed(self):
         self.assert_handler_has_result()
         self.assertTrue(
-            self.block_validation_handler.result["commit_new_block"],
+            self.block_validation_handler.commit_new_block,
             "New block not committed, should be")
 
     def assert_new_block_not_committed(self):
         self.assert_handler_has_result()
         self.assertFalse(
-            self.block_validation_handler.result["commit_new_block"],
+            self.block_validation_handler.commit_new_block,
             "New block committed, shouldn't be")
 
     def assert_handler_has_result(self):
@@ -768,36 +772,35 @@ class TestBlockValidator(unittest.TestCase):
     # block validation
 
     def validate_block(self, block):
-        validator = self.create_block_validator(
+        validator = self.create_block_validator()
+        validator.process_block_verification(
             block,
+            mock_consensus,
             self.block_validation_handler.on_block_validated)
 
-        validator.run()
-
-    def create_block_validator(self, new_block, on_block_validated):
+    def create_block_validator(self):
         return BlockValidator(
-            consensus_module=mock_consensus,
-            new_block=new_block,
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
-            done_cb=on_block_validated,
-            executor=MockTransactionExecutor(batch_execution_result=None),
+            transaction_executor=MockTransactionExecutor(
+                batch_execution_result=None),
             squash_handler=None,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier)
 
     class BlockValidationHandler(object):
         def __init__(self):
+            self.commit_new_block = None
             self.result = None
 
         def on_block_validated(self, commit_new_block, result):
-            result["commit_new_block"] = commit_new_block
+            self.commit_new_block = commit_new_block
             self.result = result
 
         def has_result(self):
-            return self.result is not None
+            return not (self.result is None or self.commit_new_block is None)
 
     # block tree manager interface
 
@@ -814,13 +817,30 @@ class TestChainController(unittest.TestCase):
     def setUp(self):
         self.block_tree_manager = BlockTreeManager()
         self.gossip = MockNetwork()
-        self.executor = SynchronousExecutor()
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
         self._chain_head_lock = RLock()
         self.state_delta_processor = MockStateDeltaProcessor()
         self.permission_verifier = MockPermissionVerifier()
+        self.state_view_factory = MockStateViewFactory(
+            self.block_tree_manager.state_db)
+        self.transaction_executor = MockTransactionExecutor(
+            batch_execution_result=None)
+
+        self.block_validator = BlockValidator(
+            state_view_factory=self.state_view_factory,
+            block_cache=self.block_tree_manager.block_cache,
+            transaction_executor=self.transaction_executor,
+            squash_handler=None,
+            identity_public_key=self.block_tree_manager.identity_public_key,
+            data_dir=None,
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
+
+        # Patch the threadpool
+        self.executor = SynchronousExecutor()
+        self.block_validator._thread_pool = self.executor
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
@@ -828,20 +848,13 @@ class TestChainController(unittest.TestCase):
 
         self.chain_ctrl = ChainController(
             block_cache=self.block_tree_manager.block_cache,
-            state_view_factory=MockStateViewFactory(
-                self.block_tree_manager.state_db),
-            block_sender=self.block_sender,
-            thread_pool=self.executor,
-            transaction_executor=MockTransactionExecutor(
-                batch_execution_result=None),
+            block_validator=self.block_validator,
+            state_view_factory=self.state_view_factory,
             chain_head_lock=self._chain_head_lock,
             on_chain_updated=chain_updated,
-            squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=self.permission_verifier,
             chain_observers=[self.state_delta_processor],
             metrics_registry=None)
 
@@ -1129,13 +1142,30 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
     def setUp(self):
         self.block_tree_manager = BlockTreeManager(with_genesis=False)
         self.gossip = MockNetwork()
-        self.executor = SynchronousExecutor()
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
         self.state_delta_processor = MockStateDeltaProcessor()
         self.chain_head_lock = RLock()
         self.permission_verifier = MockPermissionVerifier()
+        self.state_view_factory = MockStateViewFactory(
+            self.block_tree_manager.state_db)
+        self.transaction_executor = MockTransactionExecutor(
+            batch_execution_result=None)
+
+        self.block_validator = BlockValidator(
+            state_view_factory=self.state_view_factory,
+            block_cache=self.block_tree_manager.block_cache,
+            transaction_executor=self.transaction_executor,
+            squash_handler=None,
+            identity_public_key=self.block_tree_manager.identity_public_key,
+            data_dir=None,
+            config_dir=None,
+            permission_verifier=self.permission_verifier)
+
+        # Patch the threadpool
+        self.executor = SynchronousExecutor()
+        self.block_validator._thread_pool = self.executor
 
         def chain_updated(head, committed_batches=None,
                           uncommitted_batches=None):
@@ -1143,19 +1173,13 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
 
         self.chain_ctrl = ChainController(
             block_cache=self.block_tree_manager.block_cache,
-            state_view_factory=MockStateViewFactory(
-                self.block_tree_manager.state_db),
-            block_sender=self.block_sender,
-            thread_pool=self.executor,
-            transaction_executor=MockTransactionExecutor(),
+            block_validator=self.block_validator,
+            state_view_factory=self.state_view_factory,
             chain_head_lock=self.chain_head_lock,
             on_chain_updated=chain_updated,
-            squash_handler=None,
             chain_id_manager=self.chain_id_manager,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
             data_dir=None,
             config_dir=None,
-            permission_verifier=self.permission_verifier,
             chain_observers=[self.state_delta_processor],
             metrics_registry=None)
 
@@ -1244,6 +1268,7 @@ class TestJournal(unittest.TestCase):
                 squash_handler=None,
                 chain_head=btm.block_store.chain_head,
                 identity_signing_key=btm.identity_signing_key,
+                identity_public_key=btm.identity_public_key,
                 data_dir=None,
                 config_dir=None,
                 permission_verifier=self.permission_verifier,
@@ -1254,19 +1279,25 @@ class TestJournal(unittest.TestCase):
                     state_view_factory=MockStateViewFactory(btm.state_db),
                     signing_key=btm.identity_signing_key))
 
-            chain_controller = ChainController(
-                block_sender=self.block_sender,
-                block_cache=btm.block_cache,
+            block_validator = BlockValidator(
                 state_view_factory=MockStateViewFactory(btm.state_db),
+                block_cache=btm.block_cache,
                 transaction_executor=self.txn_executor,
-                chain_head_lock=block_publisher.chain_head_lock,
-                on_chain_updated=block_publisher.on_chain_updated,
                 squash_handler=None,
-                chain_id_manager=None,
-                identity_signing_key=btm.identity_signing_key,
+                identity_public_key=btm.identity_public_key,
                 data_dir=None,
                 config_dir=None,
-                permission_verifier=self.permission_verifier,
+                permission_verifier=self.permission_verifier)
+
+            chain_controller = ChainController(
+                block_cache=btm.block_cache,
+                block_validator=block_validator,
+                state_view_factory=MockStateViewFactory(btm.state_db),
+                chain_head_lock=block_publisher.chain_head_lock,
+                on_chain_updated=block_publisher.on_chain_updated,
+                chain_id_manager=None,
+                data_dir=None,
+                config_dir=None,
                 chain_observers=[self.state_delta_processor])
 
             self.gossip.on_batch_received = block_publisher.queue_batch
@@ -1294,6 +1325,8 @@ class TestJournal(unittest.TestCase):
                 block_publisher.stop()
             if chain_controller is not None:
                 chain_controller.stop()
+            if block_validator is not None:
+                block_validator.stop()
 
 
 class TestTimedCache(unittest.TestCase):
