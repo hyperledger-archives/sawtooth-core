@@ -31,7 +31,7 @@ do
     if [ $serv = "validator" ]
     then
         echo "Running keygen in $container..."
-        docker exec $container sawtooth admin keygen
+        docker exec $container sawadm keygen
     fi
 
     # 2. Start the systemd service in the container

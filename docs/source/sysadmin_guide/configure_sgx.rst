@@ -204,7 +204,7 @@ Create validator keys:
 
 .. code-block:: console
 
-    $ sawtooth admin keygen
+    $ sawadm keygen
 
 .. note::  If you're configuring multiple validators, the steps below are
     required for the first validator only.  For additional validators, you
@@ -272,7 +272,7 @@ Create a genesis block:
 
 .. code-block:: console
 
-    $ sawtooth admin genesis config-genesis.batch config.batch poet_genesis.batch
+    $ sawadm genesis config-genesis.batch config.batch poet_genesis.batch
 
 You’ll see some output indicating success:
 

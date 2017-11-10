@@ -181,7 +181,7 @@ class TestShutdownSmoke(unittest.TestCase):
              self._validator_image,
              'bash',
              '-c',
-             "sawtooth admin keygen && sawtooth admin genesis"])
+             "sawadm keygen && sawadm genesis"])
 
     def _start_validator(self, prior_container, early, extra):
         return self._docker_run(
@@ -207,7 +207,7 @@ class TestShutdownSmoke(unittest.TestCase):
              self._validator_image,
              "bash",
              '-c',
-             "sawtooth admin keygen"])
+             "sawadm keygen"])
 
     def _startup(self):
         containers = []

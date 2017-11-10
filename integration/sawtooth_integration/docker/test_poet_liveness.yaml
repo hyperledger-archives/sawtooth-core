@@ -63,7 +63,7 @@ services:
     working_dir: /root
     command: "bash -c \"\
         cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-0.toml /etc/sawtooth/validator.toml && \
-        sawtooth admin keygen --force && \
+        sawadm keygen --force && \
         sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
@@ -80,7 +80,7 @@ services:
           -k /etc/sawtooth/keys/validator.priv \
           $$(/project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/poet-settings.sh) \
           -o poet-settings.batch && \
-        sawtooth admin genesis \
+        sawadm genesis \
           config-genesis.batch config.batch poet.batch poet-settings.batch && \
         sawtooth-validator -v
     \""
@@ -99,7 +99,7 @@ services:
       - 8800
     command: "bash -c \"\
         cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-1.toml /etc/sawtooth/validator.toml && \
-        sawtooth admin keygen --force && \
+        sawadm keygen --force && \
         sawtooth-validator -v
     \""
     environment:
@@ -117,7 +117,7 @@ services:
       - 8800
     command: "bash -c \"\
         cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-2.toml /etc/sawtooth/validator.toml && \
-        sawtooth admin keygen --force && \
+        sawadm keygen --force && \
         sawtooth-validator -v
     \""
     environment:
@@ -135,7 +135,7 @@ services:
       - 8800
     command: "bash -c \"\
         cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-3.toml /etc/sawtooth/validator.toml && \
-        sawtooth admin keygen --force && \
+        sawadm keygen --force && \
         sawtooth-validator -v
     \""
     environment:
@@ -153,7 +153,7 @@ services:
       - 8800
     command: "bash -c \"\
         cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-4.toml /etc/sawtooth/validator.toml && \
-        sawtooth admin keygen --force && \
+        sawadm keygen --force && \
         sawtooth-validator -v
     \""
     environment:

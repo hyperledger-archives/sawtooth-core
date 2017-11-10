@@ -481,7 +481,7 @@ def create_parser(prog_name):
         'genesis',
         help='Create a genesis batch file of settings transactions',
         description='Creates a Batch of settings proposals that can be '
-                    'consumed by "sawtooth admin genesis" and used '
+                    'consumed by "sawadm genesis" and used '
                     'during genesis block construction.'
     )
     genesis_parser.add_argument(

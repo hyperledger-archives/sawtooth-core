@@ -47,11 +47,11 @@ services:
       - 4004
       - 8800
     command: "bash -c \"\
-        sawtooth admin keygen && \
+        sawadm keygen && \
         sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth admin genesis config-genesis.batch && \
+        sawadm genesis config-genesis.batch && \
         sawtooth-validator --endpoint tcp://validator:8800 -v \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
