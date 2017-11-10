@@ -588,7 +588,7 @@ class TestBlockValidator(unittest.TestCase):
 
     def test_block_bad_consensus(self):
         """
-        Test the case where the new block has a bad batch
+        Test the case where the new block has invalid consensus
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})

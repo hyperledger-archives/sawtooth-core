@@ -279,7 +279,7 @@ class BlockValidator(object):
             return self._validation_rule_enforcer.validate(blkw, state_root)
         return True
 
-    def validate_block(self, blkw):
+    def validate_block(self, blkw, skip_batches=False):
         # pylint: disable=broad-except
         try:
             if blkw.status == BlockStatus.Valid:
@@ -303,7 +303,10 @@ class BlockValidator(object):
                 if valid:
                     valid = self._validate_on_chain_rules(blkw)
 
-                if valid:
+                # If skip_batches is true, the block is validated except for
+                # batches. In this case, the block is marked as invalid if any
+                # of the checks fail, but will never be marked as valid.
+                if valid and not skip_batches:
                     valid = self._verify_block_batches(blkw)
 
                 # since changes to the chain-head can change the state of the
@@ -314,8 +317,12 @@ class BlockValidator(object):
                         block_store.chain_head.identifier:
                     raise ChainHeadUpdated()
 
-                blkw.status = BlockStatus.Valid if\
-                    valid else BlockStatus.Invalid
+                if valid:
+                    if not skip_batches:
+                        blkw.status = BlockStatus.Valid
+                else:
+                    blkw.status = BlockStatus.Invalid
+
                 return valid
         except ChainHeadUpdated:
             raise
@@ -455,7 +462,17 @@ class BlockValidator(object):
             self._find_common_ancestor(new_blkw, cur_blkw,
                                        new_chain, cur_chain)
 
-            # 3) Determine the validity of the new fork
+            # 3) Evaluate the 2 chains to see if the new chain should be
+            # committed
+            commit_new_chain = self._test_commit_new_chain()
+
+            # If we're not going to commit this fork and it is only a single
+            # block fork, we can skip validating the batches as an optimization
+            skip = (not commit_new_chain) and (
+                self._new_block.previous_block_id ==
+                self._chain_head.identifier)
+
+            # 4) Determine the validity of the new fork
             # build the transaction cache to simulate the state of the
             # chain at the common root.
             self._chain_commit_state = ChainCommitState(
@@ -464,7 +481,7 @@ class BlockValidator(object):
             valid = True
             for block in reversed(new_chain):
                 if valid:
-                    if not self.validate_block(block):
+                    if not self.validate_block(block, skip_batches=skip):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
                 else:
@@ -475,10 +492,6 @@ class BlockValidator(object):
             if not valid:
                 self._done_cb(False, self._result)
                 return
-
-            # 4) Evaluate the 2 chains to see if the new chain should be
-            # committed
-            commit_new_chain = self._test_commit_new_chain()
 
             # 5) Consensus to compute batch sets (only if we are switching).
             if commit_new_chain:
