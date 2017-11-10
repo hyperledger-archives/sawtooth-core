@@ -87,7 +87,7 @@ class TestConfigSmoke(unittest.TestCase):
         cmds = [
             ['sawtooth', 'config', 'proposal', 'create', '-k', self._wif_file,
              '--url', 'http://rest-api:8080', 'x=1', 'y=1'],
-            ['sawtooth', 'config', 'settings', 'list', '--url',
+            ['sawtooth', 'settings', 'list', '--url',
              'http://rest-api:8080']
         ]
 
@@ -95,7 +95,7 @@ class TestConfigSmoke(unittest.TestCase):
             self._run(cmd)
 
         command = 'sawtooth'
-        args = ['config', 'settings', 'list', '--url', 'http://rest-api:8080']
+        args = ['settings', 'list', '--url', 'http://rest-api:8080']
         settings = self._read_from_stdout(command, args).split('\n')
 
         _expected_output = [

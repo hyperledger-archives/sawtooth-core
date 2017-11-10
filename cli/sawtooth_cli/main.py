@@ -42,6 +42,8 @@ from sawtooth_cli.state import add_state_parser
 from sawtooth_cli.state import do_state
 from sawtooth_cli.identity import add_identity_parser
 from sawtooth_cli.identity import do_identity
+from sawtooth_cli.settings import add_settings_parser
+from sawtooth_cli.settings import do_settings
 
 
 DISTRIBUTION_NAME = 'sawtooth-cli'
@@ -121,6 +123,7 @@ def create_parser(prog_name):
     add_keygen_parser(subparsers, parent_parser)
     add_state_parser(subparsers, parent_parser)
     add_transaction_parser(subparsers, parent_parser)
+    add_settings_parser(subparsers, parent_parser)
 
     return parser
 
@@ -155,6 +158,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         do_state(args)
     elif args.command == 'identity':
         do_identity(args)
+    elif args.command == 'settings':
+        do_settings(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 

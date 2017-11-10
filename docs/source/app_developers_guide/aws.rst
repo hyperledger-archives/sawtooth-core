@@ -372,11 +372,11 @@ file:
 
 
 You can verify that the settings change was successfully applied by
-checking the output of ``sawtooth config settings list``:
+checking the output of ``sawtooth settings list``:
 
 .. code-block:: console
 
-  $ sawtooth config settings list
+  $ sawtooth settings list
   sawtooth.settings.vote.authorized_keys: 03e3ccf73dd618ef1abe18da84d3cf5838a5d292d36ef8857a60b5ad04fd4ab517
   sawtooth.validator.transaction_families: [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"} "...
 
