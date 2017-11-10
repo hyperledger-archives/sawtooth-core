@@ -34,13 +34,6 @@ save_usage sawtooth block
 save_usage sawtooth block list
 save_usage sawtooth block show
 
-save_usage sawtooth config
-save_usage sawtooth config genesis
-save_usage sawtooth config proposal
-save_usage sawtooth config proposal create
-save_usage sawtooth config proposal list
-save_usage sawtooth config proposal vote
-
 save_usage sawtooth keygen
 
 save_usage sawtooth identity
@@ -61,6 +54,13 @@ save_usage sawtooth transaction
 
 save_usage sawtooth transaction list
 save_usage sawtooth transaction show
+
+save_usage sawset
+save_usage sawset genesis
+save_usage sawset proposal
+save_usage sawset proposal create
+save_usage sawset proposal list
+save_usage sawset proposal vote
 
 save_usage sawtooth-validator
 save_usage sawtooth-rest-api

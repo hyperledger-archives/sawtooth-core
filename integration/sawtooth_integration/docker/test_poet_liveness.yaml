@@ -64,10 +64,10 @@ services:
     command: "bash -c \"\
         cp /project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/validator-0.toml /etc/sawtooth/validator.toml && \
         sawtooth admin keygen --force && \
-        sawtooth config genesis \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth config proposal create \
+        sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=poet \
           sawtooth.poet.report_public_key_pem=\
@@ -76,7 +76,7 @@ services:
           sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
           -o config.batch && \
         poet registration create -k /etc/sawtooth/keys/validator.priv -o poet.batch && \
-        sawtooth config proposal create \
+        sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           $$(/project/sawtooth-core/integration/sawtooth_integration/tests/poet_liveness_data/poet-settings.sh) \
           -o poet-settings.batch && \

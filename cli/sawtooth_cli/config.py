@@ -12,15 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+import argparse
 from base64 import b64decode
 import csv
 import datetime
 import getpass
 import hashlib
 import json
+import logging
 import os
 import sys
+import traceback
 import yaml
+
+import pkg_resources
+from colorlog import ColoredFormatter
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
@@ -37,6 +44,9 @@ from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
 
 import sawtooth_signing as signing
+
+
+DISTRIBUTION_NAME = 'sawset'
 
 
 SETTINGS_NAMESPACE = '000000'
@@ -64,165 +74,6 @@ def add_config_parser(subparsers, parent_parser):
     config_parsers = parser.add_subparsers(title="subcommands",
                                            dest="subcommand")
     config_parsers.required = True
-
-    # The following parser is for the `genesis` subcommand.
-    # This command creates a batch that contains all of the initial
-    # transactions for on-chain settings
-    genesis_parser = config_parsers.add_parser(
-        'genesis',
-        help='Create a genesis batch file of settings transactions',
-        description='Creates a Batch of settings proposals that can be '
-                    'consumed by "sawtooth admin genesis" and used '
-                    'during genesis block construction.'
-    )
-    genesis_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='the signing key for the resulting batches '
-             'and initial authorized key')
-
-    genesis_parser.add_argument(
-        '-o', '--output',
-        type=str,
-        default='config-genesis.batch',
-        help='the name of the file to output the resulting batches')
-
-    genesis_parser.add_argument(
-        '-T', '--approval-threshold',
-        type=int,
-        help='the required number of votes to enable a setting change')
-
-    genesis_parser.add_argument(
-        '-A', '--authorized-key',
-        type=str,
-        action='append',
-        help='a public key for an user authorized to submit '
-             'config transactions')
-
-    # The following parser is for the `proposal` subcommand group. These
-    # commands allow the user to create proposals which may be applied
-    # immediately or placed in ballot mode, depending on the current on-chain
-    # settings.
-
-    proposal_parser = config_parsers.add_parser(
-        'proposal',
-        help='View, create or vote on settings change proposals',
-        description='sawtooth-settings supports a simple voting mechanism for '
-                    'applying changes to on-change settings.  These commands '
-                    'provide tools to view, create or vote on proposed '
-                    'settings')
-    proposal_parsers = proposal_parser.add_subparsers(
-        title='proposals',
-        dest='proposal_cmd')
-    proposal_parsers.required = True
-
-    create_parser = proposal_parsers.add_parser(
-        'create',
-        help='creates proposals for setting changes',
-        description='Create proposals for settings changes.  The change '
-                    'may be applied immediately or after a series of votes, '
-                    'depending on the vote threshold setting.'
-    )
-
-    create_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='the signing key for the resulting batches')
-
-    create_target_group = create_parser.add_mutually_exclusive_group()
-    create_target_group.add_argument(
-        '-o', '--output',
-        type=str,
-        help='the name of the file to ouput the resulting batches')
-
-    create_target_group.add_argument(
-        '--url',
-        type=str,
-        help="the URL of a validator's REST API",
-        default='http://localhost:8080')
-
-    create_parser.add_argument(
-        'setting',
-        type=str,
-        nargs='+',
-        help='configuration setting, as a key/value pair: <key>=<value>')
-
-    proposal_list_parser = proposal_parsers.add_parser(
-        'list',
-        help='lists the currently proposed, but not active, settings',
-        description='Lists the currently proposed, but not active, settings. '
-                    'This list of proposals can be used to find proposals to '
-                    'vote on.')
-
-    proposal_list_parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of a validator's REST API",
-        default='http://localhost:8080')
-
-    proposal_list_parser.add_argument(
-        '--public-key',
-        type=str,
-        default='',
-        help='filters proposals from a particular public key.')
-
-    proposal_list_parser.add_argument(
-        '--filter',
-        type=str,
-        default='',
-        help='filters keys that begin with this value')
-
-    proposal_list_parser.add_argument(
-        '--format',
-        default='default',
-        choices=['default', 'csv', 'json', 'yaml'],
-        help='the format of the output')
-
-    vote_parser = proposal_parsers.add_parser(
-        'vote',
-        help='votes for specific setting change proposals',
-        description='Votes for a specific settings change proposal. The '
-                    'proposal id can be found using "sawtooth config proposal '
-                    'list".')
-
-    vote_parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of a validator's REST API",
-        default='http://localhost:8080')
-
-    vote_parser.add_argument(
-        '-k', '--key',
-        type=str,
-        help='the signing key for the resulting transaction batch')
-
-    vote_parser.add_argument(
-        'proposal_id',
-        type=str,
-        help='the proposal to vote on')
-
-    vote_parser.add_argument(
-        'vote_value',
-        type=str,
-        choices=['accept', 'reject'],
-        help='the value of the vote')
-
-
-def do_config(args):
-    """Executes the config commands subcommands.
-    """
-    if args.subcommand == 'proposal' and args.proposal_cmd == 'create':
-        _do_config_proposal_create(args)
-    elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
-        _do_config_proposal_list(args)
-    elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
-        _do_config_proposal_vote(args)
-    elif args.subcommand == 'genesis':
-        _do_config_genesis(args)
-    else:
-        raise AssertionError(
-            '"{}" is not a valid subcommand of "config"'.format(
-                args.subcommand))
 
 
 def _do_config_proposal_create(args):
@@ -552,3 +403,263 @@ def _key_to_address(key):
 
 def setting_key_to_address(key):
     return _key_to_address(key)
+
+
+def create_console_handler(verbose_level):
+    clog = logging.StreamHandler()
+    formatter = ColoredFormatter(
+        "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
+        "%(white)s%(message)s",
+        datefmt="%H:%M:%S",
+        reset=True,
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'red',
+        })
+
+    clog.setFormatter(formatter)
+
+    if verbose_level == 0:
+        clog.setLevel(logging.WARN)
+    elif verbose_level == 1:
+        clog.setLevel(logging.INFO)
+    else:
+        clog.setLevel(logging.DEBUG)
+
+    return clog
+
+
+def setup_loggers(verbose_level):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(create_console_handler(verbose_level))
+
+
+def create_parent_parser(prog_name):
+    parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
+    parent_parser.add_argument(
+        '-v', '--verbose',
+        action='count',
+        help='enable more verbose output')
+
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+
+    parent_parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
+        .format(version),
+        help='print version information')
+
+    return parent_parser
+
+
+def create_parser(prog_name):
+    parent_parser = create_parent_parser(prog_name)
+
+    parser = argparse.ArgumentParser(
+        description='Sawtooth supports storing settings on-chain. The '
+        'subcommands provided here can be used to view the '
+        'current proposals, create proposals and vote on existing '
+        'proposals, and produce setting values that will be set '
+        'in the genesis block.',
+        parents=[parent_parser])
+
+    subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
+    subparsers.required = True
+
+    # The following parser is for the `genesis` subcommand.
+    # This command creates a batch that contains all of the initial
+    # transactions for on-chain settings
+    genesis_parser = subparsers.add_parser(
+        'genesis',
+        help='Create a genesis batch file of settings transactions',
+        description='Creates a Batch of settings proposals that can be '
+                    'consumed by "sawtooth admin genesis" and used '
+                    'during genesis block construction.'
+    )
+    genesis_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the signing key for the resulting batches '
+             'and initial authorized key')
+
+    genesis_parser.add_argument(
+        '-o', '--output',
+        type=str,
+        default='config-genesis.batch',
+        help='the name of the file to output the resulting batches')
+
+    genesis_parser.add_argument(
+        '-T', '--approval-threshold',
+        type=int,
+        help='the required number of votes to enable a setting change')
+
+    genesis_parser.add_argument(
+        '-A', '--authorized-key',
+        type=str,
+        action='append',
+        help='a public key for an user authorized to submit '
+             'config transactions')
+
+    # The following parser is for the `proposal` subcommand group. These
+    # commands allow the user to create proposals which may be applied
+    # immediately or placed in ballot mode, depending on the current on-chain
+    # settings.
+
+    proposal_parser = subparsers.add_parser(
+        'proposal',
+        help='View, create or vote on settings change proposals',
+        description='sawtooth-settings supports a simple voting mechanism for '
+                    'applying changes to on-change settings.  These commands '
+                    'provide tools to view, create or vote on proposed '
+                    'settings')
+    proposal_parsers = proposal_parser.add_subparsers(
+        title='proposals',
+        dest='proposal_cmd')
+    proposal_parsers.required = True
+
+    prop_parser = proposal_parsers.add_parser(
+        'create',
+        help='creates proposals for setting changes',
+        description='Create proposals for settings changes.  The change '
+                    'may be applied immediately or after a series of votes, '
+                    'depending on the vote threshold setting.'
+    )
+
+    prop_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the signing key for the resulting batches')
+
+    prop_target_group = prop_parser.add_mutually_exclusive_group()
+    prop_target_group.add_argument(
+        '-o', '--output',
+        type=str,
+        help='the name of the file to ouput the resulting batches')
+
+    prop_target_group.add_argument(
+        '--url',
+        type=str,
+        help="the URL of a validator's REST API",
+        default='http://localhost:8080')
+
+    prop_parser.add_argument(
+        'setting',
+        type=str,
+        nargs='+',
+        help='configuration setting, as a key/value pair: <key>=<value>')
+
+    proposal_list_parser = proposal_parsers.add_parser(
+        'list',
+        help='lists the currently proposed, but not active, settings',
+        description='Lists the currently proposed, but not active, settings. '
+                    'This list of proposals can be used to find proposals to '
+                    'vote on.')
+
+    proposal_list_parser.add_argument(
+        '--url',
+        type=str,
+        help="the URL of a validator's REST API",
+        default='http://localhost:8080')
+
+    proposal_list_parser.add_argument(
+        '--public-key',
+        type=str,
+        default='',
+        help='filters proposals from a particular public key.')
+
+    proposal_list_parser.add_argument(
+        '--filter',
+        type=str,
+        default='',
+        help='filters keys that begin with this value')
+
+    proposal_list_parser.add_argument(
+        '--format',
+        default='default',
+        choices=['default', 'csv', 'json', 'yaml'],
+        help='the format of the output')
+
+    vote_parser = proposal_parsers.add_parser(
+        'vote',
+        help='votes for specific setting change proposals',
+        description='Votes for a specific settings change proposal. The '
+                    'proposal id can be found using "sawset proposal '
+                    'list".')
+
+    vote_parser.add_argument(
+        '--url',
+        type=str,
+        help="the URL of a validator's REST API",
+        default='http://localhost:8080')
+
+    vote_parser.add_argument(
+        '-k', '--key',
+        type=str,
+        help='the signing key for the resulting transaction batch')
+
+    vote_parser.add_argument(
+        'proposal_id',
+        type=str,
+        help='the proposal to vote on')
+
+    vote_parser.add_argument(
+        'vote_value',
+        type=str,
+        choices=['accept', 'reject'],
+        help='the value of the vote')
+
+    return parser
+
+
+def main(prog_name=os.path.basename(sys.argv[0]), args=None,
+         with_loggers=True):
+    parser = create_parser(prog_name)
+    if args is None:
+        args = sys.argv[1:]
+    args = parser.parse_args(args)
+
+    if with_loggers is True:
+        if args.verbose is None:
+            verbose_level = 0
+        else:
+            verbose_level = args.verbose
+        setup_loggers(verbose_level=verbose_level)
+
+    if args.subcommand == 'proposal' and args.proposal_cmd == 'create':
+        _do_config_proposal_create(args)
+    elif args.subcommand == 'proposal' and args.proposal_cmd == 'list':
+        _do_config_proposal_list(args)
+    elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
+        _do_config_proposal_vote(args)
+    elif args.subcommand == 'genesis':
+        _do_config_genesis(args)
+    else:
+        raise CliException(
+            '"{}" is not a valid subcommand of "config"'.format(
+                args.subcommand))
+
+
+def main_wrapper():
+    # pylint: disable=bare-except
+    try:
+        main()
+    except CliException as e:
+        print("Error: {}".format(e), file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        pass
+    except BrokenPipeError:
+        sys.stderr.close()
+    except SystemExit as e:
+        raise e
+    except:
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)

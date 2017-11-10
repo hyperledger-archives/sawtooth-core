@@ -37,6 +37,7 @@ setup(name='sawtooth-cli',
           ],
       entry_points={
           'console_scripts': [
+              'sawset = sawtooth_cli.config:main_wrapper',
               'sawtooth = sawtooth_cli.main:main_wrapper'
           ]
       })

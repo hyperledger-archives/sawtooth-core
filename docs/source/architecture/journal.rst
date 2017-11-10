@@ -419,16 +419,16 @@ and specifies the appropriate settings:
 
 .. code-block:: bash
 
-        sawtooth config proposal create \
+        sawset proposal create \
           -k <signing-key-file>
-          -o sawtooth-config.batch \
+          -o sawset.batch \
           sawtooth.consensus.algorithm=poet \
           sawtooth.poet.initial_wait_timer=x \
           sawtooth.poet.target_wait_time=x \
           sawtooth.poet.minimum_wait_time=x \
           sawtooth.poet.population_estimate_sample_size=x \
         sawtooth admin genesis \
-          sawtooth-config.batch
+          sawset.batch
 
 A genesis.batch file will written to the validator's data directory.
 

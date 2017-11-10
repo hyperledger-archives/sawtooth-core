@@ -101,7 +101,7 @@ The genesis block contains some initial values that are necessary when a
 Sawtooth distributed ledger is created and used for the first time.
 One of the settings in the genesis block that should be set is the
 key that is authorized to set and change configuration settings, as
-shown below using the ``sawtooth config genesis`` command.
+shown below using the ``sawset genesis`` command.
 
 To create the genesis block, open a new terminal window
 and run the following commands:
@@ -109,7 +109,7 @@ and run the following commands:
 .. code-block:: console
 
   $ sawtooth keygen
-  $ sawtooth config genesis
+  $ sawset genesis
   $ sudo -u sawtooth sawtooth admin genesis config-genesis.batch
 
 The following output appears:
@@ -310,7 +310,7 @@ If necessary, run the following command to start the REST API.
 Changing the Transaction Family Settings
 ----------------------------------------
 
-In the example below, a JSON array is submitted to the ``sawtooth config``
+In the example below, a JSON array is submitted to the ``sawset``
 command, which creates and submits a batch of transactions containing the
 settings change.
 
@@ -325,7 +325,7 @@ terminal window and enter the following commands:
 
 .. code-block:: console
 
-  $ sawtooth config proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
+  $ sawset proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
 and output similar to the following appears in the validator terminal window:

@@ -38,7 +38,7 @@ services:
     command: "bash -c \"\
         echo 5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv > test.priv && \
         sawtooth admin keygen && \
-        sawtooth config genesis -k test.priv -o setting-genesis.batch && \
+        sawset genesis -k test.priv -o setting-genesis.batch && \
         sawtooth admin genesis setting-genesis.batch  && \
         sawtooth-validator -v --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:40000 \

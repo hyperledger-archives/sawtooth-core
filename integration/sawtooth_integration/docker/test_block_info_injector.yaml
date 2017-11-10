@@ -60,10 +60,10 @@ services:
     # start the validator with an empty genesis batch
     command: "bash -c \"\
         sawtooth admin keygen && \
-        sawtooth config genesis \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth config proposal create \
+        sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.validator.batch_injectors=block_info \
           'sawtooth.validator.block_validation_rules=NofX:1,block_info;XatY:block_info,0;local:0' \

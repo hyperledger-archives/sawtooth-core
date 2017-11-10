@@ -246,74 +246,6 @@ combination when the REST API is behind a Basic Auth proxy.
    :language: console
    :linenos:
 
-sawtooth config
-===============
-
-Sawtooth supports storing settings on-chain. The ``sawtooth config``
-subcommands can be used to view the current proposals, create
-proposals and vote on existing proposals, and produce setting values
-that will be set in the genesis block.
-
-.. literalinclude:: output/sawtooth_config_usage.out
-   :language: console
-   :linenos:
-
-sawtooth config genesis
-=======================
-
-The ``sawtooth config genesis`` subcommand creates a Batch of settings
-proposals that can be consumed by ``sawtooth admin genesis`` and used
-during genesis block construction.
-
-.. literalinclude:: output/sawtooth_config_genesis_usage.out
-   :language: console
-   :linenos:
-
-sawtooth config proposal
-========================
-
-The Settings transaction processor (``sawtooth-settings``) supports a
-simple voting mechanism for applying changes to on-change settings.
-The ``sawtooth config proposal`` subcommands provide tools to view,
-create and vote on proposed settings.
-
-.. literalinclude:: output/sawtooth_config_proposal_usage.out
-   :language: console
-   :linenos:
-
-sawtooth config proposal create
-===============================
-
-The ``sawtooth config proposal create`` subcommand creates proposals
-for settings changes. The change may be applied immediately or after a
-series of votes, depending on the vote threshold setting.
-
-.. literalinclude:: output/sawtooth_config_proposal_create_usage.out
-   :language: console
-   :linenos:
-
-sawtooth config proposal list
-=============================
-
-The ``sawtooth config proposal list`` subcommand displays the
-currently proposed settings that are not yet active. This list of
-proposals can be used to find proposals to vote on.
-
-.. literalinclude:: output/sawtooth_config_proposal_list_usage.out
-   :language: console
-   :linenos:
-
-sawtooth config proposal vote
-=============================
-
-The ``sawtooth config proposal vote`` subcommand votes for a specific
-settings-change proposal. Use ``sawtooth config proposal list`` to
-find the proposal id.
-
-.. literalinclude:: output/sawtooth_config_proposal_vote_usage.out
-   :language: console
-   :linenos:
-
 sawtooth identity
 =================
 
@@ -328,7 +260,7 @@ new policies.
 
 Note that only the public keys stored in the setting
 sawtooth.identity.allowed_keys are allowed to submit identity
-transactions. Use the ``sawtooth config`` commands to change this
+transactions. Use the ``sawset`` commands to change this
 setting.
 
 

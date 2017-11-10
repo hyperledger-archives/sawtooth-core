@@ -80,12 +80,12 @@ class TestConfigSmoke(unittest.TestCase):
         ''' Test ability to list settings after submission of a setting.
             Test submits a simple config transaction to the validator,
             then confirms that the settings can be retrieved by the
-            command 'sawtooth config settings list', and that the retrieved
+            command 'sawset settings list', and that the retrieved
             setting equals the input setting.
             '''
         # Submit transaction, then list it using subprocess
         cmds = [
-            ['sawtooth', 'config', 'proposal', 'create', '-k', self._wif_file,
+            ['sawset', 'proposal', 'create', '-k', self._wif_file,
              '--url', 'http://rest-api:8080', 'x=1', 'y=1'],
             ['sawtooth', 'settings', 'list', '--url',
              'http://rest-api:8080']

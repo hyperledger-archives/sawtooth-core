@@ -26,10 +26,10 @@ services:
       - 8800
     command: "bash -c \"\
         sawtooth admin keygen --force && \
-        sawtooth config genesis \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth config proposal create \
+        sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=poet \
           sawtooth.poet.report_public_key_pem=\

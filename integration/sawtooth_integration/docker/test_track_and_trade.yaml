@@ -69,7 +69,7 @@ services:
       - tnt-server
     command: "bash -c \"\
         sawtooth admin keygen && \
-        sawtooth config genesis \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
         sawtooth admin genesis config-genesis.batch && \

@@ -509,7 +509,7 @@ def validator_genesis_init(sawtooth_home_genesis,
         priv_key_non = infile.read().strip('\n')
 
     subprocess.run([
-        'sawtooth', 'config', 'genesis',
+        'sawset', 'genesis',
         '-k', priv,
         '-o', os.path.join(
             sawtooth_home_genesis, 'data', 'config-genesis.batch')
@@ -539,7 +539,7 @@ def validator_genesis_init(sawtooth_home_genesis,
     enclave_basename = result.stdout.decode('utf-8').strip('\n')
 
     subprocess.run([
-        'sawtooth', 'config', 'proposal', 'create',
+        'sawset', 'proposal', 'create',
         '-k', priv,
         'sawtooth.identity.allowed_keys={},{}'.format(identity_pub_key, priv_key),
         'sawtooth.consensus.algorithm=poet',
