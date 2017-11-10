@@ -314,26 +314,6 @@ find the proposal id.
    :language: console
    :linenos:
 
-sawtooth config settings
-========================
-
-The ``sawtooth config settings`` subcommand displays the values of
-currently active on-chain settings.
-
-.. literalinclude:: output/sawtooth_config_settings_usage.out
-   :language: console
-   :linenos:
-
-sawtooth config settings list
-=============================
-
-The ``sawtooth config proposal list`` subcommand displays the current
-keys and values of on-chain settings.
-
-.. literalinclude:: output/sawtooth_config_settings_list_usage.out
-   :language: console
-   :linenos:
-
 sawtooth identity
 =================
 
@@ -446,6 +426,26 @@ and ``<key_dir>/<key_name>.pub``. By default, ``<key_dir>`` is
 .. literalinclude:: output/sawtooth_keygen_usage.out
   :language: console
   :linenos:
+
+sawtooth settings
+=================
+
+The ``sawtooth settings`` subcommand displays the values of currently
+active on-chain settings.
+
+.. literalinclude:: output/sawtooth_settings_usage.out
+   :language: console
+   :linenos:
+
+sawtooth settings list
+======================
+
+The ``sawtooth settings list`` subcommand displays the current keys
+and values of on-chain settings.
+
+.. literalinclude:: output/sawtooth_settings_list_usage.out
+   :language: console
+   :linenos:
 
 sawtooth state
 ==============

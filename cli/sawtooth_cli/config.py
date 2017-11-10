@@ -24,7 +24,6 @@ import yaml
 
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.rest_client import RestClient
-from sawtooth_cli import tty
 
 from sawtooth_cli.protobuf.settings_pb2 import SettingsPayload
 from sawtooth_cli.protobuf.settings_pb2 import SettingProposal
@@ -208,46 +207,6 @@ def add_config_parser(subparsers, parent_parser):
         choices=['accept', 'reject'],
         help='the value of the vote')
 
-    # The following parser is for the settings subsection of commands.  These
-    # commands display information about the currently applied on-chain
-    # settings.
-
-    settings_parser = config_parsers.add_parser(
-        'settings',
-        help='List and show on-chain settings',
-        description='Displays the values of currently active on-chain '
-                    'settings.')
-    settings_parsers = settings_parser.add_subparsers(
-        title='settings',
-        dest='settings_cmd')
-    settings_parsers.required = True
-
-    list_parser = settings_parsers.add_parser(
-        'list',
-        help='list the current keys and values of on-chain settings',
-        description='List the current keys and values of on-chain '
-                    'settings.  The content can be exported to various '
-                    'formats for external consumption.'
-    )
-
-    list_parser.add_argument(
-        '--url',
-        type=str,
-        help="the URL of a validator's REST API",
-        default='http://localhost:8080')
-
-    list_parser.add_argument(
-        '--filter',
-        type=str,
-        default='',
-        help='filters keys that begin with this value')
-
-    list_parser.add_argument(
-        '--format',
-        default='default',
-        choices=['default', 'csv', 'json', 'yaml'],
-        help='the format of the output')
-
 
 def do_config(args):
     """Executes the config commands subcommands.
@@ -258,8 +217,6 @@ def do_config(args):
         _do_config_proposal_list(args)
     elif args.subcommand == 'proposal' and args.proposal_cmd == 'vote':
         _do_config_proposal_vote(args)
-    elif args.subcommand == 'settings' and args.settings_cmd == 'list':
-        _do_config_list(args)
     elif args.subcommand == 'genesis':
         _do_config_genesis(args)
     else:
@@ -382,65 +339,6 @@ def _do_config_proposal_vote(args):
     batch_list = BatchList(batches=[batch])
 
     rest_client.send_batches(batch_list)
-
-
-def _do_config_list(args):
-    """Lists the current on-chain configuration values.
-    """
-    rest_client = RestClient(args.url)
-    state = rest_client.list_state(subtree=SETTINGS_NAMESPACE)
-
-    prefix = args.filter
-
-    head = state['head']
-    state_values = state['data']
-    printable_settings = []
-    proposals_address = _key_to_address('sawtooth.settings.vote.proposals')
-    for state_value in state_values:
-        if state_value['address'] == proposals_address:
-            # This is completely internal setting and we won't list it here
-            continue
-
-        decoded = b64decode(state_value['data'])
-        setting = Setting()
-        setting.ParseFromString(decoded)
-
-        for entry in setting.entries:
-            if entry.key.startswith(prefix):
-                printable_settings.append(entry)
-
-    printable_settings.sort(key=lambda s: s.key)
-
-    if args.format == 'default':
-        tty_width = tty.width()
-        for setting in printable_settings:
-            # Set value width to the available terminal space, or the min width
-            width = tty_width - len(setting.key) - 3
-            width = width if width > _MIN_PRINT_WIDTH else _MIN_PRINT_WIDTH
-            value = (setting.value[:width] + '...'
-                     if len(setting.value) > width
-                     else setting.value)
-            print('{}: {}'.format(setting.key, value))
-    elif args.format == 'csv':
-        try:
-            writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
-            writer.writerow(['KEY', 'VALUE'])
-            for setting in printable_settings:
-                writer.writerow([setting.key, setting.value])
-        except csv.Error:
-            raise CliException('Error writing CSV')
-    elif args.format == 'json' or args.format == 'yaml':
-        settings_snapshot = {
-            'head': head,
-            'settings': {setting.key: setting.value
-                         for setting in printable_settings}
-        }
-        if args.format == 'json':
-            print(json.dumps(settings_snapshot, indent=2, sort_keys=True))
-        else:
-            print(yaml.dump(settings_snapshot, default_flow_style=False)[0:-1])
-    else:
-        raise AssertionError('Unknown format {}'.format(args.format))
 
 
 def _do_config_genesis(args):
