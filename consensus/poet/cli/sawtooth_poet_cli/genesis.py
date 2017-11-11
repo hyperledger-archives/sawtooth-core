@@ -68,6 +68,12 @@ def add_genesis_parser(subparsers, parent_parser):
         type=str,
         help='the name of the file to output the resulting batches')
 
+    parser.add_argument(
+        '-b', '--block',
+        default=NULL_BLOCK_IDENTIFIER,
+        type=str,
+        help='the most recent block identifier to use as a sign-up nonce')
+
 
 def do_genesis(args):
     """Executes the `poet genesis` subcommand.
@@ -87,7 +93,7 @@ def do_genesis(args):
         signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=poet_enclave_module,
             originator_public_key_hash=public_key_hash,
-            nonce=SignupInfo.block_id_to_nonce(NULL_BLOCK_IDENTIFIER))
+            nonce=SignupInfo.block_id_to_nonce(args.block))
 
     print(
         'Writing key state for PoET public key: {}...{}'.format(
@@ -115,7 +121,7 @@ def do_genesis(args):
                 poet_public_key=signup_info.poet_public_key,
                 proof_data=signup_info.proof_data,
                 anti_sybil_id=signup_info.anti_sybil_id,
-                nonce=NULL_BLOCK_IDENTIFIER))
+                nonce=SignupInfo.block_id_to_nonce(args.block)))
     serialized = payload.SerializeToString()
 
     # Create the address that will be used to look up this validator
