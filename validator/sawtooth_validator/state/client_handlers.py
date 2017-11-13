@@ -817,6 +817,44 @@ class BlockGetByNumRequest(_ClientRequestHandler):
         return self._wrap_response(block=block)
 
 
+class BlockGetByTransactionRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_block_pb2.ClientBlockGetByTransactionIdRequest,
+            client_block_pb2.ClientBlockGetResponse,
+            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        try:
+            block = self._block_store.get_block_by_transaction_id(
+                request.transaction_id).block
+        except ValueError as e:
+            LOGGER.debug(e)
+            return self._status.NO_RESOURCE
+
+        return self._wrap_response(block=block)
+
+
+class BlockGetByBatchRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_block_pb2.ClientBlockGetByBatchIdRequest,
+            client_block_pb2.ClientBlockGetResponse,
+            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        try:
+            block = self._block_store.get_block_by_batch_id(
+                request.batch_id).block
+        except ValueError as e:
+            LOGGER.debug(e)
+            return self._status.NO_RESOURCE
+
+        return self._wrap_response(block=block)
+
+
 class BatchListRequest(_ClientRequestHandler):
     def __init__(self, block_store):
         super().__init__(
@@ -928,13 +966,8 @@ class TransactionGetRequest(_ClientRequestHandler):
         except ValueError as e:
             LOGGER.debug(e)
             return self._status.NO_RESOURCE
-        try:
-            block_id = self._block_store.get_block_by_transaction_id(
-                request.transaction_id).identifier
-        except ValueError as e:
-            block_id = ""
 
-        return self._wrap_response(transaction=txn, block_id=block_id)
+        return self._wrap_response(transaction=txn)
 
 
 class PeersGetRequest(_ClientRequestHandler):

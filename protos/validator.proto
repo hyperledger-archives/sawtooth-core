@@ -109,6 +109,8 @@ message Message {
         CLIENT_PEERS_GET_REQUEST = 125;
         // A response with the validator's peers
         CLIENT_PEERS_GET_RESPONSE = 126;
+        CLIENT_BLOCK_GET_BY_TRANSACTION_ID_REQUEST = 127;
+        CLIENT_BLOCK_GET_BY_BATCH_ID_REQUEST = 128;
 
         // Message types for events
         CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;

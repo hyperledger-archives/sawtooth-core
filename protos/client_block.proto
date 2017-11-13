@@ -74,6 +74,20 @@ message ClientBlockGetByNumRequest {
     uint64 block_num = 1;
 }
 
+// A request to return a specific block from the validator. The block
+// containing the given transaction is returned. If no block on the current
+// chain contains the transaction, NO_RESOURCE is returned.
+message ClientBlockGetByTransactionIdRequest {
+    string transaction_id = 1;
+}
+
+// A request to return a specific block from the validator. The block
+// containing the given batch is returned. If no block on the current chain
+// contains the batch, NO_RESOURCE is returned.
+message ClientBlockGetByBatchIdRequest {
+    string batch_id = 1;
+}
+
 // A response that returns the block specified by a ClientBlockGetByIdRequest
 // or  ClientBlockGetByNumRequest.
 //

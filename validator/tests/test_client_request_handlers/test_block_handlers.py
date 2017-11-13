@@ -418,3 +418,97 @@ class TestBlockGetByIdRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.block.SerializeToString())
+
+
+class TestBlockGetByTransactionRequests(ClientHandlerTestCase):
+    def setUp(self):
+        store = MockBlockStore()
+        self.initialize(
+            handlers.BlockGetByTransactionRequest(store),
+            client_block_pb2.ClientBlockGetByTransactionIdRequest,
+            client_block_pb2.ClientBlockGetResponse)
+
+    def test_block_get_request(self):
+        """Verifies requests for a specific block by transaction work properly.
+
+        Expects to find:
+            - a status of OK
+            - the block property which is an instances of Block
+            - The block has a header_signature of 'B-1'
+        """
+        response = self.make_request(transaction_id='t-1')
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertIsInstance(response.block, Block)
+        self.assertEqual('B-1', response.block.header_signature)
+
+    def test_block_get_bad_request(self):
+        """Verifies requests for a specific block break with a bad protobuf.
+
+        Expects to find:
+            - a status of INTERNAL_ERROR
+            - that the Block returned, when serialized, is empty
+        """
+        response = self.make_bad_request(transaction_id='t-1')
+
+        self.assertEqual(self.status.INTERNAL_ERROR, response.status)
+        self.assertFalse(response.block.SerializeToString())
+
+    def test_block_get_with_bad_id(self):
+        """Verifies requests for a specific block break with a bad id.
+
+        Expects to find:
+            - a status of NO_RESOURCE
+            - that the Block returned, when serialized, is empty
+        """
+        response = self.make_request(transaction_id='bad')
+
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertFalse(response.block.SerializeToString())
+
+
+class TestBlockGetByBatchRequests(ClientHandlerTestCase):
+    def setUp(self):
+        store = MockBlockStore()
+        self.initialize(
+            handlers.BlockGetByBatchRequest(store),
+            client_block_pb2.ClientBlockGetByBatchIdRequest,
+            client_block_pb2.ClientBlockGetResponse)
+
+    def test_block_get_request(self):
+        """Verifies requests for a specific block by batch work properly.
+
+        Expects to find:
+            - a status of OK
+            - the block property which is an instances of Block
+            - The block has a header_signature of 'B-1'
+        """
+        response = self.make_request(batch_id='b-1')
+
+        self.assertEqual(self.status.OK, response.status)
+        self.assertIsInstance(response.block, Block)
+        self.assertEqual('B-1', response.block.header_signature)
+
+    def test_block_get_bad_request(self):
+        """Verifies requests for a specific block break with a bad protobuf.
+
+        Expects to find:
+            - a status of INTERNAL_ERROR
+            - that the Block returned, when serialized, is empty
+        """
+        response = self.make_bad_request(batch_id='b-1')
+
+        self.assertEqual(self.status.INTERNAL_ERROR, response.status)
+        self.assertFalse(response.block.SerializeToString())
+
+    def test_block_get_with_bad_id(self):
+        """Verifies requests for a specific block break with a bad id.
+
+        Expects to find:
+            - a status of NO_RESOURCE
+            - that the Block returned, when serialized, is empty
+        """
+        response = self.make_request(batch_id='bad')
+
+        self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertFalse(response.block.SerializeToString())

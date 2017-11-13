@@ -23,6 +23,8 @@ from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockListRequest
 from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockListResponse
 from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetByIdRequest
 from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetByNumRequest
+from sawtooth_sdk.protobuf.client_block_pb2 import \
+    ClientBlockGetByTransactionIdRequest
 from sawtooth_sdk.protobuf.client_block_pb2 import ClientBlockGetResponse
 from sawtooth_sdk.protobuf.client_state_pb2 import ClientStateGetRequest
 from sawtooth_sdk.protobuf.client_state_pb2 import ClientStateGetResponse
@@ -498,7 +500,7 @@ class SethRpcTest(unittest.TestCase):
 
         self._send_transaction_response(msg, block.batches[1].transactions[1])
 
-        msg, request = self._receive_block_request_id()
+        msg, request = self._receive_block_request_transaction()
 
         self._send_block_back(msg, block)
 
@@ -735,7 +737,7 @@ class SethRpcTest(unittest.TestCase):
 
         msg, request = self._receive_transaction_request()
         self._send_transaction_response(msg)
-        msg, request = self._receive_block_request_id()
+        msg, request = self._receive_block_request_transaction()
         block = Block(
             header=BlockHeader(block_num=self.block_num).SerializeToString(),
             header_signature=self.block_id,
@@ -1228,8 +1230,7 @@ class SethRpcTest(unittest.TestCase):
             Message.CLIENT_TRANSACTION_GET_RESPONSE,
             ClientTransactionGetResponse(
                 status=ClientBlockGetResponse.OK,
-                transaction=transaction,
-                block_id=self.block_id),
+                transaction=transaction),
             msg)
 
 
@@ -1247,6 +1248,13 @@ class SethRpcTest(unittest.TestCase):
         request.ParseFromString(msg.content)
         return msg, request
 
+    def _receive_block_request_transaction(self):
+        msg = self.validator.receive()
+        self.assertEqual(msg.message_type,
+                         Message.CLIENT_BLOCK_GET_BY_TRANSACTION_ID_REQUEST)
+        request = ClientBlockGetByTransactionIdRequest()
+        request.ParseFromString(msg.content)
+        return msg, request
 
     def _receive_block_request_id(self):
         msg = self.validator.receive()
