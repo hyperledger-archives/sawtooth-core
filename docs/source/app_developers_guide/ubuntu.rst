@@ -104,13 +104,13 @@ key that is authorized to set and change configuration settings, as
 shown below using the ``sawtooth config genesis`` command.
 
 To create the genesis block, open a new terminal window
-and run the following commands as root:
+and run the following commands:
 
 .. code-block:: console
 
-  # sawtooth keygen
-  # sawtooth config genesis
-  # sudo -u sawtooth sawtooth admin genesis config-genesis.batch
+  $ sawtooth keygen
+  $ sawtooth config genesis
+  $ sudo -u sawtooth sawtooth admin genesis config-genesis.batch
 
 The following output appears:
 
@@ -296,7 +296,7 @@ the REST API:
 .. code-block:: console
 
   $ ps aux | grep sawtooth-rest-api
-  root      2829  0.0  0.3  55756  3980 pts/0    S+   19:36   0:00 sudo -u sawtooth sawtooth-rest-api -v
+  sawtooth  2829  0.0  0.3  55756  3980 pts/0    S+   19:36   0:00 sudo -u sawtooth sawtooth-rest-api -v
   sawtooth  2830  0.0  3.6 221164 37520 pts/0    Sl+  19:36   0:00 /usr/bin/python3 /usr/bin/sawtooth-rest-api -v
   ubuntu    3004  0.0  0.0  12944   928 pts/4    S+   19:54   0:00 grep -E --color=auto sawtooth-rest-api
 
