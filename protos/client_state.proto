@@ -22,30 +22,9 @@ option go_package = "client_state_pb2";
 import "client_list_control.proto";
 
 
-message ClientStateCurrentRequest {
-}
-
-// This is a response to a request from a client for the current merkle root.
-// Statuses:
-//   * OK - everything worked as expected
-//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
-//   * NOT_READY - the validator does not yet have a genesis block
-
-message ClientStateCurrentResponse {
-    enum Status {
-        STATUS_UNSET = 0;
-        OK = 1;
-        INTERNAL_ERROR = 2;
-        NOT_READY = 3;
-    }
-    Status status = 1;
-    string merkle_root = 2;
-}
-
-// A request to list every entry in the merkle tree. Defaults to the most
-// current tree, but can fetch older state by specifying either a merkle root
-// or a previous head block's id. Results can be further filtered by
-// specifying a subtree with a partial address.
+// A request to list every entry in global state. Defaults to the most current
+// tree, but can fetch older state by specifying a state root. Results can be
+// further filtered by specifying a subtree with a partial address.
 message ClientStateListRequest {
     oneof root_key {
         string merkle_root = 1;

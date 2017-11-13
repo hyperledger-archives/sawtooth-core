@@ -610,18 +610,6 @@ class BatchStatusRequest(_ClientRequestHandler):
         return self._wrap_response(batch_statuses=statuses)
 
 
-class StateCurrentRequest(_ClientRequestHandler):
-    def __init__(self, current_root_func):
-        self._get_root = current_root_func
-        super().__init__(
-            client_state_pb2.ClientStateCurrentRequest,
-            client_state_pb2.ClientStateCurrentResponse,
-            validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
-
-    def _respond(self, request):
-        return self._wrap_response(merkle_root=self._get_root())
-
-
 class StateListRequest(_ClientRequestHandler):
     def __init__(self, database, block_store):
         super().__init__(

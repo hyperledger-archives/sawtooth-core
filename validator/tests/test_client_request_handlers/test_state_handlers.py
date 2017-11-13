@@ -19,26 +19,6 @@ from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import make_db_and_store
 
 
-class TestStateCurrentRequests(ClientHandlerTestCase):
-    def setUp(self):
-        def mock_current_root():
-            return '123'
-
-        self.initialize(
-            handlers.StateCurrentRequest(mock_current_root),
-            client_state_pb2.ClientStateCurrentRequest,
-            client_state_pb2.ClientStateCurrentResponse)
-
-    def test_state_current_request(self):
-        """Verifies requests for the current merkle root work properly.
-        Should respond with a hard-coded mock merkle_root of '123'.
-        """
-        response = self.make_request()
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('123', response.merkle_root)
-
-
 class TestStateListRequests(ClientHandlerTestCase):
     def _find_value(self, entries, address):
         """The ordering of entries is fairly arbitrary, so some tests
