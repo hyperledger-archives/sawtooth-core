@@ -96,6 +96,29 @@ def _get_log_config(filename=None):
     return None
 
 
+def _get_processor_config(filename=None):
+    """Determines if there is a proccesor config in the config directory
+       and returns it. If it does not exist, return None.
+
+    Arguments:
+        filename (str): The name of the processor config specific to the
+            transaction processor that is being started.
+
+    Returns:
+        processor_config (dict): The dictionary to set transaction processor
+    """
+
+    if filename is not None:
+
+        conf_file = os.path.join(get_config_dir(), filename)
+        if os.path.exists(conf_file):
+            with open(conf_file) as fd:
+                raw_config = fd.read()
+                log_config = toml.loads(raw_config)
+                return log_config
+    return None
+
+
 def get_log_dir():
     """Returns the configured data directory."""
     return _get_dir(
@@ -108,3 +131,8 @@ def get_log_dir():
 def get_log_config(filename=None):
     """Returns the log config dictinary if it exists."""
     return _get_log_config(filename)
+
+
+def get_processor_config(filename=None):
+    """Returns the log config dictinary if it exists."""
+    return _get_processor_config(filename)

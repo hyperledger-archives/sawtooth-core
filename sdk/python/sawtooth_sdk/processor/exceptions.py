@@ -43,3 +43,8 @@ class InternalError(_TpResponseError):
 class AuthorizationException(Exception):
     """Raised when a authorization error occurs."""
     pass
+
+
+class LocalConfigurationError(Exception):
+    """Raised when a log configuraiton error occurs."""
+    pass
