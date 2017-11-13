@@ -35,4 +35,6 @@ The following sections describe each component's configuration file.
    configuring_sawtooth/rest_api_configuration_file
    configuring_sawtooth/poet_sgx_enclave_configuration_file
    configuring_sawtooth/path_configuration_file
+   configuring_sawtooth/identity_tp_configuration
+   configuring_sawtooth/settings_tp_configuration
    log_configuration
