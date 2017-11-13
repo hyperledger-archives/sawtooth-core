@@ -21,6 +21,11 @@ from colorlog import ColoredFormatter
 
 
 def create_console_handler(verbose_level):
+    """
+    Set up the console logging for a transaction processor.
+    Args:
+        verbose_level (int): The log level that the console should print out
+    """
     clog = logging.StreamHandler()
     formatter = ColoredFormatter(
         "%(log_color)s[%(asctime)s.%(msecs)03d "
@@ -48,13 +53,25 @@ def create_console_handler(verbose_level):
     return clog
 
 
-def init_console_logging(verbose_level=2, capture_std_output=False):
+def init_console_logging(verbose_level=2):
+    """
+    Set up the console logging for a transaction processor.
+    Args:
+        verbose_level (int): The log level that the console should print out
+    """
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     logger.addHandler(create_console_handler(verbose_level))
 
 
 def log_configuration(log_config=None, log_dir=None, name=None):
+    """
+    Sets up the loggers for a transaction processor.
+    Args:
+        log_config (dict): A dictinary of log config options
+        log_dir (string): The log directory's path
+        name (string): The name of the expected logging file
+    """
     if log_config is not None:
         logging.config.dictConfig(log_config)
     else:
