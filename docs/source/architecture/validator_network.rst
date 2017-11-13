@@ -288,6 +288,8 @@ role.
 In the future, RoleType will include other roles such as CLIENT, STATE_DELTA,
 and TP.
 
+.. _Authorization_Types:
+
 Authorization Types
 -------------------
 Presented here are the two authorization types that will be implemented
