@@ -1,0 +1,1 @@
+#SAWTOOTH_SMALLBANK_TP_GO_ARGS=-v -C tcp://localhost:4004

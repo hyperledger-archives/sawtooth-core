@@ -1,0 +1,13 @@
+[Unit]
+Description=Sawtooth XO TP Go
+After=network.target
+
+[Service]
+User=sawtooth
+Group=sawtooth
+EnvironmentFile=-/etc/default/sawtooth-xo-tp-go
+ExecStart=/usr/bin/xo-tp-go $SAWTOOTH_XO_TP_GO_ARGS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

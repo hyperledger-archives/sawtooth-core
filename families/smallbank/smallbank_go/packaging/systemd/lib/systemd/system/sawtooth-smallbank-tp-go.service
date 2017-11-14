@@ -1,0 +1,13 @@
+[Unit]
+Description=Sawtooth Smallbank TP Go
+After=network.target
+
+[Service]
+User=sawtooth
+Group=sawtooth
+EnvironmentFile=-/etc/default/sawtooth-intkey-tp-go
+ExecStart=/usr/bin/smallbank-tp-go $SAWTOOTH_SMALLBANK_TP_GO_ARGS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
