@@ -133,10 +133,11 @@ class GossipMessageHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
 
-class GossipMessageHaveBlockHandler(Handler):
-    def __init__(self, completer, has_block):
+class GossipMessageDuplicateHandler(Handler):
+    def __init__(self, completer, has_block, has_batch):
         self._completer = completer
         self._has_block = has_block
+        self._has_batch = has_batch
 
     def handle(self, connection_id, message_content):
         gossip_message = GossipMessage()
@@ -154,6 +155,21 @@ class GossipMessageHaveBlockHandler(Handler):
             if has_block:
                 LOGGER.debug("Drop duplicate block: %s",
                              block.header_signature)
+                return HandlerResult(HandlerStatus.DROP)
+
+        if gossip_message.content_type == "BATCH":
+            batch = Batch()
+            batch.ParseFromString(gossip_message.content)
+            has_batch = False
+            if self._completer.get_batch(batch.header_signature) is not None:
+                has_batch = True
+
+            if not has_batch and self._has_batch(batch.header_signature):
+                has_batch = True
+
+            if has_batch:
+                LOGGER.debug("Drop duplicate batch: %s",
+                             batch.header_signature)
                 return HandlerResult(HandlerStatus.DROP)
 
         return HandlerResult(HandlerStatus.PASS)
