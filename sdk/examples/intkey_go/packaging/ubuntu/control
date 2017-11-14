@@ -1,0 +1,11 @@
+Source: sawtooth-intkey-tp-go
+Maintainer: Hyperledger Sawtooth <unknown@unknown>
+Section: go
+Priority: optional
+Standards-Version: 3.9.6
+Homepage: https://github.com/hyperledger/sawtooth-core
+Package: sawtooth-intkey-tp-go
+Architecture: all
+Depends: libssl-dev, libzmq3-dev
+Description: Sawtooth Intkey TP Go
+Version: @VERSION@
