@@ -24,6 +24,7 @@ from sawtooth_validator.journal.event_extractors \
     import BlockEventExtractor
 from sawtooth_validator.journal.event_extractors \
     import ReceiptEventExtractor
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 LOGGER = logging.getLogger(__name__)
 
@@ -121,8 +122,10 @@ class EventBroadcaster(ChainObserver):
             # Start from the chain head and get blocks until we reach the
             # known block
             for block in self._block_store.get_predecessor_iter():
-                if block.identifier == last_known_block_id:
-                    break
+                # All the blocks if NULL_BLOCK_IDENTIFIER
+                if last_known_block_id != NULL_BLOCK_IDENTIFIER:
+                    if block.identifier == last_known_block_id:
+                        break
                 catchup_up_blocks.append(block)
 
         return list(reversed(catchup_up_blocks))
@@ -136,12 +139,16 @@ class EventBroadcaster(ChainObserver):
         blocks = []
         if last_known_block_ids:
             for block_id in last_known_block_ids:
-                try:
-                    block = self._block_store[block_id]
-                except KeyError:
-                    continue
-                block_num = block.block_num
-                blocks.append((block_num, block_id))
+                # If the subscriber wants all the blocks
+                if block_id == NULL_BLOCK_IDENTIFIER:
+                    blocks.append((-1, block_id))
+                else:
+                    try:
+                        block = self._block_store[block_id]
+                    except KeyError:
+                        continue
+                    block_num = block.block_num
+                    blocks.append((block_num, block_id))
 
         # No known blocks in the current chain
         if not blocks:
