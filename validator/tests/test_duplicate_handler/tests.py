@@ -16,19 +16,22 @@ import unittest
 
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.block_pb2 import Block
+from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.gossip.gossip_handlers import \
-    GossipMessageHaveBlockHandler
-from test_has_block_handler.mock import MockCompleter
-from test_has_block_handler.mock import MockChainController
+    GossipMessageDuplicateHandler
+from test_duplicate_handler.mock import MockCompleter
+from test_duplicate_handler.mock import MockChainController
+from test_duplicate_handler.mock import MockPublisher
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 
-class TestHasBlockHandle(unittest.TestCase):
+class TestDuplicateHandler(unittest.TestCase):
     def setUp(self):
         self.completer = MockCompleter()
         self.chain = MockChainController()
-        self.handler = GossipMessageHaveBlockHandler(
-            self.completer, self.chain.has_block)
+        self.publisher = MockPublisher()
+        self.handler = GossipMessageDuplicateHandler(
+            self.completer, self.chain.has_block, self.publisher.has_batch)
 
     def test_no_block(self):
         """
@@ -38,6 +41,18 @@ class TestHasBlockHandle(unittest.TestCase):
         block = Block(header_signature="Block1")
         message = GossipMessage(content_type=GossipMessage.BLOCK,
                                 content=block.SerializeToString())
+        handler_status = self.handler.handle(
+            "connection_id", message.SerializeToString())
+        self.assertEqual(handler_status.status, HandlerStatus.PASS)
+
+    def test_no_batch(self):
+        """
+        Test that if the block does not exist yet in the completer or the
+        chain controller, the gossip message is passed.
+        """
+        batch= Batch(header_signature="Batch1")
+        message = GossipMessage(content_type=GossipMessage.BATCH,
+                                content=batch.SerializeToString())
         handler_status = self.handler.handle(
             "connection_id", message.SerializeToString())
         self.assertEqual(handler_status.status, HandlerStatus.PASS)
@@ -55,6 +70,19 @@ class TestHasBlockHandle(unittest.TestCase):
             "connection_id", message.SerializeToString())
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
 
+    def test_completer_has_batch(self):
+        """
+        Test that if the block does not exist yet in the completer or the
+        chain controller, the gossip message is passed.
+        """
+        batch = Batch(header_signature="Batch1")
+        self.completer.add_batch("Batch1")
+        message = GossipMessage(content_type=GossipMessage.BATCH,
+                                content=batch.SerializeToString())
+        handler_status = self.handler.handle(
+            "connection_id", message.SerializeToString())
+        self.assertEqual(handler_status.status, HandlerStatus.DROP)
+
     def test_chain_has_block(self):
         """
         Test that if the block does not exist yet in the completer or the
@@ -64,6 +92,19 @@ class TestHasBlockHandle(unittest.TestCase):
         self.chain.add_block("Block1")
         message = GossipMessage(content_type=GossipMessage.BLOCK,
                                 content=block.SerializeToString())
+        handler_status = self.handler.handle(
+            "connection_id", message.SerializeToString())
+        self.assertEqual(handler_status.status, HandlerStatus.DROP)
+
+    def test_publisher_has_block(self):
+        """
+        Test that if the block does not exist yet in the completer or the
+        chain controller, the gossip message is passed.
+        """
+        batch = Batch(header_signature="Batch1")
+        self.publisher.add_batch("Batch1")
+        message = GossipMessage(content_type=GossipMessage.BATCH,
+                                content=batch.SerializeToString())
         handler_status = self.handler.handle(
             "connection_id", message.SerializeToString())
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
