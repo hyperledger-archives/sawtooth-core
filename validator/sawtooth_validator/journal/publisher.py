@@ -442,6 +442,7 @@ class BlockPublisher(object):
                                                batch_sender)
         self._pending_batches = []  # batches we are waiting for validation,
         # arranged in the order of batches received.
+        self._pending_batch_ids = []
 
         self._chain_head = chain_head  # block (BlockWrapper)
         self._squash_handler = squash_handler
@@ -459,6 +460,7 @@ class BlockPublisher(object):
             if metrics_registry else None
 
         self._batch_queue = queue.Queue()
+        self._queued_batch_ids = []
         self._batch_observers = batch_observers
         self._check_publish_block_frequency = check_publish_block_frequency
         self._publisher_thread = None
@@ -481,6 +483,7 @@ class BlockPublisher(object):
         inclusion in the next block.
         """
         self._batch_queue.put(batch)
+        self._queued_batch_ids.append(batch.header_signature)
         for observer in self._batch_observers:
             observer.notify_batch_pending(batch)
 
@@ -559,8 +562,10 @@ class BlockPublisher(object):
         :return: None
         """
         with self._lock:
+            self._queued_batch_ids = self._queued_batch_ids[:1]
             if self._permission_verifier.is_batch_signer_authorized(batch):
                 self._pending_batches.append(batch)
+                self._pending_batch_ids.append(batch.header_signature)
                 self._set_gauge(len(self._pending_batches))
                 # if we are building a block then send schedule it for
                 # execution.
@@ -588,16 +593,19 @@ class BlockPublisher(object):
 
         pending_batches = self._pending_batches
         self._pending_batches = []
+        self._pending_batch_ids = []
 
         # Uncommitted and pending disjoint sets
         # since batches can only be committed to a chain once.
         for batch in uncommitted_batches:
             if batch.header_signature not in committed_set:
                 self._pending_batches.append(batch)
+                self._pending_batch_ids.append(batch.header_signature)
 
         for batch in pending_batches:
             if batch.header_signature not in committed_set:
                 self._pending_batches.append(batch)
+                self._pending_batch_ids.append(batch.header_signature)
 
     def on_chain_updated(self, chain_head,
                          committed_batches=None,
@@ -694,3 +702,10 @@ class BlockPublisher(object):
     def _set_gauge(self, value):
         if self._pending_batch_gauge:
             self._pending_batch_gauge.set_value(value)
+
+    def has_batch(self, batch_id):
+        with self._lock:
+            if batch_id in self._pending_batch_ids:
+                return True
+            if batch_id in self._queued_batch_ids:
+                return True

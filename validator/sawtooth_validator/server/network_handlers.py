@@ -40,7 +40,7 @@ from sawtooth_validator.gossip.permission_verifier import \
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
 from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import \
-    GossipMessageHaveBlockHandler
+    GossipMessageDuplicateHandler
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipBlockResponseHandler
 from sawtooth_validator.gossip.gossip_handlers import \
@@ -66,7 +66,7 @@ LOGGER = logging.getLogger(__name__)
 
 def add(
     dispatcher, interconnect, gossip, completer, responder,
-    thread_pool, sig_pool, has_block,
+    thread_pool, sig_pool, has_block, has_batch,
     permission_verifier,
 ):
 
@@ -173,7 +173,7 @@ def add(
     # GOSSIP_MESSAGE ) Check if this is a block and if we already have it
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
-        GossipMessageHaveBlockHandler(completer, has_block),
+        GossipMessageDuplicateHandler(completer, has_block, has_batch),
         thread_pool)
 
     # GOSSIP_MESSAGE ) Verify Network Permissions
