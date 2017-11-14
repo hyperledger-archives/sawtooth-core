@@ -282,6 +282,9 @@ class Journal(object):
     def has_block(self, block_id):
         return self._chain_controller.has_block(block_id)
 
+    def has_batch(self, batch_id):
+        return self._block_publisher.has_batch(batch_id)
+
 
 class PendingBatchObserver(metaclass=abc.ABCMeta):
     """An interface class for components wishing to be notified when a Batch
