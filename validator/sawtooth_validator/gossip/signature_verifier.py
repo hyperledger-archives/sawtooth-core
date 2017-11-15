@@ -34,6 +34,7 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.protobuf.validator_pb2 import Message
+from sawtooth_validator.journal.timed_cache import TimedCache
 
 
 LOGGER = logging.getLogger(__name__)
@@ -111,6 +112,8 @@ def is_valid_transaction(txn):
 
 
 class GossipMessageSignatureVerifier(Handler):
+    def __init__(self):
+        self._seen_cache = TimedCache()
 
     def handle(self, connection_id, message_content):
         gossip_message = GossipMessage()
@@ -118,6 +121,12 @@ class GossipMessageSignatureVerifier(Handler):
         if gossip_message.content_type == "BLOCK":
             block = Block()
             block.ParseFromString(gossip_message.content)
+
+            if block.header_signature in self._seen_cache:
+                LOGGER.debug("Drop already validated block: %s",
+                             block.header_signature)
+                return HandlerResult(status=HandlerStatus.DROP)
+
             if not is_valid_block(block):
                 LOGGER.debug("block signature is invalid: %s",
                              block.header_signature)
@@ -125,10 +134,16 @@ class GossipMessageSignatureVerifier(Handler):
 
             LOGGER.debug("block passes signature verification %s",
                          block.header_signature)
+            self._seen_cache[block.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
         elif gossip_message.content_type == "BATCH":
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
+            if batch.header_signature in self._seen_cache:
+                LOGGER.debug("Drop already validated batch: %s",
+                             batch.header_signature)
+                return HandlerResult(status=HandlerStatus.DROP)
+
             if not is_valid_batch(batch):
                 LOGGER.debug("batch signature is invalid: %s",
                              batch.header_signature)
@@ -136,17 +151,27 @@ class GossipMessageSignatureVerifier(Handler):
 
             LOGGER.debug("batch passes signature verification %s",
                          batch.header_signature)
+            self._seen_cache[batch.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
-        return HandlerResult(status=HandlerStatus.PASS)
+        # should drop the message if it does not have a valid content_type
+        return HandlerResult(status=HandlerStatus.DROP)
 
 
 class GossipBlockResponseSignatureVerifier(Handler):
+    def __init__(self):
+        self._seen_cache = TimedCache()
+
     def handle(self, connection_id, message_content):
         block_response_message = GossipBlockResponse()
         block_response_message.ParseFromString(message_content)
         block = Block()
         block.ParseFromString(block_response_message.content)
+        if block.header_signature in self._seen_cache:
+            LOGGER.debug("Drop already validated block: %s",
+                         block.header_signature)
+            return HandlerResult(status=HandlerStatus.DROP)
+
         if not is_valid_block(block):
             LOGGER.debug("requested block's signature is invalid: %s",
                          block.header_signature)
@@ -154,16 +179,25 @@ class GossipBlockResponseSignatureVerifier(Handler):
 
         LOGGER.debug("requested block passes signature verification %s",
                      block.header_signature)
+        self._seen_cache = TimedCache()
         return HandlerResult(status=HandlerStatus.PASS)
 
 
 class GossipBatchResponseSignatureVerifier(Handler):
+    def __init__(self):
+        self._seen_cache = TimedCache()
+
     def handle(self, connection_id, message_content):
         batch_response_message = GossipBatchResponse()
         batch_response_message.ParseFromString(message_content)
 
         batch = Batch()
         batch.ParseFromString(batch_response_message.content)
+        if batch.header_signature in self._seen_cache:
+            LOGGER.debug("Drop already validated batch: %s",
+                         batch.header_signature)
+            return HandlerResult(status=HandlerStatus.DROP)
+
         if not is_valid_batch(batch):
             LOGGER.debug("requested batch's signature is invalid: %s",
                          batch.header_signature)
@@ -171,6 +205,7 @@ class GossipBatchResponseSignatureVerifier(Handler):
 
         LOGGER.debug("requested batch passes signature verification %s",
                      batch.header_signature)
+        self._seen_cache[batch.header_signature] = None
         return HandlerResult(status=HandlerStatus.PASS)
 
 
