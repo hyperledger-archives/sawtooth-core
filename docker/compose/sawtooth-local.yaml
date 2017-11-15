@@ -65,8 +65,8 @@ services:
       - "4004:4004"
     # start the validator with an empty genesis batch
     command: "bash -c \"\
-        sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawadm keygen && \
+        sawadm genesis && \
         sawtooth-validator -vv \
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
