@@ -86,12 +86,6 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-async def cors_handler(request):
-    headers = {}
-    RouteHandler.add_cors_headers(request, headers)
-    return web.Response(headers=headers)
-
-
 def start_rest_api(host, port, connection, timeout, registry):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
@@ -104,8 +98,6 @@ def start_rest_api(host, port, connection, timeout, registry):
     LOGGER.info('Creating handlers for validator at %s', connection.url)
 
     handler = RouteHandler(loop, connection, timeout, registry)
-
-    app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
 
     app.router.add_post('/batches', handler.submit_batches)
     app.router.add_get('/batch_status', handler.list_statuses)

@@ -655,14 +655,6 @@ class RouteHandler(object):
                 trap.check(content.status)
 
     @staticmethod
-    def add_cors_headers(request, headers):
-        if 'Origin' in request.headers:
-            headers['Access-Control-Allow-Origin'] = request.headers['Origin']
-            headers["Access-Control-Allow-Methods"] = "GET,POST"
-            headers["Access-Control-Allow-Headers"] =\
-                "Origin, X-Requested-With, Content-Type, Accept"
-
-    @staticmethod
     def _wrap_response(request, data=None, metadata=None, status=200):
         """Creates the JSON response envelope to be sent back to the client.
         """
@@ -671,13 +663,9 @@ class RouteHandler(object):
         if data is not None:
             envelope['data'] = data
 
-        headers = {}
-        RouteHandler.add_cors_headers(request, headers)
-
         return web.Response(
             status=status,
             content_type='application/json',
-            headers=headers,
             text=json.dumps(
                 envelope,
                 indent=2,
