@@ -46,6 +46,7 @@ from sawtooth_validator.protobuf import validator_pb2
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 300
 MAX_PAGE_SIZE = 1000
+DEFAULT_PAGE_SIZE = 100
 
 
 class _ResponseFailed(BaseException):
@@ -304,7 +305,7 @@ class _Pager(object):
                         total_resources=0))
 
         paging = request.paging
-        count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
+        count = min(paging.count, MAX_PAGE_SIZE) or DEFAULT_PAGE_SIZE
 
         # Find the start index from the location marker sent
         try:
@@ -715,7 +716,7 @@ class BlockListRequest(_ClientRequestHandler):
             paging = request.paging
             sort_reverse = BlockListRequest.is_reverse(
                 request.sorting, self._status.INVALID_SORT)
-            count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
+            count = min(paging.count, MAX_PAGE_SIZE) or DEFAULT_PAGE_SIZE
             iterargs = {
                 'reverse': not sort_reverse
             }
