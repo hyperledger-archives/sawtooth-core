@@ -34,7 +34,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: xo-tp-python -vv tcp://validator:4004
+    command: xo-tp-python -vv --connect tcp://validator:4004
     stop_signal: SIGKILL
 
   xo-tp-javascript:
@@ -53,7 +53,7 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
     expose:
-      - 40000
+      - 4004
     depends_on:
       - validator
     command: xo-tp-java tcp://validator:40000
@@ -67,7 +67,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: xo-tp-go -vv tcp://validator:4004
+    command: xo-tp-go -vv --connect tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
@@ -80,8 +80,8 @@ services:
     ports:
       - 4004
     command: "bash -c \"\
-        sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawadm keygen && \
+        sawadm genesis && \
         sawtooth-validator --endpoint tcp://validator:8800 -v \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
@@ -113,7 +113,7 @@ services:
       - validator
       - rest-api
     # Wait for rest_api
-    command: "bash -c \"xo init --url http://rest-api:8080 --username sawtooth
+    command: "bash -c \"sawtooth keygen sawtooth
         && tail -f /dev/null\""
     stop_signal: SIGKILL
     environment:

@@ -24,7 +24,7 @@ services:
     container_name: sawtooth-settings-tp-default
     depends_on:
       - validator
-    command: settings-tp -vv tcp://validator:4004
+    command: settings-tp -vv --connect tcp://validator:4004
 
   smallbank-tp-go:
     image: sawtooth-smallbank-tp-go:latest
@@ -48,10 +48,10 @@ services:
       - "8800:8800"
     command: "bash -c \"\
         (telegraf &) && \
-        sawtooth admin keygen && \
+        sawadm keygen && \
         sawtooth keygen && \
-        sawtooth config genesis && \
-        sawtooth admin genesis config-genesis.batch && \
+        sawset genesis && \
+        sawadm genesis config-genesis.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \

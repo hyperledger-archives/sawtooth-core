@@ -33,7 +33,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: seth-tp -vv tcp://validator:4004
+    command: seth-tp -vv --connect tcp://validator:4004
     stop_signal: SIGKILL
 
   block-info-tp:
@@ -44,7 +44,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: block-info-tp -vv tcp://validator:4004
+    command: block-info-tp -vv --connect tcp://validator:4004
     stop_signal: SIGKILL
 
   settings-tp:
@@ -55,7 +55,7 @@ services:
       - 4004
     depends_on:
       - validator
-    entrypoint: settings-tp -vv tcp://validator:4004
+    entrypoint: settings-tp -vv --connect tcp://validator:4004
 
   validator:
     image: sawtooth-validator:latest
@@ -68,15 +68,15 @@ services:
       - 4004
       - 8800
     command: "bash -c \"\
-        sawtooth admin keygen && \
-        sawtooth config genesis \
+        sawadm keygen && \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth config proposal create \
+        sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.validator.batch_injectors=block_info \
           -o config.batch && \
-        sawtooth admin genesis \
+        sawadm genesis \
           config-genesis.batch config.batch && \
         sawtooth-validator --endpoint tcp://validator:8800 -v \
             --bind component:tcp://eth0:4004 \
