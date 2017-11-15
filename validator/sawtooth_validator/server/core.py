@@ -116,8 +116,8 @@ class Validator(object):
         LOGGER.debug('block store file is %s', block_db_filename)
         block_db = IndexedDatabase(
             block_db_filename,
-            BlockStore.serialize_block,
-            BlockStore.deserialize_block,
+            serializer=BlockStore.serialize_block,
+            deserializer=BlockStore.deserialize_block,
             flag='c',
             indexes=BlockStore.create_index_configuration())
         block_store = BlockStore(block_db)
