@@ -4,76 +4,71 @@ Log Configuration
 
 Overview
 ========
-The validator and the Python SDK make it easy to customize the logging output.
-This is done by creating a TOML (`<https://github.com/toml-lang/toml>`_)
-formatted log config file and passing it to the built-in Python logging module.
+The validator and the Python SDK make it easy to customize the
+logging output.  This is done by creating a log config file in
+`TOML <https://github.com/toml-lang/toml>`_ or `YAML <http://yaml.org>`_
+format and passing it to the built-in Python logging module.
 
-Default
-=======
+.. Note::
+
+  Use YAML to configure a remote syslog service. Due to a limitation in
+  the TOML spec, you cannot configure a remote syslog service using TOML.
+
+Log Files
+=========
 
 If there is no log configuration file provided, the default is to create an
-error log and a debug log. Theses files will be stored in the log directory that
-is configured by the SAWTOOTH_HOME environment variable. For example, if
-`SAWTOOTH_HOME="/home/ubuntu/sawtooth"`, the logs will be written
-to `/home/ubuntu/sawtooth/logs`.
+error log and a debug log. Theses files will be stored in the log directory
+(``log_dir``) in a location determined by the ``SAWTOOTH_HOME`` environment
+variable. For more information, see
+:doc:`configuring_sawtooth/path_configuration_file`.
 
-If SAWTOOTH_HOME is not set, the default location is OS-specific. On Linux,
-it's `/var/log/sawtooth`. On Windows, it is one level up from the where the
-command is installed. For example, if `C:\\sawtooth\\bin\\validator.exe`
-starts the validator, the log directory is `C:\\sawtooth\\logs\\`. The log
-directory can also be set in the path.toml file, however, this file should
-rarely be used.
+The names of the validator log files are:
 
-The validator logs names are:
-
-- validator-debug.log
-- validator-error.log
+- ``validator-debug.log``
+- ``validator-error.log``
 
 For Python transaction processors, the author determines the name of the log
 file. It is highly encouraged that the file names are unique for each running
 processor to avoid naming conflicts.  The example transaction processors
-provided with the SDK uses the following:
+provided with the SDK uses the following naming convention:
 
-- {tp_name}-{zmq_identity}-debug.log
-- {tp_name}-{zmq_identity}-error.log
+- ``{TPname}-{zmqID}-debug.log``
+- ``{TPname}-{zmqID}-error.log``
 
 Examples:
 
--  *intkey-18670799cbbe4367-debug.log*
--  *intkey-18670799cbbe4367-error.log*
+-  ``intkey-18670799cbbe4367-debug.log``
+-  ``intkey-18670799cbbe4367-error.log``
 
-Configuration
-=============
+Log Configuration
+=================
 
-To change the default behavior, a log configuration file can be placed in the
-config directory (see below).
+To change the default logging behavior of a Sawtooth component, such as the
+validator, put a log configuration file in the config directory (see
+:doc:`configuring_sawtooth/path_configuration_file`).
 
-The validator log config file should be named `log_config.toml`.
+The validator log config file should be named ``log_config.toml``.
 
-Each transaction processor may also define its own config file. The name of
+Each transaction processor can define its own config file. The name of
 this file is determined by the author. The transaction processors included in
-the Python SDK follow the convention `{Transaction_Family_Name}_log_config.toml`.
-For example, the intkey (IntegerKey) log configuration file is `intkey_log_config.toml`.
+the Python SDK use the following naming convention:
 
-Config Directory
-----------------
+ - ``{TransactionFamilyName}_log_config.toml``
 
-If `$SAWTOOTH_HOME` is set the config directory is found at
-`$SAWTOOTH_HOME/etc/` . Otherwise it is defined by the OS being used. On Linux the
-config directory is located at `/etc/sawtooth`. On Windows, the config
-directory is located one directory up from where the command is installed.
-For example, if `C:\\sawtooth\\bin\\validator.exe` starts the validator, the config
-directory is `C:\\sawtooth\\conf\\`. As long as the log configuration file is
-present, the validator and transaction processors will automatically find it
-and load the configuration.
+For example, the IntegerKey (``intkey``) log configuration file is
+``intkey_log_config.toml``.
 
 Examples
 ========
 
-Configure Specific Logger
--------------------------
+Configure a Specific Logger
+---------------------------
 If the default logs give too much information, you can configure a specific
 logger that will only report on the area of the code you are interested in.
+
+This example ``log_config.toml`` file creates a handler that only writes
+interconnect logs to the directory and file specified.
 
 .. code-block:: none
 
@@ -95,15 +90,13 @@ logger that will only report on the area of the code you are interested in.
   propagate = true
   handlers = [ "interconnect"]
 
-The above log_config.toml file creates a handler that only writes
-interconnect logs to the directory and file specified. The formatter and log level
-can also be specified to provide the exact information you want in your logs.
-
+The formatter and log level can also be specified to provide the exact
+information you want in your logs.
 
 Rotating File Handler
 ---------------------
 Below is an example of how to setup rotating logs. This is useful when the logs
-may grow very large, such as with a long running network.
+may grow very large, such as with a long-running network. For example:
 
 .. code-block:: none
 
@@ -124,11 +117,11 @@ may grow very large, such as with a long running network.
   propagate = true
   handlers = [ "interconnect"]
 
-If one file exceeds the maxBytes set in the config file, that file will be
-renamed to filename.log.1 and a new filename.log will be written to. This
-process continues for the number of files plus one set in the backupCount.
-After that point, the file that is being written to is rotated. The current
-file being written to is always filename.log.
+If one file exceeds the ``maxBytes`` set in the config file, that file will be
+renamed to ``filename.log.1`` and a new ``filename.log`` will be written to.
+This process continues for the number of files plus one set in the
+``backupCount``. After that point, the file that is being written to is rotated.
+The current file being written to is always ``filename.log``.
 
-For further configuration options see the Python docs:
-`<https://docs.python.org/3/library/logging.config.html>`_
+For more Python configuration options, see the Python documentation at
+`<https://docs.python.org/3/library/logging.config.html>`_.

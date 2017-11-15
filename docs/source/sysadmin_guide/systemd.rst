@@ -1,5 +1,5 @@
 *****************************
-Running Sawtooth As A Service
+Running Sawtooth as a Service
 *****************************
 
 When installing Sawtooth using apt-get, *systemd* units are added for the
@@ -74,10 +74,3 @@ Likewise, to stop a component run:
 .. code-block:: console
 
   $ sudo systemctl stop sawtooth-COMPONENT
-
-Configuring Sawtooth
---------------------
-
-Configuration for each of the components is handled by a set of files in
-`/etc/default`. These files have the same name as the component they configure
-and contain the command line arguments passed when the service is started.

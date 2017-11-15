@@ -8,7 +8,7 @@ System Administrator's Guide
 
    sysadmin_guide/installation
    sysadmin_guide/systemd
-   sysadmin_guide/log_configuration
+   sysadmin_guide/configuring_sawtooth
    sysadmin_guide/rest_auth_proxy
    sysadmin_guide/permissioning
    sysadmin_guide/configure_sgx

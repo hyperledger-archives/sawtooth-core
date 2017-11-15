@@ -34,6 +34,8 @@ the transactor permissions have been updated to no longer allow a batch signer
 or a transaction signer that is being included in a block. For this reason, the
 allowed transactor roles will also need to be checked on block validation.
 
+.. _Off-Chain_Transactor_Permissioning:
+
 Off-Chain Transactor Permissioning
 ----------------------------------
 Validators can be locally configured by creating a validator.toml file and
