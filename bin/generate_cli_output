@@ -91,18 +91,3 @@ save_usage xo list
 save_usage xo show
 save_usage xo take
 save_usage xo-tp-python
-
-save_usage seth
-save_usage seth init
-save_usage seth show
-save_usage seth account
-save_usage seth account import
-save_usage seth account list
-save_usage seth account create
-save_usage seth contract
-save_usage seth contract call
-save_usage seth contract create
-save_usage seth permissions
-save_usage seth permissions set
-save_usage seth-tp
-save_usage seth-rpc

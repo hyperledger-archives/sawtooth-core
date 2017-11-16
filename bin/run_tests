@@ -31,7 +31,6 @@ MODULE_LIST="
     javascript_sdk
     python_sdk
     rust_sdk
-    seth
     integration
 "
 
@@ -191,9 +190,6 @@ main() {
                 deployment)
                     test_deployment
                     ;;
-                seth)
-                    test_seth
-                    ;;
                 *)
                     echo "Module '$module' not found."
                     ;;
@@ -330,17 +326,6 @@ test_python_sdk() {
 test_rust_sdk() {
     run_docker_test ./sdk/rust/unit_rust_sdk.yaml
     run_docker_test ./perf/sawtooth_workload/unit_perf_workload.yaml
-}
-
-test_seth() {
-  run_docker_test ./families/seth/tests/unit_seth.yaml
-  run_docker_test seth_chaining_test
-  run_docker_test seth_intkey_test
-  run_docker_test seth_blockhash_test
-  run_docker_test seth_blocknum_test
-  run_docker_test seth_timestamp_test
-  run_docker_test seth_perm_test
-  run_docker_test ./families/seth/rpc/comp_seth_rpc.yaml
 }
 
 test_integration() {
