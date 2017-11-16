@@ -1052,7 +1052,7 @@ class SethRpcTest(unittest.TestCase):
                     ).SerializeToString(),
                 ],
                 events=[Event(
-                    event_type="seth_log_event",
+                    event_type="seth/log",
                     attributes=[
                         Event.Attribute(key="address", value=self.contract_address),
                         Event.Attribute(key="topic1", value=topics[0]),
@@ -1069,7 +1069,7 @@ class SethRpcTest(unittest.TestCase):
                     ).SerializeToString(),
                 ],
                 events=[Event(
-                    event_type="seth_log_event",
+                    event_type="seth/log",
                     attributes=[
                         Event.Attribute(key="address", value=self.contract_address),
                         Event.Attribute(key="topic1", value=topics[1]),
@@ -1183,7 +1183,7 @@ class SethRpcTest(unittest.TestCase):
                     ).SerializeToString(),
                 ],
                 events=[Event(
-                    event_type="seth_log_event",
+                    event_type="seth/log",
                     attributes=[
                         Event.Attribute(key="address", value=self.contract_address),
                         Event.Attribute(key="topic1", value=self.topic1_s),

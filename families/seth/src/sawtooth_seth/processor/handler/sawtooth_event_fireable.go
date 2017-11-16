@@ -51,6 +51,6 @@ func (evc *SawtoothEventFireable) FireEvent(eventID string, eventDataLog EventDa
 			Value: hex.EncodeToString(topic.Bytes()),
 		})
 	}
-	evc.context.AddEvent("seth_log_event", attributes, eventDataLog.Data)
+	evc.context.AddEvent("seth/log", attributes, eventDataLog.Data)
 	return nil
 }
