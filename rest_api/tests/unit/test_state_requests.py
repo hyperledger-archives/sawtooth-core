@@ -22,14 +22,14 @@ from sawtooth_rest_api.protobuf import client_pb2
 
 class StateListTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_STATE_LIST_REQUEST,
             client_pb2.ClientStateListRequest,
             client_pb2.ClientStateListResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/state', handlers.list_state)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/state', handlers.list_state)
 
     @unittest_run_loop
     async def test_state_list(self):
@@ -688,14 +688,14 @@ class StateListTests(BaseApiTest):
 
 class StateGetTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_STATE_GET_REQUEST,
             client_pb2.ClientStateGetRequest,
             client_pb2.ClientStateGetResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/state/{address}', handlers.fetch_state)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/state/{address}', handlers.fetch_state)
 
     @unittest_run_loop
     async def test_state_get(self):

@@ -22,14 +22,14 @@ from sawtooth_rest_api.protobuf import client_peers_pb2
 
 class PeersGetRequestTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_PEERS_GET_REQUEST,
             client_peers_pb2.ClientPeersGetRequest,
             client_peers_pb2.ClientPeersGetResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/peers', handlers.fetch_peers)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/peers', handlers.fetch_peers)
 
     @unittest_run_loop
     async def test_peers_request(self):
