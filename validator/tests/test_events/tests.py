@@ -106,7 +106,7 @@ def create_receipt(txn_id, key_values):
     events = []
     for key, value in key_values:
         event = events_pb2.Event()
-        event.event_type = "block_commit"
+        event.event_type = "sawtooth/block-commit"
         attribute = event.attributes.add()
         attribute.key = key
         attribute.value = value
@@ -118,7 +118,7 @@ def create_receipt(txn_id, key_values):
 
 
 def create_block_commit_subscription():
-    return EventSubscription(event_type="block_commit")
+    return EventSubscription(event_type="sawtooth/block-commit")
 
 
 FILTER_FACTORY = EventFilterFactory()
@@ -273,7 +273,7 @@ class ClientEventsGetRequestHandlerTest(unittest.TestCase):
             request = client_event_pb2.ClientEventsGetRequest()
             request.block_ids.extend([block_id])
             subscription = request.subscriptions.add()
-            subscription.event_type = "block_commit"
+            subscription.event_type = "sawtooth/block-commit"
             event_filter = subscription.filters.add()
             event_filter.key = "address"
             event_filter.match_string = block_id
@@ -332,7 +332,7 @@ class EventBroadcasterTest(unittest.TestCase):
 
     def test_broadcast_events(self):
         """Test that broadcast_events works with a single subscriber to the
-        block_commit event type and that the subscriber does not receive events
+        sawtooth/block-commit event type and that the subscriber does not receive events
         until it is enabled.
         """
         mock_service = Mock()

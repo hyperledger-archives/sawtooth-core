@@ -355,7 +355,7 @@ class StateDeltaSubscriberHandler:
     def _make_subscriptions(address_prefixes=None):
         return [
             events_pb2.EventSubscription(event_type="state_delta"),
-            events_pb2.EventSubscription(event_type="block_commit"),
+            events_pb2.EventSubscription(event_type="sawtooth/block-commit"),
         ]
 
     @staticmethod
@@ -376,13 +376,13 @@ class StateDeltaEvent:
                 An event was missing from the event list or an attribute was
                 missing from an event.
         """
-        block_commit = self._get_event("block_commit", event_list)
+        block_commit = self._get_event("sawtooth/block-commit", event_list)
         self.block_id = self._get_attr(block_commit, "block_id")
         self.block_num = self._get_attr(block_commit, "block_num")
         self.previous_block_id = self._get_attr(
             block_commit, "previous_block_id")
 
-        state_delta = self._get_event("state_delta", event_list)
+        state_delta = self._get_event("sawtooth/state-delta", event_list)
         state_change_list = transaction_receipt_pb2.StateChangeList()
         state_change_list.ParseFromString(state_delta.data)
         self.state_changes = state_change_list.state_changes

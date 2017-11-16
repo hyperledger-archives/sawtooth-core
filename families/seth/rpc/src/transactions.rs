@@ -219,7 +219,7 @@ impl SethReceipt {
             Error::ParseError(String::from("Receipt doesn't contain any seth receipts")))?;
 
         let logs = receipt.get_events().iter()
-            .filter(|e| e.event_type == "seth_log_event")
+            .filter(|e| e.event_type == "seth/log")
             .map(SethLog::from_event_pb)
             .collect::<Result<Vec<SethLog>, Error>>()?;
 

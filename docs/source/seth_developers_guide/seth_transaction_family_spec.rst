@@ -460,7 +460,7 @@ generate :doc:`Sawtooth Events
 receipts, these events contain only the data that is available during
 transaction execution.
 
-The ``event_type`` field is set to ``“seth_log_event”``. The ``event_data``
+The ``event_type`` field is set to ``“seth/log”``. The ``event_data``
 field contains a copy of the data argument passed to the EVM LOGX instruction.
 an individual transaction contains the following protobuf message. The
 ``attributes`` field contains:
@@ -473,8 +473,8 @@ an individual transaction contains the following protobuf message. The
 .. code-block:: protobuf
 
   Event {
-  	event_type = "seth_log_event",
-  	event_data = <data passed to LOGX>,
+    event_type = "seth/log",
+    event_data = <data passed to LOGX>,
     attributes = [
       Attribute { "address": <contract address> },
       Attribute { "topicX": <topic data> },

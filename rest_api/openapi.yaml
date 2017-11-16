@@ -678,7 +678,7 @@ definitions:
           properties:
             event_type:
               type: string
-              example: block_commit
+              example: sawtooth/block-commit
             attributes:
               type: array
               items:
