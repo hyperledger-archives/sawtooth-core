@@ -15,12 +15,13 @@
 
 import os
 import unittest
+import json
 import random
 import tempfile
 from string import ascii_lowercase
 
 from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.database import lmdb_nolock_database
+from sawtooth_validator.database import indexed_database
 
 
 class TestSawtoothMerkleTrie(unittest.TestCase):
@@ -28,9 +29,10 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
         self.dir = tempfile.mkdtemp()
         self.file = os.path.join(self.dir, 'merkle.lmdb')
 
-        self.lmdb = lmdb_nolock_database.LMDBNoLockDatabase(
+        self.lmdb = indexed_database.IndexedDatabase(
             self.file,
-            'n')
+            flag='n',
+            _size=32*(1024**2))
 
         self.trie = MerkleDatabase(self.lmdb)
 
@@ -38,7 +40,7 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
         self.trie.close()
 
     def test_merkle_trie_root_advance(self):
-        value = {'name': 'foo', 'value': 1}
+        value = json.dumps({'name': 'foo', 'value': 1}).encode()
 
         orig_root = self.get_merkle_root()
         new_root = self.set('foo', value)
@@ -52,7 +54,7 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
         self.assert_value_at_address('foo', value)
 
     def test_merkle_trie_delete(self):
-        value = {'name': 'bar', 'value': 1}
+        value = json.dumps({'name': 'bar', 'value': 1}).encode()
 
         new_root = self.set('bar', value)
         self.set_merkle_root(new_root)
@@ -85,7 +87,7 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
         }
 
         for key, hashed in key_hashes.items():
-            value = {key: _random_string(512)}
+            value = json.dumps({key: _random_string(512)}).encode()
             new_root = self.set(
                 hashed, value, ishash=True)
             values[hashed] = value
@@ -98,8 +100,8 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
                 address, value, ishash=True)
 
         set_items = {
-            hashed: {key: 5.0} for key, hashed in
-            random.sample(key_hashes.items(), 50)
+            hashed: json.dumps({key: 5.0}).encode()
+            for key, hashed in random.sample(key_hashes.items(), 50)
         }
         values.update(set_items)
         delete_items = {
@@ -196,4 +198,5 @@ def _hash(key):
 
 
 def _random_string(length):
-    return ''.join(random.choice(ascii_lowercase) for _ in range(length))
+    return ''.join(random.choice(ascii_lowercase)
+                   for _ in range(length))

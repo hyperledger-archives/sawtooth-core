@@ -118,7 +118,7 @@ def make_db_and_store(size=3, start='a'):
         * 2 - {'a': b'3', 'b': b'5', 'c': b'7'}
     """
     database = DictDatabase()
-    store = MockBlockStore(size=0);
+    store = MockBlockStore(size=0)
     roots = []
 
     merkle = MerkleDatabase(database)
