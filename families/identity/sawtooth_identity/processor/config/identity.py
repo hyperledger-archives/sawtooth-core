@@ -81,7 +81,7 @@ def load_toml_identity_config(filename):
 
 def merge_identity_config(configs):
     """
-    Given a list of IdentityConfig object, merges them into a single
+    Given a list of IdentityConfig objects, merges them into a single
     IdentityConfig, giving priority in the order of the configs
     (first has highest priority).
 

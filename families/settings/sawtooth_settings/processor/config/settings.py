@@ -81,7 +81,7 @@ def load_toml_settings_config(filename):
 
 def merge_settings_config(configs):
     """
-    Given a list of SettingsConfig object, merges them into a single
+    Given a list of SettingsConfig objects, merges them into a single
     SettingsConfig, giving priority in the order of the configs
     (first has highest priority).
 
