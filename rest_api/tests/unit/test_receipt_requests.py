@@ -23,14 +23,14 @@ from sawtooth_rest_api.protobuf.txn_receipt_pb2 import TransactionReceipt
 
 class ReceiptGetRequestTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_RECEIPT_GET_REQUEST,
             txn_receipt_pb2.ClientReceiptGetRequest,
             txn_receipt_pb2.ClientReceiptGetResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/receipts', handlers.list_receipts)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/receipts', handlers.list_receipts)
 
     def assert_receipts_match(self, proto_receipts, json_receipts):
         """Asserts that JSON statuses match the original enum statuses dict

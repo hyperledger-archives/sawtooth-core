@@ -23,14 +23,14 @@ from sawtooth_rest_api.protobuf.client_pb2 import BatchStatus
 
 class PostBatchTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_SUBMIT_REQUEST,
             client_pb2.ClientBatchSubmitRequest,
             client_pb2.ClientBatchSubmitResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/batches', handlers.submit_batches)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/batches', handlers.submit_batches)
 
     @unittest_run_loop
     async def test_post_batch(self):
@@ -222,14 +222,14 @@ class PostBatchTests(BaseApiTest):
 
 class BatchStatusTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_STATUS_REQUEST,
             client_pb2.ClientBatchStatusRequest,
             client_pb2.ClientBatchStatusResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/batch_status', handlers.list_statuses)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/batch_status', handlers.list_statuses)
 
     @unittest_run_loop
     async def test_batch_status_with_one_id(self):
