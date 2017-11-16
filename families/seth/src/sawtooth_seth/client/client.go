@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"net/http"
-	sdk "sawtooth_sdk/client"
 	"sawtooth_sdk/logging"
 	. "sawtooth_seth/common"
 	. "sawtooth_seth/protobuf/seth_pb2"
@@ -163,7 +162,7 @@ func (c *Client) CreateExternalAccount(
 		transaction.CreateExternalAccount.To = newAcctAddr.Bytes()
 	}
 
-	encoder := sdk.NewEncoder(sender, sdk.TransactionParams{
+	encoder := NewEncoder(sender, TransactionParams{
 		FamilyName:    FAMILY_NAME,
 		FamilyVersion: FAMILY_VERSION,
 		Inputs:        addresses,
@@ -221,7 +220,7 @@ func (c *Client) CreateContractAccount(
 		BLOCK_INFO_PREFIX,
 	}
 
-	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
+	encoder := NewEncoder(priv, TransactionParams{
 		FamilyName:    FAMILY_NAME,
 		FamilyVersion: FAMILY_VERSION,
 		Inputs:        addresses,
@@ -295,7 +294,7 @@ func (c *Client) MessageCall(
 			BLOCK_INFO_PREFIX)
 	}
 
-	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
+	encoder := NewEncoder(priv, TransactionParams{
 		FamilyName:    FAMILY_NAME,
 		FamilyVersion: FAMILY_VERSION,
 		Inputs:        addresses,
@@ -362,7 +361,7 @@ func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, no
 		BLOCK_INFO_PREFIX,
 	}
 
-	encoder := sdk.NewEncoder(priv, sdk.TransactionParams{
+	encoder := NewEncoder(priv, TransactionParams{
 		FamilyName:    FAMILY_NAME,
 		FamilyVersion: FAMILY_VERSION,
 		Inputs:        addresses,
@@ -387,15 +386,15 @@ func (c *Client) SetPermissions(priv, to []byte, permissions *EvmPermissions, no
 	return nil
 }
 
-func (c *Client) sendTxn(transaction *SethTransaction, encoder *sdk.Encoder, wait int) (string, error) {
+func (c *Client) sendTxn(transaction *SethTransaction, encoder *Encoder, wait int) (string, error) {
 	payload, err := proto.Marshal(transaction)
 	if err != nil {
 		return "", fmt.Errorf("Couldn't serialize transaction: %v", err)
 	}
 
-	txn := encoder.NewTransaction(payload, sdk.TransactionParams{})
-	batch := encoder.NewBatch([]*sdk.Transaction{txn})
-	b := sdk.SerializeBatches([]*sdk.Batch{batch})
+	txn := encoder.NewTransaction(payload, TransactionParams{})
+	batch := encoder.NewBatch([]*Transaction{txn})
+	b := SerializeBatches([]*Batch{batch})
 
 	buf := bytes.NewReader(b)
 
