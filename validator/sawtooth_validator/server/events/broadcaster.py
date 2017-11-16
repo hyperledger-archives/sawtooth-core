@@ -24,6 +24,7 @@ from sawtooth_validator.journal.event_extractors \
     import BlockEventExtractor
 from sawtooth_validator.journal.event_extractors \
     import ReceiptEventExtractor
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 LOGGER = logging.getLogger(__name__)
 
@@ -78,17 +79,12 @@ class EventBroadcaster(ChainObserver):
             LOGGER.debug(
                 'Catching up Subscriber %s from %s',
                 connection_id, last_known_block_id)
-            catchup_blocks = self.get_catchup_blocks(last_known_block_id)
-            if not catchup_blocks:
-                return
 
-            catchup_events = self.get_events_for_blocks(
-                catchup_blocks, subscriptions)
-            if not catchup_events:
-                return
-
-            event_list = EventList(events=catchup_events)
-            self._send(connection_id, event_list.SerializeToString())
+            # Send catchup events one block at a time
+            for block_id in self.get_catchup_block_ids(last_known_block_id):
+                events = self.get_events_for_block_id(block_id, subscriptions)
+                event_list = EventList(events=events)
+                self._send(connection_id, event_list.SerializeToString())
 
     def enable_subscriber(self, connection_id):
         """Start sending events to the subscriber.
@@ -110,7 +106,7 @@ class EventBroadcaster(ChainObserver):
             if connection_id in self._subscribers:
                 del self._subscribers[connection_id]
 
-    def get_catchup_blocks(self, last_known_block_id):
+    def get_catchup_block_ids(self, last_known_block_id):
         '''
         Raises:
             PossibleForkDetectedError
@@ -121,9 +117,11 @@ class EventBroadcaster(ChainObserver):
             # Start from the chain head and get blocks until we reach the
             # known block
             for block in self._block_store.get_predecessor_iter():
-                if block.identifier == last_known_block_id:
-                    break
-                catchup_up_blocks.append(block)
+                # All the blocks if NULL_BLOCK_IDENTIFIER
+                if last_known_block_id != NULL_BLOCK_IDENTIFIER:
+                    if block.identifier == last_known_block_id:
+                        break
+                catchup_up_blocks.append(block.identifier)
 
         return list(reversed(catchup_up_blocks))
 
@@ -136,12 +134,16 @@ class EventBroadcaster(ChainObserver):
         blocks = []
         if last_known_block_ids:
             for block_id in last_known_block_ids:
-                try:
-                    block = self._block_store[block_id]
-                except KeyError:
-                    continue
-                block_num = block.block_num
-                blocks.append((block_num, block_id))
+                # If the subscriber wants all the blocks
+                if block_id == NULL_BLOCK_IDENTIFIER:
+                    blocks.append((-1, block_id))
+                else:
+                    try:
+                        block = self._block_store[block_id]
+                    except KeyError:
+                        continue
+                    block_num = block.block_num
+                    blocks.append((block_num, block_id))
 
         # No known blocks in the current chain
         if not blocks:
@@ -172,6 +174,10 @@ class EventBroadcaster(ChainObserver):
         blocks = [self._block_store[block_id] for block_id in block_ids]
         return self.get_events_for_blocks(blocks, subscriptions)
 
+    def get_events_for_block_id(self, block_id, subscriptions):
+        block = self._block_store[block_id]
+        return self.get_events_for_block(block, subscriptions)
+
     def get_events_for_blocks(self, blocks, subscriptions):
         """Get a list of events associated with all the blocks.
 
@@ -188,26 +194,32 @@ class EventBroadcaster(ChainObserver):
         """
 
         events = []
-        extractors = []
-        for blk_w in blocks:
-            extractors.append(BlockEventExtractor(blk_w))
-            receipts = []
-            for batch in blk_w.block.batches:
-                for txn in batch.transactions:
-                    try:
-                        receipts.append(self._receipt_store.get(
-                            txn.header_signature))
-                    except KeyError:
-                        LOGGER.warning(
-                            "Transaction id %s not found in receipt store "
-                            " while looking"
-                            " up events for block id %s",
-                            txn.header_signature[:10],
-                            blk_w.identifier[:10])
-            extractors.append(ReceiptEventExtractor(receipts=receipts))
+        for blkw in blocks:
+            events.extend(self.get_events_for_block(blkw, subscriptions))
+        return events
 
-        for extractor in extractors:
-            events.extend(extractor.extract(subscriptions))
+    def get_events_for_block(self, blkw, subscriptions):
+        receipts = []
+        for batch in blkw.block.batches:
+            for txn in batch.transactions:
+                try:
+                    receipts.append(self._receipt_store.get(
+                        txn.header_signature))
+                except KeyError:
+                    LOGGER.warning(
+                        "Transaction id %s not found in receipt store "
+                        " while looking"
+                        " up events for block id %s",
+                        txn.header_signature[:10],
+                        blkw.identifier[:10])
+
+        block_event_extractor = BlockEventExtractor(blkw)
+        receipt_event_extractor = ReceiptEventExtractor(receipts=receipts)
+
+        events = []
+        events.extend(block_event_extractor.extract(subscriptions))
+        events.extend(receipt_event_extractor.extract(subscriptions))
+
         return events
 
     def chain_update(self, block, receipts):

@@ -118,14 +118,14 @@ class TestEventsAndReceipts(unittest.TestCase):
         self.assert_subscribe_response(
             self._subscribe(last_known_block_ids=[blocks[0][1]]))
         LOGGER.warning("Waiting for catchup events")
-        msg = self.stream.receive().result()
-        LOGGER.warning("Got catchup events")
-        event_list = events_pb2.EventList()
-        event_list.ParseFromString(msg.content)
-        events = event_list.events
-        self.assertEqual(len(events), 3)
         for i in range(3):
-            block_commit_event = events[i]
+            msg = self.stream.receive().result()
+            LOGGER.warning("Got catchup events: ")
+            event_list = events_pb2.EventList()
+            event_list.ParseFromString(msg.content)
+            events = event_list.events
+            self.assertEqual(len(events), 1)
+            block_commit_event = events[0]
             block_id = list(filter(
                 lambda attr: attr.key == "block_id",
                 block_commit_event.attributes))[0].value
