@@ -1524,7 +1524,7 @@ class TestReceiptEventExtractor(unittest.TestCase):
         self.assertEqual(events, [event_sets[0][0], event_sets[2][1]])
 
     def test_state_delta_events(self):
-        """Test that state_delta events are generated correctly."""
+        """Test that sawtooth/state-delta events are generated correctly."""
         gen_data = [
             [("a", b"a", StateChange.SET), ("b", b"b", StateChange.DELETE)],
             [("a", b"a", StateChange.DELETE), ("d", b"d", StateChange.SET)],
@@ -1545,16 +1545,16 @@ class TestReceiptEventExtractor(unittest.TestCase):
         factory = EventFilterFactory()
         events = extractor.extract([
             EventSubscription(
-                event_type="state_delta",
+                event_type="sawtooth/state-delta",
                 filters=[factory.create("address", "a")]),
             EventSubscription(
-                event_type="state_delta",
+                event_type="sawtooth/state-delta",
                 filters=[factory.create(
                     "address", "[ce]", EventFilterType.regex_any)],
             )
         ])
         self.assertEqual(events, [Event(
-            event_type="state_delta",
+            event_type="sawtooth/state-delta",
             attributes=[
                 Event.Attribute(key="address", value=address)
                 for address in ["e", "d", "a", "b"]

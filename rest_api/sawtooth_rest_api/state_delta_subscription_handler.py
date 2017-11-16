@@ -382,7 +382,7 @@ class StateDeltaEvent:
         self.previous_block_id = self._get_attr(
             block_commit, "previous_block_id")
 
-        state_delta = self._get_event("state_delta", event_list)
+        state_delta = self._get_event("sawtooth/state-delta", event_list)
         state_change_list = transaction_receipt_pb2.StateChangeList()
         state_change_list.ParseFromString(state_delta.data)
         self.state_changes = state_change_list.state_changes

@@ -64,7 +64,7 @@ class ReceiptEventExtractor(EventExtractor):
     def _make_state_delta_events(self, subscriptions):
         gen = False
         for subscription in subscriptions:
-            if subscription.event_type == "state_delta":
+            if subscription.event_type == "sawtooth/state-delta":
                 gen = True
 
         if not gen:
@@ -86,7 +86,7 @@ class ReceiptEventExtractor(EventExtractor):
         state_change_list.state_changes.extend(squashed_changes)
 
         event = Event(
-            event_type="state_delta",
+            event_type="sawtooth/state-delta",
             attributes=attributes,
             data=state_change_list.SerializeToString())
 

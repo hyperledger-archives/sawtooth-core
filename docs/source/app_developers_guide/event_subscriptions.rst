@@ -95,7 +95,7 @@ the namespace ```"abcdef"``:
 .. code-block:: python
 
     subscription = EventSubscription(
-        event_type="state_delta",
+        event_type="sawtooth/state-delta",
         filters=[
             # Filter to only addresses in the "abcdef" namespace using a regex
             EventFilter(
