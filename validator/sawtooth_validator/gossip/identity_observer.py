@@ -39,15 +39,16 @@ class IdentityObserver(ChainObserver):
 
     def chain_update(self, block, receipts):
         """
-        Handles both "sawtooth/block-commit" Events and "identity_update" Events. For
-        "sawtooth/block-commit", the last_block_num is updated or a fork is detected.
-        For "identity_update", the corresponding cache entry will be updated.
+        Handles both "sawtooth/block-commit" Events and "identity/update"
+        Events. For "sawtooth/block-commit", the last_block_num is updated or a
+        fork is detected. For "identity/update", the corresponding cache entry
+        will be updated.
         """
 
         block_events = BlockEventExtractor(block).extract([
             EventSubscription(event_type="sawtooth/block-commit")])
         receipt_events = ReceiptEventExtractor(receipts).extract([
-            EventSubscription(event_type="identity_update")])
+            EventSubscription(event_type="identity/update")])
 
         for event in block_events:
             forked = self._handle_block_commit(event)
@@ -55,7 +56,7 @@ class IdentityObserver(ChainObserver):
                 return
 
         for event in receipt_events:
-            if event.event_type == "identity_update":
+            if event.event_type == "identity/update":
                 self._handle_txn_commit(event)
 
     def _handle_txn_commit(self, event):

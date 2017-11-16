@@ -465,7 +465,7 @@ class TestIdentityObserver(unittest.TestCase):
 
         # Add next block and event that says network was updated.
         block2 = self.create_block("abcdef1234567890")
-        event = Event(event_type="identity_update",
+        event = Event(event_type="identity/update",
                       attributes=[Event.Attribute(key="updated",
                                                   value="network")])
         receipts = TransactionReceipt(events=[event])

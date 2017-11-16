@@ -207,7 +207,7 @@ class IdentityMessageFactory(object):
 
     def create_add_event_request(self, key):
         return self._factory.create_add_event_request(
-            "identity_update",
+            "identity/update",
             [("updated", key)])
 
     def create_add_event_response(self):
