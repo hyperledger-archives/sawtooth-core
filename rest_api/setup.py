@@ -39,7 +39,7 @@ setup(name='sawtooth-rest-api',
       packages=find_packages(),
       install_requires=[
           'aiodns',
-          'aiohttp',
+          'aiohttp>=2.3.2',
           'cchardet',
           'protobuf',
           'sawtooth-sdk',
