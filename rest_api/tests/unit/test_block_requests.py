@@ -21,14 +21,14 @@ from sawtooth_rest_api.protobuf import client_block_pb2
 
 class BlockListTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client_block_pb2.ClientBlockListRequest,
             client_block_pb2.ClientBlockListResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/blocks', handlers.list_blocks)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/blocks', handlers.list_blocks)
 
     @unittest_run_loop
     async def test_block_list(self):
@@ -718,14 +718,14 @@ class BlockListTests(BaseApiTest):
 
 class BlockGetTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
             client_block_pb2.ClientBlockGetByIdRequest,
             client_block_pb2.ClientBlockGetResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/blocks/{block_id}', handlers.fetch_block)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/blocks/{block_id}', handlers.fetch_block)
 
     @unittest_run_loop
     async def test_block_get(self):

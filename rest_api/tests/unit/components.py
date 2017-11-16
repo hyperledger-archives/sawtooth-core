@@ -128,7 +128,7 @@ class MockConnection(object):
 class BaseApiTest(AioHTTPTestCase):
     """A parent class for Rest Api test cases, providing common functionality.
     """
-    async def get_application(self, loop):
+    async def get_application(self):
         """Each child must implement this method which similar to __init__
         sets up aiohttp's async test cases.
 

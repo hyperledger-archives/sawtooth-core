@@ -21,14 +21,14 @@ from sawtooth_rest_api.protobuf import client_batch_pb2
 
 class BatchListTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_LIST_REQUEST,
             client_batch_pb2.ClientBatchListRequest,
             client_batch_pb2.ClientBatchListResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/batches', handlers.list_batches)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/batches', handlers.list_batches)
 
     @unittest_run_loop
     async def test_batch_list(self):
@@ -715,14 +715,14 @@ class BatchListTests(BaseApiTest):
 
 class BatchGetTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_GET_REQUEST,
             client_batch_pb2.ClientBatchGetRequest,
             client_batch_pb2.ClientBatchGetResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/batches/{batch_id}', handlers.fetch_batch)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/batches/{batch_id}', handlers.fetch_batch)
 
     @unittest_run_loop
     async def test_batch_get(self):

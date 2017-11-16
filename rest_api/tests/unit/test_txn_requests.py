@@ -21,14 +21,14 @@ from sawtooth_rest_api.protobuf import client_transaction_pb2
 
 class TransactionListTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_TRANSACTION_LIST_REQUEST,
             client_transaction_pb2.ClientTransactionListRequest,
             client_transaction_pb2.ClientTransactionListResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        app = self.build_app(loop, '/transactions', handlers.list_transactions)
+        handlers = self.build_handlers(self.loop, self.connection)
+        app = self.build_app(self.loop, '/transactions', handlers.list_transactions)
         return app
 
     @unittest_run_loop
@@ -734,15 +734,15 @@ class TransactionListTests(BaseApiTest):
 
 class TransactionGetTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_TRANSACTION_GET_REQUEST,
             client_transaction_pb2.ClientTransactionGetRequest,
             client_transaction_pb2.ClientTransactionGetResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
+        handlers = self.build_handlers(self.loop, self.connection)
         return self.build_app(
-            loop,
+            self.loop,
             '/transactions/{transaction_id}',
             handlers.fetch_transaction)
 
