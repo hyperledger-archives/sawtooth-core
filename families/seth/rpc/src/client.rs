@@ -487,23 +487,34 @@ impl<S: MessageSender> ValidatorClient<S> {
         request.set_address(address);
         match block {
             BlockKey::Latest => {},
-            BlockKey::Earliest => {
-                request.set_head_id(String::from("0000000000000000"));
-            },
-            BlockKey::Signature(block_id) => {
-                request.set_head_id(block_id);
-            },
-            BlockKey::Number(block_num) => match self.block_num_to_block_id(block_num) {
-                Ok(block_id) => {
-                    request.set_head_id(block_id);
+            BlockKey::Earliest => match self.block_id_to_state_root(
+                    String::from("0000000000000000")) {
+                Ok(state_root) => {
+                    request.set_state_root(state_root);
                 },
                 Err(error) => {
                     return Err(String::from(format!("{:?}", error)));
                 },
             },
-            BlockKey::Transaction(transaction_id) => match self.transaction_to_block_id(transaction_id) {
-                Ok(block_id) => {
-                    request.set_head_id(block_id);
+            BlockKey::Signature(block_id) => match self.block_id_to_state_root(block_id) {
+                Ok(state_root) => {
+                    request.set_state_root(state_root);
+                },
+                Err(error) => {
+                    return Err(String::from(format!("{:?}", error)));
+                },
+            },
+            BlockKey::Number(block_num) => match self.block_num_to_state_root(block_num) {
+                Ok(state_root) => {
+                    request.set_state_root(state_root);
+                },
+                Err(error) => {
+                    return Err(String::from(format!("{:?}", error)));
+                },
+            },
+            BlockKey::Transaction(transaction_id) => match self.transaction_to_state_root(transaction_id) {
+                Ok(state_root) => {
+                    request.set_state_root(state_root);
                 },
                 Err(error) => {
                     return Err(String::from(format!("{:?}", error)));
@@ -620,13 +631,30 @@ impl<S: MessageSender> ValidatorClient<S> {
         Ok(blocks)
     }
 
-    fn block_num_to_block_id(&mut self, block_num: u64) -> Result<String, Error> {
-        self.get_block(BlockKey::Number(block_num)).map(|block|
-            String::from(block.header_signature))
+    fn block_num_to_state_root(&mut self, block_num: u64) -> Result<String, Error> {
+        self.get_block(BlockKey::Number(block_num)).and_then(|block|
+            protobuf::parse_from_bytes(&block.header)
+                .map_err(|error|
+                    Error::ParseError(format!("Error parsing block_header: {:?}", error)))
+                .map(|block_header: BlockHeader|
+                    String::from(block_header.state_root_hash)))
     }
 
-    fn transaction_to_block_id(&mut self, transaction_id: String) -> Result<String, Error> {
-        self.get_block(BlockKey::Transaction(transaction_id)).map(|block|
-            String::from(block.header_signature))
+    fn block_id_to_state_root(&mut self, block_id: String) -> Result<String, Error> {
+        self.get_block(BlockKey::Signature(block_id)).and_then(|block|
+            protobuf::parse_from_bytes(&block.header)
+                .map_err(|error|
+                    Error::ParseError(format!("Error parsing block_header: {:?}", error)))
+                .map(|block_header: BlockHeader|
+                    String::from(block_header.state_root_hash)))
+    }
+
+    fn transaction_to_state_root(&mut self, transaction_id: String) -> Result<String, Error> {
+        self.get_block(BlockKey::Transaction(transaction_id)).and_then(|block|
+            protobuf::parse_from_bytes(&block.header)
+                .map_err(|error|
+                    Error::ParseError(format!("Error parsing block_header: {:?}", error)))
+                .map(|block_header: BlockHeader|
+                    String::from(block_header.state_root_hash)))
     }
 }

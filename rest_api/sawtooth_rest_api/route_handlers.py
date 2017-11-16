@@ -256,8 +256,11 @@ class RouteHandler(object):
             paging: Paging info and nav, like total resources and a next link
         """
         paging_controls = self._get_paging_controls(request)
+
+        head, root = await self._head_to_root(request.url.query.get(
+            'head', None))
         validator_query = client_state_pb2.ClientStateListRequest(
-            head_id=request.url.query.get('head', None),
+            state_root=root,
             address=request.url.query.get('address', None),
             sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
@@ -271,7 +274,8 @@ class RouteHandler(object):
             request=request,
             response=response,
             controls=paging_controls,
-            data=response.get('entries', []))
+            data=response.get('entries', []),
+            head=head)
 
     async def fetch_state(self, request):
         """Fetches data from a specific address in the validator's state tree.
@@ -293,17 +297,18 @@ class RouteHandler(object):
         address = request.match_info.get('address', '')
         head = request.url.query.get('head', None)
 
+        head, root = await self._head_to_root(head)
         response = await self._query_validator(
             Message.CLIENT_STATE_GET_REQUEST,
             client_state_pb2.ClientStateGetResponse,
             client_state_pb2.ClientStateGetRequest(
-                head_id=head, address=address),
+                state_root=root, address=address),
             error_traps)
 
         return self._wrap_response(
             request,
             data=response['value'],
-            metadata=self._get_metadata(request, response))
+            metadata=self._get_metadata(request, response, head=head))
 
     async def list_blocks(self, request):
         """Fetches list of blocks from validator, optionally filtered by id.
@@ -598,6 +603,29 @@ class RouteHandler(object):
             LOGGER.warning('Timed out while waiting for validator response')
             raise errors.ValidatorTimedOut()
 
+    async def _head_to_root(self, block_id):
+        error_traps = [error_handlers.BlockNotFoundTrap]
+        if block_id:
+            response = await self._query_validator(
+                Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
+                client_block_pb2.ClientBlockGetResponse,
+                client_block_pb2.ClientBlockGetByIdRequest(block_id=block_id),
+                error_traps)
+            block = self._expand_block(response['block'])
+        else:
+            response = await self._query_validator(
+                Message.CLIENT_BLOCK_LIST_REQUEST,
+                client_block_pb2.ClientBlockListResponse,
+                client_block_pb2.ClientBlockListRequest(
+                    paging=client_list_control_pb2.ClientPagingControls(
+                        count=1)),
+                error_traps)
+            block = self._expand_block(response['blocks'][0])
+        return (
+            block['header_signature'],
+            block['header']['state_root_hash'],
+        )
+
     @staticmethod
     def _parse_response(proto, response):
         """Parses the content from a validator response Message.
@@ -673,11 +701,14 @@ class RouteHandler(object):
                 sort_keys=True))
 
     @classmethod
-    def _wrap_paginated_response(cls, request, response, controls, data):
+    def _wrap_paginated_response(
+        cls, request, response, controls, data, head=None
+    ):
         """Builds the metadata for a pagingated response and wraps everying in
         a JSON encoded web.Response
         """
-        head = response['head_id']
+        if head is None:
+            head = response['head_id']
         link = cls._build_url(request, head=head)
 
         paging_response = response['paging']
@@ -725,11 +756,11 @@ class RouteHandler(object):
             metadata={'head': head, 'link': link, 'paging': paging})
 
     @classmethod
-    def _get_metadata(cls, request, response):
+    def _get_metadata(cls, request, response, head=None):
         """Parses out the head and link properties based on the HTTP Request
         from the client, and the Protobuf response from the validator.
         """
-        head = response.get('head_id', None)
+        head = response.get('head_id', head)
         metadata = {'link': cls._build_url(request, head=head)}
 
         if head is not None:

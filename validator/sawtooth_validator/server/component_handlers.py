@@ -137,11 +137,6 @@ def add(
             block_store),
         thread_pool)
 
-    dispatcher.add_handler(
-        validator_pb2.Message.CLIENT_STATE_CURRENT_REQUEST,
-        client_handlers.StateCurrentRequest(
-            get_current_root), thread_pool)
-
     # Blocks
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,

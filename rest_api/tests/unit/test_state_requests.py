@@ -13,11 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+from unittest import mock
 from base64 import b64decode
 from aiohttp.test_utils import unittest_run_loop
 from components import Mocks, BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_state_pb2
+from sawtooth_rest_api.protobuf import client_block_pb2
+from sawtooth_rest_api.protobuf import block_pb2
 
 
 class StateListTests(BaseApiTest):
@@ -36,7 +39,7 @@ class StateListTests(BaseApiTest):
         """Verifies a GET /state without parameters works properly.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a state root of '2'
             - a paging response with a start of 0, and 3 total resources
             - three entries with addresses/data of:
                 * 'a': b'3'
@@ -56,12 +59,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         entries = Mocks.make_entries(a=b'3', b=b'5', c=b'7')
-        self.connection.preset_response(head_id='2', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='2',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state')
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state?head=2')
@@ -81,6 +91,10 @@ class StateListTests(BaseApiTest):
             - an error property with a code of 10
         """
         self.connection.preset_response(self.status.INTERNAL_ERROR)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
+
         response = await self.get_assert_status('/state', 500)
 
         self.assert_has_valid_error(response, 10)
@@ -97,6 +111,10 @@ class StateListTests(BaseApiTest):
             - an error property with a code of 15
         """
         self.connection.preset_response(self.status.NOT_READY)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
+
         response = await self.get_assert_status('/state', 503)
 
         self.assert_has_valid_error(response, 15)
@@ -126,12 +144,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 2)
         entries = Mocks.make_entries(a=b'2', b=b'4')
-        self.connection.preset_response(head_id='1', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='1',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?head=1')
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(head_id='1', paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/state?head=1')
@@ -151,6 +176,9 @@ class StateListTests(BaseApiTest):
             - an error property with a code of 50
         """
         self.connection.preset_response(self.status.NO_ROOT)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
         response = await self.get_assert_status('/state?head=bad', 404)
 
         self.assert_has_valid_error(response, 50)
@@ -179,12 +207,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 1)
         entries = Mocks.make_entries(c=b'7')
-        self.connection.preset_response(head_id='2', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='2',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?address=c')
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(address='c', paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', address='c', paging=controls)
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state?head=2&address=c')
@@ -210,8 +245,14 @@ class StateListTests(BaseApiTest):
         paging = Mocks.make_paging_response(None, 0)
         self.connection.preset_response(
             self.status.NO_RESOURCE,
-            head_id='2',
+            state_root='beef',
             paging=paging)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='2',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
         response = await self.get_assert_200('/state?address=bad')
 
         self.assert_has_valid_head(response, '2')
@@ -244,12 +285,18 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 1)
         entries = Mocks.make_entries(a=b'2')
-        self.connection.preset_response(head_id='1', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='1',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?address=a&head=1')
         self.connection.assert_valid_request_sent(
-            head_id='1',
+            state_root='beef',
             address='a',
             paging=Mocks.make_paging_controls())
 
@@ -281,12 +328,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4)
         entries = Mocks.make_entries(c=b'3')
-        self.connection.preset_response(head_id='d', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='d',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
-        self.connection.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&min=1&count=1')
@@ -320,6 +374,9 @@ class StateListTests(BaseApiTest):
             - an error property with a code of 54
         """
         self.connection.preset_response(self.status.INVALID_PAGING)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
         response = await self.get_assert_status('/state?min=-1', 400)
 
         self.assert_has_valid_error(response, 54)
@@ -346,12 +403,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 4)
         entries = Mocks.make_entries(d=b'4', c=b'3')
-        self.connection.preset_response(head_id='d', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='d',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?count=2')
         controls = Mocks.make_paging_controls(2)
-        self.connection.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&count=2')
@@ -382,12 +446,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(2, 4)
         entries = Mocks.make_entries(b=b'2', a=b'1')
-        self.connection.preset_response(head_id='d', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='d',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
-        self.connection.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&min=2')
@@ -421,12 +492,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4, previous_id='d')
         entries = Mocks.make_entries(c=b'3', b=b'2', a=b'1')
-        self.connection.preset_response(head_id='d', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='d',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?min=c&count=5')
         controls = Mocks.make_paging_controls(5, start_id='c')
-        self.connection.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&min=c&count=5')
@@ -461,12 +539,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(1, 4, previous_id='d', next_id='a')
         entries = Mocks.make_entries(c=b'3', b=b'2')
-        self.connection.preset_response(head_id='d', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='d',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?max=b&count=2')
         controls = Mocks.make_paging_controls(2, end_id='b')
-        self.connection.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&max=b&count=2')
@@ -498,12 +583,19 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 4)
         entries = Mocks.make_entries(d=b'4', c=b'3', b=b'2')
-        self.connection.preset_response(head_id='d', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='d',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
-        self.connection.assert_valid_request_sent(paging=controls)
+        self.connection.assert_valid_request_sent(
+            state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, 'd')
         self.assert_has_valid_link(response, '/state?head=d&max=2&count=7')
@@ -538,13 +630,20 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         entries = Mocks.make_entries(a=b'3', b=b'5', c=b'7')
-        self.connection.preset_response(head_id='2', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='2',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?sort=address')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('address')
         self.connection.assert_valid_request_sent(
+            state_root='beef',
             paging=page_controls,
             sorting=sorting)
 
@@ -566,6 +665,9 @@ class StateListTests(BaseApiTest):
             - an error property with a code of 57
         """
         self.connection.preset_response(self.status.INVALID_SORT)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
         response = await self.get_assert_status('/state?sort=bad', 400)
 
         self.assert_has_valid_error(response, 57)
@@ -596,13 +698,20 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         entries = Mocks.make_entries(c=b'7', b=b'5', a=b'3')
-        self.connection.preset_response(head_id='2', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='2',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?sort=-address')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('address', reverse=True)
         self.connection.assert_valid_request_sent(
+            state_root='beef',
             paging=page_controls,
             sorting=sorting)
 
@@ -638,13 +747,20 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         entries = Mocks.make_entries(c=b'7', b=b'45', a=b'123')
-        self.connection.preset_response(head_id='2', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='2',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state?sort=value.length')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls('value', compare_length=True)
         self.connection.assert_valid_request_sent(
+            state_root='beef',
             paging=page_controls,
             sorting=sorting)
 
@@ -682,8 +798,14 @@ class StateListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(0, 3)
         entries = Mocks.make_entries(c=b'7', b=b'5', a=b'3')
-        self.connection.preset_response(head_id='2', paging=paging,
+        self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='2',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200(
             '/state?sort=-address,value.length')
@@ -691,6 +813,7 @@ class StateListTests(BaseApiTest):
         sorting = (Mocks.make_sort_controls('address', reverse=True) +
                    Mocks.make_sort_controls('value', compare_length=True))
         self.connection.assert_valid_request_sent(
+            state_root='beef',
             paging=page_controls,
             sorting=sorting)
 
@@ -730,10 +853,17 @@ class StateGetTests(BaseApiTest):
             - a link property that ends in '/state/b?head=2'
             - a data property that b64decodes to b'3'
         """
-        self.connection.preset_response(head_id='2', value=b'3')
+        self.connection.preset_response(state_root='beef', value=b'3')
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='2',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state/a')
-        self.connection.assert_valid_request_sent(address='a')
+        self.connection.assert_valid_request_sent(
+            state_root='beef', address='a')
 
         self.assert_has_valid_head(response, '2')
         self.assert_has_valid_link(response, '/state/a?head=2')
@@ -755,6 +885,9 @@ class StateGetTests(BaseApiTest):
             - an error property with a code of 10
         """
         self.connection.preset_response(self.status.INTERNAL_ERROR)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
         response = await self.get_assert_status('/state/a', 500)
 
         self.assert_has_valid_error(response, 10)
@@ -771,6 +904,9 @@ class StateGetTests(BaseApiTest):
             - an error property with a code of 15
         """
         self.connection.preset_response(self.status.NOT_READY)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
         response = await self.get_assert_status('/state/a', 503)
 
         self.assert_has_valid_error(response, 15)
@@ -787,6 +923,9 @@ class StateGetTests(BaseApiTest):
             - an error property with a code of 75
         """
         self.connection.preset_response(self.status.NO_RESOURCE)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
         response = await self.get_assert_status('/state/bad', 404)
 
         self.assert_has_valid_error(response, 75)
@@ -809,10 +948,17 @@ class StateGetTests(BaseApiTest):
             - a link property that ends in '/state/b?head=2'
             - a data property that b64decodes to b'4'
         """
-        self.connection.preset_response(head_id='1', value=b'4')
+        self.connection.preset_response(state_root='beef', value=b'4')
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block(
+                header_signature='1',
+                header=block_pb2.BlockHeader(
+                    state_root_hash='beef').SerializeToString()))
 
         response = await self.get_assert_200('/state/b?head=1')
-        self.connection.assert_valid_request_sent(head_id='1', address='b')
+        self.connection.assert_valid_request_sent(
+            state_root='beef', address='b')
 
         self.assert_has_valid_head(response, '1')
         self.assert_has_valid_link(response, '/state/b?head=1')
@@ -834,6 +980,9 @@ class StateGetTests(BaseApiTest):
             - an error property with a code of 50
         """
         self.connection.preset_response(self.status.NO_ROOT)
+        self.connection.preset_response(
+            proto=client_block_pb2.ClientBlockGetResponse,
+            block=block_pb2.Block())
         response = await self.get_assert_status('/state/b?head=bad', 404)
 
         self.assert_has_valid_error(response, 50)

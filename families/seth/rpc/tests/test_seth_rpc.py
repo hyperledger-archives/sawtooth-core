@@ -425,6 +425,7 @@ class SethRpcTest(unittest.TestCase):
         balance = 123
         block_num = 321
         block_id = "f" * 128
+        state_root = "b" * 64
 
         self.rpc.acall(
             "eth_getBalance", ["0x" + account_address, hex(block_num)])
@@ -440,7 +441,12 @@ class SethRpcTest(unittest.TestCase):
             Message.CLIENT_BLOCK_GET_RESPONSE,
             ClientBlockGetResponse(
                 status=ClientBlockGetResponse.OK,
-                block=Block(header_signature=block_id)
+                block=Block(
+                    header_signature=block_id,
+                    header=BlockHeader(
+                        state_root_hash=state_root,
+                    ).SerializeToString(),
+                )
             ),
             msg)
 
@@ -448,7 +454,7 @@ class SethRpcTest(unittest.TestCase):
         self.assertEqual(msg.message_type, Message.CLIENT_STATE_GET_REQUEST)
         request = ClientStateGetRequest()
         request.ParseFromString(msg.content)
-        self.assertEqual(request.head_id, block_id)
+        self.assertEqual(request.state_root, state_root)
         self.assertEqual(request.address,
             "a68b06" + account_address + "0" * 24)
 

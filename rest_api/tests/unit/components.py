@@ -56,7 +56,7 @@ class MockConnection(object):
         self._reset_sent_request()
         self._reset_response()
 
-    def preset_response(self, status=None, **response_data):
+    def preset_response(self, status=None, proto=None, **response_data):
         """Sets the response that will be returned by the next `send` call.
         Should be set once before every test call the Rest Api makes to
         Connection.
@@ -65,9 +65,12 @@ class MockConnection(object):
             status (int, optional): Enum of the response status, defaults to OK
             response_data (kwargs): Other data to add to the Protobuf response
         """
+        if proto is None:
+            proto = self._response_proto
         if status is None:
-            status = self._response_proto.OK
-        self._response = self._response_proto(status=status, **response_data)
+            status = proto.OK
+        self._response.append(proto(status=status, **response_data))
+
 
     def assert_valid_request_sent(self, **request_data):
         """Asserts that the last sent request matches the expected data.
@@ -98,7 +101,7 @@ class MockConnection(object):
         self._sent_request = request
 
         try:
-            response_bytes = self._response.SerializeToString()
+            response_bytes = self._response.pop().SerializeToString()
         except AttributeError:
             raise AssertionError("Preset a response before sending a request!")
 
@@ -109,7 +112,7 @@ class MockConnection(object):
         self._sent_request = None
 
     def _reset_response(self):
-        self._response = None
+        self._response = []
 
     class _MockFuture(object):
         class Response(object):

@@ -178,9 +178,12 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
                 LOGGER.debug('Unable to find block "%s" in store', e)
                 raise _ResponseFailed(self._status.NO_ROOT)
 
-        elif self._block_store.chain_head:
-            return self._block_store.chain_head
+        else:
+            return self._get_chain_head()
 
+    def _get_chain_head(self):
+        if self._block_store.chain_head:
+            return self._block_store.chain_head
         else:
             LOGGER.debug('Unable to get chain head from block store')
             raise _ResponseFailed(self._status.NOT_READY)
@@ -195,19 +198,16 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             request (object): The parsed protobuf request object
 
         Returns:
-            None: if a merkle_root is specified directly, no id is returned
-            str: the id of the head block used to specify the root
+            str: the state root of the head block used to specify the root
 
         Raises:
             ResponseFailed: Failed to set the root if the merkle tree
         """
-        if request.merkle_root:
-            root = request.merkle_root
-            head_id = None
+        if request.state_root:
+            root = request.state_root
         else:
-            head = self._get_head_block(request)
+            head = self._get_chain_head()
             root = head.state_root_hash
-            head_id = head.header_signature
 
         try:
             self._tree.set_merkle_root(root)
@@ -215,7 +215,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             LOGGER.debug('Unable to find root "%s" in database', e)
             raise _ResponseFailed(self._status.NO_ROOT)
 
-        return head_id
+        return root
 
     def _list_store_resources(self, request, head_id, filter_ids,
                               resource_fetcher, block_xform):
@@ -610,18 +610,6 @@ class BatchStatusRequest(_ClientRequestHandler):
         return self._wrap_response(batch_statuses=statuses)
 
 
-class StateCurrentRequest(_ClientRequestHandler):
-    def __init__(self, current_root_func):
-        self._get_root = current_root_func
-        super().__init__(
-            client_state_pb2.ClientStateCurrentRequest,
-            client_state_pb2.ClientStateCurrentResponse,
-            validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
-
-    def _respond(self, request):
-        return self._wrap_response(merkle_root=self._get_root())
-
-
 class StateListRequest(_ClientRequestHandler):
     def __init__(self, database, block_store):
         super().__init__(
@@ -632,7 +620,7 @@ class StateListRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
-        head_id = self._set_root(request)
+        state_root = self._set_root(request)
 
         # Fetch entries and encode as protobuf
         entries = [
@@ -655,11 +643,11 @@ class StateListRequest(_ClientRequestHandler):
         if not entries:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id,
+                state_root=state_root,
                 paging=paging)
 
         return self._wrap_response(
-            head_id=head_id,
+            state_root=state_root,
             paging=paging,
             entries=entries)
 
@@ -674,7 +662,7 @@ class StateGetRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
-        head_id = self._set_root(request)
+        state_root = self._set_root(request)
 
         # Fetch leaf value
         try:
@@ -686,7 +674,7 @@ class StateGetRequest(_ClientRequestHandler):
             LOGGER.debug('Address %s is a nonleaf', request.address)
             return self._status.INVALID_ADDRESS
 
-        return self._wrap_response(head_id=head_id, value=value)
+        return self._wrap_response(state_root=state_root, value=value)
 
 
 class BlockListRequest(_ClientRequestHandler):
