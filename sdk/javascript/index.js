@@ -17,15 +17,13 @@
 
 'use strict'
 
-const {signer, BatchEncoder, TransactionEncoder} = require('./client')
+const {signer} = require('./client')
 
 module.exports = {
 
   processor: require('./processor'),
   exceptions: require('./processor/exceptions'),
 
-  signer,
-  BatchEncoder,
-  TransactionEncoder
+  signer
 
 }
