@@ -31,12 +31,12 @@ class BlockEventExtractor(EventExtractor):
                 key="state_root_hash", value=block.state_root_hash),
             Event.Attribute(
                 key="previous_block_id", value=block.previous_block_id)]
-        return Event(event_type="block_commit", attributes=attributes)
+        return Event(event_type="sawtooth/block-commit", attributes=attributes)
 
     def extract(self, subscriptions):
         if subscriptions:
             for sub in subscriptions:
-                if sub.event_type == "block_commit":
+                if sub.event_type == "sawtooth/block-commit":
                     return [self._make_event()]
 
 

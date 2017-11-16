@@ -38,7 +38,7 @@ Event Type
 All events within Sawtooth have an ``event_type`` field which is used to
 determine how opaque data has been serialized and what transparent attributes to
 expect. This event type is unique across the network. For example, block commit
-events have the event type ``"block_commit"``.
+events have the event type ``"sawtooth/block-commit"``.
 
 Event Filters
 -------------

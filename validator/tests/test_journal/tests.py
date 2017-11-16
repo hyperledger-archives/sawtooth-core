@@ -1471,7 +1471,7 @@ class TestChainCommitState(unittest.TestCase):
 
 class TestBlockEventExtractor(unittest.TestCase):
     def test_block_event_extractor(self):
-        """Test that a block_commit event is generated correctly."""
+        """Test that a sawtooth/block-commit event is generated correctly."""
         block_header = BlockHeader(
             block_num=85,
             state_root_hash="0987654321fedcba",
@@ -1481,10 +1481,10 @@ class TestBlockEventExtractor(unittest.TestCase):
             header=block_header.SerializeToString()))
         extractor = BlockEventExtractor(block)
         events = extractor.extract([EventSubscription(
-            event_type="block_commit")])
+            event_type="sawtooth/block-commit")])
         self.assertEqual(events, [
             Event(
-                event_type="block_commit",
+                event_type="sawtooth/block-commit",
                 attributes=[
                     Event.Attribute(key="block_id",value="abcdef1234567890"),
                     Event.Attribute(key="block_num", value="85"),

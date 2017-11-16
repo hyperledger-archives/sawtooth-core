@@ -89,7 +89,7 @@ class TestEventsAndReceipts(unittest.TestCase):
 
         response = self._get_events(
             block_id,
-            [events_pb2.EventSubscription(event_type="block_commit")])
+            [events_pb2.EventSubscription(event_type="sawtooth/block-commit")])
         events = self.assert_events_get_response(response)
         self.assert_block_commit_event(events[0], block_num)
 
@@ -189,7 +189,7 @@ class TestEventsAndReceipts(unittest.TestCase):
     def _subscribe(self, subscriptions=None, last_known_block_ids=None):
         if subscriptions is None:
             subscriptions = [
-                events_pb2.EventSubscription(event_type="block_commit"),
+                events_pb2.EventSubscription(event_type="sawtooth/block-commit"),
             ]
         if last_known_block_ids is None:
             last_known_block_ids = []
@@ -209,7 +209,7 @@ class TestEventsAndReceipts(unittest.TestCase):
         return response
 
     def assert_block_commit_event(self, event, block_num):
-        self.assertEqual(event.event_type, "block_commit")
+        self.assertEqual(event.event_type, "sawtooth/block-commit")
         self.assertTrue(all([
             any(attribute.key == "block_id" for attribute in event.attributes),
             any(attribute.key == "block_num"
