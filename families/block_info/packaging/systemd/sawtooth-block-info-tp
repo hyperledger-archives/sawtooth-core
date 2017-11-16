@@ -1,0 +1,1 @@
+SAWTOOTH_BLOCK_INFO_TP_ARGS=-v -C tcp://localhost:4004

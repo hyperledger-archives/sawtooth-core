@@ -373,7 +373,8 @@ then
         docker_build $build_dir/sawtooth-int-settings-tp \
             $build_dir/ sawtooth-settings-tp
 
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-block-info-tp
+        docker_build $build_dir/sawtooth-int-block-info-tp \
+            $build_dir/ sawtooth-block-info-tp
 
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-battleship-tp
 
