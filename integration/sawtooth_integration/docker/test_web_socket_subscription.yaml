@@ -44,10 +44,10 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     command: "bash -c \"\
-      while true; do curl -s http://rest-api:8080/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
-      intkey workload --rate 1 --display-frequency 15 --urls http://rest-api:8080
+      while true; do curl -s http://rest-api:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
+      intkey workload --rate 1 --display-frequency 15 --urls http://rest-api:8008
       \""
     stop_signal: SIGKILL
     environment:
@@ -80,10 +80,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
+      - 8008
     depends_on:
       - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   test-web-socket-subscription:
@@ -91,13 +91,13 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - validator
       - rest-api
     working_dir: /project/sawtooth-core/integration/sawtooth_integration/tests
     command: "bash -c \"\
-      while true; do curl -s http://rest-api:8080/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
+      while true; do curl -s http://rest-api:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
       phantomjs test_web_socket_subscription.js
       \""
     stop_signal: SIGKILL

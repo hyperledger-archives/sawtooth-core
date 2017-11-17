@@ -104,8 +104,8 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
-    command: sawtooth-rest-api -v --connect tcp://validator-0:4004 --bind rest-api-0:8080
+      - 8008
+    command: sawtooth-rest-api -v --connect tcp://validator-0:4004 --bind rest-api-0:8008
     stop_signal: SIGKILL
 
   rest-api-1:
@@ -114,8 +114,8 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
-    command: sawtooth-rest-api -v --connect tcp://validator-1:4004 --bind rest-api-1:8080
+      - 8008
+    command: sawtooth-rest-api -v --connect tcp://validator-1:4004 --bind rest-api-1:8008
     stop_signal: SIGKILL
 
   rest-api-2:
@@ -124,8 +124,8 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
-    command: sawtooth-rest-api -v --connect tcp://validator-2:4004 --bind rest-api-2:8080
+      - 8008
+    command: sawtooth-rest-api -v --connect tcp://validator-2:4004 --bind rest-api-2:8008
     stop_signal: SIGKILL
 
   intkey-tp-0:
@@ -220,7 +220,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - rest-api-0
       - rest-api-1

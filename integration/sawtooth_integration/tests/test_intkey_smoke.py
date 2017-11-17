@@ -39,7 +39,7 @@ class TestIntkeySmoke(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest-api:8080'])
+        wait_for_rest_apis(['rest-api:8008'])
 
     def test_intkey_smoke(self):
         '''
@@ -143,7 +143,7 @@ def _get_state():
 
 
 def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
-    url = 'http://rest-api:8080' + suffix
+    url = 'http://rest-api:8008' + suffix
     return _submit_request(urllib.request.Request(url, data, headers),
                            expected_code=expected_code)
 

@@ -28,7 +28,7 @@ LOGGER.setLevel(logging.DEBUG)
 
 
 WAIT = 300
-REST_API = 'rest-api:8080'
+REST_API = 'rest-api:8008'
 
 
 class TestXoSmoke(unittest.TestCase):

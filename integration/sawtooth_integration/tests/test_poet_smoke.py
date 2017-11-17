@@ -32,7 +32,7 @@ WAIT = 120
 
 class TestPoetSmoke(unittest.TestCase):
     def setUp(self):
-        endpoints = ['rest-api-{}:8080'.format(i)
+        endpoints = ['rest-api-{}:8008'.format(i)
                      for i in range(VALIDATOR_COUNT)]
 
         wait_for_rest_apis(endpoints, tries=10)

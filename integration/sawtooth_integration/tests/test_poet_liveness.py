@@ -23,7 +23,7 @@ import requests
 
 LOGGER = logging.getLogger(__name__)
 
-URL = 'http://rest-api-%d:8080'
+URL = 'http://rest-api-%d:8008'
 
 # The number of nodes in the test (this needs to match the test's compose file)
 NODES = 5

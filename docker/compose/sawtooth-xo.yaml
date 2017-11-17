@@ -94,12 +94,12 @@ services:
       - ../../:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
+      - 8008
     ports:
-      - 8080
+      - 8008
     depends_on:
      - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   xo-client:
@@ -108,7 +108,7 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - validator
       - rest-api

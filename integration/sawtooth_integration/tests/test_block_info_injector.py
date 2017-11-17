@@ -63,7 +63,7 @@ def post_batch(batch):
 
 
 def query_rest_api(suffix='', data=None, headers={}):
-    url = 'http://rest-api:8080' + suffix
+    url = 'http://rest-api:8008' + suffix
     return submit_request(urllib.request.Request(url, data, headers))
 
 

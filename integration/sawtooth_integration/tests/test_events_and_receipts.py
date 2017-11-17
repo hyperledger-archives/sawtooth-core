@@ -295,7 +295,7 @@ class BatchSubmitter:
 
     def _query_rest_api(self, suffix='', data=None, headers={},
                         expected_code=200):
-        url = 'http://rest-api:8080' + suffix
+        url = 'http://rest-api:8008' + suffix
         return self._submit_request(urllib.request.Request(url, data, headers),
                                     expected_code=expected_code)
 

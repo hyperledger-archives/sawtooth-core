@@ -116,7 +116,7 @@ URL
 ---
 
 The ``xo`` commands all take a ``--url`` argument that defaults to
-``http://127.0.0.1:8080``. This should be set to the URL of the REST
+``http://127.0.0.1:8008``. This should be set to the URL of the REST
 API. The *XO* client will send requests to update and query the
 blockchain to this URL.
 

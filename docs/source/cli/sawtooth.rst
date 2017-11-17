@@ -60,7 +60,7 @@ sawtooth batch list
 ===================
 
 The ``sawtooth batch list`` subcommand queries the specified Sawtooth
-REST API (default: ``http://localhost:8080``) for a list of Batches in
+REST API (default: ``http://localhost:8008``) for a list of Batches in
 the current blockchain. It returns the id of each Batch, the public
 key of each signer, and the number of transactions in each Batch.
 
@@ -85,7 +85,7 @@ information to just the value of a single key, either from the batch
 or its header.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a `username`:`password`
+``http://localhost:8008``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 
@@ -106,7 +106,7 @@ until processing is complete, with an optional timeout value specified
 in seconds.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a `username`:`password`
+``http://localhost:8008``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_batch_status_usage.out
@@ -124,7 +124,7 @@ contain one or more batches with any number of transactions. The
 processing is complete, with an optional timeout specified in seconds.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a `username`:`password`
+``http://localhost:8008``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 
@@ -146,7 +146,7 @@ sawtooth block list
 ===================
 
 The ``sawtooth block list`` subcommand queries the Sawtooth REST API
-(default: ``http://localhost:8080``) for a list of all blocks in the
+(default: ``http://localhost:8008``) for a list of all blocks in the
 current chain. It returns the id and number of each block, the public
 key of each signer, and the number of transactions and batches in
 each.
@@ -171,7 +171,7 @@ information to just the value of a single key, either from the block,
 or its header.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a `username`:`password`
+``http://localhost:8008``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 
@@ -341,7 +341,7 @@ and YAML) are available and can be piped into a file for further
 processing.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a `username`:`password`
+``http://localhost:8008``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_state_list_usage.out
@@ -359,7 +359,7 @@ the logic of the transaction family that created it, and must be
 decoded using that same logic.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a `username`:`password`
+``http://localhost:8008``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_state_show_usage.out
@@ -380,7 +380,7 @@ sawtooth transaction list
 =========================
 
 The ``sawtooth transaction list`` subcommand queries the Sawtooth REST
-API (default: ``http://localhost:8080``) for a list of transactions in
+API (default: ``http://localhost:8008``) for a list of transactions in
 the current blockchain. It returns the id of each transaction, its
 family and version, the size of its payload, and the data in the
 payload itself.
@@ -405,7 +405,7 @@ returned information to just the value of a single key, either from
 the transaction or its header.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a `username`:`password`
+``http://localhost:8008``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_transaction_show_usage.out

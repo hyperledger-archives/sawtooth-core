@@ -79,7 +79,7 @@ class TestNetworkPermissioning(unittest.TestCase):
         """
 
 
-        walter = Admin("http://127.0.0.1:8080")
+        walter = Admin("http://127.0.0.1:{}".format(8008 + 0))
 
         sawtooth_home0 = mkdtemp()
         self.sawtooth_home[0] = sawtooth_home0
@@ -88,36 +88,35 @@ class TestNetworkPermissioning(unittest.TestCase):
         self.sawtooth_home[1] = sawtooth_home1
 
         with SetSawtoothHome(sawtooth_home0):
-            write_validator_config(sawtooth_home0,
-                                   roles={"network": "trust"},
-                                   endpoint="tcp://127.0.0.1:8800",
-                                   bind=["network:tcp://127.0.0.1:{}".format(8800),
-                                         "component:tcp://127.0.0.1:{}".format(4004)],
-                                   seeds=["tcp://127.0.0.1:8801"],
-                                   peering="dynamic",
-                                   scheduler='parallel')
+            write_validator_config(
+                sawtooth_home0,
+                roles={"network": "trust"},
+                endpoint="tcp://127.0.0.1:{}".format(8800 + 0),
+                bind=["network:tcp://127.0.0.1:{}".format(8800 + 0),
+                      "component:tcp://127.0.0.1:{}".format(4004 + 0)],
+                seeds=["tcp://127.0.0.1:{}".format(8800 + 1)],
+                peering="dynamic",
+                scheduler='parallel')
             validator_non_genesis_init(sawtooth_home1)
             validator_genesis_init(sawtooth_home0, sawtooth_home1,
                                    identity_pub_key=walter.pub_key,
                                    role="network")
             self.processes.extend(start_validator(0, sawtooth_home0))
-            self.clients.append(Client("http://127.0.0.1:8080"))
+            self.clients.append(Client(NodeController.http_address(0)))
 
         with SetSawtoothHome(sawtooth_home1):
-            write_validator_config(sawtooth_home1,
-                                   roles={"network": "trust"},
-                                   endpoint="tcp://127.0.0.1:8801",
-                                   bind=["network:tcp://127.0.0.1:{}".format(
-                                       8801),
-                                         "component:tcp://127.0.0.1:{}".format(
-                                             4005)],
-                                   peering="dynamic",
-                                   seeds=["tcp://127.0.0.1:8800"],
-                                   scheduler='parallel')
+            write_validator_config(
+                sawtooth_home1,
+                roles={"network": "trust"},
+                endpoint="tcp://127.0.0.1:{}".format(8800 + 1),
+                bind=["network:tcp://127.0.0.1:{}".format(8800 + 1),
+                      "component:tcp://127.0.0.1:{}".format(4004 + 1)],
+                peering="dynamic",
+                seeds=["tcp://127.0.0.1:{}".format(8800 + 0)],
+                scheduler='parallel')
 
             self.processes.extend(start_validator(1, sawtooth_home1))
-
-            self.clients.append(Client("http://127.0.0.1:8081"))
+            self.clients.append(Client(NodeController.http_address(1)))
 
         with open(os.path.join(self.sawtooth_home[1], 'keys', 'validator.pub'), 'r') as infile:
             non_genesis_key = infile.read().strip('\n')
@@ -187,7 +186,7 @@ class TestNetworkPermissioning(unittest.TestCase):
 
         """
 
-        walter = Admin("http://127.0.0.1:8082")
+        walter = Admin("http://127.0.0.1:{}".format(8008 + 2))
 
         processes = []
 
@@ -198,38 +197,35 @@ class TestNetworkPermissioning(unittest.TestCase):
         self.sawtooth_home[1] = sawtooth_home1
 
         with SetSawtoothHome(sawtooth_home0):
-            write_validator_config(sawtooth_home0,
-                                   roles={"network": "challenge"},
-                                   endpoint="tcp://127.0.0.1:8802",
-                                   bind=["network:tcp://127.0.0.1:{}".format(
-                                       8802),
-                                         "component:tcp://127.0.0.1:{}".format(
-                                             4006)],
-                                   seeds=["tcp://127.0.0.1:8803"],
-                                   peering="dynamic",
-                                   scheduler='parallel')
+            write_validator_config(
+                sawtooth_home0,
+                roles={"network": "challenge"},
+                endpoint="tcp://127.0.0.1:{}".format(8800 + 2),
+                bind=["network:tcp://127.0.0.1:{}".format(8800 + 2),
+                      "component:tcp://127.0.0.1:{}".format(4004 + 2)],
+                seeds=["tcp://127.0.0.1:{}".format(8800 + 3)],
+                peering="dynamic",
+                scheduler='parallel')
             validator_non_genesis_init(sawtooth_home1)
             validator_genesis_init(sawtooth_home0, sawtooth_home1,
                                    identity_pub_key=walter.pub_key,
                                    role="network")
             processes.extend(start_validator(2, sawtooth_home0))
-            self.clients.append(Client("http://127.0.0.1:8082"))
+            self.clients.append(Client(NodeController.http_address(2)))
 
         with SetSawtoothHome(sawtooth_home1):
-            write_validator_config(sawtooth_home1,
-                                   roles={"network": "challenge"},
-                                   endpoint="tcp://127.0.0.1:8803",
-                                   bind=["network:tcp://127.0.0.1:{}".format(
-                                       8803),
-                                       "component:tcp://127.0.0.1:{}".format(
-                                           4007)],
-                                   peering="dynamic",
-                                   seeds=["tcp://127.0.0.1:8802"],
-                                   scheduler='parallel')
+            write_validator_config(
+                sawtooth_home1,
+                roles={"network": "challenge"},
+                endpoint="tcp://127.0.0.1:{}".format(8800 + 3),
+                bind=["network:tcp://127.0.0.1:{}".format(8800 + 3),
+                      "component:tcp://127.0.0.1:{}".format(4004 + 3)],
+                peering="dynamic",
+                seeds=["tcp://127.0.0.1:{}".format(8800 + 2)],
+                scheduler='parallel')
 
             processes.extend(start_validator(3, sawtooth_home1))
-
-            self.clients.append(Client("http://127.0.0.1:8083"))
+            self.clients.append(Client(NodeController.http_address(3)))
 
         with open(os.path.join(self.sawtooth_home[1], 'keys', 'validator.pub'),
                   'r') as infile:

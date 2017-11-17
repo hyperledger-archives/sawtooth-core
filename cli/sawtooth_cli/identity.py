@@ -108,7 +108,7 @@ def add_identity_parser(subparsers, parent_parser):
         '--url',
         type=str,
         help="the URL of a validator's REST API",
-        default='http://localhost:8080')
+        default='http://localhost:8008')
 
     create_parser.add_argument(
         '--wait',
@@ -139,7 +139,7 @@ def add_identity_parser(subparsers, parent_parser):
         '--url',
         type=str,
         help="the URL of a validator's REST API",
-        default='http://localhost:8080')
+        default='http://localhost:8008')
 
     list_parser.add_argument(
         '--format',
@@ -191,7 +191,7 @@ def add_identity_parser(subparsers, parent_parser):
         '--url',
         type=str,
         help="the URL of a validator's REST API",
-        default='http://localhost:8080')
+        default='http://localhost:8008')
 
     create_parser.add_argument(
         'name',
@@ -213,7 +213,7 @@ def add_identity_parser(subparsers, parent_parser):
         '--url',
         type=str,
         help="the URL of a validator's REST API",
-        default='http://localhost:8080')
+        default='http://localhost:8008')
 
     list_parser.add_argument(
         '--format',

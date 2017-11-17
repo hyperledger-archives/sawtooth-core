@@ -22,11 +22,11 @@ The ``rest_api.toml`` configuration file has the following options:
 - ``bind`` = ["`HOST:PORT`"]
 
   Sets the port and host for the REST API to run on.
-  Default: ``127.0.0.1:8080``. For example:
+  Default: ``127.0.0.1:8008``. For example:
 
   .. code-block:: none
 
-    bind = ["127.0.0.1:8080"]
+    bind = ["127.0.0.1:8008"]
 
 - ``connect`` = "`URL`"
 

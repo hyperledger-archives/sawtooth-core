@@ -102,7 +102,7 @@ def start_node(num,
                                 validator_cmd_func,
                                 poet_kwargs)
 
-    wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)], tries=20)
+    wait_for_rest_apis(['127.0.0.1:{}'.format(8008 + num)], tries=20)
 
     return [rest_api] + processors + [validator]
 
@@ -307,7 +307,7 @@ def start_processors(num, processor_func):
 def rest_api_cmd(num):
     return 'sawtooth-rest-api --connect {s} --bind 127.0.0.1:{p}'.format(
         s=connection_address(num),
-        p=(8080 + num)
+        p=(8008 + num)
     )
 
 def start_rest_api(num):
@@ -323,7 +323,7 @@ def connection_address(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)
 
 def http_address(num):
-    return 'http://127.0.0.1:{}'.format(8080 + num)
+    return 'http://127.0.0.1:{}'.format(8008 + num)
 
 def bind_component(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)

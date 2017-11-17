@@ -158,7 +158,7 @@ fn run_submit_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     }
 
     let target: String = match args.value_of("target")
-        .unwrap_or("http://localhost:8080")
+        .unwrap_or("http://localhost:8008")
         .parse() {
             Ok(s) => s,
             Err(_) => String::new()

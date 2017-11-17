@@ -221,7 +221,7 @@ container, run this ``curl`` command as root:
 
 .. code-block:: console
 
-  root@75b380886502:/# curl http://rest-api:8080/blocks
+  root@75b380886502:/# curl http://rest-api:8008/blocks
 
 
 To check connectivity from the host computer, open a new terminal window on your
@@ -229,7 +229,7 @@ host system and use this curl command:
 
 .. code-block:: console
 
-  $ curl http://localhost:8080/blocks
+  $ curl http://localhost:8008/blocks
 
 
 If the validator is running and reachable, the output for each command
@@ -253,7 +253,7 @@ should be similar to this example:
       }
     ],
     "head": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
-    "link": "http://rest-api:8080/blocks?head=119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+    "link": "http://rest-api:8008/blocks?head=119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
     "paging": {
       "start_index": 0,
       "total_count": 1
@@ -281,7 +281,7 @@ Run the following commands from the client container:
 .. code-block:: console
 
   $ intkey create_batch --count 10 --key-count 5
-  $ intkey load -f batches.intkey -U http://rest-api:8080
+  $ intkey load -f batches.intkey -U http://rest-api:8008
 
 The terminal window in which you ran the ``docker-compose`` command will begin
 logging output as the validator and IntegerKey transaction processor handle the
@@ -314,7 +314,7 @@ as generated above with this command:
 
 .. code-block:: console
 
-  $ sawtooth batch submit -f batches.intkey --url http://rest-api:8080
+  $ sawtooth batch submit -f batches.intkey --url http://rest-api:8008
 
 
 Viewing the Block Chain
@@ -335,7 +335,7 @@ Enter the command ``sawtooth block list`` to view the blocks stored by the state
 
 .. code-block:: console
 
-  $ sawtooth block list --url http://rest-api:8080
+  $ sawtooth block list --url http://rest-api:8008
 
 The output of the command will be similar to this:
 
@@ -355,7 +355,7 @@ of a block you want to get more info about, then paste it in place of
 
 .. code-block:: console
 
-  $ sawtooth block show --url http://rest-api:8080 {BLOCK_ID}
+  $ sawtooth block show --url http://rest-api:8008 {BLOCK_ID}
 
 The output of this command includes all data stored under that block, and can be
 quite long. It should look something like this:
@@ -409,7 +409,7 @@ Use the command ``sawtooth state list`` to list the nodes in the Merkle tree:
 
 .. code-block:: console
 
-  $ sawtooth state list --url http://rest-api:8080
+  $ sawtooth state list --url http://rest-api:8008
 
 The output of the command will be similar to this truncated list:
 
@@ -436,7 +436,7 @@ in the following ``sawtooth state show`` command:
 
 .. code-block:: console
 
-  $ sawtooth state show --url http://rest-api:8080 {STATE_ADDRESS}
+  $ sawtooth state show --url http://rest-api:8008 {STATE_ADDRESS}
 
 
 The output of the command will include both the bytes stored at that address
@@ -461,7 +461,7 @@ Enter the following command from the terminal window for the client container:
 
 .. code-block:: console
 
-  $ curl http://rest-api:8080/blocks
+  $ curl http://rest-api:8008/blocks
 
 
 From the Host Operating System
@@ -472,7 +472,7 @@ Enter the following command from the terminal window for your host system:
 
 .. code-block:: console
 
-  $ curl http://localhost:8080/blocks
+  $ curl http://localhost:8008/blocks
 
 
 Connecting to Each Container
@@ -530,7 +530,7 @@ The REST API Container
 ----------------------
 
 * Runs the REST API
-* Available to the client container and host on TCP port 8080
+* Available to the client container and host on TCP port 8008
 * Container name: ``sawtooth-rest-api-default``
 
 Log into this container by running this command from the host computer's
@@ -546,7 +546,7 @@ To see which components are running, run this command from the container:
 
   $ ps --pid 1 fw
     PID TTY      STAT   TIME COMMAND
-    1 ?        Ssl    0:02 /usr/bin/python3 /usr/bin/sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8080
+    1 ?        Ssl    0:02 /usr/bin/python3 /usr/bin/sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8008
 
 
 The Settings Transaction Processor Container
@@ -675,10 +675,10 @@ Then run the following command from the validator container:
 .. code-block:: console
 
   $ sawset proposal create \
-    --url http://rest-api:8080 \
+    --url http://rest-api:8008 \
     --key /root/.sawtooth/keys/my_key.priv \
     sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
-  $ sawset settings list --url http://rest-api:8080
+  $ sawset settings list --url http://rest-api:8008
 
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,

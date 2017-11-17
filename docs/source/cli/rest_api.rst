@@ -33,7 +33,7 @@ sawtooth-rest-api
 
 The ``sawtooth-rest-api`` command starts the REST API and connects to
 the validator. Options specify the bind address for the host and port
-(by default, ``http://localhost:8080``) and the TCP address where the
+(by default, ``http://localhost:8008``) and the TCP address where the
 validator is running (the default is ``tcp://localhost:4004``). An
 optional timeout value configures how long the REST API will wait for
 a response for the validator.
