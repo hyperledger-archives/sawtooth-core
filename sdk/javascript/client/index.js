@@ -18,5 +18,5 @@
 'use strict'
 
 module.exports = {
-  signer: require('./signer'),
+  signer: require('./signer')
 }

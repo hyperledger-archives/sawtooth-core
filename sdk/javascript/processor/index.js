@@ -166,7 +166,6 @@ class TransactionProcessor {
             })
         })
       })
-
     })
 
     process.on('SIGINT', () => this._handleShutdown())
@@ -180,7 +179,6 @@ class TransactionProcessor {
     process.exit()
   }
 }
-
 
 module.exports = {
   TransactionProcessor
