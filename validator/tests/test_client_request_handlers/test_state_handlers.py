@@ -179,7 +179,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of OK
-            - the state_root from block 'b' * 127 + '1'
+            - the state_root from block 'bbb...1'
             - a paging response showing all 1 resources returned
             - a list of entries with 1 item
             - that the list contains instances of ClientStateListResponse.Entry
@@ -206,7 +206,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of NO_RESOURCE
-            - the state_root from block 'b' * 127 + '1'
+            - the state_root from block 'bbb...1'
             - that paging and entries are missing
         """
         response = self.make_request(address='c', state_root=self.roots[1])
@@ -348,7 +348,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of OK
-            - the state_root of block 'b' * 127 + '1'
+            - the state_root of block 'bbb...1'
             - a paging response with:
                 * an empty next_id
                 * a previous_id of 'a'

@@ -34,7 +34,7 @@ def _increment_key(key, offset=1):
         return chr(ord(key) + offset)
 
 def _make_mock_transaction(base_id='id', payload='payload'):
-    txn_id = 't-' + base_id
+    txn_id = 'c' * (128 - len(base_id)) + base_id
     header = TransactionHeader(
         batcher_public_key='public_key-' + base_id,
         family_name='family',
@@ -48,7 +48,7 @@ def _make_mock_transaction(base_id='id', payload='payload'):
         payload=payload.encode())
 
 def make_mock_batch(base_id='id'):
-    batch_id = 'b-' + base_id
+    batch_id = 'a' * (128 - len(base_id)) + base_id
     txn = _make_mock_transaction(base_id)
 
     header = BatchHeader(
@@ -64,9 +64,9 @@ def make_mock_batch(base_id='id'):
 class MockBlockStore(BlockStore):
     """
     Creates a block store with a preseeded chain of blocks.
-    With defaults, creates three blocks with ids ranging from 'b' * 127 + '0' to 'b' * 127 + '2',
-    and a single batch, and single transaction in each, with ids prefixed by
-    'b-' or 't-'. Using the optional root parameter for add_block, it is
+    With defaults, creates three blocks with ids ranging from 'bbb...0' to 'bbb...2',
+    with a single batch, and single transaction in each, with ids prefixed by
+    'aaa...'' or 'ccc...'. Using the optional root parameter for add_block, it is
     possible to save meaningful state_root_hashes to a block.
     """
     def __init__(self, size=3, start='0'):
@@ -143,17 +143,17 @@ def make_store_and_tracker(size=3):
         * tracker - a batch tracker attached to the store, with one pending batch
 
     With defaults, the three block ids in the store will be:
-        * 'b' * 127 + '0', 'b' * 127 + '1', B-2'
+        * 'bbb...0', 'bbb...1', 'bbb...2'
     The three batch ids in the store will be:
-        * 'b-0', 'b-1', b-2'
+        * 'aaa...0', 'aaa...1', 'aaa...2'
     The pending batch in the tracker will be:
-        * 'b-3'
+        * 'aaa...3'
     """
     store = MockBlockStore(size=size)
     tracker = BatchTracker(store)
-    tracker.notify_batch_pending(make_mock_batch('pending'))
-    tracker.notify_batch_pending(make_mock_batch('invalid'))
-    tracker.notify_txn_invalid('t-invalid', 'error message', b'error data')
+    tracker.notify_batch_pending(make_mock_batch('d'))
+    tracker.notify_batch_pending(make_mock_batch('f'))
+    tracker.notify_txn_invalid('c' * 127 + 'f', 'error message', b'error data')
 
     return store, tracker
 

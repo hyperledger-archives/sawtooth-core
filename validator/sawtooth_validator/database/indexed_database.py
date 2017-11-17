@@ -135,7 +135,10 @@ class IndexedDatabase(database.Database):
                 read_key = key.encode()
                 # If we're looking at an index, check the index first
                 if index_cursor:
-                    read_key = index_cursor.get(read_key)
+                    try:
+                        read_key = index_cursor.get(read_key)
+                    except lmdb.BadValsizeError:
+                        raise KeyError("Invalid key: %s" % read_key)
                     if not read_key:
                         continue
 
