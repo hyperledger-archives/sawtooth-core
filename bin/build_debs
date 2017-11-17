@@ -68,6 +68,8 @@ main() {
 
     build_pkg "families/identity"
 
+    build_pkg "families/block_info"
+
     build_pkg "rest_api"
 
     build_pkg "sdk/examples/intkey_python"

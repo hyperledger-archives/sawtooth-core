@@ -22,7 +22,19 @@ import pkg_resources
 from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
+from sawtooth_sdk.processor.log import init_console_logging
+from sawtooth_sdk.processor.log import log_configuration
+from sawtooth_sdk.processor.config import get_log_config
+from sawtooth_sdk.processor.config import get_log_dir
+from sawtooth_sdk.processor.config import get_config_dir
 from sawtooth_block_info.processor.handler import BlockInfoTransactionHandler
+from sawtooth_block_info.processor.config.block_info import BlockInfoConfig
+from sawtooth_block_info.processor.config.block_info import \
+    load_default_block_info_config
+from sawtooth_block_info.processor.config.block_info import \
+    load_toml_block_info_config
+from sawtooth_block_info.processor.config.block_info import \
+    merge_block_info_config
 
 
 DISTRIBUTION_NAME = 'sawtooth-block-info'
@@ -55,10 +67,23 @@ def create_console_handler(verbose_level):
     return clog
 
 
-def setup_loggers(verbose_level):
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(create_console_handler(verbose_level))
+def setup_loggers(verbose_level, processor):
+    log_config = get_log_config(filename="block_info_log_config.toml")
+
+    # If no toml, try loading yaml
+    if log_config is None:
+        log_config = get_log_config(filename="block_info_log_config.yaml")
+
+    if log_config is not None:
+        log_configuration(log_config=log_config)
+    else:
+        log_dir = get_log_dir()
+        # use the transaction processor zmq identity for filename
+        log_configuration(
+            log_dir=log_dir,
+            name="block-info-" + str(processor.zmq_id)[2:-1])
+
+    init_console_logging(verbose_level=verbose_level)
 
 
 def create_parser(prog_name):
@@ -92,6 +117,21 @@ def create_parser(prog_name):
     return parser
 
 
+def load_block_info_config(first_config):
+    default_block_info_config = \
+        load_default_block_info_config()
+    conf_file = os.path.join(get_config_dir(), 'block_info.toml')
+
+    toml_config = load_toml_block_info_config(conf_file)
+
+    return merge_block_info_config(
+        configs=[first_config, toml_config, default_block_info_config])
+
+
+def create_block_info_config(args):
+    return BlockInfoConfig(connect=args.connect)
+
+
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
          with_loggers=True):
     if args is None:
@@ -99,14 +139,16 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
 
+    arg_config = create_block_info_config(args)
+    block_info_config = load_block_info_config(arg_config)
+    processor = TransactionProcessor(url=block_info_config.connect)
+
     if with_loggers is True:
         if args.verbose is None:
             verbose_level = 0
         else:
             verbose_level = args.verbose
-        setup_loggers(verbose_level=verbose_level)
-
-    processor = TransactionProcessor(url=args.connect)
+        setup_loggers(verbose_level=verbose_level, processor=processor)
 
     handler = BlockInfoTransactionHandler()
 
