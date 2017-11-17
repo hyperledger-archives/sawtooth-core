@@ -204,7 +204,7 @@ class WorkloadGenerator(object):
 
         try:
             result = requests.post(
-                url + '/batch_status', data=data, headers=headers)
+                url + '/batch_statuses', data=data, headers=headers)
 
             code, json_result = \
                 result.status_code, result.json()

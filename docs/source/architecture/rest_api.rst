@@ -244,7 +244,7 @@ only once the batches are committed.
 
    * **/batches** - accepts a ``POST`` request with a body of a binary
      BatchList of batches to be submitted
-   * **/batch_status** - fetches the committed status of one or more batches
+   * **/batch_statuses** - fetches the committed status of one or more batches
 
      *Example batch status response:*
 

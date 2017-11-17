@@ -61,7 +61,7 @@ class IntkeyClient(RestClient):
         while time_waited < self.wait:
 
             res = self._get(
-                '/batch_status',
+                '/batch_statuses',
                 id=','.join(batch_ids), wait=(self.wait - time_waited))
 
             if 'PENDING' not in [data['status'] for data in res['data']]:

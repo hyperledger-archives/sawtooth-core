@@ -126,7 +126,7 @@ class RouteHandler(object):
         Response:
             status:
                  - 202: Batches submitted and pending
-            link: /batches or /batch_status link for submitted batches
+            link: /batches or /batch_statuses link for submitted batches
 
         """
         timer_ctx = self._post_batches_total_time.time()
@@ -170,7 +170,7 @@ class RouteHandler(object):
         id_string = ','.join(b.header_signature for b in batch_list.batches)
 
         status = 202
-        link = self._build_url(request, path='/batch_status', id=id_string)
+        link = self._build_url(request, path='/batch_statuses', id=id_string)
 
         retval = self._wrap_response(
             request,
@@ -191,7 +191,7 @@ class RouteHandler(object):
 
         Response:
             data: A JSON object, with batch ids as keys, and statuses as values
-            link: The /batch_status link queried (if GET)
+            link: The /batch_statuses link queried (if GET)
         """
         error_traps = [error_handlers.StatusResponseMissing]
 
