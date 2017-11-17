@@ -316,7 +316,6 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
             public_key=public_key,
-            payload=payload,
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
@@ -352,7 +351,6 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
             public_key=public_key,
-            payload=payload,
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
@@ -365,7 +363,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         permission_verifer = MockPermissionVerifier()
         gossip = MockGossip()
         handler = AuthorizationChallengeSubmitHandler(
-            network, permission_verifer, gossip)
+            network, permission_verifer, gossip, {"connection_id": payload})
         handler_status = handler.handle(
             "connection_id",
             auth_challenge_submit.SerializeToString())
@@ -388,7 +386,6 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
             public_key="other",
-            payload=payload,
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
@@ -401,7 +398,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         permission_verifer = MockPermissionVerifier()
         gossip = MockGossip()
         handler = AuthorizationChallengeSubmitHandler(
-            network, permission_verifer, gossip)
+            network, permission_verifer, gossip, {"connection_id": payload})
         handler_status = handler.handle(
             "connection_id",
             auth_challenge_submit.SerializeToString())
@@ -424,7 +421,6 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
             public_key=public_key,
-            payload=payload,
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
@@ -437,7 +433,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         permission_verifer = MockPermissionVerifier(allow=False)
         gossip = MockGossip()
         handler = AuthorizationChallengeSubmitHandler(
-            network, permission_verifer, gossip)
+            network, permission_verifer, gossip, {"connection_id": payload})
         handler_status = handler.handle(
             "connection_id",
             auth_challenge_submit.SerializeToString())
