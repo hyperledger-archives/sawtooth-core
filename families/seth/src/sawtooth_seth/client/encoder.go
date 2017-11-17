@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	. "sawtooth_sdk/client"
 	"sawtooth_sdk/protobuf/batch_pb2"
 	"sawtooth_sdk/protobuf/transaction_pb2"
 	"time"
