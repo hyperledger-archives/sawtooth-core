@@ -35,11 +35,11 @@ class TestPeerRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of OK
-            - a head_id of 'b' * 127 + '2' (the latest)
+            - a head_id of 'bbb...2' (the latest)
             - the default paging response, showing all 3 resources returned
             - a list of blocks with 3 items
             - the items are instances of Block
-            - The first item has a header_signature of 'b' * 127 + '2'
+            - The first item has a header_signature of 'bbb...2'
         """
         response = self.make_request()
 
