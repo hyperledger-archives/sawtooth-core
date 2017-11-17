@@ -285,7 +285,7 @@ class BatchSubmitter:
     def _post_batch(self, batch):
         headers = {'Content-Type': 'application/octet-stream'}
         response = self._query_rest_api(
-            '/batches?wait={}'.format(self.timeout),
+            '/batches',
             data=batch,
             headers=headers,
             expected_code=202)

@@ -29,7 +29,6 @@ paths:
           schema:
             $ref: "#/definitions/BatchList"
           required: true
-        - $ref: "#/parameters/wait"
       responses:
         202:
           description: Batches submitted for validation, but not yet committed
