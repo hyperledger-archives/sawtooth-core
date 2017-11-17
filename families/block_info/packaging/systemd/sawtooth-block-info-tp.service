@@ -5,8 +5,7 @@ After=network.target
 [Service]
 User=sawtooth
 Group=sawtooth
-EnvironmentFile=-/etc/default/sawtooth-block-info-tp
-ExecStart=/usr/bin/block-info-tp $SAWTOOTH_BLOCK_INFO_TP_ARGS
+ExecStart=/usr/bin/block-info-tp
 Restart=on-failure
 
 [Install]

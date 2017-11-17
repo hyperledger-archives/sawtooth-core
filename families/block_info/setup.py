@@ -23,10 +23,6 @@ from setuptools import setup, find_packages
 
 data_files = []
 
-if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default',
-                       ['packaging/systemd/sawtooth-block-info-tp']))
-
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
                        ['packaging/systemd/sawtooth-block-info-tp.service']))
