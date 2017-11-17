@@ -101,7 +101,7 @@ RUN apt-get update && apt-get install -y -q \
  && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 4004/tcp
-EXPOSE 8080
+EXPOSE 8008
 
 RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /var/log/sawtooth \

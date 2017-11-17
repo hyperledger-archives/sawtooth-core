@@ -32,7 +32,7 @@ from sawtooth_xo.xo_exceptions import XoException
 DISTRIBUTION_NAME = 'sawtooth-xo'
 
 
-DEFAULT_URL = 'http://127.0.0.1:8080'
+DEFAULT_URL = 'http://127.0.0.1:8008'
 
 
 def create_console_handler(verbose_level):

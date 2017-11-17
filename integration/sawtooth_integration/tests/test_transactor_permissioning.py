@@ -30,7 +30,7 @@ class TestTransactorPermissioning(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        REST_API = "rest-api:8080"
+        REST_API = "rest-api:8008"
         wait_for_rest_apis([REST_API])
         cls.REST_ENDPOINT = "http://" + REST_API
 

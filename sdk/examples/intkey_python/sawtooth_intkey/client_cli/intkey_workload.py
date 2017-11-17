@@ -227,7 +227,7 @@ def add_workload_parser(subparsers, parent_parser):
     parser.add_argument('-u', '--urls',
                         help='comma separated urls of the REST API to connect '
                         'to.',
-                        default="http://127.0.0.1:8080")
+                        default="http://127.0.0.1:8008")
     parser.add_argument('--auth-user',
                         type=str,
                         help='username for authentication '

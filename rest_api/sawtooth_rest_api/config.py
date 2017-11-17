@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 
 def load_default_rest_api_config():
     return RestApiConfig(
-        bind=["127.0.0.1:8080"],
+        bind=["127.0.0.1:8008"],
         connect="tcp://localhost:4004",
         timeout=300)
 

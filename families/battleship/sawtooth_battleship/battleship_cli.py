@@ -549,7 +549,7 @@ def load_config():
     key_dir = os.path.join(home, ".sawtooth", "keys")
 
     config = configparser.SafeConfigParser()
-    config.set('DEFAULT', 'url', 'http://127.0.0.1:8080')
+    config.set('DEFAULT', 'url', 'http://127.0.0.1:8008')
     config.set('DEFAULT', 'key_dir', key_dir)
     config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.priv')
     config.set('DEFAULT', 'username', real_user)

@@ -114,7 +114,7 @@ def add_load_parser(subparsers, parent_parser):
         '-U', '--url',
         type=str,
         help='url for the REST API',
-        default='http://localhost:8080')
+        default='http://localhost:8008')
 
     parser.add_argument(
         '--auth-user',

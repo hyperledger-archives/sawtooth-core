@@ -26,7 +26,7 @@ from sawtooth_cli.exceptions import CliException
 
 class RestClient(object):
     def __init__(self, base_url=None, user=None):
-        self._base_url = base_url or 'http://localhost:8080'
+        self._base_url = base_url or 'http://localhost:8008'
 
         if user:
             b64_string = b64encode(user.encode()).decode()

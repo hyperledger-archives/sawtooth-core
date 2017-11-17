@@ -16,7 +16,7 @@
  */
 
 
-var ws = new WebSocket('ws:rest-api:8080/subscriptions');
+var ws = new WebSocket('ws:rest-api:8008/subscriptions');
 console.log("WebSocket created");
 
 isEventGood = function(event) {

@@ -3,7 +3,7 @@
 #
 
 # The port and host for the api to run on
-#   bind = ["127.0.0.1:8080"]
+#   bind = ["127.0.0.1:8008"]
 
 # The url to connect to a running Validator
 #   connect = "tcp://localhost:4004"

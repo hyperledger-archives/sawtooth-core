@@ -57,7 +57,7 @@ be found `here <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/launch-market
     to add an inbound rule allowing TCP traffic on port 4004.
 
   * If you'd like to access the REST API remotely, you'll need to add an
-    inbound rule allowing TCP traffic on port 8080.
+    inbound rule allowing TCP traffic on port 8008.
 
   Please see Amazon's `Security Groups
   <http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_SecurityGroups.html#AddRemoveRules>`_
@@ -296,7 +296,7 @@ Enter the following command from a terminal window:
 
 .. code-block:: console
 
-  $ curl http://localhost:8080/blocks
+  $ curl http://localhost:8008/blocks
 
 
 Configuring the List of Transaction Families

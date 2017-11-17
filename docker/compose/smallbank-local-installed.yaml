@@ -55,9 +55,9 @@ services:
     image: sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-default
     expose:
-      - 8080
+      - 8008
     ports:
-      - "8080:8080"
+      - "8008:8008"
     depends_on:
       - validator
-    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8080
+    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8008

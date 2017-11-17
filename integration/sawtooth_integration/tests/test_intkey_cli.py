@@ -27,7 +27,7 @@ from sawtooth_integration.tests.integration_tools import RestClient
 LOGGER = logging.getLogger(__name__)
 
 
-URL = 'http://rest-api:8080'
+URL = 'http://rest-api:8008'
 WAIT = 300
 
 
