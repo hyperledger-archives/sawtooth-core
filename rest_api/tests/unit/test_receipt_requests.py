@@ -126,7 +126,7 @@ class ReceiptGetRequestTests(BaseApiTest):
         self.assert_receipts_match(receipts, response['data'])
 
     @unittest_run_loop
-    async def test_batch_status_as_post(self):
+    async def test_batch_statuses_as_post(self):
         """Verifies a POST to /receipts with many ids works properly.
 
         It will receive a Protobuf response with receipts with ids:

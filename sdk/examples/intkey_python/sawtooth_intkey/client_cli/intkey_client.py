@@ -91,7 +91,7 @@ class IntkeyClient:
     def _get_status(self, batch_id, wait):
         try:
             result = self._send_request(
-                'batch_status?id={}&wait={}'.format(batch_id, wait),)
+                'batch_statuses?id={}&wait={}'.format(batch_id, wait),)
             return yaml.safe_load(result)['data'][0]['status']
         except BaseException as err:
             raise IntkeyClientException(err)

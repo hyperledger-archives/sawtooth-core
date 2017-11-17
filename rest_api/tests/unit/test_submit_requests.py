@@ -46,7 +46,7 @@ class PostBatchTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 202
             - no data property
-            - a link property that ends in '/batch_status?id=a'
+            - a link property that ends in '/batch_statuses?id=a'
         """
         batches = Mocks.make_batches('a')
         self.connection.preset_response()
@@ -57,7 +57,7 @@ class PostBatchTests(BaseApiTest):
 
         response = await request.json()
         self.assertNotIn('data', response)
-        self.assert_has_valid_link(response, '/batch_status?id=a')
+        self.assert_has_valid_link(response, '/batch_statuses?id=a')
 
     @unittest_run_loop
     async def test_post_batch_with_validator_error(self):
@@ -129,7 +129,7 @@ class PostBatchTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 202
             - no data property
-            - a link property that ends in '/batch_status?id=a,b,c'
+            - a link property that ends in '/batch_statuses?id=a,b,c'
         """
         batches = Mocks.make_batches('a', 'b', 'c')
         self.connection.preset_response()
@@ -140,7 +140,7 @@ class PostBatchTests(BaseApiTest):
 
         response = await request.json()
         self.assertNotIn('data', response)
-        self.assert_has_valid_link(response, '/batch_status?id=a,b,c')
+        self.assert_has_valid_link(response, '/batch_statuses?id=a,b,c')
 
     @unittest_run_loop
     async def test_post_no_batches(self):
@@ -166,11 +166,11 @@ class ClientBatchStatusTests(BaseApiTest):
             client_batch_submit_pb2.ClientBatchStatusResponse)
 
         handlers = self.build_handlers(self.loop, self.connection)
-        return self.build_app(self.loop, '/batch_status', handlers.list_statuses)
+        return self.build_app(self.loop, '/batch_statuses', handlers.list_statuses)
 
     @unittest_run_loop
-    async def test_batch_status_with_one_id(self):
-        """Verifies a GET /batch_status with one id works properly.
+    async def test_batch_statuses_with_one_id(self):
+        """Verifies a GET /batch_statuses with one id works properly.
 
         It will receive a Protobuf response with:
             - batch statuses of {batch_id: 'pending',  status: PENDING}
@@ -180,22 +180,22 @@ class ClientBatchStatusTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - a link property that ends in '/batch_status?id=pending'
+            - a link property that ends in '/batch_statuses?id=pending'
             - a data property matching the batch statuses received
         """
         statuses = [ClientBatchStatus(
             batch_id='pending', status=ClientBatchStatus.PENDING)]
         self.connection.preset_response(batch_statuses=statuses)
 
-        response = await self.get_assert_200('/batch_status?id=pending')
+        response = await self.get_assert_200('/batch_statuses?id=pending')
         self.connection.assert_valid_request_sent(batch_ids=['pending'])
 
-        self.assert_has_valid_link(response, '/batch_status?id=pending')
+        self.assert_has_valid_link(response, '/batch_statuses?id=pending')
         self.assert_statuses_match(statuses, response['data'])
 
     @unittest_run_loop
-    async def test_batch_status_with_invalid_data(self):
-        """Verifies a GET /batch_status with fetched invalid data works.
+    async def test_batch_statuses_with_invalid_data(self):
+        """Verifies a GET /batch_statuses with fetched invalid data works.
 
         It will receive a Protobuf response with:
             - batch_id: 'bad-batch'
@@ -209,7 +209,7 @@ class ClientBatchStatusTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - a link property that ends in '/batch_status?id=bad'
+            - a link property that ends in '/batch_statuses?id=bad'
             - a data property matching the batch statuses received
         """
         statuses = [ClientBatchStatus(
@@ -221,15 +221,15 @@ class ClientBatchStatusTests(BaseApiTest):
                 extended_data=b'error data')])]
         self.connection.preset_response(batch_statuses=statuses)
 
-        response = await self.get_assert_200('/batch_status?id=bad')
+        response = await self.get_assert_200('/batch_statuses?id=bad')
         self.connection.assert_valid_request_sent(batch_ids=['bad'])
 
-        self.assert_has_valid_link(response, '/batch_status?id=bad')
+        self.assert_has_valid_link(response, '/batch_statuses?id=bad')
         self.assert_statuses_match(statuses, response['data'])
 
     @unittest_run_loop
-    async def test_batch_status_with_validator_error(self):
-        """Verifies a GET /batch_status with a validator error breaks properly.
+    async def test_batch_statuses_with_validator_error(self):
+        """Verifies a GET /batch_statuses with a validator error breaks properly.
 
         It will receive a Protobuf response with:
             - a status of INTERNAL_ERROR
@@ -240,13 +240,13 @@ class ClientBatchStatusTests(BaseApiTest):
         """
         self.connection.preset_response(self.status.INTERNAL_ERROR)
         response = await self.get_assert_status(
-            '/batch_status?id=pending', 500)
+            '/batch_statuses?id=pending', 500)
 
         self.assert_has_valid_error(response, 10)
 
     @unittest_run_loop
-    async def test_batch_status_with_missing_statuses(self):
-        """Verifies a GET /batch_status with no statuses breaks properly.
+    async def test_batch_statuses_with_missing_statuses(self):
+        """Verifies a GET /batch_statuses with no statuses breaks properly.
 
         It will receive a Protobuf response with:
             - a status of NO_RESOURCE
@@ -257,13 +257,13 @@ class ClientBatchStatusTests(BaseApiTest):
         """
         self.connection.preset_response(self.status.NO_RESOURCE)
         response = await self.get_assert_status(
-            '/batch_status?id=pending', 500)
+            '/batch_statuses?id=pending', 500)
 
         self.assert_has_valid_error(response, 27)
 
     @unittest_run_loop
-    async def test_batch_status_with_wait(self):
-        """Verifies a GET /batch_status with a wait set works properly.
+    async def test_batch_statuses_with_wait(self):
+        """Verifies a GET /batch_statuses with a wait set works properly.
 
         It will receive a Protobuf response with:
             - batch statuses of {batch_id: 'pending', status: COMMITTED}
@@ -275,25 +275,25 @@ class ClientBatchStatusTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - a link property that ends in '/batch_status?id=pending&wait'
+            - a link property that ends in '/batch_statuses?id=pending&wait'
             - a data property matching the batch statuses received
         """
         statuses = [ClientBatchStatus(
             batch_id='pending', status=ClientBatchStatus.COMMITTED)]
         self.connection.preset_response(batch_statuses=statuses)
 
-        response = await self.get_assert_200('/batch_status?id=pending&wait')
+        response = await self.get_assert_200('/batch_statuses?id=pending&wait')
         self.connection.assert_valid_request_sent(
             batch_ids=['pending'],
             wait=True,
             timeout=4)
 
-        self.assert_has_valid_link(response, '/batch_status?id=pending&wait')
+        self.assert_has_valid_link(response, '/batch_statuses?id=pending&wait')
         self.assert_statuses_match(statuses, response['data'])
 
     @unittest_run_loop
-    async def test_batch_status_with_many_ids(self):
-        """Verifies a GET /batch_status with many ids works properly.
+    async def test_batch_statuses_with_many_ids(self):
+        """Verifies a GET /batch_statuses with many ids works properly.
 
         It will receive a Protobuf response with:
             - batch statuses of:
@@ -306,7 +306,7 @@ class ClientBatchStatusTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - link property ending in '/batch_status?id=committed,unknown,bad'
+            - link property ending in '/batch_statuses?id=committed,unknown,bad'
             - a data property matching the batch statuses received
         """
         statuses = [
@@ -319,30 +319,30 @@ class ClientBatchStatusTests(BaseApiTest):
         self.connection.preset_response(batch_statuses=statuses)
 
         response = await self.get_assert_200(
-            '/batch_status?id=committed,unknown,bad')
+            '/batch_statuses?id=committed,unknown,bad')
         self.connection.assert_valid_request_sent(
             batch_ids=['committed', 'unknown', 'bad'])
 
         self.assert_has_valid_link(
             response,
-            '/batch_status?id=committed,unknown,bad')
+            '/batch_statuses?id=committed,unknown,bad')
         self.assert_statuses_match(statuses, response['data'])
 
     @unittest_run_loop
-    async def test_batch_status_with_no_id(self):
-        """Verifies a GET /batch_status with no id breaks properly.
+    async def test_batch_statuses_with_no_id(self):
+        """Verifies a GET /batch_statuses with no id breaks properly.
 
         It should send back a JSON response with:
             - a response status of 400
             - an error property with a code of 66
         """
-        response = await self.get_assert_status('/batch_status', 400)
+        response = await self.get_assert_status('/batch_statuses', 400)
 
         self.assert_has_valid_error(response, 66)
 
     @unittest_run_loop
-    async def test_batch_status_as_post(self):
-        """Verifies a POST to /batch_status works properly.
+    async def test_batch_statuses_as_post(self):
+        """Verifies a POST to /batch_statuses works properly.
 
         It will receive a Protobuf response with:
             - batch statuses of:
@@ -368,7 +368,7 @@ class ClientBatchStatusTests(BaseApiTest):
         self.connection.preset_response(batch_statuses=statuses)
 
         request = await self.client.post(
-            '/batch_status',
+            '/batch_statuses',
             data=json.dumps(['committed', 'pending', 'bad']).encode(),
             headers={'content-type': 'application/json'})
         self.connection.assert_valid_request_sent(
@@ -380,15 +380,15 @@ class ClientBatchStatusTests(BaseApiTest):
         self.assert_statuses_match(statuses, response['data'])
 
     @unittest_run_loop
-    async def test_batch_status_wrong_post_type(self):
-        """Verifies a bad POST to /batch_status breaks properly.
+    async def test_batch_statuses_wrong_post_type(self):
+        """Verifies a bad POST to /batch_statuses breaks properly.
 
         It should send back a JSON response with:
             - a response status of 400
             - an error property with a code of 43
         """
         request = await self.client.post(
-            '/batch_status',
+            '/batch_statuses',
             data=json.dumps(['a', 'b', 'c']).encode(),
             headers={'content-type': 'application/octet-stream'})
         self.assertEqual(400, request.status)
@@ -397,15 +397,15 @@ class ClientBatchStatusTests(BaseApiTest):
         self.assert_has_valid_error(response, 43)
 
     @unittest_run_loop
-    async def test_batch_status_as_bad_post(self):
-        """Verifies an empty POST to /batch_status breaks properly.
+    async def test_batch_statuses_as_bad_post(self):
+        """Verifies an empty POST to /batch_statuses breaks properly.
 
         It should send back a JSON response with:
             - a response status of 400
             - an error property with a code of 46
         """
         request = await self.client.post(
-            '/batch_status',
+            '/batch_statuses',
             data=json.dumps('bad body').encode(),
             headers={'content-type': 'application/json'})
         self.assertEqual(400, request.status)
@@ -414,15 +414,15 @@ class ClientBatchStatusTests(BaseApiTest):
         self.assert_has_valid_error(response, 46)
 
     @unittest_run_loop
-    async def test_batch_status_as_empty_post(self):
-        """Verifies an empty POST to /batch_status breaks properly.
+    async def test_batch_statuses_as_empty_post(self):
+        """Verifies an empty POST to /batch_statuses breaks properly.
 
         It should send back a JSON response with:
             - a response status of 400
             - an error property with a code of 46
         """
         request = await self.client.post(
-            '/batch_status',
+            '/batch_statuses',
             data=json.dumps([]).encode(),
             headers={'content-type': 'application/json'})
         self.assertEqual(400, request.status)

@@ -41,7 +41,7 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
 
         Expects to find:
             - a response status of OK
-            - no batch_statusus
+            - no batch_statuses
         """
         response = self.make_request(batches=[make_mock_batch('new')])
 
@@ -69,7 +69,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
             store=store,
             tracker=tracker)
 
-    def test_batch_status_in_store(self):
+    def test_batch_statuses_in_store(self):
         """Verifies requests for status of a batch in the block store work.
 
         Queries the default mock block store with three blocks/batches:
@@ -88,7 +88,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(response.batch_statuses[0].status,
                          ClientBatchStatus.COMMITTED)
 
-    def test_batch_status_bad_request(self):
+    def test_batch_statuses_bad_request(self):
         """Verifies bad requests for status of a batch break properly.
 
         Expects to find:
@@ -98,7 +98,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.INTERNAL_ERROR, response.status)
 
-    def test_batch_status_when_empty(self):
+    def test_batch_statuses_when_empty(self):
         """Verifies requests for batch statuses with no ids break properly.
 
         Expects to find:
@@ -110,7 +110,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.batch_statuses)
 
-    def test_invalid_batch_status(self):
+    def test_invalid_batch_statuses(self):
         """Verifies batch status requests marked INVALID by the tracker work.
 
         Queries the default mock batch tracker with invalid batch ids of:
@@ -137,7 +137,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(invalid_txn.message, 'error message')
         self.assertEqual(invalid_txn.extended_data, b'error data')
 
-    def test_pending_batch_status(self):
+    def test_pending_batch_statuses(self):
         """Verifies batch status requests marked PENDING by the tracker work.
 
         Queries the default mock batch tracker with pending batch ids of:
@@ -154,7 +154,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(response.batch_statuses[0].status,
                          ClientBatchStatus.PENDING)
 
-    def test_batch_status_when_missing(self):
+    def test_batch_statuses_when_missing(self):
         """Verifies requests for status of a batch that is not found work.
 
         Expects to find:
@@ -168,7 +168,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(response.batch_statuses[0].status,
                          ClientBatchStatus.UNKNOWN)
 
-    def test_batch_status_for_many_batches(self):
+    def test_batch_statuses_for_many_batches(self):
         """Verifies requests for status of many batches work properly.
 
         Queries the default mock block store with three blocks/batches:
@@ -199,7 +199,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(response.batch_statuses[3].status,
                          ClientBatchStatus.UNKNOWN)
 
-    def test_batch_status_with_wait(self):
+    def test_batch_statuses_with_wait(self):
         """Verifies requests for status that wait for commit work properly.
 
         Queries the default mock block store which will have no block with
@@ -230,7 +230,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(response.batch_statuses[0].status,
                          ClientBatchStatus.COMMITTED)
 
-    def test_batch_status_with_committed_wait(self):
+    def test_batch_statuses_with_committed_wait(self):
         """Verifies requests for status that wait for commit work properly,
         when the batch is already committed.
 

@@ -70,7 +70,7 @@ class RestClient(object):
         Returns:
             list of dict: Dicts with 'id' and 'status' properties
         """
-        return self._post('/batch_status', batch_ids, wait=wait)['data']
+        return self._post('/batch_statuses', batch_ids, wait=wait)['data']
 
     def send_batches(self, batch_list):
         """Sends a list of batches to the validator.

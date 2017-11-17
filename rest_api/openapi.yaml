@@ -18,7 +18,7 @@ paths:
         file and submits it to the validator to be committed.
 
         The API will return immediately with a status of `202`. There will be
-        no `data` object, only a `link` to a `/batch_status` endpoint to be
+        no `data` object, only a `link` to a `/batch_statuses` endpoint to be
         polled to check the status of submitted batches.
       consumes:
         - application/octet-stream
@@ -100,7 +100,7 @@ paths:
         503:
           $ref: "#/responses/503ServiceUnavailable"
 
-  /batch_status:
+  /batch_statuses:
     get:
       summary: Fetches the committed statuses for a set of batches
       description: |
@@ -144,7 +144,7 @@ paths:
     post:
       summary: Fetches the committed statuses for a set of batches
       description: |
-        Identical to `GET /batch_status`, but takes ids of batches as a JSON
+        Identical to `GET /batch_statuses`, but takes ids of batches as a JSON
         formatted POST body rather than a query parameter. This allows for many
         more batches to be checked and should be used for more than 15 ids.
 

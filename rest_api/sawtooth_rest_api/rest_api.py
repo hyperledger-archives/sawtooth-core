@@ -100,8 +100,8 @@ def start_rest_api(host, port, connection, timeout, registry):
     handler = RouteHandler(loop, connection, timeout, registry)
 
     app.router.add_post('/batches', handler.submit_batches)
-    app.router.add_get('/batch_status', handler.list_statuses)
-    app.router.add_post('/batch_status', handler.list_statuses)
+    app.router.add_get('/batch_statuses', handler.list_statuses)
+    app.router.add_post('/batch_statuses', handler.list_statuses)
 
     app.router.add_get('/state', handler.list_state)
     app.router.add_get('/state/{address}', handler.fetch_state)
