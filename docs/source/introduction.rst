@@ -63,15 +63,8 @@ Additional transaction families provide models for specific areas\:
       blockchain systems.
       This transaction family is based on the H-Store Smallbank benchmark.
 
-    * Seth - Enables the creation and execution of smart contracts.
-      This transaction family integrates the Hyperledger Burrow
-      implementation of the Ethereum Virtual Machine (EVM)
-      into the Hyperledger Sawtooth framework using the
-      Sawtooth Go SDK.
-
     * BlockInfo - Provides a methodology for storing information
       about a configureable number of historic blocks.
-      This transaction family is used for Seth smart contracts.
 
 We also provide several example transaction families to demonstrate
 Sawtooth functionality\:

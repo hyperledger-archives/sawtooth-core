@@ -1,7 +1,0 @@
-package: sawtooth_seth
-import:
-- package: github.com/stretchr/testify
-- package: golang.org/x/crypto
-  subpackages:
-  - ripemd160
-- package: gopkg.in/fatih/set.v0

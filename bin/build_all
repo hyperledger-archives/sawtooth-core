@@ -96,7 +96,6 @@ then
         javascript
         python
         rust
-        seth
 "
 fi
 
@@ -155,9 +154,6 @@ main() {
                     ;;
                 rust)
                     build_rust
-                    ;;
-                seth)
-                    build_seth
                     ;;
                 *)
                     warn "Module '$language' not found."
@@ -233,10 +229,6 @@ build_external() {
         sawtooth-stats-influxdb
 }
 
-build_seth() {
-    docker_build docker/sawtooth-dev-seth docker/ sawtooth-dev-seth
-    docker_run sawtooth-dev-seth
-}
 
 build_debs() {
     build_dir=/tmp/build-docker$ISOLATION_ID
