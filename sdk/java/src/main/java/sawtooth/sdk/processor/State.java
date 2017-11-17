@@ -57,7 +57,7 @@ public class State {
    * @return Map where the keys are addresses, values Bytestring
    * @throws InternalError something went wrong processing transaction
    */
-  public Map<String, ByteString> get(Collection<String> addresses)
+  public Map<String, ByteString> getState(Collection<String> addresses)
       throws InternalError, InvalidTransactionException {
     TpStateGetRequest getRequest = TpStateGetRequest.newBuilder()
             .addAllAddresses(addresses)
@@ -102,7 +102,7 @@ public class State {
    * @return addressesThatWereSet, A collection of address Strings that were set
    * @throws InternalError something went wrong processing transaction
    */
-  public Collection<String> set(Collection<java.util.Map.Entry<String,
+  public Collection<String> setState(Collection<java.util.Map.Entry<String,
           ByteString>> addressValuePairs) throws InternalError, InvalidTransactionException {
     ArrayList<TpStateEntry> entryArrayList = new ArrayList<TpStateEntry>();
     for (Map.Entry<String, ByteString> entry : addressValuePairs) {
