@@ -19,10 +19,23 @@
 Sawtooth CLI
 ************
 
+The Sawtooth CLI is the usual way to interact with validators or
+validator networks.
+
+This CLI has a multi-level structure. It starts with the base call to
+``sawtooth``. Next is a top-level subcommand such as ``block`` or ``state``.
+Each top-level subcommand has additional subcommands that specify the
+operation to perform, such as ``list`` or ``create``.  The subcommands have
+options and arguments that control their behavior. For example:
+
+.. code-block:: console
+
+  $ sawtooth state list --format csv
+
 sawtooth
 ========
 
-The Sawtooth CLI has a large set of subcommands that are used to
+The ``sawtooth`` command provides a set of subcommands that are used to
 configure, manage, and interact with the components of Sawtooth.
 
 .. literalinclude:: output/sawtooth_usage.out
@@ -67,12 +80,12 @@ sawtooth batch show
 The ``sawtooth batch show`` subcommand queries the Sawtooth REST API
 for a specific batch in the current blockchain. It returns complete
 information for this batch in either YAML (default) or JSON format.
-Using the ``--key`` option, it is possible to narrow the returned
+Use the ``--key`` option to narrow the returned
 information to just the value of a single key, either from the batch
 or its header.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a username:password
+``http://localhost:8080``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 
@@ -93,7 +106,7 @@ until processing is complete, with an optional timeout value specified
 in seconds.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a username:password
+``http://localhost:8080``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_batch_status_usage.out
@@ -111,7 +124,7 @@ contain one or more batches with any number of transactions. The
 processing is complete, with an optional timeout specified in seconds.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a username:password
+``http://localhost:8080``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 
@@ -158,7 +171,7 @@ information to just the value of a single key, either from the block,
 or its header.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a username:password
+``http://localhost:8080``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 
@@ -269,7 +282,7 @@ processing.
 sawtooth keygen
 ===============
 
-The keygen subcommand generates a private key file and a public key
+The ``sawtooth keygen`` subcommand generates a private key file and a public key
 file so that users can sign Sawtooth transactions and batches. These
 files are stored in the ``<key-dir>`` directory in ``<key_name>.priv``
 and ``<key_dir>/<key_name>.pub``. By default, ``<key_dir>`` is
@@ -313,12 +326,12 @@ sawtooth state list
 ===================
 
 The ``sawtooth state list`` subcommand queries the Sawtooth REST API
-for a list of all state entries in the current blockchain state. It
+for a list of all state entries in the current blockchain state. This subcommand
 returns the address of each entry, its size in bytes, and the
 byte-encoded data it contains. It also returns the head block for
 which this data is valid.
 
-The state that is returned can be controlled using the subtree
+To control the state that is returned, use the ``subtree``
 argument to specify an address prefix as a filter or a block id to use
 as the chain head.
 
@@ -328,7 +341,7 @@ and YAML) are available and can be piped into a file for further
 processing.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a username:password
+``http://localhost:8080``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_state_list_usage.out
@@ -346,7 +359,7 @@ the logic of the transaction family that created it, and must be
 decoded using that same logic.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a username:password
+``http://localhost:8080``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_state_show_usage.out
@@ -387,12 +400,12 @@ sawtooth transaction show
 The ``sawtooth transaction show`` subcommand queries the Sawtooth REST
 API for a specific transaction in the current blockchain. It returns
 complete information for this transaction in either YAML (default) or
-JSON format. Using the --key option, it is possible to narrow the
+JSON format. Use the ``--key`` option to narrow the
 returned information to just the value of a single key, either from
 the transaction or its header.
 
 This subcommand requires the URL of the REST API (default:
-``http://localhost:8080``), and can specify a username:password
+``http://localhost:8080``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_transaction_show_usage.out

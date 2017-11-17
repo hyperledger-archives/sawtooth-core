@@ -15,11 +15,11 @@
 
 .. _rest-api-cli-reference-label:
 
-************
-REST API CLI
-************
+********************************
+REST API CLI (sawtooth-rest-api)
+********************************
 
-The Sawtooth REST API is designed to run alongside a validator,
+The REST API, ``sawtooth-rest-api``, is designed to run alongside a validator,
 providing potential clients access to blockchain and state data
 through common HTTP/JSON standards. It is a stateless process, and
 does not store any part of the blockchain or blockchain state. Instead

@@ -27,10 +27,8 @@ Batch for the genesis block. For more information, see
 poet
 ====
 
-The ``poet`` command generates information for configuring a node to
-use Sawtooth with the PoET consensus method. The genesis subcommand
-creates a Batch for the genesis block. The enclave subcommand
-generates enclave setup information.
+The ``poet`` command provides subcommands for configuring a node to use
+Sawtooth with the PoET consensus method.
 
 .. literalinclude:: output/poet_usage.out
    :language: console
