@@ -7,7 +7,7 @@ cd $top_dir
 dirs="
 $top_dir/sdk/go/src/sawtooth_sdk/messaging
 $top_dir/sdk/go/src/sawtooth_sdk/processor
-$top_dir/sdk/go/src/sawtooth_sdk/client
+$top_dir/sdk/go/src/sawtooth_sdk/signing
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey/handler
 $top_dir/sdk/examples/xo_go/src/sawtooth_xo
