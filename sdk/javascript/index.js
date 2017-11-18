@@ -17,13 +17,7 @@
 
 'use strict'
 
-const {signer} = require('./client')
-
 module.exports = {
-
   processor: require('./processor'),
-  exceptions: require('./processor/exceptions'),
-
-  signer
-
+  exceptions: require('./processor/exceptions')
 }
