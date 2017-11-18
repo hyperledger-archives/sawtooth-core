@@ -276,7 +276,7 @@ class StateDeltaSubscriberHandler:
         resp = await self._connection.send(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client_block_pb2.ClientBlockListRequest(
-                paging=client_list_control_pb2.ClientPagingControls(count=1)
+                paging=client_list_control_pb2.ClientPagingControls(limit=1)
             ).SerializeToString())
 
         block_list_resp = client_block_pb2.ClientBlockListResponse()

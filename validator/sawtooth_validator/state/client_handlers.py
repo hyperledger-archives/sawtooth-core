@@ -39,8 +39,6 @@ from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf import client_list_control_pb2
 from sawtooth_validator.protobuf import client_peers_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
-from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf import validator_pb2
 
 
@@ -301,35 +299,32 @@ class _Pager(object):
             object: The ClientPagingResponse to be sent back to the client
         """
         if not resources:
-            return (resources,
-                    client_list_control_pb2.ClientPagingResponse(
-                        total_resources=0))
+            return (resources, client_list_control_pb2.ClientPagingResponse())
 
         paging = request.paging
-        count = min(paging.count, MAX_PAGE_SIZE) or DEFAULT_PAGE_SIZE
-
+        limit = min(paging.limit, MAX_PAGE_SIZE) or DEFAULT_PAGE_SIZE
         # Find the start index from the location marker sent
         try:
-            if paging.start_id:
-                start_index = cls.index_by_id(paging.start_id, resources)
-            elif paging.end_id:
-                end_index = cls.index_by_id(paging.end_id, resources)
-                start_index = end_index + 1 - count
+            if paging.start:
+                start_index = cls.index_by_id(paging.start, resources)
             else:
-                start_index = paging.start_index
+                start_index = 0
 
             if start_index < 0 or start_index >= len(resources):
                 raise AssertionError
         except AssertionError:
             raise _ResponseFailed(on_fail_status)
 
-        paged_resources = resources[start_index: start_index + count]
-
-        paging_response = client_list_control_pb2.ClientPagingResponse(
-            next_id=cls.id_by_index(start_index + count, resources),
-            previous_id=cls.id_by_index(start_index - 1, resources),
-            start_index=start_index,
-            total_resources=len(resources))
+        paged_resources = resources[start_index: start_index + limit]
+        if start_index + limit < len(resources):
+            paging_response = client_list_control_pb2.ClientPagingResponse(
+                next=cls.id_by_index(start_index + limit, resources),
+                start=cls.id_by_index(start_index, resources),
+                limit=limit)
+        else:
+            paging_response = client_list_control_pb2.ClientPagingResponse(
+                start=cls.id_by_index(start_index, resources),
+                limit=limit)
 
         return paged_resources, paging_response
 
@@ -437,7 +432,6 @@ class _Sorter(object):
         """
         def __init__(self, controls, fail_status, header_proto=None):
             self._keys = controls.keys
-            self._compare_length = controls.compare_length
             self._fail_status = fail_status
             self._header_proto = header_proto
 
@@ -467,13 +461,6 @@ class _Sorter(object):
                     resource_a = getattr(resource_a, key)
                     resource_b = getattr(resource_b, key)
                 except AttributeError:
-                    raise _ResponseFailed(self._fail_status)
-
-            if self._compare_length:
-                try:
-                    resource_a = len(resource_a)
-                    resource_b = len(resource_b)
-                except TypeError:
                     raise _ResponseFailed(self._fail_status)
 
             return resource_a, resource_b
@@ -631,10 +618,8 @@ class StateListRequest(_ClientRequestHandler):
         # Order entries, remove if tree.entries refactored to be ordered
         entries.sort(key=lambda l: l.address)
 
-        entries = _Sorter.sort_resources(
-            request,
-            entries,
-            self._status.INVALID_SORT)
+        if self.is_reverse(request.sorting, self._status.INVALID_SORT):
+            entries.reverse()
 
         entries, paging = _Pager.paginate_resources(
             request,
@@ -651,6 +636,16 @@ class StateListRequest(_ClientRequestHandler):
             state_root=state_root,
             paging=paging,
             entries=entries)
+
+    @staticmethod
+    def is_reverse(sorting, fail_status):
+        if not sorting:
+            return False
+
+        if not sorting[0].keys == ['default']:
+            raise _ResponseFailed(fail_status)
+
+        return sorting[0].reverse
 
 
 class StateGetRequest(_ClientRequestHandler):
@@ -699,19 +694,18 @@ class BlockListRequest(_ClientRequestHandler):
             # realize the iterator
             blocks = list(map(lambda blkw: blkw.block, blocks))
 
-            paging_response = client_list_control_pb2.ClientPagingResponse(
-                total_resources=len(blocks))
+            paging_response = client_list_control_pb2.ClientPagingResponse()
         else:
             paging = request.paging
             sort_reverse = BlockListRequest.is_reverse(
                 request.sorting, self._status.INVALID_SORT)
-            count = min(paging.count, MAX_PAGE_SIZE) or DEFAULT_PAGE_SIZE
+            limit = min(paging.limit, MAX_PAGE_SIZE) or DEFAULT_PAGE_SIZE
             iterargs = {
                 'reverse': not sort_reverse
             }
 
-            if paging.start_id:
-                iterargs['start_block_num'] = paging.start_id
+            if paging.start:
+                iterargs['start_block_num'] = paging.start
             elif not sort_reverse:
                 iterargs['start_block'] = head_block
 
@@ -724,8 +718,7 @@ class BlockListRequest(_ClientRequestHandler):
                         lambda block: block.block_num <= head_block.block_num,
                         blocks)
 
-                blocks = itertools.islice(blocks, count)
-
+                blocks = itertools.islice(blocks, limit)
                 # realize the result list, which will evaluate the underlying
                 # iterator
                 blocks = list(map(lambda blkw: blkw.block, blocks))
@@ -736,15 +729,20 @@ class BlockListRequest(_ClientRequestHandler):
                         next_block.block_num)
                 else:
                     next_block_num = None
+
+                start = self._block_store.get(
+                    blocks[0].header_signature).block_num
             except ValueError:
-                if paging.start_id:
+                if paging.start:
                     return self._status.INVALID_PAGING
 
                 return self._status.NO_ROOT
 
             paging_response = client_list_control_pb2.ClientPagingResponse(
-                next_id=next_block_num,
-                total_resources=head_block.block_num + 1)
+                next=next_block_num,
+                limit=limit,
+                start=BlockStore.block_num_to_hex(start)
+                )
 
         if not blocks:
             return self._wrap_response(
@@ -867,11 +865,8 @@ class BatchListRequest(_ClientRequestHandler):
             self._block_store.get_batch,
             lambda block: [a for a in block.batches])
 
-        batches = _Sorter.sort_resources(
-            request,
-            batches,
-            self._status.INVALID_SORT,
-            BatchHeader)
+        if self.is_reverse(request.sorting, self._status.INVALID_SORT):
+            batches.reverse()
 
         batches, paging = _Pager.paginate_resources(
             request,
@@ -888,6 +883,16 @@ class BatchListRequest(_ClientRequestHandler):
             head_id=head_id,
             paging=paging,
             batches=batches)
+
+    @staticmethod
+    def is_reverse(sorting, fail_status):
+        if not sorting:
+            return False
+
+        if not sorting[0].keys == ['default']:
+            raise _ResponseFailed(fail_status)
+
+        return sorting[0].reverse
 
 
 class BatchGetRequest(_ClientRequestHandler):
@@ -924,11 +929,8 @@ class TransactionListRequest(_ClientRequestHandler):
             self._block_store.get_transaction,
             lambda block: [t for a in block.batches for t in a.transactions])
 
-        transactions = _Sorter.sort_resources(
-            request,
-            transactions,
-            self._status.INVALID_SORT,
-            TransactionHeader)
+        if self.is_reverse(request.sorting, self._status.INVALID_SORT):
+            transactions.reverse()
 
         transactions, paging = _Pager.paginate_resources(
             request,
@@ -945,6 +947,16 @@ class TransactionListRequest(_ClientRequestHandler):
             head_id=head_id,
             paging=paging,
             transactions=transactions)
+
+    @staticmethod
+    def is_reverse(sorting, fail_status):
+        if not sorting:
+            return False
+
+        if not sorting[0].keys == ['default']:
+            raise _ResponseFailed(fail_status)
+
+        return sorting[0].reverse
 
 
 class TransactionGetRequest(_ClientRequestHandler):

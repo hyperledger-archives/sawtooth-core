@@ -24,6 +24,8 @@ ID_B = 'b' * 128
 ID_C = 'c' * 128
 ID_D = 'd' * 128
 
+DEFAULT_LIMIT = 100
+
 
 class TransactionListTests(BaseApiTest):
 
@@ -43,7 +45,7 @@ class TransactionListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_C
-            - a paging response with a start of 0, and 3 total resources
+            - a paging response with a start of ID_C and limit of 100
             - three transactions with ids of ID_C, ID_B, and ID_A
 
         It should send a Protobuf request with:
@@ -52,12 +54,13 @@ class TransactionListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_C
-            - a link property that ends in '/transactions?head={}'.format(ID_C)
+            - a link property that ends in
+                '/transactions?head={}&start={}&limit=100'.format(ID_C, ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - those dicts are full transactions with ids ID_C, ID_B, and ID_A
         """
-        paging = Mocks.make_paging_response(0, 3)
+        paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         self.connection.preset_response(
             head_id=ID_C,
             paging=paging,
@@ -68,7 +71,9 @@ class TransactionListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/transactions?head={}'.format(ID_C))
+        self.assert_has_valid_link(
+            response,
+            '/transactions?head={}&start={}&limit=100'.format(ID_C, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_txns_well_formed(response['data'], ID_C, ID_B, ID_A)
@@ -111,7 +116,7 @@ class TransactionListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_B
-            - a paging response with a start of 0, and 2 total resources
+            - a paging response with a start of ID_B and limit of 100
             - two transactions with ids of 1' and ID_A
 
         It should send a Protobuf request with:
@@ -121,12 +126,13 @@ class TransactionListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_B
-            - a link property that ends in '/transactions?head={}'.format(ID_B)
+            - a link property that ends in
+                '/transactions?head={}&start={}&limit=100'.format(ID_B, ID_B))
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - those dicts are full transactions with ids ID_B and ID_A
         """
-        paging = Mocks.make_paging_response(0, 2)
+        paging = Mocks.make_paging_response("", ID_B, DEFAULT_LIMIT)
         self.connection.preset_response(
             head_id=ID_B,
             paging=paging,
@@ -135,9 +141,10 @@ class TransactionListTests(BaseApiTest):
         response = await self.get_assert_200('/transactions?head={}'.format(ID_B))
         controls = Mocks.make_paging_controls()
         self.connection.assert_valid_request_sent(head_id=ID_B, paging=controls)
-
         self.assert_has_valid_head(response, ID_B)
-        self.assert_has_valid_link(response, '/transactions?head={}'.format(ID_B))
+        self.assert_has_valid_link(
+            response,
+            '/transactions?head={}&start={}&limit=100'.format(ID_B, ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_B, ID_A)
@@ -164,7 +171,7 @@ class TransactionListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_C
-            - a paging response with a start of 0, and 2 total resources
+            - a paging response with a start of ID_C and limit of 100
             - two transactions with ids of ID_A and ID_C
 
         It should send a Protobuf request with:
@@ -174,12 +181,13 @@ class TransactionListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_C, the latest
-            - a link property that ends in '/transactions?head={}&id={},{}'.format(ID_C, ID_A, ID_C)
+            - a link property that ends in
+                '/transactions?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_A, ID_C))
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - those dicts are full transactions with ids ID_A and ID_C
         """
-        paging = Mocks.make_paging_response(0, 2)
+        paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         transactions = Mocks.make_txns(ID_A, ID_C)
         self.connection.preset_response(head_id=ID_C, paging=paging, transactions=transactions)
 
@@ -188,7 +196,8 @@ class TransactionListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(transaction_ids=[ID_A, ID_C], paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/transactions?head={}&id={},{}'.format(ID_C, ID_A, ID_C))
+        self.assert_has_valid_link(
+            response, '/transactions?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_A, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_A, ID_C)
@@ -204,11 +213,12 @@ class TransactionListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_C, the latest
-            - a link property that ends in '/transactions?head={}&id={},{}'.format(ID_C, ID_B, ID_D)
+            - a link property that ends in
+                '/transactions?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_B, ID_D))
             - a paging property with only a total_count of 0
             - a data property that is an empty list
         """
-        paging = Mocks.make_paging_response(None, 0)
+        paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         self.connection.preset_response(
             self.status.NO_RESOURCE,
             head_id=ID_C,
@@ -216,7 +226,9 @@ class TransactionListTests(BaseApiTest):
         response = await self.get_assert_200('/transactions?id={},{}'.format(ID_B, ID_D))
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/transactions?head={}&id={},{}'.format(ID_C, ID_B, ID_D))
+        self.assert_has_valid_link(
+            response,
+            '/transactions?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_B, ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -226,7 +238,7 @@ class TransactionListTests(BaseApiTest):
 
         It should send a Protobuf request with:
             - a head_id property of ID_B
-            - a paging response with a start of 0, and 1 total resource
+            - a paging response with a start of ID_B and limit of 100
             - a transaction_ids property of [ID_A]
 
         It will receive a Protobuf response with:
@@ -237,12 +249,13 @@ class TransactionListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_B
-            - a link property that ends in '/transactions?head={}&id={}'.format(ID_B, ID_A)
+            - a link property that ends in
+                '/transactions?head={}&start={}&limit=100&id={}'.format(ID_B, ID_B, ID_A))
             - a paging property that matches the paging response
             - a data property that is a list of 1 dict
             - that dict is a full transaction with an id of ID_A
         """
-        paging = Mocks.make_paging_response(0, 1)
+        paging = Mocks.make_paging_response("", ID_B, DEFAULT_LIMIT)
         self.connection.preset_response(
             head_id=ID_B,
             paging=paging,
@@ -256,48 +269,11 @@ class TransactionListTests(BaseApiTest):
             paging=controls)
 
         self.assert_has_valid_head(response, ID_B)
-        self.assert_has_valid_link(response, '/transactions?head={}&id={}'.format(ID_B, ID_A))
+        self.assert_has_valid_link(
+            response, '/transactions?head={}&start={}&limit=100&id={}'.format(ID_B, ID_B, ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_txns_well_formed(response['data'], ID_A)
-
-    @unittest_run_loop
-    async def test_txn_list_paginated(self):
-        """Verifies GET /transactions paginated by min id works properly.
-
-        It will receive a Protobuf response with:
-            - a head id of ID_D
-            - a paging response with a start of 1, and 4 total resources
-            - one transaction with the id ID_C
-
-        It should send a Protobuf request with:
-            - paging controls with a count of 1, and a start_index of 1
-
-        It should send back a JSON response with:
-            - a response status of 200
-            - a head property of ID_D
-            - a link property that ends in '/transactions?head={}&min=1&count=1'.format(ID_D)
-            - paging that matches the response, with next and previous links
-            - a data property that is a list of 1 dict
-            - that dict is a full transaction with the id ID_C
-        """
-        paging = Mocks.make_paging_response(1, 4)
-        self.connection.preset_response(
-            head_id=ID_D,
-            paging=paging,
-            transactions=Mocks.make_txns(ID_C))
-
-        response = await self.get_assert_200('/transactions?min=1&count=1')
-        controls = Mocks.make_paging_controls(1, start_index=1)
-        self.connection.assert_valid_request_sent(paging=controls)
-
-        self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/transactions?head={}&min=1&count=1'.format(ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/transactions?head={}&min=2&count=1'.format(ID_D),
-                                     '/transactions?head={}&min=0&count=1'.format(ID_D))
-        self.assert_has_valid_data_list(response, 1)
-        self.assert_txns_well_formed(response['data'], ID_C)
 
     @unittest_run_loop
     async def test_txn_list_with_zero_count(self):
@@ -307,7 +283,7 @@ class TransactionListTests(BaseApiTest):
             - a response status of 400
             - an error property with a code of 53
         """
-        response = await self.get_assert_status('/transactions?count=0', 400)
+        response = await self.get_assert_status('/transactions?limit=0', 400)
 
         self.assert_has_valid_error(response, 53)
 
@@ -328,39 +304,42 @@ class TransactionListTests(BaseApiTest):
         self.assert_has_valid_error(response, 54)
 
     @unittest_run_loop
-    async def test_txn_list_paginated_with_just_count(self):
-        """Verifies GET /transactions paginated just by count works properly.
+    async def test_txn_list_paginated_with_just_limit(self):
+        """Verifies GET /transactions paginated just by limit works properly.
 
         It will receive a Protobuf response with:
             - a head id of ID_D
-            - a paging response with a start of 0, and 4 total resources
+            - a paging response with a start of ID_D, next of ID_B and limit of 2
             - two transactions with the ids ID_D and ID_C
 
         It should send a Protobuf request with:
-            - paging controls with a count of 2
+            - paging controls with a limit of 2
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in '/transactions?head={}&count=2'.format(ID_D)
+            - a link property that ends in
+                '/transactions?head={}&start={}&limit=2'.format(ID_D, ID_D))
             - paging that matches the response with a next link
             - a data property that is a list of 2 dicts
             - those dicts are full transactions with ids ID_D and ID_C
         """
-        paging = Mocks.make_paging_response(0, 4)
+        paging = Mocks.make_paging_response(ID_B, ID_D, 2)
         self.connection.preset_response(
             head_id=ID_D,
             paging=paging,
             transactions=Mocks.make_txns(ID_D, ID_C))
 
-        response = await self.get_assert_200('/transactions?count=2')
+        response = await self.get_assert_200('/transactions?limit=2')
         controls = Mocks.make_paging_controls(2)
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/transactions?head={}&count=2'.format(ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/transactions?head={}&min=2&count=2'.format(ID_D))
+        self.assert_has_valid_link(response,
+            '/transactions?head={}&start={}&limit=2'.format(ID_D, ID_D))
+        self.assert_has_valid_paging(
+            response, paging,
+            '/transactions?head={}&start={}&limit=2'.format(ID_D, ID_B))
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_D, ID_C)
 
@@ -370,47 +349,45 @@ class TransactionListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_D
-            - a paging response with a start of 2, and 4 total resources
+            - a paging response with a start of ID_D and a limit of 100
             - two transactions with the ids ID_B and ID_A
 
         It should send a Protobuf request with:
-            - paging controls with a start_index of 2
+            - paging controls with a start of 2
 
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in '/transactions?head={}&min=2'.format(ID_D)
+            - a link property that ends in
+                '/transactions?head={}&start={}&limit=100'.format(ID_D, ID_D))
             - paging that matches the response, with a previous link
             - a data property that is a list of 2 dicts
             - those dicts are full transactions with ids ID_D and ID_C
         """
-        paging = Mocks.make_paging_response(2, 4)
+        paging = Mocks.make_paging_response("", ID_D, DEFAULT_LIMIT)
         self.connection.preset_response(
             head_id=ID_D,
             paging=paging,
             transactions=Mocks.make_txns(ID_B, ID_A))
 
-        response = await self.get_assert_200('/transactions?min=2')
-        controls = Mocks.make_paging_controls(None, start_index=2)
+        response = await self.get_assert_200('/transactions?start=2')
+        controls = Mocks.make_paging_controls(None, start="2")
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/transactions?head={}&min=2'.format(ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     previous_link='/transactions?head={}&min=0&count=2'.format(ID_D))
+        self.assert_has_valid_link(
+            response, '/transactions?head={}&start={}&limit=100'.format(ID_D, ID_D))
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_B, ID_A)
 
     @unittest_run_loop
-    async def test_txn_list_paginated_by_min_id(self):
-        """Verifies GET /transactions paginated by a min id works properly.
+    async def test_txn_list_paginated_by_start_id(self):
+        """Verifies GET /transactions paginated by a start id works properly.
 
         It will receive a Protobuf response with:
             - a head id of ID_D
-            - a paging response with:
-                * a start_index of 1
-                * total_resources of 4
-                * a previous_id of ID_D
+            - a paging response with start of ID_C and limit of 5
             - three transactions with the ids ID_C, ID_B and ID_A
 
         It should send a Protobuf request with:
@@ -419,201 +396,28 @@ class TransactionListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in '/transactions?head={}&min={}&count=5'.format(ID_D, ID_C)
+            - a link property that ends in
+                '/transactions?head={}&start={}&limit=5'.format(ID_D, ID_C))
             - paging that matches the response, with a previous link
             - a data property that is a list of 3 dicts
             - those dicts are full transactions with ids ID_C, ID_B, and ID_A
         """
-        paging = Mocks.make_paging_response(1, 4, previous_id=ID_D)
+        paging = Mocks.make_paging_response("", ID_C, 5)
         self.connection.preset_response(
             head_id=ID_D,
             paging=paging,
             transactions=Mocks.make_txns(ID_C, ID_B, ID_A))
 
-        response = await self.get_assert_200('/transactions?min={}&count=5'.format(ID_C))
-        controls = Mocks.make_paging_controls(5, start_id=ID_C)
+        response = await self.get_assert_200('/transactions?start={}&limit=5'.format(ID_C))
+        controls = Mocks.make_paging_controls(5, start=ID_C)
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/transactions?head={}&min={}&count=5'.format(ID_D, ID_C))
-        self.assert_has_valid_paging(response, paging,
-                                     previous_link='/transactions?head={}&max={}&count=5'.format(ID_D, ID_D))
+        self.assert_has_valid_link(response, '/transactions?head={}&start={}&limit=5'.format(ID_D, ID_C))
+        self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_txns_well_formed(response['data'], ID_C, ID_B, ID_A)
 
-    @unittest_run_loop
-    async def test_txn_list_paginated_by_max_id(self):
-        """Verifies GET /transactions paginated by a max id works properly.
-
-        It will receive a Protobuf response with:
-            - a head id of ID_D
-            - a paging response with:
-                * a start_index of 1
-                * a total_resources of 4
-                * a previous_id of ID_D
-                * a next_id of ID_A
-            - two transactions with the ids ID_C and ID_B
-
-        It should send a Protobuf request with:
-            - paging controls with a count of 2, and an end_id of ID_B
-
-        It should send back a JSON response with:
-            - a response status of 200
-            - a head property of ID_D
-            - a link property that ends in '/transactions?head={}&max={}&count=2'.format(ID_D, ID_B)
-            - paging that matches the response, with next and previous links
-            - a data property that is a list of 2 dicts
-            - those dicts are full transactions with ids ID_C and ID_B
-        """
-        paging = Mocks.make_paging_response(1, 4, previous_id=ID_D, next_id=ID_A)
-        self.connection.preset_response(
-            head_id=ID_D,
-            paging=paging,
-            transactions=Mocks.make_txns(ID_C, ID_B))
-
-        response = await self.get_assert_200('/transactions?max={}&count=2'.format(ID_B))
-        controls = Mocks.make_paging_controls(2, end_id=ID_B)
-        self.connection.assert_valid_request_sent(paging=controls)
-
-        self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/transactions?head={}&max={}&count=2'.format(ID_D, ID_B))
-        self.assert_has_valid_paging(response, paging,
-                                     '/transactions?head={}&min={}&count=2'.format(ID_D, ID_A),
-                                     '/transactions?head={}&max={}&count=2'.format(ID_D, ID_D))
-        self.assert_has_valid_data_list(response, 2)
-        self.assert_txns_well_formed(response['data'], ID_C, ID_B)
-
-    @unittest_run_loop
-    async def test_txn_list_paginated_by_max_index(self):
-        """Verifies GET /transactions paginated by a max index works properly.
-
-        It will receive a Protobuf response with:
-            - a head id of ID_D
-            - a paging response with a start of 0, and 4 total resources
-            - three transactions with the ids ID_D, ID_C and ID_B
-
-        It should send a Protobuf request with:
-            - paging controls with a count of 3, and an start_index of 0
-
-        It should send back a JSON response with:
-            - a response status of 200
-            - a head property of ID_D
-            - a link property that ends in '/transactions?head={}&min=3&count=7'.format(ID_D)
-            - paging that matches the response, with a next link
-            - a data property that is a list of 2 dicts
-            - those dicts are full transactions with ids ID_D, ID_C, and ID_B
-        """
-        paging = Mocks.make_paging_response(0, 4)
-        self.connection.preset_response(
-            head_id=ID_D,
-            paging=paging,
-            transactions=Mocks.make_txns(ID_D, ID_C, ID_B))
-
-        response = await self.get_assert_200('/transactions?max=2&count=7')
-        controls = Mocks.make_paging_controls(3, start_index=0)
-        self.connection.assert_valid_request_sent(paging=controls)
-
-        self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/transactions?head={}&max=2&count=7'.format(ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/transactions?head={}&min=3&count=7'.format(ID_D))
-        self.assert_has_valid_data_list(response, 3)
-        self.assert_txns_well_formed(response['data'], ID_D, ID_C, ID_B)
-
-    @unittest_run_loop
-    async def test_txn_list_sorted(self):
-        """Verifies GET /transactions can send proper sort controls.
-
-        It will receive a Protobuf response with:
-            - a head id of ID_C
-            - a paging response with a start of 0, and 3 total resources
-            - three transactions with ids ID_A, ID_B, and ID_C
-
-        It should send a Protobuf request with:
-            - empty paging controls
-            - sort controls with a key of 'header_signature'
-
-        It should send back a JSON response with:
-            - a status of 200
-            - a head property of ID_C
-            - a link property ending in '/transactions?head={}&sort=header_signature'.format(ID_C)
-            - a paging property that matches the paging response
-            - a data property that is a list of 3 dicts
-            - and those dicts are full transactions with ids ID_A, ID_B, and ID_C
-        """
-        paging = Mocks.make_paging_response(0, 3)
-        transactions = Mocks.make_txns(ID_A, ID_B, ID_C)
-        self.connection.preset_response(head_id=ID_C, paging=paging, transactions=transactions)
-
-        response = await self.get_assert_200('/transactions?sort=header_signature')
-        page_controls = Mocks.make_paging_controls()
-        sorting = Mocks.make_sort_controls('header_signature')
-        self.connection.assert_valid_request_sent(
-            paging=page_controls,
-            sorting=sorting)
-
-        self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response,
-            '/transactions?head={}&sort=header_signature'.format(ID_C))
-        self.assert_has_valid_paging(response, paging)
-        self.assert_has_valid_data_list(response, 3)
-        self.assert_txns_well_formed(response['data'], ID_A, ID_B, ID_C)
-
-    @unittest_run_loop
-    async def test_batch_list_with_bad_sort(self):
-        """Verifies a GET /transactions with a bad sort breaks properly.
-
-        It will receive a Protobuf response with:
-            - a status of INVALID_PAGING
-
-        It should send back a JSON response with:
-            - a response status of 400
-            - an error property with a code of 57
-        """
-        self.connection.preset_response(self.status.INVALID_SORT)
-        response = await self.get_assert_status('/transactions?sort=bad', 400)
-
-        self.assert_has_valid_error(response, 57)
-
-    @unittest_run_loop
-    async def test_txn_list_sorted_with_nested_keys(self):
-        """Verifies GET /transactions can send proper sort controls with nested keys.
-
-        It will receive a Protobuf response with:
-            - a head id of ID_C
-            - a paging response with a start of 0, and 3 total resources
-            - three transactions with ids ID_A, ID_B, and ID_C
-
-        It should send a Protobuf request with:
-            - empty paging controls
-            - sort controls with keys of 'header' and 'signer_public_key'
-
-        It should send back a JSON response with:
-            - a status of 200
-            - a head property of ID_C
-            - a link ending in '/transactions?head={}&sort=header.signer_public_key'.format(ID_C)
-            - a paging property that matches the paging response
-            - a data property that is a list of 3 dicts
-            - and those dicts are full transactions with ids ID_A, ID_B, and ID_C
-        """
-        paging = Mocks.make_paging_response(0, 3)
-        transactions = Mocks.make_txns(ID_A, ID_B, ID_C)
-        self.connection.preset_response(head_id=ID_C, paging=paging, transactions=transactions)
-
-        response = await self.get_assert_200(
-            '/transactions?sort=header.signer_public_key')
-        page_controls = Mocks.make_paging_controls()
-        sorting = Mocks.make_sort_controls('header', 'signer_public_key')
-        self.connection.assert_valid_request_sent(
-            paging=page_controls,
-            sorting=sorting)
-
-        self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response,
-            '/transactions?head={}&sort=header.signer_public_key'.format(ID_C))
-        self.assert_has_valid_paging(response, paging)
-        self.assert_has_valid_data_list(response, 3)
-        self.assert_txns_well_formed(response['data'], ID_A, ID_B, ID_C)
 
     @unittest_run_loop
     async def test_txn_list_sorted_in_reverse(self):
@@ -621,7 +425,7 @@ class TransactionListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_C
-            - a paging response with a start of 0, and 3 total resources
+            - a paging response with start of ID_C and limit of 100
             - three transactions with ids ID_C, ID_B, and ID_A
 
         It should send a Protobuf request with:
@@ -631,108 +435,25 @@ class TransactionListTests(BaseApiTest):
         It should send back a JSON response with:
             - a status of 200
             - a head property of ID_C
-            - a link property ending in '/transactions?head={}&sort=-header_signature'.format(ID_C)
+            - a link property ending in
+                '/transactions?head={}&start={}&limit=100&reverse'.format(ID_C, ID_C))
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - and those dicts are full transactions with ids ID_C, ID_B, and ID_A
         """
-        paging = Mocks.make_paging_response(0, 3)
+        paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         transactions = Mocks.make_txns(ID_C, ID_B, ID_A)
         self.connection.preset_response(head_id=ID_C, paging=paging, transactions=transactions)
-
-        response = await self.get_assert_200('/transactions?sort=-header_signature')
+        response = await self.get_assert_200('/transactions?reverse')
         page_controls = Mocks.make_paging_controls()
-        sorting = Mocks.make_sort_controls(
-            'header_signature', reverse=True)
+        sorting = Mocks.make_sort_controls("default", reverse=True)
         self.connection.assert_valid_request_sent(
             paging=page_controls,
             sorting=sorting)
 
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(response,
-            '/transactions?head={}&sort=-header_signature'.format(ID_C))
-        self.assert_has_valid_paging(response, paging)
-        self.assert_has_valid_data_list(response, 3)
-        self.assert_txns_well_formed(response['data'], ID_C, ID_B, ID_A)
-
-    @unittest_run_loop
-    async def test_txn_list_sorted_by_length(self):
-        """Verifies a GET /transactions can send proper sort parameters.
-
-        It will receive a Protobuf response with:
-            - a head id of ID_C
-            - a paging response with a start of 0, and 3 total resources
-            - three transactions with ids ID_A, ID_B, and ID_C
-
-        It should send a Protobuf request with:
-            - empty paging controls
-            - sort controls with a key of 'payload' sorted by length
-
-        It should send back a JSON response with:
-            - a status of 200
-            - a head property of ID_C
-            - a link property ending in '/transactions?head={}&sort=payload.length'.format(ID_C)
-            - a paging property that matches the paging response
-            - a data property that is a list of 3 dicts
-            - and those dicts are full transactions with ids ID_A, ID_B, and ID_C
-        """
-        paging = Mocks.make_paging_response(0, 3)
-        transactions = Mocks.make_txns(ID_A, ID_B, ID_C)
-        self.connection.preset_response(head_id=ID_C, paging=paging, transactions=transactions)
-
-        response = await self.get_assert_200('/transactions?sort=payload.length')
-        page_controls = Mocks.make_paging_controls()
-        sorting = Mocks.make_sort_controls('payload', compare_length=True)
-        self.connection.assert_valid_request_sent(
-            paging=page_controls,
-            sorting=sorting)
-
-        self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response,
-            '/transactions?head={}&sort=payload.length'.format(ID_C))
-        self.assert_has_valid_paging(response, paging)
-        self.assert_has_valid_data_list(response, 3)
-        self.assert_txns_well_formed(response['data'], ID_A, ID_B, ID_C)
-
-    @unittest_run_loop
-    async def test_txn_list_sorted_by_many_keys(self):
-        """Verifies a GET /transactions can send proper sort parameters.
-
-        It will receive a Protobuf response with:
-            - a head id of ID_C
-            - a paging response with a start of 0, and 3 total resources
-            - three transactions with ids ID_C, ID_B, and ID_A
-
-        It should send a Protobuf request with:
-            - empty paging controls
-            - multiple sort controls with:
-                * a key of 'header_signature' that is reversed
-                * a key of 'payload' that is sorted by length
-
-        It should send back a JSON response with:
-            - a status of 200
-            - a head property of ID_C
-            - link with '/transactions?head={}&sort=-header_signature,payload.length'.format(ID_C)
-            - a paging property that matches the paging response
-            - a data property that is a list of 3 dicts
-            - and those dicts are full transactions with ids ID_C, ID_B, and ID_A
-        """
-        paging = Mocks.make_paging_response(0, 3)
-        transactions = Mocks.make_txns(ID_C, ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_C, paging=paging, transactions=transactions)
-
-        response = await self.get_assert_200(
-            '/transactions?sort=-header_signature,payload.length')
-        page_controls = Mocks.make_paging_controls()
-        sorting = (Mocks.make_sort_controls('header_signature', reverse=True) +
-                   Mocks.make_sort_controls('payload', compare_length=True))
-        self.connection.assert_valid_request_sent(
-            paging=page_controls,
-            sorting=sorting)
-
-        self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response,
-            '/transactions?head={}&sort=-header_signature,payload.length'.format(ID_C))
+            '/transactions?head={}&start={}&limit=100&reverse'.format(ID_C, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_txns_well_formed(response['data'], ID_C, ID_B, ID_A)
