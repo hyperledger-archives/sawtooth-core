@@ -90,4 +90,5 @@ save_usage xo create
 save_usage xo list
 save_usage xo show
 save_usage xo take
+save_usage xo delete
 save_usage xo-tp-python
