@@ -125,7 +125,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
 
         std::string state_value_rep;
         json state_value_map;
-        if(this->state->Get(&state_value_rep, address)) {
+        if(this->state->GetState(&state_value_rep, address)) {
             if (state_value_rep.length() != 0) { // empty rep
                 std::vector<std::uint8_t> state_value_rep_v = ToVector(state_value_rep);
                 state_value_map = json::from_cbor(state_value_rep_v);
@@ -144,7 +144,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
         // encode the value map back to cbor for storage.
         std::vector<std::uint8_t> state_value_rep_vec = json::to_cbor(state_value_map);
         state_value_rep = ToString(state_value_rep_vec);
-        this->state->Set(address, state_value_rep);
+        this->state->SetState(address, state_value_rep);
     }
 
     // Handle an IntKey 'inc' verb action. This increments an IntKey value
@@ -156,7 +156,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
 
         json state_value_map;
         std::string state_value_rep;
-        if(this->state->Get(&state_value_rep, address)) {
+        if(this->state->GetState(&state_value_rep, address)) {
             std::vector<std::uint8_t> state_value_rep_v = ToVector(state_value_rep);
             
             state_value_map = json::from_cbor(state_value_rep_v);
@@ -183,7 +183,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
         std::vector<std::uint8_t> state_value_rep_vec =
             json::to_cbor(state_value_map);
         state_value_rep = ToString(state_value_rep_vec);
-        this->state->Set(address, state_value_rep);
+        this->state->SetState(address, state_value_rep);
     }
 
     // Handle an IntKey 'dec' verb action. This decrements an IntKey value
@@ -195,7 +195,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
 
         json state_value_map;
         std::string state_value_rep;
-        if(this->state->Get(&state_value_rep, address)) {
+        if(this->state->GetState(&state_value_rep, address)) {
             std::vector<std::uint8_t> state_value_rep_v = ToVector(state_value_rep);
             state_value_map = json::from_cbor(state_value_rep_v);
 
@@ -220,7 +220,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
 
         std::vector<std::uint8_t> state_value_rep_vec = json::to_cbor(state_value_map);
         state_value_rep = ToString(state_value_rep_vec);
-        this->state->Set(address, state_value_rep);
+        this->state->SetState(address, state_value_rep);
     }
 };
 
