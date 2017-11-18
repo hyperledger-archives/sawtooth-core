@@ -316,16 +316,12 @@ then
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir
         mkdir -p $build_dir
+        cp $top_dir/build/debs/sawtooth*go*.deb $build_dir/
 
         cp $top_dir/docker/sawtooth-int-intkey-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-smallbank-tp-go $build_dir
-        cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
-            $build_dir
-        cp $top_dir/sdk/examples/xo_go/bin/xo-tp-go \
-            $build_dir
-        cp $top_dir/families/smallbank/smallbank_go/bin/smallbank-tp-go \
-            $build_dir
+
         ls $build_dir
 
         docker_build $build_dir/sawtooth-int-intkey-tp-go $build_dir/ \
@@ -365,7 +361,7 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
         docker_run sawtooth-dev-python
 
-        cp $top_dir/build/debs/*.deb $build_dir/
+        cp $top_dir/build/debs/python3*.deb $build_dir/
         cp $top_dir/docker/sawtooth-int-* $build_dir/
         ls $build_dir
 
