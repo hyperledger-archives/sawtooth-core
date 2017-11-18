@@ -71,16 +71,41 @@ def setup_loggers(verbose_level):
 def add_create_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'create',
-        help='creates a new xo game',
+        help='Creates a new xo game',
         description='Sends a transaction to start an xo game with the '
-        'identifier <name>. This transaction will fail if a game already '
-        'exists with the name <name>.',
+        'identifier <name>. This transaction will fail if the specified '
+	'game already exists.',
         parents=[parent_parser])
 
     parser.add_argument(
         'name',
         type=str,
-        help='an identifier for the new game')
+        help='unique identifier for the new game')
+
+    parser.add_argument(
+        '--url',
+        type=str,
+        help='specify URL of REST API')
+
+    parser.add_argument(
+        '--username',
+        type=str,
+        help="identify name of user's private key file")
+
+    parser.add_argument(
+        '--key-dir',
+        type=str,
+        help="identify directory of user's private key file")
+
+    parser.add_argument(
+        '--auth-user',
+        type=str,
+        help='specify username for authentication if REST API is using Basic Auth')
+
+    parser.add_argument(
+        '--auth-password',
+        type=str,
+        help='specify password for authentication if REST API is using Basic Auth')
 
     parser.add_argument(
         '--disable-client-validation',
@@ -93,22 +118,46 @@ def add_create_parser(subparsers, parent_parser):
         nargs='?',
         const=sys.maxsize,
         type=int,
-        help='wait for game to commit, set an integer to specify a timeout')
+        help='set time, in seconds, to wait for game to commit')
 
 
 def add_list_parser(subparsers, parent_parser):
-    subparsers.add_parser(
+    parser = subparsers.add_parser(
         'list',
-        help='displays information for all xo games',
+        help='Displays information for all xo games',
         description='Displays information for all xo games in state, showing '
         'the players, the game state, and the board for each game.',
         parents=[parent_parser])
 
+    parser.add_argument(
+        '--url',
+        type=str,
+        help='specify URL of REST API')
+
+    parser.add_argument(
+        '--username',
+        type=str,
+        help="identify name of user's private key file")
+
+    parser.add_argument(
+        '--key-dir',
+        type=str,
+        help="identify directory of user's private key file")
+
+    parser.add_argument(
+        '--auth-user',
+        type=str,
+        help='specify username for authentication if REST API is using Basic Auth')
+
+    parser.add_argument(
+        '--auth-password',
+        type=str,
+        help='specify password for authentication if REST API is using Basic Auth')
 
 def add_show_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'show',
-        help='displays information about an xo game',
+        help='Displays information about an xo game',
         description='Displays the xo game <name>, showing the players, the '
         'game state, and the board',
         parents=[parent_parser])
@@ -116,50 +165,133 @@ def add_show_parser(subparsers, parent_parser):
     parser.add_argument(
         'name',
         type=str,
-        help='the identifier for the game')
+        help='identifier for the game')
 
+    parser.add_argument(
+        '--url',
+        type=str,
+        help='specify URL of REST API')
+
+    parser.add_argument(
+        '--username',
+        type=str,
+        help="identify name of user's private key file")
+
+    parser.add_argument(
+        '--key-dir',
+        type=str,
+        help="identify directory of user's private key file")
+
+    parser.add_argument(
+        '--auth-user',
+        type=str,
+        help='specify username for authentication if REST API is using Basic Auth')
+
+    parser.add_argument(
+        '--auth-password',
+        type=str,
+        help='specify password for authentication if REST API is using Basic Auth')
 
 def add_take_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'take',
-        help='takes a space in an xo game',
-        description='Sends a transaction to start an xo game with the '
-        'identifier <name>. This transaction will fail if a game already '
-        'exists with the name <name>.',
+        help='Takes a space in an xo game',
+        description='Sends a transaction to take a square in the xo game '
+	'with the identifier <name>. This transaction will fail if the '
+	'specified game does not exist.',
         parents=[parent_parser])
 
     parser.add_argument(
         'name',
         type=str,
-        help='the identifier for the game')
+        help='identifier for the game')
 
     parser.add_argument(
         'space',
         type=int,
-        help='the square number to take')
+        help='number of the square to take (1-9); the upper-left space is '
+	     '1, and the lower-right space is 9')
+
+    parser.add_argument(
+        '--url',
+        type=str,
+        help='specify URL of REST API')
+
+    parser.add_argument(
+        '--username',
+        type=str,
+        help="identify name of user's private key file")
+
+    parser.add_argument(
+        '--key-dir',
+        type=str,
+        help="identify directory of user's private key file")
+
+    parser.add_argument(
+        '--auth-user',
+        type=str,
+        help='specify username for authentication if REST API is using Basic Auth')
+
+    parser.add_argument(
+        '--auth-password',
+        type=str,
+        help='specify password for authentication if REST API is using Basic Auth')
 
     parser.add_argument(
         '--wait',
         nargs='?',
         const=sys.maxsize,
         type=int,
-        help='wait for take to commit, set an integer to specify a timeout')
-
+        help='set time, in seconds, to wait for take transaction to commit')
 
 def add_delete_parser(subparsers, parent_parser):
     parser = subparsers.add_parser('delete', parents=[parent_parser])
 
+# def add_delete_parser(subparsers, parent_parser):
+#     parser = subparsers.add_parser(
+#         'delete',
+#          help='Deletes an xo game',
+#          description='Sends a transaction to delete an xo game with the '
+#          'identifier <name>. This transaction will fail if the specified '
+#          ' game does not exist.',
+#          parents=[parent_parser])
+
     parser.add_argument(
         'name',
         type=str,
-        help='the identifier for the game to be deleted')
+        help='specify the name of the game to be deleted')
+
+    parser.add_argument(
+        '--url',
+        type=str,
+        help='specify URL of REST API')
+
+    parser.add_argument(
+        '--username',
+        type=str,
+        help="identify name of user's private key file")
+
+    parser.add_argument(
+        '--key-dir',
+        type=str,
+        help="identify directory of user's private key file")
+
+    parser.add_argument(
+        '--auth-user',
+        type=str,
+        help='specify username for authentication if REST API is using Basic Auth')
+
+    parser.add_argument(
+        '--auth-password',
+        type=str,
+        help='specify password for authentication if REST API is using Basic Auth')
 
     parser.add_argument(
         '--wait',
         nargs='?',
         const=sys.maxsize,
         type=int,
-        help='wait for take to commit, set an integer to specify a timeout')
+        help='set time, in seconds, to wait for take transaction to commit')
 
 
 def create_parent_parser(prog_name):
@@ -179,32 +311,32 @@ def create_parent_parser(prog_name):
         action='version',
         version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
         .format(version),
-        help='print version information')
+        help='display version information')
 
-    parent_parser.add_argument(
-        '--url',
-        type=str,
-        help='the url of the REST API')
+#   parent_parser.add_argument(
+#       '--url',
+#       type=str,
+#       help='specify URL of REST API')
 
-    parent_parser.add_argument(
-        '--username',
-        type=str,
-        help="the name of the user's private key file")
+#   parent_parser.add_argument(
+#       '--username',
+#       type=str,
+#       help="identify name of user's private key file")
 
-    parent_parser.add_argument(
-        '--key-dir',
-        type=str,
-        help="the directory of the user's private key file")
+#   parent_parser.add_argument(
+#       '--key-dir',
+#       type=str,
+#       help="identify directory of user's private key file")
 
-    parent_parser.add_argument(
-        '--auth-user',
-        type=str,
-        help='username for authentication if REST API is using Basic Auth')
+#   parent_parser.add_argument(
+#       '--auth-user',
+#       type=str,
+#       help='specify username for authentication if REST API is using Basic Auth')
 
-    parent_parser.add_argument(
-        '--auth-password',
-        type=str,
-        help='password for authentication if REST API is using Basic Auth')
+#   parent_parser.add_argument(
+#       '--auth-password',
+#       type=str,
+#       help='specify password for authentication if REST API is using Basic Auth')
 
     return parent_parser
 
