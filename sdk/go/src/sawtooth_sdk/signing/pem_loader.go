@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
-package client
+package signing
 
 // #cgo LDFLAGS: -lcrypto
 // #include "../../../../c/loader.c"
