@@ -24,15 +24,30 @@
 
 FROM ubuntu:xenial
 
-LABEL "install-type"="copied-bin"
+LABEL "install-type"="local-debs"
 
 RUN apt-get update \
  && apt-get install -y -q \
+    dpkg-dev \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir /debs
+
+COPY sawtooth-smallbank-tp-go*.deb /debs/
+
+RUN cd /debs \
+ && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz \
+ && echo "deb file:/debs ./" >> /etc/apt/sources.list \
+ && echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+ && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
+ && apt-get update
+
+RUN apt-get update \
+ && apt-get install -y -q --allow-unauthenticated \
     libzmq3-dev \
+    sawtooth-smallbank-tp-go \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-
-COPY smallbank-tp-go /usr/bin/smallbank-tp-go
 
 EXPOSE 4004/tcp
 
