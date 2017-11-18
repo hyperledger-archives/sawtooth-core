@@ -59,7 +59,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - the default paging response, showing all 3 resources returned
+            - a paging response with start of C_2 and limit 100
             - a list of transactions with 3 items
             - those items are instances of Transaction
             - the first item has a header_signature of 'ccc...2'
@@ -68,7 +68,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
+        self.assert_valid_paging(response, C_2, 100)
         self.assertEqual(3, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_2, response.transactions[0].header_signature)
@@ -123,7 +123,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...1'
-            - a paging response showing all 2 resources returned
+            - a paging response with start of C_1 and limit 100
             - a list of transactions with 2 items
             - those items are instances of Transaction
             - the first item has a header_signature of 'ccc...1'
@@ -132,7 +132,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_1, response.head_id)
-        self.assert_valid_paging(response, total=2)
+        self.assert_valid_paging(response, C_1, 100)
         self.assertEqual(2, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_1, response.transactions[0].header_signature)
@@ -173,7 +173,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 2 resources returned
+            - a paging response with start of C_0 and limit 100
             - a list of transactions with 2 items
             - the items are instances of Transaction
             - the first item has a header_signature of 'ccc...0'
@@ -183,7 +183,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, total=2)
+        self.assert_valid_paging(response, C_0, 100)
         self.assertEqual(2, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_0, response.transactions[0].header_signature)
@@ -242,7 +242,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 1 resources returned
+        - a paging response with start of C_1 and limit 100
             - a list of transactions with 1 items
             - that item is an instances of Transaction
             - that item has a header_signature of 'ccc...1'
@@ -251,7 +251,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, total=1)
+        self.assert_valid_paging(response, C_1, 100)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_1, response.transactions[0].header_signature)
@@ -277,7 +277,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...1'
-            - a paging response showing all 1 resources returned
+            - a paging response with a start of C_0 and limit 100
             - a list of transactions with 1 item
             - that item is an instance of Transaction
             - that item has a header_signature of 'ccc...0'
@@ -286,7 +286,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_1, response.head_id)
-        self.assert_valid_paging(response, total=1)
+        self.assert_valid_paging(response, C_0, 100)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_0, response.transactions[0].header_signature)
@@ -321,7 +321,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assertFalse(response.transactions)
 
     def test_txn_list_paginated(self):
-        """Verifies requests for txn lists work when paginated just by count.
+        """Verifies requests for txn lists work when paginated just by limit.
 
         Queries the default mock block store:
             {
@@ -343,25 +343,24 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a status of OK
             - a head_id of 'bbb...2', the latest
             - a paging response with:
-                * a next_id of 'ccc...0'
-                * the default empty previous_id
-                * the default start_index of 0
-                * the default total resource count of 3
+                * a next_id of C_0
+                * the default start of C_2
+                * limit of 2
             - a list of transactions with 2 items
             - those items are instances of Transaction
             - the first item has a header_signature of 'ccc...2'
         """
-        response = self.make_paged_request(count=2)
+        response = self.make_paged_request(limit=2)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, next_id=C_0)
+        self.assert_valid_paging(response, C_2, 2, next_id=C_0)
         self.assertEqual(2, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_2, response.transactions[0].header_signature)
 
     def test_txn_list_paginated_by_start_id (self):
-        """Verifies txn list requests work paginated by count and start_id.
+        """Verifies txn list requests work paginated by limit and start_id.
 
         Queries the default mock block store:
             {
@@ -383,65 +382,24 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a status of OK
             - a head_id of 'bbb...2', the latest
             - a paging response with:
-                * a next_id of 'ccc...0'
-                * a previous_id of 'ccc...2'
-                * a start_index of 1
-                * the default total resource count of 3
+                * a next_id of C_0
+                * a start of C_1
+                * limit of 1
             - a list of transactions with 1 item
             - that item is an instance of Transaction
             - that item has a header_signature of 'ccc...1'
         """
-        response = self.make_paged_request(count=1, start_id=C_1)
+        response = self.make_paged_request(limit=1, start=C_1)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, C_0, C_2, 1)
+        self.assert_valid_paging(response, C_1, 1, C_0)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_1, response.transactions[0].header_signature)
 
-    def test_txn_list_paginated_by_end_id (self):
-        """Verifies txn list requests work paginated by count and end_id.
-
-        Queries the default mock block store:
-            {
-                header_signature: 'bbb...2',
-                batches: [{
-                    header_signature: 'aaa...2',
-                    transactions: [{
-                        header_signature: 'ccc...2',
-                        ...
-                    }],
-                    ...
-                }],
-                ...
-            },
-            {header_signature: 'bbb...1', ...},
-            {header_signature: 'bbb...0', ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response with:
-                * the default empty next_id
-                * a previous_id of 'ccc...2'
-                * a start_index of 1
-                * the default total resource count of 3
-            - a list of transactions with 2 items
-            - those items are instances of Transaction
-            - the first item has a header_signature of 'ccc...1'
-        """
-        response = self.make_paged_request(count=2, end_id=C_0)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, previous_id=C_2, start_index=1)
-        self.assertEqual(2, len(response.transactions))
-        self.assert_all_instances(response.transactions, Transaction)
-        self.assertEqual(C_1, response.transactions[0].header_signature)
-
     def test_txn_list_paginated_by_index (self):
-        """Verifies txn list requests work paginated by count and min_index.
+        """Verifies txn list requests work paginated by limit and min_index.
 
         Queries the default mock block store:
             {
@@ -462,16 +420,16 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response with a next_id of 'ccc...1'
+            - a paging response with a next of C_1, start of C_2 and limit of 1
             - a list of transactions with 1 item
             - that item is an instance of Transaction
             - that item has a header_signature of 'ccc...2'
         """
-        response = self.make_paged_request(count=1, start_index=0)
+        response = self.make_paged_request(limit=1, start=C_2)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, next_id=C_1)
+        self.assert_valid_paging(response, C_2, 1, C_1)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_2, response.transactions[0].header_signature)
@@ -499,7 +457,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a status of INVALID_PAGING
             - that head_id, paging, and transactions are missing
         """
-        response = self.make_paged_request(count=3, start_id='bad')
+        response = self.make_paged_request(limit=3, start='bad')
 
         self.assertEqual(self.status.INVALID_PAGING, response.status)
         self.assertFalse(response.head_id)
@@ -517,210 +475,20 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a status of OK
             - a head_id of 'bbb...1'
             - a paging response with:
-                * an empty next_id
-                * a previous_id of 'ccc...1'
-                * a start_index of 1
-                * a total resource count of 2
+                * a start of C_0
+                * limit of 1
             - a list of transactions with 1 item
             - that item is an instance of Transaction
             - that has a header_signature of 'ccc...0'
         """
-        response = self.make_paged_request(count=1, start_index=1, head_id=B_1)
+        response = self.make_paged_request(limit=1, start=C_0, head_id=B_1)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_1, response.head_id)
-        self.assert_valid_paging(response, '', C_1, 1, 2)
+        self.assert_valid_paging(response, C_0, 1)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_0, response.transactions[0].header_signature)
-
-    def test_txn_list_sorted_by_key(self):
-        """Verifies txn list requests work sorted by header_signature.
-
-        Queries the default mock block store:
-            {
-                header_signature: 'bbb...2',
-                batches: [{
-                    header_signature: 'aaa...2',
-                    transactions: [{
-                        header_signature: 'ccc...2',
-                        ...
-                    }],
-                    ...
-                }],
-                ...
-            },
-            {header_signature: 'bbb...1', ...},
-            {header_signature: 'bbb...0', ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
-            - a list of transactions with 3 items
-            - the items are instances of Transaction
-            - the first item has a header_signature of 'ccc...0'
-            - the last item has a header_signature of 'ccc...2'
-        """
-        controls = self.make_sort_controls('header_signature')
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
-        self.assertEqual(3, len(response.transactions))
-        self.assert_all_instances(response.transactions, Transaction)
-        self.assertEqual(C_0, response.transactions[0].header_signature)
-        self.assertEqual(C_2, response.transactions[2].header_signature)
-
-    def test_txn_list_sorted_by_bad_key(self):
-        """Verifies txn list requests break properly sorted by a bad key.
-
-        Queries the default mock block store:
-            {
-                header_signature: 'bbb...2',
-                batches: [{
-                    header_signature: 'aaa...2',
-                    transactions: [{
-                        header_signature: 'ccc...2',
-                        ...
-                    }],
-                    ...
-                }],
-                ...
-            },
-            {header_signature: 'bbb...1', ...},
-            {header_signature: 'bbb...0', ...}
-
-        Expects to find:
-            - a status of INVALID_SORT
-            - that head_id, paging, and transactions are missing
-        """
-        controls = self.make_sort_controls('bad')
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.INVALID_SORT, response.status)
-        self.assertFalse(response.head_id)
-        self.assertFalse(response.paging.SerializeToString())
-        self.assertFalse(response.transactions)
-
-    def test_txn_list_sorted_by_nested_key(self):
-        """Verifies txn list requests work sorted by header.signer_public_key.
-
-        Queries the default mock block store:
-            {
-                header_signature: 'bbb...2',
-                batches: [{
-                    header_signature: 'aaa...2',
-                    transactions: [{
-                        header_signature: 'ccc...2',
-                        ...
-                    }],
-                    ...
-                }],
-                ...
-            },
-            {header_signature: 'bbb...1', ...},
-            {header_signature: 'bbb...0', ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
-            - a list of transactions with 3 items
-            - the items are instances of Transaction
-            - the first item has a header_signature of 'ccc...0'
-            - the last item has a header_signature of 'ccc...2'
-        """
-        controls = self.make_sort_controls('header', 'signer_public_key')
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
-        self.assertEqual(3, len(response.transactions))
-        self.assert_all_instances(response.transactions, Transaction)
-        self.assertEqual(C_0, response.transactions[0].header_signature)
-        self.assertEqual(C_2, response.transactions[2].header_signature)
-
-    def test_txn_list_sorted_by_implied_header(self):
-        """Verifies txn list requests work sorted by an implicit header key.
-
-        Queries the default mock block store:
-            {
-                header_signature: 'bbb...2',
-                batches: [{
-                    header_signature: 'aaa...2',
-                    transactions: [{
-                        header_signature: 'ccc...2',
-                        ...
-                    }],
-                    ...
-                }],
-                ...
-            },
-            {header_signature: 'bbb...1', ...},
-            {header_signature: 'bbb...0', ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
-            - a list of transactions with 3 items
-            - the items are instances of Transaction
-            - the first item has a header_signature of 'ccc...0'
-            - the last item has a header_signature of 'ccc...2'
-        """
-        controls = self.make_sort_controls('signer_public_key')
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
-        self.assertEqual(3, len(response.transactions))
-        self.assert_all_instances(response.transactions, Transaction)
-        self.assertEqual(C_0, response.transactions[0].header_signature)
-        self.assertEqual(C_2, response.transactions[2].header_signature)
-
-    def test_txn_list_sorted_by_many_keys(self):
-        """Verifies txn list requests work sorted by two keys.
-
-        Queries the default mock block store:
-            {
-                header_signature: 'bbb...2',
-                batches: [{
-                    header_signature: 'aaa...2',
-                    transactions: [{
-                        header_signature: 'ccc...2',
-                        ...
-                    }],
-                    ...
-                }],
-                ...
-            },
-            {header_signature: 'bbb...1', ...},
-            {header_signature: 'bbb...0', ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
-            - a list of transactions with 3 items
-            - the items are instances of Transaction
-            - the first item has a header_signature of 'ccc...0'
-            - the last item has a header_signature of 'ccc...2'
-        """
-        controls = (self.make_sort_controls('family_name') +
-                    self.make_sort_controls('signer_public_key'))
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
-        self.assertEqual(3, len(response.transactions))
-        self.assert_all_instances(response.transactions, Transaction)
-        self.assertEqual(C_0, response.transactions[0].header_signature)
-        self.assertEqual(C_2, response.transactions[2].header_signature)
 
     def test_txn_list_sorted_in_reverse(self):
         """Verifies txn list requests work sorted by a key in reverse.
@@ -744,22 +512,22 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
+            - a paging response start of C_0 and limit of 100
             - a list of transactions with 3 items
             - the items are instances of Transaction
             - the first item has a header_signature of 'ccc...0'
             - the last item has a header_signature of 'ccc...2'
         """
-        controls = self.make_sort_controls('header_signature', reverse=True)
+        controls = self.make_sort_controls('default', reverse=True)
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
+        self.assert_valid_paging(response, C_0, 100)
         self.assertEqual(3, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
-        self.assertEqual(C_2, response.transactions[0].header_signature)
-        self.assertEqual(C_0, response.transactions[2].header_signature)
+        self.assertEqual(C_0, response.transactions[0].header_signature)
+        self.assertEqual(C_2, response.transactions[2].header_signature)
 
 
 class TestTransactionGetRequests(ClientHandlerTestCase):

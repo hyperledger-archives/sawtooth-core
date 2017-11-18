@@ -47,7 +47,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2' (the latest)
-            - the default paging response, showing all 3 resources returned
+            - a paging response with start of 'b' * 127 + '2' and limit 100
             - a list of blocks with 3 items
             - the items are instances of Block
             - The first item has a header_signature of 'bbb...2'
@@ -56,7 +56,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
+        self.assert_valid_paging(response, '0x0000000000000002',100)
         self.assertEqual(3, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_2, response.blocks[0].header_signature)
@@ -100,7 +100,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...1'
-            - a paging response showing all 2 resources returned
+            - a paging response with start of B_2 and limit 100
             - a list of blocks with 2 items
             - the items are instances of Block
             - The first item has a header_signature of 'bbb...1'
@@ -109,7 +109,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_1, response.head_id)
-        self.assert_valid_paging(response, total=2)
+        self.assert_valid_paging(response, '0x0000000000000001', 100)
         self.assertEqual(2, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_1, response.blocks[0].header_signature)
@@ -139,7 +139,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 2 resources returned
+            - an empty paging response
             - a list of blocks with 2 items
             - the items are instances of Block
             - the first item has a header_signature of 'bbb...0'
@@ -149,7 +149,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, total=2)
+        self.assert_valid_paging(response, "", 0)
         self.assertEqual(2, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_0, response.blocks[0].header_signature)
@@ -186,7 +186,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 1 resources returned
+            - an empty paging response
             - a list of blocks with 1 items
             - that item is an instances of Block
             - that item has a header_signature of 'bbb...1'
@@ -195,7 +195,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, total=1)
+        self.assert_valid_paging(response, "", 0)
         self.assertEqual(1, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_1, response.blocks[0].header_signature)
@@ -210,7 +210,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...1'
-            - a paging response showing all 1 resources returned
+                - an empty paging response
             - a list of blocks with 1 item
             - that item is an instance of Block
             - that item has a header_signature of 'bbb...0'
@@ -219,7 +219,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_1, response.head_id)
-        self.assert_valid_paging(response, total=1)
+        self.assert_valid_paging(response, "", 0)
         self.assertEqual(1, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_0, response.blocks[0].header_signature)
@@ -242,7 +242,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assertFalse(response.blocks)
 
     def test_block_list_paginated(self):
-        """Verifies requests for block lists work when paginated just by count.
+        """Verifies requests for block lists work when paginated just by limit.
 
         Queries the default mock block store with three blocks:
             {header: {block_num: 2 ...}, header_signature: B_2 ...},
@@ -252,23 +252,24 @@ class TestBlockListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response with a next_id of 'bbb...0'
+             a paging response with start of B_@, limit 100 and
+                next of B_0
             - a list of blocks with 2 items
             - those items are instances of Block
             - the first item has a header_signature of 'bbb...2'
         """
-        response = self.make_paged_request(count=2)
+        response = self.make_paged_request(limit=2)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
         self.assertEqual(2, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_2, response.blocks[0].header_signature)
-        self.assert_valid_paging(response,
+        self.assert_valid_paging(response, '0x0000000000000002', 2,
                                  next_id=BlockStore.block_num_to_hex(0))
 
-    def test_block_list_paginated_by_start_id(self):
-        """Verifies block list requests work paginated by count and start_id.
+    def test_block_list_paginated_by_start(self):
+        """Verifies block list requests work paginated by limit and start.
 
         Queries the default mock block store with three blocks:
             {header: {block_num: 2 ...}, header_signature: 'bbb...2' ...},
@@ -279,20 +280,20 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - a status of OK
             - a head_id of 'bbb...2', the latest
             - a paging response with:
-                * a next_id of 'bbb...0'
-                * a previous_id of 'bbb...2'
-                * a start_index of 1
-                * the default total resource count of 3
+                * a next_id of '0x0000000000000000
+                * a limit of 100
+                * start of '0x0000000000000001'
             - a list of blocks with 1 item
             - that item is an instance of Block
             - that item has a header_signature of 'bbb...1'
         """
         response = self.make_paged_request(
-            count=1, start_id=BlockStore.block_num_to_hex(1))
+            limit=1, start=BlockStore.block_num_to_hex(1))
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
         self.assert_valid_paging(response,
+                                 '0x0000000000000001', 1,
                                  next_id=BlockStore.block_num_to_hex(0))
         self.assertEqual(1, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
@@ -310,7 +311,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - a status of INVALID_PAGING
             - that head_id, paging, and blocks are missing
         """
-        response = self.make_paged_request(count=3, start_id='bad')
+        response = self.make_paged_request(limit=3, start='bad')
 
         self.assertEqual(self.status.INVALID_PAGING, response.status)
         self.assertFalse(response.head_id)
@@ -338,7 +339,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assertFalse(response.blocks)
 
     def test_block_list_sorted_in_reverse(self):
-        """Verifies block list requests work sorted by a key in reverse.
+        """Verifies block list requests work sorted in reverse.
 
         Queries the default mock block store with three blocks:
             {header: {block_num: 2 ...}, header_signature: 'bbb...2' ...},
@@ -348,7 +349,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
+            - a paging response with start of B_) and limit 100
             - a list of blocks with 3 items
             - the items are instances of Block
             - the first item has a header_signature of 'bbb...2'
@@ -359,7 +360,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
+        self.assert_valid_paging(response, '0x0000000000000000', 100)
         self.assertEqual(3, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_0, response.blocks[0].header_signature)

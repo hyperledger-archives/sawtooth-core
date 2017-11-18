@@ -48,10 +48,9 @@ paths:
         Fetches a paginated list of batches from the validator.
       parameters:
         - $ref: "#/parameters/head"
-        - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min"
-        - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
+        - $ref: "#/parameters/start"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/reverse"
       responses:
         200:
           description: Successfully retrieved batches
@@ -190,10 +189,9 @@ paths:
           in: query
           type: string
           description: A partial address to filter leaves by
-        - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min"
-        - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
+        - $ref: "#/parameters/start"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/reverse"
       responses:
         200:
           description: Successfully retrieved state data
@@ -252,10 +250,9 @@ paths:
         Fetches a paginated list of blocks from the validator.
       parameters:
         - $ref: "#/parameters/head"
-        - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min"
-        - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
+        - $ref: "#/parameters/start"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/reverse"
       responses:
         200:
           description: Successfully retrieved blocks
@@ -311,10 +308,9 @@ paths:
         Fetches a paginated list of transactions from the validator.
       parameters:
         - $ref: "#/parameters/head"
-        - $ref: "#/parameters/count"
-        - $ref: "#/parameters/min"
-        - $ref: "#/parameters/max"
-        - $ref: "#/parameters/sort"
+        - $ref: "#/parameters/start"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/reverse"
       responses:
         200:
           description: Successfully retrieved transactions
@@ -508,33 +504,22 @@ parameters:
     in: query
     type: integer
     description: A time in seconds to wait for commit
-  count:
-    name: count
+  limit:
+    name: limit
     in: query
     type: integer
     default: 1000
     description: Number of items to return
-  min:
-    name: min
+  start:
+    name: start
     in: query
     type: string
-    description: Id or index to start paging (inclusive)
-  max:
-    name: max
+    description: Id to start paging (inclusive)
+  reverse:
+    name: reverse
     in: query
     type: string
-    description: Id or index to end paging (inclusive)
-  sort:
-    name: sort
-    in: query
-    type: string
-    description: |
-      Comma-separated keys to sort a list by:
-        - can reference header keys explicitly or implicitly
-        - dot-notation indicates nested keys
-        - starting a key with a minus-sign indicates descending order
-        - ending a key with `.length` sorts by the length
-        - example: `sort=header.signer_public_key,-transaction_ids.length`
+    description: If the list should be reversed
 
 definitions:
   Head:
@@ -545,18 +530,18 @@ definitions:
     example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd
   Paging:
     properties:
-      start_index:
-        type: integer
-        example: 1000
-      total_count:
+      start:
+        type: string
+        example: "65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd"
+      limit:
         type: integer
         example: 54321
-      previous:
+      next_position:
         type: string
-        example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd&min=0&count=1000
+        example: "65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd"
       next:
         type: string
-        example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd&min=2000&count=1000
+        example: https://api.sawtooth.com/state?head=65cd3a3ce088b265b626f704b7f3db97b6f12e848dccb35d7806f3d0324c71b709ed360d602b8b658b94695374717e3bdb4b76f77886953777d5d008558247dd&start=2000&limit=1000
 
   Error:
     properties:
