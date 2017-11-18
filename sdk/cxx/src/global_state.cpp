@@ -34,11 +34,11 @@ GlobalState::GlobalState(
     const MessageStreamPtr& message_stream, const std::string& context_id):
     message_stream(message_stream), context_id(context_id) {}
 
-bool GlobalState::Get(std::string* out_value, const std::string& address) const {
+bool GlobalState::GetState(std::string* out_value, const std::string& address) const {
     std::unordered_map<std::string, std::string> out;
     std::vector<std::string> addresses = { address };
 
-    this->Get(&out, addresses);
+    this->GetState(&out, addresses);
     auto value = out.find(address);
     if( value != out.end()) {
         *out_value = (*value).second;
@@ -47,7 +47,7 @@ bool GlobalState::Get(std::string* out_value, const std::string& address) const 
     return false;
 }
 
-void GlobalState::Get(
+void GlobalState::GetState(
         std::unordered_map<std::string, std::string>* out_values,
         const std::vector<std::string>& addresses) const {
     if (!out_values) {
@@ -82,12 +82,12 @@ void GlobalState::Get(
     }
 }
 
-void GlobalState::Set(const std::string& address, const std::string& value) const {
+void GlobalState::SetState(const std::string& address, const std::string& value) const {
     std::vector<KeyValue> kv_pairs = { make_pair(address, value) };
-    this->Set(kv_pairs);
+    this->SetState(kv_pairs);
 }
 
-void GlobalState::Set(const std::vector<KeyValue>& kv_pairs) const {
+void GlobalState::SetState(const std::vector<KeyValue>& kv_pairs) const {
     TpStateSetRequest request;
     TpStateSetResponse response;
     request.set_context_id(this->context_id);
@@ -110,13 +110,13 @@ void GlobalState::Set(const std::vector<KeyValue>& kv_pairs) const {
 }
 
 
-void GlobalState::Delete(
+void GlobalState::DeleteState(
         const std::string& address) const {
     std::vector<std::string> addrs = { address };
-    this->Delete(addrs);
+    this->DeleteState(addrs);
 }
 
-void GlobalState::Delete(const std::vector<std::string>& addresses) const {
+void GlobalState::DeleteState(const std::vector<std::string>& addresses) const {
     TpStateDeleteRequest request;
     TpStateDeleteResponse response;
     request.set_context_id(this->context_id);
