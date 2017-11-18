@@ -165,6 +165,7 @@ main() {
 
 docker_run() {
     image=$1
+    arg=$2
 
     if [ -z $ISOLATION_ID ]; then
         tag=$image
@@ -187,7 +188,7 @@ docker_run() {
             --env http_proxy=$http_proxy \
             --env HTTPS_PROXY=$HTTPS_PROXY \
             --env HTTP_PROXY=$HTTP_PROXY \
-            $tag
+            $tag $arg
     else
         docker run --rm -v $top_dir:/project/sawtooth-core \
             $cargo_registry_flag \
@@ -195,7 +196,7 @@ docker_run() {
             --env http_proxy=$http_proxy \
             --env HTTPS_PROXY=$HTTPS_PROXY \
             --env HTTP_PROXY=$HTTP_PROXY \
-            $tag
+            $tag $arg
     fi
 }
 
@@ -300,8 +301,17 @@ then
     }
 
     build_go() {
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_run sawtooth-dev-go
+
+        cp $top_dir/bin/install_packaging_deps $build_dir
+        cp $top_dir/ci/sawtooth-build-debs $build_dir
+        docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
+        docker_run sawtooth-build-debs go
 
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir
@@ -350,7 +360,7 @@ then
         cp $top_dir/bin/install_packaging_deps $build_dir
         cp $top_dir/ci/sawtooth-build-debs $build_dir
         docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
-        docker_run sawtooth-build-debs
+        docker_run sawtooth-build-debs python
 
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
         docker_run sawtooth-dev-python
