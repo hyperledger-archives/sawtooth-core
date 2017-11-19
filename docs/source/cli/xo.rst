@@ -19,11 +19,21 @@
 XO CLI
 ******
 
+The XO CLI demonstrates an example client that uses the XO transaction family
+to play a simple game of Tic-tac-toe (also known as Noughts and Crosses,
+or X's and O's). This CLI handles the construction and submission of
+transactions to a running validator via the URL of the validator's REST API.
+
+Before playing a game, you must start a validator, the XO transaction processor,and the REST API. The XO client sends requests to update and query the
+blockchain to the URL of the REST API (by default, ``http://127.0.0.1:8080``).
+
+For more information on requirements and game rules, see
+:doc:`../app_developers_guide/intro_xo_transaction_family`.
+
 xo
 ==
 
-The ``xo`` command allows users to play a simple board game known
-variously as tic-tac-toe, noughts and crosses, and XO.
+The ``xo`` command provides subcommands for playing XO on the command line.
 
 .. literalinclude:: output/xo_usage.out
    :language: console
@@ -32,9 +42,7 @@ variously as tic-tac-toe, noughts and crosses, and XO.
 xo create
 =========
 
-Sends a transaction to start an xo game with the identifier
-``<name>``. This transaction will fail if a game already exists with
-the name ``<name>``.
+The ``xo create`` subcommand starts an XO game with the specified name.
 
 .. literalinclude:: output/xo_create_usage.out
    :language: console
@@ -43,8 +51,7 @@ the name ``<name>``.
 xo list
 =======
 
-Displays information for all xo games in state, showing the players,
-the game state, and the board for each game.
+The ``xo list`` subcommand displays information for all XO games in state.
 
 .. literalinclude:: output/xo_list_usage.out
    :language: console
@@ -53,8 +60,7 @@ the game state, and the board for each game.
 xo show
 =======
 
-Displays the xo game ``<name>``, showing the players, the game state,
-and the board.
+The ``xo show`` subcommand displays information about the specified XO game.
 
 .. literalinclude:: output/xo_show_usage.out
    :language: console
@@ -63,9 +69,8 @@ and the board.
 xo take
 =======
 
-Sends a transaction to make a move in the xo game ``<name>``, taking
-``<space>``. This transaction will fail if the game ``<name>`` does
-not exist, if it is not the sender’s turn, or if ``<space>`` is
+The ``xo take`` subcommand makes a move in an XO game by sending a transaction
+to take the identified space.  This transaction will fail if the game `name` does not exist, if it is not the sender’s turn, or if `space` is
 already taken.
 
 .. literalinclude:: output/xo_take_usage.out

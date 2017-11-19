@@ -15,14 +15,17 @@
 
 .. _intkey-cli-reference-label:
 
-**************
-IntegerKey CLI
-**************
+***********************
+IntegerKey CLI (intkey)
+***********************
+
+The IntegerKey CLI, ``intkey``, provides functions that can be used to test
+deployed ledgers.
 
 intkey
 ======
 
-The IntegerKey transaction family allows users to set, increment, and
+The ``intkey`` command provides subcommands to set, increment, and
 decrement the value of entries stored in a state dictionary.
 
 .. literalinclude:: output/intkey_usage.out
@@ -32,9 +35,9 @@ decrement the value of entries stored in a state dictionary.
 intkey set
 ==========
 
-Sends a transaction to set ``<name>`` to ``<value>``. This transaction
-will fail if ``<value>`` is less than 0 or greater than 2\
-:sup:`32` - 1.
+The ``intkey set`` subcommand sets a key (`name`) to the specified value.
+This transaction will fail if the value is less than 0 or greater than
+2\ :sup:`32` - 1.
 
 .. literalinclude:: output/intkey_set_usage.out
    :language: console
@@ -43,9 +46,9 @@ will fail if ``<value>`` is less than 0 or greater than 2\
 intkey inc
 ==========
 
-Sends a transaction to increment ``<name>`` by ``<value>``. This
-transaction will fail if ``<name>`` is not set or if the resulting
-value would exceed 2\ :sup:`32` - 1.
+The ``intkey inc`` subcommand increments a key (`name`) by the specified value.
+This transaction will fail if the key is not set or if the resulting value
+would exceed 2\ :sup:`32` - 1.
 
 .. literalinclude:: output/intkey_inc_usage.out
    :language: console
@@ -54,9 +57,9 @@ value would exceed 2\ :sup:`32` - 1.
 intkey dec
 ==========
 
-Sends a transaction to increment ``<name>`` by ``<value>``. This
-transaction will fail if ``<name>`` is not set or if the resulting
-value would be less than 0.
+The ``intkey dec`` subcommand decrements a key (`name`) by the specified value.
+This transaction will fail if the key is not set or if the resulting value
+would be less than 0.
 
 .. literalinclude:: output/intkey_dec_usage.out
    :language: console
@@ -65,7 +68,7 @@ value would be less than 0.
 intkey show
 ===========
 
-Displays the value of the intkey entry ``<name>``.
+The ``intkey show`` subcommand displays the value of the specified key (`name`).
 
 .. literalinclude:: output/intkey_show_usage.out
    :language: console
@@ -74,7 +77,7 @@ Displays the value of the intkey entry ``<name>``.
 intkey list
 ===========
 
-Displays the value of all intkey entries in state.
+The ``intkey list`` subcommand displays the value of all keys.
 
 .. literalinclude:: output/intkey_list_usage.out
    :language: console

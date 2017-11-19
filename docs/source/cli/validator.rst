@@ -15,11 +15,11 @@
 
 .. _validator-cli-reference-label:
 
-*************
-Validator CLI
-*************
+**********************************
+Validator CLI (sawtooth-validator)
+**********************************
 
-The Validator CLI (the sawtooth-validator command) controls the
+The validator CLI, ``sawtooth-validator``, controls the
 behavior of the validator.
 
 A validator is the component ultimately responsible for validating
@@ -41,7 +41,7 @@ validator.
 
   - If set to ``static``, use the ``--peers`` option to list the URLs
     of all peers that the validator should connect to, using the
-    format tcp://hostname:port. Specify multiple peer URLs in a
+    format ``tcp``://`hostname`:`port`. Specify multiple peer URLs in a
     comma-separated list.
 
   - If set to ``dynamic``, any static peers will be processed first,

@@ -15,9 +15,11 @@
 
 .. _sawadm-reference-label:
 
-******************
-Sawtooth Admin CLI
-******************
+***************************
+Sawtooth Admin CLI (sawadm)
+***************************
+
+The Sawtooth admin CLI, ``sawadm`` is used for Sawtooth administration tasks.
 
 sawadm
 ======
@@ -33,60 +35,48 @@ initializing a validator.
 sawadm genesis
 ==============
 
-Overview
---------
-
-The genesis CLI tool produces a file for use during initialization of
-a validator. A network requires an initial block (known as the genesis
-block) whose signature will determine the block chain id. This initial
+The ``sawadm genesis`` subcommand produces a file for use during the
+initialization of a validator. A network requires an initial block (known as the
+`genesis block`) whose signature will determine the block chain id. This initial
 block is produced from a list of batches, which will be applied at
-genesis time. The input to the command is a set of zero or more files
-containing serialized ``BatchList`` protobuf messages. The output is a
-file containing a serialized ``GenesisData`` protobuf message. This
-file, when placed at ``<sawtooth_data>/genesis.batch``, will trigger
+genesis time.
+
+The optional argument `input_file` specifies one or more files containing
+serialized ``BatchList`` protobuf messages to add to the genesis data. (Use a
+space to separate multiple files.) If no input file is specified,
+``sawadm keygen`` produces an empty genesis block.
+
+The output is a file containing a serialized ``GenesisData`` protobuf message.
+This file, when placed at `sawtooth_data`/``genesis.batch``, will trigger
 the genesis process.
 
-The location ``sawtooth_data`` depends on whether or not the
-environment variable ``SAWTOOTH_HOME`` is set. If it is, then
-``sawtooth_data`` is located at ``<SAWTOOTH_HOME>/data``. If it is
-not, then ``sawtooth_data`` is located at ``/var/lib/sawtooth``.
+.. Note::
 
-Usage
------
+  The location of `sawtooth_data` depends on whether the
+  environment variable ``SAWTOOTH_HOME`` is set. If it is, then
+  `sawtooth_data` is located at ``SAWTOOTH_HOME/data``. If it is
+  not, then `sawtooth_data` is located at ``/var/lib/sawtooth``.
+
+When ``sawadm genesis`` runs, it displays the path and filename of the
+target file where the serialized ``GenesisData`` is written. (Default:
+`sawtooth_data`/``genesis.batch``.) For example:
+
+.. code-block:: console
+
+    $ sawadm genesis config.batch mktplace.batch
+    Generating /var/lib/sawtooth/genesis.batch
+
+Use ``--output`` `filename` to specify a different name for the target file.
 
 .. literalinclude:: output/sawadm_genesis_usage.out
    :language: console
    :linenos:
 
-Arguments
-^^^^^^^^^
-
-- ``input_batch_file`` - a repeated list of files containing a
-  serialized ``BatchList`` message. This may be empty, which will
-  produce an empty genesis block.
-
-- ``--output <filename>`` - a target file where the serialized
-  ``GenesisData`` will be written. Defaults to
-  ``<sawtooth_data>/genesis.batch``.
-
-Output
-^^^^^^
-
-The output of the command displays a message where the output
-``GenesisData`` is written.
-
-Example
-^^^^^^^
-
-.. code-block:: console
-
-    > sawadm genesis config.batch mktplace.batch
-    Generating /var/lib/sawtooth/genesis.batch
 
 sawadm keygen
 =============
 
-The ``sawadm keygen`` command generates keys that the validator uses to
+The ``sawadm keygen`` subcommand generates keys that the validator uses to
 sign blocks. This system-wide key must be created during Sawtooth
 configuration.
 
