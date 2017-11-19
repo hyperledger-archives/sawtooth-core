@@ -210,6 +210,8 @@ class RouteHandler(object):
                     or not all(isinstance(i, str) for i in ids)):
                 LOGGER.debug('Request body was invalid: %s', ids)
                 raise errors.StatusBodyInvalid()
+            for i in ids:
+                self._validate_id(i)
 
         else:
             ids = self._get_filter_ids(request)
@@ -326,7 +328,7 @@ class RouteHandler(object):
         """
         paging_controls = self._get_paging_controls(request)
         validator_query = client_block_pb2.ClientBlockListRequest(
-            head_id=request.url.query.get('head', None),
+            head_id=self._get_head_id(request),
             block_ids=self._get_filter_ids(request),
             sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
@@ -355,6 +357,7 @@ class RouteHandler(object):
         error_traps = [error_handlers.BlockNotFoundTrap]
 
         block_id = request.match_info.get('block_id', '')
+        self._validate_id(block_id)
 
         response = await self._query_validator(
             Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
@@ -383,7 +386,7 @@ class RouteHandler(object):
         """
         paging_controls = self._get_paging_controls(request)
         validator_query = client_batch_pb2.ClientBatchListRequest(
-            head_id=request.url.query.get('head', None),
+            head_id=self._get_head_id(request),
             batch_ids=self._get_filter_ids(request),
             sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
@@ -413,6 +416,7 @@ class RouteHandler(object):
         error_traps = [error_handlers.BatchNotFoundTrap]
 
         batch_id = request.match_info.get('batch_id', '')
+        self._validate_id(batch_id)
 
         response = await self._query_validator(
             Message.CLIENT_BATCH_GET_REQUEST,
@@ -441,7 +445,7 @@ class RouteHandler(object):
         """
         paging_controls = self._get_paging_controls(request)
         validator_query = client_transaction_pb2.ClientTransactionListRequest(
-            head_id=request.url.query.get('head', None),
+            head_id=self._get_head_id(request),
             transaction_ids=self._get_filter_ids(request),
             sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
@@ -473,6 +477,7 @@ class RouteHandler(object):
         error_traps = [error_handlers.TransactionNotFoundTrap]
 
         txn_id = request.match_info.get('transaction_id', '')
+        self._validate_id(txn_id)
 
         response = await self._query_validator(
             Message.CLIENT_TRANSACTION_GET_REQUEST,
@@ -518,6 +523,8 @@ class RouteHandler(object):
                     or not all(isinstance(i, str) for i in ids)):
                 LOGGER.debug('Request body was invalid: %s', ids)
                 raise errors.ReceiptBodyInvalid()
+            for i in ids:
+                self._validate_id(i)
 
         else:
             ids = self._get_filter_ids(request)
@@ -1009,12 +1016,39 @@ class RouteHandler(object):
                     for k, v in item.items()}
         return item
 
-    @staticmethod
-    def _get_filter_ids(request):
+    @classmethod
+    def _get_head_id(cls, request):
+        """Fetches the request's head query, and validates if present.
+        """
+        head_id = request.url.query.get('head', None)
+
+        if head_id is not None:
+            cls._validate_id(head_id)
+
+        return head_id
+
+    @classmethod
+    def _get_filter_ids(cls, request):
         """Parses the `id` filter paramter from the url query.
         """
-        filter_ids = request.url.query.get('id', None)
-        return filter_ids and filter_ids.split(',')
+        id_query = request.url.query.get('id', None)
+
+        if id_query is None:
+            return None
+
+        filter_ids = id_query.split(',')
+        for filter_id in filter_ids:
+            cls._validate_id(filter_id)
+
+        return filter_ids
+
+    @staticmethod
+    def _validate_id(resource_id):
+        """Confirms a header_signature is 128 hex characters, raising an
+        ApiError if not.
+        """
+        if not re.fullmatch('[0-9a-f]{128}', resource_id):
+            raise errors.InvalidResourceId(resource_id)
 
     @staticmethod
     def _message_to_dict(message):

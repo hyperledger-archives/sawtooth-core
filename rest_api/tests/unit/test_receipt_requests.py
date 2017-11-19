@@ -21,6 +21,12 @@ from sawtooth_rest_api.protobuf import client_receipt_pb2
 from sawtooth_rest_api.protobuf.transaction_receipt_pb2 import TransactionReceipt
 
 
+ID_A = 'a' * 128
+ID_B = 'b' * 128
+ID_C = 'c' * 128
+ID_D = 'd' * 128
+
+
 class ReceiptGetRequestTests(BaseApiTest):
 
     async def get_application(self):
@@ -47,22 +53,22 @@ class ReceiptGetRequestTests(BaseApiTest):
             - a transaction receipt with matching id
 
         It should send a Protobuf request with:
-            - a transaction_ids property of ['1']
+            - a transaction_ids property of [ID_B]
 
         It should send back a JSON response with:
             - a response status of 200
-            - a link property that ends in '/receipts?id=1'
+            - a link property that ends in '/receipts?id={}'.format(ID_B)
             - a data property matching the receipts received
         """
-        receipts = [TransactionReceipt(transaction_id='1')]
+        receipts = [TransactionReceipt(transaction_id=ID_B)]
         self.connection.preset_response(
             receipts=receipts,
             status=self.status.OK)
 
-        response = await self.get_assert_200('/receipts?id=1')
-        self.connection.assert_valid_request_sent(transaction_ids=['1'])
+        response = await self.get_assert_200('/receipts?id={}'.format(ID_B))
+        self.connection.assert_valid_request_sent(transaction_ids=[ID_B])
 
-        self.assert_has_valid_link(response, '/receipts?id=1')
+        self.assert_has_valid_link(response, '/receipts?id={}'.format(ID_B))
         self.assert_receipts_match(receipts, response['data'])
 
     @unittest_run_loop
@@ -77,7 +83,7 @@ class ReceiptGetRequestTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 404
-            - a link property that ends in '/receipts?id=bad'
+            - a link property that ends in '/receipts?id={}'.format(ID_D)
             - a data property matching the receipts statuses received
         """
         receipts = []
@@ -85,8 +91,8 @@ class ReceiptGetRequestTests(BaseApiTest):
             receipts=receipts,
             status=self.status.NO_RESOURCE)
 
-        response = await self.get_assert_status('/receipts?id=missing', 404)
-        self.connection.assert_valid_request_sent(transaction_ids=['missing'])
+        response = await self.get_assert_status('/receipts?id={}'.format(ID_D), 404)
+        self.connection.assert_valid_request_sent(transaction_ids=[ID_D])
 
         self.assert_has_valid_error(response, 80)
 
@@ -95,34 +101,34 @@ class ReceiptGetRequestTests(BaseApiTest):
         """Verifies a GET /receipts with many ids works properly.
 
         It will receive a Protobuf response with receipts with ids:
-            - '1'
-            - '2'
-            - '3'
+            - ID_B
+            - ID_C
+            - ID_D
 
         It should send a Protobuf request with:
-            - a transaction_ids property of ['1', '2', '3']
+            - a transaction_ids property of [ID_B, ID_C, ID_D]
 
         It should send back a JSON response with:
             - a response status of 200
-            - link property ending in '/receipts?id=1,2,3'
+            - link property ending in '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D)
             - a data property matching the batch statuses received
         """
         receipts = [
             TransactionReceipt(transaction_id=t_id)
-            for t_id in ('1', '2', '3')
+            for t_id in (ID_B, ID_C, ID_D)
         ]
         self.connection.preset_response(
             status=self.status.OK,
             receipts=receipts)
 
         response = await self.get_assert_200(
-            '/receipts?id=1,2,3')
+            '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D))
         self.connection.assert_valid_request_sent(
-            transaction_ids=['1', '2', '3'])
+            transaction_ids=[ID_B, ID_C, ID_D])
 
         self.assert_has_valid_link(
             response,
-            '/receipts?id=1,2,3')
+            '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D))
         self.assert_receipts_match(receipts, response['data'])
 
     @unittest_run_loop
@@ -130,21 +136,21 @@ class ReceiptGetRequestTests(BaseApiTest):
         """Verifies a POST to /receipts with many ids works properly.
 
         It will receive a Protobuf response with receipts with ids:
-            - '1'
-            - '2'
-            - '3'
+            - ID_B
+            - ID_C
+            - ID_D
 
         It should send a Protobuf request with:
-            - a transaction_ids property of ['1', '2', '3']
+            - a transaction_ids property of [ID_B, ID_C, ID_D]
 
         It should send back a JSON response with:
             - a response status of 200
-            - link property ending in '/receipts?id=1,2,3'
+            - link property ending in '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D)
             - a data property matching the batch statuses received
         """
         receipts = [
             TransactionReceipt(transaction_id=t_id)
-            for t_id in ('1', '2', '3')
+            for t_id in (ID_B, ID_C, ID_D)
         ]
         self.connection.preset_response(
             status=self.status.OK,
@@ -152,10 +158,10 @@ class ReceiptGetRequestTests(BaseApiTest):
 
         request = await self.client.post(
             '/receipts',
-            data=json.dumps(['1', '2', '3']).encode(),
+            data=json.dumps([ID_B, ID_C, ID_D]).encode(),
             headers={'content-type': 'application/json'})
         self.connection.assert_valid_request_sent(
-            transaction_ids=['1', '2', '3'])
+            transaction_ids=[ID_B, ID_C, ID_D])
         self.assertEqual(200, request.status)
 
         response = await request.json()
