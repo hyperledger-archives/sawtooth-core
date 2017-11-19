@@ -34,7 +34,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store with three blocks:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -45,12 +45,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - the default paging response, showing all 3 resources returned
             - a list of transactions with 3 items
             - those items are instances of Transaction
@@ -59,7 +59,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request()
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -72,7 +72,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a status of INTERNAL_ERROR
             - that head_id, paging, and transactions are missing
         """
-        response = self.make_bad_request(head_id='B-1')
+        response = self.make_bad_request(head_id='b' * 127 + '1')
 
         self.assertEqual(self.status.INTERNAL_ERROR, response.status)
         self.assertFalse(response.head_id)
@@ -97,9 +97,9 @@ class TestTransactionListRequests(ClientHandlerTestCase):
     def test_txn_list_with_head(self):
         """Verifies requests for txn lists work properly with a head id.
 
-        Queries the default mock block store with 'B-1' as the head:
+        Queries the default mock block store with 'b' * 127 + '1' as the head:
             {
-                header_signature: 'B-1',
+                header_signature: 'b' * 127 + '1',
                 batches: [{
                     header_signature: 'b-1',
                     transactions: [{
@@ -110,20 +110,20 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-1'
+            - a head_id of 'b' * 127 + '1'
             - a paging response showing all 2 resources returned
             - a list of transactions with 2 items
             - those items are instances of Transaction
             - the first item has a header_signature of 't-1'
         """
-        response = self.make_request(head_id='B-1')
+        response = self.make_request(head_id='b' * 127 + '1')
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-1', response.head_id)
+        self.assertEqual('b' * 127 + '1', response.head_id)
         self.assert_valid_paging(response, total=2)
         self.assertEqual(2, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -148,7 +148,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store with three blocks:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -159,12 +159,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response showing all 2 resources returned
             - a list of transactions with 2 items
             - the items are instances of Transaction
@@ -174,7 +174,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request(transaction_ids=['t-0', 't-2'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response, total=2)
         self.assertEqual(2, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -186,7 +186,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store with three blocks:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -197,18 +197,18 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of NO_RESOURCE
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - that paging and transactions are missing
         """
         response = self.make_request(transaction_ids=['bad', 'notgood'])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.transactions)
 
@@ -217,7 +217,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store with three blocks:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -228,12 +228,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response showing all 1 resources returned
             - a list of transactions with 1 items
             - that item is an instances of Transaction
@@ -242,7 +242,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request(transaction_ids=['bad', 't-1'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response, total=1)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -251,9 +251,9 @@ class TestTransactionListRequests(ClientHandlerTestCase):
     def test_txn_list_by_head_and_ids(self):
         """Verifies txn list requests work with both head and txn ids.
 
-        Queries the default mock block store with 'B-1' as the head:
+        Queries the default mock block store with 'b' * 127 + '1' as the head:
             {
-                header_signature: 'B-1',
+                header_signature: 'b' * 127 + '1',
                 batches: [{
                     header_signature: 'b-1',
                     transactions: [{
@@ -264,20 +264,20 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-1'
+            - a head_id of 'b' * 127 + '1'
             - a paging response showing all 1 resources returned
             - a list of transactions with 1 item
             - that item is an instance of Transaction
             - that item has a header_signature of 't-0'
         """
-        response = self.make_request(head_id='B-1', transaction_ids=['t-0'])
+        response = self.make_request(head_id='b' * 127 + '1', transaction_ids=['t-0'])
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-1', response.head_id)
+        self.assertEqual('b' * 127 + '1', response.head_id)
         self.assert_valid_paging(response, total=1)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -286,9 +286,9 @@ class TestTransactionListRequests(ClientHandlerTestCase):
     def test_txn_list_head_ids_mismatch(self):
         """Verifies txn list requests break when ids not found with head.
 
-        Queries the default mock block store with 'B-0' as the head:
+        Queries the default mock block store with 'b' * 127 + '0' as the head:
             {
-                header_signature: 'B-0',
+                header_signature: 'b' * 127 + '0',
                 batches: [{
                     header_signature: 'b-0',
                     transactions: [{
@@ -302,13 +302,13 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Expects to find:
             - a status of NO_RESOURCE
-            - a head_id of 'B-0'
+            - a head_id of 'b' * 127 + '0'
             - that paging and transactions are missing
         """
-        response = self.make_request(head_id='B-0', transaction_ids=['t-1', 't-2'])
+        response = self.make_request(head_id='b' * 127 + '0', transaction_ids=['t-1', 't-2'])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
-        self.assertEqual('B-0', response.head_id)
+        self.assertEqual('b' * 127 + '0', response.head_id)
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.transactions)
 
@@ -317,7 +317,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -328,12 +328,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response with:
                 * a next_id of 't-0'
                 * the default empty previous_id
@@ -346,7 +346,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_paged_request(count=2)
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response, next_id='t-0')
         self.assertEqual(2, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -357,7 +357,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -368,12 +368,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response with:
                 * a next_id of 't-0'
                 * a previous_id of 't-2'
@@ -386,7 +386,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_paged_request(count=1, start_id='t-1')
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response, 't-0', 't-2', 1)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -397,7 +397,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -408,12 +408,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response with:
                 * the default empty next_id
                 * a previous_id of 't-2'
@@ -426,7 +426,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_paged_request(count=2, end_id='t-0')
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response, previous_id='t-2', start_index=1)
         self.assertEqual(2, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -437,7 +437,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -448,12 +448,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response with a next_id of 't-1'
             - a list of transactions with 1 item
             - that item is an instance of Transaction
@@ -462,7 +462,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_paged_request(count=1, start_index=0)
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response, next_id='t-1')
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -473,7 +473,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -484,8 +484,8 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of INVALID_PAGING
@@ -501,13 +501,13 @@ class TestTransactionListRequests(ClientHandlerTestCase):
     def test_txn_list_paginated_with_head (self):
         """Verifies txn list requests work with both paging and a head id.
 
-        Queries the default mock block store with 'B-1' as the head:
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+        Queries the default mock block store with 'b' * 127 + '1' as the head:
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-1'
+            - a head_id of 'b' * 127 + '1'
             - a paging response with:
                 * an empty next_id
                 * a previous_id of 't-1'
@@ -517,10 +517,10 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - that item is an instance of Transaction
             - that has a header_signature of 't-0'
         """
-        response = self.make_paged_request(count=1, start_index=1, head_id='B-1')
+        response = self.make_paged_request(count=1, start_index=1, head_id='b' * 127 + '1')
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-1', response.head_id)
+        self.assertEqual('b' * 127 + '1', response.head_id)
         self.assert_valid_paging(response, '', 't-1', 1, 2)
         self.assertEqual(1, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -531,7 +531,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -542,12 +542,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response showing all 3 resources returned
             - a list of transactions with 3 items
             - the items are instances of Transaction
@@ -558,7 +558,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -570,7 +570,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -581,8 +581,8 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of INVALID_SORT
@@ -601,7 +601,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -612,12 +612,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response showing all 3 resources returned
             - a list of transactions with 3 items
             - the items are instances of Transaction
@@ -628,7 +628,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -640,7 +640,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -651,12 +651,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response showing all 3 resources returned
             - a list of transactions with 3 items
             - the items are instances of Transaction
@@ -667,7 +667,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -679,7 +679,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -690,12 +690,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response showing all 3 resources returned
             - a list of transactions with 3 items
             - the items are instances of Transaction
@@ -707,7 +707,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -719,7 +719,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store:
             {
-                header_signature: 'B-2',
+                header_signature: 'b' * 127 + '2',
                 batches: [{
                     header_signature: 'b-2',
                     transactions: [{
@@ -730,12 +730,12 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-2', the latest
+            - a head_id of 'b' * 127 + '2', the latest
             - a paging response showing all 3 resources returned
             - a list of transactions with 3 items
             - the items are instances of Transaction
@@ -746,7 +746,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-2', response.head_id)
+        self.assertEqual('b' * 127 + '2', response.head_id)
         self.assert_valid_paging(response)
         self.assertEqual(3, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -758,7 +758,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
 
         Queries the default mock block store with two added blocks:
             {
-                header_signature: 'B-long',
+                header_signature: 'b' * 127 + 'long',
                 batches: [{
                     header_signature: 'b-long',
                     transactions: [{
@@ -769,14 +769,14 @@ class TestTransactionListRequests(ClientHandlerTestCase):
                 }],
                 ...
             },
-            {header_signature: 'B-longest', ...},
-            {header_signature: 'B-2', ...},
-            {header_signature: 'B-1', ...},
-            {header_signature: 'B-0', ...}
+            {header_signature: 'b' * 127 + 'longest', ...},
+            {header_signature: 'b' * 127 + '2', ...},
+            {header_signature: 'b' * 127 + '1', ...},
+            {header_signature: 'b' * 127 + '0', ...}
 
         Expects to find:
             - a status of OK
-            - a head_id of 'B-long', the latest
+            - a head_id of 'b' * 127 + 'long', the latest
             - a paging response showing all 5 resources returned
             - a list of transactions with 5 items
             - the items are instances of Transaction
@@ -789,7 +789,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
-        self.assertEqual('B-long', response.head_id)
+        self.assertEqual('b' * 124 + 'long', response.head_id)
         self.assert_valid_paging(response, total=5)
         self.assertEqual(5, len(response.transactions))
         self.assert_all_instances(response.transactions, Transaction)
@@ -852,7 +852,7 @@ class TestTransactionGetRequests(ClientHandlerTestCase):
             - a status of NO_RESOURCE
             - that the Transaction returned, when serialized, is actually empty
         """
-        response = self.make_request(transaction_id='B-1')
+        response = self.make_request(transaction_id='b' * 127 + '1')
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.transaction.SerializeToString())

@@ -73,9 +73,9 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         """Verifies requests for status of a batch in the block store work.
 
         Queries the default mock block store with three blocks/batches:
-            {header: {batch_ids: ['b-2'] ...}, header_signature: 'B-2' ...},
-            {header: {batch_ids: ['b-1'] ...}, header_signature: 'B-1' ...},
-            {header: {batch_ids: ['b-0'] ...}, header_signature: 'B-0' ...}
+            {header: {batch_ids: ['b-2'] ...}, header_signature: 'b' * 127 + '2' ...},
+            {header: {batch_ids: ['b-1'] ...}, header_signature: 'b' * 127 + '1' ...},
+            {header: {batch_ids: ['b-0'] ...}, header_signature: 'b' * 127 + '0' ...}
 
         Expects to find:
             - a response status of OK
@@ -172,9 +172,9 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         """Verifies requests for status of many batches work properly.
 
         Queries the default mock block store with three blocks/batches:
-            {header: {batch_ids: ['b-2'] ...}, header_signature: 'B-2' ...},
-            {header: {batch_ids: ['b-1'] ...}, header_signature: 'B-1' ...},
-            {header: {batch_ids: ['b-0'] ...}, header_signature: 'B-0' ...}
+            {header: {batch_ids: ['b-2'] ...}, header_signature: 'b' * 127 + '2' ...},
+            {header: {batch_ids: ['b-1'] ...}, header_signature: 'b' * 127 + '1' ...},
+            {header: {batch_ids: ['b-0'] ...}, header_signature: 'b' * 127 + '0' ...}
 
         ...and the default mock batch tracker with pending batch ids of:
             - 'b-pending'

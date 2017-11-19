@@ -64,7 +64,7 @@ def make_mock_batch(base_id='id'):
 class MockBlockStore(BlockStore):
     """
     Creates a block store with a preseeded chain of blocks.
-    With defaults, creates three blocks with ids ranging from 'B-0' to 'B-2',
+    With defaults, creates three blocks with ids ranging from 'b' * 127 + '0' to 'b' * 127 + '2',
     and a single batch, and single transaction in each, with ids prefixed by
     'b-' or 't-'. Using the optional root parameter for add_block, it is
     possible to save meaningful state_root_hashes to a block.
@@ -81,7 +81,7 @@ class MockBlockStore(BlockStore):
             indexes=BlockStore.create_index_configuration())
 
     def add_block(self, base_id, root='merkle_root'):
-        block_id = 'B-' + base_id
+        block_id = 'b' * (128 - len(base_id)) + base_id
         head = self.chain_head
         if head:
             previous_id = head.header_signature
@@ -143,7 +143,7 @@ def make_store_and_tracker(size=3):
         * tracker - a batch tracker attached to the store, with one pending batch
 
     With defaults, the three block ids in the store will be:
-        * 'B-0', 'B-1', B-2'
+        * 'b' * 127 + '0', 'b' * 127 + '1', B-2'
     The three batch ids in the store will be:
         * 'b-0', 'b-1', b-2'
     The pending batch in the tracker will be:

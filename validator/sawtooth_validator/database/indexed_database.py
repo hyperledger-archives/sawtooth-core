@@ -139,7 +139,11 @@ class IndexedDatabase(database.Database):
                     if not read_key:
                         continue
 
-                packed = cursor.get(read_key)
+                try:
+                    packed = cursor.get(read_key)
+                except lmdb.BadValsizeError:
+                    raise KeyError("Invalid key: %s" % read_key)
+
                 if packed is not None:
                     result.append((read_key.decode(),
                                    self._deserializer(packed)))

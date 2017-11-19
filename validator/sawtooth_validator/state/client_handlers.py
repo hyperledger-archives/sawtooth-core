@@ -18,6 +18,7 @@ import logging
 from time import time
 import itertools
 from functools import cmp_to_key
+import re
 from threading import Condition
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
@@ -768,14 +769,19 @@ class BlockListRequest(_ClientRequestHandler):
 
 
 class BlockGetByIdRequest(_ClientRequestHandler):
+
     def __init__(self, block_store):
         super().__init__(
             client_block_pb2.ClientBlockGetByIdRequest,
             client_block_pb2.ClientBlockGetResponse,
             validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
             block_store=block_store)
+        self.valid_regex = re.compile('^[0-9a-f]{128}$')
 
     def _respond(self, request):
+        if not self.valid_regex.match(request.block_id):
+            return self._status.NO_RESOURCE
+
         try:
             block = self._block_store[request.block_id].block
 
