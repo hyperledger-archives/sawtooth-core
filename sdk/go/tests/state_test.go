@@ -18,104 +18,102 @@
 package tests
 
 import (
-    "fmt"
-    "testing"
-    "github.com/golang/protobuf/proto"
-    "sawtooth_sdk/processor"
-    "sawtooth_sdk/messaging"
-    "mocks/mock_messaging"
-    "sawtooth_sdk/protobuf/events_pb2"
-    "sawtooth_sdk/protobuf/validator_pb2"
-    "sawtooth_sdk/protobuf/state_context_pb2"
-    "github.com/golang/mock/gomock"
+	"fmt"
+	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/proto"
+	"mocks/mock_messaging"
+	"sawtooth_sdk/messaging"
+	"sawtooth_sdk/processor"
+	"sawtooth_sdk/protobuf/events_pb2"
+	"sawtooth_sdk/protobuf/state_context_pb2"
+	"sawtooth_sdk/protobuf/validator_pb2"
+	"testing"
 )
 
 func TestState(t *testing.T) {
-  mockCtrl := gomock.NewController(t)
-  defer mockCtrl.Finish()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-  var connection messaging.Connection
-  mock_connection := mock_messaging.NewMockConnection(mockCtrl)
-  connection = mock_connection
-  context := processor.NewContext(connection, "abc")
+	var connection messaging.Connection
+	mock_connection := mock_messaging.NewMockConnection(mockCtrl)
+	connection = mock_connection
+	context := processor.NewContext(connection, "abc")
 
-  request := &state_context_pb2.TpStateGetRequest{
+	request := &state_context_pb2.TpStateGetRequest{
 		ContextId: "abc",
 		Addresses: []string{"abc"},
 	}
 	bytes, _ := proto.Marshal(request)
 
-  mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_STATE_GET_REQUEST, bytes)
-  mock_connection.EXPECT().RecvMsgWithId("")
+	mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_STATE_GET_REQUEST, bytes)
+	mock_connection.EXPECT().RecvMsgWithId("")
 
-  context.GetState([]string{"abc"})
+	context.GetState([]string{"abc"})
 }
 
 func TestAddEvent(t *testing.T) {
-  mockCtrl := gomock.NewController(t)
-  defer mockCtrl.Finish()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-  var connection messaging.Connection
-  mock_connection := mock_messaging.NewMockConnection(mockCtrl)
-  connection = mock_connection
-  context := processor.NewContext(connection, "asdf")
+	var connection messaging.Connection
+	mock_connection := mock_messaging.NewMockConnection(mockCtrl)
+	connection = mock_connection
+	context := processor.NewContext(connection, "asdf")
 
+	event_attributes := make([]*events_pb2.Event_Attribute, 0)
+	event_attributes = append(event_attributes, &events_pb2.Event_Attribute{"key", "value"})
 
-  event_attributes := make([]*events_pb2.Event_Attribute, 0)
-  event_attributes = append(event_attributes, &events_pb2.Event_Attribute{"key", "value"})
+	event := &events_pb2.Event{
+		EventType:  "test",
+		Attributes: event_attributes,
+		Data:       []byte("data"),
+	}
 
-  event := &events_pb2.Event {
-    EventType: "test",
-    Attributes: event_attributes,
-    Data: []byte("data"),
-  }
+	request := &state_context_pb2.TpEventAddRequest{
+		ContextId: "asdf",
+		Event:     event,
+	}
+	request_bytes, _ := proto.Marshal(request)
 
-  request := &state_context_pb2.TpEventAddRequest {
-    ContextId: "asdf",
-    Event: event,
-  }
-  request_bytes, _ := proto.Marshal(request)
+	response_bytes, err := proto.Marshal(&state_context_pb2.TpEventAddResponse{
+		Status: state_context_pb2.TpEventAddResponse_OK,
+	})
 
-  response_bytes, err := proto.Marshal(&state_context_pb2.TpEventAddResponse{
-    Status: state_context_pb2.TpEventAddResponse_OK,
-    })
+	mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_EVENT_ADD_REQUEST, request_bytes)
+	mock_connection.EXPECT().RecvMsgWithId("").
+		Return(
+			"",
+			&validator_pb2.Message{
+				MessageType:   validator_pb2.Message_TP_EVENT_ADD_RESPONSE,
+				CorrelationId: "",
+				Content:       response_bytes,
+			},
+			err)
 
-  mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_EVENT_ADD_REQUEST, request_bytes)
-  mock_connection.EXPECT().RecvMsgWithId("").
-    Return(
-      "",
-      &validator_pb2.Message{
-        MessageType: validator_pb2.Message_TP_EVENT_ADD_RESPONSE,
-        CorrelationId: "",
-        Content: response_bytes,
-      },
-      err)
-
-
-  attributes := []processor.Attribute{{"key", "value"}}
-  add_event_err := context.AddEvent("test", attributes, []byte("data"))
-  if add_event_err != nil {
-    t.Error(fmt.Errorf("ERROR: %s", add_event_err))
-  }
+	attributes := []processor.Attribute{{"key", "value"}}
+	add_event_err := context.AddEvent("test", attributes, []byte("data"))
+	if add_event_err != nil {
+		t.Error(fmt.Errorf("ERROR: %s", add_event_err))
+	}
 }
 
 func TestReceiptData(t *testing.T) {
-  mockCtrl := gomock.NewController(t)
-  defer mockCtrl.Finish()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-  var connection messaging.Connection
-  mock_connection := mock_messaging.NewMockConnection(mockCtrl)
-  connection = mock_connection
-  context := processor.NewContext(connection, "qwerty")
+	var connection messaging.Connection
+	mock_connection := mock_messaging.NewMockConnection(mockCtrl)
+	connection = mock_connection
+	context := processor.NewContext(connection, "qwerty")
 
-  request := &state_context_pb2.TpReceiptAddDataRequest{
-    ContextId: "qwerty",
-    Data: []byte("receiptdata"),
-  }
-  bytes, _ := proto.Marshal(request)
+	request := &state_context_pb2.TpReceiptAddDataRequest{
+		ContextId: "qwerty",
+		Data:      []byte("receiptdata"),
+	}
+	bytes, _ := proto.Marshal(request)
 
-  mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_RECEIPT_ADD_DATA_REQUEST, bytes)
-  mock_connection.EXPECT().RecvMsgWithId("")
+	mock_connection.EXPECT().SendNewMsg(validator_pb2.Message_TP_RECEIPT_ADD_DATA_REQUEST, bytes)
+	mock_connection.EXPECT().RecvMsgWithId("")
 
-  context.AddReceiptData([]byte("receiptdata"))
+	context.AddReceiptData([]byte("receiptdata"))
 }
