@@ -23,6 +23,12 @@ from sawtooth_rest_api.protobuf import client_block_pb2
 from sawtooth_rest_api.protobuf import block_pb2
 
 
+ID_A = 'a' * 128
+ID_B = 'b' * 128
+ID_C = 'c' * 128
+ID_D = 'd' * 128
+
+
 class StateListTests(BaseApiTest):
 
     async def get_application(self):
@@ -39,7 +45,7 @@ class StateListTests(BaseApiTest):
         """Verifies a GET /state without parameters works properly.
 
         It will receive a Protobuf response with:
-            - a state root of '2'
+            - a state root of ID_C
             - a paging response with a start of 0, and 3 total resources
             - three entries with addresses/data of:
                 * 'a': b'3'
@@ -51,8 +57,8 @@ class StateListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '2'
-            - a link property that ends in '/state?head=2&min=0&count=3'
+            - a head property of ID_C
+            - a link property that ends in '/state?head={}&min=0&count=3'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 leaf dicts
             - three entries that match those in Protobuf response
@@ -64,7 +70,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='2',
+                header_signature=ID_C,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -73,8 +79,8 @@ class StateListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(
             state_root='beef', paging=controls)
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/state?head=2')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/state?head={}'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
@@ -124,20 +130,20 @@ class StateListTests(BaseApiTest):
         """Verifies a GET /state works properly with head specified.
 
         It will receive a Protobuf response with:
-            - a head id of '1'
+            - a head id of ID_B
             - a paging response with a start of 0, and 2 total resources
             - two entries with addresses/data of:
                 * 'a': b'2'
                 * 'b': b'4'
 
         It should send a Protobuf request with:
-            - a head_id property of '1'
+            - a head_id property of ID_B
             - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '1'
-            - a link property that ends in '/state?head=1&min=0&count=2'
+            - a head property of ID_B
+            - a link property that ends in '/state?head={}&min=0&count=2'.format(ID_B)
             - a paging property that matches the paging response
             - a data property that is a list of 2 leaf dicts
             - three entries that match those in Protobuf response
@@ -149,17 +155,17 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='1',
+                header_signature=ID_B,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
-        response = await self.get_assert_200('/state?head=1')
+        response = await self.get_assert_200('/state?head={}'.format(ID_B))
         controls = Mocks.make_paging_controls()
         self.connection.assert_valid_request_sent(
             state_root='beef', paging=controls)
 
-        self.assert_has_valid_head(response, '1')
-        self.assert_has_valid_link(response, '/state?head=1')
+        self.assert_has_valid_head(response, ID_B)
+        self.assert_has_valid_link(response, '/state?head={}'.format(ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_entries_match(entries, response['data'])
@@ -179,7 +185,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block())
-        response = await self.get_assert_status('/state?head=bad', 404)
+        response = await self.get_assert_status('/state?head={}'.format(ID_D), 404)
 
         self.assert_has_valid_error(response, 50)
 
@@ -188,7 +194,7 @@ class StateListTests(BaseApiTest):
         """Verifies a GET /state works properly filtered by address.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 1 total resource
             - one leaf with addresses/data of: 'c': b'7'
 
@@ -198,9 +204,9 @@ class StateListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '2'
+            - a head property of ID_C
             - a link property that ends in
-            '/state?head=2&min=0&count=1&address=c'
+            '/state?head={}&min=0&count=1&address=c'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 1 leaf dict
             - one leaf that matches the Protobuf response
@@ -212,7 +218,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='2',
+                header_signature=ID_C,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -221,8 +227,8 @@ class StateListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(
             state_root='beef', address='c', paging=controls)
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/state?head=2&address=c')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/state?head={}&address=c'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_entries_match(entries, response['data'])
@@ -233,12 +239,12 @@ class StateListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a status of NO_RESOURCE
-            - a head id of '2'
+            - a head id of ID_C
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '2'
-            - a link property that ends in '/state?head=2&address=bad'
+            - a head property of ID_C
+            - a link property that ends in '/state?head={}&address=bad'.format(ID_C)
             - a paging property with only a total_count of 0
             - a data property that is an empty list
         """
@@ -250,13 +256,13 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='2',
+                header_signature=ID_C,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
         response = await self.get_assert_200('/state?address=bad')
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/state?head=2&address=bad')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/state?head={}&address=bad'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -265,20 +271,20 @@ class StateListTests(BaseApiTest):
         """Verifies GET /state works with a head and filtered by address.
 
         It will receive a Protobuf response with:
-            - a head id of '1'
+            - a head id of ID_B
             - a paging response with a start of 0, and 1 total resource
             - one leaf with addresses/data of: 'a': b'2'
 
         It should send a Protobuf request with:
-            - a head_id property of '1'
+            - a head_id property of ID_B
             - an address property of 'a'
             - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '1'
+            - a head property of ID_B
             - a link property that ends in
-            '/state?head=1&min=0&count=1&address=a'
+            '/state?head={}&min=0&count=1&address=a'.format(ID_B)
             - a paging property that matches the paging response
             - a data property that is a list of 1 leaf dict
             - one leaf that matches the Protobuf response
@@ -290,18 +296,18 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='1',
+                header_signature=ID_B,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
-        response = await self.get_assert_200('/state?address=a&head=1')
+        response = await self.get_assert_200('/state?address=a&head={}'.format(ID_B))
         self.connection.assert_valid_request_sent(
             state_root='beef',
             address='a',
             paging=Mocks.make_paging_controls())
 
-        self.assert_has_valid_head(response, '1')
-        self.assert_has_valid_link(response, '/state?head=1&address=a')
+        self.assert_has_valid_head(response, ID_B)
+        self.assert_has_valid_link(response, '/state?head={}&address=a'.format(ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_entries_match(entries, response['data'])
@@ -311,7 +317,7 @@ class StateListTests(BaseApiTest):
         """Verifies GET /state paginated by min id works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with a start of 1, and 4 total resources
             - one leaf of {'c': b'3'}
 
@@ -320,8 +326,8 @@ class StateListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/state?head=d&min=1&count=1'
+            - a head property of ID_D
+            - a link property that ends in '/state?head={}&min=1&count=1'.format(ID_D)
             - paging that matches the response, with next and previous links
             - a data property that is a list of 1 dict
             - and that dict is a leaf that matches the one received
@@ -333,7 +339,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='d',
+                header_signature=ID_D,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -342,11 +348,11 @@ class StateListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(
             state_root='beef', paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/state?head=d&min=1&count=1')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/state?head={}&min=1&count=1'.format(ID_D))
         self.assert_has_valid_paging(response, paging,
-                                     '/state?head=d&min=2&count=1',
-                                     '/state?head=d&min=0&count=1')
+                                     '/state?head={}&min=2&count=1'.format(ID_D),
+                                     '/state?head={}&min=0&count=1'.format(ID_D))
         self.assert_has_valid_data_list(response, 1)
         self.assert_entries_match(entries, response['data'])
 
@@ -386,17 +392,17 @@ class StateListTests(BaseApiTest):
         """Verifies GET /state paginated just by count works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with a start of 0, and 4 total resources
-            - two entries of {'d': b'4'}, and {'c': b'3'}
+            - two entries of {ID_D: b'4'}, and {'c': b'3'}
 
         It should send a Protobuf request with:
             - a paging controls with a count of 2
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/state?head=d&min=0&count=2'
+            - a head property of ID_D
+            - a link property that ends in '/state?head={}&min=0&count=2'.format(ID_D)
             - paging that matches the response with a next link
             - a data property that is a list of 2 dicts
             - and those dicts are entries that match those received
@@ -408,7 +414,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='d',
+                header_signature=ID_D,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -417,10 +423,10 @@ class StateListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(
             state_root='beef', paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/state?head=d&count=2')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/state?head={}&count=2'.format(ID_D))
         self.assert_has_valid_paging(response, paging,
-                                     '/state?head=d&min=2&count=2')
+                                     '/state?head={}&min=2&count=2'.format(ID_D))
         self.assert_has_valid_data_list(response, 2)
         self.assert_entries_match(entries, response['data'])
 
@@ -429,7 +435,7 @@ class StateListTests(BaseApiTest):
         """Verifies GET /state paginated without count works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with a start of 2, and 4 total resources
             - two entries of {'b': b'2'} and {'a': b'1'}
 
@@ -438,8 +444,8 @@ class StateListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/state?head=d&min=2&count=2'
+            - a head property of ID_D
+            - a link property that ends in '/state?head={}&min=2&count=2'.format(ID_D)
             - paging that matches the response, with a previous link
             - a data property that is a list of 2 dicts
             - and those dicts are entries that match those received
@@ -451,7 +457,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='d',
+                header_signature=ID_D,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -460,10 +466,10 @@ class StateListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(
             state_root='beef', paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/state?head=d&min=2')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/state?head={}&min=2'.format(ID_D))
         self.assert_has_valid_paging(response, paging,
-                                     previous_link='/state?head=d&min=0&count=2')
+                                     previous_link='/state?head={}&min=0&count=2'.format(ID_D))
         self.assert_has_valid_data_list(response, 2)
         self.assert_entries_match(entries, response['data'])
 
@@ -472,44 +478,44 @@ class StateListTests(BaseApiTest):
         """Verifies GET /state paginated by a min id works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with:
                 * a start_index of 1
                 * total_resources of 4
-                * a previous_id of 'd'
+                * a previous_id of ID_D
             - three entries of {'c': b'3'}, {'b': b'2'}, and {'a': b'1'}
 
         It should send a Protobuf request with:
-            - a paging controls with a start_id of 'c'
+            - a paging controls with a start_id of ID_C
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/state?head=d&min=c&count=5'
+            - a head property of ID_D
+            - a link property that ends in '/state?head={}&min={}&count=5'.format(ID_D, ID_C)
             - paging that matches the response, with a previous link
             - a data property that is a list of 3 dicts
             - and those dicts are entries that match those received
         """
-        paging = Mocks.make_paging_response(1, 4, previous_id='d')
+        paging = Mocks.make_paging_response(1, 4, previous_id=ID_D)
         entries = Mocks.make_entries(c=b'3', b=b'2', a=b'1')
         self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='d',
+                header_signature=ID_D,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
-        response = await self.get_assert_200('/state?min=c&count=5')
-        controls = Mocks.make_paging_controls(5, start_id='c')
+        response = await self.get_assert_200('/state?min={}&count=5'.format(ID_C))
+        controls = Mocks.make_paging_controls(5, start_id=ID_C)
         self.connection.assert_valid_request_sent(
             state_root='beef', paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/state?head=d&min=c&count=5')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/state?head={}&min={}&count=5'.format(ID_D, ID_C))
         self.assert_has_valid_paging(response, paging,
-                                     previous_link='/state?head=d&max=d&count=5')
+                                     previous_link='/state?head={}&max={}&count=5'.format(ID_D, ID_D))
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
 
@@ -518,46 +524,46 @@ class StateListTests(BaseApiTest):
         """Verifies GET /state paginated by a max id works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with:
                 * a start_index of 1
                 * a total_resources of 4
-                * a previous_id of 'd'
-                * a next_id of 'a'
+                * a previous_id of ID_D
+                * a next_id of ID_A
             - two entries of {'c': b'3'} and {'b': b'3'}
 
         It should send a Protobuf request with:
-            - a paging controls with a count of 2 and an end_id of 'b'
+            - a paging controls with a count of 2 and an end_id of ID_B
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/state?head=d&max=b&count=2'
+            - a head property of ID_D
+            - a link property that ends in '/state?head={}&max={}&count=2'.format(ID_D, ID_B)
             - paging that matches the response, with next and previous links
             - a data property that is a list of 2 dicts
             - and those dicts are entries that match those received
         """
-        paging = Mocks.make_paging_response(1, 4, previous_id='d', next_id='a')
+        paging = Mocks.make_paging_response(1, 4, previous_id=ID_D, next_id=ID_A)
         entries = Mocks.make_entries(c=b'3', b=b'2')
         self.connection.preset_response(state_root='beef', paging=paging,
                                         entries=entries)
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='d',
+                header_signature=ID_D,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
-        response = await self.get_assert_200('/state?max=b&count=2')
-        controls = Mocks.make_paging_controls(2, end_id='b')
+        response = await self.get_assert_200('/state?max={}&count=2'.format(ID_B))
+        controls = Mocks.make_paging_controls(2, end_id=ID_B)
         self.connection.assert_valid_request_sent(
             state_root='beef', paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/state?head=d&max=b&count=2')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/state?head={}&max={}&count=2'.format(ID_D, ID_B))
         self.assert_has_valid_paging(response, paging,
-                                     '/state?head=d&min=a&count=2',
-                                     '/state?head=d&max=d&count=2')
+                                     '/state?head={}&min={}&count=2'.format(ID_D, ID_A),
+                                     '/state?head={}&max={}&count=2'.format(ID_D, ID_D))
         self.assert_has_valid_data_list(response, 2)
         self.assert_entries_match(entries, response['data'])
 
@@ -566,17 +572,17 @@ class StateListTests(BaseApiTest):
         """Verifies GET /state paginated by a max index works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with a start of 0, and 4 total resources
-            - three entries with the ids {'d': b'4'}, {'c': b'3'} and {'b': b'2'}
+            - three entries with the ids {ID_D: b'4'}, {'c': b'3'} and {'b': b'2'}
 
         It should send a Protobuf request with:
             - a paging controls with a count of 2 and an start_index of 0
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/state?head=d&min=3&count=7'
+            - a head property of ID_D
+            - a link property that ends in '/state?head={}&min=3&count=7'.format(ID_D)
             - paging that matches the response, with a next link
             - a data property that is a list of 2 dicts
             - and those dicts are entries that match those received
@@ -588,7 +594,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='d',
+                header_signature=ID_D,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -597,10 +603,10 @@ class StateListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(
             state_root='beef', paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/state?head=d&max=2&count=7')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/state?head={}&max=2&count=7'.format(ID_D))
         self.assert_has_valid_paging(response, paging,
-                                     '/state?head=d&min=3&count=7')
+                                     '/state?head={}&min=3&count=7'.format(ID_D))
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
 
@@ -609,7 +615,7 @@ class StateListTests(BaseApiTest):
         """Verifies GET /state can send proper sort controls.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
             - three entries with addresses/data of:
                 * 'a': b'3'
@@ -622,8 +628,8 @@ class StateListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - a link property ending in '/state?head=2&sort=address'
+            - a head property of ID_C
+            - a link property ending in '/state?head={}&sort=address'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - three entries that match those in Protobuf response
@@ -635,7 +641,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='2',
+                header_signature=ID_C,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -647,8 +653,8 @@ class StateListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/state?head=2&sort=address')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/state?head={}&sort=address'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
@@ -677,7 +683,7 @@ class StateListTests(BaseApiTest):
         """Verifies a GET /state can send proper sort parameters.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
             - three entries with addresses/data of:
                 * 'c': b'7'
@@ -690,8 +696,8 @@ class StateListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - a link property ending in '/state?head=2&sort=-address'
+            - a head property of ID_C
+            - a link property ending in '/state?head={}&sort=-address'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - three entries that match those in Protobuf response
@@ -703,7 +709,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='2',
+                header_signature=ID_C,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -715,8 +721,8 @@ class StateListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/state?head=2&sort=-address')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/state?head={}&sort=-address'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
@@ -726,7 +732,7 @@ class StateListTests(BaseApiTest):
         """Verifies a GET /state can send proper sort parameters.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
             - three entries with addresses/data of:
                 * 'c': b'7'
@@ -739,8 +745,8 @@ class StateListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - a link property ending in '/state?head=2&sort=value.length'
+            - a head property of ID_C
+            - a link property ending in '/state?head={}&sort=value.length'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - three entries that match those in Protobuf response
@@ -752,7 +758,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='2',
+                header_signature=ID_C,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -764,8 +770,8 @@ class StateListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/state?head=2&sort=value.length')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/state?head={}&sort=value.length'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
@@ -775,7 +781,7 @@ class StateListTests(BaseApiTest):
         """Verifies a GET /state can send proper sort parameters.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
             - three entries with addresses/data of:
                 * 'c': b'7'
@@ -790,8 +796,8 @@ class StateListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - link with '/state?head=2&sort=-address,value.length'
+            - a head property of ID_C
+            - link with '/state?head={}&sort=-address,value.length'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - three entries that match those in Protobuf response
@@ -803,7 +809,7 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='2',
+                header_signature=ID_C,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -817,9 +823,9 @@ class StateListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(response,
-            '/state?head=2&sort=-address,value.length')
+            '/state?head={}&sort=-address,value.length'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
@@ -841,7 +847,7 @@ class StateGetTests(BaseApiTest):
         """Verifies a GET /state/{address} without parameters works properly.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a leaf with addresses/data of: 'a': b'3'
 
         It should send a Protobuf request with:
@@ -849,15 +855,15 @@ class StateGetTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '2'
-            - a link property that ends in '/state/b?head=2'
+            - a head property of ID_C
+            - a link property that ends in '/state/b?head={}'.format(ID_C)
             - a data property that b64decodes to b'3'
         """
         self.connection.preset_response(state_root='beef', value=b'3')
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='2',
+                header_signature=ID_C,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
@@ -865,8 +871,8 @@ class StateGetTests(BaseApiTest):
         self.connection.assert_valid_request_sent(
             state_root='beef', address='a')
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/state/a?head=2')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/state/a?head={}'.format(ID_C))
         self.assertIn('data', response)
 
         data = response['data']
@@ -935,33 +941,33 @@ class StateGetTests(BaseApiTest):
         """Verifies a GET /state/{address} works properly with head parameter.
 
         It will receive a Protobuf response with:
-            - a head id of '1'
+            - a head id of ID_B
             - a leaf with addresses/data of: 'b': b'4'
 
         It should send a Protobuf request with:
-            - a head_id property of '1'
+            - a head_id property of ID_B
             - an address property of 'b'
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '2'
-            - a link property that ends in '/state/b?head=2'
+            - a head property of ID_C
+            - a link property that ends in '/state/b?head={}'.format(ID_C)
             - a data property that b64decodes to b'4'
         """
         self.connection.preset_response(state_root='beef', value=b'4')
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block(
-                header_signature='1',
+                header_signature=ID_B,
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
-        response = await self.get_assert_200('/state/b?head=1')
+        response = await self.get_assert_200('/state/b?head={}'.format(ID_B))
         self.connection.assert_valid_request_sent(
             state_root='beef', address='b')
 
-        self.assert_has_valid_head(response, '1')
-        self.assert_has_valid_link(response, '/state/b?head=1')
+        self.assert_has_valid_head(response, ID_B)
+        self.assert_has_valid_link(response, '/state/b?head={}'.format(ID_B))
         self.assertIn('data', response)
 
         data = response['data']
@@ -983,6 +989,6 @@ class StateGetTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block())
-        response = await self.get_assert_status('/state/b?head=bad', 404)
+        response = await self.get_assert_status('/state/b?head={}'.format(ID_D), 404)
 
         self.assert_has_valid_error(response, 50)
