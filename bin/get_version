@@ -29,7 +29,12 @@ with open(version_file, 'r') as f:
 
 def bump_version(version):
     (major, minor, patch) = version.split('.')
-    patch = str(int(patch) + 1)
+    if 'rc' in patch:
+        parts = patch.split('rc')
+        parts[1] = str(int(parts[1]) + 1)
+        patch = "rc".join(parts)
+    else:
+        patch = str(int(patch) + 1)
     return ".".join([major, minor, patch])
 
 
