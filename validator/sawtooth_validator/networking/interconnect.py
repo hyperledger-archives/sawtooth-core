@@ -891,7 +891,6 @@ class Interconnect(object):
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
             public_key=self._public_key,
-            payload=payload,
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
@@ -913,7 +912,6 @@ class Interconnect(object):
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
             public_key=self._public_key,
-            payload=payload,
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 

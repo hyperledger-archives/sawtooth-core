@@ -49,6 +49,7 @@ from sawtooth_validator.journal.timed_cache import TimedCache
 
 LOGGER = logging.getLogger(__name__)
 PAYLOAD_LENGTH = 64
+AUTHORIZATION_CACHE_TIMEOUT = 300
 
 
 class ConnectHandler(Handler):
@@ -324,6 +325,11 @@ class AuthorizationTrustRequestHandler(Handler):
 class AuthorizationChallengeRequestHandler(Handler):
     def __init__(self, network):
         self._network = network
+        self._challenge_payload_cache = TimedCache(
+            keep_time=AUTHORIZATION_CACHE_TIMEOUT)
+
+    def get_challenge_payload_cache(self):
+        return self._challenge_payload_cache
 
     def handle(self, connection_id, message_content):
         """
@@ -350,6 +356,7 @@ class AuthorizationChallengeRequestHandler(Handler):
                 .AUTHORIZATION_VIOLATION)
 
         random_payload = os.urandom(PAYLOAD_LENGTH)
+        self._challenge_payload_cache[connection_id] = random_payload
         auth_challenge_response = AuthorizationChallengeResponse(
             payload=random_payload)
 
@@ -365,10 +372,11 @@ class AuthorizationChallengeRequestHandler(Handler):
 
 
 class AuthorizationChallengeSubmitHandler(Handler):
-    def __init__(self, network, permission_verifier, gossip):
+    def __init__(self, network, permission_verifier, gossip, cache):
         self._network = network
         self._permission_verifier = permission_verifier
         self._gossip = gossip
+        self._challenge_payload_cache = cache
 
     def handle(self, connection_id, message_content):
         """
@@ -402,7 +410,20 @@ class AuthorizationChallengeSubmitHandler(Handler):
         auth_challenge_submit = AuthorizationChallengeSubmit()
         auth_challenge_submit.ParseFromString(message_content)
 
-        if not signing.verify(auth_challenge_submit.payload,
+        try:
+            payload = self._challenge_payload_cache[connection_id]
+        except KeyError:
+            LOGGER.debug("Connection's challenge payload expired before a"
+                         "response was received. %s", connection_id)
+            violation = AuthorizationViolation(
+                violation=RoleType.Value("NETWORK"))
+            return HandlerResult(
+                HandlerStatus.RETURN_AND_CLOSE,
+                message_out=violation,
+                message_type=validator_pb2.Message
+                .AUTHORIZATION_VIOLATION)
+
+        if not signing.verify(payload,
                               auth_challenge_submit.signature,
                               auth_challenge_submit.public_key):
             LOGGER.warning("Signature was not able to be verifed. Remove "

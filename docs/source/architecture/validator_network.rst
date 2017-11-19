@@ -353,9 +353,6 @@ Challenge
       // public key of node
       string public_key = 1;
 
-      // payload bytes that was signed to make the signature
-      bytes payload = 2;
-
       // signature derived from signing the challenge payload
       string signature = 3;
 

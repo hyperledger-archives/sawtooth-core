@@ -102,10 +102,11 @@ def add(
             gossip=gossip),
         thread_pool)
 
+    challenge_request_handler = AuthorizationChallengeRequestHandler(
+        network=interconnect)
     dispatcher.add_handler(
         validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
-        AuthorizationChallengeRequestHandler(
-            network=interconnect),
+        challenge_request_handler,
         thread_pool)
 
     dispatcher.add_handler(
@@ -113,7 +114,8 @@ def add(
         AuthorizationChallengeSubmitHandler(
             network=interconnect,
             permission_verifier=permission_verifier,
-            gossip=gossip),
+            gossip=gossip,
+            cache=challenge_request_handler.get_challenge_payload_cache()),
         thread_pool)
 
     # -- Gossip -- #
