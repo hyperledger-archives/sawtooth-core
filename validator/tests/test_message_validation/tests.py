@@ -20,7 +20,6 @@ import string
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader, \
     Transaction
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
@@ -32,7 +31,7 @@ from sawtooth_validator.gossip import structure_verifier
 class TestMessageValidation(unittest.TestCase):
     def setUp(self):
         context = create_context('secp256k1')
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         self.signer = crypto_factory.new_signer(private_key)
 

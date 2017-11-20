@@ -33,8 +33,6 @@ from sawtooth_integration.tests.integration_tools import RestClient
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
-from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 
 import time
 
@@ -308,7 +306,7 @@ class Client(object):
 
     def __init__(self, rest_endpoint):
         context = create_context('secp256k1')
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = context.new_random_private_key()
         self.priv_key = private_key.as_hex()
         self.pub_key = context.get_public_key(private_key).as_hex()
 
@@ -343,7 +341,7 @@ class Admin(object):
 
     def __init__(self, rest_endpoint):
         context = create_context('secp256k1')
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = context.new_random_private_key()
         self.priv_key = private_key.as_hex()
         self.pub_key = context.get_public_key(private_key).as_hex()
 

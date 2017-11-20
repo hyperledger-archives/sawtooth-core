@@ -17,7 +17,6 @@ import os
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_validator.networking.interconnect import AuthorizationType
 from sawtooth_validator.networking.interconnect import ConnectionStatus
@@ -310,8 +309,8 @@ class TestAuthorizationHandlers(unittest.TestCase):
         Test the AuthorizationChallengeSubmitHandler returns an
         AuthorizationChallengeResult.
         """
-        private_key = Secp256k1PrivateKey.new_random()
         context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         signer = crypto_factory.new_signer(private_key)
 
@@ -348,8 +347,8 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the last message
         was not AuthorizaitonChallengeRequest.
         """
-        private_key = Secp256k1PrivateKey.new_random()
         context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         signer = crypto_factory.new_signer(private_key)
 
@@ -386,8 +385,8 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the signature
         is not verified.
         """
-        private_key = Secp256k1PrivateKey.new_random()
         context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         signer = crypto_factory.new_signer(private_key)
 
@@ -424,8 +423,8 @@ class TestAuthorizationHandlers(unittest.TestCase):
         AuthorizationViolation and closes the connection if the permission
         verifier does not permit the public_key.
         """
-        private_key = Secp256k1PrivateKey.new_random()
         context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         signer = crypto_factory.new_signer(private_key)
 

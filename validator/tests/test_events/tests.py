@@ -50,7 +50,6 @@ from sawtooth_validator.protobuf import validator_pb2
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from test_scheduler.yaml_scheduler_tester import create_batch
 from test_scheduler.yaml_scheduler_tester import create_transaction
@@ -72,8 +71,8 @@ def create_block(block_num=85,
 
 
 def create_chain(num=10):
-    private_key = Secp256k1PrivateKey.new_random()
     context = create_context('secp256k1')
+    private_key = context.new_random_private_key()
     crypto_factory = CryptoFactory(context)
     signer = crypto_factory.new_signer(private_key)
 

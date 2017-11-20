@@ -26,7 +26,6 @@ from base64 import b64encode
 import requests
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_intkey.client_cli.workload.workload_generator import \
     WorkloadGenerator
 from sawtooth_intkey.client_cli.workload.sawtooth_workload import Workload
@@ -88,8 +87,9 @@ class IntKeyWorkload(Workload):
         self._lock = threading.Lock()
         self._delegate = delegate
         self._deps = {}
-        self._signer = CryptoFactory(create_context('secp256k1')).new_signer(
-            Secp256k1PrivateKey.new_random())
+        context = create_context('secp256k1')
+        self._signer = CryptoFactory(context).new_signer(
+            context.new_random_private_key())
 
     def on_will_start(self):
         pass

@@ -27,7 +27,6 @@ import cbor
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_sdk.protobuf import transaction_pb2
 from sawtooth_sdk.protobuf import batch_pb2
@@ -128,8 +127,9 @@ def generate_word_list(count):
 
 
 def do_generate(args):
-    signer = CryptoFactory(create_context('secp256k1')).new_signer(
-        Secp256k1PrivateKey.new_random())
+    context = create_context('secp256k1')
+    signer = CryptoFactory(context).new_signer(
+        context.new_random_private_key())
 
     words = generate_word_list(args.pool_size)
 

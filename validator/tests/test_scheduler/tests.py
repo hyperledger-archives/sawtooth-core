@@ -22,7 +22,6 @@ import time
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 
@@ -50,8 +49,8 @@ class TestSchedulers(unittest.TestCase):
     def setUp(self):
         self._context_manager = ContextManager(dict_database.DictDatabase())
 
-        context = create_context('secp256k1')
-        self._crypto_factory = CryptoFactory(context)
+        self._context = create_context('secp256k1')
+        self._crypto_factory = CryptoFactory(self._context)
 
     def tearDown(self):
         self._context_manager.stop()
@@ -108,7 +107,7 @@ class TestSchedulers(unittest.TestCase):
                3 and 5.
 
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         transaction_validity = {}
@@ -257,7 +256,7 @@ class TestSchedulers(unittest.TestCase):
              3. Assert that only txn A is run.
         """
 
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         transaction_validity = {}
@@ -362,7 +361,7 @@ class TestSchedulers(unittest.TestCase):
         This test should work for both a serial and parallel scheduler.
         """
 
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         txn, _ = create_transaction(
@@ -420,7 +419,7 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         txn, _ = create_transaction(
@@ -477,7 +476,7 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         # Create a basic transaction and batch.
@@ -585,7 +584,7 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         # 1)
@@ -705,7 +704,7 @@ class TestSchedulers(unittest.TestCase):
                is invalid and consequently has no state hash.
         """
 
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         # 1)
@@ -796,8 +795,8 @@ class TestSerialScheduler(unittest.TestCase):
                                          self.first_state_root,
                                          always_persist=False)
 
-        context = create_context('secp256k1')
-        self._crypto_factory = CryptoFactory(context)
+        self._context = create_context('secp256k1')
+        self._crypto_factory = CryptoFactory(self._context)
 
     def tearDown(self):
         self.context_manager.stop()
@@ -814,7 +813,7 @@ class TestSerialScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
@@ -866,7 +865,7 @@ class TestSerialScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator, and the complete is true in the at the end.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
@@ -925,7 +924,7 @@ class TestSerialScheduler(unittest.TestCase):
         since the first Transaction was marked as applied in the previous
         step.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
@@ -973,8 +972,8 @@ class TestParallelScheduler(unittest.TestCase):
                                            self.first_state_root,
                                            always_persist=False)
 
-        context = create_context('secp256k1')
-        self._crypto_factory = CryptoFactory(context)
+        self._context = create_context('secp256k1')
+        self._crypto_factory = CryptoFactory(self._context)
 
     def tearDown(self):
         self.context_manager.stop()
@@ -986,7 +985,7 @@ class TestParallelScheduler(unittest.TestCase):
         The result is expected to be a SchedulerError, since adding a batch
         to a finalized scheduler is invalid.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         # Finalize prior to attempting to add a batch.
@@ -1014,7 +1013,7 @@ class TestParallelScheduler(unittest.TestCase):
         transaction without first causing it to be scheduled (by using an
         iterator or calling next_transaction()).
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         txn, _ = create_transaction(
@@ -1044,7 +1043,7 @@ class TestParallelScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
@@ -1091,7 +1090,7 @@ class TestParallelScheduler(unittest.TestCase):
 
         Creates one batch with four transactions.
         """
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
