@@ -193,6 +193,15 @@ class Context {
   getPublicKey (privateKey) {
     throw new TypeError('Abstract method not implemented')
   }
+
+  /**
+   * Generate a new random private key, based on the underlying algorithm.
+   *
+   * @return {PrivateKey} - a private key instance
+   */
+  newRandomPrivateKey () {
+    throw new TypeError('Abstract method not implemented')
+  }
 }
 
 module.exports = {
