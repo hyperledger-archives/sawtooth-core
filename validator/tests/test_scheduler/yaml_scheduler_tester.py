@@ -26,7 +26,6 @@ import yaml
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
@@ -128,8 +127,8 @@ class SchedulerTester(object):
             context_manager (context_manager.ContextManager): The context
                 manager holding state for this scheduler.
         """
-        context = create_context('secp256k1')
-        self._crypto_factory = CryptoFactory(context)
+        self._context = create_context('secp256k1')
+        self._crypto_factory = CryptoFactory(self._context)
         self._yaml_file_name = file_name
         self._counter = itertools.count(0)
         self._referenced_txns_in_other_batches = {}
@@ -622,7 +621,7 @@ class SchedulerTester(object):
 
     def _create_batches(self):
         test_yaml = self._yaml_from_file()
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
 
         batches, batch_results = self._process_batches(

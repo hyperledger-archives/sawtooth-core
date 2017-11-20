@@ -19,7 +19,6 @@ import sys
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.admin_command.config import get_key_dir
 from sawtooth_signing import create_context
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 
 def add_keygen_parser(subparsers, parent_parser):
@@ -94,7 +93,7 @@ def do_keygen(args):
 
     context = create_context('secp256k1')
 
-    private_key = Secp256k1PrivateKey.new_random()
+    private_key = context.new_random_private_key()
     public_key = context.get_public_key(private_key)
 
     try:

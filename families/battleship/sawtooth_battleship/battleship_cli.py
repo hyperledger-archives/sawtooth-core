@@ -29,7 +29,6 @@ import sys
 from colorlog import ColoredFormatter
 
 from sawtooth_signing import create_context
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_battleship.battleship_board import BoardLayout
 from sawtooth_battleship.battleship_board import create_nonces
@@ -246,7 +245,7 @@ def do_init(args, config):
                 os.makedirs(os.path.dirname(priv_filename))
 
             context = create_context('secp256k1')
-            private_key = Secp256k1PrivateKey.new_random()
+            private_key = context.new_random_private_key()
             public_key = context.get_public_key(private_key)
 
             with open(priv_filename, "w") as priv_fd:

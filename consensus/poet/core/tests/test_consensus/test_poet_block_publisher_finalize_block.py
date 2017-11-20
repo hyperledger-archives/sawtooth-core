@@ -22,7 +22,6 @@ from unittest import mock
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_poet.poet_consensus import poet_block_publisher
 from sawtooth_poet.poet_consensus.mock_consensus_state import\
@@ -105,7 +104,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         context = create_context('secp256k1')
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         signer = crypto_factory.new_signer(private_key)
         mock_batch_publisher = mock.Mock(
@@ -208,7 +207,7 @@ class TestPoetBlockPublisher(TestCase):
 
         # create mock_batch_publisher
         context = create_context('secp256k1')
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         signer = crypto_factory.new_signer(private_key)
         mock_batch_publisher = mock.Mock(

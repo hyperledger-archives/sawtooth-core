@@ -134,5 +134,8 @@ class Secp256k1Context(Context):
         except Exception:
             return False
 
+    def new_random_private_key(self):
+        return Secp256k1PrivateKey.new_random()
+
     def get_public_key(self, private_key):
         return Secp256k1PublicKey(private_key.secp256k1_private_key.pubkey)

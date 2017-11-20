@@ -22,7 +22,6 @@ import string
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_validator.database.dict_database import DictDatabase
 
@@ -108,11 +107,11 @@ class BlockTreeManager(object):
 
         self.state_view_factory = MockStateViewFactory(self.state_db)
         context = create_context('secp256k1')
-        private_key = Secp256k1PrivateKey.new_random()
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         self.signer = crypto_factory.new_signer(private_key)
 
-        identity_private_key = Secp256k1PrivateKey.new_random()
+        identity_private_key = context.new_random_private_key()
         self.identity_signer = crypto_factory.new_signer(private_key)
         chain_head = None
         if with_genesis:

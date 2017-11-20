@@ -19,7 +19,6 @@ import time
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_sdk.protobuf.processor_pb2 import TpRegisterRequest
 from sawtooth_sdk.protobuf.processor_pb2 import TpProcessResponse
@@ -55,8 +54,9 @@ def is_valid_merkle_address(address):
 
 
 def _signer():
-    return CryptoFactory(create_context('secp256k1')).new_signer(
-        Secp256k1PrivateKey.new_random())
+    context = create_context('secp256k1')
+    return CryptoFactory(context).new_signer(
+        context.new_random_private_key())
 
 
 class MessageFactory(object):

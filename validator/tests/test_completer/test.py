@@ -19,7 +19,6 @@ import cbor
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.journal.block_store import BlockStore
@@ -40,8 +39,8 @@ class TestCompleter(unittest.TestCase):
         self.completer._on_block_received = self._on_block_received
         self.completer._on_batch_received = self._on_batch_received
 
-        private_key = Secp256k1PrivateKey.new_random()
         context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         self.signer = crypto_factory.new_signer(private_key)
 

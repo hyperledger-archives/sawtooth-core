@@ -22,7 +22,6 @@ from unittest.mock import patch
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -45,8 +44,8 @@ class TestGenesisController(unittest.TestCase):
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
-        private_key = Secp256k1PrivateKey.new_random()
         context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         self._signer = crypto_factory.new_signer(private_key)
 

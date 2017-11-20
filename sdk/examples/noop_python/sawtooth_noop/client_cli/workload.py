@@ -26,7 +26,6 @@ from http.client import RemoteDisconnected
 import requests
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_sdk.workload.workload_generator import WorkloadGenerator
 from sawtooth_sdk.workload.sawtooth_workload import Workload
 from sawtooth_sdk.protobuf import batch_pb2
@@ -68,8 +67,9 @@ class NoopWorkload(Workload):
         self._urls = []
         self._lock = threading.Lock()
         self._delegate = delegate
-        self._signer = CryptoFactory(create_context('secp256k1')).new_signer(
-            Secp256k1PrivateKey.new_random())
+        context = create_context('secp256k1')
+        self._signer = CryptoFactory(context).new_signer(
+            context.new_random_private_key())
 
     def on_will_start(self):
         pass
