@@ -35,16 +35,6 @@ type Secp256k1PrivateKey struct {
 	private_key []byte
 }
 
-// Generates a new secp256k1 private key.
-func NewSecp256k1PrivateKey() (PrivateKey, error) {
-	priv, err := ellcurv.NewPrivateKey(cachedCurve)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Secp256k1PrivateKey{priv.Serialize()}, nil
-}
-
 // WifToSecp256k1PrivateKey converts a WIF string to a private key.
 func WifToSecp256k1PrivateKey(wif string) (*Secp256k1PrivateKey, error) {
 	priv, err := wifToPriv(wif)
@@ -128,6 +118,13 @@ func NewSecp256k1Context() Context {
 // Returns the string "secp256k1".
 func (self *Secp256k1Context) GetAlgorithmName() string {
 	return "secp256k1"
+}
+
+// Generates a new random secp256k1 private key.
+func (self *Secp256k1Context) NewRandomPrivateKey() PrivateKey {
+	priv, _ := ellcurv.NewPrivateKey(cachedCurve)
+
+	return &Secp256k1PrivateKey{priv.Serialize()}
 }
 
 // Produces a public key for the given private key.
