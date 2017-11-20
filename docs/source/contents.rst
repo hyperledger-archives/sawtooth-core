@@ -10,6 +10,7 @@ Table of Contents
    core_developers_guide.rst
    sysadmin_guide.rst
    rest_api.rst
+   sdks.rst
    cli.rst
    transaction_family_specifications.rst
    examples.rst
