@@ -62,13 +62,10 @@ def add_config_parser(subparsers, parent_parser):
     """
     parser = subparsers.add_parser(
         'config',
-        help='Change genesis block settings and create, view, and '
+        help='Changes genesis block settings and create, view, and '
         'vote on settings proposals',
-        description='Sawtooth supports storing settings on-chain. The '
-                    'subcommands provided here can be used to view the '
-                    'current proposals, create proposals and vote on existing '
-                    'proposals, and produce setting values that will be set '
-                    'in the genesis block.'
+        description='Provides subcommands to change genesis block settings '
+                    'and to view, create, and vote on existing proposals.'
     )
 
     config_parsers = parser.add_subparsers(title="subcommands",
@@ -455,7 +452,7 @@ def create_parent_parser(prog_name):
         action='version',
         version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
         .format(version),
-        help='print version information')
+        help='display version information')
 
     return parent_parser
 
@@ -464,11 +461,8 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        description='Sawtooth supports storing settings on-chain. The '
-        'subcommands provided here can be used to view the '
-        'current proposals, create proposals and vote on existing '
-        'proposals, and produce setting values that will be set '
-        'in the genesis block.',
+        description='Provides subcommands to change genesis block settings '
+        'and to view, create, and vote on settings proposals.',
         parents=[parent_parser])
 
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
@@ -479,7 +473,7 @@ def create_parser(prog_name):
     # transactions for on-chain settings
     genesis_parser = subparsers.add_parser(
         'genesis',
-        help='Create a genesis batch file of settings transactions',
+        help='Creates a genesis batch file of settings transactions',
         description='Creates a Batch of settings proposals that can be '
                     'consumed by "sawadm genesis" and used '
                     'during genesis block construction.'
@@ -487,25 +481,25 @@ def create_parser(prog_name):
     genesis_parser.add_argument(
         '-k', '--key',
         type=str,
-        help='the signing key for the resulting batches '
+        help='specify signing key for resulting batches '
              'and initial authorized key')
 
     genesis_parser.add_argument(
         '-o', '--output',
         type=str,
         default='config-genesis.batch',
-        help='the name of the file to output the resulting batches')
+        help='specify the output file for the resulting batches')
 
     genesis_parser.add_argument(
         '-T', '--approval-threshold',
         type=int,
-        help='the required number of votes to enable a setting change')
+        help='set the number of votes required to enable a setting change')
 
     genesis_parser.add_argument(
         '-A', '--authorized-key',
         type=str,
         action='append',
-        help='a public key for an user authorized to submit '
+        help='specify a public key for the user authorized to submit '
              'config transactions')
 
     # The following parser is for the `proposal` subcommand group. These
@@ -515,20 +509,18 @@ def create_parser(prog_name):
 
     proposal_parser = subparsers.add_parser(
         'proposal',
-        help='View, create or vote on settings change proposals',
-        description='sawtooth-settings supports a simple voting mechanism for '
-                    'applying changes to on-change settings.  These commands '
-                    'provide tools to view, create or vote on proposed '
-                    'settings')
+        help='Views, creates, or votes on settings change proposals',
+        description='Provides subcommands to view, create, or vote on '
+                    'proposed settings')
     proposal_parsers = proposal_parser.add_subparsers(
-        title='proposals',
+        title='subcommands',
         dest='proposal_cmd')
     proposal_parsers.required = True
 
     prop_parser = proposal_parsers.add_parser(
         'create',
-        help='creates proposals for setting changes',
-        description='Create proposals for settings changes.  The change '
+        help='Creates proposals for setting changes',
+        description='Create proposals for settings changes. The change '
                     'may be applied immediately or after a series of votes, '
                     'depending on the vote threshold setting.'
     )
@@ -536,85 +528,85 @@ def create_parser(prog_name):
     prop_parser.add_argument(
         '-k', '--key',
         type=str,
-        help='the signing key for the resulting batches')
+        help='specify a signing key for the resulting batches')
 
     prop_target_group = prop_parser.add_mutually_exclusive_group()
     prop_target_group.add_argument(
         '-o', '--output',
         type=str,
-        help='the name of the file to ouput the resulting batches')
+        help='specify the output file for the resulting batches')
 
     prop_target_group.add_argument(
         '--url',
         type=str,
-        help="the URL of a validator's REST API",
+        help="identify the URL of a validator's REST API",
         default='http://localhost:8008')
 
     prop_parser.add_argument(
         'setting',
         type=str,
         nargs='+',
-        help='configuration setting, as a key/value pair: <key>=<value>')
+        help='configuration setting as key/value pair with the '
+        'format <key>=<value>')
 
     proposal_list_parser = proposal_parsers.add_parser(
         'list',
-        help='lists the currently proposed, but not active, settings',
-        description='Lists the currently proposed, but not active, settings. '
-                    'This list of proposals can be used to find proposals to '
+        help='Lists the currently proposed (not active) settings',
+        description='Lists the currently proposed (not active) settings. '
+                    'Use this list of proposals to find proposals to '
                     'vote on.')
 
     proposal_list_parser.add_argument(
         '--url',
         type=str,
-        help="the URL of a validator's REST API",
+        help="identify the URL of a validator's REST API",
         default='http://localhost:8008')
 
     proposal_list_parser.add_argument(
         '--public-key',
         type=str,
         default='',
-        help='filters proposals from a particular public key.')
+        help='filter proposals from a particular public key')
 
     proposal_list_parser.add_argument(
         '--filter',
         type=str,
         default='',
-        help='filters keys that begin with this value')
+        help='filter keys that begin with this value')
 
     proposal_list_parser.add_argument(
         '--format',
         default='default',
         choices=['default', 'csv', 'json', 'yaml'],
-        help='the format of the output')
+        help='choose the output format')
 
     vote_parser = proposal_parsers.add_parser(
         'vote',
-        help='votes for specific setting change proposals',
-        description='Votes for a specific settings change proposal. The '
-                    'proposal id can be found using "sawset proposal '
-                    'list".')
+        help='Votes for specific setting change proposals',
+        description='Votes for a specific settings change proposal. Use '
+                    '"sawset proposal list" to find the proposal id.')
 
     vote_parser.add_argument(
         '--url',
         type=str,
-        help="the URL of a validator's REST API",
+        help="identify the URL of a validator's REST API",
         default='http://localhost:8008')
 
     vote_parser.add_argument(
         '-k', '--key',
         type=str,
-        help='the signing key for the resulting transaction batch')
+        help='specify a signing key for the resulting transaction batch')
 
     vote_parser.add_argument(
         'proposal_id',
         type=str,
-        help='the proposal to vote on')
+        help='identify the proposal to vote on')
 
     vote_parser.add_argument(
         'vote_value',
         type=str,
         choices=['accept', 'reject'],
-        help='the value of the vote')
+        help='specify the value of the vote')
 
     return parser
 

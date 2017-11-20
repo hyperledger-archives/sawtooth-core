@@ -31,12 +31,12 @@ def add_state_parser(subparsers, parent_parser):
     """
     parser = subparsers.add_parser(
         'state',
-        help='Display information on the entries in state',
+        help='Displays information on the entries in state',
         description='Provides subcommands to display information about the '
         'state entries in the current blockchain state.')
 
     grand_parsers = parser.add_subparsers(
-        title='grandchildcommands',
+        title='subcommands',
         dest='subcommand')
 
     grand_parsers.required = True
@@ -52,13 +52,13 @@ def add_state_parser(subparsers, parent_parser):
         type=str,
         nargs='?',
         default=None,
-        help='the address of a subtree to filter list by')
+        help='address of a subtree to filter the list by')
 
     list_parser.add_argument(
         '--head',
         action='store',
         default=None,
-        help='the id of the block to set as the chain head')
+        help='specify the id of the block to set as the chain head')
 
     show_parser = grand_parsers.add_parser(
         'show',
@@ -70,13 +70,13 @@ def add_state_parser(subparsers, parent_parser):
     show_parser.add_argument(
         'address',
         type=str,
-        help='the address of the leaf')
+        help='address of the leaf')
 
     show_parser.add_argument(
         '--head',
         action='store',
         default=None,
-        help='the id of the block to set as the chain head')
+        help='specify the id of the block to set as the chain head')
 
 
 def do_state(args):

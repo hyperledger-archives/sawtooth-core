@@ -49,64 +49,57 @@ def parse_args(args):
         formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('--config-dir',
-                        help='Configuration directory',
+                        help='specify the configuration directory',
                         type=str)
     parser.add_argument('-B', '--bind',
-                        help='Set the endpoint url for the network and the '
-                             'validator component service endpoints. Multiple '
-                             '--bind arguments should be provided in the '
-                             'format network:endpoint and component:endpoint.',
+                        help='set the URL for the network or validator '
+                        'component service endpoints with the format '
+                        'network:<endpoint> or component:<endpoint>. '
+                        'Use two --bind options to specify both '
+                        'endpoints.',
                         action='append',
                         type=str)
     parser.add_argument('-P', '--peering',
-                        help='The type of peering approach the validator '
-                             'should take. Choices are \'static\' which '
-                             'only attempts to peer with candidates '
-                             'provided with the --peers option, and '
-                             '\'dynamic\' which will do topology buildouts. '
-                             'If \'dynamic\' is provided, any static peers '
-                             'will be processed first, prior to the topology '
-                             'buildout starting',
+                        help='determine peering type for the validator: '
+                        '\'static\' (must use --peers to list peers) or '
+                        '\'dynamic\' (processes any static peers first, '
+                        'then starts topology buildout).',
                         choices=['static', 'dynamic'],
                         type=str)
     parser.add_argument('-E', '--endpoint',
-                        help='Advertised network endpoint URL',
+                        help='specifies the advertised network endpoint URL',
                         type=str)
     parser.add_argument('-s', '--seeds',
-                        help='uri(s) to connect to in order to initially '
-                             'connect to the validator network, in the '
-                             'format tcp://hostname:port. Multiple --seeds '
-                             'arguments can be provided, and a single '
-                             '--seeds argument will accept a comma separated '
-                             'list of tcp://hostname:port,tcp://hostname:port '
-                             'parameters',
+                        help='provide URI(s) for the initial connection to '
+                        'the validator network, in the format '
+                        'tcp://<hostname>:<port>. Specify multiple URIs '
+                        'in a comma-separated list. Repeating the --seeds '
+                             'option is also accepted.',
                         action='append',
                         type=str)
     parser.add_argument('-p', '--peers',
-                        help='A list of peers to attempt to connect to '
-                             'in the format tcp://hostname:port. Multiple '
-                             '--peers arguments can be provided, and a single '
-                             '--peers argument will accept a comma separated '
-                             'list of tcp://hostname:port,tcp://hostname:port '
-                             'parameters',
+                        help='list static peers to attempt to connect to '
+                        'in the format tcp://<hostname>:<port>. Specify '
+                        'multiple peers in a comma-separated list. '
+                        'Repeating the --peers option is also accepted.',
                         action='append',
                         type=str)
     parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
-                        help='Increase output sent to stderr')
+                        help='enable more verbose output to stderr')
     parser.add_argument('--scheduler',
                         choices=['serial', 'parallel'],
-                        help='The type of scheduler to be used.')
+                        help='set scheduler type: serial or parallel')
     parser.add_argument('--network-auth',
                         choices=['trust', 'challenge'],
-                        help='The type of authorization required to join the '
+                        help='identify type of authorization required to join '
                              'validator network.')
     parser.add_argument('--opentsdb-url',
-                        help='The host and port for Open TSDB database \
+                        help='specify host and port for Open TSDB database \
                         used for metrics')
     parser.add_argument('--opentsdb-db',
-                        help='The name of the database used for storing \
+                        help='specify name of database used for storing \
                         metrics')
 
     try:
@@ -119,7 +112,7 @@ def parse_args(args):
         action='version',
         version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
         .format(version),
-        help='print version information')
+        help='display version information')
 
     return parser.parse_args(args)
 

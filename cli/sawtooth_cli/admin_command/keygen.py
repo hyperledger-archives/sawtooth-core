@@ -57,7 +57,7 @@ def add_keygen_parser(subparsers, parent_parser):
     parser.add_argument(
         '-q',
         '--quiet',
-        help="print no output",
+        help="do not display output",
         action='store_true')
 
 

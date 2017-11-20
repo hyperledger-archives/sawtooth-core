@@ -95,7 +95,7 @@ def create_parent_parser(prog_name):
         action='version',
         version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
         .format(version),
-        help='print version information')
+        help='display version information')
 
     return parent_parser
 
@@ -125,7 +125,7 @@ def create_parser(prog_name):
 
 
 def add_set_parser(subparsers, parent_parser):
-    message = 'Sends an intkey transaction to set <name> to <value>'
+    message = 'Sends an intkey transaction to set <name> to <value>.'
 
     parser = subparsers.add_parser(
         'set',
@@ -136,29 +136,29 @@ def add_set_parser(subparsers, parent_parser):
     parser.add_argument(
         'name',
         type=str,
-        help='the name of the key to set')
+        help='name of key to set')
 
     parser.add_argument(
         'value',
         type=int,
-        help='the amount to set')
+        help='amount to set')
 
     parser.add_argument(
         '--url',
         type=str,
-        help='the url of the REST API')
+        help='specify URL of REST API')
 
     parser.add_argument(
         '--keyfile',
         type=str,
-        help="the file containing the user's private key")
+        help="identify file containing user's private key")
 
     parser.add_argument(
         '--wait',
         nargs='?',
         const=sys.maxsize,
         type=int,
-        help='seconds to wait for the transaction to commit')
+        help='set time, in seconds, to wait for transaction to commit')
 
 
 def do_set(args):
@@ -169,7 +169,7 @@ def do_set(args):
 
 
 def add_inc_parser(subparsers, parent_parser):
-    message = 'Sends an intkey transaction to increment <name> by <value>'
+    message = 'Sends an intkey transaction to increment <name> by <value>.'
 
     parser = subparsers.add_parser(
         'inc',
@@ -180,29 +180,29 @@ def add_inc_parser(subparsers, parent_parser):
     parser.add_argument(
         'name',
         type=str,
-        help='the name of the key to increment')
+        help='identify name of key to increment')
 
     parser.add_argument(
         'value',
         type=int,
-        help='the amount to increment')
+        help='specify amount to increment')
 
     parser.add_argument(
         '--url',
         type=str,
-        help='the url of the REST API')
+        help='specify URL of REST API')
 
     parser.add_argument(
         '--keyfile',
         type=str,
-        help="the file containing the user's private key")
+        help="identify file containing user's private key")
 
     parser.add_argument(
         '--wait',
         nargs='?',
         const=sys.maxsize,
         type=int,
-        help='seconds to wait for the transaction to commit')
+        help='set time, in seconds, to wait for transaction to commit')
 
 
 def do_inc(args):
@@ -213,7 +213,7 @@ def do_inc(args):
 
 
 def add_dec_parser(subparsers, parent_parser):
-    message = 'Sends an intkey transaction to decrement <name> by <value>'
+    message = 'Sends an intkey transaction to decrement <name> by <value>.'
 
     parser = subparsers.add_parser(
         'dec',
@@ -224,29 +224,29 @@ def add_dec_parser(subparsers, parent_parser):
     parser.add_argument(
         'name',
         type=str,
-        help='the name of the key to decrement')
+        help='identify name of key to decrement')
 
     parser.add_argument(
         'value',
         type=int,
-        help='the amount to decrement')
+        help='amount to decrement')
 
     parser.add_argument(
         '--url',
         type=str,
-        help='the url of the REST API')
+        help='specify URL of REST API')
 
     parser.add_argument(
         '--keyfile',
         type=str,
-        help="the file containing the user's private key")
+        help="identify file containing user's private key")
 
     parser.add_argument(
         '--wait',
         nargs='?',
         const=sys.maxsize,
         type=int,
-        help='seconds to wait for the transaction to commit')
+        help='set time, in seconds, to wait for transaction to commit')
 
 
 def do_dec(args):
@@ -257,23 +257,23 @@ def do_dec(args):
 
 
 def add_show_parser(subparsers, parent_parser):
-    message = 'Shows the value of the key <name>'
+    message = 'Shows the value of the key <name>.'
 
     parser = subparsers.add_parser(
         'show',
         parents=[parent_parser],
         description=message,
-        help='Displays some intkey value')
+        help='Displays the specified intkey value')
 
     parser.add_argument(
         'name',
         type=str,
-        help='the name of the key to show')
+        help='name of key to show')
 
     parser.add_argument(
         '--url',
         type=str,
-        help='the url of the REST API')
+        help='specify URL of REST API')
 
 
 def do_show(args):
@@ -284,7 +284,7 @@ def do_show(args):
 
 
 def add_list_parser(subparsers, parent_parser):
-    message = 'Shows the values of all keys in intkey state'
+    message = 'Shows the values of all keys in intkey state.'
 
     parser = subparsers.add_parser(
         'list',
@@ -295,7 +295,7 @@ def add_list_parser(subparsers, parent_parser):
     parser.add_argument(
         '--url',
         type=str,
-        help='the url of the REST API')
+        help='specify URL of REST API')
 
 
 def do_list(args):
