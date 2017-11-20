@@ -33,7 +33,7 @@
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run -v $(pwd):/project/sawtooth-core -e AUTH_TOKEN={npm auth token} sawtooth-publish-js-sdk
+#   $ docker run -v $(pwd):/project/sawtooth-core -e AUTH_TOKEN={npm auth token} -e LATEST_STABLE={version to tag as latest stable} sawtooth-publish-js-sdk
 
 FROM ubuntu:xenial
 
@@ -70,4 +70,5 @@ WORKDIR /project/sawtooth-core
 CMD cd /project/sawtooth-core/sdk/javascript \
     && echo "//registry.npmjs.org/:_authToken=$AUTH_TOKEN" >> ~/.npmrc \
     && npm install --unsafe-perm \
-    && npm publish --unsafe-perm
+    && npm publish --unsafe-perm \
+    && npm dist-tags add sawtooth-sdk@$LATEST_STABLE latest
