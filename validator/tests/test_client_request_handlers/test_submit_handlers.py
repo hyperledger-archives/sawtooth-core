@@ -173,6 +173,18 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(response.batch_statuses[0].status,
                          ClientBatchStatus.UNKNOWN)
 
+    def test_batch_statuses_when_invalid(self):
+        """Verifies requests for status of a batch break with invalid ids.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that the batch_statuses are missing
+        """
+        response = self.make_request(batch_ids=['not', 'valid'])
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
+        self.assertFalse(response.batch_statuses)
+
     def test_batch_statuses_for_many_batches(self):
         """Verifies requests for status of many batches work properly.
 

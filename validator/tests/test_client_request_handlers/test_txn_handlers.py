@@ -256,6 +256,19 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_1, response.transactions[0].header_signature)
 
+    def test_txn_list_by_invalid_ids(self):
+        """Verifies txn list requests break when invalid ids are sent.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that paging and transactions are missing
+        """
+        response = self.make_request(transaction_ids=['not', 'valid'])
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.transactions)
+
     def test_txn_list_by_head_and_ids(self):
         """Verifies txn list requests work with both head and txn ids.
 
@@ -576,6 +589,18 @@ class TestTransactionGetRequests(ClientHandlerTestCase):
         response = self.make_request(transaction_id='f' * 128)
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertFalse(response.transaction.SerializeToString())
+
+    def test_txn_get_with_invalid_id(self):
+        """Verifies requests for a specific txn break with an invalid id.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that the Transaction returned, when serialized, is actually empty
+        """
+        response = self.make_request(transaction_id='invalid')
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
         self.assertFalse(response.transaction.SerializeToString())
 
     def test_txn_get_with_block_id(self):

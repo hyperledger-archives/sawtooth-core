@@ -200,6 +200,19 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_1, response.blocks[0].header_signature)
 
+    def test_block_list_by_invalid_ids(self):
+        """Verifies block list requests break when invalid ids are sent.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that paging and blocks are missing
+        """
+        response = self.make_request(block_ids=['not', 'valid'])
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.blocks)
+
     def test_block_list_by_head_and_ids(self):
         """Verifies block list requests work with both head and block ids.
 
@@ -412,6 +425,18 @@ class TestBlockGetByIdRequests(ClientHandlerTestCase):
         response = self.make_request(block_id='f' * 128)
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertFalse(response.block.SerializeToString())
+
+    def test_block_get_with_invalid_id(self):
+        """Verifies requests for a specific block break with an invalid id.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that the Block returned, when serialized, is actually empty
+        """
+        response = self.make_request(block_id='invalid')
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
         self.assertFalse(response.block.SerializeToString())
 
     def test_block_get_with_batch_id(self):
