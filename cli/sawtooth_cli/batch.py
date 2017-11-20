@@ -37,11 +37,11 @@ def add_batch_parser(subparsers, parent_parser):
     """
     parser = subparsers.add_parser(
         'batch',
-        help='Display information about batches and submit new batches',
+        help='Displays information about batches and submit new batches',
         description='Provides subcommands to display Batch information and '
         'submit Batches to the validator via the REST API.')
 
-    grand_parsers = parser.add_subparsers(title='grandchildcommands',
+    grand_parsers = parser.add_subparsers(title='subcommands',
                                           dest='subcommand')
     grand_parsers.required = True
     add_batch_list_parser(grand_parsers, parent_parser)
@@ -73,7 +73,7 @@ def add_batch_show_parser(subparsers, parent_parser):
     show_parser.add_argument(
         'batch_id',
         type=str,
-        help='the id (i.e. header_signature) of the batch')
+        help='id (header_signature) of the batch')
 
 
 def add_batch_status_parser(subparsers, parent_parser):
@@ -87,19 +87,19 @@ def add_batch_status_parser(subparsers, parent_parser):
         nargs='?',
         const=maxsize,
         type=int,
-        help='a time in seconds to wait for commit')
+        help='set time, in seconds, to wait for commit')
 
     status_parser.add_argument(
         'batch_ids',
         type=str,
-        help='a comma-separated list of batch ids')
+        help='single batch id or comma-separated list of batch ids')
 
     status_parser.add_argument(
         '-F', '--format',
         action='store',
         default='yaml',
         choices=['yaml', 'json'],
-        help='the format to use for printing the output (defaults to yaml)')
+        help='choose the output format (default: yaml)')
 
 
 def add_batch_submit_parser(subparsers, parent_parser):
@@ -116,18 +116,19 @@ def add_batch_submit_parser(subparsers, parent_parser):
         nargs='?',
         const=maxsize,
         type=int,
-        help='wait for batches to commit, set an integer to specify a timeout')
+        help='set time, in seconds, to wait for batches to commit')
 
     submit_parser.add_argument(
         '-f', '--filename',
         type=str,
-        help='location of input file',
+        help='specify location of input file',
         default='batches.intkey')
 
     submit_parser.add_argument(
         '--batch-size-limit',
         type=int,
-        help='batches are split for processing if they exceed this size',
+        help='set maximum batch size; batches are split for processing '
+        'if they exceed this size',
         default=100
     )
 

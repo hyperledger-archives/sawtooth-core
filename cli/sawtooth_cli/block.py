@@ -33,10 +33,10 @@ def add_block_parser(subparsers, parent_parser):
         'block',
         description='Provides subcommands to display information about the '
         'blocks in the current blockchain.',
-        help='Display information on blocks in the current blockchain')
+        help='Displays information on blocks in the current blockchain')
 
     grand_parsers = parser.add_subparsers(
-        title='grandchildcommands',
+        title='subcommands',
         dest='subcommand')
 
     grand_parsers.required = True
@@ -66,7 +66,7 @@ def add_block_parser(subparsers, parent_parser):
     show_parser.add_argument(
         'block_id',
         type=str,
-        help='the id (i.e. header_signature) of the block')
+        help='id (header_signature) of the block')
 
 
 def do_block(args):

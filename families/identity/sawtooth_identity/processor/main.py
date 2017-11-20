@@ -88,7 +88,7 @@ def setup_loggers(verbose_level, processor):
 
 def create_parser(prog_name):
     parser = argparse.ArgumentParser(
-        description='Starts a sawtooth-identity transaction processor.',
+        description='Starts an Identity transaction processor.',
         epilog='This process is required to apply any changes to on-chain '
         'permissions used by the Sawtooth platform.',
         prog=prog_name,
@@ -96,13 +96,13 @@ def create_parser(prog_name):
 
     parser.add_argument(
         '-C', '--connect',
-        help='Endpoint for the validator connection')
+        help='specify the endpoint for the validator connection')
 
     parser.add_argument(
         '-v', '--verbose',
         action='count',
         default=0,
-        help='Increase output sent to stderr')
+        help='enable more verbose output to stderr')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -114,7 +114,7 @@ def create_parser(prog_name):
         action='version',
         version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
         .format(version),
-        help='print version information')
+        help='display version information')
 
     return parser
 

@@ -32,12 +32,12 @@ def add_transaction_parser(subparsers, parent_parser):
     """
     parser = subparsers.add_parser(
         'transaction',
-        help='Show information on transactions in the current chain',
+        help='Shows information on transactions in the current chain',
         description='Provides subcommands to display information about '
         'the transactions in the current blockchain.')
 
     grand_parsers = parser.add_subparsers(
-        title='grandchildcommands',
+        title='subcommands',
         dest='subcommand')
 
     grand_parsers.required = True
@@ -57,7 +57,7 @@ def add_transaction_parser(subparsers, parent_parser):
     show_parser.add_argument(
         'transaction_id',
         type=str,
-        help='the id (i.e. header_signature) of the transaction')
+        help='id (header_signature) of the transaction')
 
 
 def do_transaction(args):

@@ -94,13 +94,13 @@ def create_parser(prog_name):
     parser.add_argument(
         '-C', '--connect',
         default='tcp://localhost:4004',
-        help='Endpoint for the validator connection')
+        help='specify the endpoint for the validator connection')
 
     parser.add_argument(
         '-v', '--verbose',
         action='count',
         default=0,
-        help='Increase output sent to stderr')
+        help='enable more verbose output to stderr')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version

@@ -47,7 +47,7 @@ def add_registration_parser(subparsers, parent_parser):
     """Add argument parser arguments for the `poet registration`
     subcommand
     """
-    description = 'Provides subcommands for creating PoET registration'
+    description = 'Provides a subcommand for creating PoET registration'
 
     parser = subparsers.add_parser(
         'registration',
@@ -83,19 +83,20 @@ def add_create_parser(subparsers, parent_parser):
     parser.add_argument(
         '-k', '--key',
         type=str,
-        help='name of file containing transaction signing key')
+        help='identify file containing transaction signing key')
 
     parser.add_argument(
         '-o', '--output',
         default='poet-genesis.batch',
         type=str,
-        help='the name of the file to output the resulting batches')
+        help='change default output file name for resulting batches')
 
     parser.add_argument(
         '-b', '--block',
         default=NULL_BLOCK_IDENTIFIER,
         type=str,
-        help='the most recent block identifier to use as a sign-up nonce')
+        help='specify the most recent block identifier to use as '
+        'a sign-up nonce')
 
 
 def do_registration(args):
