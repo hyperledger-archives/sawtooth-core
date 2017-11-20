@@ -122,7 +122,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - a status of NO_ROOT
             - that head_id, paging, and batches are missing
         """
-        response = self.make_request(head_id='bad')
+        response = self.make_request(head_id='f' * 128)
 
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.head_id)
@@ -156,7 +156,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assertEqual(A_0, response.batches[0].header_signature)
         self.assertEqual(A_2, response.batches[1].header_signature)
 
-    def test_batch_list_by_bad_ids(self):
+    def test_batch_list_by_missing_ids(self):
         """Verifies batch list requests break when ids are not found.
 
         Queries the default mock block store with three blocks:
@@ -169,14 +169,14 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - a head_id of 'bbb...2', the latest
             - that paging and batches are missing
         """
-        response = self.make_request(batch_ids=['bad', 'also-bad'])
+        response = self.make_request(batch_ids=['f' * 128, 'e' * 128])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertEqual(B_2, response.head_id)
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.batches)
 
-    def test_batch_list_by_good_and_bad_ids(self):
+    def test_batch_list_by_found_and_missing_ids(self):
         """Verifies batch list requests work filtered by good and bad ids.
 
         Queries the default mock block store with three blocks:
@@ -192,7 +192,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - that item is an instances of Batch
             - that item has a header_signature of 'aaa...1'
         """
-        response = self.make_request(batch_ids=['bad', A_1])
+        response = self.make_request(batch_ids=['f' * 128, A_1])
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
@@ -305,7 +305,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - a status of INVALID_PAGING
             - that head_id, paging, and batches are missing
         """
-        response = self.make_paged_request(limit=3, start='bad')
+        response = self.make_paged_request(limit=3, start='f' * 128)
 
         self.assertEqual(self.status.INVALID_PAGING, response.status)
         self.assertFalse(response.head_id)
@@ -400,14 +400,14 @@ class TestBatchGetRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.INTERNAL_ERROR, response.status)
         self.assertFalse(response.batch.SerializeToString())
 
-    def test_batch_get_with_bad_id(self):
-        """Verifies requests for a specific batch break with a bad id.
+    def test_batch_get_with_missing_id(self):
+        """Verifies requests for a specific batch break with an unfound id.
 
         Expects to find:
             - a status of NO_RESOURCE
             - that the Batch returned, when serialized, is actually empty
         """
-        response = self.make_request(batch_id='bad')
+        response = self.make_request(batch_id='f' * 128)
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.batch.SerializeToString())

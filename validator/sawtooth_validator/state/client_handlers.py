@@ -13,6 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=too-many-lines
+# Until this module can be sensibly broken up
+
 import abc
 import logging
 from time import time
@@ -43,6 +46,7 @@ from sawtooth_validator.protobuf import validator_pb2
 
 
 LOGGER = logging.getLogger(__name__)
+ID_REGEX = re.compile('[0-9a-f]{128}')
 DEFAULT_TIMEOUT = 300
 MAX_PAGE_SIZE = 1000
 DEFAULT_PAGE_SIZE = 100
@@ -171,6 +175,9 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             ResponseFailed: Failed to retrieve a head block
         """
         if request.head_id:
+            if ID_REGEX.fullmatch(request.head_id) is None:
+                LOGGER.debug('Invalid head id requested: %s', request.head_id)
+                raise _ResponseFailed(self._status.NO_ROOT)
             try:
                 return self._block_store[request.head_id]
             except KeyError as e:
@@ -277,6 +284,21 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             resources = [matches[i] for i in filter_ids if i in matches]
 
         return resources
+
+    def _validate_ids(self, resource_ids):
+        """Validates a list of ids, raising a ResponseFailed error if invalid.
+
+        Args:
+            resource_id (list of str): The ids to validate
+
+        Raises:
+            ResponseFailed: The id was invalid, and a status of INVALID_ID
+                will be sent with the response.
+        """
+        for resource_id in resource_ids:
+            if ID_REGEX.fullmatch(resource_id) is None:
+                LOGGER.debug('Invalid resource id requested: %s', resource_id)
+                raise _ResponseFailed(self._status.INVALID_ID)
 
 
 class _Pager(object):
@@ -582,6 +604,8 @@ class BatchStatusRequest(_ClientRequestHandler):
             validator_pb2.Message.CLIENT_BATCH_STATUS_RESPONSE)
 
     def _respond(self, request):
+        self._validate_ids(request.batch_ids)
+
         if request.wait:
             waiter = _BatchWaiter(self._batch_tracker)
             statuses = waiter.wait_for_batches(
@@ -683,8 +707,10 @@ class BlockListRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         head_block = self._get_head_block(request)
+        self._validate_ids(request.block_ids)
         blocks = None
         paging_response = None
+
         if request.block_ids:
             blocks = self._block_store.get_blocks(request.block_ids)
             blocks = itertools.filterfalse(
@@ -774,11 +800,9 @@ class BlockGetByIdRequest(_ClientRequestHandler):
             client_block_pb2.ClientBlockGetResponse,
             validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
             block_store=block_store)
-        self.valid_regex = re.compile('^[0-9a-f]{128}$')
 
     def _respond(self, request):
-        if not self.valid_regex.match(request.block_id):
-            return self._status.NO_RESOURCE
+        self._validate_ids([request.block_id])
 
         try:
             block = self._block_store[request.block_id].block
@@ -819,6 +843,8 @@ class BlockGetByTransactionRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
+        self._validate_ids([request.transaction_id])
+
         try:
             block = self._block_store.get_block_by_transaction_id(
                 request.transaction_id).block
@@ -838,6 +864,8 @@ class BlockGetByBatchRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
+        self._validate_ids([request.batch_id])
+
         try:
             block = self._block_store.get_block_by_batch_id(
                 request.batch_id).block
@@ -858,6 +886,8 @@ class BatchListRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         head_id = self._get_head_block(request).header_signature
+        self._validate_ids(request.batch_ids)
+
         batches = self._list_store_resources(
             request,
             head_id,
@@ -904,11 +934,14 @@ class BatchGetRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
+        self._validate_ids([request.batch_id])
+
         try:
             batch = self._block_store.get_batch(request.batch_id)
         except ValueError as e:
             LOGGER.debug(e)
             return self._status.NO_RESOURCE
+
         return self._wrap_response(batch=batch)
 
 
@@ -922,6 +955,8 @@ class TransactionListRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         head_id = self._get_head_block(request).header_signature
+        self._validate_ids(request.transaction_ids)
+
         transactions = self._list_store_resources(
             request,
             head_id,
@@ -968,6 +1003,8 @@ class TransactionGetRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
+        self._validate_ids([request.transaction_id])
+
         try:
             txn = self._block_store.get_transaction(request.transaction_id)
         except ValueError as e:

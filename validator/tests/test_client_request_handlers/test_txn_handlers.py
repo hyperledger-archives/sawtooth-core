@@ -144,7 +144,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a status of NO_ROOT
             - that head_id, paging, and transactions are missing
         """
-        response = self.make_request(head_id='bad')
+        response = self.make_request(head_id='f' * 128)
 
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.head_id)
@@ -189,7 +189,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assertEqual(C_0, response.transactions[0].header_signature)
         self.assertEqual(C_2, response.transactions[1].header_signature)
 
-    def test_txn_list_by_bad_ids(self):
+    def test_txn_list_by_missing_ids(self):
         """Verifies txn list requests break properly when ids are not found.
 
         Queries the default mock block store with three blocks:
@@ -213,14 +213,14 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a head_id of 'bbb...2', the latest
             - that paging and transactions are missing
         """
-        response = self.make_request(transaction_ids=['bad', 'notgood'])
+        response = self.make_request(transaction_ids=['f' * 128, 'e' * 128])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertEqual(B_2, response.head_id)
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.transactions)
 
-    def test_txn_list_by_good_and_bad_ids(self):
+    def test_txn_list_by_found_and_missing_ids(self):
         """Verifies txn list requests work filtered by good and bad ids.
 
         Queries the default mock block store with three blocks:
@@ -247,7 +247,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - that item is an instances of Transaction
             - that item has a header_signature of 'ccc...1'
         """
-        response = self.make_request(transaction_ids=['bad', C_1])
+        response = self.make_request(transaction_ids=['f' * 128, C_1])
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
@@ -313,7 +313,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a head_id of 'bbb...0'
             - that paging and transactions are missing
         """
-        response = self.make_request(head_id=B_0, transaction_ids=['ccc...1', 'ccc...2'])
+        response = self.make_request(head_id=B_0, transaction_ids=[C_1, C_2])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertEqual(B_0, response.head_id)
@@ -457,7 +457,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
             - a status of INVALID_PAGING
             - that head_id, paging, and transactions are missing
         """
-        response = self.make_paged_request(limit=3, start='bad')
+        response = self.make_paged_request(limit=3, start='f' * 128)
 
         self.assertEqual(self.status.INVALID_PAGING, response.status)
         self.assertFalse(response.head_id)
@@ -566,14 +566,14 @@ class TestTransactionGetRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.INTERNAL_ERROR, response.status)
         self.assertFalse(response.transaction.SerializeToString())
 
-    def test_txn_get_with_bad_id(self):
-        """Verifies requests for a specific txn break with a bad id.
+    def test_txn_get_with_missing_id(self):
+        """Verifies requests for a specific txn break with an unfound id.
 
         Expects to find:
             - a status of NO_RESOURCE
             - that the Transaction returned, when serialized, is actually empty
         """
-        response = self.make_request(transaction_id='bad')
+        response = self.make_request(transaction_id='f' * 128)
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.transaction.SerializeToString())

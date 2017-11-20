@@ -121,7 +121,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - a status of NO_ROOT
             - that blocks, head_id, and paging are missing
         """
-        response = self.make_request(head_id='bad')
+        response = self.make_request(head_id='f' * 128)
 
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.head_id)
@@ -155,7 +155,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assertEqual(B_0, response.blocks[0].header_signature)
         self.assertEqual(B_2, response.blocks[1].header_signature)
 
-    def test_block_list_by_bad_ids(self):
+    def test_block_list_by_missing_ids(self):
         """Verifies block list requests break when ids are not found.
 
         Queries the default mock block store with three blocks:
@@ -168,14 +168,14 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - a head_id of 'bbb...2', the latest
             - that blocks and paging are missing
         """
-        response = self.make_request(block_ids=['bad', 'also-bad'])
+        response = self.make_request(block_ids=['f' * 128, 'e' * 128])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertEqual(B_2, response.head_id)
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.blocks)
 
-    def test_block_list_by_good_and_bad_ids(self):
+    def test_block_list_by_found_and_missing_ids(self):
         """Verifies block list requests work filtered by good and bad ids.
 
         Queries the default mock block store with three blocks:
@@ -191,7 +191,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - that item is an instances of Block
             - that item has a header_signature of 'bbb...1'
         """
-        response = self.make_request(block_ids=['bad', B_1])
+        response = self.make_request(block_ids=['f' * 128, B_1])
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
@@ -311,7 +311,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - a status of INVALID_PAGING
             - that head_id, paging, and blocks are missing
         """
-        response = self.make_paged_request(limit=3, start='bad')
+        response = self.make_paged_request(limit=3, start='f' * 128)
 
         self.assertEqual(self.status.INVALID_PAGING, response.status)
         self.assertFalse(response.head_id)
@@ -330,7 +330,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
             - a status of INVALID_SORT
             - that head_id, paging, and blocks are missing
         """
-        controls = self.make_sort_controls('bad')
+        controls = self.make_sort_controls('f' * 128)
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.INVALID_SORT, response.status)
@@ -402,14 +402,14 @@ class TestBlockGetByIdRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.INTERNAL_ERROR, response.status)
         self.assertFalse(response.block.SerializeToString())
 
-    def test_block_get_with_bad_id(self):
-        """Verifies requests for a specific block break with a bad id.
+    def test_block_get_with_missing_id(self):
+        """Verifies requests for a specific block break with an unfound id.
 
         Expects to find:
             - a status of NO_RESOURCE
             - that the Block returned, when serialized, is empty
         """
-        response = self.make_request(block_id='bad')
+        response = self.make_request(block_id='f' * 128)
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.block.SerializeToString())
@@ -468,7 +468,7 @@ class TestBlockGetByTransactionRequests(ClientHandlerTestCase):
             - a status of NO_RESOURCE
             - that the Block returned, when serialized, is empty
         """
-        response = self.make_request(transaction_id='bad')
+        response = self.make_request(transaction_id='f' * 128)
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.block.SerializeToString())
@@ -515,7 +515,7 @@ class TestBlockGetByBatchRequests(ClientHandlerTestCase):
             - a status of NO_RESOURCE
             - that the Block returned, when serialized, is empty
         """
-        response = self.make_request(batch_id='bad')
+        response = self.make_request(batch_id='f' * 128)
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.block.SerializeToString())

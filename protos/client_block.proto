@@ -55,6 +55,7 @@ message ClientBlockListResponse {
         NO_RESOURCE = 5;
         INVALID_PAGING = 6;
         INVALID_SORT = 7;
+        INVALID_ID = 8;
     }
     Status status = 1;
     repeated Block blocks = 2;
@@ -101,6 +102,7 @@ message ClientBlockGetResponse {
         OK = 1;
         INTERNAL_ERROR = 2;
         NO_RESOURCE = 5;
+        INVALID_ID = 8;
     }
     Status status = 1;
     Block block = 2;
