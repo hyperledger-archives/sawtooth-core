@@ -21,80 +21,20 @@ const protobuf = require('protobufjs')
 
 const root = protobuf.Root.fromJSON(require('./protobuf_bundle.json'))
 
-const TpRegisterResponse = root.lookup('TpRegisterResponse')
-TpRegisterResponse.Status = TpRegisterResponse.nested.Status.values
-
-const TpProcessResponse = root.lookup('TpProcessResponse')
-TpProcessResponse.Status = TpProcessResponse.nested.Status.values
-
-const TpUnregisterResponse = root.lookup('TpUnregisterResponse')
-TpUnregisterResponse.Status = TpUnregisterResponse.nested.Status.values
-
-const TpStateSetResponse = root.lookup('TpStateSetResponse')
-TpStateSetResponse.Status = TpStateSetResponse.nested.Status.values
-
-const TpStateGetResponse = root.lookup('TpStateGetResponse')
-TpStateGetResponse.Status = TpStateGetResponse.nested.Status.values
-
-const TpStateDeleteResponse = root.lookup('TpStateDeleteResponse')
-TpStateDeleteResponse.Status = TpStateDeleteResponse.nested.Status.values
-
-const PingResponse = root.lookup('PingResponse')
-
 const Message = root.lookup('Message')
 Message.MessageType = Message.nested.MessageType.values
 Message.MessageType.stringValue = (id) =>
   `${Message.nested.MessageType.valuesById[id]}(${id})`
 
-module.exports = {
-  //
-  // Validator messages
-  Message,
+let exportableMessages =
+  Object.keys(root)
+    .filter((key) => /^[A-Z]/.test(key))
+    .reduce((acc, key) => {
+      acc[key] = root[key]
+      return acc
+    }, {})
 
-  //
-  // processor
-  TpRegisterRequest:
-    root.lookup('TpRegisterRequest'),
+// Add our stringValue enabled Message
+exportableMessages['Message'] = Message
 
-  TpRegisterResponse,
-
-  TpUnregisterRequest:
-    root.lookup('TpUnregisterRequest'),
-
-  TpUnregisterResponse,
-
-  TpProcessRequest:
-    root.lookup('TpProcessRequest'),
-
-  TpProcessResponse,
-
-  PingResponse,
-
-  //
-  // State
-  TpStateEntry: root.lookup('TpStateEntry'),
-
-  TpStateGetRequest: root.lookup('TpStateGetRequest'),
-
-  TpStateGetResponse,
-
-  TpStateSetRequest: root.lookup('TpStateSetRequest'),
-
-  TpStateSetResponse,
-
-  TpStateDeleteRequest: root.lookup('TpStateDeleteRequest'),
-
-  TpStateDeleteResponse,
-
-  //
-  // Transactions
-  TransactionHeader: root.lookup('TransactionHeader'),
-  Transaction: root.lookup('Transaction'),
-  TransactionList: root.lookup('TransactionList'),
-
-  //
-  // Batches
-  BatchHeader: root.lookup('BatchHeader'),
-  Batch: root.lookup('Batch'),
-  BatchList: root.lookup('BatchList')
-}
+module.exports = exportableMessages
