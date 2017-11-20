@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
     'signing'))
 
-from sawtooth_cli.config import main_wrapper
+from sawtooth_cli.sawset import main_wrapper
 
 if __name__ == '__main__':
     main_wrapper()

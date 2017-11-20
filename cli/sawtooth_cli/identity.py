@@ -37,7 +37,7 @@ from sawtooth_cli.protobuf.transaction_pb2 import Transaction
 from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import Batch
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
-from sawtooth_cli.config import setting_key_to_address
+from sawtooth_cli.sawset import setting_key_to_address
 
 import sawtooth_signing as signing
 
