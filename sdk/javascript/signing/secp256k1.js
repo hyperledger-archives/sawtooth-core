@@ -125,6 +125,10 @@ class Secp256k1Context extends Context {
     return new Secp256k1PublicKey(
       secp256k1.publicKeyCreate(privateKey.privateKeyBytes))
   }
+
+  newRandomPrivateKey () {
+    return Secp256k1PrivateKey.newRandom()
+  }
 }
 
 module.exports = {
