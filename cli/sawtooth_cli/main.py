@@ -41,6 +41,8 @@ from sawtooth_cli.identity import do_identity
 from sawtooth_cli.settings import add_settings_parser
 from sawtooth_cli.settings import do_settings
 
+from sawtooth_cli.cli_config import load_cli_config
+
 
 DISTRIBUTION_NAME = 'sawtooth-cli'
 
@@ -128,6 +130,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     if args is None:
         args = sys.argv[1:]
     args = parser.parse_args(args)
+
+    load_cli_config(args)
 
     if with_loggers is True:
         if args.verbose is None:

@@ -28,7 +28,6 @@ def base_http_parser():
     base_parser.add_argument(
         '--url',
         type=str,
-        default='http://localhost:8008',
         help="the URL of the validator's REST API")
     base_parser.add_argument(
         '-u', '--user',

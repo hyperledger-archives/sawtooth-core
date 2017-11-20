@@ -1,0 +1,6 @@
+#
+# Sawtooth -- CLI Configuration
+#
+
+# The REST API URL
+#   url = "http://localhost:8008"
