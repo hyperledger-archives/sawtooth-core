@@ -105,7 +105,7 @@ def load_toml_validator_config(filename):
 
 def merge_validator_config(configs):
     """
-    Given a list of ValidatorConfig object, merges them into a single
+    Given a list of ValidatorConfig objects, merges them into a single
     ValidatorConfig, giving priority in the order of the configs
     (first has highest priority).
     """

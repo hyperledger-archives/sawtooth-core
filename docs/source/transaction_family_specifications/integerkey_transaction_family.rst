@@ -90,9 +90,11 @@ The outputs for IntegerKey family transactions must include:
 
 Dependencies
 ------------
-* A list of transaction *header_signatures* which are required dependencies and must be processed prior to processing this transaction
 
-.. note:: For example, 'inc' and 'dec' transactions must list the initial 'set' transaction for the entry. If an 'inc' or 'dec' transaction is ordered before the corresponding 'set' transaction (without listing the 'set' transaction as a dependency), they will be considered invalid (because *Name* will not exist when they are processed).
+* List of transaction *header_signatures* that are required dependencies
+  and must be processed prior to processing this transaction
+
+For example, the 'inc' and 'dec' transactions must list the initial 'set' transaction for the entry. If an 'inc' or 'dec' transaction is ordered before the corresponding 'set' transaction (without listing the 'set' transaction as a dependency), they will be considered invalid (because *Name* will not exist when they are processed).
 
 Family
 ------

@@ -66,9 +66,8 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
 
 WORKDIR /project/sawtooth-core
 
-# Update version and publish JS SDK
+# Publish JS SDK
 CMD cd /project/sawtooth-core/sdk/javascript \
     && echo "//registry.npmjs.org/:_authToken=$AUTH_TOKEN" >> ~/.npmrc \
-    && VERSION=AUTO_STRICT ../../bin/get_version | xargs npm version \
-    && npm install \
+    && npm install --unsafe-perm \
     && npm publish --unsafe-perm

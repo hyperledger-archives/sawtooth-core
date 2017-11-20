@@ -130,12 +130,10 @@ class TransactionExecutorThread(object):
                 data=data)
 
         elif response.status == processor_pb2.TpProcessResponse.INTERNAL_ERROR:
-            header = transaction_pb2.TransactionHeader()
-            header.ParseFromString(req.header)
 
             processor_type = processor_iterator.ProcessorType(
-                header.family_name,
-                header.family_version)
+                req.header.family_name,
+                req.header.family_version)
 
             self._execute_or_wait_for_processor_type(
                 processor_type, request, req.signature)
@@ -241,7 +239,7 @@ class TransactionExecutorThread(object):
                     context_id=None)
                 continue
             content = processor_pb2.TpProcessRequest(
-                header=txn.header,
+                header=header,
                 payload=txn.payload,
                 signature=txn.header_signature,
                 context_id=context_id).SerializeToString()

@@ -20,11 +20,10 @@ import signal
 import time
 import threading
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.execution.context_manager import ContextManager
+from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.publisher import BlockPublisher
@@ -44,8 +43,6 @@ from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.state.identity_view import IdentityViewFactory
-from sawtooth_validator.state.state_delta_processor import StateDeltaProcessor
-from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import IdentityCache
@@ -67,7 +64,7 @@ class Validator(object):
 
     def __init__(self, bind_network, bind_component, endpoint,
                  peering, seeds_list, peer_list, data_dir, config_dir,
-                 identity_signing_key, scheduler_type, permissions,
+                 identity_signer, scheduler_type, permissions,
                  network_public_key=None, network_private_key=None,
                  roles=None,
                  metrics_registry=None
@@ -94,10 +91,11 @@ class Validator(object):
             peer_list (list of str): a list of peer addresses
             data_dir (str): path to the data directory
             config_dir (str): path to the config directory
-            identity_signing_key (str): key validator uses for signing
+            identity_signer (str): cryptographic signer the validator uses for
+                signing
         """
         # Get the public key for the signing key
-        identity_public_key = signing.generate_public_key(identity_signing_key)
+        identity_public_key = identity_signer.get_public_key().as_hex()
 
         # -- Setup Global State Database and Factory -- #
         global_state_db_filename = os.path.join(
@@ -106,13 +104,6 @@ class Validator(object):
             'global state database file is %s', global_state_db_filename)
         global_state_db = LMDBNoLockDatabase(global_state_db_filename, 'c')
         state_view_factory = StateViewFactory(global_state_db)
-
-        # -- Setup State Delta Store -- #
-        delta_db_filename = os.path.join(
-            data_dir, 'state-deltas-{}.lmdb'.format(bind_network[-2:]))
-        LOGGER.debug('state delta store file is %s', delta_db_filename)
-        state_delta_db = LMDBNoLockDatabase(delta_db_filename, 'c')
-        state_delta_store = StateDeltaStore(state_delta_db)
 
         # -- Setup Receipt Store -- #
         receipt_db_filename = os.path.join(
@@ -125,7 +116,12 @@ class Validator(object):
         block_db_filename = os.path.join(
             data_dir, 'block-{}.lmdb'.format(bind_network[-2:]))
         LOGGER.debug('block store file is %s', block_db_filename)
-        block_db = LMDBNoLockDatabase(block_db_filename, 'c')
+        block_db = IndexedDatabase(
+            block_db_filename,
+            BlockStore.serialize_block,
+            BlockStore.deserialize_block,
+            flag='c',
+            indexes=BlockStore.create_index_configuration())
         block_store = BlockStore(block_db)
         block_cache = BlockCache(
             block_store, keep_time=300, purge_frequency=30)
@@ -173,13 +169,12 @@ class Validator(object):
             max_incoming_connections=100,
             max_future_callback_workers=10,
             authorize=True,
-            public_key=identity_public_key,
-            priv_key=identity_signing_key,
+            signer=identity_signer,
             roles=roles,
             metrics_registry=metrics_registry)
 
         # -- Setup Transaction Execution Platform -- #
-        context_manager = ContextManager(global_state_db, state_delta_store)
+        context_manager = ContextManager(global_state_db)
 
         batch_tracker = BatchTracker(block_store)
 
@@ -194,8 +189,6 @@ class Validator(object):
         component_service.set_check_connections(
             transaction_executor.check_connections)
 
-        state_delta_processor = StateDeltaProcessor(
-            component_service, state_delta_store, block_store)
         event_broadcaster = EventBroadcaster(
             component_service, block_store, receipt_store)
 
@@ -236,7 +229,7 @@ class Validator(object):
         batch_injector_factory = DefaultBatchInjectorFactory(
             block_store=block_store,
             state_view_factory=state_view_factory,
-            signing_key=identity_signing_key)
+            signer=identity_signer)
 
         block_publisher = BlockPublisher(
             transaction_executor=transaction_executor,
@@ -246,8 +239,8 @@ class Validator(object):
             batch_sender=batch_sender,
             squash_handler=context_manager.get_squash_handler(),
             chain_head=block_store.chain_head,
-            identity_signing_key=identity_signing_key,
-            identity_public_key=identity_public_key,
+            identity_signer=identity_signer,
+            identity_public_key=identity_signer.get_public_key().as_hex(),
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier,
@@ -276,7 +269,6 @@ class Validator(object):
             data_dir=data_dir,
             config_dir=config_dir,
             chain_observers=[
-                state_delta_processor,
                 event_broadcaster,
                 receipt_store,
                 batch_tracker,
@@ -290,8 +282,8 @@ class Validator(object):
             completer=completer,
             block_store=block_store,
             state_view_factory=state_view_factory,
-            identity_signing_key=identity_signing_key,
-            identity_public_key=identity_public_key,
+            identity_signer=identity_signer,
+            identity_public_key=identity_signer.get_public_key().as_hex(),
             data_dir=data_dir,
             config_dir=config_dir,
             chain_id_manager=chain_id_manager,
@@ -305,15 +297,16 @@ class Validator(object):
         # -- Register Message Handler -- #
         network_handlers.add(
             network_dispatcher, network_service, gossip, completer,
-            responder, network_thread_pool, sig_pool, permission_verifier)
+            responder, network_thread_pool, sig_pool,
+            chain_controller.has_block, block_publisher.has_batch,
+            permission_verifier)
 
         component_handlers.add(
             component_dispatcher, gossip, context_manager,
             transaction_executor, completer, block_store, batch_tracker,
             global_state_db, self.get_chain_head_state_root_hash,
-            receipt_store, state_delta_processor, state_delta_store,
-            event_broadcaster, permission_verifier, component_thread_pool,
-            sig_pool)
+            receipt_store, event_broadcaster, permission_verifier,
+            component_thread_pool, sig_pool)
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher

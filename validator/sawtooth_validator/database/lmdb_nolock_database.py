@@ -59,23 +59,11 @@ class LMDBNoLockDatabase(database.Database):
         with self._lmdb.begin() as txn:
             return txn.stat()['entries']
 
-    def __contains__(self, key):
+    def contains_key(self, key, index=None):
         with self._lmdb.begin() as txn:
             return bool(txn.get(key.encode()) is not None)
 
-    def get(self, key):
-        """Retrieves a value associated with a key from the database
-
-        Args:
-            key (str): The key to retrieve
-        """
-        with self._lmdb.begin() as txn:
-            packed = txn.get(key.encode())
-            if packed is not None:
-                return cbor.loads(packed)
-        return None
-
-    def get_batch(self, keys):
+    def get_multi(self, keys, index=None):
         with self._lmdb.begin() as txn:
             result = []
             for key in keys:
@@ -84,39 +72,17 @@ class LMDBNoLockDatabase(database.Database):
                     result.append((key, cbor.loads(packed)))
         return result
 
-    def get_indirect(self, key):
-        """Retrieves a value associated with a persisted key, whose location in
-        the database is specified by the given key.
-
-        Args: key (str): The key of the persisted key in the database
+    def cursor(self, index=None):
         """
-        with self._lmdb.begin() as txn:
-            packed = txn.get(key.encode())
-            if packed is not None:
-                key_2 = cbor.loads(packed)
-                packed = txn.get(key_2.encode())
-                if packed is not None:
-                    return cbor.loads(packed)
-        return None
-
-    def set(self, key, value):
-        """Sets a value associated with a key in the database
-
-        Args:
-            key (str): The key to set.
-            value (str): The value to associate with the key.
+        This currently is just to satisfy the interface.
         """
-        packed = cbor.dumps(value)
-        with self._lmdb.begin(write=True, buffers=True) as txn:
-            txn.put(key.encode(), packed, overwrite=True)
-        self.sync()
+        raise NotImplementedError()
 
-    def set_batch(self, add_pairs, del_keys=None):
+    def update(self, puts, deletes):
         with self._lmdb.begin(write=True, buffers=True) as txn:
-            if del_keys is not None:
-                for k in del_keys:
-                    txn.delete(k.encode())
-            for k, v in add_pairs:
+            for k in deletes:
+                txn.delete(k.encode())
+            for k, v in puts:
                 packed = cbor.dumps(v)
                 txn.put(k.encode(), packed, overwrite=True)
         self.sync()
@@ -140,7 +106,7 @@ class LMDBNoLockDatabase(database.Database):
         """
         self._lmdb.close()
 
-    def keys(self):
+    def keys(self, index=None):
         """Returns a list of keys in the database
         """
         with self._lmdb.begin() as txn:

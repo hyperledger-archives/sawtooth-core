@@ -37,11 +37,13 @@ from sawtooth_rest_api.protobuf import client_state_pb2
 from sawtooth_rest_api.protobuf import client_block_pb2
 from sawtooth_rest_api.protobuf import client_batch_pb2
 from sawtooth_rest_api.protobuf import client_receipt_pb2
+from sawtooth_rest_api.protobuf import client_peers_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
 from sawtooth_rest_api.protobuf.transaction_pb2 import TransactionHeader
 
+# pylint: disable=too-many-lines
 
 DEFAULT_TIMEOUT = 300
 LOGGER = logging.getLogger(__name__)
@@ -124,7 +126,7 @@ class RouteHandler(object):
         Response:
             status:
                  - 202: Batches submitted and pending
-            link: /batches or /batch_status link for submitted batches
+            link: /batches or /batch_statuses link for submitted batches
 
         """
         timer_ctx = self._post_batches_total_time.time()
@@ -168,7 +170,7 @@ class RouteHandler(object):
         id_string = ','.join(b.header_signature for b in batch_list.batches)
 
         status = 202
-        link = self._build_url(request, path='/batch_status', id=id_string)
+        link = self._build_url(request, path='/batch_statuses', id=id_string)
 
         retval = self._wrap_response(
             request,
@@ -189,7 +191,7 @@ class RouteHandler(object):
 
         Response:
             data: A JSON object, with batch ids as keys, and statuses as values
-            link: The /batch_status link queried (if GET)
+            link: The /batch_statuses link queried (if GET)
         """
         error_traps = [error_handlers.StatusResponseMissing]
 
@@ -208,6 +210,8 @@ class RouteHandler(object):
                     or not all(isinstance(i, str) for i in ids)):
                 LOGGER.debug('Request body was invalid: %s', ids)
                 raise errors.StatusBodyInvalid()
+            for i in ids:
+                self._validate_id(i)
 
         else:
             ids = self._get_filter_ids(request)
@@ -254,8 +258,11 @@ class RouteHandler(object):
             paging: Paging info and nav, like total resources and a next link
         """
         paging_controls = self._get_paging_controls(request)
+
+        head, root = await self._head_to_root(request.url.query.get(
+            'head', None))
         validator_query = client_state_pb2.ClientStateListRequest(
-            head_id=request.url.query.get('head', None),
+            state_root=root,
             address=request.url.query.get('address', None),
             sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
@@ -269,7 +276,8 @@ class RouteHandler(object):
             request=request,
             response=response,
             controls=paging_controls,
-            data=response.get('entries', []))
+            data=response.get('entries', []),
+            head=head)
 
     async def fetch_state(self, request):
         """Fetches data from a specific address in the validator's state tree.
@@ -291,17 +299,18 @@ class RouteHandler(object):
         address = request.match_info.get('address', '')
         head = request.url.query.get('head', None)
 
+        head, root = await self._head_to_root(head)
         response = await self._query_validator(
             Message.CLIENT_STATE_GET_REQUEST,
             client_state_pb2.ClientStateGetResponse,
             client_state_pb2.ClientStateGetRequest(
-                head_id=head, address=address),
+                state_root=root, address=address),
             error_traps)
 
         return self._wrap_response(
             request,
             data=response['value'],
-            metadata=self._get_metadata(request, response))
+            metadata=self._get_metadata(request, response, head=head))
 
     async def list_blocks(self, request):
         """Fetches list of blocks from validator, optionally filtered by id.
@@ -319,7 +328,7 @@ class RouteHandler(object):
         """
         paging_controls = self._get_paging_controls(request)
         validator_query = client_block_pb2.ClientBlockListRequest(
-            head_id=request.url.query.get('head', None),
+            head_id=self._get_head_id(request),
             block_ids=self._get_filter_ids(request),
             sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
@@ -348,11 +357,12 @@ class RouteHandler(object):
         error_traps = [error_handlers.BlockNotFoundTrap]
 
         block_id = request.match_info.get('block_id', '')
+        self._validate_id(block_id)
 
         response = await self._query_validator(
-            Message.CLIENT_BLOCK_GET_REQUEST,
+            Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
             client_block_pb2.ClientBlockGetResponse,
-            client_block_pb2.ClientBlockGetRequest(block_id=block_id),
+            client_block_pb2.ClientBlockGetByIdRequest(block_id=block_id),
             error_traps)
 
         return self._wrap_response(
@@ -376,7 +386,7 @@ class RouteHandler(object):
         """
         paging_controls = self._get_paging_controls(request)
         validator_query = client_batch_pb2.ClientBatchListRequest(
-            head_id=request.url.query.get('head', None),
+            head_id=self._get_head_id(request),
             batch_ids=self._get_filter_ids(request),
             sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
@@ -406,6 +416,7 @@ class RouteHandler(object):
         error_traps = [error_handlers.BatchNotFoundTrap]
 
         batch_id = request.match_info.get('batch_id', '')
+        self._validate_id(batch_id)
 
         response = await self._query_validator(
             Message.CLIENT_BATCH_GET_REQUEST,
@@ -434,7 +445,7 @@ class RouteHandler(object):
         """
         paging_controls = self._get_paging_controls(request)
         validator_query = client_transaction_pb2.ClientTransactionListRequest(
-            head_id=request.url.query.get('head', None),
+            head_id=self._get_head_id(request),
             transaction_ids=self._get_filter_ids(request),
             sorting=self._get_sorting_message(request),
             paging=self._make_paging_message(paging_controls))
@@ -466,6 +477,7 @@ class RouteHandler(object):
         error_traps = [error_handlers.TransactionNotFoundTrap]
 
         txn_id = request.match_info.get('transaction_id', '')
+        self._validate_id(txn_id)
 
         response = await self._query_validator(
             Message.CLIENT_TRANSACTION_GET_REQUEST,
@@ -511,6 +523,8 @@ class RouteHandler(object):
                     or not all(isinstance(i, str) for i in ids)):
                 LOGGER.debug('Request body was invalid: %s', ids)
                 raise errors.ReceiptBodyInvalid()
+            for i in ids:
+                self._validate_id(i)
 
         else:
             ids = self._get_filter_ids(request)
@@ -540,6 +554,25 @@ class RouteHandler(object):
             self._drop_empty_props(response['receipts']))
 
         return self._wrap_response(request, data=data, metadata=metadata)
+
+    async def fetch_peers(self, request):
+        """Fetches the peers from the validator.
+        Request:
+
+        Response:
+            data: JSON array of peer endpoints
+            link: The link to this exact query
+        """
+
+        response = await self._query_validator(
+            Message.CLIENT_PEERS_GET_REQUEST,
+            client_peers_pb2.ClientPeersGetResponse,
+            client_peers_pb2.ClientPeersGetRequest())
+
+        return self._wrap_response(
+            request,
+            data=response['peers'],
+            metadata=self._get_metadata(request, response))
 
     async def _query_validator(self, request_type, response_proto,
                                payload, error_traps=None):
@@ -576,6 +609,29 @@ class RouteHandler(object):
         except asyncio.TimeoutError:
             LOGGER.warning('Timed out while waiting for validator response')
             raise errors.ValidatorTimedOut()
+
+    async def _head_to_root(self, block_id):
+        error_traps = [error_handlers.BlockNotFoundTrap]
+        if block_id:
+            response = await self._query_validator(
+                Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
+                client_block_pb2.ClientBlockGetResponse,
+                client_block_pb2.ClientBlockGetByIdRequest(block_id=block_id),
+                error_traps)
+            block = self._expand_block(response['block'])
+        else:
+            response = await self._query_validator(
+                Message.CLIENT_BLOCK_LIST_REQUEST,
+                client_block_pb2.ClientBlockListResponse,
+                client_block_pb2.ClientBlockListRequest(
+                    paging=client_list_control_pb2.ClientPagingControls(
+                        count=1)),
+                error_traps)
+            block = self._expand_block(response['blocks'][0])
+        return (
+            block['header_signature'],
+            block['header']['state_root_hash'],
+        )
 
     @staticmethod
     def _parse_response(proto, response):
@@ -634,14 +690,6 @@ class RouteHandler(object):
                 trap.check(content.status)
 
     @staticmethod
-    def add_cors_headers(request, headers):
-        if 'Origin' in request.headers:
-            headers['Access-Control-Allow-Origin'] = request.headers['Origin']
-            headers["Access-Control-Allow-Methods"] = "GET,POST"
-            headers["Access-Control-Allow-Headers"] =\
-                "Origin, X-Requested-With, Content-Type, Accept"
-
-    @staticmethod
     def _wrap_response(request, data=None, metadata=None, status=200):
         """Creates the JSON response envelope to be sent back to the client.
         """
@@ -650,13 +698,9 @@ class RouteHandler(object):
         if data is not None:
             envelope['data'] = data
 
-        headers = {}
-        RouteHandler.add_cors_headers(request, headers)
-
         return web.Response(
             status=status,
             content_type='application/json',
-            headers=headers,
             text=json.dumps(
                 envelope,
                 indent=2,
@@ -664,11 +708,14 @@ class RouteHandler(object):
                 sort_keys=True))
 
     @classmethod
-    def _wrap_paginated_response(cls, request, response, controls, data):
+    def _wrap_paginated_response(
+        cls, request, response, controls, data, head=None
+    ):
         """Builds the metadata for a pagingated response and wraps everying in
         a JSON encoded web.Response
         """
-        head = response['head_id']
+        if head is None:
+            head = response['head_id']
         link = cls._build_url(request, head=head)
 
         paging_response = response['paging']
@@ -692,7 +739,8 @@ class RouteHandler(object):
                                   min=min_pos, max=max_pos)
 
         # Build paging urls based on ids
-        if 'start_id' in controls or 'end_id' in controls:
+        if 'start_id' in controls or 'end_id' in controls or \
+                paging_response['next_id']:
             if paging_response['next_id']:
                 paging['next'] = build_pg_url(paging_response['next_id'])
             if paging_response['previous_id']:
@@ -715,11 +763,11 @@ class RouteHandler(object):
             metadata={'head': head, 'link': link, 'paging': paging})
 
     @classmethod
-    def _get_metadata(cls, request, response):
+    def _get_metadata(cls, request, response, head=None):
         """Parses out the head and link properties based on the HTTP Request
         from the client, and the Protobuf response from the validator.
         """
-        head = response.get('head_id', None)
+        head = response.get('head_id', head)
         metadata = {'link': cls._build_url(request, head=head)}
 
         if head is not None:
@@ -968,12 +1016,39 @@ class RouteHandler(object):
                     for k, v in item.items()}
         return item
 
-    @staticmethod
-    def _get_filter_ids(request):
+    @classmethod
+    def _get_head_id(cls, request):
+        """Fetches the request's head query, and validates if present.
+        """
+        head_id = request.url.query.get('head', None)
+
+        if head_id is not None:
+            cls._validate_id(head_id)
+
+        return head_id
+
+    @classmethod
+    def _get_filter_ids(cls, request):
         """Parses the `id` filter paramter from the url query.
         """
-        filter_ids = request.url.query.get('id', None)
-        return filter_ids and filter_ids.split(',')
+        id_query = request.url.query.get('id', None)
+
+        if id_query is None:
+            return None
+
+        filter_ids = id_query.split(',')
+        for filter_id in filter_ids:
+            cls._validate_id(filter_id)
+
+        return filter_ids
+
+    @staticmethod
+    def _validate_id(resource_id):
+        """Confirms a header_signature is 128 hex characters, raising an
+        ApiError if not.
+        """
+        if not re.fullmatch('[0-9a-f]{128}', resource_id):
+            raise errors.InvalidResourceId(resource_id)
 
     @staticmethod
     def _message_to_dict(message):

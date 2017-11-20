@@ -88,7 +88,7 @@ class GossipHandlerStructureVerifier(Handler):
     def handle(self, connection_id, message_content):
         gossip_message = network_pb2.GossipMessage()
         gossip_message.ParseFromString(message_content)
-        if gossip_message.content_type == "BLOCK":
+        if gossip_message.content_type == network_pb2.GossipMessage.BLOCK:
             block = Block()
             block.ParseFromString(gossip_message.content)
             if not is_valid_block(block):
@@ -99,7 +99,7 @@ class GossipHandlerStructureVerifier(Handler):
             LOGGER.debug("block passes batch structure verification %s",
                          block.header_signature)
             return HandlerResult(status=HandlerStatus.PASS)
-        elif gossip_message.content_type == "BATCH":
+        elif gossip_message.content_type == network_pb2.GossipMessage.BATCH:
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
             if not is_valid_batch(batch):

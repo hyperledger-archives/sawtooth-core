@@ -77,9 +77,9 @@ services:
     command: "
       bash -c \"\
         /project/sawtooth-core/integration/sawtooth_integration/tests/scripts_for_permissioning_tests/test_transactor_permissioning.sh && \
-        sawtooth admin keygen && \
-        sawtooth config genesis -k /root/.sawtooth/keys/walter.priv -o config-genesis.batch && \
-        sawtooth admin genesis config-genesis.batch config.batch && \
+        sawadm keygen && \
+        sawset genesis -k /root/.sawtooth/keys/walter.priv -o config-genesis.batch && \
+        sawadm genesis config-genesis.batch config.batch && \
         sawtooth-validator -vv \
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
@@ -94,10 +94,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
+      - 8008
     depends_on:
       - validator
-    command: sawtooth-rest-api -vv --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -vv --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   test-transactor-permissioning:
@@ -105,7 +105,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - validator
       - rest-api

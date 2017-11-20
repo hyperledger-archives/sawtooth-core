@@ -19,22 +19,46 @@
 PoET CLI
 ********
 
+The PoET CLI initializes the proof-of-elapsed-time consensus mechanism
+for Sawtooth by generating enclave setup information and creating a
+Batch for the genesis block. For more information, see
+:doc:`/architecture/poet`.
+
 poet
 ====
+
+The ``poet`` command provides subcommands for configuring a node to use
+Sawtooth with the PoET consensus method.
 
 .. literalinclude:: output/poet_usage.out
    :language: console
    :linenos:
 
-poet genesis
-============
+poet registration
+=================
 
-.. literalinclude:: output/poet_genesis_usage.out
+The ``poet registration`` subcommand provides a command to work with
+the PoET validator registry.
+
+.. literalinclude:: output/poet_registration_usage.out
+   :language: console
+   :linenos:
+
+poet registration create
+========================
+
+The ``poet registration create`` subcommand creates a batch to enroll
+a validator in the network's validator registry. It must be run from
+the validator host wishing to enroll.
+
+.. literalinclude:: output/poet_registration_create_usage.out
    :language: console
    :linenos:
 
 poet enclave
 ============
+
+The ``poet enclave`` subcommand generates enclave setup information.
 
 .. literalinclude:: output/poet_enclave_usage.out
    :language: console

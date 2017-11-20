@@ -10,22 +10,23 @@ It provides an extremely modular and flexible platform for implementing
 transaction-based updates to shared state between
 untrusted parties coordinated by consensus algorithms.
 
-Incubation Notice
------------------
-
-This project is an _active_ Hyperledger project. It was proposed to the 
-community and documented [here](http://bit.ly/1T6eVBH). Information on what 
-_Active_ entails can be found in the 
-[Hyperledger Project Lifecycle document](https://goo.gl/4edNRc).
-
 Documentation
 -------------
 
-The latest documentation for Hyperledger Sawtooth is available within this repo in
-the [docs](docs) subdirectory.
+Documentation for how to run and extend Sawtooth is available here:
+https://sawtooth.hyperledger.org/docs/
 
-Documentation for our stable release is available at: 
-http://intelledger.github.io/.
+Running examples of Sawtooth blockchains can be found here: 
+https://sawtooth.hyperledger.org/examples/
+
+
+Project Status
+-----------------
+
+This project is an _active_ Hyperledger project. It was proposed to the 
+community and documented [here](https://docs.google.com/document/d/1j7YcGLJH6LkzvWdOYFIt2kpkVlLEmILErXL6t-Ky2zU/edit).
+Information on what _Active_ entails can be found in the 
+[Hyperledger Project Lifecycle document](https://wiki.hyperledger.org/community/project-lifecycle).
 
 License
 -------

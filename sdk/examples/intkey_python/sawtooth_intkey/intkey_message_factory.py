@@ -21,13 +21,12 @@ from sawtooth_intkey.processor.handler import make_intkey_address
 
 
 class IntkeyMessageFactory:
-    def __init__(self, private=None, public=None):
+    def __init__(self, signer=None):
         self._factory = MessageFactory(
             family_name='intkey',
             family_version='1.0',
             namespace=INTKEY_ADDRESS_PREFIX,
-            private=private,
-            public=public
+            signer=signer
         )
 
     def _dumps(self, obj):

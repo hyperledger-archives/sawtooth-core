@@ -18,7 +18,7 @@ paths:
         file and submits it to the validator to be committed.
 
         The API will return immediately with a status of `202`. There will be
-        no `data` object, only a `link` to a `/batch_status` endpoint to be
+        no `data` object, only a `link` to a `/batch_statuses` endpoint to be
         polled to check the status of submitted batches.
       consumes:
         - application/octet-stream
@@ -29,7 +29,6 @@ paths:
           schema:
             $ref: "#/definitions/BatchList"
           required: true
-        - $ref: "#/parameters/wait"
       responses:
         202:
           description: Batches submitted for validation, but not yet committed
@@ -100,7 +99,7 @@ paths:
         503:
           $ref: "#/responses/503ServiceUnavailable"
 
-  /batch_status:
+  /batch_statuses:
     get:
       summary: Fetches the committed statuses for a set of batches
       description: |
@@ -144,7 +143,7 @@ paths:
     post:
       summary: Fetches the committed statuses for a set of batches
       description: |
-        Identical to `GET /batch_status`, but takes ids of batches as a JSON
+        Identical to `GET /batch_statuses`, but takes ids of batches as a JSON
         formatted POST body rather than a query parameter. This allows for many
         more batches to be checked and should be used for more than 15 ids.
 
@@ -433,6 +432,27 @@ paths:
         503:
           $ref: "#/responses/503ServiceUnavailable"
 
+  /peers:
+    get:
+      summary: Fetches the endpoints of the authorized peers of the validator
+      responses:
+        200:
+          description: Successfully retrieved peers
+          schema:
+            properties:
+              data:
+                type: array
+                items:
+                  type: string
+                  example: tcp://12.345.67.890:8800
+              link:
+                $ref: "#/definitions/Link"
+        400:
+          $ref: "#/responses/400BadRequest"
+        500:
+          $ref: "#/responses/500ServerError"
+        503:
+          $ref: "#/responses/503ServiceUnavailable"
 
 responses:
   400BadRequest:
@@ -662,7 +682,7 @@ definitions:
           properties:
             event_type:
               type: string
-              example: block_commit
+              example: sawtooth/block-commit
             attributes:
               type: array
               items:
@@ -677,12 +697,8 @@ definitions:
       data:
         type: array
         items:
-          properties:
-            data_type:
-              type: string
-            data:
-              type: string
-              format: binary
+          type: string
+          format: binary
   TransactionReceipts:
     type: array
     items:

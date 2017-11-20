@@ -150,6 +150,10 @@ Error Codes and Descriptions
      - Invalid Sort Query
      - The validator rejected the sort request submitted. Most likely one of
        the keys specified was not found in the resources sorted.
+   * - 60
+     - Invalid Resource Id
+     - A submitted block, batch, or transaction id was invalid. All such
+       resources are identified by 128 character hex-strings.
    * - 62
      - Invalid State Address
      - The state address submitted was invalid. Returned when attempting to

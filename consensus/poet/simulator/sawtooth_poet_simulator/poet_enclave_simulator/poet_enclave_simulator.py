@@ -30,7 +30,10 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
+from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
@@ -57,8 +60,8 @@ class _PoetEnclaveSimulator(object):
 
     # The private key we generate to sign the certificate ID when creating
     # the random wait timeout value
-    _seal_private_key = signing.generate_private_key()
-    _seal_public_key = signing.generate_public_key(_seal_private_key)
+    _context = create_context('secp256k1')
+    _seal_private_key = Secp256k1PrivateKey.new_random()
 
     # The basename and enclave measurement values we will put into and verify
     # are in the enclave quote in the attestation verification report.
@@ -175,15 +178,15 @@ class _PoetEnclaveSimulator(object):
             # First we need to create a public/private key pair for the PoET
             # enclave to use.
             # Counter ID is a placeholder for a hardware counter in a TEE.
-            poet_private_key = signing.generate_private_key()
+            poet_private_key = Secp256k1PrivateKey.new_random()
             poet_public_key = \
-                signing.generate_public_key(poet_private_key)
+                cls._context.get_public_key(poet_private_key)
             counter_id = None
 
             # Simulate sealing (encrypting) the signup data.
             signup_data = {
-                'poet_private_key': poet_private_key,
-                'poet_public_key': poet_public_key,
+                'poet_private_key': poet_private_key.as_hex(),
+                'poet_public_key': poet_public_key.as_hex(),
                 'counter_id': counter_id
             }
             sealed_signup_data = \
@@ -204,7 +207,7 @@ class _PoetEnclaveSimulator(object):
             hash_input = \
                 '{0}{1}'.format(
                     originator_public_key_hash.upper(),
-                    poet_public_key.upper()).encode()
+                    poet_public_key.as_hex().upper()).encode()
             report_data = hashlib.sha256(hash_input).digest()
             sgx_report_data = sgx_structs.SgxReportData(d=report_data)
             sgx_report_body = \
@@ -326,6 +329,14 @@ class _PoetEnclaveSimulator(object):
                     ValueError(
                         'Invalid signup data. No poet private key.')
 
+            try:
+                poet_private_key = Secp256k1PrivateKey.from_hex(
+                    poet_private_key)
+            except ParseError:
+                raise \
+                    ValueError(
+                        'Invalid signup data. Badly formatted poet key(s).')
+
             # In a TEE implementation we would increment the HW counter here.
             # We can't usefully simulate a HW counter though.
 
@@ -334,8 +345,8 @@ class _PoetEnclaveSimulator(object):
             # low-order 64 bits to change that to a number [0, 1]
             tag = \
                 base64.b64decode(
-                    signing.sign(
-                        previous_certificate_id,
+                    cls._context.sign(
+                        previous_certificate_id.encode(),
                         cls._seal_private_key))
 
             tagd = float(struct.unpack('Q', tag[-8:])[0]) / (2**64 - 1)
@@ -351,8 +362,8 @@ class _PoetEnclaveSimulator(object):
                     previous_certificate_id=previous_certificate_id,
                     local_mean=local_mean)
             wait_timer.signature = \
-                signing.sign(
-                    wait_timer.serialize(),
+                cls._context.sign(
+                    wait_timer.serialize().encode(),
                     poet_private_key)
 
             return wait_timer
@@ -384,6 +395,15 @@ class _PoetEnclaveSimulator(object):
                     ValueError(
                         'Invalid signup data. No poet key(s).')
 
+            try:
+                poet_public_key = Secp256k1PublicKey.from_hex(poet_public_key)
+                poet_private_key = Secp256k1PrivateKey.from_hex(
+                    poet_private_key)
+            except ParseError:
+                raise \
+                    ValueError(
+                        'Invalid signup data. Badly formatted poet key(s).')
+
             # Several criteria need to be met before we can create a wait
             # certificate:
             # 1. This signup data was used to sign this timer.
@@ -403,9 +423,9 @@ class _PoetEnclaveSimulator(object):
             # and we don't worry about the timer having timed out.
 
             if wait_timer is None or \
-                    not signing.verify(
-                        wait_timer.serialize(),
+                    not cls._context.verify(
                         wait_timer.signature,
+                        wait_timer.serialize().encode(),
                         poet_public_key):
                 raise \
                     ValueError(
@@ -457,9 +477,11 @@ class _PoetEnclaveSimulator(object):
                     nonce=nonce,
                     block_hash=block_hash)
             wait_certificate.signature = \
-                signing.sign(
-                    wait_certificate.serialize(),
+                cls._context.sign(
+                    wait_certificate.serialize().encode(),
                     poet_private_key)
+
+            LOGGER.error('****WC %s ****', wait_certificate)
 
             # In a TEE implementation we would increment the HW counter here
             # to prevent replay.
@@ -480,10 +502,17 @@ class _PoetEnclaveSimulator(object):
         # format for public keys and we should be handed a public key that was
         # part of signup information created by us, don't bother decoding
         # the public key.
+        try:
+            poet_public_key = Secp256k1PublicKey.from_hex(poet_public_key)
+        except ParseError:
+            raise \
+                ValueError(
+                    'Invalid signup data. Badly formatted poet key(s).')
+
         if not \
-            signing.verify(
-                certificate.serialize(),
+            cls._context.verify(
                 certificate.signature,
+                certificate.serialize().encode(),
                 poet_public_key):
             raise ValueError('Wait certificate signature does not match')
 

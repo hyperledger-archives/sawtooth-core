@@ -5,7 +5,7 @@ PoET 1.0 Specification
 Introduction
 ============
 
-The Proof-of-Elapsed-Time or PoET Consensus method offers a solution to the
+The Proof of Elapsed Time (PoET) Consensus method offers a solution to the
 Byzantine Generals Problem that utilizes a “trusted execution environment” to
 improve on the efficiency of present solutions such as Proof-of-Work. The
 initial reference implementation of PoET released to Hyperledger was written for
@@ -20,6 +20,55 @@ with the smallest sample wins the election. Cheating is prevented through the
 use of a trusted execution environment, identity verification and blacklisting
 based on asymmetric key cryptography, and an additional set of election
 policies.
+
+For the purpose of achieving distributed consensus efficiently,
+a good lottery function has several characteristics:
+
+    * Fairness: The function should distribute leader election
+      across the broadest possible population of participants.
+
+    * Investment: The cost of controlling the leader election
+      process should be proportional to the value gained from it.
+
+    * Verification: It should be relatively simple for all participants
+      to verify that the leader was legitimately selected.
+
+PoET is designed to achieve these goals using new secure CPU instructions
+which are becoming widely available in consumer and enterprise processors.
+PoET uses these features to ensure the safety and randomness of the leader
+election process without requiring the costly investment of power and specialized
+hardware inherent in most “proof” algorithms.
+
+Sawtooth includes an implementation which simulates the secure instructions.
+This should make it easier for the community to work with the software but
+also forgoes Byzantine fault tolerance.
+
+PoET essentially works as follows:
+
+#. Every validator requests a wait time from an enclave (a trusted function).
+
+#. The validator with the shortest wait time for a particular transaction
+   block is elected the leader.
+
+#. One function, such as “CreateTimer”, creates a timer for a transaction
+   block that is guaranteed to have been created by the enclave.
+
+#. Another function, such as “CheckTimer”, verifies that the timer
+   was created by the enclave. If the timer has expired, this function
+   creates an attestation that can be used to verify that validator did
+   wait the allotted time before claiming the leadership role.
+
+The PoET leader election algorithm meets the criteria for a good lottery
+algorithm. It randomly distributes leadership election across the entire
+population of validators with distribution that is similar to what is
+provided by other lottery algorithms. The probability of election
+is proportional to the resources contributed (in this case, resources
+are general purpose processors with a trusted execution environment).
+An attestation of execution provides information for verifying that the
+certificate was created within the enclave (and that the validator waited
+the allotted time). Further, the low cost of participation increases the
+likelihood that the population of validators will be large, increasing
+the robustness of the consensus algorithm.
 
 Definitions
 ===========

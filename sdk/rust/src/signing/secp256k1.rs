@@ -134,7 +134,7 @@ impl Algorithm for Secp256k1Algorithm {
     fn sign(&self, message: &[u8], key: &PrivateKey) -> Result<String, Error> {
         let mut sha = Sha256::new();
         sha.input(message);
-        let mut hash: &mut [u8] = & mut [0; 32];
+        let hash: &mut [u8] = & mut [0; 32];
         sha.result(hash);
 
         let sk = secp256k1::key::SecretKey::from_slice(&self.context, key.as_slice())?;
@@ -149,7 +149,7 @@ impl Algorithm for Secp256k1Algorithm {
     fn verify(&self, signature: &str, message: &[u8], key: &PublicKey) -> Result<bool, Error> {
         let mut sha = Sha256::new();
         sha.input(message);
-        let mut hash: &mut [u8] = & mut [0; 32];
+        let hash: &mut [u8] = & mut [0; 32];
         sha.result(hash);
 
         let result = self.context.verify(

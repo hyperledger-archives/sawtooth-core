@@ -47,34 +47,63 @@ main() {
     info "Building protobuf classes"
     $build_dir/bin/protogen
 
-    # 4. Build the packages in the correct order
+    case "$1" in
+        python)
+            echo "Building python packages"
+            build_python
+            ;;
+        go)
+            echo "Building go packages"
+            build_go
+            ;;
+        *)
+            echo "Building python and go packages"
+            build_python
+            build_go
+            ;;
+    esac
+
+    # 4. Display info for all packages built
+    cd $top_dir
+    for pkg in build/debs/*.deb
+    do
+        echo
+        info "Package $pkg"
+        dpkg -I $pkg
+    done
+
+}
+
+build_python() {
 
     # Group 1: No internal dependencies
-    build_pkg "signing"
+    build_python_pkg "signing"
 
     pypath=$build_dir/consensus/poet/common
     pypath=$pypath:$build_dir/consensus/poet/common/tests
-    build_pkg "consensus/poet/common"  $pypath
+    build_python_pkg "consensus/poet/common"  $pypath
 
-    build_pkg "utility/ias_client"
+    build_python_pkg "utility/ias_client"
 
     # Group 2: Depends only on 1
-    build_pkg "sdk/python" "$build_dir/sdk/python"
+    build_python_pkg "sdk/python" "$build_dir/sdk/python"
 
-    build_pkg "cli"
+    build_python_pkg "cli"
 
     # Group 3: Depends on 1 & 2
-    build_pkg "families/settings"
+    build_python_pkg "families/settings"
 
-    build_pkg "families/identity"
+    build_python_pkg "families/identity"
 
-    build_pkg "rest_api"
+    build_python_pkg "families/block_info"
 
-    build_pkg "sdk/examples/intkey_python"
+    build_python_pkg "rest_api"
 
-    build_pkg "sdk/examples/xo_python"
+    build_python_pkg "sdk/examples/intkey_python"
 
-    build_pkg "validator" "$build_dir/signing"
+    build_python_pkg "sdk/examples/xo_python"
+
+    build_python_pkg "validator" "$build_dir/signing"
 
     pypath=$build_dir/integration
     pypath=$pypath:$build_dir/sdk/python
@@ -82,7 +111,7 @@ main() {
     pypath=$pypath:$build_dir/consensus/poet/common
     pypath=$pypath:$build_dir/consensus/poet/families
     pypath=$pypath:$build_dir/consensus/poet/families/tests
-    build_pkg "consensus/poet/families" $pypath
+    build_python_pkg "consensus/poet/families" $pypath
 
     # Group 4: Depends on 1, 2, & 3
     pypath=$build_dir/signing
@@ -91,7 +120,7 @@ main() {
     pypath=$pypath:$build_dir/consensus/poet/core
     pypath=$pypath:$build_dir/consensus/poet/families
     pypath=$pypath:$build_dir/consensus/poet/families/tests
-    build_pkg "consensus/poet/simulator" $pypath
+    build_python_pkg "consensus/poet/simulator" $pypath
 
     pypath=$build_dir/signing
     pypath=$pypath:$build_dir/validator
@@ -100,14 +129,14 @@ main() {
     pypath=$pypath:$build_dir/consensus/poet/core
     pypath=$pypath:$build_dir/consensus/poet/core/tests
     pypath=$pypath:$build_dir/consensus/poet/simulator
-    build_pkg "consensus/poet/core" $pypath
+    build_python_pkg "consensus/poet/core" $pypath
 
     pypath=$build_dir/sdk/python
     pypath=$pypath:$build_dir/utility/ias_client
-    build_pkg "utility/ias_proxy" $pypath
+    build_python_pkg "utility/ias_proxy" $pypath
 
     # Group 5: Depends on 1-4
-    build_pkg "consensus/poet/cli" $pypath
+    build_python_pkg "consensus/poet/cli" $pypath
 
     # Group 6: PoET
     # No dependencies on anything above, builds last for simplicity
@@ -125,9 +154,9 @@ main() {
     export PATH
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SAWTOOTH_POET
 
-    build_pkg "consensus/poet/sgx"
+    build_python_pkg "consensus/poet/sgx"
 
-    # 5. Build the meta-package
+    # Build the meta-package
     VERSION=$($top_dir/bin/get_version)
     cd $top_dir/ci
     sed -i -e"s/@VERSION@/$VERSION/" ns-control
@@ -135,24 +164,76 @@ main() {
     sed -i -e"s/$VERSION/@VERSION@/" ns-control
     mv sawtooth*.deb $pkg_dir/
 
-    # 6. Copy the packages to the output directory
+    # Copy the packages to the output directory
     find $build_dir -name python3-sawtooth*.deb -exec cp {} $pkg_dir/ \;
-
-    # 7. Display info for all packages built
-    cd $top_dir
-    for pkg in build/debs/*.deb
-    do
-        echo
-        info "Package $pkg"
-        dpkg -I $pkg
-    done
 }
 
 info() {
     echo -e "\033[0;35m\n[--- $1 ---]\n\033[0m"
 }
 
-build_pkg() {
+build_go() {
+
+    info "smallbank_go"
+    build_go_pkg smallbank
+    info "intkey_go"
+    build_go_pkg intkey_go
+    info "noop_go"
+    build_go_pkg noop_go
+    info "xo_go"
+    build_go_pkg xo_go
+
+}
+
+build_go_pkg(){
+    pkg=$1
+    GO_TP_DASH=$(echo $pkg | sed s/_/-/)
+    CHANGELOG_DIR="debian/usr/share/doc/sawtooth-tp-$GO_TP_DASH"
+    ST_VERSION=$($top_dir/bin/get_version)
+
+    if [ $pkg == "smallbank" ];
+    then
+        cd $build_dir/families/smallbank/smallbank_go
+    else
+        cd $build_dir/sdk/examples/$pkg
+    fi
+
+    if [ -d "debian" ]
+    then
+        rm -rf debian
+    fi
+
+    mkdir -p debian/DEBIAN
+
+    mkdir -p $CHANGELOG_DIR
+    cp packaging/ubuntu/* debian
+    sed -i -e"s/@VERSION@/$ST_VERSION/" debian/control
+    sed -i -e"s/@VERSION@/$ST_VERSION/" debian/changelog
+    cp debian/changelog $CHANGELOG_DIR
+    mv debian/changelog $CHANGELOG_DIR/changelog.Debian
+    gzip --best $CHANGELOG_DIR/changelog
+    gzip --best $CHANGELOG_DIR/changelog.Debian
+    mv debian/control debian/DEBIAN
+    mv debian/postinst debian/DEBIAN
+
+    PACKAGENAME=$(awk '/^Package:/ { print $2 }' debian/DEBIAN/control)
+    PACKAGEVERSION=$(dpkg-parsechangelog -S version -l $CHANGELOG_DIR/changelog.gz)
+    PACKAGEARCH=$(dpkg-architecture -qDEB_BUILD_ARCH)
+
+    mkdir debian/usr/bin
+    cp -R bin/ debian/usr/
+    cp -R packaging/systemd/* debian/
+
+
+    fakeroot dpkg-deb --build debian
+    echo --
+    echo "${PACKAGENAME}_${PACKAGEVERSION}_${PACKAGEARCH}.deb"
+    echo --
+    mv debian.deb $pkg_dir/"${PACKAGENAME}_${PACKAGEVERSION}_${PACKAGEARCH}.deb"
+}
+
+
+build_python_pkg() {
     pkg=$1
     pypath=$2
 
@@ -188,4 +269,4 @@ build_pkg() {
     unset PYTHONPATH
 }
 
-main
+main "$@"

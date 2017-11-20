@@ -31,7 +31,6 @@ MODULE_LIST="
     javascript_sdk
     python_sdk
     rust_sdk
-    seth
     integration
 "
 
@@ -167,9 +166,6 @@ main() {
                 block_info)
                     test_block_info
                     ;;
-                supplychain)
-                    test_supplychain
-                    ;;
                 validator)
                     test_validator
                     ;;
@@ -193,9 +189,6 @@ main() {
                     ;;
                 deployment)
                     test_deployment
-                    ;;
-                seth)
-                    test_seth
                     ;;
                 *)
                     echo "Module '$module' not found."
@@ -269,15 +262,6 @@ test_block_info() {
   copy_coverage .coverage.block_info_injector
 }
 
-test_supplychain() {
-    run_docker_test ./families/supplychain/python/tests/unit_supplychain_python.yaml
-    copy_coverage .coverage.config
-    run_docker_test ./families/supplychain/python/tests/test_tp_supplychain_python.yaml
-    copy_coverage .coverage.config
-    run_docker_test ./families/supplychain/python/tests/int_supplychain_python.yaml
-    copy_coverage .coverage.config
-}
-
 test_validator() {
     run_docker_test ./validator/tests/unit_validator.yaml
     copy_coverage .coverage.validator
@@ -342,17 +326,6 @@ test_python_sdk() {
 test_rust_sdk() {
     run_docker_test ./sdk/rust/unit_rust_sdk.yaml
     run_docker_test ./perf/sawtooth_workload/unit_perf_workload.yaml
-}
-
-test_seth() {
-  run_docker_test ./families/seth/tests/unit_seth.yaml
-  run_docker_test seth_chaining_test
-  run_docker_test seth_intkey_test
-  run_docker_test seth_blockhash_test
-  run_docker_test seth_blocknum_test
-  run_docker_test seth_timestamp_test
-  run_docker_test seth_perm_test
-  run_docker_test ./families/seth/rpc/comp_seth_rpc.yaml
 }
 
 test_integration() {

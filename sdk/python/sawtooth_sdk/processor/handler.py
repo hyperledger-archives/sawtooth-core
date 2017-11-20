@@ -29,15 +29,15 @@ class TransactionHandler(object, metaclass=abc.ABCMeta):
     def family_name(self):
         """
         family_name should return the name of the transaction family that this
-        handler can process. Eg., "intkey"
+        handler can process, e.g. "intkey"
         """
         pass
 
     @abc.abstractproperty
     def family_versions(self):
         """
-        family_versions should return a list of versions the this transaction
-        family handler can process. Eg., ["1.0"]
+        family_versions should return a list of versions this transaction
+        family handler can process, e.g. ["1.0"]
         """
         pass
 
@@ -45,7 +45,7 @@ class TransactionHandler(object, metaclass=abc.ABCMeta):
     def namespaces(self):
         """
         namespaces should return a list containing all the handler's
-        namespaces. Eg., ["abcdef"]
+        namespaces, e.g. ["abcdef"]
         """
         pass
 

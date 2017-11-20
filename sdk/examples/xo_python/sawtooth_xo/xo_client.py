@@ -20,7 +20,10 @@ import time
 import requests
 import yaml
 
-import sawtooth_signing.secp256k1_signer as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.protobuf.transaction_pb2 import Transaction
@@ -41,23 +44,36 @@ class XoClient:
         self._base_url = base_url
 
         if keyfile is None:
-            self._private_key = None
-            self._public_key = None
+            self._signer = None
             return
 
         try:
             with open(keyfile) as fd:
-                self._private_key = fd.read().strip()
-                fd.close()
+                private_key_str = fd.read().strip()
         except OSError as err:
             raise XoException(
                 'Failed to read private key {}: {}'.format(
                     keyfile, str(err)))
 
-        self._public_key = signing.generate_public_key(self._private_key)
+        try:
+            private_key = Secp256k1PrivateKey.from_hex(private_key_str)
+        except ParseError:
+            try:
+                private_key = Secp256k1PrivateKey.from_wif(private_key_str)
+            except ParseError as e:
+                raise XoException(
+                    'Unable to load private key: {}'.format(str(e)))
+
+        self._signer = CryptoFactory(create_context('secp256k1')) \
+            .new_signer(private_key)
 
     def create(self, name, wait=None, auth_user=None, auth_password=None):
         return self._send_xo_txn(name, "create", wait=wait,
+                                 auth_user=auth_user,
+                                 auth_password=auth_password)
+
+    def delete(self, name, wait=None, auth_user=None, auth_password=None):
+        return self._send_xo_txn(name, "delete", wait=wait,
                                  auth_user=auth_user,
                                  auth_password=auth_password)
 
@@ -100,7 +116,7 @@ class XoClient:
     def _get_status(self, batch_id, wait, auth_user=None, auth_password=None):
         try:
             result = self._send_request(
-                'batch_status?id={}&wait={}'.format(batch_id, wait),
+                'batch_statuses?id={}&wait={}'.format(batch_id, wait),
                 auth_user=auth_user,
                 auth_password=auth_password)
             return yaml.safe_load(result)['data'][0]['status']
@@ -164,18 +180,18 @@ class XoClient:
         address = self._get_address(name)
 
         header = TransactionHeader(
-            signer_public_key=self._public_key,
+            signer_public_key=self._signer.get_public_key().as_hex(),
             family_name="xo",
             family_version="1.0",
             inputs=[address],
             outputs=[address],
             dependencies=[],
             payload_sha512=_sha512(payload),
-            batcher_public_key=self._public_key,
+            batcher_public_key=self._signer.get_public_key().as_hex(),
             nonce=time.time().hex().encode()
         ).SerializeToString()
 
-        signature = signing.sign(header, self._private_key)
+        signature = self._signer.sign(header)
 
         transaction = Transaction(
             header=header,
@@ -220,11 +236,11 @@ class XoClient:
         transaction_signatures = [t.header_signature for t in transactions]
 
         header = BatchHeader(
-            signer_public_key=self._public_key,
+            signer_public_key=self._signer.get_public_key().as_hex(),
             transaction_ids=transaction_signatures
         ).SerializeToString()
 
-        signature = signing.sign(header, self._private_key)
+        signature = self._signer.sign(header)
 
         batch = Batch(
             header=header,

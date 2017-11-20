@@ -31,7 +31,7 @@ import toml
 
 from sawtooth_ias_client import ias_client
 from sawtooth_ias_proxy.utils import LruCache
-from sawtooth_sdk.client import config
+from sawtooth_sdk.processor import config
 
 
 LOGGER = logging.getLogger(__name__)

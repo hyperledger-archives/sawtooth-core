@@ -130,19 +130,18 @@ class ChainController(object):
         self._chain_id_manager = chain_id_manager
 
         self._chain_head = None
-        self._set_chain_head_from_block_store()
 
         self._chain_observers = chain_observers
-        self._chain_head_gauge = \
-            metrics_registry.gauge('chain_head', default='no chain head') \
-            if metrics_registry else None
 
         if metrics_registry:
+            self._chain_head_gauge = GaugeWrapper(
+                metrics_registry.gauge('chain_head', default='no chain head'))
             self._committed_transactions_count = CounterWrapper(
                 metrics_registry.counter('committed_transactions_count'))
             self._block_num_gauge = GaugeWrapper(
                 metrics_registry.gauge('block_num'))
         else:
+            self._chain_head_gauge = GaugeWrapper()
             self._committed_transactions_count = CounterWrapper()
             self._block_num_gauge = GaugeWrapper()
 
@@ -150,6 +149,8 @@ class ChainController(object):
         self._chain_thread = None
 
         self._block_validator = block_validator
+        # Only run this after all member variables have been bound
+        self._set_chain_head_from_block_store()
 
     def _set_chain_head_from_block_store(self):
         try:
@@ -157,6 +158,8 @@ class ChainController(object):
             if self._chain_head is not None:
                 LOGGER.info("Chain controller initialized with chain head: %s",
                             self._chain_head)
+                self._chain_head_gauge.set_value(
+                    self._chain_head.identifier[:8])
         except Exception:
             LOGGER.exception(
                 "Invalid block store. Head of the block chain cannot be"
@@ -268,9 +271,8 @@ class ChainController(object):
                             "Chain head updated to: %s",
                             self._chain_head)
 
-                        if self._chain_head_gauge:
-                            self._chain_head_gauge.set_value(
-                                self._chain_head.identifier[:8])
+                        self._chain_head_gauge.set_value(
+                            self._chain_head.identifier[:8])
 
                         self._committed_transactions_count.inc(
                             result.transaction_count)
@@ -343,7 +345,7 @@ class ChainController(object):
     def on_block_received(self, block):
         try:
             with self._lock:
-                if block.header_signature in self._block_store:
+                if self.has_block(block.header_signature):
                     # do we already have this block
                     return
 
@@ -368,7 +370,11 @@ class ChainController(object):
                     pending_blocks = \
                         self._blocks_pending.get(block.previous_block_id,
                                                  [])
-                    pending_blocks.append(block)
+                    # Though rare, the block may already be in the
+                    # pending_block list and should not be re-added.
+                    if block not in pending_blocks:
+                        pending_blocks.append(block)
+
                     self._blocks_pending[block.previous_block_id] = \
                         pending_blocks
                 else:
@@ -378,6 +384,19 @@ class ChainController(object):
         except Exception:
             LOGGER.exception(
                 "Unhandled exception in ChainController.on_block_received()")
+
+    def has_block(self, block_id):
+        with self._lock:
+            if block_id in self._block_cache:
+                return True
+
+            if block_id in self._blocks_processing:
+                return True
+
+            if block_id in self._blocks_pending:
+                return True
+
+            return False
 
     def _set_genesis(self, block):
         # This is used by a non-genesis journal when it has received the
@@ -397,6 +416,7 @@ class ChainController(object):
 
                 valid = self._block_validator.validate_block(
                     block, consensus_module)
+
                 if valid:
                     if chain_id is None:
                         self._chain_id_manager.save_block_chain_id(
@@ -416,11 +436,7 @@ class ChainController(object):
         receipts = []
         for result in results:
             receipt = TransactionReceipt()
-            receipt.data.extend([
-                TransactionReceipt.Data(
-                    data_type=data_type, data=data)
-                for data_type, data in result.data
-            ])
+            receipt.data.extend([data for data in result.data])
             receipt.state_changes.extend(result.state_changes)
             receipt.events.extend(result.events)
             receipt.transaction_id = result.signature

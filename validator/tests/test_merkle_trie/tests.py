@@ -194,5 +194,6 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
 def _hash(key):
     return MerkleDatabase.hash(key.encode())
 
+
 def _random_string(length):
     return ''.join(random.choice(ascii_lowercase) for _ in range(length))

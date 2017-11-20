@@ -47,7 +47,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     libssl-dev \
     pep8 \
     python3-aiodns=1.1.1-1 \
-    python3-aiohttp=1.3.5-1 \
+    python3-aiohttp>=2.3.2-1 \
     python3-aiopg \
     python3-async-timeout=1.2.0-1 \
     python3-bitcoin=1.1.42-1 \
@@ -101,7 +101,7 @@ RUN apt-get update && apt-get install -y -q \
  && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 4004/tcp
-EXPOSE 8080
+EXPOSE 8008
 
 RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /var/log/sawtooth \

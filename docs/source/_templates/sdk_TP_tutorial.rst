@@ -245,8 +245,7 @@ an empty string if the action isn't 'take'). So our {% if language == 'JavaScrip
 .. code-block:: python
 
     def _unpack_transaction(self, transaction):
-        header = TransactionHeader()
-        header.ParseFromString(transaction.header)
+        header = transaction.header
         signer = header.signer
 
         try:

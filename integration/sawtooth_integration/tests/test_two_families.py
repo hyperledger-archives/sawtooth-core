@@ -42,7 +42,7 @@ class TestTwoFamilies(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest-api:8080'])
+        wait_for_rest_apis(['rest-api:8008'])
 
     def test_two_families(self):
         '''
@@ -86,7 +86,7 @@ class TestTwoFamilies(unittest.TestCase):
             _send_intkey_cmd(intkey_cmd)
             _send_xo_cmd('{} --url {} --wait {}'.format(
                 xo_cmd,
-                'http://rest-api:8080',
+                'http://rest-api:8008',
                 WAIT))
 
             if intkey_cmd == self.intkey_verifier.valid_txns:
@@ -176,7 +176,7 @@ def _get_state_prefix(prefix):
     return response['data']
 
 def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
-    url = 'http://rest-api:8080' + suffix
+    url = 'http://rest-api:8008' + suffix
     return _submit_request(urllib.request.Request(url, data, headers),
                            expected_code=expected_code)
 

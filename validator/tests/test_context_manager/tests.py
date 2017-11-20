@@ -22,7 +22,6 @@ import time
 from sawtooth_validator.database import dict_database
 from sawtooth_validator.execution import context_manager
 from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.state.state_delta_store import StateDeltaStore
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.events_pb2 import Event
 
@@ -35,9 +34,8 @@ class TestContextManager(unittest.TestCase):
 
     def setUp(self):
         self.database_of_record = dict_database.DictDatabase()
-        self.state_delta_store = StateDeltaStore(dict_database.DictDatabase())
         self.context_manager = context_manager.ContextManager(
-            self.database_of_record, self.state_delta_store)
+            self.database_of_record)
         self.first_state_hash = self.context_manager.get_first_root()
 
         # used for replicating state hash through direct merkle tree updates
@@ -200,7 +198,7 @@ class TestContextManager(unittest.TestCase):
             attributes=[Event.Attribute(key=teststr, value=teststr)],
             data=teststr.encode()) for teststr in ("test1", "test2")]
         deletes = {addr2: None}
-        data = [(teststr, teststr.encode()) for teststr in ("test1", "test2")]
+        data = [(teststr.encode()) for teststr in ("test1", "test2")]
 
         self.context_manager.set(context_id, [sets])
         for event in events:
@@ -209,7 +207,7 @@ class TestContextManager(unittest.TestCase):
         self.context_manager.delete(context_id, deletes)
         for datum in data:
             self.context_manager.add_execution_data(
-                context_id, datum[0], datum[1])
+                context_id, datum)
 
 
         results = self.context_manager.get_execution_results(context_id)
@@ -502,7 +500,6 @@ class TestContextManager(unittest.TestCase):
                 3) Apply all of the aggregate sets from all
                 of the contexts, to another database with a merkle tree.
                 4) Assert that the state hashes are the same.
-                5) Assert that the state deltas have been stored
         """
         # 1)
         context_id = self._setup_context()
@@ -537,17 +534,6 @@ class TestContextManager(unittest.TestCase):
             final_state_to_update, virtual=False)
         # 4)
         self.assertEqual(resulting_state_hash, test_resulting_state_hash)
-        state_changes = self.state_delta_store.get_state_deltas(
-            resulting_state_hash)
-
-        # 5)
-        for addr, value in final_state_to_update.items():
-            expected_state_change = StateChange(
-                address=addr,
-                value=value,
-                type=StateChange.SET)
-
-            self.assertTrue(expected_state_change in state_changes)
 
     def test_squash_no_updates(self):
         """Tests that squashing a context that has no state updates will return
@@ -560,12 +546,7 @@ class TestContextManager(unittest.TestCase):
                 1) Squash the context.
                 2) Assert that the state hash is the same as the starting
                 hash.
-                3) Assert that the state deltas have not been overwritten
         """
-        self.state_delta_store.save_state_deltas(
-            self.first_state_hash,
-            [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)])
-
         context_id = self.context_manager.create_context(
             state_hash=self.first_state_hash,
             base_contexts=[],
@@ -578,13 +559,6 @@ class TestContextManager(unittest.TestCase):
         # 2
         self.assertIsNotNone(resulting_state_hash)
         self.assertEquals(resulting_state_hash, self.first_state_hash)
-
-        # 3
-        changes = self.state_delta_store.get_state_deltas(resulting_state_hash)
-
-        self.assertEqual(
-            [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)],
-            [c for c in changes])
 
     def test_squash_deletes_no_update(self):
         """Tests that squashing a context that has no state updates,
@@ -599,12 +573,7 @@ class TestContextManager(unittest.TestCase):
                 2) Squash the context.
                 3) Assert that the state hash is the same as the starting
                 hash.
-                4) Assert that the state deltas have not been overwritten
         """
-        self.state_delta_store.save_state_deltas(
-            self.first_state_hash,
-            [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)])
-
         context_id = self.context_manager.create_context(
             state_hash=self.first_state_hash,
             base_contexts=[],
@@ -630,13 +599,6 @@ class TestContextManager(unittest.TestCase):
         # 3)
         self.assertIsNotNone(resulting_state_hash)
         self.assertEquals(resulting_state_hash, self.first_state_hash)
-
-        # 4)
-        changes = self.state_delta_store.get_state_deltas(resulting_state_hash)
-
-        self.assertEqual(
-            [StateChange(address='aaa', value=b'xyz', type=StateChange.SET)],
-            [c for c in changes])
 
     def test_reads_from_context_w_several_writes(self):
         """Tests that those context values that have been written to the

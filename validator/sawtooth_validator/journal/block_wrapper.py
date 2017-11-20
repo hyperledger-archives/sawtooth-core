@@ -44,6 +44,13 @@ class BlockWrapper(object):
         # consensus algorithm.
         self.status = status  # One of the BlockStatus types.
 
+    @staticmethod
+    def wrap(block, weight=0, status=BlockStatus.Unknown):
+        if isinstance(block, BlockWrapper):
+            return block
+
+        return BlockWrapper(block, weight=weight, status=status)
+
     @property
     def batches(self):
         """

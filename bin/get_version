@@ -19,16 +19,22 @@ import os
 import subprocess
 import sys
 
-top_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+top_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-version_file=top_dir + "/VERSION"
+version_file = top_dir + "/VERSION"
 
-with open(version_file, 'r')  as f:
+with open(version_file, 'r') as f:
     version_data = f.read().strip()
+
 
 def bump_version(version):
     (major, minor, patch) = version.split('.')
-    patch = str(int(patch) + 1)
+    if 'rc' in patch:
+        parts = patch.split('rc')
+        parts[1] = str(int(parts[1]) + 1)
+        patch = "rc".join(parts)
+    else:
+        patch = str(int(patch) + 1)
     return ".".join([major, minor, patch])
 
 
@@ -42,12 +48,12 @@ def auto_version(default, strict):
         msg = "VERSION file and (bumped?) git describe versions differ: " \
               "{} != {}".format(default, parts[0])
         if strict:
-            print >> sys.stderr, "ERROR: " + msg
+            print("ERROR: " + msg, file=sys.stderr)
             sys.exit(1)
         else:
-            print >> sys.stderr, "WARNING: " + msg
-            print >> sys.stderr, "WARNING: using setup.py version {}".format(
-                default)
+            print("WARNING: " + msg, file=sys.stderr)
+            print("WARNING: using setup.py version {}".format(
+                  default), file=sys.stderr)
             parts[0] = default
 
     if len(parts) > 1:
@@ -70,5 +76,6 @@ def version(default):
     else:
         version = default + ".dev1"
     return version
+
 
 print(version(version_data))

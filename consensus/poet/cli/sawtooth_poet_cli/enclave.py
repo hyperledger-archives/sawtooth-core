@@ -21,7 +21,12 @@ from sawtooth_poet_cli.poet_enclave_module_wrapper import \
 def add_enclave_parser(subparsers, parent_parser):
     """Add argument parser arguments for the `poet enclave` sub-command.
     """
-    parser = subparsers.add_parser('enclave')
+    description = 'Generates enclave setup information'
+
+    parser = subparsers.add_parser(
+        'enclave',
+        help=description,
+        description=description + '.')
 
     parser.add_argument(
         '--enclave-module',

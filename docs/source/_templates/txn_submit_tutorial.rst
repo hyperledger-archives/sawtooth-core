@@ -132,8 +132,8 @@ the right data into the right keys.
    (see TransactionHeaders in :doc:`/architecture/transactions_and_batches`).
    The dependencies property will frequently be left empty, but generally at
    least one input and output must always be set, and those addresses must
-   adhere to validation rules specific to your Transaction Family (`in this
-   case IntKey <../transaction_family_specifications
+   adhere to validation rules specific to your Transaction Family (in this
+   case, `IntegerKey <../transaction_family_specifications
    /integerkey_transaction_family.html#addressing>`_).
 
 

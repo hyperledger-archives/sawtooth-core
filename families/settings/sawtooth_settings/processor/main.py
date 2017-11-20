@@ -22,7 +22,19 @@ import pkg_resources
 from colorlog import ColoredFormatter
 
 from sawtooth_sdk.processor.core import TransactionProcessor
+from sawtooth_sdk.processor.log import init_console_logging
+from sawtooth_sdk.processor.log import log_configuration
+from sawtooth_sdk.processor.config import get_log_config
+from sawtooth_sdk.processor.config import get_log_dir
+from sawtooth_sdk.processor.config import get_config_dir
 from sawtooth_settings.processor.handler import SettingsTransactionHandler
+from sawtooth_settings.processor.config.settings import SettingsConfig
+from sawtooth_settings.processor.config.settings import \
+    load_default_settings_config
+from sawtooth_settings.processor.config.settings import \
+    load_toml_settings_config
+from sawtooth_settings.processor.config.settings import \
+    merge_settings_config
 
 
 DISTRIBUTION_NAME = 'sawtooth-settings'
@@ -31,7 +43,8 @@ DISTRIBUTION_NAME = 'sawtooth-settings'
 def create_console_handler(verbose_level):
     clog = logging.StreamHandler()
     formatter = ColoredFormatter(
-        "%(log_color)s[%(asctime)s %(levelname)-8s%(module)s]%(reset)s "
+        "%(log_color)s[%(asctime)s.%(msecs)03d "
+        "%(levelname)-8s %(module)s]%(reset)s "
         "%(white)s%(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         reset=True,
@@ -55,10 +68,23 @@ def create_console_handler(verbose_level):
     return clog
 
 
-def setup_loggers(verbose_level):
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(create_console_handler(verbose_level))
+def setup_loggers(verbose_level, processor):
+    log_config = get_log_config(filename="settings_log_config.toml")
+
+    # If no toml, try loading yaml
+    if log_config is None:
+        log_config = get_log_config(filename="settings_log_config.yaml")
+
+    if log_config is not None:
+        log_configuration(log_config=log_config)
+    else:
+        log_dir = get_log_dir()
+        # use the transaction processor zmq identity for filename
+        log_configuration(
+            log_dir=log_dir,
+            name="settings-" + str(processor.zmq_id)[2:-1])
+
+    init_console_logging(verbose_level=verbose_level)
 
 
 def create_parser(prog_name):
@@ -71,8 +97,8 @@ def create_parser(prog_name):
 
     parser.add_argument(
         '-C', '--connect',
-        default='tcp://localhost:4004',
-        help='Endpoint for the validator connection')
+        help='Endpoint for the validator connection, defaults to '
+             'tcp://localhost:4004 ')
 
     parser.add_argument(
         '-v', '--verbose',
@@ -95,6 +121,21 @@ def create_parser(prog_name):
     return parser
 
 
+def load_settings_config(first_config):
+    default_settings_config = \
+        load_default_settings_config()
+    conf_file = os.path.join(get_config_dir(), 'settings.toml')
+
+    toml_config = load_toml_settings_config(conf_file)
+
+    return merge_settings_config(
+        configs=[first_config, toml_config, default_settings_config])
+
+
+def create_settings_config(args):
+    return SettingsConfig(connect=args.connect)
+
+
 def main(prog_name=os.path.basename(sys.argv[0]), args=None,
          with_loggers=True):
     if args is None:
@@ -102,14 +143,16 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
     parser = create_parser(prog_name)
     args = parser.parse_args(args)
 
+    arg_config = create_settings_config(args)
+    settings_config = load_settings_config(arg_config)
+    processor = TransactionProcessor(url=settings_config.connect)
+
     if with_loggers is True:
         if args.verbose is None:
             verbose_level = 0
         else:
             verbose_level = args.verbose
-        setup_loggers(verbose_level=verbose_level)
-
-    processor = TransactionProcessor(url=args.connect)
+        setup_loggers(verbose_level=verbose_level, processor=processor)
 
     handler = SettingsTransactionHandler()
 

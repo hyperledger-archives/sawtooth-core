@@ -20,8 +20,9 @@ option java_package = "sawtooth.identity.protobuf";
 
 message IdentityPayload {
     enum IdentityType {
-      POLICY = 0;
-      ROLE = 1;
+      IDENTITY_TYPE_UNSET = 0;
+      POLICY = 1;
+      ROLE = 2;
     }
 
     // What type of payload this is for

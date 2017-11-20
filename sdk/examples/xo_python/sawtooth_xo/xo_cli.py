@@ -32,7 +32,7 @@ from sawtooth_xo.xo_exceptions import XoException
 DISTRIBUTION_NAME = 'sawtooth-xo'
 
 
-DEFAULT_URL = 'http://127.0.0.1:8080'
+DEFAULT_URL = 'http://127.0.0.1:8008'
 
 
 def create_console_handler(verbose_level):
@@ -69,7 +69,13 @@ def setup_loggers(verbose_level):
 
 
 def add_create_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('create', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'create',
+        help='creates a new xo game',
+        description='Sends a transaction to start an xo game with the '
+        'identifier <name>. This transaction will fail if a game already '
+        'exists with the name <name>.',
+        parents=[parent_parser])
 
     parser.add_argument(
         'name',
@@ -91,11 +97,21 @@ def add_create_parser(subparsers, parent_parser):
 
 
 def add_list_parser(subparsers, parent_parser):
-    subparsers.add_parser('list', parents=[parent_parser])
+    subparsers.add_parser(
+        'list',
+        help='displays information for all xo games',
+        description='Displays information for all xo games in state, showing '
+        'the players, the game state, and the board for each game.',
+        parents=[parent_parser])
 
 
 def add_show_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('show', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'show',
+        help='displays information about an xo game',
+        description='Displays the xo game <name>, showing the players, the '
+        'game state, and the board',
+        parents=[parent_parser])
 
     parser.add_argument(
         'name',
@@ -104,7 +120,13 @@ def add_show_parser(subparsers, parent_parser):
 
 
 def add_take_parser(subparsers, parent_parser):
-    parser = subparsers.add_parser('take', parents=[parent_parser])
+    parser = subparsers.add_parser(
+        'take',
+        help='takes a space in an xo game',
+        description='Sends a transaction to start an xo game with the '
+        'identifier <name>. This transaction will fail if a game already '
+        'exists with the name <name>.',
+        parents=[parent_parser])
 
     parser.add_argument(
         'name',
@@ -115,6 +137,22 @@ def add_take_parser(subparsers, parent_parser):
         'space',
         type=int,
         help='the square number to take')
+
+    parser.add_argument(
+        '--wait',
+        nargs='?',
+        const=sys.maxsize,
+        type=int,
+        help='wait for take to commit, set an integer to specify a timeout')
+
+
+def add_delete_parser(subparsers, parent_parser):
+    parser = subparsers.add_parser('delete', parents=[parent_parser])
+
+    parser.add_argument(
+        'name',
+        type=str,
+        help='the identifier for the game to be deleted')
 
     parser.add_argument(
         '--wait',
@@ -175,8 +213,9 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        parents=[parent_parser],
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        description='Provides subcommands to play tic-tac-toe (also known as '
+        'Noughts and Crosses) by sending XO transactions.',
+        parents=[parent_parser])
 
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
 
@@ -186,6 +225,7 @@ def create_parser(prog_name):
     add_list_parser(subparsers, parent_parser)
     add_show_parser(subparsers, parent_parser)
     add_take_parser(subparsers, parent_parser)
+    add_delete_parser(subparsers, parent_parser)
 
     return parser
 
@@ -299,6 +339,28 @@ def do_take(args):
     print("Response: {}".format(response))
 
 
+def do_delete(args):
+    name = args.name
+
+    url = _get_url(args)
+    keyfile = _get_keyfile(args)
+    auth_user, auth_password = _get_auth_info(args)
+
+    client = XoClient(base_url=url, keyfile=keyfile)
+
+    if args.wait and args.wait > 0:
+        response = client.delete(
+            name, wait=args.wait,
+            auth_user=auth_user,
+            auth_password=auth_password)
+    else:
+        response = client.delete(
+            name, auth_user=auth_user,
+            auth_password=auth_password)
+
+    print("Response: {}".format(response))
+
+
 def _get_url(args):
     return DEFAULT_URL if args.url is None else args.url
 
@@ -341,6 +403,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
         do_show(args)
     elif args.command == 'take':
         do_take(args)
+    elif args.command == 'delete':
+        do_delete(args)
     else:
         raise XoException("invalid command: {}".format(args.command))
 

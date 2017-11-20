@@ -40,6 +40,8 @@ from sawtooth_validator.gossip.permission_verifier import \
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
 from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import \
+    GossipMessageDuplicateHandler
+from sawtooth_validator.gossip.gossip_handlers import \
     GossipBlockResponseHandler
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipBatchResponseHandler
@@ -64,7 +66,7 @@ LOGGER = logging.getLogger(__name__)
 
 def add(
     dispatcher, interconnect, gossip, completer, responder,
-    thread_pool, sig_pool,
+    thread_pool, sig_pool, has_block, has_batch,
     permission_verifier,
 ):
 
@@ -100,10 +102,11 @@ def add(
             gossip=gossip),
         thread_pool)
 
+    challenge_request_handler = AuthorizationChallengeRequestHandler(
+        network=interconnect)
     dispatcher.add_handler(
         validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
-        AuthorizationChallengeRequestHandler(
-            network=interconnect),
+        challenge_request_handler,
         thread_pool)
 
     dispatcher.add_handler(
@@ -111,7 +114,8 @@ def add(
         AuthorizationChallengeSubmitHandler(
             network=interconnect,
             permission_verifier=permission_verifier,
-            gossip=gossip),
+            gossip=gossip,
+            cache=challenge_request_handler.get_challenge_payload_cache()),
         thread_pool)
 
     # -- Gossip -- #
@@ -162,13 +166,19 @@ def add(
         PeerUnregisterHandler(gossip=gossip),
         thread_pool)
 
-    # GOSSIP_MESSAGE 1) Sends acknowledgement to the sender
+    # GOSSIP_MESSAGE ) Sends acknowledgement to the sender
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
         GossipMessageHandler(),
         thread_pool)
 
-    # GOSSIP_MESSAGE 2) Verify Network Permissions
+    # GOSSIP_MESSAGE ) Check if this is a block and if we already have it
+    dispatcher.add_handler(
+        validator_pb2.Message.GOSSIP_MESSAGE,
+        GossipMessageDuplicateHandler(completer, has_block, has_batch),
+        thread_pool)
+
+    # GOSSIP_MESSAGE ) Verify Network Permissions
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
         NetworkPermissionHandler(
@@ -178,19 +188,19 @@ def add(
         ),
         thread_pool)
 
-    # GOSSIP_MESSAGE 3) Verifies signature
+    # GOSSIP_MESSAGE ) Verifies signature
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
         signature_verifier.GossipMessageSignatureVerifier(),
         sig_pool)
 
-    # GOSSIP_MESSAGE 4) Verifies batch structure
+    # GOSSIP_MESSAGE ) Verifies batch structure
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
         structure_verifier.GossipHandlerStructureVerifier(),
         thread_pool)
 
-    # GOSSIP_MESSAGE 4) Verifies that the node is allowed to publish a
+    # GOSSIP_MESSAGE ) Verifies that the node is allowed to publish a
     # block
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
@@ -201,7 +211,7 @@ def add(
         ),
         thread_pool)
 
-    # GOSSIP_MESSAGE 5) Determines if we should broadcast the
+    # GOSSIP_MESSAGE ) Determines if we should broadcast the
     # message to our peers. It is important that this occur prior
     # to the sending of the message to the completer, as this step
     # relies on whether the  gossip message has previously been
@@ -214,7 +224,7 @@ def add(
             completer=completer),
         thread_pool)
 
-    # GOSSIP_MESSAGE 6) Send message to completer
+    # GOSSIP_MESSAGE ) Send message to completer
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
         CompleterGossipHandler(

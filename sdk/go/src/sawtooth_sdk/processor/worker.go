@@ -49,13 +49,7 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 			break
 		}
 
-		header := &transaction_pb2.TransactionHeader{}
-		err = proto.Unmarshal(request.Header, header)
-		if err != nil {
-			logger.Errorf(
-				"(%v) Failed to unmarshal TransactionHeader: %v", id, err)
-			break
-		}
+		header := request.GetHeader()
 
 		// Try to find a handler
 		handler, err := findHandler(handlers, header)
@@ -135,7 +129,16 @@ func findHandler(handlers []TransactionHandler, header *transaction_pb2.Transact
 			break
 		}
 
-		if header.GetFamilyVersion() != handler.FamilyVersion() {
+		HeaderVersion := header.GetFamilyVersion()
+		HasVersion := false
+		for _, version := range handler.FamilyVersions() {
+			if version == HeaderVersion {
+				HasVersion = true
+				break
+			}
+		}
+
+		if !HasVersion {
 			break
 		}
 

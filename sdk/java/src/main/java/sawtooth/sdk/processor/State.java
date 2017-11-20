@@ -22,8 +22,8 @@ import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
-import sawtooth.sdk.protobuf.Entry;
 import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.TpStateEntry;
 import sawtooth.sdk.protobuf.TpStateGetRequest;
 import sawtooth.sdk.protobuf.TpStateGetResponse;
 import sawtooth.sdk.protobuf.TpStateSetRequest;
@@ -57,7 +57,7 @@ public class State {
    * @return Map where the keys are addresses, values Bytestring
    * @throws InternalError something went wrong processing transaction
    */
-  public Map<String, ByteString> get(Collection<String> addresses)
+  public Map<String, ByteString> getState(Collection<String> addresses)
       throws InternalError, InvalidTransactionException {
     TpStateGetRequest getRequest = TpStateGetRequest.newBuilder()
             .addAllAddresses(addresses)
@@ -83,7 +83,7 @@ public class State {
         throw new InvalidTransactionException(
           "Tried to get unauthorized address " + addresses.toString()) ;
       }
-      for (Entry entry : getResponse.getEntriesList()) {
+      for (TpStateEntry entry : getResponse.getEntriesList()) {
         results.put(entry.getAddress(), entry.getData());
       }
     }
@@ -102,15 +102,15 @@ public class State {
    * @return addressesThatWereSet, A collection of address Strings that were set
    * @throws InternalError something went wrong processing transaction
    */
-  public Collection<String> set(Collection<java.util.Map.Entry<String,
+  public Collection<String> setState(Collection<java.util.Map.Entry<String,
           ByteString>> addressValuePairs) throws InternalError, InvalidTransactionException {
-    ArrayList<Entry> entryArrayList = new ArrayList<Entry>();
+    ArrayList<TpStateEntry> entryArrayList = new ArrayList<TpStateEntry>();
     for (Map.Entry<String, ByteString> entry : addressValuePairs) {
-      Entry ourEntry = Entry.newBuilder()
+      TpStateEntry ourTpStateEntry = TpStateEntry.newBuilder()
               .setAddress(entry.getKey())
               .setData(entry.getValue())
               .build();
-      entryArrayList.add(ourEntry);
+      entryArrayList.add(ourTpStateEntry);
     }
     TpStateSetRequest setRequest = TpStateSetRequest.newBuilder()
             .addAllEntries(entryArrayList)

@@ -48,4 +48,4 @@ RUN apt-get install -y -q --allow-unauthenticated \
 
 EXPOSE 4004/tcp
 
-CMD ["xo-tp-python", "tcp://validator:4004"]
+CMD ["xo-tp-python", "-C", "tcp://validator:4004"]

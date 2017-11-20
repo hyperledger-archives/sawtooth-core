@@ -17,7 +17,7 @@
 
 'use strict'
 
-const {TransactionHandler} = require('sawtooth-sdk/processor')
+const {TransactionHandler} = require('sawtooth-sdk/processor/handler')
 const {InvalidTransaction, InternalError} = require('sawtooth-sdk/processor/exceptions')
 
 const crypto = require('crypto')
@@ -106,7 +106,7 @@ const _applyDec = _applyOperator('dec', (x, y) => x - y)
 
 class IntegerKeyHandler extends TransactionHandler {
   constructor () {
-    super(INT_KEY_FAMILY, '1.0', [INT_KEY_NAMESPACE])
+    super(INT_KEY_FAMILY, ['1.0'], [INT_KEY_NAMESPACE])
   }
 
   apply (transactionProcessRequest, context) {

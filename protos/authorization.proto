@@ -25,24 +25,28 @@ message ConnectionRequest {
 }
 
 enum RoleType {
+  ROLE_TYPE_UNSET = 0;
+
   // A shorthand request for asking for all allowed roles.
-  ALL = 0;
+  ALL = 1;
 
   // Role defining validator to validator communication
-  NETWORK = 1;
+  NETWORK = 2;
 }
 
 message ConnectionResponse {
   // Whether the connection can participate in authorization
   enum Status {
-    OK = 0;
-    ERROR = 1;
+    STATUS_UNSET = 0;
+    OK = 1;
+    ERROR = 2;
   }
 
   //Authorization Type required for the authorization procedure
   enum AuthorizationType {
-    TRUST = 0;
-    CHALLENGE = 1;
+    AUTHORIZATION_TYPE_UNSET = 0;
+    TRUST = 1;
+    CHALLENGE = 2;
   }
 
   message RoleEntry {
@@ -85,9 +89,6 @@ message AuthorizationChallengeResponse {
 message AuthorizationChallengeSubmit {
   // public key of node
   string public_key = 1;
-
-  // payload bytes that was signed to make the signature
-  bytes payload = 2;
 
   // signature derived from signing the challenge payload
   string signature = 3;

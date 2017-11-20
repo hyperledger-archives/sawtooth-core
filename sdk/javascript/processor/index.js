@@ -24,12 +24,12 @@ const {
   TpProcessRequest,
   TpProcessResponse,
   PingResponse,
-  TransactionHeader,
   Message
 } = require('../protobuf')
 
 const {
   InternalError,
+  AuthorizationException,
   InvalidTransaction,
   ValidatorConnectionError
 } = require('./exceptions')
@@ -38,16 +38,36 @@ const Context = require('./context')
 
 const {Stream} = require('../messaging/stream')
 
+/**
+ * TransactionProcessor is a generic class for communicating with a
+ * validator and routing transaction processing requests to a
+ * registered handler. It uses ZMQ and channels to handle requests
+ * concurrently.
+ *
+ * @param {string} url - the URL of the validator
+ */
 class TransactionProcessor {
   constructor (url) {
     this._stream = new Stream(url)
     this._handlers = []
   }
 
+  /**
+   * addHandler adds the given handler to the transaction processor so
+   * it can receive transaction processing requests. All handlers must
+   * be added prior to starting the processor.
+   *
+   * @param {TransactionHandler} handler - a handler to be added
+   */
   addHandler (handler) {
     this._handlers.push(handler)
   }
 
+  /**
+   * start connects the transaction processor to a validator and
+   * starts listening for requests and routing them to an appropriate
+   * handler.
+   */
   start () {
     this._stream.connect(() => {
       this._stream.onReceive(message => {
@@ -68,17 +88,18 @@ class TransactionProcessor {
         const context = new Context(this._stream, request.contextId)
 
         if (this._handlers.length > 0) {
-          let txnHeader = TransactionHeader.decode(request.header)
+          let txnHeader = request.header
 
-          let handler = this._handlers.find((candidate) =>
-             candidate.transactionFamilyName === txnHeader.familyName &&
-               candidate.version === txnHeader.familyVersion)
+          let handler = this._handlers.find(
+            (candidate) =>
+              candidate.transactionFamilyName === txnHeader.familyName &&
+              candidate.versions.includes(txnHeader.familyVersion))
 
           if (handler) {
             handler.apply(request, context)
-              .then(() => TpProcessResponse.encode({
+              .then(() => TpProcessResponse.create({
                 status: TpProcessResponse.Status.OK
-              }).finish())
+              }))
               .catch((e) => {
                 if (e instanceof InvalidTransaction) {
                   console.log(e)
@@ -124,23 +145,25 @@ class TransactionProcessor {
       })
 
       this._handlers.forEach(handler => {
-        this._stream.send(
-          Message.MessageType.TP_REGISTER_REQUEST,
-          TpRegisterRequest.encode({
-            family: handler.transactionFamilyName,
-            version: handler.version,
-            namespaces: handler.namespaces
-          }).finish()
-        )
-        .then(content => TpRegisterResponse.decode(content))
-        .then(ack => {
-          let {transactionFamilyName: familyName, version} = handler
-          let status = ack.status === 0 ? 'succeeded' : 'failed'
-          console.log(`Registration of [${familyName} ${version}] ${status}`)
-        })
-        .catch(e => {
-          let {transactionFamilyName: familyName, version} = handler
-          console.log(`Registration of [${familyName} ${version}] Failed!`, e)
+        handler.versions.forEach(version => {
+          this._stream.send(
+            Message.MessageType.TP_REGISTER_REQUEST,
+            TpRegisterRequest.encode({
+              family: handler.transactionFamilyName,
+              version: version,
+              namespaces: handler.namespaces
+            }).finish())
+            .then(content => TpRegisterResponse.decode(content))
+            .then(ack => {
+              let {transactionFamilyName: familyName} = handler
+              let status = ack.status ===
+                  TpRegisterResponse.Status.OK ? 'succeeded' : 'failed'
+              console.log(`Registration of [${familyName} ${version}] ${status}`)
+            })
+            .catch(e => {
+              let {transactionFamilyName: familyName} = handler
+              console.log(`Registration of [${familyName} ${version}] Failed!`, e)
+            })
         })
       })
     })
@@ -157,26 +180,6 @@ class TransactionProcessor {
   }
 }
 
-const _readOnlyProperty = (instance, propertyName, value) =>
-    Object.defineProperty(instance, propertyName, {
-      writeable: false,
-      enumerable: true,
-      congigurable: true,
-      value})
-
-class TransactionHandler {
-  constructor (transactionFamilyName, version, namespaces) {
-    _readOnlyProperty(this, 'transactionFamilyName', transactionFamilyName)
-    _readOnlyProperty(this, 'version', version)
-    _readOnlyProperty(this, 'namespaces', namespaces)
-  }
-
-  apply (transactionProcessRequest, context) {
-    throw new Error('apply(TpProcessRequest, context) not implemented')
-  }
-}
-
 module.exports = {
-  TransactionProcessor,
-  TransactionHandler
+  TransactionProcessor
 }

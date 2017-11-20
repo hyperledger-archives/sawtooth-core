@@ -47,11 +47,11 @@ services:
       - 4004
       - 8800
     command: "bash -c \"\
-        sawtooth admin keygen && \
-        sawtooth config genesis \
+        sawadm keygen && \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth admin genesis config-genesis.batch && \
+        sawadm genesis config-genesis.batch && \
         sawtooth-validator --endpoint tcp://validator:8800 -v \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
@@ -64,10 +64,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
+      - 8008
     depends_on:
      - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   test-xo-smoke-python:
@@ -75,7 +75,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - validator
       - rest-api
@@ -87,6 +87,7 @@ services:
         test_xo_smoke.TestXoSmoke
     stop_signal: SIGKILL
     environment:
+      TP_LANG: "python"
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/integration:\
         /project/sawtooth-core/signing"

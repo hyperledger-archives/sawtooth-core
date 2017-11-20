@@ -24,17 +24,33 @@
 
 FROM ubuntu:xenial
 
-LABEL "install-type"="copied-bin"
+LABEL "install-type"="local-debs"
 
 RUN apt-get update \
  && apt-get install -y -q \
+    dpkg-dev \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir /debs
+
+COPY sawtooth-xo-tp-go*.deb /debs/
+
+RUN cd /debs \
+ && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz \
+ && echo "deb file:/debs ./" >> /etc/apt/sources.list \
+ && echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+ && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
+ && apt-get update
+
+RUN apt-get update \
+ && apt-get install -y -q --allow-unauthenticated \
     libssl-dev \
     libzmq3-dev \
+    sawtooth-xo-tp-go \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-COPY xo-tp-go /usr/bin/xo-tp-go
 
 EXPOSE 4004/tcp
 
-CMD ["xo-tp-go", "tcp://validator:4004"]
+CMD ["xo-tp-go", "-C", "tcp://validator:4004"]

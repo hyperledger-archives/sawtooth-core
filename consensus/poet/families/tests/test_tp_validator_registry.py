@@ -25,9 +25,12 @@ from sawtooth_poet_common import sgx_structs
 from sawtooth_poet_common.protobuf.validator_registry_pb2 import \
     ValidatorRegistryPayload
 
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
+
 
 PRIVATE = '5HsjpyQzpeoGAAvNeG5PzQsn1Ght18GgSmDaEUCd1c1HpA2avzc'
-PUBLIC = '02f3d385777ab35888fc47af6d123bba6f8b04817a4746e97446ce1562fc4307d7'
 
 
 class TestValidatorRegistry(TransactionProcessorTestCase):
@@ -35,9 +38,12 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        context = create_context('secp256k1')
+        private_key = Secp256k1PrivateKey.from_wif(PRIVATE)
+        signer = CryptoFactory(context).new_signer(private_key)
+
         cls.factory = ValidatorRegistryMessageFactory(
-            private=PRIVATE,
-            public=PUBLIC)
+            signer=signer)
 
     def _expect_invalid_transaction(self):
         self.validator.expect(

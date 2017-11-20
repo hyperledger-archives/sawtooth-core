@@ -23,7 +23,7 @@ from sawtooth_sdk.messaging.future import Future
 from sawtooth_sdk.messaging.future import FutureResult
 
 from sawtooth_sdk.protobuf.validator_pb2 import Message
-from sawtooth_sdk.protobuf.state_context_pb2 import Entry
+from sawtooth_sdk.protobuf.state_context_pb2 import TpStateEntry
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetRequest
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateGetResponse
 from sawtooth_sdk.protobuf.state_context_pb2 import TpStateSetRequest
@@ -54,7 +54,7 @@ class ContextTest(unittest.TestCase):
 
     def _make_entries(self, protobuf=True):
         if protobuf:
-            return [Entry(address=a, data=d)
+            return [TpStateEntry(address=a, data=d)
                     for a, d in zip(self.addresses, self.data)]
 
         entries = OrderedDict()
@@ -117,13 +117,12 @@ class ContextTest(unittest.TestCase):
             content=TpReceiptAddDataResponse(
                 status=TpReceiptAddDataResponse.OK).SerializeToString())
 
-        self.context.add_receipt_data("test", b"test")
+        self.context.add_receipt_data(b"test")
 
         self.mock_stream.send.assert_called_with(
             Message.TP_RECEIPT_ADD_DATA_REQUEST,
             TpReceiptAddDataRequest(
                 context_id=self.context_id,
-                data_type="test",
                 data=b"test").SerializeToString())
 
     def test_add_event(self):

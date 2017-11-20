@@ -38,6 +38,6 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
  && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 4004/tcp
-EXPOSE 8080
+EXPOSE 8008
 
 CMD ["sawtooth-rest-api"]

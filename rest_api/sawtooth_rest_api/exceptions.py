@@ -44,7 +44,7 @@ class _ApiError(HTTPError):
     title = None
     message = None
 
-    def __init__(self):
+    def __init__(self, additional_info=''):
         assert self.api_code is not None, 'Invalid ApiError, api_code not set'
         assert self.status_code is not None, 'Invalid ApiError, status not set'
         assert self.title is not None, 'Invalid ApiError, title not set'
@@ -53,7 +53,7 @@ class _ApiError(HTTPError):
         error = {
             'code': self.api_code,
             'title': self.title,
-            'message': self.message}
+            'message': self.message + additional_info}
 
         super().__init__(
             content_type='application/json',
@@ -199,6 +199,14 @@ class SortInvalid(_ApiError):
     title = 'Invalid Sort Query'
     message = ("The sort request failed as written. Some of the keys "
                "specified were not valid.")
+
+
+class InvalidResourceId(_ApiError):
+    api_code = 60
+    status_code = 400
+    title = 'Invalid Resource Id'
+    message = ('Blockchain items are identified by 128 character hex-strings. '
+               'A submitted block, batch, or transaction id was invalid: ')
 
 
 class InvalidStateAddress(_ApiError):

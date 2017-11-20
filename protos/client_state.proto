@@ -22,42 +22,19 @@ option go_package = "client_state_pb2";
 import "client_list_control.proto";
 
 
-message ClientStateCurrentRequest {
-}
-
-// This is a response to a request from a client for the current merkle root.
-// Statuses:
-//   * OK - everything worked as expected
-//   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
-//   * NOT_READY - the validator does not yet have a genesis block
-
-message ClientStateCurrentResponse {
-    enum Status {
-        OK = 0;
-        INTERNAL_ERROR = 1;
-        NOT_READY = 2;
-    }
-    Status status = 1;
-    string merkle_root = 2;
-}
-
-// A request to list every entry in the merkle tree. Defaults to the most
-// current tree, but can fetch older state by specifying either a merkle root
-// or a previous head block's id. Results can be further filtered by
-// specifying a subtree with a partial address.
+// A request to list every entry in global state. Defaults to the most current
+// tree, but can fetch older state by specifying a state root. Results can be
+// further filtered by specifying a subtree with a partial address.
 message ClientStateListRequest {
-    oneof root_key {
-        string merkle_root = 1;
-        string head_id = 2;
-    }
+    string state_root = 1;
     string address = 3;
     ClientPagingControls paging = 4;
     repeated ClientSortControls sorting = 5;
 }
 
-// A response that lists the data Entries from the state's merkle tree,
-// filtered by merkle root, head id, or subtree address according to the
-// request. Returns the chain head id used to facilitate future requests.
+// A response that lists the data Entries from global state, filtered by state
+// root or subtree address according to the request. Returns the state root
+// used to facilitate future requests.
 //
 // Statuses:
 //   * OK - everything worked as expected
@@ -70,13 +47,14 @@ message ClientStateListRequest {
 
 message ClientStateListResponse {
     enum Status {
-        OK = 0;
-        INTERNAL_ERROR = 1;
-        NOT_READY = 2;
-        NO_ROOT = 3;
-        NO_RESOURCE = 4;
-        INVALID_PAGING = 5;
-        INVALID_SORT = 6;
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NOT_READY = 3;
+        NO_ROOT = 4;
+        NO_RESOURCE = 5;
+        INVALID_PAGING = 6;
+        INVALID_SORT = 7;
     }
 
     // An entry in the State
@@ -87,20 +65,16 @@ message ClientStateListResponse {
 
     Status status = 1;
     repeated Entry entries = 2;
-    string head_id = 3;
+    string state_root = 3;
     ClientPagingResponse paging = 4;
 }
 
-// A request from a client for a particular entry in the merkle tree.
-// Like State List, it defaults to the newest state, but a merkle root
-// or head block id can be used to specify older data. Unlike State List
-// the request must be provided with a full address that corresponds to
-// a single entry.
+// A request from a client for a particular entry in global state.
+// Like State List, it defaults to the newest state, but a state root
+// can be used to specify older data. Unlike State List the request must be
+// provided with a full address that corresponds to a single entry.
 message ClientStateGetRequest {
-    oneof root_key {
-        string merkle_root = 1;
-        string head_id = 2;
-    }
+    string state_root = 1;
     string address = 3;
 }
 
@@ -112,19 +86,20 @@ message ClientStateGetRequest {
 //   * OK - everything worked as expected
 //   * INTERNAL_ERROR - general error, such as protobuf failing to deserialize
 //   * NOT_READY - the validator does not yet have a genesis block
-//   * NO_ROOT - the head block or merkle_root specified was not found
+//   * NO_ROOT - the state_root specified was not found
 //   * NO_RESOURCE - the address specified doesn't exist
 //   * INVALID_ADDRESS - address isn't a valid, i.e. it's a subtree (truncated)
 message ClientStateGetResponse {
     enum Status {
-        OK = 0;
-        INTERNAL_ERROR = 1;
-        NOT_READY = 2;
-        NO_ROOT = 3;
-        NO_RESOURCE = 4;
-        INVALID_ADDRESS = 5;
+        STATUS_UNSET = 0;
+        OK = 1;
+        INTERNAL_ERROR = 2;
+        NOT_READY = 3;
+        NO_ROOT = 4;
+        NO_RESOURCE = 5;
+        INVALID_ADDRESS = 6;
     }
     Status status = 1;
     bytes value = 2;
-    string head_id = 3;
+    string state_root = 3;
 }

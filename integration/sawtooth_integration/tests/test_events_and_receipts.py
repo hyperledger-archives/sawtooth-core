@@ -67,6 +67,75 @@ class TestEventsAndReceipts(unittest.TestCase):
 
         self._unsubscribe()
 
+    def test_get_events(self):
+        """Tests that block commit events are properly received on block
+        boundaries."""
+        self._subscribe()
+
+        self.batch_submitter.submit_next_batch()
+        msg = self.stream.receive().result()
+        self._unsubscribe()
+
+        event_list = events_pb2.EventList()
+        event_list.ParseFromString(msg.content)
+        events = event_list.events
+        block_commit_event = events[0]
+        block_id = list(filter(
+            lambda attr: attr.key == "block_id",
+            block_commit_event.attributes))[0].value
+        block_num = list(filter(
+            lambda attr: attr.key == "block_num",
+            block_commit_event.attributes))[0].value
+
+        response = self._get_events(
+            block_id,
+            [events_pb2.EventSubscription(event_type="sawtooth/block-commit")])
+        events = self.assert_events_get_response(response)
+        self.assert_block_commit_event(events[0], block_num)
+
+    def test_catchup(self):
+        """Tests that a subscriber correctly receives catchup events."""
+        self._subscribe()
+
+        blocks = []
+        for i in range(4):
+            self.batch_submitter.submit_next_batch()
+            msg = self.stream.receive().result()
+            event_list = events_pb2.EventList()
+            event_list.ParseFromString(msg.content)
+            events = event_list.events
+            block_commit_event = events[0]
+            block_id = list(filter(
+                lambda attr: attr.key == "block_id",
+                block_commit_event.attributes))[0].value
+            block_num = list(filter(
+                lambda attr: attr.key == "block_num",
+                block_commit_event.attributes))[0].value
+            blocks.append((block_num, block_id))
+
+        self._unsubscribe()
+
+        self.assert_subscribe_response(
+            self._subscribe(last_known_block_ids=[blocks[0][1]]))
+        LOGGER.warning("Waiting for catchup events")
+        for i in range(3):
+            msg = self.stream.receive().result()
+            LOGGER.warning("Got catchup events: ")
+            event_list = events_pb2.EventList()
+            event_list.ParseFromString(msg.content)
+            events = event_list.events
+            self.assertEqual(len(events), 1)
+            block_commit_event = events[0]
+            block_id = list(filter(
+                lambda attr: attr.key == "block_id",
+                block_commit_event.attributes))[0].value
+            block_num = list(filter(
+                lambda attr: attr.key == "block_num",
+                block_commit_event.attributes))[0].value
+            self.assertEqual((block_num, block_id), blocks[i+1])
+
+        self._unsubscribe()
+
     def test_receipt_stored(self):
         """Tests that receipts are stored successfully when a block is
         committed."""
@@ -108,13 +177,25 @@ class TestEventsAndReceipts(unittest.TestCase):
             request.SerializeToString()).result()
         return response
 
-    def _subscribe(self, subscriptions=None):
+    def _get_events(self, block_id, subscriptions):
+        request = client_event_pb2.ClientEventsGetRequest(
+            block_ids=[block_id],
+            subscriptions=subscriptions)
+        response = self.stream.send(
+            validator_pb2.Message.CLIENT_EVENTS_GET_REQUEST,
+            request.SerializeToString()).result()
+        return response
+
+    def _subscribe(self, subscriptions=None, last_known_block_ids=None):
         if subscriptions is None:
             subscriptions = [
-                events_pb2.EventSubscription(event_type="block_commit"),
+                events_pb2.EventSubscription(event_type="sawtooth/block-commit"),
             ]
+        if last_known_block_ids is None:
+            last_known_block_ids = []
         request = client_event_pb2.ClientEventsSubscribeRequest(
-            subscriptions=subscriptions)
+            subscriptions=subscriptions,
+            last_known_block_ids=last_known_block_ids)
         response = self.stream.send(
             validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
             request.SerializeToString()).result()
@@ -128,7 +209,7 @@ class TestEventsAndReceipts(unittest.TestCase):
         return response
 
     def assert_block_commit_event(self, event, block_num):
-        self.assertEqual(event.event_type, "block_commit")
+        self.assertEqual(event.event_type, "sawtooth/block-commit")
         self.assertTrue(all([
             any(attribute.key == "block_id" for attribute in event.attributes),
             any(attribute.key == "block_num"
@@ -155,6 +236,20 @@ class TestEventsAndReceipts(unittest.TestCase):
             client_receipt_pb2.ClientReceiptGetResponse.OK)
 
         return receipt_response.receipts
+
+    def assert_events_get_response(self, msg):
+        self.assertEqual(
+            msg.message_type,
+            validator_pb2.Message.CLIENT_EVENTS_GET_RESPONSE)
+
+        events_response = client_event_pb2.ClientEventsGetResponse()
+        events_response.ParseFromString(msg.content)
+
+        self.assertEqual(
+            events_response.status,
+            client_event_pb2.ClientEventsGetResponse.OK)
+
+        return events_response.events
 
     def assert_subscribe_response(self, msg):
         self.assertEqual(
@@ -190,7 +285,7 @@ class BatchSubmitter:
     def _post_batch(self, batch):
         headers = {'Content-Type': 'application/octet-stream'}
         response = self._query_rest_api(
-            '/batches?wait={}'.format(self.timeout),
+            '/batches',
             data=batch,
             headers=headers,
             expected_code=202)
@@ -200,7 +295,7 @@ class BatchSubmitter:
 
     def _query_rest_api(self, suffix='', data=None, headers={},
                         expected_code=200):
-        url = 'http://rest-api:8080' + suffix
+        url = 'http://rest-api:8008' + suffix
         return self._submit_request(urllib.request.Request(url, data, headers),
                                     expected_code=expected_code)
 
