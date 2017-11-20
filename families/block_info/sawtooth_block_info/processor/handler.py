@@ -182,7 +182,7 @@ class BlockInfoTransactionHandler(TransactionHandler):
 
         # If this is not true, something else has modified global state
         if deletes:
-            if set(deletes) != set(context.delete(deletes)):
+            if set(deletes) != set(context.delete_state(deletes)):
                 raise InternalError(
                     "Blocks should have been in state but weren't: {}".format(
                         deletes))

@@ -15,7 +15,7 @@
 
 from sawtooth_validator.server.events.extractor import EventExtractor
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaSet
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 
 
 class BlockEventExtractor(EventExtractor):
@@ -31,12 +31,12 @@ class BlockEventExtractor(EventExtractor):
                 key="state_root_hash", value=block.state_root_hash),
             Event.Attribute(
                 key="previous_block_id", value=block.previous_block_id)]
-        return Event(event_type="block_commit", attributes=attributes)
+        return Event(event_type="sawtooth/block-commit", attributes=attributes)
 
     def extract(self, subscriptions):
         if subscriptions:
             for sub in subscriptions:
-                if sub.event_type == "block_commit":
+                if sub.event_type == "sawtooth/block-commit":
                     return [self._make_event()]
 
 
@@ -64,7 +64,7 @@ class ReceiptEventExtractor(EventExtractor):
     def _make_state_delta_events(self, subscriptions):
         gen = False
         for subscription in subscriptions:
-            if subscription.event_type == "state_delta":
+            if subscription.event_type == "sawtooth/state-delta":
                 gen = True
 
         if not gen:
@@ -82,13 +82,13 @@ class ReceiptEventExtractor(EventExtractor):
                         Event.Attribute(key="address", value=address))
                     squashed_changes.append(state_change)
 
-        state_delta_set = StateDeltaSet()
-        state_delta_set.state_changes.extend(squashed_changes)
+        state_change_list = StateChangeList()
+        state_change_list.state_changes.extend(squashed_changes)
 
         event = Event(
-            event_type="state_delta",
+            event_type="sawtooth/state-delta",
             attributes=attributes,
-            data=state_delta_set.SerializeToString())
+            data=state_change_list.SerializeToString())
 
         for subscription in subscriptions:
             if event in subscription:

@@ -29,7 +29,7 @@ services:
   rethinkdb:
     image: rethinkdb
     expose:
-      - 8080
+      - 8008
       - 28015
 
   tnt-server:
@@ -37,7 +37,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
       - 3000
     depends_on:
       - rethinkdb
@@ -68,12 +68,12 @@ services:
     depends_on:
       - tnt-server
     command: "bash -c \"\
-        sawtooth admin keygen && \
-        sawtooth config genesis \
+        sawadm keygen && \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth admin genesis config-genesis.batch && \
-        sawtooth admin genesis && \
+        sawadm genesis config-genesis.batch && \
+        sawadm genesis && \
         sawtooth-validator -v \
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
@@ -87,8 +87,8 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8081
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8081
+      - 8009
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8009
     stop_signal: SIGKILL
 
   test-track-and-trade:
@@ -96,8 +96,8 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
-      - 8081
+      - 8008
+      - 8009
     depends_on:
       - tnt-server
     command: "bash -c \" \

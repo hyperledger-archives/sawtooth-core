@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+user="sawtooth"
+group="sawtooth"
+
+if ! getent group $group > /dev/null; then
+    addgroup --quiet --system $group
+fi
+
+if ! getent passwd $user > /dev/null; then
+    adduser --quiet --system --ingroup $group $user
+fi

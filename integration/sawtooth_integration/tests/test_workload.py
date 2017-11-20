@@ -36,7 +36,7 @@ class TestWorkload(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        url = 'rest-api:8080'
+        url = 'rest-api:8008'
         wait_for_rest_apis([url])
         http = 'http://' + url
         cls.client = RestClient(http)
@@ -58,7 +58,7 @@ class TestWorkload(unittest.TestCase):
         # if workload is working, expect at least
         # MINIMUM_BLOCK_COUNT blocks to have been created
         self.assertGreaterEqual(
-            len(blocks),
+            len(list(blocks)),
             MINIMUM_BLOCK_COUNT,
             'Not enough blocks; something is probably wrong with workload')
 

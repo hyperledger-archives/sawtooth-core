@@ -7,6 +7,7 @@ User=sawtooth
 Group=sawtooth
 EnvironmentFile=-/etc/default/sawtooth-settings-tp
 ExecStart=/usr/bin/settings-tp $SAWTOOTH_SETTINGS_TP_ARGS
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

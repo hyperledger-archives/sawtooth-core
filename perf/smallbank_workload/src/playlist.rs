@@ -127,7 +127,7 @@ pub fn process_smallbank_playlist(output: &mut Write,
 
         let mut sha = Sha512::new();
         sha.input(&payload_bytes);
-        let mut hash: &mut [u8] = & mut [0; 64];
+        let hash: &mut [u8] = & mut [0; 64];
         sha.result(hash);
 
         txn_header.set_payload_sha512(bytes_to_hex_str(hash));
@@ -161,16 +161,18 @@ fn make_addresses(payload: &SmallbankTransactionPayload) -> Vec<String> {
         SBPayloadType::SEND_PAYMENT =>
             vec![customer_id_address(payload.get_send_payment().get_source_customer_id()),
                  customer_id_address(payload.get_send_payment().get_dest_customer_id())],
-        SBPayloadType::AMALGAMATE=>
+        SBPayloadType::AMALGAMATE =>
             vec![customer_id_address(payload.get_amalgamate().get_source_customer_id()),
                  customer_id_address(payload.get_amalgamate().get_dest_customer_id())],
+        SBPayloadType::PAYLOAD_TYPE_UNSET =>
+            panic!("Payload type was not set: {:?}", payload)
     }
 }
 
 fn customer_id_address(customer_id: u32) -> String {
     let mut sha = Sha512::new();
     sha.input(customer_id.to_string().as_bytes());
-    let mut hash: &mut [u8] = & mut [0; 64];
+    let hash: &mut [u8] = & mut [0; 64];
     sha.result(hash);
 
     let hex = bytes_to_hex_str(hash);
@@ -242,6 +244,7 @@ impl Iterator for SmallbankGeneratingIter {
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_account < self.num_accounts {
             let mut payload =  SmallbankTransactionPayload::new();
+            payload.set_payload_type(SBPayloadType::CREATE_ACCOUNT);
 
             let mut create_account = smallbank::SmallbankTransactionPayload_CreateAccountTransactionData::new();
             create_account.set_customer_id(self.current_account as u32);
@@ -352,6 +355,8 @@ impl From<SmallbankTransactionPayload> for Yaml {
                     "source_customer_id" => Yaml::Integer(data.source_customer_id as i64),
                     "dest_customer_id" => Yaml::Integer(data.dest_customer_id as i64)}
             },
+            SBPayloadType::PAYLOAD_TYPE_UNSET =>
+                panic!("Unset payload type: {:?}", payload)
         }
     }
 }
@@ -567,7 +572,7 @@ impl<'a> FmtWriter<'a> {
 
 impl<'a> fmt::Write for FmtWriter<'a> {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        let mut w = &mut *self.writer;
+        let w = &mut *self.writer;
         w.write_all(s.as_bytes()).map_err(|_| fmt::Error::default())
     }
 }

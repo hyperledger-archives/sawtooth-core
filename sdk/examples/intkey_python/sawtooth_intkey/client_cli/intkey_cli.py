@@ -31,8 +31,8 @@ from sawtooth_intkey.client_cli.create_batch import add_create_batch_parser
 from sawtooth_intkey.client_cli.create_batch import do_create_batch
 from sawtooth_intkey.client_cli.load import add_load_parser
 from sawtooth_intkey.client_cli.load import do_load
-from sawtooth_intkey.client_cli.workload import add_workload_parser
-from sawtooth_intkey.client_cli.workload import do_workload
+from sawtooth_intkey.client_cli.intkey_workload import add_workload_parser
+from sawtooth_intkey.client_cli.intkey_workload import do_workload
 
 from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
 from sawtooth_intkey.client_cli.exceptions import IntKeyCliException
@@ -42,7 +42,7 @@ from sawtooth_intkey.client_cli.exceptions import IntkeyClientException
 DISTRIBUTION_NAME = 'sawtooth-intkey'
 
 
-DEFAULT_URL = 'http://127.0.0.1:8080'
+DEFAULT_URL = 'http://127.0.0.1:8008'
 
 
 def create_console_handler(verbose_level):
@@ -130,7 +130,8 @@ def add_set_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'set',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Sets an intkey value')
 
     parser.add_argument(
         'name',
@@ -173,7 +174,8 @@ def add_inc_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'inc',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Increments an intkey value')
 
     parser.add_argument(
         'name',
@@ -216,7 +218,8 @@ def add_dec_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'dec',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Decrements an intkey value')
 
     parser.add_argument(
         'name',
@@ -259,7 +262,8 @@ def add_show_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'show',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Displays some intkey value')
 
     parser.add_argument(
         'name',
@@ -285,7 +289,8 @@ def add_list_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'list',
         parents=[parent_parser],
-        description=message)
+        description=message,
+        help='Displays all intkey values')
 
     parser.add_argument(
         '--url',

@@ -17,7 +17,7 @@
 
 'use strict'
 
-const {Entry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, Message} = require('../protobuf')
+const {TpStateEntry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, TpStateDeleteRequest, TpStateDeleteResponse, Message} = require('../protobuf')
 const {AuthorizationException} = require('../processor/exceptions')
 
 const _timeoutPromise = (p, millis) => {
@@ -30,6 +30,11 @@ const _timeoutPromise = (p, millis) => {
   }
 }
 
+/**
+ * Context provides an interface for getting and setting validator
+ * state. All validator interactions by a handler should be through
+ * a Context instance.
+ */
 class Context {
   constructor (stream, contextId) {
     this._stream = stream
@@ -37,10 +42,15 @@ class Context {
   }
 
   /**
-   * @param {string[]} addresses an array of address
+   * getState queries the validator state for data at each of the
+   * addresses in the given list. The addresses that have been set are
+   * returned in a list.
+   *
+   * @param {string[]} addresses an array of addresses
    * @param {number} [timeout] - an optional timeout
-   * @return a promise for a map of (address, buffer) pairs, where the buffer is
-   * the encoded value at the specified address
+   * @return a promise for a map of (address, buffer) pairs, where the
+   * buffer is the encoded value at the specified address
+   * @throws {AuthorizationException}
    */
   getState (addresses, timeout = null) {
     let getRequest = TpStateGetRequest.create({addresses, contextId: this._contextId})
@@ -63,14 +73,20 @@ class Context {
   }
 
   /**
-   * @param {Object} addressValuePairs - a map of (address, buffer) entries, where the
+   * set_state requests that each address in the provided dictionary
+   * be set in validator state to its corresponding value. A list is
+   * returned containing the successfully set addresses.
+
+   * @param {Object} addressValuePairs - a map of (address, buffer)
+   * entries, where the buffer is the encoded value to be set at the
+   * the given address.
    * @param {number} [timeout] - an optional timeout
-   * buffer is the encoded value to be set at the the given address.
-   * @return a promise for the adddress successfully set.
+   * @return a promise for the adddresses successfully set.
+   * @throws {AuthorizationException}
    */
   setState (addressValuePairs, timeout = null) {
     let entries = Object.keys(addressValuePairs).map((address) =>
-      Entry.create({address, data: addressValuePairs[address]}))
+      TpStateEntry.create({address, data: addressValuePairs[address]}))
 
     let setRequest = TpStateSetRequest.create({entries, contextId: this._contextId})
     let future = this._stream.send(Message.MessageType.TP_STATE_SET_REQUEST,
@@ -88,15 +104,32 @@ class Context {
       timeout)
   }
 
-  // Deprecated: use getState instead
-  get (addresses, timeout = null) {
-    return this.getState(addresses, timeout)
+  /**
+   * delete_state requests that each of the provided addresses be
+   * unset in validator state. A list of successfully deleted
+   * addresses is returned.
+
+   * @param {string[]} addresses -  an array of addresses
+   * @param {number} [timeout] - an optional timeout
+   * @return a promise for the adddresses successfully deleted.
+   * @throws {AuthorizationException}
+   */
+  deleteState (addresses, timeout = null) {
+    let getRequest = TpStateDeleteRequest.create({addresses, contextId: this._contextId})
+    let future = this._stream.send(Message.MessageType.TP_STATE_DELETE_REQUEST,
+                                   TpStateDeleteRequest.encode(getRequest).finish())
+    return _timeoutPromise(
+      future.then((buffer) => {
+        let deleteResponse = TpStateDeleteResponse.decode(buffer)
+
+        if (deleteResponse.status === TpStateDeleteResponse.Status.AUTHORIZATION_ERROR) {
+          throw new AuthorizationException(`Tried to delete unauthorized address ${addresses}`)
+        }
+        return deleteResponse.addresses
+      }),
+      timeout)
   }
 
-  // Deprecated: use setState instead
-  set (addressValuePairs, timeout = null) {
-    return this.setState(addressValuePairs, timeout)
-  }
 }
 
 module.exports = Context

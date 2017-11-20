@@ -7,10 +7,6 @@ and how SGX may be utilized to allow for assets to be transfered off ledger and
 traded in private between parties with only the trading parties knowing the
 details of the transaction.
 
-
-Private UTXO Overview
-=====================
-
 The Private UTXO example allows for assets to be tracked and traded on the
 Ledger. These assets can also be held off the Ledger and still traded in a
 manner that enforces the Ledger rules governing the Asset and allows
@@ -19,6 +15,9 @@ exist in two states; on-Ledger and off-Ledger. When assets are on-Ledger, they
 are held in "Holdings" associated with the owner’s public key. In this state
 the balances and trades of and trades between participants are visible to all
 who can see the Ledger.
+
+Assets
+------
 
 Assets in the off-Ledger state are unspent transaction outputs (UTXO) stored on
 the Ledger with a matching document held by the owner off-Ledger describing the
@@ -74,7 +73,7 @@ then the Asset has either been consumed or has not yet be recorded with
     :lines: 18-25
 
 Trading and Transactions
-=========================
+-------------------------
 
 Private UTXO Transaction Family
 +++++++++++++++++++++++++++++++
@@ -87,19 +86,18 @@ that manages representation in the Ledger.
 
    private_utxo_transaction_family.rst
 
-
 Off-Ledger Trading
 ++++++++++++++++++
 
 This section describes how off-Ledger Assets, stored in UTXODocuments,
 are traded.
 
-UTXO processing Trusted Execution Environment (UTEE) are reponsible for
+UTXO processing Trusted Execution Environment (UTEE) are responsible for
 validating and signing all off-Ledger transactions. UTEE's will be provided as
 signed binaries from the operators of the Ledger. The initial versions of the
 UTEE will support operation on clients enabled with SGX technology. The UTEE
 will utilize an IAS Proxy service to allow for generation of the Attestation
-Verification Reports(AVRs).
+Verification Reports (AVRs).
 
 The UTEE is responsible for enforcing the Asset semantic rules. This
 implementation only enforces the constant supply of Assets (Transfers neither
@@ -124,7 +122,7 @@ the enclave, and the transaction. The Quote is used by the Attestation service
 to verify that this is a valid UTEE environment.
 
 Alice then submits the Quote to the Intel Attestation Service for verification.
-When the verification succeeds, an Attestation Verification Report(AVR) is
+When the verification succeeds, an Attestation Verification Report (AVR) is
 generated.
 
 Alice will then generate a Transfer UTXO transaction with the addresses of the
@@ -146,7 +144,7 @@ UTEE Enclave Operations
 The UTEE provides functionality to generate an Attestation for UTXO transfers.
 
 Generate Transfer UTXO Quote
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Given a set of Input and Output UTXODocuments, validate the Inputs are
 authorized to be spent and the Outputs conform to the asset rules. Then
@@ -181,19 +179,19 @@ If all the validation passes, then an enclave quote is generated. The report
 data field of the quote (sgx_report_data_t) set to the sha512(input
 addresses|output addresses). This provides linkage between the transaction and
 the SGX Attestation. The input and output addresses are generated UTXO
-address as described in the :doc:`private_utxo_transaction_family`
+address as described in the :doc:`private_utxo_transaction_family` .
 
 IAS Proxy
----------
+^^^^^^^^^
 
 Once the Enclave Quote is generated, it must be passed to the Intel Attestation
 Service (IAS) for verification and signing. A proxy interface to IAS is
 provided to allow the connection to IAS to be authenticated with the Software
 provider Id. The proxy accepts the Enclave quotes and returns Attestation
-Verification Reports (AVRS) singed by IAS.
+Verification Reports (AVRs) signed by IAS.
 
 Transfer UTXO Transaction
--------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once the Transfer AVR is created, a Transfer UTXO transaction can be created
 and submitted for validation. This transaction must contain the input and
@@ -202,7 +200,7 @@ UTEE. This transaction should be signed with a randomly generated key, so that
 the identity of the UTXO can be hidden.
 
 UTEE Authorization
------------------------------------
+^^^^^^^^^^^^^^^^^^
 
 A Ledger setting in the settings namespace is used to hold the list of enclave
 builds that are authorized to operate on this network. The setting
@@ -222,8 +220,8 @@ It is recommended that Participants in the system manage multiple private keys
 for holding off-Ledger UTXO. Only use a primary key for trading on-Ledger and
 have a set of keys for off-Ledger trading. When an asset is converted to UTXO,
 it should be transferred among these keys several times in a random order to
-hide the ownership of the asset. Furthermore, when an asset is transferred off-
-Ledger, it should receive the same mixing behavior both before and after the
+hide the ownership of the asset. Furthermore, when an asset is transferred
+off-Ledger, it should receive the same mixing behavior both before and after the
 trade by both the sender and receiver. In addition, the off-Ledger keys should
 regularly be regenerated so that the public keys cannot be associated with a
 particular participant over time from observing the behavior of the trading.

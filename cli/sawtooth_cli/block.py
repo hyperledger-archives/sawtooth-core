@@ -29,28 +29,38 @@ def add_block_parser(subparsers, parent_parser):
             subparsers: Add parsers to this subparser object
             parent_parser: The parent argparse.ArgumentParser object
     """
-    parser = subparsers.add_parser('block')
+    parser = subparsers.add_parser(
+        'block',
+        description='Provides subcommands to display information about the '
+        'blocks in the current blockchain.',
+        help='Display information on blocks in the current blockchain')
 
-    grand_parsers = parser.add_subparsers(title='grandchildcommands',
-                                          dest='subcommand')
+    grand_parsers = parser.add_subparsers(
+        title='grandchildcommands',
+        dest='subcommand')
+
     grand_parsers.required = True
 
-    epilog = '''details:
-        Lists committed blocks from the newest to the oldest, including
-    their id (i.e. header signature), batch and transaction count, and
-    their signer's public key.
-    '''
+    description = (
+        'Displays information for all blocks on the current '
+        'blockchain, including the block id and number, public keys all '
+        'of allsigners, and number of transactions and batches.')
+
     grand_parsers.add_parser(
-        'list', epilog=epilog,
+        'list',
+        help='Displays information for all blocks on the current blockchain',
+        description=description,
         parents=[base_http_parser(), base_list_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    epilog = '''details:
-        Shows the data for a single block, or for a particular property within
-    that block or its header. Displays data in YAML (default), or JSON formats.
-    '''
+    description = (
+        'Displays information about the specified block on '
+        'the current blockchain')
+
     show_parser = grand_parsers.add_parser(
-        'show', epilog=epilog,
+        'show',
+        help=description,
+        description=description + '.',
         parents=[base_http_parser(), base_show_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
     show_parser.add_argument(

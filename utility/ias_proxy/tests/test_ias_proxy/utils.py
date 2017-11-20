@@ -17,7 +17,8 @@ import random
 import string
 import hashlib
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 
 def random_name(length=16):
@@ -27,13 +28,14 @@ def random_name(length=16):
 
 
 def create_random_private_key():
-    return signing.generate_private_key()
+    return Secp256k1PrivateKey.new_random()
 
 
 def create_random_public_key():
-    return signing.generate_public_key(create_random_private_key())
+    return create_context('secp256k1').get_public_key(
+        create_random_private_key())
 
 
 def create_random_public_key_hash():
-    return \
-        hashlib.sha256(create_random_public_key().encode()).hexdigest()
+    public_key_bytes = create_random_public_key().as_hex().encode()
+    return hashlib.sha256(public_key_bytes).hexdigest()

@@ -16,7 +16,8 @@
 import unittest
 import time
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from sawtooth_poet_simulator.poet_enclave_simulator.enclave_wait_timer \
     import EnclaveWaitTimer
@@ -26,7 +27,7 @@ class TestEnclaveSimulatorWaitTimer(unittest.TestCase):
 
     @classmethod
     def _create_random_key(cls):
-        return signing.generate_private_key()
+        return Secp256k1PrivateKey.new_random()
 
     def test_create_wait_timer(self):
         wait_timer = \
@@ -65,9 +66,9 @@ class TestEnclaveSimulatorWaitTimer(unittest.TestCase):
                 local_mean=2.71828)
 
         serialized = wait_timer.serialize()
-        signing_key = self._create_random_key()
+        private_key = self._create_random_key()
         wait_timer.signature = \
-            signing.sign(serialized, signing_key)
+            create_context('secp256k1').sign(serialized.encode(), private_key)
 
         copy_wait_timer = \
             EnclaveWaitTimer.wait_timer_from_serialized(

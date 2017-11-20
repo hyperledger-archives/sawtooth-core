@@ -22,11 +22,9 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
-	"sawtooth_sdk/protobuf/transaction_pb2"
 	"strconv"
 	"strings"
 )
@@ -54,8 +52,9 @@ type Game struct {
 func (self *XoHandler) FamilyName() string {
 	return "xo"
 }
-func (self *XoHandler) FamilyVersion() string {
-	return "1.0"
+
+func (self *XoHandler) FamilyVersions() []string {
+	return []string{"1.0"}
 }
 
 func (self *XoHandler) Namespaces() []string {
@@ -66,10 +65,7 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *p
 	// The xo player is defined as the signer of the transaction, so we unpack
 	// the transaction header to obtain the signer's public key, which will be
 	// used as the player's identity.
-	header, err := unpackHeader(request.Header)
-	if err != nil {
-		return err
-	}
+	header := request.GetHeader()
 	player := header.GetSignerPublicKey()
 
 	// The payload is sent to the transaction processor as bytes (just as it
@@ -86,6 +82,8 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *p
 	switch payload.Action {
 	case "create":
 		return applyCreate(payload.Name, context)
+	case "delete":
+		return applyDelete(payload.Name, context)
 	case "take":
 		return applyTake(payload.Name, payload.Space, player, context)
 	default:
@@ -112,6 +110,18 @@ func applyCreate(name string, context *processor.Context) error {
 	}
 
 	return saveGame(game, context)
+}
+
+func applyDelete(name string, context *processor.Context) error {
+	game, err := loadGame(name, context)
+	if err != nil {
+		return err
+	}
+	if game == nil {
+		return &processor.InvalidTransactionError{Msg: "Delete requires an existing game"}
+	}
+
+	return deleteGame(name, context)
 }
 
 func applyTake(name string, space int, player string, context *processor.Context) error {
@@ -217,16 +227,6 @@ func unpackPayload(payloadData []byte) (*XoPayload, error) {
 	return &payload, nil
 }
 
-func unpackHeader(headerData []byte) (*transaction_pb2.TransactionHeader, error) {
-	header := &transaction_pb2.TransactionHeader{}
-	err := proto.Unmarshal(headerData, header)
-	if err != nil {
-		return nil, &processor.InternalError{
-			Msg: fmt.Sprint("Failed to unmarshal TransactionHeader: %v", err)}
-	}
-	return header, nil
-}
-
 func unpackGame(gameData []byte) (*Game, error) {
 	parts := strings.Split(string(gameData), ",")
 	if len(parts) != 5 {
@@ -307,6 +307,19 @@ func saveGame(game *Game, context *processor.Context) error {
 	}
 	if len(addresses) == 0 {
 		return &processor.InternalError{Msg: "No addresses in set response"}
+	}
+	return nil
+}
+
+func deleteGame(name string, context *processor.Context) error {
+	address := namespace + hexdigest(name)[:64]
+
+	addresses, err := context.DeleteState([]string{address})
+	if err != nil {
+		return err
+	}
+	if len(addresses) == 0 {
+		return &processor.InternalError{Msg: "No addresses in delete response"}
 	}
 	return nil
 }

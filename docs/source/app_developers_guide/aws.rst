@@ -57,7 +57,7 @@ be found `here <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/launch-market
     to add an inbound rule allowing TCP traffic on port 4004.
 
   * If you'd like to access the REST API remotely, you'll need to add an
-    inbound rule allowing TCP traffic on port 8080.
+    inbound rule allowing TCP traffic on port 8008.
 
   Please see Amazon's `Security Groups
   <http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_SecurityGroups.html#AddRemoveRules>`_
@@ -80,10 +80,11 @@ Creating And Submitting Transactions with intkey
 ------------------------------------------------
 
 The ``intkey`` CLI command is provided to create sample transactions of the
-intkey transaction type for testing purposes. Using it you will be able prepare
-batches of intkey transactions that *set* a few keys to random values, then
-randomly *inc* (increment) and *dec* (decrement) those values. These batches
-will be saved locally, and then can then be submitted to the validator.
+intkey (IntegerKey) transaction type for testing purposes. Using it you will
+be able to prepare batches of intkey transactions that *set* a few keys to
+random values, then randomly *inc* (increment) and *dec* (decrement) those
+values. These batches will be saved locally, and then can then be submitted
+to the validator.
 
 To use, run the following commands:
 
@@ -100,7 +101,7 @@ intkey logs in ``/var/log/sawtooth``.
 The validator logs show that state is being updated and a new block
 has been published.
 
-The intkey logs show values being incremented and decremented.
+The IntegerKey logs show values being incremented and decremented.
 
 .. note::
 
@@ -295,7 +296,7 @@ Enter the following command from a terminal window:
 
 .. code-block:: console
 
-  $ curl http://localhost:8080/blocks
+  $ curl http://localhost:8008/blocks
 
 
 Configuring the List of Transaction Families
@@ -312,18 +313,14 @@ in Python.
   includes additional transaction processors written in several languages.
   The following lists the processors that are included:
 
-  * settings-tp - A settings family transaction processor written in Python
+  * settings-tp - A Settings family transaction processor written in Python
 
-  * intkey-tp-go - An intkey transaction processor written in Go
+  * intkey-tp-go - An IntegerKey transaction processor written in Go
 
-  * intkey-tp-java - An intkey transaction processor written in Java
+  * intkey-tp-java - An IntegerKey transaction processor written in Java
 
-  * intkey-tp-javascript - An intkey transaction processor written in JavaScript
+  * intkey-tp-javascript - An IntegerKey transaction processor written in JavaScript
     (requires node.js)
-
-  * jvm-sc-tp - An intkey transaction processor implemented as a smart contract;
-    the bytecode to run a transaction is stored in state and the blockchain
-    (requires Java)
 
   * poet-validator-registry-tp - A transaction family used by the PoET consensus
     algorithm implementation to keep track of other validators
@@ -339,22 +336,22 @@ The next step describes how to configure this setting with a single command.
 Changing the Transaction Family Settings
 ----------------------------------------
 
-In the example below, a JSON array is submitted to the `sawtooth config`
+In the example below, a JSON array is submitted to the `sawset`
 command, which creates and submits a batch of transactions containing the
 settings change.
 
 The JSON array used tells the validator or validator network to accept
 transactions of the following types:
 
-* intkey
-* sawtooth_settings
+* ``intkey`` (IntegerKey transaction family)
+* ``sawtooth_settings`` (Settings transaction family)
 
 To create and submit the batch containing the new settings, enter the
 following commands at a Linux command-line prompt:
 
 .. code-block:: console
 
-  $ sawtooth config proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
+  $ sawset proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
 and output similar to the following appears in the ``validator-debug.log``
@@ -375,11 +372,11 @@ file:
 
 
 You can verify that the settings change was successfully applied by
-checking the output of ``sawtooth config settings list``:
+checking the output of ``sawtooth settings list``:
 
 .. code-block:: console
 
-  $ sawtooth config settings list
+  $ sawtooth settings list
   sawtooth.settings.vote.authorized_keys: 03e3ccf73dd618ef1abe18da84d3cf5838a5d292d36ef8857a60b5ad04fd4ab517
   sawtooth.validator.transaction_families: [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"} "...
 

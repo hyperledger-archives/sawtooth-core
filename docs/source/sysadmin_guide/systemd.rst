@@ -1,5 +1,5 @@
 *****************************
-Running Sawtooth As A Service
+Running Sawtooth as a Service
 *****************************
 
 When installing Sawtooth using apt-get, *systemd* units are added for the
@@ -44,8 +44,8 @@ the first validator can load:
 .. code-block:: console
 
   $ sawtooth keygen --key-dir ~ sawtooth
-  $ sawtooth config genesis --key ~/sawtooth.priv
-  $ sawtooth admin genesis config-genesis.batch
+  $ sawset genesis --key ~/sawtooth.priv
+  $ sawadm genesis config-genesis.batch
 
 Running Sawtooth
 ----------------
@@ -74,10 +74,3 @@ Likewise, to stop a component run:
 .. code-block:: console
 
   $ sudo systemctl stop sawtooth-COMPONENT
-
-Configuring Sawtooth
---------------------
-
-Configuration for each of the components is handled by a set of files in
-`/etc/default`. These files have the same name as the component they configure
-and contain the command line arguments passed when the service is started.

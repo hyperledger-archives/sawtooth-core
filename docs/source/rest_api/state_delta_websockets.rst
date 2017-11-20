@@ -26,7 +26,7 @@ by using standard means.  In the case of in-browser JavaScript:
 
 .. code-block:: javascript
 
-   let ws = new WebSocket('ws:localhost:8080/subscriptions')
+   let ws = new WebSocket('ws:localhost:8008/subscriptions')
 
 If the REST API is running, it should trigger an event on the web socket's
 `onopen` handler.

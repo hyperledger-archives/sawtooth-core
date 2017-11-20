@@ -44,11 +44,12 @@ from sawtooth_validator.server.events.subscription import EventFilterFactory
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.protobuf.transaction_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
+    TransactionReceipt
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventList
-from sawtooth_validator.protobuf.state_delta_pb2 import StateDeltaSet
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 
@@ -62,7 +63,6 @@ from test_journal.mock import MockBlockSender
 from test_journal.mock import MockBatchSender
 from test_journal.mock import MockNetwork
 from test_journal.mock import MockStateViewFactory, CreateSetting
-from test_journal.mock import MockStateDeltaProcessor
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import MockPermissionVerifier
 from test_journal.mock import SynchronousExecutor
@@ -73,6 +73,7 @@ from test_journal import mock_consensus
 
 
 LOGGER = logging.getLogger(__name__)
+
 
 class TestBlockCache(unittest.TestCase):
     def test_load_from_block_store(self):
@@ -127,7 +128,7 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
@@ -284,7 +285,7 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
@@ -317,7 +318,7 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
@@ -371,7 +372,7 @@ class TestBlockPublisher(unittest.TestCase):
             batch_sender=self.batch_sender,
             squash_handler=None,
             chain_head=self.block_tree_manager.chain_head,
-            identity_signing_key=self.block_tree_manager.identity_signing_key,
+            identity_signer=self.block_tree_manager.identity_signer,
             identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
@@ -821,7 +822,6 @@ class TestChainController(unittest.TestCase):
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
         self._chain_head_lock = RLock()
-        self.state_delta_processor = MockStateDeltaProcessor()
         self.permission_verifier = MockPermissionVerifier()
         self.state_view_factory = MockStateViewFactory(
             self.block_tree_manager.state_db)
@@ -855,7 +855,7 @@ class TestChainController(unittest.TestCase):
             chain_id_manager=self.chain_id_manager,
             data_dir=None,
             config_dir=None,
-            chain_observers=[self.state_delta_processor],
+            chain_observers=[],
             metrics_registry=None)
 
         init_root = self.chain_ctrl.chain_head
@@ -872,8 +872,6 @@ class TestChainController(unittest.TestCase):
         new_block = self.generate_block(self.init_head)
         self.receive_and_process_blocks(new_block)
         self.assert_is_chain_head(new_block)
-        # validate that the deltas for the new block are published
-        self.assertEqual(new_block, self.state_delta_processor.block)
 
     def test_alternate_genesis(self):
         '''Tests a fork extending an alternate genesis block
@@ -1145,7 +1143,6 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.chain_id_manager = MockChainIdManager()
-        self.state_delta_processor = MockStateDeltaProcessor()
         self.chain_head_lock = RLock()
         self.permission_verifier = MockPermissionVerifier()
         self.state_view_factory = MockStateViewFactory(
@@ -1180,7 +1177,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             chain_id_manager=self.chain_id_manager,
             data_dir=None,
             config_dir=None,
-            chain_observers=[self.state_delta_processor],
+            chain_observers=[],
             metrics_registry=None)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
@@ -1243,7 +1240,6 @@ class TestJournal(unittest.TestCase):
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
-        self.state_delta_processor = MockStateDeltaProcessor()
         self.permission_verifier = MockPermissionVerifier()
 
     def test_publish_block(self):
@@ -1267,7 +1263,7 @@ class TestJournal(unittest.TestCase):
                 batch_sender=self.batch_sender,
                 squash_handler=None,
                 chain_head=btm.block_store.chain_head,
-                identity_signing_key=btm.identity_signing_key,
+                identity_signer=btm.identity_signer,
                 identity_public_key=btm.identity_public_key,
                 data_dir=None,
                 config_dir=None,
@@ -1277,7 +1273,7 @@ class TestJournal(unittest.TestCase):
                 batch_injector_factory=DefaultBatchInjectorFactory(
                     block_store=btm.block_store,
                     state_view_factory=MockStateViewFactory(btm.state_db),
-                    signing_key=btm.identity_signing_key))
+                    signer=btm.identity_signer))
 
             block_validator = BlockValidator(
                 state_view_factory=MockStateViewFactory(btm.state_db),
@@ -1298,7 +1294,7 @@ class TestJournal(unittest.TestCase):
                 chain_id_manager=None,
                 data_dir=None,
                 config_dir=None,
-                chain_observers=[self.state_delta_processor])
+                chain_observers=[])
 
             self.gossip.on_batch_received = block_publisher.queue_batch
             self.gossip.on_block_received = chain_controller.queue_block
@@ -1465,7 +1461,8 @@ class TestChainCommitState(unittest.TestCase):
 
     def create_chain_commit_state(self, blocks, uncommitted_blocks=None,
                                   chain_head=None):
-        block_store = BlockStore(DictDatabase())
+        block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
         block_store.update_chain(blocks)
         if chain_head is None:
             chain_head = block_store.chain_head.identifier
@@ -1509,7 +1506,7 @@ class TestChainCommitState(unittest.TestCase):
 
 class TestBlockEventExtractor(unittest.TestCase):
     def test_block_event_extractor(self):
-        """Test that a block_commit event is generated correctly."""
+        """Test that a sawtooth/block-commit event is generated correctly."""
         block_header = BlockHeader(
             block_num=85,
             state_root_hash="0987654321fedcba",
@@ -1519,10 +1516,10 @@ class TestBlockEventExtractor(unittest.TestCase):
             header=block_header.SerializeToString()))
         extractor = BlockEventExtractor(block)
         events = extractor.extract([EventSubscription(
-            event_type="block_commit")])
+            event_type="sawtooth/block-commit")])
         self.assertEqual(events, [
             Event(
-                event_type="block_commit",
+                event_type="sawtooth/block-commit",
                 attributes=[
                     Event.Attribute(key="block_id",value="abcdef1234567890"),
                     Event.Attribute(key="block_num", value="85"),
@@ -1562,7 +1559,7 @@ class TestReceiptEventExtractor(unittest.TestCase):
         self.assertEqual(events, [event_sets[0][0], event_sets[2][1]])
 
     def test_state_delta_events(self):
-        """Test that state_delta events are generated correctly."""
+        """Test that sawtooth/state-delta events are generated correctly."""
         gen_data = [
             [("a", b"a", StateChange.SET), ("b", b"b", StateChange.DELETE)],
             [("a", b"a", StateChange.DELETE), ("d", b"d", StateChange.SET)],
@@ -1583,21 +1580,21 @@ class TestReceiptEventExtractor(unittest.TestCase):
         factory = EventFilterFactory()
         events = extractor.extract([
             EventSubscription(
-                event_type="state_delta",
+                event_type="sawtooth/state-delta",
                 filters=[factory.create("address", "a")]),
             EventSubscription(
-                event_type="state_delta",
+                event_type="sawtooth/state-delta",
                 filters=[factory.create(
                     "address", "[ce]", EventFilterType.regex_any)],
             )
         ])
         self.assertEqual(events, [Event(
-            event_type="state_delta",
+            event_type="sawtooth/state-delta",
             attributes=[
                 Event.Attribute(key="address", value=address)
                 for address in ["e", "d", "a", "b"]
             ],
-            data=StateDeltaSet(state_changes=[
+            data=StateChangeList(state_changes=[
                 change_sets[2][0], change_sets[1][1],
                 change_sets[1][0], change_sets[0][1],
             ]).SerializeToString(),

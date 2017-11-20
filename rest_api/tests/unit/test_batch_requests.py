@@ -19,50 +19,56 @@ from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_batch_pb2
 
 
+ID_A = 'a' * 128
+ID_B = 'b' * 128
+ID_C = 'c' * 128
+ID_D = 'd' * 128
+
+
 class BatchListTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_LIST_REQUEST,
             client_batch_pb2.ClientBatchListRequest,
             client_batch_pb2.ClientBatchListResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/batches', handlers.list_batches)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/batches', handlers.list_batches)
 
     @unittest_run_loop
     async def test_batch_list(self):
         """Verifies a GET /batches without parameters works properly.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
-            - three batches with ids of '2', '1', and '0'
+            - three batches with ids of ID_C, ID_B, and ID_A
 
         It should send a Protobuf request with:
             - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '2'
-            - a link property that ends in '/batches?head=2'
+            - a head property of ID_C
+            - a link property that ends in '/batches?head={}'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - and those dicts are full batches with ids '2', '1', and '0'
+            - and those dicts are full batches with ids ID_C, ID_B, and ID_A
         """
         paging = Mocks.make_paging_response(0, 3)
-        batches = Mocks.make_batches('2', '1', '0')
-        self.connection.preset_response(head_id='2', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_C, ID_B, ID_A)
+        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches')
         controls = Mocks.make_paging_controls()
         self.connection.assert_valid_request_sent(paging=controls)
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/batches?head=2')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/batches?head={}'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_batches_well_formed(response['data'], '2', '1', '0')
+        self.assert_batches_well_formed(response['data'], ID_C, ID_B, ID_A)
 
     @unittest_run_loop
     async def test_batch_list_with_validator_error(self):
@@ -101,35 +107,35 @@ class BatchListTests(BaseApiTest):
         """Verifies a GET /batches with a head parameter works properly.
 
         It will receive a Protobuf response with:
-            - a head id of '1'
+            - a head id of ID_B
             - a paging response with a start of 0, and 2 total resources
-            - two batches with ids of 1' and '0'
+            - two batches with ids of 1' and ID_A
 
         It should send a Protobuf request with:
-            - a head_id property of '1'
+            - a head_id property of ID_B
             - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '1'
-            - a link property that ends in '/batches?head=1'
+            - a head property of ID_B
+            - a link property that ends in '/batches?head={}'.format(ID_B)
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
-            - and those dicts are full batches with ids '1' and '0'
+            - and those dicts are full batches with ids ID_B and ID_A
         """
         paging = Mocks.make_paging_response(0, 2)
-        batches = Mocks.make_batches('1', '0')
-        self.connection.preset_response(head_id='1', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_B, ID_A)
+        self.connection.preset_response(head_id=ID_B, paging=paging, batches=batches)
 
-        response = await self.get_assert_200('/batches?head=1')
+        response = await self.get_assert_200('/batches?head={}'.format(ID_B))
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(head_id='1', paging=controls)
+        self.connection.assert_valid_request_sent(head_id=ID_B, paging=controls)
 
-        self.assert_has_valid_head(response, '1')
-        self.assert_has_valid_link(response, '/batches?head=1')
+        self.assert_has_valid_head(response, ID_B)
+        self.assert_has_valid_link(response, '/batches?head={}'.format(ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
-        self.assert_batches_well_formed(response['data'], '1', '0')
+        self.assert_batches_well_formed(response['data'], ID_B, ID_A)
 
     @unittest_run_loop
     async def test_batch_list_with_bad_head(self):
@@ -143,7 +149,7 @@ class BatchListTests(BaseApiTest):
             - an error property with a code of 50
         """
         self.connection.preset_response(self.status.NO_ROOT)
-        response = await self.get_assert_status('/batches?head=bad', 404)
+        response = await self.get_assert_status('/batches?head={}'.format(ID_D), 404)
 
         self.assert_has_valid_error(response, 50)
 
@@ -152,35 +158,35 @@ class BatchListTests(BaseApiTest):
         """Verifies GET /batches with an id filter works properly.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 2 total resources
-            - two batches with ids of '0' and '2'
+            - two batches with ids of ID_A and ID_C
 
         It should send a Protobuf request with:
-            - a batch_ids property of ['0', '2']
+            - a batch_ids property of [ID_A, ID_C]
             - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '2', the latest
-            - a link property that ends in '/batches?head=2&id=0,2'
+            - a head property of ID_C, the latest
+            - a link property that ends in '/batches?head={}&id={},{}'.format(ID_C, ID_A, ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
-            - and those dicts are full batches with ids '0' and '2'
+            - and those dicts are full batches with ids ID_A and ID_C
         """
         paging = Mocks.make_paging_response(0, 2)
-        batches = Mocks.make_batches('0', '2')
-        self.connection.preset_response(head_id='2', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_A, ID_C)
+        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
 
-        response = await self.get_assert_200('/batches?id=0,2')
+        response = await self.get_assert_200('/batches?id={},{}'.format(ID_A, ID_C))
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(batch_ids=['0', '2'], paging=controls)
+        self.connection.assert_valid_request_sent(batch_ids=[ID_A, ID_C], paging=controls)
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/batches?head=2&id=0,2')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/batches?head={}&id={},{}'.format(ID_C, ID_A, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
-        self.assert_batches_well_formed(response['data'], '0', '2')
+        self.assert_batches_well_formed(response['data'], ID_A, ID_C)
 
     @unittest_run_loop
     async def test_batch_list_with_bad_ids(self):
@@ -188,24 +194,24 @@ class BatchListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a status of NO_RESOURCE
-            - a head id of '2'
+            - a head id of ID_C
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '2', the latest
-            - a link property that ends in '/batches?head=2&id=bad,notgood'
+            - a head property of ID_C, the latest
+            - a link property that ends in '/batches?head={}&id={},{}'.format(ID_C, ID_B, ID_D)
             - a paging property with only a total_count of 0
             - a data property that is an empty list
         """
         paging = Mocks.make_paging_response(None, 0)
         self.connection.preset_response(
             self.status.NO_RESOURCE,
-            head_id='2',
+            head_id=ID_C,
             paging=paging)
-        response = await self.get_assert_200('/batches?id=bad,notgood')
+        response = await self.get_assert_200('/batches?id={},{}'.format(ID_B, ID_D))
 
-        self.assert_has_valid_head(response, '2')
-        self.assert_has_valid_link(response, '/batches?head=2&id=bad,notgood')
+        self.assert_has_valid_head(response, ID_C)
+        self.assert_has_valid_link(response, '/batches?head={}&id={},{}'.format(ID_C, ID_B, ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -214,75 +220,75 @@ class BatchListTests(BaseApiTest):
         """Verifies GET /batches with head and id parameters work properly.
 
         It should send a Protobuf request with:
-            - a head_id property of '1'
+            - a head_id property of ID_B
             - a paging response with a start of 0, and 1 total resource
-            - a batch_ids property of ['0']
+            - a batch_ids property of [ID_A]
 
         It will receive a Protobuf response with:
-            - a head id of '1'
-            - one batch with an id of '0'
+            - a head id of ID_B
+            - one batch with an id of ID_A
             - empty paging controls
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of '1'
-            - a link property that ends in '/batches?head=1&id=0'
+            - a head property of ID_B
+            - a link property that ends in '/batches?head={}&id={}'.format(ID_B, ID_A)
             - a paging property that matches the paging response
             - a data property that is a list of 1 dict
-            - and that dict is a full batch with an id of '0'
+            - and that dict is a full batch with an id of ID_A
         """
         paging = Mocks.make_paging_response(0, 1)
-        batches = Mocks.make_batches('0')
-        self.connection.preset_response(head_id='1', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_A)
+        self.connection.preset_response(head_id=ID_B, paging=paging, batches=batches)
 
-        response = await self.get_assert_200('/batches?id=0&head=1')
+        response = await self.get_assert_200('/batches?id={}&head={}'.format(ID_A, ID_B))
         controls = Mocks.make_paging_controls()
         self.connection.assert_valid_request_sent(
-            head_id='1',
-            batch_ids=['0'],
+            head_id=ID_B,
+            batch_ids=[ID_A],
             paging=controls)
 
-        self.assert_has_valid_head(response, '1')
-        self.assert_has_valid_link(response, '/batches?head=1&id=0')
+        self.assert_has_valid_head(response, ID_B)
+        self.assert_has_valid_link(response, '/batches?head={}&id={}'.format(ID_B, ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
-        self.assert_batches_well_formed(response['data'], '0')
+        self.assert_batches_well_formed(response['data'], ID_A)
 
     @unittest_run_loop
     async def test_batch_list_paginated(self):
         """Verifies GET /batches paginated by min id works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with a start of 1, and 4 total resources
-            - one batch with the id 'c'
+            - one batch with the id ID_C
 
         It should send a Protobuf request with:
             - paging controls with a count of 1, and a start_index of 1
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/batches?head=d&min=1&count=1'
+            - a head property of ID_D
+            - a link property that ends in '/batches?head={}&min=1&count=1'.format(ID_D)
             - paging that matches the response, with next and previous links
             - a data property that is a list of 1 dict
-            - and that dict is a full batch with the id 'c'
+            - and that dict is a full batch with the id ID_C
         """
         paging = Mocks.make_paging_response(1, 4)
-        batches = Mocks.make_batches('c')
-        self.connection.preset_response(head_id='d', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_C)
+        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?min=1&count=1')
         controls = Mocks.make_paging_controls(1, start_index=1)
         self.connection.assert_valid_request_sent(paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/batches?head=d&min=1&count=1')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/batches?head={}&min=1&count=1'.format(ID_D))
         self.assert_has_valid_paging(response, paging,
-                                     '/batches?head=d&min=2&count=1',
-                                     '/batches?head=d&min=0&count=1')
+                                     '/batches?head={}&min=2&count=1'.format(ID_D),
+                                     '/batches?head={}&min=0&count=1'.format(ID_D))
         self.assert_has_valid_data_list(response, 1)
-        self.assert_batches_well_formed(response['data'], 'c')
+        self.assert_batches_well_formed(response['data'], ID_C)
 
     @unittest_run_loop
     async def test_batch_list_with_zero_count(self):
@@ -317,192 +323,192 @@ class BatchListTests(BaseApiTest):
         """Verifies GET /batches paginated just by count works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with a start of 0, and 4 total resources
-            - two batches with the ids 'd' and 'c'
+            - two batches with the ids ID_D and ID_C
 
         It should send a Protobuf request with:
             - paging controls with a count of 2
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/batches?head=d&count=2'
+            - a head property of ID_D
+            - a link property that ends in '/batches?head={}&count=2'.format(ID_D)
             - paging that matches the response with a next link
             - a data property that is a list of 2 dicts
-            - and those dicts are full batches with ids 'd' and 'c'
+            - and those dicts are full batches with ids ID_D and ID_C
         """
         paging = Mocks.make_paging_response(0, 4)
-        batches = Mocks.make_batches('d', 'c')
-        self.connection.preset_response(head_id='d', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_D, ID_C)
+        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?count=2')
         controls = Mocks.make_paging_controls(2)
         self.connection.assert_valid_request_sent(paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/batches?head=d&count=2')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/batches?head={}&count=2'.format(ID_D))
         self.assert_has_valid_paging(response, paging,
-                                     '/batches?head=d&min=2&count=2')
+                                     '/batches?head={}&min=2&count=2'.format(ID_D))
         self.assert_has_valid_data_list(response, 2)
-        self.assert_batches_well_formed(response['data'], 'd', 'c')
+        self.assert_batches_well_formed(response['data'], ID_D, ID_C)
 
     @unittest_run_loop
     async def test_batch_list_paginated_without_count(self):
         """Verifies GET /batches paginated without count works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with a start of 2, and 4 total resources
-            - two batches with the ids 'b' and 'a'
+            - two batches with the ids ID_B and ID_A
 
         It should send a Protobuf request with:
             - paging controls with a start_index of 2
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/batches?head=d&min=2'
+            - a head property of ID_D
+            - a link property that ends in '/batches?head={}&min=2'.format(ID_D)
             - paging that matches the response, with a previous link
             - a data property that is a list of 2 dicts
-            - and those dicts are full batches with ids 'd' and 'c'
+            - and those dicts are full batches with ids ID_D and ID_C
         """
         paging = Mocks.make_paging_response(2, 4)
-        batches = Mocks.make_batches('b', 'a')
-        self.connection.preset_response(head_id='d', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_B, ID_A)
+        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?min=2')
         controls = Mocks.make_paging_controls(None, start_index=2)
         self.connection.assert_valid_request_sent(paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/batches?head=d&min=2')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/batches?head={}&min=2'.format(ID_D))
         self.assert_has_valid_paging(response, paging,
-                                     previous_link='/batches?head=d&min=0&count=2')
+                                     previous_link='/batches?head={}&min=0&count=2'.format(ID_D))
         self.assert_has_valid_data_list(response, 2)
-        self.assert_batches_well_formed(response['data'], 'b', 'a')
+        self.assert_batches_well_formed(response['data'], ID_B, ID_A)
 
     @unittest_run_loop
     async def test_batch_list_paginated_by_min_id(self):
         """Verifies GET /batches paginated by a min id works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with:
                 * a start_index of 1
                 * total_resources of 4
-                * a previous_id of 'd'
-            - three batches with the ids 'c', 'b' and 'a'
+                * a previous_id of ID_D
+            - three batches with the ids ID_C, ID_B and ID_A
 
         It should send a Protobuf request with:
-            - paging controls with a count of 5, and a start_id of 'c'
+            - paging controls with a count of 5, and a start_id of ID_C
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/batches?head=d&min=c&count=5'
+            - a head property of ID_D
+            - a link property that ends in '/batches?head={}&min={}&count=5'.format(ID_D, ID_C)
             - paging that matches the response, with a previous link
             - a data property that is a list of 3 dicts
-            - and those dicts are full batches with ids 'c', 'b', and 'a'
+            - and those dicts are full batches with ids ID_C, ID_B, and ID_A
         """
-        paging = Mocks.make_paging_response(1, 4, previous_id='d')
-        batches = Mocks.make_batches('c', 'b', 'a')
-        self.connection.preset_response(head_id='d', paging=paging, batches=batches)
+        paging = Mocks.make_paging_response(1, 4, previous_id=ID_D)
+        batches = Mocks.make_batches(ID_C, ID_B, ID_A)
+        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
 
-        response = await self.get_assert_200('/batches?min=c&count=5')
-        controls = Mocks.make_paging_controls(5, start_id='c')
+        response = await self.get_assert_200('/batches?min={}&count=5'.format(ID_C))
+        controls = Mocks.make_paging_controls(5, start_id=ID_C)
         self.connection.assert_valid_request_sent(paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/batches?head=d&min=c&count=5')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/batches?head={}&min={}&count=5'.format(ID_D, ID_C))
         self.assert_has_valid_paging(response, paging,
-                                     previous_link='/batches?head=d&max=d&count=5')
+                                     previous_link='/batches?head={}&max={}&count=5'.format(ID_D, ID_D))
         self.assert_has_valid_data_list(response, 3)
-        self.assert_batches_well_formed(response['data'], 'c', 'b', 'a')
+        self.assert_batches_well_formed(response['data'], ID_C, ID_B, ID_A)
 
     @unittest_run_loop
     async def test_batch_list_paginated_by_max_id(self):
         """Verifies GET /batches paginated by a max id works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with:
                 * a start_index of 1
                 * a total_resources of 4
-                * a previous_id of 'd'
-                * a next_id of 'a'
-            - two batches with the ids 'c' and 'b'
+                * a previous_id of ID_D
+                * a next_id of ID_A
+            - two batches with the ids ID_C and ID_B
 
         It should send a Protobuf request with:
-            - paging controls with a count of 2, and an end_id of 'b'
+            - paging controls with a count of 2, and an end_id of ID_B
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/batches?head=d&max=b&count=2'
+            - a head property of ID_D
+            - a link property that ends in '/batches?head={}&max={}&count=2'.format(ID_D, ID_B)
             - paging that matches the response, with next and previous links
             - a data property that is a list of 2 dicts
-            - and those dicts are full batches with ids 'c' and 'b'
+            - and those dicts are full batches with ids ID_C and ID_B
         """
-        paging = Mocks.make_paging_response(1, 4, previous_id='d', next_id='a')
-        batches = Mocks.make_batches('c', 'b')
-        self.connection.preset_response(head_id='d', paging=paging, batches=batches)
+        paging = Mocks.make_paging_response(1, 4, previous_id=ID_D, next_id=ID_A)
+        batches = Mocks.make_batches(ID_C, ID_B)
+        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
 
-        response = await self.get_assert_200('/batches?max=b&count=2')
-        controls = Mocks.make_paging_controls(2, end_id='b')
+        response = await self.get_assert_200('/batches?max={}&count=2'.format(ID_B))
+        controls = Mocks.make_paging_controls(2, end_id=ID_B)
         self.connection.assert_valid_request_sent(paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/batches?head=d&max=b&count=2')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/batches?head={}&max={}&count=2'.format(ID_D, ID_B))
         self.assert_has_valid_paging(response, paging,
-                                     '/batches?head=d&min=a&count=2',
-                                     '/batches?head=d&max=d&count=2')
+                                     '/batches?head={}&min={}&count=2'.format(ID_D, ID_A),
+                                     '/batches?head={}&max={}&count=2'.format(ID_D, ID_D))
         self.assert_has_valid_data_list(response, 2)
-        self.assert_batches_well_formed(response['data'], 'c', 'b')
+        self.assert_batches_well_formed(response['data'], ID_C, ID_B)
 
     @unittest_run_loop
     async def test_batch_list_paginated_by_max_index(self):
         """Verifies GET /batches paginated by a max index works properly.
 
         It will receive a Protobuf response with:
-            - a head id of 'd'
+            - a head id of ID_D
             - a paging response with a start of 0, and 4 total resources
-            - three batches with the ids 'd', 'c' and 'b'
+            - three batches with the ids ID_D, ID_C and ID_B
 
         It should send a Protobuf request with:
             - paging controls with a count of 3, and an start_index of 0
 
         It should send back a JSON response with:
             - a response status of 200
-            - a head property of 'd'
-            - a link property that ends in '/batches?head=d&min=3&count=7'
+            - a head property of ID_D
+            - a link property that ends in '/batches?head={}&min=3&count=7'.format(ID_D)
             - paging that matches the response, with a next link
             - a data property that is a list of 2 dicts
-            - and those dicts are full batches with ids 'd', 'c', and 'b'
+            - and those dicts are full batches with ids ID_D, ID_C, and ID_B
         """
         paging = Mocks.make_paging_response(0, 4)
-        batches = Mocks.make_batches('d', 'c', 'b')
-        self.connection.preset_response(head_id='d', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_D, ID_C, ID_B)
+        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?max=2&count=7')
         controls = Mocks.make_paging_controls(3, start_index=0)
         self.connection.assert_valid_request_sent(paging=controls)
 
-        self.assert_has_valid_head(response, 'd')
-        self.assert_has_valid_link(response, '/batches?head=d&max=2&count=7')
+        self.assert_has_valid_head(response, ID_D)
+        self.assert_has_valid_link(response, '/batches?head={}&max=2&count=7'.format(ID_D))
         self.assert_has_valid_paging(response, paging,
-                                     '/batches?head=d&min=3&count=7')
+                                     '/batches?head={}&min=3&count=7'.format(ID_D))
         self.assert_has_valid_data_list(response, 3)
-        self.assert_batches_well_formed(response['data'], 'd', 'c', 'b')
+        self.assert_batches_well_formed(response['data'], ID_D, ID_C, ID_B)
 
     @unittest_run_loop
     async def test_batch_list_sorted(self):
         """Verifies GET /batches can send proper sort controls.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
-            - three batches with ids '0', '1', and '2'
+            - three batches with ids ID_A, ID_B, and ID_C
 
         It should send a Protobuf request with:
             - empty paging controls
@@ -510,15 +516,15 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - a link property ending in '/batches?head=2&sort=header_signature'
+            - a head property of ID_C
+            - a link property ending in '/batches?head={}&sort=header_signature'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - and those dicts are full batches with ids '0', '1', and '2'
+            - and those dicts are full batches with ids ID_A, ID_B, and ID_C
         """
         paging = Mocks.make_paging_response(0, 3)
-        batches = Mocks.make_batches('0', '1', '2')
-        self.connection.preset_response(head_id='2', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_A, ID_B, ID_C)
+        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?sort=header_signature')
         page_controls = Mocks.make_paging_controls()
@@ -527,12 +533,12 @@ class BatchListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(response,
-            '/batches?head=2&sort=header_signature')
+            '/batches?head={}&sort=header_signature'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_batches_well_formed(response['data'], '0', '1', '2')
+        self.assert_batches_well_formed(response['data'], ID_A, ID_B, ID_C)
 
     @unittest_run_loop
     async def test_batch_list_with_bad_sort(self):
@@ -555,9 +561,9 @@ class BatchListTests(BaseApiTest):
         """Verifies GET /batches can send proper sort controls with nested keys.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
-            - three batches with ids '0', '1', and '2'
+            - three batches with ids ID_A, ID_B, and ID_C
 
         It should send a Protobuf request with:
             - empty paging controls
@@ -565,15 +571,15 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - a link ending in '/batches?head=2&sort=header.signer_public_key'
+            - a head property of ID_C
+            - a link ending in '/batches?head={}&sort=header.signer_public_key'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - and those dicts are full batches with ids '0', '1', and '2'
+            - and those dicts are full batches with ids ID_A, ID_B, and ID_C
         """
         paging = Mocks.make_paging_response(0, 3)
-        batches = Mocks.make_batches('0', '1', '2')
-        self.connection.preset_response(head_id='2', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_A, ID_B, ID_C)
+        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
 
         response = await self.get_assert_200(
             '/batches?sort=header.signer_public_key')
@@ -583,21 +589,21 @@ class BatchListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(response,
-            '/batches?head=2&sort=header.signer_public_key')
+            '/batches?head={}&sort=header.signer_public_key'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_batches_well_formed(response['data'], '0', '1', '2')
+        self.assert_batches_well_formed(response['data'], ID_A, ID_B, ID_C)
 
     @unittest_run_loop
     async def test_batch_list_sorted_in_reverse(self):
         """Verifies a GET /batches can send proper sort parameters.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
-            - three batches with ids '2', '1', and '0'
+            - three batches with ids ID_C, ID_B, and ID_A
 
         It should send a Protobuf request with:
             - empty paging controls
@@ -605,15 +611,15 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - a link property ending in '/batches?head=2&sort=-header_signature'
+            - a head property of ID_C
+            - a link property ending in '/batches?head={}&sort=-header_signature'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - and those dicts are full batches with ids '2', '1', and '0'
+            - and those dicts are full batches with ids ID_C, ID_B, and ID_A
         """
         paging = Mocks.make_paging_response(0, 3)
-        batches = Mocks.make_batches('2', '1', '0')
-        self.connection.preset_response(head_id='2', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_C, ID_B, ID_A)
+        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?sort=-header_signature')
         page_controls = Mocks.make_paging_controls()
@@ -623,21 +629,21 @@ class BatchListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(response,
-            '/batches?head=2&sort=-header_signature')
+            '/batches?head={}&sort=-header_signature'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_batches_well_formed(response['data'], '2', '1', '0')
+        self.assert_batches_well_formed(response['data'], ID_C, ID_B, ID_A)
 
     @unittest_run_loop
     async def test_batch_list_sorted_by_length(self):
         """Verifies a GET /batches can send proper sort parameters.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
-            - three batches with ids '0', '1', and '2'
+            - three batches with ids ID_A, ID_B, and ID_C
 
         It should send a Protobuf request with:
             - empty paging controls
@@ -645,15 +651,15 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - a link property ending in '/batches?head=2&sort=transactions.length'
+            - a head property of ID_C
+            - a link property ending in '/batches?head={}&sort=transactions.length'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - and those dicts are full batches with ids '0', '1', and '2'
+            - and those dicts are full batches with ids ID_A, ID_B, and ID_C
         """
         paging = Mocks.make_paging_response(0, 3)
-        batches = Mocks.make_batches('0', '1', '2')
-        self.connection.preset_response(head_id='2', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_A, ID_B, ID_C)
+        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?sort=transactions.length')
         page_controls = Mocks.make_paging_controls()
@@ -662,21 +668,21 @@ class BatchListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(response,
-            '/batches?head=2&sort=transactions.length')
+            '/batches?head={}&sort=transactions.length'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_batches_well_formed(response['data'], '0', '1', '2')
+        self.assert_batches_well_formed(response['data'], ID_A, ID_B, ID_C)
 
     @unittest_run_loop
     async def test_batch_list_sorted_by_many_keys(self):
         """Verifies a GET /batches can send proper sort parameters.
 
         It will receive a Protobuf response with:
-            - a head id of '2'
+            - a head id of ID_C
             - a paging response with a start of 0, and 3 total resources
-            - three batches with ids '2', '1', and '0'
+            - three batches with ids ID_C, ID_B, and ID_A
 
         It should send a Protobuf request with:
             - empty paging controls
@@ -686,15 +692,15 @@ class BatchListTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a status of 200
-            - a head property of '2'
-            - link with '/batches?head=2&sort=-header_signature,transactions.length'
+            - a head property of ID_C
+            - link with '/batches?head={}&sort=-header_signature,transactions.length'.format(ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - and those dicts are full batches with ids '2', '1', and '0'
+            - and those dicts are full batches with ids ID_C, ID_B, and ID_A
         """
         paging = Mocks.make_paging_response(0, 3)
-        batches = Mocks.make_batches('2', '1', '0')
-        self.connection.preset_response(head_id='2', paging=paging, batches=batches)
+        batches = Mocks.make_batches(ID_C, ID_B, ID_A)
+        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
 
         response = await self.get_assert_200(
             '/batches?sort=-header_signature,transactions.length')
@@ -705,50 +711,50 @@ class BatchListTests(BaseApiTest):
             paging=page_controls,
             sorting=sorting)
 
-        self.assert_has_valid_head(response, '2')
+        self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(response,
-            '/batches?head=2&sort=-header_signature,transactions.length')
+            '/batches?head={}&sort=-header_signature,transactions.length'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
-        self.assert_batches_well_formed(response['data'], '2', '1', '0')
+        self.assert_batches_well_formed(response['data'], ID_C, ID_B, ID_A)
 
 
 class BatchGetTests(BaseApiTest):
 
-    async def get_application(self, loop):
+    async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_GET_REQUEST,
             client_batch_pb2.ClientBatchGetRequest,
             client_batch_pb2.ClientBatchGetResponse)
 
-        handlers = self.build_handlers(loop, self.connection)
-        return self.build_app(loop, '/batches/{batch_id}', handlers.fetch_batch)
+        handlers = self.build_handlers(self.loop, self.connection)
+        return self.build_app(self.loop, '/batches/{batch_id}', handlers.fetch_batch)
 
     @unittest_run_loop
     async def test_batch_get(self):
         """Verifies a GET /batches/{batch_id} works properly.
 
         It should send a Protobuf request with:
-            - a batch_id property of '1'
+            - a batch_id property of ID_B
 
         It will receive a Protobuf response with:
-            - a batch with an id of '1'
+            - a batch with an id of ID_B
 
         It should send back a JSON response with:
             - a response status of 200
             - no head property
-            - a link property that ends in '/batches/1'
-            - a data property that is a full batch with an id of '1'
+            - a link property that ends in '/batches/{}'.format(ID_B)
+            - a data property that is a full batch with an id of ID_B
         """
-        self.connection.preset_response(batch=Mocks.make_batches('1')[0])
+        self.connection.preset_response(batch=Mocks.make_batches(ID_B)[0])
 
-        response = await self.get_assert_200('/batches/1')
-        self.connection.assert_valid_request_sent(batch_id='1')
+        response = await self.get_assert_200('/batches/{}'.format(ID_B))
+        self.connection.assert_valid_request_sent(batch_id=ID_B)
 
         self.assertNotIn('head', response)
-        self.assert_has_valid_link(response, '/batches/1')
+        self.assert_has_valid_link(response, '/batches/{}'.format(ID_B))
         self.assertIn('data', response)
-        self.assert_batches_well_formed(response['data'], '1')
+        self.assert_batches_well_formed(response['data'], ID_B)
 
     @unittest_run_loop
     async def test_batch_get_with_validator_error(self):
@@ -762,7 +768,7 @@ class BatchGetTests(BaseApiTest):
             - an error property with a code of 10
         """
         self.connection.preset_response(self.status.INTERNAL_ERROR)
-        response = await self.get_assert_status('/batches/1', 500)
+        response = await self.get_assert_status('/batches/{}'.format(ID_B), 500)
 
         self.assert_has_valid_error(response, 10)
 
@@ -778,6 +784,6 @@ class BatchGetTests(BaseApiTest):
             - an error property with a code of 71
         """
         self.connection.preset_response(self.status.NO_RESOURCE)
-        response = await self.get_assert_status('/batches/bad', 404)
+        response = await self.get_assert_status('/batches/{}'.format(ID_D), 404)
 
         self.assert_has_valid_error(response, 71)

@@ -48,7 +48,8 @@ from sawtooth_validator.protobuf import state_context_pb2
 from sawtooth_validator.protobuf import transaction_receipt_pb2
 from sawtooth_validator.protobuf import validator_pb2
 
-import sawtooth_signing as signer
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
 
 from test_scheduler.yaml_scheduler_tester import create_batch
 from test_scheduler.yaml_scheduler_tester import create_transaction
@@ -70,8 +71,10 @@ def create_block(block_num=85,
 
 
 def create_chain(num=10):
-    priv_key = signer.generate_private_key()
-    pub_key = signer.generate_public_key(priv_key)
+    context = create_context('secp256k1')
+    private_key = context.new_random_private_key()
+    crypto_factory = CryptoFactory(context)
+    signer = crypto_factory.new_signer(private_key)
 
     counter = 1
     previous_block_id = "0000000000000000"
@@ -80,14 +83,12 @@ def create_chain(num=10):
         current_block_id = uuid4().hex
         txns = [t[0] for t in [create_transaction(
                 payload=uuid4().hex.encode(),
-                private_key=priv_key,
-                public_key=pub_key) for _ in range(20)]]
+                signer=signer) for _ in range(20)]]
 
         txn_ids = [t.header_signature for t in txns]
         batch = create_batch(
             transactions=txns,
-            public_key=pub_key,
-            private_key=priv_key)
+            signer=signer)
 
         blk_w = create_block(
             counter,
@@ -106,7 +107,7 @@ def create_receipt(txn_id, key_values):
     events = []
     for key, value in key_values:
         event = events_pb2.Event()
-        event.event_type = "block_commit"
+        event.event_type = "sawtooth/block-commit"
         attribute = event.attributes.add()
         attribute.key = key
         attribute.value = value
@@ -118,7 +119,7 @@ def create_receipt(txn_id, key_values):
 
 
 def create_block_commit_subscription():
-    return EventSubscription(event_type="block_commit")
+    return EventSubscription(event_type="sawtooth/block-commit")
 
 
 FILTER_FACTORY = EventFilterFactory()
@@ -156,6 +157,8 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
         """
 
         mock_event_broadcaster = Mock()
+        mock_event_broadcaster.get_latest_known_block_id.return_value = \
+            "0" * 128
         handler = \
             ClientEventsSubscribeValidationHandler(mock_event_broadcaster)
         request = client_event_pb2.ClientEventsSubscribeRequest(
@@ -174,7 +177,7 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
                 event_type="test_event",
                 filters=[
                     FILTER_FACTORY.create(key="test", match_string="test")])],
-            ["0" * 128])
+            "0" * 128)
         self.assertEqual(HandlerStatus.RETURN_AND_PASS, response.status)
         self.assertEqual(client_event_pb2.ClientEventsSubscribeResponse.OK,
                          response.message_out.status)
@@ -271,7 +274,7 @@ class ClientEventsGetRequestHandlerTest(unittest.TestCase):
             request = client_event_pb2.ClientEventsGetRequest()
             request.block_ids.extend([block_id])
             subscription = request.subscriptions.add()
-            subscription.event_type = "block_commit"
+            subscription.event_type = "sawtooth/block-commit"
             event_filter = subscription.filters.add()
             event_filter.key = "address"
             event_filter.match_string = block_id
@@ -330,7 +333,7 @@ class EventBroadcasterTest(unittest.TestCase):
 
     def test_broadcast_events(self):
         """Test that broadcast_events works with a single subscriber to the
-        block_commit event type and that the subscriber does not receive events
+        sawtooth/block-commit event type and that the subscriber does not receive events
         until it is enabled.
         """
         mock_service = Mock()

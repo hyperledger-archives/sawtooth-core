@@ -370,9 +370,7 @@ class TestSchedulersWithYaml(unittest.TestCase):
             " must be the same as calculated by the tester".format(name))
 
     def setUp(self):
-        self._context_manager = ContextManager(
-            dict_database.DictDatabase(),
-            state_delta_store=Mock())
+        self._context_manager = ContextManager(dict_database.DictDatabase())
 
     def tearDown(self):
         self._context_manager.stop()

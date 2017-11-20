@@ -133,6 +133,48 @@ class GossipMessageHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
 
+class GossipMessageDuplicateHandler(Handler):
+    def __init__(self, completer, has_block, has_batch):
+        self._completer = completer
+        self._has_block = has_block
+        self._has_batch = has_batch
+
+    def handle(self, connection_id, message_content):
+        gossip_message = GossipMessage()
+        gossip_message.ParseFromString(message_content)
+        if gossip_message.content_type == gossip_message.BLOCK:
+            block = Block()
+            block.ParseFromString(gossip_message.content)
+            has_block = False
+            if self._completer.get_block(block.header_signature) is not None:
+                has_block = True
+
+            if not has_block and self._has_block(block.header_signature):
+                has_block = True
+
+            if has_block:
+                LOGGER.debug("Drop duplicate block: %s",
+                             block.header_signature)
+                return HandlerResult(HandlerStatus.DROP)
+
+        if gossip_message.content_type == gossip_message.BATCH:
+            batch = Batch()
+            batch.ParseFromString(gossip_message.content)
+            has_batch = False
+            if self._completer.get_batch(batch.header_signature) is not None:
+                has_batch = True
+
+            if not has_batch and self._has_batch(batch.header_signature):
+                has_batch = True
+
+            if has_batch:
+                LOGGER.debug("Drop duplicate batch: %s",
+                             batch.header_signature)
+                return HandlerResult(HandlerStatus.DROP)
+
+        return HandlerResult(HandlerStatus.PASS)
+
+
 class GossipBlockResponseHandler(Handler):
     def handle(self, connection_id, message_content):
         ack = NetworkAcknowledgement()
@@ -169,13 +211,13 @@ class GossipBroadcastHandler(Handler):
         exclude = [connection_id]
         gossip_message = GossipMessage()
         gossip_message.ParseFromString(message_content)
-        if gossip_message.content_type == "BATCH":
+        if gossip_message.content_type == GossipMessage.BATCH:
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
             # If we already have this batch, don't forward it
             if not self._completer.get_batch(batch.header_signature):
                 self._gossip.broadcast_batch(batch, exclude)
-        elif gossip_message.content_type == "BLOCK":
+        elif gossip_message.content_type == GossipMessage.BLOCK:
             block = Block()
             block.ParseFromString(gossip_message.content)
             # If we already have this block, don't forward it

@@ -83,6 +83,7 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
                 LOGGER.debug(
                     '(%s) Executing task %s', self._name, task_details)
 
+            return_value = None
             try:
                 return_value = fn(*args, **kwargs)
             # pylint: disable=broad-except

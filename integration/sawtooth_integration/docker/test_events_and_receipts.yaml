@@ -48,8 +48,8 @@ services:
       - 8800
     # start the validator with an empty genesis batch
     command: "bash -c \"\
-        sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawadm keygen && \
+        sawadm genesis && \
         sawtooth-validator --endpoint tcp://validator:8800 -v \
             --bind component:tcp://eth0:4004 \
             --bind network:tcp://eth0:8800 \
@@ -62,10 +62,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
+      - 8008
     depends_on:
       - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   test-events-and-receipts:
@@ -73,7 +73,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - validator
       - rest-api

@@ -107,12 +107,13 @@ message SmallbankTransactionPayload {
     }
 
     enum PayloadType {
-        CREATE_ACCOUNT = 0;
-        DEPOSIT_CHECKING = 1;
-        WRITE_CHECK = 2;
-        TRANSACT_SAVINGS = 3;
-        SEND_PAYMENT = 4;
-        AMALGAMATE = 5;
+        PAYLOAD_TYPE_UNSET = 0;
+        CREATE_ACCOUNT = 1;
+        DEPOSIT_CHECKING = 2;
+        WRITE_CHECK = 3;
+        TRANSACT_SAVINGS = 4;
+        SEND_PAYMENT = 5;
+        AMALGAMATE = 6;
     }
 
     PayloadType payload_type = 1;
@@ -123,4 +124,3 @@ message SmallbankTransactionPayload {
     SendPaymentTransactionData send_payment = 6;
     AmalgamateTransactionData amalgamate = 7;
 }
-

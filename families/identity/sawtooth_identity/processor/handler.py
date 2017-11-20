@@ -21,7 +21,6 @@ from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.messaging.future import FutureTimeoutError
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
-from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_sdk.protobuf.setting_pb2 import Setting
 
 from sawtooth_identity.protobuf.identity_pb2 import Policy
@@ -120,8 +119,7 @@ class IdentityTransactionHandler(TransactionHandler):
 
 
 def _check_allowed_transactor(transaction, context):
-    header = TransactionHeader()
-    header.ParseFromString(transaction.header)
+    header = transaction.header
 
     entries_list = _get_data(ALLOWED_SIGNER_ADDRESS, context)
     if not entries_list:
@@ -188,7 +186,7 @@ def _set_policy(data, context):
         raise InternalError('Unable to save policy {}'.format(new_policy.name))
 
     context.add_event(
-        event_type="identity_update",
+        event_type="identity/update",
         attributes=[("updated", new_policy.name)])
     LOGGER.debug("Set policy : \n%s", new_policy)
 
@@ -246,7 +244,7 @@ def _set_role(data, context):
         raise InternalError('Unable to save role {}'.format(role.name))
 
     context.add_event(
-        event_type="identity_update",
+        event_type="identity/update",
         attributes=[("updated", role.name)])
     LOGGER.debug("Set role: \n%s", role)
 

@@ -32,8 +32,6 @@ import zmq.auth
 from zmq.auth.asyncio import AsyncioAuthenticator
 import zmq.asyncio
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.concurrent.thread import InstrumentedThread
@@ -612,8 +610,7 @@ class Interconnect(object):
                  max_future_callback_workers=10,
                  roles=None,
                  authorize=False,
-                 public_key=None,
-                 priv_key=None,
+                 signer=None,
                  metrics_registry=None
                  ):
         """
@@ -631,6 +628,7 @@ class Interconnect(object):
             heartbeat (bool): Whether or not to send ping messages.
             max_future_callback_workers (int): max number of workers for future
                 callbacks, defaults to 10
+            signer (:obj:`Signer`): cryptographic signer for the validator
         """
         self._endpoint = endpoint
         self._public_endpoint = public_endpoint
@@ -663,8 +661,7 @@ class Interconnect(object):
                     self._roles[role] = AuthorizationType.TRUST
 
         self._authorize = authorize
-        self._public_key = public_key
-        self._priv_key = priv_key
+        self._signer = signer
 
         self._send_receive_thread = _SendReceive(
             "ServerThread",
@@ -788,12 +785,13 @@ class Interconnect(object):
         the validator to be authorized by the incoming connection.
         """
         connect_message = ConnectionRequest(endpoint=self._public_endpoint)
-        self.send(validator_pb2.Message.NETWORK_CONNECT,
-                  connect_message.SerializeToString(),
-                  connection_id,
-                  callback=partial(self._inbound_connection_request_callback,
-                                   connection_id=connection_id
-                                   ))
+        self._safe_send(validator_pb2.Message.NETWORK_CONNECT,
+                        connect_message.SerializeToString(),
+                        connection_id,
+                        callback=partial(
+                            self._inbound_connection_request_callback,
+                            connection_id=connection_id
+                            ))
 
     def _connect_callback(self, request, result,
                           connection=None):
@@ -821,7 +819,7 @@ class Interconnect(object):
                 if auth_type["trust"]:
                     auth_trust_request = AuthorizationTrustRequest(
                         roles=auth_type["trust"],
-                        public_key=self._public_key)
+                        public_key=self._signer.get_public_key().as_hex())
                     connection.send(
                         validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
                         auth_trust_request.SerializeToString()
@@ -857,8 +855,8 @@ class Interconnect(object):
         if auth_type["trust"]:
             auth_trust_request = AuthorizationTrustRequest(
                 roles=[RoleType.Value("NETWORK")],
-                public_key=self._public_key)
-            self.send(
+                public_key=self._signer.get_public_key().as_hex())
+            self._safe_send(
                 validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
                 auth_trust_request.SerializeToString(),
                 connection_id
@@ -866,7 +864,7 @@ class Interconnect(object):
 
         if auth_type["challenge"]:
             auth_challenge_request = AuthorizationChallengeRequest()
-            self.send(
+            self._safe_send(
                 validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
                 auth_challenge_request.SerializeToString(),
                 connection_id,
@@ -886,11 +884,10 @@ class Interconnect(object):
         auth_challenge_response = AuthorizationChallengeResponse()
         auth_challenge_response.ParseFromString(result.content)
         payload = auth_challenge_response.payload
-        signature = signing.sign(payload, self._priv_key)
+        signature = self._signer.sign(payload)
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
-            public_key=self._public_key,
-            payload=payload,
+            public_key=self._signer.get_public_key().as_hex(),
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
@@ -908,19 +905,17 @@ class Interconnect(object):
         auth_challenge_response = AuthorizationChallengeResponse()
         auth_challenge_response.ParseFromString(result.content)
         payload = auth_challenge_response.payload
-        signature = signing.sign(payload, self._priv_key)
+        signature = self._signer.sign(payload)
 
         auth_challenge_submit = AuthorizationChallengeSubmit(
-            public_key=self._public_key,
-            payload=payload,
+            public_key=self._signer.get_public_key().as_hex(),
             signature=signature,
             roles=[RoleType.Value("NETWORK")])
 
-        self.send(
+        self._safe_send(
             validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
             auth_challenge_submit.SerializeToString(),
-            connection_id
-            )
+            connection_id)
 
     def send(self, message_type, data, connection_id, callback=None):
         """
@@ -1141,6 +1136,17 @@ class Interconnect(object):
                 ConnectionType.OUTBOUND_CONNECTION:
             return True
         return False
+
+    def _safe_send(self, message_type, message, connection_id, callback=None):
+        try:
+            self.send(
+                message_type,
+                message,
+                connection_id,
+                callback=callback
+                )
+        except ValueError:
+            LOGGER.debug("Connection disconnected: %s", connection_id)
 
 
 class OutboundConnection(object):

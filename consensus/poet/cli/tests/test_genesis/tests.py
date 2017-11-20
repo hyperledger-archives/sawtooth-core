@@ -19,7 +19,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
 
 from sawtooth_poet_cli.main import main
 import sawtooth_validator.protobuf.batch_pb2 as batch_pb
@@ -40,9 +40,9 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
 
-    @patch('sawtooth_poet_cli.genesis.PoetKeyStateStore')
-    @patch('sawtooth_poet_cli.genesis.config.get_data_dir')
-    @patch('sawtooth_poet_cli.genesis.config.get_key_dir')
+    @patch('sawtooth_poet_cli.registration.PoetKeyStateStore')
+    @patch('sawtooth_poet_cli.registration.config.get_data_dir')
+    @patch('sawtooth_poet_cli.registration.config.get_key_dir')
     def test_run_simulator_genesis(self,
                                    get_key_dir_fn,
                                    get_data_dir_fn,
@@ -50,7 +50,8 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         """Test generating a Validator Registry transaction, which is written
         to a file.
 
-        This test executes the `poet genesis` command. The expected output is:
+        This test executes the `poet registration create` command. The
+        expected output is:
 
         - a BatchList written to a file at <temp_dir>/poet_genesis.batch
         - the serialized sealed signup data is written to the key state store
@@ -62,7 +63,7 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         public_key = self._create_key()
 
         main('poet',
-             args=['genesis',
+             args=['registration', 'create',
                    '-o', os.path.join(self._temp_dir, 'poet-genesis.batch')])
 
         self._assert_validator_transaction(public_key, 'poet-genesis.batch')
@@ -100,9 +101,10 @@ class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
         self.assertTrue(poet_public_key in self._store)
 
     def _create_key(self, key_name='validator.priv'):
-        private_key = signing.generate_private_key()
+        context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
         priv_file = os.path.join(self._temp_dir, key_name)
         with open(priv_file, 'w') as priv_fd:
-            priv_fd.write(private_key)
+            priv_fd.write(private_key.as_hex())
 
-        return signing.generate_public_key(private_key)
+        return context.get_public_key(private_key).as_hex()

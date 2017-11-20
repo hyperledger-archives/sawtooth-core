@@ -32,11 +32,10 @@ typedef std::shared_ptr<std::string> StringPtr;
 // The transaction data for a Transaction Processing request.
 class Transaction final {
  public:
-    Transaction(StringPtr header, StringPtr payload, StringPtr signature):
+    Transaction(TransactionHeader* header, StringPtr payload, StringPtr signature):
             payload_(payload), signature_(signature) {
-        this->header_.ParseFromArray(header->c_str(),
-            header->length());
     }
+
     Transaction (const Transaction&) = delete;
     Transaction (const Transaction&&) = delete;
     Transaction& operator= (const Transaction&) = delete;

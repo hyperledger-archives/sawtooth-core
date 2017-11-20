@@ -133,9 +133,9 @@ func (self *Context) GetState(addresses []string) (map[string][]byte, error) {
 //
 func (self *Context) SetState(pairs map[string][]byte) ([]string, error) {
 	// Construct the message
-	entries := make([]*state_context_pb2.Entry, 0, len(pairs))
+	entries := make([]*state_context_pb2.TpStateEntry, 0, len(pairs))
 	for address, data := range pairs {
-		entries = append(entries, &state_context_pb2.Entry{
+		entries = append(entries, &state_context_pb2.TpStateEntry{
 			Address: address,
 			Data:    data,
 		})
@@ -192,19 +192,74 @@ func (self *Context) SetState(pairs map[string][]byte) ([]string, error) {
 	return response.GetAddresses(), nil
 }
 
-func (self *Context) Get(addresses []string) (map[string][]byte, error) {
-	return self.GetState(addresses)
+// DeleteState requests that each address in the validator state be
+// deleted from state. A slice of addresses deleted is returned or an
+// error if there was a problem deleting the addresses. For example:
+//
+//     responses, err := context.DeleteState(dataMap)
+//     if err != nil {
+//         fmt.Println("Error deleting addresses!")
+//     }
+//     delete, ok := results[address]
+//     if !ok {
+//         fmt.Prinln("Address was not deleted!")
+//     }
+//
+func (self *Context) DeleteState(addresses []string) ([]string, error) {
+	// Construct the message
+	request := &state_context_pb2.TpStateDeleteRequest{
+		ContextId: self.contextId,
+		Addresses: addresses,
+	}
+
+	bytes, err := proto.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to marshal TpStateDeleteRequest: %v", err)
+	}
+
+	// Send the message and get the response
+	corrId, err := self.connection.SendNewMsg(
+		validator_pb2.Message_TP_STATE_DELETE_REQUEST, bytes,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to send TpStateDeleteRequest: %v", err)
+	}
+
+	_, msg, err := self.connection.RecvMsgWithId(corrId)
+	if msg.GetCorrelationId() != corrId {
+		return nil, fmt.Errorf(
+			"Expected message with correlation id %v but got %v",
+			corrId, msg.GetCorrelationId(),
+		)
+	}
+
+	if msg.GetMessageType() != validator_pb2.Message_TP_STATE_DELETE_RESPONSE {
+		return nil, fmt.Errorf(
+			"Expected TpStateDeleteResponse but got %v", msg.GetMessageType(),
+		)
+	}
+
+	// Parse the result
+	response := &state_context_pb2.TpStateDeleteResponse{}
+	err = proto.Unmarshal(msg.GetContent(), response)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal TpStatedDeleteResponse: %v", err)
+	}
+
+	// Use a switch in case new Status values are added
+	switch response.Status {
+	case state_context_pb2.TpStateDeleteResponse_AUTHORIZATION_ERROR:
+		return nil, &AuthorizationException{Msg: fmt.Sprint("Tried to get unauthorized address: ", addresses)}
+	}
+
+	return response.GetAddresses(), nil
 }
 
-func (self *Context) Set(pairs map[string][]byte) ([]string, error) {
-	return self.SetState(pairs)
-}
-
-func (self *Context) AddReceiptData(data_type string, data []byte) error {
+// Add a blob to the execution result for this transaction.
+func (self *Context) AddReceiptData(data []byte) error {
 	// Append the data to the transaction receipt and set the type
 	request := &state_context_pb2.TpReceiptAddDataRequest{
 		ContextId: self.contextId,
-		DataType:  data_type,
 		Data:      data,
 	}
 	bytes, err := proto.Marshal(request)
@@ -250,6 +305,7 @@ func (self *Context) AddReceiptData(data_type string, data []byte) error {
 	return nil
 }
 
+// Add a new event to the execution result for this transaction.
 func (self *Context) AddEvent(event_type string, attributes []Attribute, event_data []byte) error {
 	event_attributes := make([]*events_pb2.Event_Attribute, 0, len(attributes))
 	for _, attribute := range attributes {

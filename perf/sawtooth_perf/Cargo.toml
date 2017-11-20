@@ -6,11 +6,7 @@ authors = ["Intel Corporation"]
 [dependencies]
 sawtooth_sdk = { path = "../../sdk/rust" }
 protobuf = "1.4.1"
-clap = "2.26.0"
 futures = "0.1"
 hyper = "0.11"
 tokio-core = "0.1"
 tokio-timer = "0.1"
-yaml-rust = "0.3.5"
-rand = "0.3.16"
-rust-crypto = "0.2.36"

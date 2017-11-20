@@ -17,7 +17,9 @@ import os
 import time
 import netifaces
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -49,6 +51,7 @@ from sawtooth_validator.journal.timed_cache import TimedCache
 
 LOGGER = logging.getLogger(__name__)
 PAYLOAD_LENGTH = 64
+AUTHORIZATION_CACHE_TIMEOUT = 300
 
 
 class ConnectHandler(Handler):
@@ -324,6 +327,11 @@ class AuthorizationTrustRequestHandler(Handler):
 class AuthorizationChallengeRequestHandler(Handler):
     def __init__(self, network):
         self._network = network
+        self._challenge_payload_cache = TimedCache(
+            keep_time=AUTHORIZATION_CACHE_TIMEOUT)
+
+    def get_challenge_payload_cache(self):
+        return self._challenge_payload_cache
 
     def handle(self, connection_id, message_content):
         """
@@ -350,6 +358,7 @@ class AuthorizationChallengeRequestHandler(Handler):
                 .AUTHORIZATION_VIOLATION)
 
         random_payload = os.urandom(PAYLOAD_LENGTH)
+        self._challenge_payload_cache[connection_id] = random_payload
         auth_challenge_response = AuthorizationChallengeResponse(
             payload=random_payload)
 
@@ -365,10 +374,20 @@ class AuthorizationChallengeRequestHandler(Handler):
 
 
 class AuthorizationChallengeSubmitHandler(Handler):
-    def __init__(self, network, permission_verifier, gossip):
+    def __init__(self, network, permission_verifier, gossip, cache):
         self._network = network
         self._permission_verifier = permission_verifier
         self._gossip = gossip
+        self._challenge_payload_cache = cache
+
+    @staticmethod
+    def _network_violation_result():
+        violation = AuthorizationViolation(
+            violation=RoleType.Value("NETWORK"))
+        return HandlerResult(
+            HandlerStatus.RETURN_AND_CLOSE,
+            message_out=violation,
+            message_type=validator_pb2.Message.AUTHORIZATION_VIOLATION)
 
     def handle(self, connection_id, message_content):
         """
@@ -391,29 +410,38 @@ class AuthorizationChallengeSubmitHandler(Handler):
                          " AuthorizationChallengeRequest, Remove connection to"
                          "%s",
                          connection_id)
-            violation = AuthorizationViolation(
-                violation=RoleType.Value("NETWORK"))
-            return HandlerResult(
-                HandlerStatus.RETURN_AND_CLOSE,
-                message_out=violation,
-                message_type=validator_pb2.Message
-                .AUTHORIZATION_VIOLATION)
+            return AuthorizationChallengeSubmitHandler \
+                ._network_violation_result()
 
         auth_challenge_submit = AuthorizationChallengeSubmit()
         auth_challenge_submit.ParseFromString(message_content)
 
-        if not signing.verify(auth_challenge_submit.payload,
-                              auth_challenge_submit.signature,
-                              auth_challenge_submit.public_key):
+        try:
+            payload = self._challenge_payload_cache[connection_id]
+        except KeyError:
+            LOGGER.debug("Connection's challenge payload expired before a"
+                         "response was received. %s", connection_id)
+            return AuthorizationChallengeSubmitHandler \
+                ._network_violation_result()
+
+        context = create_context('secp256k1')
+        try:
+            public_key = Secp256k1PublicKey.from_hex(
+                auth_challenge_submit.public_key)
+        except ParseError:
+            LOGGER.warning('Authorization Challenge Request cannot be '
+                           'verified. Invalid public key %s',
+                           auth_challenge_submit.public_key)
+            return AuthorizationChallengeSubmitHandler \
+                ._network_violation_result()
+
+        if not context.verify(auth_challenge_submit.signature,
+                              payload,
+                              public_key):
             LOGGER.warning("Signature was not able to be verifed. Remove "
                            "connection to %s", connection_id)
-            violation = AuthorizationViolation(
-                violation=RoleType.Value("NETWORK"))
-            return HandlerResult(
-                HandlerStatus.RETURN_AND_CLOSE,
-                message_out=violation,
-                message_type=validator_pb2.Message
-                .AUTHORIZATION_VIOLATION)
+            return AuthorizationChallengeSubmitHandler \
+                ._network_violation_result()
 
         roles = self._network.roles
         for role in auth_challenge_submit.roles:
@@ -424,13 +452,9 @@ class AuthorizationChallengeSubmitHandler(Handler):
                     permitted = self._permission_verifier.check_network_role(
                         auth_challenge_submit.public_key)
                 if not permitted:
-                    violation = AuthorizationViolation(
-                        violation=RoleType.Value("NETWORK"))
-                    return HandlerResult(
-                        HandlerStatus.RETURN_AND_CLOSE,
-                        message_out=violation,
-                        message_type=validator_pb2.Message
-                        .AUTHORIZATION_VIOLATION)
+                    return AuthorizationChallengeSubmitHandler \
+                            ._network_violation_result()
+
         self._network.update_connection_public_key(
             connection_id,
             auth_challenge_submit.public_key)

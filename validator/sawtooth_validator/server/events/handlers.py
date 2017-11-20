@@ -15,6 +15,7 @@
 
 import logging
 
+from sawtooth_validator.exceptions import PossibleForkDetectedError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -37,6 +38,7 @@ from sawtooth_validator.protobuf.client_event_pb2 \
 from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 from sawtooth_validator.server.events.subscription import InvalidFilterError
+from sawtooth_validator.server.events.broadcaster import NoKnownBlockError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -79,8 +81,24 @@ class ClientEventsSubscribeValidationHandler(Handler):
                 message_out=ack,
                 message_type=self._msg_type)
 
+        last_known_block_ids = list(request.last_known_block_ids)
+
+        last_known_block_id = None
+        if last_known_block_ids:
+            try:
+                last_known_block_id = \
+                    self._event_broadcaster.get_latest_known_block_id(
+                        last_known_block_ids)
+            except NoKnownBlockError as err:
+                ack.status = ack.UNKNOWN_BLOCK
+                ack.response_message = str(err)
+                return HandlerResult(
+                    HandlerStatus.RETURN,
+                    message_out=ack,
+                    message_type=self._msg_type)
+
         self._event_broadcaster.add_subscriber(
-            connection_id, subscriptions, request.last_known_block_ids)
+            connection_id, subscriptions, last_known_block_id)
 
         ack.status = ack.OK
         return HandlerResult(
@@ -99,6 +117,12 @@ class ClientEventsSubscribeHandler(Handler):
         self._event_broadcaster = event_broadcaster
 
     def handle(self, connection_id, message_content):
+        # Attempt to catch the subscriber up with events
+        try:
+            self._event_broadcaster.catchup_subscriber(connection_id)
+        except (PossibleForkDetectedError, NoKnownBlockError, KeyError) as err:
+            LOGGER.warning("Failed to catchup subscriber: %s", err)
+
         self._event_broadcaster.enable_subscriber(connection_id)
         return HandlerResult(HandlerStatus.PASS)
 

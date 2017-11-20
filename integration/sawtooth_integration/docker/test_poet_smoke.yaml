@@ -25,11 +25,11 @@ services:
       - 4004
       - 8800
     command: "bash -c \"\
-        sawtooth admin keygen --force && \
-        sawtooth config genesis \
+        sawadm keygen --force && \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth config proposal create \
+        sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=poet \
           sawtooth.poet.report_public_key_pem=\
@@ -37,8 +37,8 @@ services:
           sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
           sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
           -o config.batch && \
-        poet genesis -o poet.batch && \
-        sawtooth admin genesis \
+        poet registration create -o poet.batch && \
+        sawadm genesis \
           config-genesis.batch config.batch poet.batch && \
         sawtooth-validator -v \
             --endpoint tcp://validator-0:8800 \
@@ -61,7 +61,7 @@ services:
     depends_on:
       - validator-0
     command: "bash -c \"\
-        sawtooth admin keygen --force && \
+        sawadm keygen --force && \
         sawtooth-validator -v \
           --endpoint tcp://validator-1:8800 \
           --peers tcp://validator-0:8800 \
@@ -85,7 +85,7 @@ services:
       - validator-0
       - validator-1
     command: "bash -c \"\
-        sawtooth admin keygen --force && \
+        sawadm keygen --force && \
         sawtooth-validator -v \
           --endpoint tcp://validator-2:8800 \
           --peers tcp://validator-0:8800,tcp://validator-1:8800
@@ -104,8 +104,8 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
-    command: sawtooth-rest-api -v --connect tcp://validator-0:4004 --bind rest-api-0:8080
+      - 8008
+    command: sawtooth-rest-api -v --connect tcp://validator-0:4004 --bind rest-api-0:8008
     stop_signal: SIGKILL
 
   rest-api-1:
@@ -114,8 +114,8 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
-    command: sawtooth-rest-api -v --connect tcp://validator-1:4004 --bind rest-api-1:8080
+      - 8008
+    command: sawtooth-rest-api -v --connect tcp://validator-1:4004 --bind rest-api-1:8008
     stop_signal: SIGKILL
 
   rest-api-2:
@@ -124,8 +124,8 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
-    command: sawtooth-rest-api -v --connect tcp://validator-2:4004 --bind rest-api-2:8080
+      - 8008
+    command: sawtooth-rest-api -v --connect tcp://validator-2:4004 --bind rest-api-2:8008
     stop_signal: SIGKILL
 
   intkey-tp-0:
@@ -220,7 +220,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - rest-api-0
       - rest-api-1

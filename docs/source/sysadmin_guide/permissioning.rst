@@ -34,6 +34,8 @@ the transactor permissions have been updated to no longer allow a batch signer
 or a transaction signer that is being included in a block. For this reason, the
 allowed transactor roles will also need to be checked on block validation.
 
+.. _Off-Chain_Transactor_Permissioning:
+
 Off-Chain Transactor Permissioning
 ----------------------------------
 Validators can be locally configured by creating a validator.toml file and
@@ -89,7 +91,7 @@ roles and policies.
 
 .. code-block:: console
 
-  $ sawtooth config proposal create sawtooth.identity.allowed_keys=02b2be336a6ada8f96881cd55fd848c10386d99d0a05e1778d2fc1c60c2783c2f4
+  $ sawset proposal create sawtooth.identity.allowed_keys=02b2be336a6ada8f96881cd55fd848c10386d99d0a05e1778d2fc1c60c2783c2f4
 
 Once your signer key is stored in the setting, the identity cli can be used to
 set and update roles and policies. Make sure that the identity transaction

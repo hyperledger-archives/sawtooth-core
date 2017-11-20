@@ -45,16 +45,22 @@ message PingResponse{
 }
 
 message GossipMessage {
+    enum ContentType{
+        CONTENT_TYPE_UNSET = 0;
+        BLOCK = 1;
+        BATCH = 2;
+    }
     bytes content = 1;
-    string content_type = 2;
+    ContentType content_type = 2;
 }
 
 // A response sent from the validator to the peer acknowledging message
 // receipt
 message NetworkAcknowledgement {
     enum Status {
-        OK = 0;
-        ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
     }
 
     Status status = 1;

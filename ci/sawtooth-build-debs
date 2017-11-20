@@ -104,4 +104,4 @@ WORKDIR /project/sawtooth-core
 
 # Build sawtooth debs
 ENV VERSION=AUTO_STRICT
-ENTRYPOINT ./bin/build_debs
+ENTRYPOINT ["./bin/build_debs"]

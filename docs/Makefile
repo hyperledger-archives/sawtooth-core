@@ -8,9 +8,12 @@ SPHINXAPIDOC  = sphinx-apidoc
 PAPER         =
 BUILDDIR      = build
 
+HTMLDIR       = $(BUILDDIR)/html
+SAWTOOTH      = ..
+
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
-$(error The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)
+$(error "The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/")
 endif
 
 # Internal variables.
@@ -20,7 +23,7 @@ ALLSPHINXOPTS   = -W -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) 
 # the i18n builder cannot share the environment and doctrees with the others
 I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
 
-.PHONY: help clean templates html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest coverage gettext cli
+.PHONY: help clean templates html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest coverage gettext cli python go javascript
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -54,17 +57,34 @@ clean:
 
 templates:
 	@mkdir -p source/_autogen
-	@../bin/make_templated_docs
+	@$(SAWTOOTH)/bin/make_templated_docs
 
 cli:
-	../bin/generate_cli_output
+	$(SAWTOOTH)/bin/generate_cli_output
 
-html: templates cli
+python:
+    # pydoc doesn't allow specifying an output directory, so make the
+    # files first and then move them.
+	mkdir -p $(HTMLDIR)/python_sdk/processor
+	pydoc3 -w sawtooth_sdk.processor.core
+	pydoc3 -w sawtooth_sdk.processor.context
+	pydoc3 -w sawtooth_sdk.processor.handler
+	mv sawtooth_sdk.processor*.html $(HTMLDIR)/python_sdk/processor
+
+go:
+	mkdir -p $(HTMLDIR)/go_sdk/
+	godoc -html sawtooth_sdk/processor > $(HTMLDIR)/go_sdk/processor.html
+
+javascript:
+	mkdir -p $(HTMLDIR)/javascript_sdk/
+	jsdoc $(SAWTOOTH)/sdk/javascript/processor/ -d $(HTMLDIR)/javascript_sdk/processor/
+
+html: templates cli python go javascript
 	@mkdir -p source/_static
-	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(HTMLDIR)
 	@echo
-	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
-	@cp ../docker/compose/sawtooth-default.yaml $(BUILDDIR)/html/app_developers_guide/sawtooth-default.yaml
+	@echo "Build finished. The HTML pages are in $(HTMLDIR)."
+	@cp $(SAWTOOTH)/docker/compose/sawtooth-default.yaml $(HTMLDIR)/app_developers_guide/sawtooth-default.yaml
 
 dirhtml: templates cli
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) $(BUILDDIR)/dirhtml

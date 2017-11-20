@@ -1,0 +1,12 @@
+[Unit]
+Description=Sawtooth TP Block Info
+After=network.target
+
+[Service]
+User=sawtooth
+Group=sawtooth
+ExecStart=/usr/bin/block-info-tp
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

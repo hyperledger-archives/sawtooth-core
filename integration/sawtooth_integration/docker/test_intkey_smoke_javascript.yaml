@@ -46,11 +46,11 @@ services:
     expose:
       - 4004
     command: "bash -c \"\
-        sawtooth admin keygen && \
-        sawtooth config genesis \
+        sawadm keygen && \
+        sawset genesis \
           -k /etc/sawtooth/keys/validator.priv \
           -o config-genesis.batch && \
-        sawtooth admin genesis config-genesis.batch && \
+        sawadm genesis config-genesis.batch && \
         sawtooth-validator -v \
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
@@ -64,10 +64,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
+      - 8008
     depends_on:
       - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   test-intkey-smoke-javascript:
@@ -75,7 +75,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - validator
       - rest-api

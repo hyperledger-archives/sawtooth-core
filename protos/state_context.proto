@@ -21,7 +21,7 @@ option go_package = "state_context_pb2";
 import "events.proto";
 
 // An entry in the State
-message Entry {
+message TpStateEntry {
     string address = 1;
     bytes data = 2;
 }
@@ -36,25 +36,27 @@ message TpStateGetRequest {
 // A response from the contextmanager/validator with a series of State entries
 message TpStateGetResponse {
     enum Status {
-        OK = 0;
-        AUTHORIZATION_ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        AUTHORIZATION_ERROR = 2;
     }
 
-    repeated Entry entries = 1;
+    repeated TpStateEntry entries = 1;
     Status status = 2;
 }
 
 // A request from the handler/tp to put entries in the state of a context
 message TpStateSetRequest {
     string context_id = 1;
-    repeated Entry entries = 2;
+    repeated TpStateEntry entries = 2;
 }
 
 // A response from the contextmanager/validator with the addresses that were set
 message TpStateSetResponse {
   enum Status {
-      OK = 0;
-      AUTHORIZATION_ERROR = 1;
+      STATUS_UNSET = 0;
+      OK = 1;
+      AUTHORIZATION_ERROR = 2;
   }
 
     repeated string addresses = 1;
@@ -70,8 +72,9 @@ message TpStateDeleteRequest {
 // A response form the contextmanager/validator with the addresses that were deleted
 message TpStateDeleteResponse {
     enum Status {
-        OK = 0;
-        AUTHORIZATION_ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        AUTHORIZATION_ERROR = 2;
     }
 
     repeated string addresses = 1;
@@ -81,9 +84,8 @@ message TpStateDeleteResponse {
 // The request from the transaction processor to the validator append data
 // to a transaction receipt
 message TpReceiptAddDataRequest {
-    // The context id that references a context in the contextmanager
+    // The context id that references a context in the context manager
     string context_id = 1;
-    string data_type = 2;
     bytes data = 3;
 }
 
@@ -91,8 +93,9 @@ message TpReceiptAddDataRequest {
 // data has been appended to a transaction receipt
 message TpReceiptAddDataResponse {
     enum Status {
-        OK = 0;
-        ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
     }
 
     Status status = 2;
@@ -105,8 +108,9 @@ message TpEventAddRequest {
 
 message TpEventAddResponse {
     enum Status {
-      OK = 0;
-      ERROR = 1;
+      STATUS_UNSET = 0;
+      OK = 1;
+      ERROR = 2;
     }
     Status status = 2;
 }

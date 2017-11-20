@@ -19,8 +19,6 @@ import hashlib
 import time
 import json
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
@@ -178,8 +176,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 payload_sha512=hashlib.sha512(serialized).hexdigest(),
                 batcher_public_key=block_header.signer_public_key,
                 nonce=time.time().hex().encode()).SerializeToString()
-        signature = \
-            signing.sign(header, self._batch_publisher.identity_signing_key)
+
+        signature = self._batch_publisher.identity_signer.sign(header)
 
         transaction = \
             txn_pb.Transaction(

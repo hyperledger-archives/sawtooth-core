@@ -68,18 +68,18 @@ services:
     container_name: sawtooth-rest-api-default
     expose:
       - 4004
-      - 8080
+      - 8008
     ports:
-      - "8080:8080"
+      - "8008:8008"
     depends_on:
       - validator
-    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8080
+    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8008
 
   client:
     image: hyperledger/sawtooth-all:latest
     container_name: sawtooth-client-default
     expose:
-      - 8080
+      - 8008
       - 4004
     depends_on:
       - rest-api

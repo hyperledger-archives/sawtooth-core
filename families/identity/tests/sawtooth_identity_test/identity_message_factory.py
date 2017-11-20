@@ -35,13 +35,12 @@ LOGGER = logging.getLogger(__name__)
 
 class IdentityMessageFactory(object):
 
-    def __init__(self, private=None, public=None):
+    def __init__(self, signer=None):
         self._factory = MessageFactory(
             family_name="sawtooth_identity",
             family_version="1.0",
             namespace="00001d",
-            private=private,
-            public=public
+            signer=signer,
         )
 
     @property
@@ -207,7 +206,7 @@ class IdentityMessageFactory(object):
 
     def create_add_event_request(self, key):
         return self._factory.create_add_event_request(
-            "identity_update",
+            "identity/update",
             [("updated", key)])
 
     def create_add_event_response(self):

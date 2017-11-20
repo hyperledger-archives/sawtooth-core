@@ -18,6 +18,9 @@ option java_multiple_files = true;
 option java_package = "sawtooth.sdk.protobuf";
 option go_package = "processor_pb2";
 
+import "transaction.proto";
+
+
 // The registration request from the transaction processor to the
 // validator/executor
 message TpRegisterRequest {
@@ -41,8 +44,9 @@ message TpRegisterRequest {
 // acknowledging the registration
 message TpRegisterResponse {
     enum Status {
-        OK = 0;
-        ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
     }
 
     Status status = 1;
@@ -59,8 +63,9 @@ message TpUnregisterRequest {
 // acknowledging the unregistration
 message TpUnregisterResponse {
     enum Status {
-        OK = 0;
-        ERROR = 1;
+        STATUS_UNSET = 0;
+        OK = 1;
+        ERROR = 2;
     }
 
     Status status = 1;
@@ -70,7 +75,7 @@ message TpUnregisterResponse {
 // The request from the validator/executor of the transaction processor
 // to verify a transaction.
 message TpProcessRequest {
-    bytes header = 1;  // The transaction header
+    TransactionHeader header = 1;  // The transaction header
     bytes payload = 2;  // The transaction payload
     string signature = 3;  // The transaction header_signature
     string context_id = 4; // The context_id for state requests.
@@ -81,9 +86,10 @@ message TpProcessRequest {
 // used to respond about the validity of a transaction
 message TpProcessResponse {
     enum Status {
-        OK = 0;
-        INVALID_TRANSACTION = 1;
-        INTERNAL_ERROR = 2;
+        STATUS_UNSET = 0;
+        OK = 1;
+        INVALID_TRANSACTION = 2;
+        INTERNAL_ERROR = 3;
     }
 
     Status status = 1;

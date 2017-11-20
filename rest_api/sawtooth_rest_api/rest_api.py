@@ -27,11 +27,11 @@ from zmq.asyncio import ZMQEventLoop
 from pyformance import MetricsRegistry
 from pyformance.reporters import InfluxReporter
 
-from sawtooth_sdk.client.log import init_console_logging
-from sawtooth_sdk.client.log import log_configuration
-from sawtooth_sdk.client.config import get_log_config
-from sawtooth_sdk.client.config import get_log_dir
-from sawtooth_sdk.client.config import get_config_dir
+from sawtooth_sdk.processor.log import init_console_logging
+from sawtooth_sdk.processor.log import log_configuration
+from sawtooth_sdk.processor.config import get_log_config
+from sawtooth_sdk.processor.config import get_log_dir
+from sawtooth_sdk.processor.config import get_config_dir
 from sawtooth_rest_api.messaging import Connection
 from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.state_delta_subscription_handler \
@@ -49,7 +49,10 @@ DISTRIBUTION_NAME = 'sawtooth-rest-api'
 def parse_args(args):
     """Parse command line flags added to `rest_api` command.
     """
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Starts the REST API application and connects to a '
+        'specified validator.')
+
     parser.add_argument('-B', '--bind',
                         help='The host and port for the api to run on.',
                         action='append')
@@ -83,12 +86,6 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-async def cors_handler(request):
-    headers = {}
-    RouteHandler.add_cors_headers(request, headers)
-    return web.Response(headers=headers)
-
-
 def start_rest_api(host, port, connection, timeout, registry):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
@@ -102,11 +99,9 @@ def start_rest_api(host, port, connection, timeout, registry):
 
     handler = RouteHandler(loop, connection, timeout, registry)
 
-    app.router.add_route('OPTIONS', '/{route_name}', cors_handler)
-
     app.router.add_post('/batches', handler.submit_batches)
-    app.router.add_get('/batch_status', handler.list_statuses)
-    app.router.add_post('/batch_status', handler.list_statuses)
+    app.router.add_get('/batch_statuses', handler.list_statuses)
+    app.router.add_post('/batch_statuses', handler.list_statuses)
 
     app.router.add_get('/state', handler.list_state)
     app.router.add_get('/state/{address}', handler.fetch_state)
@@ -124,6 +119,8 @@ def start_rest_api(host, port, connection, timeout, registry):
 
     app.router.add_get('/receipts', handler.list_receipts)
     app.router.add_post('/receipts', handler.list_receipts)
+
+    app.router.add_get('/peers', handler.fetch_peers)
 
     subscriber_handler = StateDeltaSubscriberHandler(connection)
     app.router.add_get('/subscriptions', subscriber_handler.subscriptions)

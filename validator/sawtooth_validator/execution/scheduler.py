@@ -247,8 +247,8 @@ class TxnExecutionResult:
         is_valid (bool): True if the transaction is valid, False otherwise.
         context_id (str): The context id against which the transaction was run.
         state_hash (str): The state hash against which the transaction was run.
-        state_changes (list of :obj:`state_delta_pb2.StateChange`): The state
-            changes that were a result of applying this transaction.
+        state_changes (list of :obj:`transaction_receipt_pb2.StateChange`): The
+            state changes that were a result of applying this transaction.
         events (list of :obj:`client_event_pb2.Event`): The events that were
             returned while executing this transaction.
         data (list of (str, bytes)): Opaque data that was returned while

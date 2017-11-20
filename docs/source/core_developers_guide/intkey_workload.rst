@@ -54,7 +54,7 @@ occurrences of the ``--verbose`` (or ``-v``) option. For example, ``-vv``,
 ``-v -v``, and ``--verbose --verbose`` all would result in logging messages
 with level DEBUG and above being displayed on the console.
 
-The default batch rate, if it is not specified, is 10 batches per second.
+The default batch rate, if it is not specified, is 1 batch per second.
 
 The default display refresh frequency is 30 seconds.
 

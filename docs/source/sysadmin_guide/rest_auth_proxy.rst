@@ -33,7 +33,7 @@ Might instead look like this:
 .. code-block:: json
 
    {
-     "link": "http://localhost:8080/blocks?head=..."
+     "link": "http://localhost:8008/blocks?head=..."
    }
 
 The solution to this problem is sending the destroyed information using HTTP
@@ -65,7 +65,7 @@ are three of these headers that the REST API may look for when building links.
      - An uncommon header implemented specially by the REST API to handle extra
        path information. Only necessary if the proxy endpoints do not map
        directly to the REST API endpoints (i.e.
-       *"hyperledger.org/sawtooth/blocks"* -> *"localhost:8080/blocks"*).
+       *"hyperledger.org/sawtooth/blocks"* -> *"localhost:8008/blocks"*).
      - */sawtooth*
 
 
@@ -102,7 +102,7 @@ response links:
      - An non-standard key header used to handle extra path information. Only
        necessary if the proxy endpoints do not map directly to the REST API
        endpoints (i.e. *"hyperledger.org/sawtooth/blocks"* ->
-       *"localhost:8080/blocks"*).
+       *"localhost:8008/blocks"*).
      - *path="/sawtooth"*
 
 .. note::
@@ -196,8 +196,8 @@ Edit the file to look like this:
        </Location>
    </VirtualHost>
 
-   ProxyPass /sawtooth http://localhost:8080
-   ProxyPassReverse /sawtooth http://localhost:8080
+   ProxyPass /sawtooth http://localhost:8008
+   ProxyPassReverse /sawtooth http://localhost:8008
    RequestHeader set X-Forwarded-Path "/sawtooth"
 
 .. note::
@@ -223,8 +223,8 @@ Start a validator, and the REST API.
 
 .. code-block:: console
 
-   $ sawtooth admin keygen
-   $ sawtooth admin genesis
+   $ sawadm keygen
+   $ sawadm genesis
    $ sawtooth-validator -v --endpoint localhost:8800
    $ sawtooth-rest-api -v
 
@@ -237,14 +237,14 @@ worked. We'll start by querying the REST API directly:
 
 .. code-block:: console
 
-   $ curl http://localhost:8080/blocks
+   $ curl http://localhost:8008/blocks
 
 The response link should look like this:
 
 .. code-block:: json
 
    {
-     "link": "http://localhost:8080/blocks?head=..."
+     "link": "http://localhost:8008/blocks?head=..."
    }
 
 You should also be able to get back a ``401`` by querying the proxy without

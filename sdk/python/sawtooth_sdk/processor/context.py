@@ -21,9 +21,14 @@ from sawtooth_sdk.processor.exceptions import AuthorizationException
 
 class Context(object):
     """
+    Context provides an interface for getting, setting, and deleting
+    validator state. All validator interactions by a handler should be
+    through a Context instance.
+
     Attributes:
         _stream (sawtooth.client.stream.Stream): client grpc communication
         _context_id (str): the context_id passed in from the validator
+
     """
     def __init__(self, stream, context_id):
         self._stream = stream
@@ -31,14 +36,19 @@ class Context(object):
 
     def get_state(self, addresses, timeout=None):
         """
-        Get the value at a given list of address in the validator's merkle
-        state.
+        get_state queries the validator state for data at each of the
+        addresses in the given list. The addresses that have been set
+        are returned in a list.
+
         Args:
-            addressses (list): the addresss to fetch
+            addresses (list): the addresses to fetch
             timeout: optional timeout, in seconds
         Returns:
             results (list): a list of Entries (address, data), for the
             addresses that have a value
+
+        Raises:
+            AuthorizationException
         """
         request = state_context_pb2.TpStateGetRequest(
             context_id=self._context_id,
@@ -58,7 +68,10 @@ class Context(object):
 
     def set_state(self, entries, timeout=None):
         """
-        set an address to a value in the validator's merkle state
+        set_state requests that each address in the provided dictionary be
+        set in validator state to its corresponding value. A list is
+        returned containing the successfully set addresses.
+
         Args:
             entries (dict): dictionary where addresses are the keys and data is
                 the value.
@@ -67,8 +80,10 @@ class Context(object):
         Returns:
             addresses (list): a list of addresses that were set
 
+        Raises:
+            AuthorizationException
         """
-        state_entries = [state_context_pb2.Entry(
+        state_entries = [state_context_pb2.TpStateEntry(
             address=e,
             data=entries[e]) for e in entries]
         request = state_context_pb2.TpStateSetRequest(
@@ -87,14 +102,19 @@ class Context(object):
 
     def delete_state(self, addresses, timeout=None):
         """
-        delete an address in the validator's merkle state
+        delete_state requests that each of the provided addresses be unset
+        in validator state. A list of successfully deleted addresses
+        is returned.
+
         Args:
-            addresses (list): list of addresses
+            addresses (list): list of addresses to delete
             timeout: optional timeout, in seconds
 
         Returns:
             addresses (list): a list of addresses that were deleted
 
+        Raises:
+            AuthorizationException
         """
         request = state_context_pb2.TpStateDeleteRequest(
             context_id=self._context_id,
@@ -109,16 +129,14 @@ class Context(object):
                 'Tried to delete unauthorized address: {}'.format(addresses))
         return response.addresses
 
-    def add_receipt_data(self, data_type, data, timeout=None):
+    def add_receipt_data(self, data, timeout=None):
         """Add a blob to the execution result for this transaction.
 
         Args:
-            data_type (str): Transparent hint for decoding the data.
             data (bytes): The data to add.
         """
         request = state_context_pb2.TpReceiptAddDataRequest(
             context_id=self._context_id,
-            data_type=data_type,
             data=data).SerializeToString()
         response = state_context_pb2.TpReceiptAddDataResponse()
         response.ParseFromString(
@@ -127,7 +145,7 @@ class Context(object):
                 request).result(timeout).content)
         if response.status == state_context_pb2.TpReceiptAddDataResponse.ERROR:
             raise InternalError(
-                "Failed to add receipt data: {}".format((data_type, data)))
+                "Failed to add receipt data: {}".format((data)))
 
     def add_event(self, event_type, attributes=None, data=None, timeout=None):
         """Add a new event to the execution result for this transaction.
@@ -164,21 +182,3 @@ class Context(object):
             raise InternalError(
                 "Failed to add event: ({}, {}, {})".format(
                     event_type, attributes, data))
-
-    get = get_state
-    """
-    deprecated:
-     Use get_state instead.
-    """
-
-    set = set_state
-    """
-    deprecated:
-     Use set_state instead.
-    """
-
-    delete = delete_state
-    """
-    deprecated:
-     Use delete_state instead.
-    """

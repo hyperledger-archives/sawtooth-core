@@ -24,8 +24,13 @@ from sawtooth_validator.journal.event_extractors \
     import BlockEventExtractor
 from sawtooth_validator.journal.event_extractors \
     import ReceiptEventExtractor
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 LOGGER = logging.getLogger(__name__)
+
+
+class NoKnownBlockError(Exception):
+    pass
 
 
 class EventBroadcaster(ChainObserver):
@@ -37,18 +42,49 @@ class EventBroadcaster(ChainObserver):
         self._receipt_store = receipt_store
 
     def add_subscriber(self, connection_id, subscriptions,
-                       last_known_block_ids):
+                       last_known_block_id):
         """Register the subscriber for the given event subscriptions.
 
-        Raises an exception if:
-        1. The subscription is unsuccessful.
-        2. None of the block ids in last_known_block_ids are part of the
-           current chain.
+        Raises:
+            InvalidFilterError
+                One of the filters in the subscriptions is invalid.
         """
         with self._subscribers_cv:
             self._subscribers[connection_id] = \
                 EventSubscriber(
-                    connection_id, subscriptions, last_known_block_ids)
+                    connection_id, subscriptions, last_known_block_id)
+
+        LOGGER.debug(
+            'Added Subscriber %s for %s', connection_id, subscriptions)
+
+    def catchup_subscriber(self, connection_id):
+        """Send an event list with all events that are in the given
+        subscriptions from all blocks since that latest block in the current
+        chain that is in the given last known block ids.
+
+        Raises:
+            PossibleForkDetectedError
+                A possible fork was detected while building the event list
+            NoKnownBlockError
+                None of the last known blocks were in the current chain
+            KeyError
+                Unknown connection_id
+        """
+        with self._subscribers_cv:
+            subscriber = self._subscribers[connection_id]
+            last_known_block_id = subscriber.get_last_known_block_id()
+            subscriptions = subscriber.subscriptions
+
+        if last_known_block_id is not None:
+            LOGGER.debug(
+                'Catching up Subscriber %s from %s',
+                connection_id, last_known_block_id)
+
+            # Send catchup events one block at a time
+            for block_id in self.get_catchup_block_ids(last_known_block_id):
+                events = self.get_events_for_block_id(block_id, subscriptions)
+                event_list = EventList(events=events)
+                self._send(connection_id, event_list.SerializeToString())
 
     def enable_subscriber(self, connection_id):
         """Start sending events to the subscriber.
@@ -70,6 +106,54 @@ class EventBroadcaster(ChainObserver):
             if connection_id in self._subscribers:
                 del self._subscribers[connection_id]
 
+    def get_catchup_block_ids(self, last_known_block_id):
+        '''
+        Raises:
+            PossibleForkDetectedError
+        '''
+        # If latest known block is not the current chain head, catch up
+        catchup_up_blocks = []
+        if last_known_block_id != self._block_store.chain_head.identifier:
+            # Start from the chain head and get blocks until we reach the
+            # known block
+            for block in self._block_store.get_predecessor_iter():
+                # All the blocks if NULL_BLOCK_IDENTIFIER
+                if last_known_block_id != NULL_BLOCK_IDENTIFIER:
+                    if block.identifier == last_known_block_id:
+                        break
+                catchup_up_blocks.append(block.identifier)
+
+        return list(reversed(catchup_up_blocks))
+
+    def get_latest_known_block_id(self, last_known_block_ids):
+        '''
+        Raises:
+            NoKnownBlockError
+        '''
+        # Filter known blocks to contain only blocks in the current chain
+        blocks = []
+        if last_known_block_ids:
+            for block_id in last_known_block_ids:
+                # If the subscriber wants all the blocks
+                if block_id == NULL_BLOCK_IDENTIFIER:
+                    blocks.append((-1, block_id))
+                else:
+                    try:
+                        block = self._block_store[block_id]
+                    except KeyError:
+                        continue
+                    block_num = block.block_num
+                    blocks.append((block_num, block_id))
+
+        # No known blocks in the current chain
+        if not blocks:
+            raise NoKnownBlockError()
+
+        # Sort by block num and get the block id of the latest known block
+        blocks.sort()
+        block_id = blocks[-1][1]
+        return block_id
+
     def get_events_for_block_ids(self, block_ids, subscriptions):
         """Get a list of events associated with all the block ids.
 
@@ -81,33 +165,61 @@ class EventBroadcaster(ChainObserver):
 
         Returns (list of Events): The Events associated which each block id.
 
-        Raises: KeyError A block id isn't found within the block store.
+        Raises:
+            KeyError
+                A block id isn't found within the block store or a transaction
+                is missing from the receipt store.
+        """
 
+        blocks = [self._block_store[block_id] for block_id in block_ids]
+        return self.get_events_for_blocks(blocks, subscriptions)
+
+    def get_events_for_block_id(self, block_id, subscriptions):
+        block = self._block_store[block_id]
+        return self.get_events_for_block(block, subscriptions)
+
+    def get_events_for_blocks(self, blocks, subscriptions):
+        """Get a list of events associated with all the blocks.
+
+        Args:
+            blocks (list of BlockWrapper): The blocks to search for events that
+                match each subscription.
+            subscriptions (list of EventSubscriptions): EventFilter and
+                event type to filter events.
+
+        Returns (list of Events): The Events associated which each block id.
+
+        Raises:
+            KeyError A receipt is missing from the receipt store.
         """
 
         events = []
+        for blkw in blocks:
+            events.extend(self.get_events_for_block(blkw, subscriptions))
+        return events
 
-        extractors = []
-        for block_id in block_ids:
-            blk_w = self._block_store[block_id]
-            extractors.append(BlockEventExtractor(blk_w))
-            receipts = []
-            for batch in blk_w.block.batches:
-                for txn in batch.transactions:
-                    try:
-                        receipts.append(self._receipt_store.get(
-                            txn.header_signature))
-                    except KeyError:
-                        LOGGER.warning(
-                            "Transaction id %s not found in receipt store "
-                            " while looking"
-                            " up events for block id %s",
-                            txn.header_signature[:10],
-                            block_id[:10])
-            extractors.append(ReceiptEventExtractor(receipts=receipts))
+    def get_events_for_block(self, blkw, subscriptions):
+        receipts = []
+        for batch in blkw.block.batches:
+            for txn in batch.transactions:
+                try:
+                    receipts.append(self._receipt_store.get(
+                        txn.header_signature))
+                except KeyError:
+                    LOGGER.warning(
+                        "Transaction id %s not found in receipt store "
+                        " while looking"
+                        " up events for block id %s",
+                        txn.header_signature[:10],
+                        blkw.identifier[:10])
 
-        for extractor in extractors:
-            events.extend(extractor.extract(subscriptions))
+        block_event_extractor = BlockEventExtractor(blkw)
+        receipt_event_extractor = ReceiptEventExtractor(receipts=receipts)
+
+        events = []
+        events.extend(block_event_extractor.extract(subscriptions))
+        events.extend(receipt_event_extractor.extract(subscriptions))
+
         return events
 
     def chain_update(self, block, receipts):
@@ -133,8 +245,14 @@ class EventBroadcaster(ChainObserver):
 
     def broadcast_events(self, events):
         LOGGER.debug("Broadcasting events: %s", events)
-        if self._subscribers:
-            for connection_id, subscriber in self._subscribers.items():
+        with self._subscribers_cv:
+            # Copy the subscribers
+            subscribers = {
+                conn: sub.copy() for conn, sub in self._subscribers.items()
+            }
+
+        if subscribers:
+            for connection_id, subscriber in subscribers.items():
                 if subscriber.is_listening():
                     subscriber_events = [event for event in events
                                          if subscriber.is_subscribed(event)]
@@ -148,11 +266,12 @@ class EventBroadcaster(ChainObserver):
 
 
 class EventSubscriber:
-    def __init__(self, connection_id, subscriptions, last_known_block_ids):
+    def __init__(self, connection_id, subscriptions, last_known_block,
+                 listening=False):
         self._connection_id = connection_id
         self._subscriptions = subscriptions
-        self._listening = False
-        self._last_known_block_ids = last_known_block_ids
+        self._listening = listening
+        self._last_known_block = last_known_block
 
     def start_listening(self):
         self._listening = True
@@ -173,3 +292,16 @@ class EventSubscriber:
     @property
     def subscriptions(self):
         return self._subscriptions.copy()
+
+    def get_last_known_block_id(self):
+        return self._last_known_block
+
+    def set_last_known_block_id(self):
+        return self._last_known_block
+
+    def copy(self):
+        return self.__class__(
+            self._connection_id,
+            self._subscriptions,
+            self._last_known_block,
+            self._listening)

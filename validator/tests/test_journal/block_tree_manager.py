@@ -20,7 +20,8 @@ import pprint
 import random
 import string
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
 
 from sawtooth_validator.database.dict_database import DictDatabase
 
@@ -93,7 +94,8 @@ class BlockTreeManager(object):
     def __init__(self, with_genesis=True):
         self.block_sender = MockBlockSender()
         self.batch_sender = MockBatchSender()
-        self.block_store = BlockStore(DictDatabase())
+        self.block_store = BlockStore(DictDatabase(
+            indexes=BlockStore.create_index_configuration()))
         self.block_cache = BlockCache(self.block_store)
         self.state_db = {}
 
@@ -104,12 +106,16 @@ class BlockTreeManager(object):
             'sawtooth.consensus.algorithm', 'test_journal.mock_consensus')
 
         self.state_view_factory = MockStateViewFactory(self.state_db)
-        self.signing_key = signing.generate_private_key()
-        self.public_key = signing.generate_public_key(self.signing_key)
+        context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
+        crypto_factory = CryptoFactory(context)
+        self.signer = crypto_factory.new_signer(private_key)
 
-        self.identity_signing_key = signing.generate_private_key()
-        self.identity_public_key = signing.generate_public_key(
-            self.identity_signing_key)
+        identity_private_key = context.new_random_private_key()
+        self.identity_signer = crypto_factory.new_signer(identity_private_key)
+        self.identity_public_key =\
+            self.identity_signer.get_public_key().as_hex()
+
         chain_head = None
         if with_genesis:
             self.genesis_block = self.generate_genesis_block()
@@ -124,7 +130,7 @@ class BlockTreeManager(object):
             batch_sender=self.block_sender,
             squash_handler=None,
             chain_head=chain_head,
-            identity_signing_key=self.identity_signing_key,
+            identity_signer=self.identity_signer,
             identity_public_key=self.identity_public_key,
             data_dir=None,
             config_dir=None,
@@ -156,7 +162,7 @@ class BlockTreeManager(object):
 
         header = BlockHeader(
             previous_block_id=previous.identifier,
-            signer_public_key=self.public_key,
+            signer_public_key=self.identity_signer.get_public_key().as_hex(),
             block_num=previous.block_num+1)
 
         block_builder = BlockBuilder(header)
@@ -178,7 +184,7 @@ class BlockTreeManager(object):
         consensus.finalize_block(block_builder.block_header, weight=weight)
 
         header_bytes = block_builder.block_header.SerializeToString()
-        signature = signing.sign(header_bytes, self.identity_signing_key)
+        signature = self.identity_signer.sign(header_bytes)
         block_builder.set_signature(signature)
 
         block_wrapper = BlockWrapper(block_builder.build_block())
@@ -223,6 +229,7 @@ class BlockTreeManager(object):
 
         try:
             block_defs = [self._block_def(**params) for _ in range(blocks)]
+            block_defs[-1] = self._block_def()
         except TypeError:
             block_defs = blocks
 
@@ -238,7 +245,7 @@ class BlockTreeManager(object):
                      previous_block_id=NULL_BLOCK_IDENTIFIER, block_num=0):
         header = BlockHeader(
             previous_block_id=previous_block_id,
-            signer_public_key=self.public_key,
+            signer_public_key=self.identity_signer.get_public_key().as_hex(),
             block_num=block_num)
 
         block_builder = BlockBuilder(header)
@@ -248,7 +255,7 @@ class BlockTreeManager(object):
         block_builder.set_state_hash('0'*70)
 
         header_bytes = block_builder.block_header.SerializeToString()
-        signature = signing.sign(header_bytes, self.identity_signing_key)
+        signature = self.identity_signer.sign(header_bytes)
         block_builder.set_signature(signature)
 
         block_wrapper = BlockWrapper(block_builder.build_block())
@@ -311,7 +318,7 @@ class BlockTreeManager(object):
         return batch
 
     def _generate_batch(self, txn_count=2, missing_deps=False,
-                       txns=None):
+                        txns=None):
         if txns is None:
             txns = []
 
@@ -330,13 +337,13 @@ class BlockTreeManager(object):
             txns[-1] = txn_missing_deps
 
         batch_header = BatchHeader(
-            signer_public_key=self.public_key,
+            signer_public_key=self.signer.get_public_key().as_hex(),
             transaction_ids=[txn.header_signature for txn in txns]
         ).SerializeToString()
 
         batch = Batch(
             header=batch_header,
-            header_signature=self._signed_header(batch_header),
+            header_signature=self.signer.sign(batch_header),
             transactions=txns)
 
         return batch
@@ -348,17 +355,17 @@ class BlockTreeManager(object):
 
         txn_header = TransactionHeader(
             dependencies=([] if deps is None else deps),
-            batcher_public_key=self.public_key,
+            batcher_public_key=self.signer.get_public_key().as_hex(),
             family_name='test',
             family_version='1',
             nonce=_generate_id(16),
             payload_sha512=hasher.hexdigest().encode(),
-            signer_public_key=self.public_key
+            signer_public_key=self.signer.get_public_key().as_hex()
         ).SerializeToString()
 
         txn = Transaction(
             header=txn_header,
-            header_signature=self._signed_header(txn_header),
+            header_signature=self.signer.sign(txn_header),
             payload=payload_encoded)
 
         return txn
@@ -367,17 +374,12 @@ class BlockTreeManager(object):
         txn = self.generate_transaction(payload)
 
         batch_header = BatchHeader(
-            signer_public_key=self.public_key,
+            signer_public_key=self.signer.get_public_key().as_hex(),
             transaction_ids=[txn.header_signature]
         ).SerializeToString()
 
         batch = Batch(
             header=batch_header,
-            header_signature=self._signed_header(batch_header),
+            header_signature=self.signer.sign(batch_header),
             transactions=[txn])
         return batch
-
-    def _signed_header(self, header):
-        return signing.sign(
-            header,
-            self.signing_key)

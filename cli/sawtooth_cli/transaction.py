@@ -30,30 +30,30 @@ def add_transaction_parser(subparsers, parent_parser):
             subparsers: Add parsers to this subparser object
             parent_parser: The parent argparse.ArgumentParser object
     """
-    parser = subparsers.add_parser('transaction')
+    parser = subparsers.add_parser(
+        'transaction',
+        help='Show information on transactions in the current chain',
+        description='Provides subcommands to display information about '
+        'the transactions in the current blockchain.')
 
-    grand_parsers = parser.add_subparsers(title='grandchildcommands',
-                                          dest='subcommand')
+    grand_parsers = parser.add_subparsers(
+        title='grandchildcommands',
+        dest='subcommand')
+
     grand_parsers.required = True
 
-    epilog = '''details:
-        Lists committed transactions from newest to oldest, including their id
-    (i.e. header_signature), transaction family and version, and their payload.
-    '''
     grand_parsers.add_parser(
-        'list', epilog=epilog,
+        'list',
+        description='Lists all transactions in the current blockchain.',
         parents=[base_http_parser(), base_list_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    epilog = '''details:
-        Shows the data for a single transaction, or for a particular property
-    within that transaction or its header. Displays data in YAML (default),
-    or JSON formats.
-    '''
     show_parser = grand_parsers.add_parser(
-        'show', epilog=epilog,
+        'show',
+        description='Displays information for the specified transaction.',
         parents=[base_http_parser(), base_show_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
+
     show_parser.add_argument(
         'transaction_id',
         type=str,

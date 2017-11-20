@@ -7,6 +7,7 @@ User=sawtooth
 Group=sawtooth
 EnvironmentFile=-/etc/default/sawtooth-intkey-tp-python
 ExecStart=/usr/bin/intkey-tp-python $SAWTOOTH_INTKEY_TP_PYTHON_ARGS
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

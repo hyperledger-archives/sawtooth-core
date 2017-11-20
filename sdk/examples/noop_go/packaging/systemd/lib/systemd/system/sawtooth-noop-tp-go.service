@@ -1,0 +1,13 @@
+[Unit]
+Description=Sawtooth Noop TP Go
+After=network.target
+
+[Service]
+User=sawtooth
+Group=sawtooth
+EnvironmentFile=-/etc/default/sawtooth-noop-tp-go
+ExecStart=/usr/bin/noop-tp-go $SAWTOOTH_NOOP_TP_GO_ARGS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

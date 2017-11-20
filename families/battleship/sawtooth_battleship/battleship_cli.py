@@ -28,7 +28,7 @@ import sys
 
 from colorlog import ColoredFormatter
 
-import sawtooth_signing.secp256k1_signer as signing
+from sawtooth_signing import create_context
 
 from sawtooth_battleship.battleship_board import BoardLayout
 from sawtooth_battleship.battleship_board import create_nonces
@@ -244,17 +244,18 @@ def do_init(args, config):
             if not os.path.exists(os.path.dirname(priv_filename)):
                 os.makedirs(os.path.dirname(priv_filename))
 
-            private_key = signing.generate_private_key()
-            public_key = signing.generate_public_key(private_key)
+            context = create_context('secp256k1')
+            private_key = context.new_random_private_key()
+            public_key = context.get_public_key(private_key)
 
             with open(priv_filename, "w") as priv_fd:
                 print("writing file: {}".format(priv_filename))
-                priv_fd.write(private_key)
+                priv_fd.write(private_key.as_hex())
                 priv_fd.write("\n")
 
             with open(public_key_filename, "w") as public_key_fd:
                 print("writing file: {}".format(public_key_filename))
-                public_key_fd.write(public_key)
+                public_key_fd.write(public_key.as_hex())
                 public_key_fd.write("\n")
         except IOError as ioe:
             raise BattleshipException("IOError: {}".format(str(ioe)))
@@ -549,7 +550,7 @@ def load_config():
     key_dir = os.path.join(home, ".sawtooth", "keys")
 
     config = configparser.SafeConfigParser()
-    config.set('DEFAULT', 'url', 'http://127.0.0.1:8080')
+    config.set('DEFAULT', 'url', 'http://127.0.0.1:8008')
     config.set('DEFAULT', 'key_dir', key_dir)
     config.set('DEFAULT', 'key_file', '%(key_dir)s/%(username)s.priv')
     config.set('DEFAULT', 'username', real_user)

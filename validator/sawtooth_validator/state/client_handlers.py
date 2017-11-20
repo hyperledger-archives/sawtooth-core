@@ -16,12 +16,15 @@
 import abc
 import logging
 from time import time
+import itertools
 from functools import cmp_to_key
+import re
 from threading import Condition
 # pylint: disable=import-error,no-name-in-module
 # needed for google.protobuf import
 from google.protobuf.message import DecodeError
 
+from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchFinishObserver
 from sawtooth_validator.networking.dispatch import Handler
@@ -34,6 +37,7 @@ from sawtooth_validator.protobuf import client_state_pb2
 from sawtooth_validator.protobuf import client_transaction_pb2
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf import client_list_control_pb2
+from sawtooth_validator.protobuf import client_peers_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -43,6 +47,7 @@ from sawtooth_validator.protobuf import validator_pb2
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 300
 MAX_PAGE_SIZE = 1000
+DEFAULT_PAGE_SIZE = 100
 
 
 class _ResponseFailed(BaseException):
@@ -169,14 +174,17 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         """
         if request.head_id:
             try:
-                return self._block_store[request.head_id].block
+                return self._block_store[request.head_id]
             except KeyError as e:
                 LOGGER.debug('Unable to find block "%s" in store', e)
                 raise _ResponseFailed(self._status.NO_ROOT)
 
-        elif self._block_store.chain_head:
-            return self._block_store.chain_head.block
+        else:
+            return self._get_chain_head()
 
+    def _get_chain_head(self):
+        if self._block_store.chain_head:
+            return self._block_store.chain_head
         else:
             LOGGER.debug('Unable to get chain head from block store')
             raise _ResponseFailed(self._status.NOT_READY)
@@ -191,21 +199,16 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             request (object): The parsed protobuf request object
 
         Returns:
-            None: if a merkle_root is specified directly, no id is returned
-            str: the id of the head block used to specify the root
+            str: the state root of the head block used to specify the root
 
         Raises:
             ResponseFailed: Failed to set the root if the merkle tree
         """
-        if request.merkle_root:
-            root = request.merkle_root
-            head_id = None
+        if request.state_root:
+            root = request.state_root
         else:
-            head = self._get_head_block(request)
-            header = BlockHeader()
-            header.ParseFromString(head.header)
-            root = header.state_root_hash
-            head_id = head.header_signature
+            head = self._get_chain_head()
+            root = head.state_root_hash
 
         try:
             self._tree.set_merkle_root(root)
@@ -213,7 +216,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             LOGGER.debug('Unable to find root "%s" in database', e)
             raise _ResponseFailed(self._status.NO_ROOT)
 
-        return head_id
+        return root
 
     def _list_store_resources(self, request, head_id, filter_ids,
                               resource_fetcher, block_xform):
@@ -303,7 +306,7 @@ class _Pager(object):
                         total_resources=0))
 
         paging = request.paging
-        count = min(paging.count, MAX_PAGE_SIZE) or MAX_PAGE_SIZE
+        count = min(paging.count, MAX_PAGE_SIZE) or DEFAULT_PAGE_SIZE
 
         # Find the start index from the location marker sent
         try:
@@ -608,18 +611,6 @@ class BatchStatusRequest(_ClientRequestHandler):
         return self._wrap_response(batch_statuses=statuses)
 
 
-class StateCurrentRequest(_ClientRequestHandler):
-    def __init__(self, current_root_func):
-        self._get_root = current_root_func
-        super().__init__(
-            client_state_pb2.ClientStateCurrentRequest,
-            client_state_pb2.ClientStateCurrentResponse,
-            validator_pb2.Message.CLIENT_STATE_CURRENT_RESPONSE)
-
-    def _respond(self, request):
-        return self._wrap_response(merkle_root=self._get_root())
-
-
 class StateListRequest(_ClientRequestHandler):
     def __init__(self, database, block_store):
         super().__init__(
@@ -630,7 +621,7 @@ class StateListRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
-        head_id = self._set_root(request)
+        state_root = self._set_root(request)
 
         # Fetch entries and encode as protobuf
         entries = [
@@ -653,11 +644,11 @@ class StateListRequest(_ClientRequestHandler):
         if not entries:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id,
+                state_root=state_root,
                 paging=paging)
 
         return self._wrap_response(
-            head_id=head_id,
+            state_root=state_root,
             paging=paging,
             entries=entries)
 
@@ -672,7 +663,7 @@ class StateGetRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
-        head_id = self._set_root(request)
+        state_root = self._set_root(request)
 
         # Fetch leaf value
         try:
@@ -684,7 +675,7 @@ class StateGetRequest(_ClientRequestHandler):
             LOGGER.debug('Address %s is a nonleaf', request.address)
             return self._status.INVALID_ADDRESS
 
-        return self._wrap_response(head_id=head_id, value=value)
+        return self._wrap_response(state_root=state_root, value=value)
 
 
 class BlockListRequest(_ClientRequestHandler):
@@ -696,54 +687,163 @@ class BlockListRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
-        head_id = self._get_head_block(request).header_signature
-        blocks = self._list_store_resources(
-            request,
-            head_id,
-            request.block_ids,
-            lambda filter_id: self._block_store[filter_id].block,
-            lambda block: [block])
+        head_block = self._get_head_block(request)
+        blocks = None
+        paging_response = None
+        if request.block_ids:
+            blocks = self._block_store.get_blocks(request.block_ids)
+            blocks = itertools.filterfalse(
+                lambda block: block.block_num > head_block.block_num,
+                blocks)
 
-        blocks = _Sorter.sort_resources(
-            request,
-            blocks,
-            self._status.INVALID_SORT,
-            BlockHeader)
+            # realize the iterator
+            blocks = list(map(lambda blkw: blkw.block, blocks))
 
-        blocks, paging = _Pager.paginate_resources(
-            request,
-            blocks,
-            self._status.INVALID_PAGING)
+            paging_response = client_list_control_pb2.ClientPagingResponse(
+                total_resources=len(blocks))
+        else:
+            paging = request.paging
+            sort_reverse = BlockListRequest.is_reverse(
+                request.sorting, self._status.INVALID_SORT)
+            count = min(paging.count, MAX_PAGE_SIZE) or DEFAULT_PAGE_SIZE
+            iterargs = {
+                'reverse': not sort_reverse
+            }
+
+            if paging.start_id:
+                iterargs['start_block_num'] = paging.start_id
+            elif not sort_reverse:
+                iterargs['start_block'] = head_block
+
+            block_iter = None
+            try:
+                block_iter = self._block_store.get_block_iter(**iterargs)
+                blocks = block_iter
+                if sort_reverse:
+                    blocks = itertools.takewhile(
+                        lambda block: block.block_num <= head_block.block_num,
+                        blocks)
+
+                blocks = itertools.islice(blocks, count)
+
+                # realize the result list, which will evaluate the underlying
+                # iterator
+                blocks = list(map(lambda blkw: blkw.block, blocks))
+
+                next_block = next(block_iter, None)
+                if next_block:
+                    next_block_num = BlockStore.block_num_to_hex(
+                        next_block.block_num)
+                else:
+                    next_block_num = None
+            except ValueError:
+                if paging.start_id:
+                    return self._status.INVALID_PAGING
+
+                return self._status.NO_ROOT
+
+            paging_response = client_list_control_pb2.ClientPagingResponse(
+                next_id=next_block_num,
+                total_resources=head_block.block_num + 1)
 
         if not blocks:
             return self._wrap_response(
                 self._status.NO_RESOURCE,
-                head_id=head_id,
-                paging=paging)
+                head_id=head_block.identifier,
+                paging=paging_response)
 
         return self._wrap_response(
-            head_id=head_id,
-            paging=paging,
+            head_id=head_block.identifier,
+            paging=paging_response,
             blocks=blocks)
 
+    @staticmethod
+    def is_reverse(sorting, fail_status):
+        if not sorting:
+            return False
 
-class BlockGetRequest(_ClientRequestHandler):
+        if not sorting[0].keys == ['block_num']:
+            raise _ResponseFailed(fail_status)
+
+        return sorting[0].reverse
+
+
+class BlockGetByIdRequest(_ClientRequestHandler):
+
     def __init__(self, block_store):
         super().__init__(
-            client_block_pb2.ClientBlockGetRequest,
+            client_block_pb2.ClientBlockGetByIdRequest,
+            client_block_pb2.ClientBlockGetResponse,
+            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
+            block_store=block_store)
+        self.valid_regex = re.compile('^[0-9a-f]{128}$')
+
+    def _respond(self, request):
+        if not self.valid_regex.match(request.block_id):
+            return self._status.NO_RESOURCE
+
+        try:
+            block = self._block_store[request.block_id].block
+
+        except KeyError as e:
+            LOGGER.debug(e)
+            return self._status.NO_RESOURCE
+
+        return self._wrap_response(block=block)
+
+
+class BlockGetByNumRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_block_pb2.ClientBlockGetByNumRequest,
             client_block_pb2.ClientBlockGetResponse,
             validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
             block_store=block_store)
 
     def _respond(self, request):
         try:
-            if request.block_id != "":
-                block = self._block_store[request.block_id].block
-            else:
-                block = self._block_store.get_block_by_number(
-                    request.block_num).block
+            block = self._block_store.get_block_by_number(
+                request.block_num).block
 
         except KeyError as e:
+            LOGGER.debug(e)
+            return self._status.NO_RESOURCE
+
+        return self._wrap_response(block=block)
+
+
+class BlockGetByTransactionRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_block_pb2.ClientBlockGetByTransactionIdRequest,
+            client_block_pb2.ClientBlockGetResponse,
+            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        try:
+            block = self._block_store.get_block_by_transaction_id(
+                request.transaction_id).block
+        except ValueError as e:
+            LOGGER.debug(e)
+            return self._status.NO_RESOURCE
+
+        return self._wrap_response(block=block)
+
+
+class BlockGetByBatchRequest(_ClientRequestHandler):
+    def __init__(self, block_store):
+        super().__init__(
+            client_block_pb2.ClientBlockGetByBatchIdRequest,
+            client_block_pb2.ClientBlockGetResponse,
+            validator_pb2.Message.CLIENT_BLOCK_GET_RESPONSE,
+            block_store=block_store)
+
+    def _respond(self, request):
+        try:
+            block = self._block_store.get_block_by_batch_id(
+                request.batch_id).block
+        except ValueError as e:
             LOGGER.debug(e)
             return self._status.NO_RESOURCE
 
@@ -861,10 +961,20 @@ class TransactionGetRequest(_ClientRequestHandler):
         except ValueError as e:
             LOGGER.debug(e)
             return self._status.NO_RESOURCE
-        try:
-            block_id = self._block_store.get_block_by_transaction_id(
-                request.transaction_id).identifier
-        except ValueError as e:
-            block_id = ""
 
-        return self._wrap_response(transaction=txn, block_id=block_id)
+        return self._wrap_response(transaction=txn)
+
+
+class PeersGetRequest(_ClientRequestHandler):
+    def __init__(self, gossip):
+        super().__init__(
+            client_peers_pb2.ClientPeersGetRequest,
+            client_peers_pb2.ClientPeersGetResponse,
+            validator_pb2.Message.CLIENT_PEERS_GET_RESPONSE
+            )
+        self._gossip = gossip
+
+    def _respond(self, request):
+        peers = self._gossip.get_peers()
+        endpoints = [peers[connection_id] for connection_id in peers]
+        return self._wrap_response(peers=endpoints)

@@ -16,12 +16,15 @@
 import logging
 import os
 
+import sawtooth_signing as signing
+from sawtooth_signing import CryptoFactory
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_validator.exceptions import LocalConfigurationError
 
 LOGGER = logging.getLogger(__name__)
 
 
-def load_identity_signing_key(key_dir, key_name):
+def load_identity_signer(key_dir, key_name):
     """Loads a private key from the key directory, based on a validator's
     identity.
 
@@ -30,7 +33,7 @@ def load_identity_signing_key(key_dir, key_name):
         key_name (str): The name of the key to load.
 
     Returns:
-        str: the private signing key, in hex.
+        Signer: the cryptographic signer for the key
     """
     key_path = os.path.join(key_dir, '{}.priv'.format(key_name))
 
@@ -44,9 +47,20 @@ def load_identity_signing_key(key_dir, key_name):
     LOGGER.info('Loading signing key: %s', key_path)
     try:
         with open(key_path, 'r') as key_file:
-            private_key = key_file.read().strip()
+            private_key_str = key_file.read().strip()
     except IOError as e:
         raise LocalConfigurationError(
             "Could not load key file: {}".format(str(e)))
 
-    return private_key
+    try:
+        private_key = Secp256k1PrivateKey.from_hex(private_key_str)
+    except signing.ParseError:
+        try:
+            private_key = Secp256k1PrivateKey.from_wif(private_key_str)
+        except signing.ParseError:
+            raise LocalConfigurationError(
+                "Invalid key in file {}: {}".format(key_path, str(e)))
+
+    context = signing.create_context('secp256k1')
+    crypto_factory = CryptoFactory(context)
+    return crypto_factory.new_signer(private_key)

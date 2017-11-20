@@ -1,0 +1,7 @@
+#
+# Sawtooth -- Block Info Transaction Processor Configuration
+#
+
+# The url to connect to a running Validator
+#   connect = "tcp://localhost:4004"
+connect = "tcp://blarg:1234"

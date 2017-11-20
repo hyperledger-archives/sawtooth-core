@@ -47,6 +47,6 @@ RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-rest-api
 
 EXPOSE 4004/tcp
-EXPOSE 8080
+EXPOSE 8008
 
 CMD ["sawtooth-rest-api"]

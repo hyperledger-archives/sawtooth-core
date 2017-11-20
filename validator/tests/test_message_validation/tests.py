@@ -18,7 +18,8 @@ import hashlib
 import random
 import string
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader, \
     Transaction
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader, Batch
@@ -29,8 +30,14 @@ from sawtooth_validator.gossip import structure_verifier
 
 class TestMessageValidation(unittest.TestCase):
     def setUp(self):
-        self.private_key = signing.generate_private_key()
-        self.public_key = signing.generate_public_key(self.private_key)
+        context = create_context('secp256k1')
+        private_key = context.new_random_private_key()
+        crypto_factory = CryptoFactory(context)
+        self.signer = crypto_factory.new_signer(private_key)
+
+    @property
+    def public_key(self):
+        return self.signer.get_public_key().as_hex()
 
     def broadcast(self, msg):
         pass
@@ -71,9 +78,7 @@ class TestMessageValidation(unittest.TestCase):
             header_bytes = header.SerializeToString()
 
             if valid_signature:
-                signature = signing.sign(
-                    header_bytes,
-                    self.private_key)
+                signature = self.signer.sign(header_bytes)
             else:
                 signature = "bad_signature"
 
@@ -113,9 +118,7 @@ class TestMessageValidation(unittest.TestCase):
             header_bytes = batch_header.SerializeToString()
 
             if valid_batch:
-                signature = signing.sign(
-                    header_bytes,
-                    self.private_key)
+                signature = self.signer.sign(header_bytes)
             else:
                 signature = "bad_signature"
 
@@ -142,9 +145,7 @@ class TestMessageValidation(unittest.TestCase):
             header_bytes = block_header.SerializeToString()
 
             if valid_block:
-                signature = signing.sign(
-                    header_bytes,
-                    self.private_key)
+                signature = self.signer.sign(header_bytes)
             else:
                 signature = "bad_signature"
 

@@ -96,7 +96,6 @@ then
         javascript
         python
         rust
-        seth
 "
 fi
 
@@ -156,9 +155,6 @@ main() {
                 rust)
                     build_rust
                     ;;
-                seth)
-                    build_seth
-                    ;;
                 *)
                     warn "Module '$language' not found."
                     ;;
@@ -169,6 +165,7 @@ main() {
 
 docker_run() {
     image=$1
+    arg=$2
 
     if [ -z $ISOLATION_ID ]; then
         tag=$image
@@ -191,7 +188,7 @@ docker_run() {
             --env http_proxy=$http_proxy \
             --env HTTPS_PROXY=$HTTPS_PROXY \
             --env HTTP_PROXY=$HTTP_PROXY \
-            $tag
+            $tag $arg
     else
         docker run --rm -v $top_dir:/project/sawtooth-core \
             $cargo_registry_flag \
@@ -199,7 +196,7 @@ docker_run() {
             --env http_proxy=$http_proxy \
             --env HTTPS_PROXY=$HTTPS_PROXY \
             --env HTTP_PROXY=$HTTP_PROXY \
-            $tag
+            $tag $arg
     fi
 }
 
@@ -233,10 +230,6 @@ build_external() {
         sawtooth-stats-influxdb
 }
 
-build_seth() {
-    docker_build docker/sawtooth-dev-seth docker/ sawtooth-dev-seth
-    docker_run sawtooth-dev-seth
-}
 
 build_debs() {
     build_dir=/tmp/build-docker$ISOLATION_ID
@@ -287,7 +280,6 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-block-info-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-battleship-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-supplychain-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
@@ -309,21 +301,27 @@ then
     }
 
     build_go() {
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_run sawtooth-dev-go
+
+        cp $top_dir/bin/install_packaging_deps $build_dir
+        cp $top_dir/ci/sawtooth-build-debs $build_dir
+        docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
+        docker_run sawtooth-build-debs go
 
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir
         mkdir -p $build_dir
+        cp $top_dir/build/debs/sawtooth*go*.deb $build_dir/
+
         cp $top_dir/docker/sawtooth-int-intkey-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-xo-tp-go $build_dir
         cp $top_dir/docker/sawtooth-int-smallbank-tp-go $build_dir
-        cp $top_dir/sdk/examples/intkey_go/bin/intkey-tp-go \
-            $build_dir
-        cp $top_dir/sdk/examples/xo_go/bin/xo-tp-go \
-            $build_dir
-        cp $top_dir/families/smallbank/smallbank_go/bin/smallbank-tp-go \
-            $build_dir
+
         ls $build_dir
 
         docker_build $build_dir/sawtooth-int-intkey-tp-go $build_dir/ \
@@ -358,12 +356,12 @@ then
         cp $top_dir/bin/install_packaging_deps $build_dir
         cp $top_dir/ci/sawtooth-build-debs $build_dir
         docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
-        docker_run sawtooth-build-debs
+        docker_run sawtooth-build-debs python
 
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
         docker_run sawtooth-dev-python
 
-        cp $top_dir/build/debs/*.deb $build_dir/
+        cp $top_dir/build/debs/python3*.deb $build_dir/
         cp $top_dir/docker/sawtooth-int-* $build_dir/
         ls $build_dir
 
@@ -373,7 +371,8 @@ then
         docker_build $build_dir/sawtooth-int-settings-tp \
             $build_dir/ sawtooth-settings-tp
 
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-block-info-tp
+        docker_build $build_dir/sawtooth-int-block-info-tp \
+            $build_dir/ sawtooth-block-info-tp
 
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-battleship-tp
 
@@ -394,6 +393,10 @@ then
     }
 
     build_rust() {
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
         cp $top_dir/docker/sawtooth-dev-rust $build_dir
         docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-dev-rust
         docker_run sawtooth-dev-rust

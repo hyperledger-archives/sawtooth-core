@@ -20,7 +20,8 @@ import hashlib
 import threading
 import time
 
-import sawtooth_signing as signing
+from sawtooth_signing import create_context
+from sawtooth_signing import CryptoFactory
 
 import sawtooth_validator.protobuf.transaction_pb2 as transaction_pb2
 
@@ -46,9 +47,10 @@ def _get_address_from_txn(txn_info):
 class TestSchedulers(unittest.TestCase):
 
     def setUp(self):
-        self._context_manager = ContextManager(
-            dict_database.DictDatabase(),
-            state_delta_store=Mock())
+        self._context_manager = ContextManager(dict_database.DictDatabase())
+
+        self._context = create_context('secp256k1')
+        self._crypto_factory = CryptoFactory(self._context)
 
     def tearDown(self):
         self._context_manager.stop()
@@ -105,9 +107,8 @@ class TestSchedulers(unittest.TestCase):
                3 and 5.
 
         """
-
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         transaction_validity = {}
 
@@ -115,87 +116,74 @@ class TestSchedulers(unittest.TestCase):
 
         txn_a, _ = create_transaction(
             payload='A'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         transaction_validity[txn_a.header_signature] = True
 
         txn_b, _ = create_transaction(
             payload='B'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         transaction_validity[txn_b.header_signature] = True
 
         txn_c, _ = create_transaction(
             payload='C'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         transaction_validity[txn_c.header_signature] = False
 
         batch_1 = create_batch(
             transactions=[txn_a, txn_b, txn_c],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         txn_d, _ = create_transaction(
             payload='D'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         transaction_validity[txn_d.header_signature] = True
 
         txn_e, _ = create_transaction(
             payload='E'.encode(),
-            private_key=private_key,
-            public_key=public_key,
+            signer=signer,
             dependencies=[txn_b.header_signature])
 
         transaction_validity[txn_e.header_signature] = True
 
         batch_2 = create_batch(
             transactions=[txn_d, txn_e],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         txn_f, _ = create_transaction(
             payload='F'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         transaction_validity[txn_f.header_signature] = True
 
         batch_3 = create_batch(
             transactions=[txn_f],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         txn_g, _ = create_transaction(
             payload='G'.encode(),
-            private_key=private_key,
-            public_key=public_key,
+            signer=signer,
             dependencies=[txn_d.header_signature])
 
         transaction_validity[txn_g.header_signature] = True
 
         batch_4 = create_batch(
             transactions=[txn_g],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         txn_h, _ = create_transaction(
             payload='H'.encode(),
-            private_key=private_key,
-            public_key=public_key,
+            signer=signer,
             dependencies=[txn_f.header_signature])
 
         transaction_validity[txn_h.header_signature] = True
 
         batch_5 = create_batch(
             transactions=[txn_h],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         for batch in [batch_1, batch_2, batch_3, batch_4, batch_5]:
             scheduler.add_batch(batch)
@@ -268,52 +256,44 @@ class TestSchedulers(unittest.TestCase):
              3. Assert that only txn A is run.
         """
 
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         transaction_validity = {}
 
         txn_a, _ = create_transaction(
             payload='A'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         transaction_validity[txn_a.header_signature] = False
 
         txn_b, _ = create_transaction(
             payload='B'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         txn_c, _ = create_transaction(
             payload='C'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         batch_1 = create_batch(transactions=[txn_a, txn_b, txn_c],
-                               private_key=private_key,
-                               public_key=public_key)
+                               signer=signer)
 
         txn_d, _ = create_transaction(
             payload='D'.encode(),
-            private_key=private_key,
-            public_key=public_key,
+            signer=signer,
             dependencies=[txn_b.header_signature])
 
         txn_e, _ = create_transaction(
             payload='E'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         txn_f, _ = create_transaction(
             payload='F'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         batch_2 = create_batch(
             transactions=[txn_d, txn_e, txn_f],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         scheduler.add_batch(batch_1)
         scheduler.add_batch(batch_2)
@@ -381,18 +361,16 @@ class TestSchedulers(unittest.TestCase):
         This test should work for both a serial and parallel scheduler.
         """
 
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         txn, _ = create_transaction(
             payload='a'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         batch = create_batch(
             transactions=[txn],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         iterable = iter(scheduler)
 
@@ -441,18 +419,16 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         txn, _ = create_transaction(
             payload='a'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         batch = create_batch(
             transactions=[txn],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         iterable = iter(scheduler)
 
@@ -500,18 +476,16 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         # Create a basic transaction and batch.
         txn, _ = create_transaction(
             payload='a'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
         batch = create_batch(
             transactions=[txn],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         # This class is used to run the scheduler's iterator.
         class IteratorThread(threading.Thread):
@@ -610,8 +584,8 @@ class TestSchedulers(unittest.TestCase):
 
         This test should work for both a serial and parallel scheduler.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         # 1)
         batch_signatures = []
@@ -620,15 +594,13 @@ class TestSchedulers(unittest.TestCase):
             for name in names:
                 txn, _ = create_transaction(
                     payload=name.encode(),
-                    private_key=private_key,
-                    public_key=public_key)
+                    signer=signer)
 
                 batch_txns.append(txn)
 
             batch = create_batch(
                 transactions=batch_txns,
-                private_key=private_key,
-                public_key=public_key)
+                signer=signer)
 
             batch_signatures.append(batch.header_signature)
             scheduler.add_batch(batch)
@@ -732,8 +704,8 @@ class TestSchedulers(unittest.TestCase):
                is invalid and consequently has no state hash.
         """
 
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         # 1)
         batch_signatures = []
@@ -743,15 +715,13 @@ class TestSchedulers(unittest.TestCase):
             for name in names:
                 txn, _ = create_transaction(
                     payload=name.encode(),
-                    private_key=private_key,
-                    public_key=public_key)
+                    signer=signer)
 
                 batch_txns.append(txn)
 
             batch = create_batch(
                 transactions=batch_txns,
-                private_key=private_key,
-                public_key=public_key)
+                signer=signer)
             batches.append(batch)
             batch_signatures.append(batch.header_signature)
         invalid_payload_sha = hashlib.sha512(
@@ -818,13 +788,15 @@ class TestSchedulers(unittest.TestCase):
 
 class TestSerialScheduler(unittest.TestCase):
     def setUp(self):
-        self.context_manager = ContextManager(dict_database.DictDatabase(),
-                                              state_delta_store=Mock())
+        self.context_manager = ContextManager(dict_database.DictDatabase())
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
         self.scheduler = SerialScheduler(squash_handler,
                                          self.first_state_root,
                                          always_persist=False)
+
+        self._context = create_context('secp256k1')
+        self._crypto_factory = CryptoFactory(self._context)
 
     def tearDown(self):
         self.context_manager.stop()
@@ -841,8 +813,8 @@ class TestSerialScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
 
@@ -851,16 +823,14 @@ class TestSerialScheduler(unittest.TestCase):
             for name in names:
                 txn, _ = create_transaction(
                     payload=name.encode(),
-                    private_key=private_key,
-                    public_key=public_key)
+                    signer=signer)
 
                 batch_txns.append(txn)
                 txns.append(txn)
 
             batch = create_batch(
                 transactions=batch_txns,
-                private_key=private_key,
-                public_key=public_key)
+                signer=signer)
 
             self.scheduler.add_batch(batch)
 
@@ -895,8 +865,8 @@ class TestSerialScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator, and the complete is true in the at the end.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
 
@@ -905,16 +875,14 @@ class TestSerialScheduler(unittest.TestCase):
             for name in names:
                 txn, _ = create_transaction(
                     payload=name.encode(),
-                    private_key=private_key,
-                    public_key=public_key)
+                    signer=signer)
 
                 batch_txns.append(txn)
                 txns.append(txn)
 
             batch = create_batch(
                 transactions=batch_txns,
-                private_key=private_key,
-                public_key=public_key)
+                signer=signer)
 
             self.scheduler.add_batch(batch)
 
@@ -956,23 +924,21 @@ class TestSerialScheduler(unittest.TestCase):
         since the first Transaction was marked as applied in the previous
         step.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
 
         for name in ['a', 'b']:
             txn, _ = create_transaction(
                 payload=name.encode(),
-                private_key=private_key,
-                public_key=public_key)
+                signer=signer)
 
             txns.append(txn)
 
         batch = create_batch(
             transactions=txns,
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         self.scheduler.add_batch(batch)
 
@@ -999,13 +965,15 @@ class TestSerialScheduler(unittest.TestCase):
 
 class TestParallelScheduler(unittest.TestCase):
     def setUp(self):
-        self.context_manager = ContextManager(dict_database.DictDatabase(),
-                                              state_delta_store=Mock())
+        self.context_manager = ContextManager(dict_database.DictDatabase())
         squash_handler = self.context_manager.get_squash_handler()
         self.first_state_root = self.context_manager.get_first_root()
         self.scheduler = ParallelScheduler(squash_handler,
                                            self.first_state_root,
                                            always_persist=False)
+
+        self._context = create_context('secp256k1')
+        self._crypto_factory = CryptoFactory(self._context)
 
     def tearDown(self):
         self.context_manager.stop()
@@ -1017,21 +985,19 @@ class TestParallelScheduler(unittest.TestCase):
         The result is expected to be a SchedulerError, since adding a batch
         to a finalized scheduler is invalid.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         # Finalize prior to attempting to add a batch.
         self.scheduler.finalize()
 
         txn, _ = create_transaction(
             payload='a'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         batch = create_batch(
             transactions=[txn],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         # scheduler.add_batch(batch) should throw a SchedulerError due to
         # the finalized status of the scheduler.
@@ -1047,18 +1013,16 @@ class TestParallelScheduler(unittest.TestCase):
         transaction without first causing it to be scheduled (by using an
         iterator or calling next_transaction()).
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         txn, _ = create_transaction(
             payload='a'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         batch = create_batch(
             transactions=[txn],
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         self.scheduler.add_batch(batch)
 
@@ -1079,8 +1043,8 @@ class TestParallelScheduler(unittest.TestCase):
         This test also finalizes the scheduler and verifies that StopIteration
         is thrown by the iterator.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
 
@@ -1089,16 +1053,14 @@ class TestParallelScheduler(unittest.TestCase):
             for name in names:
                 txn, _ = create_transaction(
                     payload=name.encode(),
-                    private_key=private_key,
-                    public_key=public_key)
+                    signer=signer)
 
                 batch_txns.append(txn)
                 txns.append(txn)
 
             batch = create_batch(
                 transactions=batch_txns,
-                private_key=private_key,
-                public_key=public_key)
+                signer=signer)
 
             self.scheduler.add_batch(batch)
 
@@ -1128,30 +1090,27 @@ class TestParallelScheduler(unittest.TestCase):
 
         Creates one batch with four transactions.
         """
-        private_key = signing.generate_private_key()
-        public_key = signing.generate_public_key(private_key)
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
 
         txns = []
         headers = []
 
         txn, header = create_transaction(
             payload='a'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
         txns.append(txn)
         headers.append(header)
 
         txn, header = create_transaction(
             payload='b'.encode(),
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
         txns.append(txn)
         headers.append(header)
 
-        txn, header =create_transaction(
+        txn, header = create_transaction(
             payload='aa'.encode(),
-            private_key=private_key,
-            public_key=public_key,
+            signer=signer,
             inputs=['000000' + hashlib.sha512('a'.encode()).hexdigest()[:64]],
             outputs=['000000' + hashlib.sha512('a'.encode()).hexdigest()[:64]])
         txns.append(txn)
@@ -1159,8 +1118,7 @@ class TestParallelScheduler(unittest.TestCase):
 
         txn, header = create_transaction(
             payload='bb'.encode(),
-            private_key=private_key,
-            public_key=public_key,
+            signer=signer,
             inputs=['000000' + hashlib.sha512('b'.encode()).hexdigest()[:64]],
             outputs=['000000' + hashlib.sha512('b'.encode()).hexdigest()[:64]])
         txns.append(txn)
@@ -1168,8 +1126,7 @@ class TestParallelScheduler(unittest.TestCase):
 
         batch = create_batch(
             transactions=txns,
-            private_key=private_key,
-            public_key=public_key)
+            signer=signer)
 
         self.scheduler.add_batch(batch)
         self.scheduler.finalize()

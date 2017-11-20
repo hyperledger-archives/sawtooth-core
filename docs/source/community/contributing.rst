@@ -37,10 +37,9 @@ pull requests. When contributing code please do the following:
 * Please include unit and integration tests for any new features and updates
   to existing tests.
 * Please ensure the unit and integration tests run successfully. Both are run
-  with `./bin/run_tests`, but integration tests are only run if the environment
-  variable ENABLE_INTEGRATION_TESTS is set.
-* Please ensure that lint passes by running './bin/run_lint'.  The command
-  should produce no output if there are no lint errors.
+  with `./bin/run_tests`.
+* Please ensure that lint passes by running './bin/run_lint -s master'.
+  On success, the command produces no output.
 
 **Pull Request Guidelines**
 

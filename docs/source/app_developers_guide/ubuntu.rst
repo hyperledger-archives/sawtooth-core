@@ -101,16 +101,16 @@ The genesis block contains some initial values that are necessary when a
 Sawtooth distributed ledger is created and used for the first time.
 One of the settings in the genesis block that should be set is the
 key that is authorized to set and change configuration settings, as
-shown below using the ``sawtooth config genesis`` command.
+shown below using the ``sawset genesis`` command.
 
 To create the genesis block, open a new terminal window
-and run the following commands as root:
+and run the following commands:
 
 .. code-block:: console
 
-  # sawtooth keygen
-  # sawtooth config genesis
-  # sudo -u sawtooth sawtooth admin genesis config-genesis.batch
+  $ sawtooth keygen
+  $ sawset genesis
+  $ sudo -u sawtooth sawadm genesis config-genesis.batch
 
 The following output appears:
 
@@ -121,7 +121,7 @@ The following output appears:
 
 .. note::
 
-  If you need to delete previously existing block-chain data before running a
+  If you need to delete previously existing blockchain data before running a
   validator, simply remove all files from /var/lib/sawtooth.
 
 
@@ -133,7 +133,7 @@ following commands:
 
 .. code-block:: console
 
-   $ sudo sawtooth admin keygen
+   $ sudo sawadm keygen
    $ sudo -u sawtooth sawtooth-validator -vv
 
 .. note::
@@ -153,7 +153,7 @@ output includes something similar to this:
 
   If you want to stop the validator, enter CTRL-c in the validator's terminal
   window.  You can stop any other running Sawtooth component by entering
-  CTRL-c in the apprpriate window.
+  CTRL-c in the appropriate window.
 
 .. note::
 
@@ -244,18 +244,14 @@ in Python.
   includes additional transaction processors written in several languages.
   The following lists the processors that are included:
 
-  * settings-tp - A settings family transaction processor written in Python
+  * settings-tp - A Settings family transaction processor written in Python
 
-  * intkey-tp-go - An intkey transaction processor written in Go
+  * intkey-tp-go - An IntegerKey transaction processor written in Go
 
-  * intkey-tp-java - An intkey transaction processor written in Java
+  * intkey-tp-java - An IntegerKey transaction processor written in Java
 
-  * intkey-tp-javascript - An intkey transaction processor written in JavaScript
+  * intkey-tp-javascript - An IntegerKey transaction processor written in JavaScript
     (requires node.js)
-
-  * jvm-sc-tp - An intkey transaction processor implemented as a smart contract;
-    the bytecode to run a transaction is stored in state and the blockchain
-    (requires Java)
 
   * poet-validator-registry-tp - A transaction family used by the PoET consensus
     algorithm implementation to keep track of other validators
@@ -300,7 +296,7 @@ the REST API:
 .. code-block:: console
 
   $ ps aux | grep sawtooth-rest-api
-  root      2829  0.0  0.3  55756  3980 pts/0    S+   19:36   0:00 sudo -u sawtooth sawtooth-rest-api -v
+  sawtooth  2829  0.0  0.3  55756  3980 pts/0    S+   19:36   0:00 sudo -u sawtooth sawtooth-rest-api -v
   sawtooth  2830  0.0  3.6 221164 37520 pts/0    Sl+  19:36   0:00 /usr/bin/python3 /usr/bin/sawtooth-rest-api -v
   ubuntu    3004  0.0  0.0  12944   928 pts/4    S+   19:54   0:00 grep -E --color=auto sawtooth-rest-api
 
@@ -314,22 +310,22 @@ If necessary, run the following command to start the REST API.
 Changing the Transaction Family Settings
 ----------------------------------------
 
-In the example below, a JSON array is submitted to the ``sawtooth config``
+In the example below, a JSON array is submitted to the ``sawset``
 command, which creates and submits a batch of transactions containing the
 settings change.
 
 The JSON array used tells the validator or validator network to accept
 transactions of the following types:
 
-* intkey
-* sawtooth_settings
+* intkey (IntegerKey transaction family)
+* sawtooth_settings (Settings transaction family)
 
 To create and submit the batch containing the new settings, open a new
 terminal window and enter the following commands:
 
 .. code-block:: console
 
-  $ sawtooth config proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
+  $ sawset proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
 and output similar to the following appears in the validator terminal window:
@@ -348,7 +344,7 @@ The ``intkey`` command creates sample transactions of the ``intkey``
 
 This section guides you through the following tasks:
 
-1. Preparing a batch of intkey transactions that set the keys to random values.
+1. Preparing a batch of IntegerKey transactions that set the keys to random values.
 
 2. Generating *inc* (increment) and *dec* (decrement) transactions to apply to
    the existing state stored in the blockchain.
@@ -365,7 +361,7 @@ Open a new terminal window and run the following commands:
   $ intkey load
   batches: 2 batch/sec: 135.96900883377907
 
-You can watch the processing of the intkey transactions by observing the
+You can watch the processing of the transactions by observing the
 logging output of the ``intkey`` transaction processor. A truncated example of
 this output is shown below:
 

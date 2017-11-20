@@ -31,7 +31,7 @@ from sawtooth_validator.config.validator import merge_validator_config
 from sawtooth_validator.config.validator import ValidatorConfig
 from sawtooth_validator.config.logs import get_log_config
 from sawtooth_validator.server.core import Validator
-from sawtooth_validator.server.keys import load_identity_signing_key
+from sawtooth_validator.server.keys import load_identity_signer
 from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.server.log import log_configuration
 from sawtooth_validator.exceptions import GenesisError
@@ -45,6 +45,7 @@ DISTRIBUTION_NAME = 'sawtooth-validator'
 
 def parse_args(args):
     parser = argparse.ArgumentParser(
+        description='Configures and starts a Sawtooth validator.',
         formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('--config-dir',
@@ -240,7 +241,7 @@ def main(args=None):
     # multiple errors before restarting the validator.
     init_errors = False
     try:
-        identity_signing_key = load_identity_signing_key(
+        identity_signer = load_identity_signer(
             key_dir=path_config.key_dir,
             key_name='validator')
     except LocalConfigurationError as e:
@@ -287,7 +288,6 @@ def main(args=None):
         LOGGER.error("Initialization errors occurred (see previous log "
                      "ERROR messages), shutting down.")
         sys.exit(1)
-
     bind_network = validator_config.bind_network
     bind_component = validator_config.bind_component
 
@@ -336,7 +336,7 @@ def main(args=None):
                           validator_config.peers,
                           path_config.data_dir,
                           path_config.config_dir,
-                          identity_signing_key,
+                          identity_signer,
                           validator_config.scheduler,
                           validator_config.permissions,
                           validator_config.network_public_key,

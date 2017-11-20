@@ -26,12 +26,8 @@ from colorlog import ColoredFormatter
 
 from sawtooth_cli.exceptions import CliException
 
-from sawtooth_cli.admin import add_admin_parser
-from sawtooth_cli.admin import do_admin
 from sawtooth_cli.keygen import add_keygen_parser
 from sawtooth_cli.keygen import do_keygen
-from sawtooth_cli.config import add_config_parser
-from sawtooth_cli.config import do_config
 from sawtooth_cli.block import add_block_parser
 from sawtooth_cli.block import do_block
 from sawtooth_cli.batch import add_batch_parser
@@ -42,6 +38,10 @@ from sawtooth_cli.state import add_state_parser
 from sawtooth_cli.state import do_state
 from sawtooth_cli.identity import add_identity_parser
 from sawtooth_cli.identity import do_identity
+from sawtooth_cli.settings import add_settings_parser
+from sawtooth_cli.settings import do_settings
+
+from sawtooth_cli.cli_config import load_cli_config
 
 
 DISTRIBUTION_NAME = 'sawtooth-cli'
@@ -106,19 +106,20 @@ def create_parser(prog_name):
     parent_parser = create_parent_parser(prog_name)
 
     parser = argparse.ArgumentParser(
-        parents=[parent_parser],
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        description='Provides subcommands to configure, manage, '
+        'and use Sawtooth components',
+        parents=[parent_parser],)
 
     subparsers = parser.add_subparsers(title='subcommands', dest='command')
     subparsers.required = True
-    add_keygen_parser(subparsers, parent_parser)
-    add_admin_parser(subparsers, parent_parser)
-    add_config_parser(subparsers, parent_parser)
-    add_block_parser(subparsers, parent_parser)
+
     add_batch_parser(subparsers, parent_parser)
-    add_transaction_parser(subparsers, parent_parser)
-    add_state_parser(subparsers, parent_parser)
+    add_block_parser(subparsers, parent_parser)
     add_identity_parser(subparsers, parent_parser)
+    add_keygen_parser(subparsers, parent_parser)
+    add_state_parser(subparsers, parent_parser)
+    add_transaction_parser(subparsers, parent_parser)
+    add_settings_parser(subparsers, parent_parser)
 
     return parser
 
@@ -130,6 +131,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         args = sys.argv[1:]
     args = parser.parse_args(args)
 
+    load_cli_config(args)
+
     if with_loggers is True:
         if args.verbose is None:
             verbose_level = 0
@@ -137,12 +140,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
             verbose_level = args.verbose
         setup_loggers(verbose_level=verbose_level)
 
-    if args.command == 'admin':
-        do_admin(args)
-    elif args.command == 'keygen':
+    if args.command == 'keygen':
         do_keygen(args)
-    elif args.command == 'config':
-        do_config(args)
     elif args.command == 'block':
         do_block(args)
     elif args.command == 'batch':
@@ -153,8 +152,10 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         do_state(args)
     elif args.command == 'identity':
         do_identity(args)
+    elif args.command == 'settings':
+        do_settings(args)
     else:
-        raise AssertionError("invalid command: {}".format(args.command))
+        raise CliException("invalid command: {}".format(args.command))
 
 
 def main_wrapper():
@@ -166,6 +167,8 @@ def main_wrapper():
         sys.exit(1)
     except KeyboardInterrupt:
         pass
+    except BrokenPipeError:
+        sys.stderr.close()
     except SystemExit as e:
         raise e
     except:

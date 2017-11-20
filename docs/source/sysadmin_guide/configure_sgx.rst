@@ -204,7 +204,7 @@ Create validator keys:
 
 .. code-block:: console
 
-    $ sawtooth admin keygen
+    $ sawadm keygen
 
 .. note::  If you're configuring multiple validators, the steps below are
     required for the first validator only.  For additional validators, you
@@ -215,13 +215,13 @@ Create a genesis batch:
 
 .. code-block:: console
 
-    $ sawtooth config genesis --key /etc/sawtooth/keys/validator.priv -o config-genesis.batch
+    $ sawset genesis --key /etc/sawtooth/keys/validator.priv -o config-genesis.batch
 
 Create and submit a proposal:
 
 .. code-block:: console
 
-    $ sawtooth config proposal create -k /etc/sawtooth/keys/validator.priv \
+    $ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
     sawtooth.consensus.algorithm=poet \
     sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)" \
     sawtooth.poet.valid_enclave_measurements=$(poet enclave --enclave-module sgx measurement) \
@@ -251,7 +251,7 @@ There’s quite a bit going on in the previous command, so let’s take a closer
   In this case, ``poet_enclave_sgx.poet_enclave`` is the SGX version of
   the enclave; it includes the Python code as well as the Python extension.
 
-When the ``sawtooth config proposal`` command runs, you should see several
+When the ``sawset proposal`` command runs, you should see several
 lines of output showing that the SGX enclave has been initialized:
 
 .. code-block:: console
@@ -263,7 +263,7 @@ Create a poet-genesis batch:
 
 .. code-block:: console
 
-    $ poet genesis -k /etc/sawtooth/keys/validator.priv \
+    $ poet registration create -k /etc/sawtooth/keys/validator.priv \
       --enclave-module sgx -o poet_genesis.batch
     Writing key state for PoET public key: 0387a451...9932a998
     Generating poet_genesis.batch
@@ -272,7 +272,7 @@ Create a genesis block:
 
 .. code-block:: console
 
-    $ sawtooth admin genesis config-genesis.batch config.batch poet_genesis.batch
+    $ sawadm genesis config-genesis.batch config.batch poet_genesis.batch
 
 You’ll see some output indicating success:
 
@@ -463,4 +463,3 @@ Restart Sawtooth services:
     $ sudo systemctl restart sawtooth-validator.service
     $ sudo systemctl restart sawtooth-settings-tp.service
     $ sudo systemctl restart sawtooth-intkey-tp-python.service
-

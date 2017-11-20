@@ -107,12 +107,9 @@ public class XoHandler implements TransactionHandler {
 
     // The transaction signer is the player
     String player;
-    try {
-      TransactionHeader header = TransactionHeader.parseFrom(transactionRequest.getHeader());
-      player = header.getSignerPublicKey();
-    } catch (InvalidProtocolBufferException e) {
-      throw new InternalError("Protocol Buffer Error: " + e.toString());
-    }
+    TransactionHeader header = transactionRequest.getHeader();
+    player = header.getSignerPublicKey();
+
     if (transactionData.gameName.equals("")) {
       throw new InvalidTransactionException("Name is required");
     }
@@ -142,7 +139,7 @@ public class XoHandler implements TransactionHandler {
     String address = makeGameAddress(transactionData.gameName);
     // stateStore.get() returns a list.
     // If no data has been stored yet at the given address, it will be empty.
-    String stateEntry = stateStore.get(
+    String stateEntry = stateStore.getState(
         Collections.singletonList(address)
     ).get(address).toStringUtf8();
     GameData stateData = getStateData(stateEntry, transactionData.gameName);
@@ -233,11 +230,11 @@ public class XoHandler implements TransactionHandler {
       }
       stateEntry = StringUtils.join(dataList, "|");
     }
-    
+
     ByteString csvByteString = ByteString.copyFromUtf8(stateEntry);
     Map.Entry<String, ByteString> entry = new AbstractMap.SimpleEntry<>(address, csvByteString);
     Collection<Map.Entry<String, ByteString>> addressValues = Collections.singletonList(entry);
-    Collection<String> addresses = stateStore.set(addressValues);
+    Collection<String> addresses = stateStore.setState(addressValues);
     if (addresses.size() < 1) {
       throw new InternalError("State Error");
     }

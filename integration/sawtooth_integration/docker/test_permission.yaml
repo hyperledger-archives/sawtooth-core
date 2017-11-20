@@ -37,9 +37,9 @@ services:
       - 8800
     command: "bash -c \"\
         echo 5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv > test.priv && \
-        sawtooth admin keygen && \
-        sawtooth config genesis -k test.priv -o setting-genesis.batch && \
-        sawtooth admin genesis setting-genesis.batch  && \
+        sawadm keygen && \
+        sawset genesis -k test.priv -o setting-genesis.batch && \
+        sawadm genesis setting-genesis.batch  && \
         sawtooth-validator -v --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:40000 \
             --bind network:tcp://eth0:8800 \
@@ -52,10 +52,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 40000
-      - 8080
+      - 8008
     depends_on:
       - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:40000 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:40000 --bind rest-api:8008
     stop_signal: SIGKILL
 
   test-permission:
@@ -63,7 +63,7 @@ services:
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
     depends_on:
       - validator
       - rest-api

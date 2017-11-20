@@ -15,12 +15,18 @@
 
 .. _intkey-cli-reference-label:
 
-******************
-intkey Family CLIs
-******************
+***********************
+IntegerKey CLI (intkey)
+***********************
+
+The IntegerKey CLI, ``intkey``, provides functions that can be used to test
+deployed ledgers.
 
 intkey
 ======
+
+The ``intkey`` command provides subcommands to set, increment, and
+decrement the value of entries stored in a state dictionary.
 
 .. literalinclude:: output/intkey_usage.out
    :language: console
@@ -29,12 +35,20 @@ intkey
 intkey set
 ==========
 
+The ``intkey set`` subcommand sets a key (`name`) to the specified value.
+This transaction will fail if the value is less than 0 or greater than
+2\ :sup:`32` - 1.
+
 .. literalinclude:: output/intkey_set_usage.out
    :language: console
    :linenos:
 
 intkey inc
 ==========
+
+The ``intkey inc`` subcommand increments a key (`name`) by the specified value.
+This transaction will fail if the key is not set or if the resulting value
+would exceed 2\ :sup:`32` - 1.
 
 .. literalinclude:: output/intkey_inc_usage.out
    :language: console
@@ -43,12 +57,18 @@ intkey inc
 intkey dec
 ==========
 
+The ``intkey dec`` subcommand decrements a key (`name`) by the specified value.
+This transaction will fail if the key is not set or if the resulting value
+would be less than 0.
+
 .. literalinclude:: output/intkey_dec_usage.out
    :language: console
    :linenos:
 
 intkey show
 ===========
+
+The ``intkey show`` subcommand displays the value of the specified key (`name`).
 
 .. literalinclude:: output/intkey_show_usage.out
    :language: console
@@ -57,48 +77,8 @@ intkey show
 intkey list
 ===========
 
+The ``intkey list`` subcommand displays the value of all keys.
+
 .. literalinclude:: output/intkey_list_usage.out
-   :language: console
-   :linenos:
-
-intkey generate
-===============
-
-.. literalinclude:: output/intkey_generate_usage.out
-   :language: console
-   :linenos:
-
-intkey load
-===========
-
-.. literalinclude:: output/intkey_load_usage.out
-   :language: console
-   :linenos:
-
-intkey populate
-===============
-
-.. literalinclude:: output/intkey_populate_usage.out
-   :language: console
-   :linenos:
-
-intkey create_batch
-===================
-
-.. literalinclude:: output/intkey_create_batch_usage.out
-   :language: console
-   :linenos:
-
-intkey workload
-===============
-
-.. literalinclude:: output/intkey_workload_usage.out
-   :language: console
-   :linenos:
-
-intkey-tp-python
-================
-
-.. literalinclude:: output/intkey-tp-python_usage.out
    :language: console
    :linenos:

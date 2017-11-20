@@ -38,7 +38,7 @@ class TestConfigSmoke(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        wait_for_rest_apis(['rest-api:8080'])
+        wait_for_rest_apis(['rest-api:8008'])
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
@@ -80,22 +80,22 @@ class TestConfigSmoke(unittest.TestCase):
         ''' Test ability to list settings after submission of a setting.
             Test submits a simple config transaction to the validator,
             then confirms that the settings can be retrieved by the
-            command 'sawtooth config settings list', and that the retrieved
+            command 'sawset settings list', and that the retrieved
             setting equals the input setting.
             '''
         # Submit transaction, then list it using subprocess
         cmds = [
-            ['sawtooth', 'config', 'proposal', 'create', '-k', self._wif_file,
-             '--url', 'http://rest-api:8080', 'x=1', 'y=1'],
-            ['sawtooth', 'config', 'settings', 'list', '--url',
-             'http://rest-api:8080']
+            ['sawset', 'proposal', 'create', '-k', self._wif_file,
+             '--url', 'http://rest-api:8008', 'x=1', 'y=1'],
+            ['sawtooth', 'settings', 'list', '--url',
+             'http://rest-api:8008']
         ]
 
         for cmd in cmds:
             self._run(cmd)
 
         command = 'sawtooth'
-        args = ['config', 'settings', 'list', '--url', 'http://rest-api:8080']
+        args = ['settings', 'list', '--url', 'http://rest-api:8008']
         settings = self._read_from_stdout(command, args).split('\n')
 
         _expected_output = [

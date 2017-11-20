@@ -22,7 +22,7 @@ services:
     container_name: sawtooth-settings-tp-default
     depends_on:
       - validator
-    entrypoint: settings-tp -vv tcp://validator:4004
+    entrypoint: settings-tp -vv --connect tcp://validator:4004
 
   smallbank-tp-go:
     image: sawtooth-smallbank-tp-go:latest
@@ -41,10 +41,10 @@ services:
       - "4004:4004"
       - "8800:8800"
     entrypoint: "bash -c \"\
-        sawtooth admin keygen && \
+        sawadm keygen && \
         sawtooth keygen && \
-        sawtooth config genesis && \
-        sawtooth admin genesis config-genesis.batch && \
+        sawset genesis && \
+        sawadm genesis config-genesis.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
@@ -55,9 +55,9 @@ services:
     image: sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-default
     expose:
-      - 8080
+      - 8008
     ports:
-      - "8080:8080"
+      - "8008:8008"
     depends_on:
       - validator
-    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8080
+    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8008

@@ -74,7 +74,7 @@ message Message {
         // A request to list blocks from the web api/client to the validator
         CLIENT_BLOCK_LIST_REQUEST = 102;
         CLIENT_BLOCK_LIST_RESPONSE = 103;
-        CLIENT_BLOCK_GET_REQUEST = 104;
+        CLIENT_BLOCK_GET_BY_ID_REQUEST = 104;
         CLIENT_BLOCK_GET_RESPONSE = 105;
         CLIENT_BATCH_LIST_REQUEST = 106;
         CLIENT_BATCH_LIST_RESPONSE = 107;
@@ -101,9 +101,16 @@ message Message {
         // A response with the batch statuses
         CLIENT_BATCH_STATUS_RESPONSE = 121;
         // A request for one or more transaction receipts
-        CLIENT_RECEIPT_GET_REQUEST= 122;
+        CLIENT_RECEIPT_GET_REQUEST = 122;
         // A response with the receipts
-        CLIENT_RECEIPT_GET_RESPONSE= 123;
+        CLIENT_RECEIPT_GET_RESPONSE = 123;
+        CLIENT_BLOCK_GET_BY_NUM_REQUEST = 124;
+        // A request for a validator's peers
+        CLIENT_PEERS_GET_REQUEST = 125;
+        // A response with the validator's peers
+        CLIENT_PEERS_GET_RESPONSE = 126;
+        CLIENT_BLOCK_GET_BY_TRANSACTION_ID_REQUEST = 127;
+        CLIENT_BLOCK_GET_BY_BATCH_ID_REQUEST = 128;
 
         // Message types for events
         CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;
@@ -129,15 +136,6 @@ message Message {
         NETWORK_ACK = 300;
         NETWORK_CONNECT = 301;
         NETWORK_DISCONNECT = 302;
-
-        // Message types for State Delta Exports
-        STATE_DELTA_SUBSCRIBE_REQUEST = 400;
-        STATE_DELTA_SUBSCRIBE_RESPONSE = 401;
-        STATE_DELTA_UNSUBSCRIBE_REQUEST = 402;
-        STATE_DELTA_UNSUBSCRIBE_RESPONSE = 403;
-        STATE_DELTA_EVENT = 404;
-        STATE_DELTA_GET_EVENTS_REQUEST = 405;
-        STATE_DELTA_GET_EVENTS_RESPONSE = 406;
 
         // Message types for Authorization Types
         AUTHORIZATION_CONNECTION_RESPONSE = 600;

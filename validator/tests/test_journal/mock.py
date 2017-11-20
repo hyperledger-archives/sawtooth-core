@@ -258,17 +258,6 @@ def CreateSetting(key, value):
     return addr, setting.SerializeToString()
 
 
-class MockStateDeltaProcessor(object):
-    """Mock for the StateDeltaProcessor, which provides publishing of the state
-    changes on block publishing.
-    """
-
-    def __init__(self):
-        self.block = None
-
-    def chain_update(self, block, receipts):
-        self.block = block
-
 class MockPermissionVerifier(object):
     def is_batch_signer_authorized(self, batch, state_root=None):
         return True

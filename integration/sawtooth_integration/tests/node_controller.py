@@ -102,7 +102,7 @@ def start_node(num,
                                 validator_cmd_func,
                                 poet_kwargs)
 
-    wait_for_rest_apis(['127.0.0.1:{}'.format(8080 + num)], tries=20)
+    wait_for_rest_apis(['127.0.0.1:{}'.format(8008 + num)], tries=20)
 
     return [rest_api] + processors + [validator]
 
@@ -144,7 +144,7 @@ def validator_cmds(num,
         peering_func (int -> str): a function of one argument n
             returning a string specifying the peers of the num-th node
     '''
-    keygen = 'sawtooth admin keygen {}'.format(
+    keygen = 'sawadm keygen {}'.format(
         os.path.join(sawtooth_home, 'keys', 'validator'))
 
     validator = ' '.join([
@@ -159,7 +159,7 @@ def validator_cmds(num,
     priv = os.path.join(sawtooth_home, 'keys', 'validator.priv')
 
     config_genesis = ' '.join([
-        'sawtooth config genesis',
+        'sawset genesis',
         '-k {}'.format(priv),
         '-o {}'.format(os.path.join(
             sawtooth_home, 'data', 'config-genesis.batch'))
@@ -189,7 +189,7 @@ def validator_cmds(num,
     enclave_basename = result.stdout.decode('utf-8')
 
     config_proposal = ' '.join([
-        'sawtooth config proposal create',
+        'sawset proposal create',
         '-k {}'.format(priv),
         'sawtooth.consensus.algorithm=poet',
         'sawtooth.poet.report_public_key_pem="{}"'.format(public_key_pem),
@@ -202,11 +202,11 @@ def validator_cmds(num,
         '-o {}'.format(os.path.join(sawtooth_home, 'data', 'config.batch'))
     ])
 
-    poet = 'poet genesis -k {} -o {}'.format(priv, os.path.join(
+    poet = 'poet registration create -k {} -o {}'.format(priv, os.path.join(
         sawtooth_home, 'data', 'poet.batch'))
 
     genesis = ' '.join([
-        'sawtooth admin genesis',
+        'sawadm genesis',
         '{} {} {}'.format(
             os.path.join(sawtooth_home, 'data', 'config-genesis.batch'),
             os.path.join(sawtooth_home, 'data', 'config.batch'),
@@ -307,7 +307,7 @@ def start_processors(num, processor_func):
 def rest_api_cmd(num):
     return 'sawtooth-rest-api --connect {s} --bind 127.0.0.1:{p}'.format(
         s=connection_address(num),
-        p=(8080 + num)
+        p=(8008 + num)
     )
 
 def start_rest_api(num):
@@ -323,7 +323,7 @@ def connection_address(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)
 
 def http_address(num):
-    return 'http://127.0.0.1:{}'.format(8080 + num)
+    return 'http://127.0.0.1:{}'.format(8008 + num)
 
 def bind_component(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)

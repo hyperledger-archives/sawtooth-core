@@ -26,7 +26,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: settings-tp -vv tcp://validator:4004
+    command: settings-tp -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   intkey-tp-python:
@@ -38,7 +38,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: intkey-tp-python -vv tcp://validator:4004
+    command: intkey-tp-python -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   xo-tp-python:
@@ -50,7 +50,7 @@ services:
       - 4004
     depends_on:
       - validator
-    command: xo-tp-python -vv tcp://validator:4004
+    command: xo-tp-python -vv -C tcp://validator:4004
     stop_signal: SIGKILL
 
   validator:
@@ -61,10 +61,12 @@ services:
     expose:
       - 4004
       - 8800
+    ports:
+      - "4004:4004"
     # start the validator with an empty genesis batch
     command: "bash -c \"\
-        sawtooth admin keygen && \
-        sawtooth admin genesis && \
+        sawadm keygen && \
+        sawadm genesis && \
         sawtooth-validator -vv \
             --endpoint tcp://validator:8800 \
             --bind component:tcp://eth0:4004 \
@@ -79,10 +81,12 @@ services:
       - ../../:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
+      - 8008
+    ports:
+      - "8008:8008"
     depends_on:
       - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   client:
@@ -91,7 +95,7 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
     expose:
-      - 8080
+      - 8008
       - 4004
     depends_on:
       - rest-api
