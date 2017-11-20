@@ -461,9 +461,14 @@ paths:
         200:
           description: Successfully retrieved peers
           schema:
-            data: List of peers endpoints
-            link:
-              $ref: "#/definitions/Link"
+            properties:
+              data:
+                type: array
+                items:
+                  type: string
+                  example: tcp://12.345.67.890:8800
+              link:
+                $ref: "#/definitions/Link"
         400:
           $ref: "#/responses/400BadRequest"
         500:
