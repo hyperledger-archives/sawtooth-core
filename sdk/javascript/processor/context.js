@@ -17,8 +17,22 @@
 
 'use strict'
 
-const {TpStateEntry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, TpStateDeleteRequest, TpStateDeleteResponse, Message} = require('../protobuf')
-const {AuthorizationException} = require('../processor/exceptions')
+const {
+  TpStateEntry,
+  TpStateGetRequest,
+  TpStateGetResponse,
+  TpStateSetRequest,
+  TpStateSetResponse,
+  TpStateDeleteRequest,
+  TpStateDeleteResponse,
+  TpReceiptAddDataRequest,
+  TpReceiptAddDataResponse,
+  Message
+} = require('../protobuf')
+const {
+  AuthorizationException,
+  InternalError
+} = require('../processor/exceptions')
 
 const _timeoutPromise = (p, millis) => {
   if (millis !== null && millis !== undefined) {
@@ -108,7 +122,7 @@ class Context {
    * delete_state requests that each of the provided addresses be
    * unset in validator state. A list of successfully deleted
    * addresses is returned.
-
+   *
    * @param {string[]} addresses -  an array of addresses
    * @param {number} [timeout] - an optional timeout
    * @return a promise for the adddresses successfully deleted.
@@ -130,6 +144,33 @@ class Context {
       timeout)
   }
 
+  /**
+   * Add a blob to the execution result for this transaction.
+   *
+   * @param {Buffer} data - the data to add
+   * @param {number} [timeout] - an optional timeout
+   * @return {Promise} a promise that resolves to nothing on success, or an
+   * error if the operation fails
+   */
+  addReceiptData (data, timeout = null) {
+    let addReceiptRequest = TpReceiptAddDataRequest.create({
+      contextId: this._contextId,
+      data
+    })
+
+    let future = this._stream.send(Message.MessageType.TP_RECEIPT_ADD_DATA_REQUEST,
+                                   TpReceiptAddDataRequest.encode(addReceiptRequest).finish())
+
+    return _timeoutPromise(
+      future.then((buffer) => {
+        let response = TpReceiptAddDataResponse.decode(buffer)
+
+        if (response.status !== TpReceiptAddDataResponse.Status.OK) {
+          throw new InternalError('Failed to add receipt data')
+        }
+      }),
+      timeout)
+  }
 }
 
 module.exports = Context
