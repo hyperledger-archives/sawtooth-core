@@ -18,6 +18,7 @@ import logging
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.concurrent.atomic import ConcurrentSet
+from sawtooth_validator.concurrent.atomic import ConcurrentMultiMap
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -151,6 +152,10 @@ class BlockValidator(object):
 
         # Blocks that are currently being processed
         self._blocks_processing = ConcurrentSet()
+
+        # Descendant blocks that are waiting for an in process block
+        # to complete
+        self._blocks_pending = ConcurrentMultiMap()
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)
@@ -467,8 +472,29 @@ class BlockValidator(object):
 
     def submit_blocks_for_verification(self, blocks, callback):
         for block in blocks:
+            if self.in_process(block.header_signature):
+                LOGGER.debug("Block already in process: %s", block)
+                continue
+
+            if self.in_process(block.previous_block_id):
+                LOGGER.debug(
+                    "Previous block '%s' in process,"
+                    " adding '%s' pending",
+                    block.previous_block_id, block)
+                self._add_block_to_pending(block)
+                continue
+
+            if self.in_pending(block.previous_block_id):
+                LOGGER.debug(
+                    "Previous block '%s' is pending,"
+                    " adding '%s' pending",
+                    block.previous_block_id, block)
+                self._add_block_to_pending(block)
+                continue
+
             LOGGER.debug(
                 "Adding block %s for processing", block.identifier[:6])
+
             # Add the block to the set of blocks being processed
             self._blocks_processing.add(block.identifier)
 
@@ -491,11 +517,43 @@ class BlockValidator(object):
                     " wasn't in processes: %s",
                     block.identifier)
 
+            # If the block is invalid, mark all descendant blocks as invalid
+            # and remove from pending.
+            if block.status == BlockStatus.Valid:
+                blocks_now_ready = self._blocks_pending.pop(
+                    block.identifier, [])
+                self.submit_blocks_for_verification(blocks_now_ready, callback)
+
+            else:
+                # Get all the pending blocks that can now be processed
+                blocks_now_invalid = self._blocks_pending.pop(
+                    block.identifier, [])
+
+                while blocks_now_invalid:
+                    invalid_block = blocks_now_invalid.pop()
+                    invalid_block.status = BlockStatus.Invalid
+
+                    LOGGER.debug(
+                        'Marking descendant block invalid: %s',
+                        invalid_block)
+
+                    # Get descendants of the descendant
+                    blocks_now_invalid.extend(
+                        self._blocks_pending.pop(invalid_block.identifier, []))
+
             callback(commit_new_block, result)
+
         return wrapper
 
     def in_process(self, block_id):
         return block_id in self._blocks_processing
+
+    def in_pending(self, block_id):
+        return block_id in self._blocks_pending
+
+    def _add_block_to_pending(self, block):
+        previous = block.previous_block_id
+        self._blocks_pending.append(previous, block)
 
     def process_block_verification(self, block, callback):
         """
