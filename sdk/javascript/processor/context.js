@@ -27,6 +27,9 @@ const {
   TpStateDeleteResponse,
   TpReceiptAddDataRequest,
   TpReceiptAddDataResponse,
+  Event,
+  TpEventAddRequest,
+  TpEventAddResponse,
   Message
 } = require('../protobuf')
 const {
@@ -167,6 +170,51 @@ class Context {
 
         if (response.status !== TpReceiptAddDataResponse.Status.OK) {
           throw new InternalError('Failed to add receipt data')
+        }
+      }),
+      timeout)
+  }
+
+  /**
+   * Add a new event to the execution result for this transaction.
+   *
+   * @param {string} eventType - This is used to subscribe to events. It should
+   * be globally unique and describe what, in general, has occurred
+   * @param {string[][]} attributes - Additional information about the event that
+   * is transparent to the validator.  Attributes can be used by subscribers to
+   * filter the type of events they receive.
+   * @param {Buffer} data - Additional information about the event that is
+   * opaque to the validator.
+   * @param {number} [timeout] - an optional timeout
+   * @return {Promise} a promise that resolves to nothing on success, or an
+   * error if the operation fails
+   */
+  addEvent (eventType, attributes, data, timeout = null) {
+    if (attributes === null || attributes === undefined) {
+      attributes = []
+    }
+
+    let event = Event.create({
+      eventType,
+      attributes: attributes.map(([key, value]) =>
+                                 Event.Attribute.create({key, value})),
+      data
+    })
+
+    let request = TpEventAddRequest.encode({
+      contextId: this._contextId,
+      event
+    }).finish()
+
+    let future = this._stream.send(Message.MessageType.TP_EVENT_ADD_REQUEST,
+                                   request)
+
+    return _timeoutPromise(
+      future.then((buffer) => {
+        let response = TpEventAddResponse.decode(buffer)
+
+        if (response.status !== TpEventAddResponse.Status.OK) {
+          throw new InternalError(`Failed to add event: ${eventType}`)
         }
       }),
       timeout)
