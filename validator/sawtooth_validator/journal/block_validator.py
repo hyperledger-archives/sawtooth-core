@@ -473,25 +473,27 @@ class BlockValidator(object):
             # Add the block to the set of blocks being processed
             self._blocks_processing.add(block.identifier)
 
-            # Internal cleanup after verification
-            def _wrapper(commit_new_block, result):
-                LOGGER.debug(
-                    "Removing block from processing %s",
-                    block.identifier[:6])
-                try:
-                    self._blocks_processing.remove(block.identifier)
-                except KeyError:
-                    LOGGER.warning(
-                        "Tried to remove block from in process but it"
-                        " wasn't in processes: %s",
-                        block.identifier)
-
-                callback(commit_new_block, result)
-
             # Schedule the block for processing
             self._thread_pool.submit(
-                self.process_block_verification,
-                block, _wrapper)
+                self.process_block_verification, block, self._wrap_callback(
+                    block, callback))
+
+    def _wrap_callback(self, block, callback):
+        # Internal cleanup after verification
+        def wrapper(commit_new_block, result):
+            LOGGER.debug(
+                "Removing block from processing %s",
+                block.identifier[:6])
+            try:
+                self._blocks_processing.remove(block.identifier)
+            except KeyError:
+                LOGGER.warning(
+                    "Tried to remove block from in process but it"
+                    " wasn't in processes: %s",
+                    block.identifier)
+
+            callback(commit_new_block, result)
+        return wrapper
 
     def in_process(self, block_id):
         return block_id in self._blocks_processing
