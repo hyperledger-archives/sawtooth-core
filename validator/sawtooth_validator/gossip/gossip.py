@@ -212,6 +212,9 @@ class Gossip(object):
                              "was not registered: %s",
                              connection_id)
 
+    def is_temp(self, connection_id):
+        return self._topology.is_temp(connection_id)
+
     def broadcast_block(self, block, exclude=None):
         gossip_message = GossipMessage(
             content_type=GossipMessage.BLOCK,
@@ -741,6 +744,13 @@ class ConnectionManager(InstrumentedThread):
 
                 self._gossip.send_block_request("HEAD", connection_id)
 
+    def is_temp(self, connection_id):
+        with self._lock:
+            status = self._connection_statuses.get(connection_id)
+            if status is not None and status == PeerStatus.TEMP:
+                return True
+            return False
+
     def _remove_temporary_connection(self, connection_id):
         status = self._connection_statuses.get(connection_id)
         if status == PeerStatus.TEMP:
@@ -753,7 +763,7 @@ class ConnectionManager(InstrumentedThread):
             except ValueError:
                 pass
             del self._connection_statuses[connection_id]
-            self._network.remove_connection(connection_id)
+
         elif status == PeerStatus.PEER:
             LOGGER.debug("Connection close request for peer ignored: %s",
                          connection_id)
@@ -811,13 +821,10 @@ class ConnectionManager(InstrumentedThread):
         self._connection_statuses[connection_id] = PeerStatus.TEMP
         get_peers_request = GetPeersRequest()
 
-        def callback(request, result):
-            # request, result are ignored, but required by the callback
-            self._remove_temporary_connection(connection_id)
         try:
             self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
                                get_peers_request.SerializeToString(),
-                               connection_id,
-                               callback=callback)
+                               connection_id
+                               )
         except ValueError:
             LOGGER.debug("Connection disconnected: %s", connection_id)
