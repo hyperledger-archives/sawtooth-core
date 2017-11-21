@@ -60,7 +60,6 @@ class InvalidBatch(Exception):
 class BlockValidationResult:
     def __init__(self, block):
         self.block = block
-        self.valid = False
         self.chain_head = None
         self.new_chain = []
         self.current_chain = []
@@ -70,7 +69,7 @@ class BlockValidationResult:
         self.transaction_count = 0
 
     def __bool__(self):
-        return self.valid
+        return self.block.status == BlockStatus.Valid
 
     def __str__(self):
         keys = ("block", "valid", "chain_head", "new_chain", "current_chain",
