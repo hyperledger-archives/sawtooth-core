@@ -183,8 +183,8 @@ class ChainController(object):
     def chain_head(self):
         return self._chain_head
 
-    def _submit_blocks_for_verification(self, blocks):
-        self._block_validator.submit_blocks_for_verification(
+    def _submit_blocks_for_validation(self, blocks):
+        self._block_validator.submit_blocks_for_validation(
             blocks, self.on_block_validated)
 
     def on_block_validated(self, commit_new_block, result):
@@ -213,7 +213,7 @@ class ChainController(object):
                         new_block)
 
                     LOGGER.debug('Verify block again: %s ', new_block)
-                    self._submit_blocks_for_verification([new_block])
+                    self._submit_blocks_for_validation([new_block])
 
                 # If the head is to be updated to the new block.
                 elif commit_new_block:
@@ -278,7 +278,7 @@ class ChainController(object):
                 self._block_cache[block.identifier] = block
 
                 # schedule this block for validation.
-                self._submit_blocks_for_verification([block])
+                self._submit_blocks_for_validation([block])
 
         # pylint: disable=broad-except
         except Exception:

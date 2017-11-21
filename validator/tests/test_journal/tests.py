@@ -775,7 +775,7 @@ class TestBlockValidator(unittest.TestCase):
     def validate_block(self, block):
         validator = self.create_block_validator()
         validator._load_consensus = lambda block: mock_consensus
-        validator.process_block_verification(
+        validator.process_block_validation(
             block,
             self.block_validation_handler.on_block_validated)
 
