@@ -75,9 +75,9 @@ services:
       - validator
     entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8008
 
-  client:
+  shell:
     image: hyperledger/sawtooth-all:latest
-    container_name: sawtooth-client-default
+    container_name: sawtooth-shell-default
     expose:
       - 8008
       - 4004

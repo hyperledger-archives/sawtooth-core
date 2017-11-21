@@ -19,11 +19,11 @@
 #
 # Build:
 #   $ cd sawtooth-core/docker
-#   $ docker build . -f sawtooth-all -t sawtooth-all
+#   $ docker build . -f sawtooth-shell -t sawtooth-shell
 #
 # Run:
 #   $ cd sawtooth-core
-#   $ docker run sawtooth-all
+#   $ docker run -it sawtooth-shell bash
 
 FROM ubuntu:xenial
 
@@ -35,18 +35,10 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc
  && apt-get install -y -q \
     curl \
     python3-sawtooth-cli \
-    python3-sawtooth-identity \
     python3-sawtooth-intkey \
-    python3-sawtooth-manage \
-    python3-sawtooth-poet-common \
-    python3-sawtooth-poet-core \
-    python3-sawtooth-poet-families \
-    python3-sawtooth-poet-simulator \
-    python3-sawtooth-rest-api \
+    python3-sawtooth-poet-cli \
     python3-sawtooth-sdk \
     python3-sawtooth-settings \
-    python3-sawtooth-signing \
-    python3-sawtooth-validator \
     python3-sawtooth-xo \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
