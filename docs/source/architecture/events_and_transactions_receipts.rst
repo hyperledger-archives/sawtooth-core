@@ -16,6 +16,8 @@ This allows applications to do the following:
    :align: center
    :alt: Event Subsystem
 
+.. _events-reference-label:
+
 Events
 ======
 
