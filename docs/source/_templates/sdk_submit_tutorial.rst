@@ -10,21 +10,27 @@ most of these details, and greatly simplifies the process of making changes to
 the blockchain.
 
 
-Creating a Private Key
-======================
+Creating a Private Key and Signer
+=================================
 
 In order to confirm your identity and sign the information you send to the
 validator, you will need a 256-bit key. Sawtooth uses the secp256k1 ECSDA
 standard for signing, which means that almost any set of 32 bytes is a valid
-key, and it is fairly simple to generate this using the SDK's *signer* module.
+key. It is fairly simple to generate a valid key using the SDK's *signing*
+module.
+
+A *Signer* wraps a private key and provides some convenient methods for signing
+bytes and getting the private key's associated public key.
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const {signer} = require('sawtooth-sdk')
+    const {createContext, CryptoFactory} = require('sawtooth-sdk/signing')
 
-    const privateKey = signer.makePrivateKey()
+    const context = createContext('secp256k1')
+    const privateKey = context.newRandomPrivateKey()
+    const signer = CryptoFactory(context).newSigner(privateKey)
 
 {% else %}
 
@@ -32,9 +38,12 @@ key, and it is fairly simple to generate this using the SDK's *signer* module.
 
 .. code-block::  python
 
-    from sawtooth_signing.secp256k1_signer import generate_private_key
+    from sawtooth_signing import create_context
+    from sawtooth_signing import CryptoFactory
 
-    private_key = private_key = generate_private_key(private_key_format='bytes')
+    context = create_context('secp256k1')
+    private_key = context.new_random_private_key()
+    signer = CryptoFactory(context).new_signer(private_key)
 
 
 {% endif %}
@@ -49,12 +58,6 @@ key, and it is fairly simple to generate this using the SDK's *signer* module.
 
 {% include 'partials/encoding_your_payload.rst' %}
 
-.. note::
-
-   This process can be simplified somewhat by offloading some of the work to
-   the *payload encoder* of a *TransactionEncoder* (see below).
-
-
 Building the Transaction
 ========================
 
@@ -67,55 +70,66 @@ to familiarize yourself with the information in
 TransactionHeaders.
 
 
-1. Create an Encoder
---------------------
+1. Create the Transaction Header
+--------------------------------
 
-A *TransactionEncoder* stores your private key, and (optionally) default
-TransactionHeader values and a function to encode each payload. Once
-instantiated, multiple Transactions can be created using these common elements,
-and without any explicit hashing or signing. You will never need to specify the
-*nonce*, *signer public_key*, or *payload Sha512* properties of a TransactionHeader,
-as the SDK will generate these automatically. You will only need to set a
-*batcher public_key* if a different private key will be used to sign Batches containing
-these Transactions (see below).
-
+A TransactionHeader contains information for routing a transaction to the
+correct transaction processor, what input and output state addresses are
+involved, references to prior transactions it depends on, and the public keys
+associated with the its signature. The header references the payload through a
+SHA-512 hash of the payload bytes.
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const {TransactionEncoder} = require('sawtooth-sdk')
+    const {createHash} = require('crypto')
+    const {protobuf} = require('sawtooth-sdk')
 
-    const encoder = new TransactionEncoder(privateKey, {
-        // We don't want a batcher public_key or dependencies for our example,
-        // but this is what setting them might look like:
-        // batcherPublicKey: '02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
-        // dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
+    const transactionHeaderBytes = protobuf.TransactionHeader.encode({
         familyName: 'intkey',
         familyVersion: '1.0',
-        inputs: ['1cf126'],
-        outputs: ['1cf126'],
-        payloadEncoder: cbor.encode
-    })
+        inputs: ['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
+        outputs: ['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
+        signerPublicKey: signer.getPublicKey().asHex(),
+        // In this example, we're signing the batch with the same private key,
+        // but the batch can be signed by another party, in which case, the
+        // public key will need to be associated with that key.
+        batcherPublicKey: signer.getPublicKey().asHex(),
+        // In this example, there are no dependencies.  This list should include
+        // an previous transaction header signatures that must be applied for
+        // this transaction to successfully commit.
+        // For example,
+        // dependencies: ['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
+        dependencies: [],
+        payloadSha512: createHash('sha512').update(payloadBytes).digest('hex')
+    }).finish()
 
 {% else %}
 
 .. code-block::  python
 
-    from sawtooth_sdk.client.encoding import TransactionEncoder
+    from hashlib import sha512
+    from sawtooth_sdk.protobuf.transaction_pb2 import TransactionHeader
 
-    encoder = TransactionEncoder(
-        private_key,
-        # We don't want a batcher public_key or dependencies for our example,
-        # but this is what setting them might look like:
-        # batcherPublicKey='02d260a46457a064733153e09840c322bee1dff34445d7d49e19e60abd18fd0758',
-        # dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
-        payload_encoder=cbor.dumps,
+    txn_header_bytes = TransactionHeader(
         family_name='intkey',
         family_version='1.0',
         inputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
         outputs=['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7']
-        )
+        signer_public_key=signer.get_public_key().as_hex(),
+        # In this example, we're signing the batch with the same private key,
+        # but the batch can be signed by another party, in which case, the
+        # public key will need to be associated with that key.
+        batcher_public_key=signer.get_public_key().as_hex(),
+        # In this example, there are no dependencies.  This list should include
+        # an previous transaction header signatures that must be applied for
+        # this transaction to successfully commit.
+        # For example,
+        # dependencies=['540a6803971d1880ec73a96cb97815a95d374cbad5d865925e5aa0432fcf1931539afe10310c122c5eaae15df61236079abbf4f258889359c4d175516934484a'],
+        dependencies=[],
+        payload_sha512=sha512(payload_bytes).hexdigest()
+    ).SerializeToString()
 
 {% endif %}
 
@@ -127,72 +141,57 @@ these Transactions (see below).
    committed before this one (see *TransactionHeaders* in
    :doc:`/architecture/transactions_and_batches`).
 
-   Although possible, it would be unusual to set these properties when
-   creating a *TransactionEncoder*. The default batcher public_key will be valid
-   as long as the Transactions and Batches are signed by the same key, and
-   dependencies are typically different from Transaction to Transaction.
+.. note::
+
+   The *inputs* and *outputs* are the state addresses a Transaction is allowed
+   to read from or write to. With the Transaction above, we referenced the
+   specific address where the value of  ``'foo'`` is stored.  Whenever possible,
+   specific addresses should be used, as this will allow the validator to
+   schedule transaction processing more efficiently.
+
+   Note that the methods for assigning and validating addresses are entirely up
+   to the Transaction Processor. In the case of IntegerKey, there are `specific
+   rules to generate valid addresses <../transaction_family_specifications
+   /integerkey_transaction_family.html#addressing>`_, which must be followed or
+   Transactions will be rejected. You will need to follow the addressing rules
+   for whichever Transaction Family you are working with.
 
 
 2. Create the Transaction
 -------------------------
 
-If all of the necessary header defaults were set in the TransactionEncoder, a
-Transaction can be created simply by calling the *create* method and passing
-it a payload. If a *payload encoder* function was set, it will be run with the
-payload as its one argument. The payload encoder can do any work you like to
-format the payload, but in the end it what it returns *must* be binary
-encoded.
-
-Optionally, you may pass in header properties in order to override any defaults on for an individual Transaction.
+Once the TransactionHeader is constructed, its bytes are then used to create a
+signature.  This header signature also acts as the ID of the transaction.  The
+header bytes, the header signature, and the payload bytes are all used to
+construct the complete Transaction.
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const txn = encoder.create(payload, {
-        inputs: ['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7'],
-        outputs: ['1cf1266e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7']
-    })
+    const signature = signer.sign(transactionHeaderBytes)
 
-    const txn2 = encoder.create({
-        Verb: 'inc',
-        Name: 'foo',
-        Value: 1
+    const transaction = protobuf.Transaction.create({
+        header: transactionHeaderBytes,
+        headerSignature: signature,
+        payload: payloadBytes
     })
 
 {% else %}
 
 .. code-block::  python
 
-    txn = encoder.create(
-        payload,
-        inputs=['1cf12663ae9d398142a7d84c49b73ba2f667c8d377ceb7832db69b1a416133562ea496'],
-        outputs=['1cf12663ae9d398142a7d84c49b73ba2f667c8d377ceb7832db69b1a416133562ea496'])
+    from sawtooth_sdk.protobuf.transaction_pb2 import Transaction
 
-    txn2 = encoder.create({
-        'Verb': 'inc',
-        'Name': 'foo',
-        'Value': 1})
+    signature = signer.sign(txn_header_bytes)
+
+    txn = Transaction(
+        header=txn_header_bytes,
+        header_signature=signature,
+        payload: payload_bytes
+    )
 
 {% endif %}
-
-.. note::
-
-   Remember that *inputs* and *outputs* are the state addresses a Transaction
-   is allowed to read from or write to. When initializing our
-   *TransactionEncoder* we used only the six-character IntegerKey prefix
-   (intkey), allowing Transactions which don't specify inputs/outputs to access
-   any IntegerKey address. With ``txn`` above, we referenced the specific
-   address where the value of  ``'foo'`` is stored. Whenever possible, specific
-   addresses should be used, as this will allow the validator to better schedule
-   Transaction processing.
-
-   Note that the methods for assigning and validating addresses are entirely up
-   to the Transaction Processor. In the case of IntegerKey, there are `specific
-   rules to generate valid addresses <../transaction_family_specifications
-   /integerkey_transaction_family.html#addressing>`_, which must be followed or
-   Transactions will be rejected. You will need to know and follow the
-   addressing rules for whichever Transaction Family you are working with.
 
 
 3. (optional) Encode the Transaction(s)
@@ -202,32 +201,31 @@ If the same machine is creating Transactions and Batches there is no need to
 encode the Transaction instances. However, in the use case where Transactions
 are being batched externally, they must be serialized before being transmitted
 to the batcher. The {{ language }} SDK offers two options for this. One or more
-Transactions can be combined into a serialized *TransactionList* using the
-*encode* method, or if only serializing a single Transaction, creation and
-encoding can done in a single step with *createEncoded*.
+Transactions can be combined into a serialized *TransactionList* method, or can
+be serialized as a single Transaction.
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const txnBytes = encoder.encode([txn, txn2])
+    const txnListBytes = protobuf.TransactionList.encode([
+        transaction1,
+        transaction2
+    ]).finish()
 
-    const txnBytes2 = encoder.createEncoded({
-        Verb: 'dec',
-        Name: 'foo',
-        Value: 3
-    })
+    const txnBytes2 = transaction.finish()
 
 {% else %}
 
 .. code-block:: python
 
-    txn_bytes = encoder.encode([txn, txn2])
+    from sawtooth_sdk.protobuf import TransactionList
 
-    txn_bytes2 = encoder.create_encoded({
-        'Verb': 'dec',
-        'Name': 'foo',
-        'Value': 3})
+    txn_list_bytes = TransactionList(
+        transactions=[txn1, txn2]
+    ).SerializeToString()
+
+    txn_bytes = txn.SerializeToString()
 
 {% endif %}
 
@@ -243,29 +241,38 @@ dependent on any others, they cannot be submitted directly to the validator.
 They must all be wrapped in a Batch.
 
 
-1. Create an Encoder
---------------------
+1. Create the BatchHeader
+-------------------------
 
-Similar to the TransactionEncoder, there is a *BatchEncoder* for making Batches.
-As Batches are much simpler than Transactions, the only argument to pass during
-instantiation is the private key to sign the Batches with.
+Similar to the TransactionHeader, there is a *BatchHeader* for each Batch.
+As Batches are much simpler than Transactions, a BatchHeader needs only  the
+public key of the signer and the list of Transaction IDs, in the same order they
+are listed in the Batch.
 
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const {BatchEncoder} = require('sawtooth-sdk')
+    const transactions = [transaction]
 
-    const batcher = new BatchEncoder(privateKey)
+    const batchHeaderBytes = protobuf.BatchHeader.encode({
+        signerPublicKey: signer.getPublicKey().asHex(),
+        transactionIds: transactions.map((txn) => txn.headerSignature),
+    }).finish()
 
 {% else %}
 
 .. code-block:: python
 
-    from sawtooth_sdk.client.encoding import BatchEncoder
+    from sawtooth_sdk.protobuf.batch_pb2 import BatchHeader
 
-    batcher = BatchEncoder(private_key)
+    txns = [txn]
+
+    batch_header_bytes = BatchHeader(
+        signer_public_key=signer.get_public_key().as_hex(),
+        transaction_ids=[txn.header_signature for txn in txns],
+    ).SerializeToString()
 
 {% endif %}
 
@@ -273,33 +280,36 @@ instantiation is the private key to sign the Batches with.
 2. Create the Batch
 -------------------
 
-Using the SDK, creating a Batch is as simple as calling the *create* method and
-passing it one or more Transactions. If serialized, there is no need to
-decode them first. In addition to Transaction instances, the BatchEncoder can
-handle TransactionLists encoded as both raw binaries and url-safe base64
-strings.
-
+Using the SDK, creating a Batch is similar to creating a transaction.  The
+header is signed, and the resulting signature acts as the Batch's ID.  The Batch
+is then constructed out of the header bytes, the header signature, and the
+transactions that make up the batch.
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const batch = batcher.create(txn)
+    const signature = signer.sign(batchHeaderBytes)
 
-    const batch2 = batcher.create([txn, txn2])
-
-    const batch3 = batcher.create(txnBytes)
-
+    const batch = protobuf.Batch.create({
+        header: batchHeaderBytes,
+        headerSignature: signature,
+        transactions: transactions
+    }
 
 {% else %}
 
 .. code-block:: python
 
-    batch = batcher.create(txn)
+    from sawtooth_sdk.protobuf.batch_pb2 import Batch
 
-    batch2 = batcher.create([txn, txn2])
+    signature = signer.sign(batch_header_bytes)
 
-    batch3 = batcher.create(txn_bytes)
+    batch = Batch(
+        header=batch_header_bytes,
+        header_signature=signature,
+        transactions=txns
+    )
 
 {% endif %}
 
@@ -307,28 +317,27 @@ strings.
 3. Encode the Batch(es) in a BatchList
 --------------------------------------
 
-Like the TransactionEncoder, BatchEncoders have both *encode* and
-*createEncoded* methods for serializing Batches in a BatchList. If encoding
-multiple Batches in one BatchList, they must be created individually first, and
-then encoded. If only wrapping one Batch per BatchList, creating and encoding
-can happen in one step.
-
+In order to submit Batches to the validator, they  must be collected into a
+*BatchList*.  Multiple batches can be submitted in one BatchList, though the
+Batches themselves don't necessarily need to depend on each other. Unlike
+Batches, a BatchList is not atomic. Batches from other clients may be
+interleaved with yours.
 
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
 
-    const batchBytes = batcher.encode([batch, batch2, batch3])
-
-    const batchBytes2 = batcher.createEncoded(txn)
+    const batchListBytes = protobuf.BatchList.encode({
+        batches: [batch]
+    }).finish()
 
 {% else %}
 
 .. code-block:: python
 
-    batch_bytes = batcher.encode([batch, batch2, batch3])
+    from sawtooth_sdk.protobuf.batch_pb2 import BatchList
 
-    batch_bytes2 = batcher.create_encoded(txn)
+    batch_list_bytes = BatchList(batches=[batch]).SerializeToString()
 
 {% endif %}
 
