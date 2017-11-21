@@ -49,7 +49,7 @@ on your host system:
 .. code-block:: console
 
   $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-  $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe'
+  $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
   $ sudo apt-get update
 
 To use the nightly repository, run the following commands in a terminal window
