@@ -7,9 +7,10 @@ with a validator using common HTTP/JSON standards. It is an entirely separate
 process, which once running, allows transactions to be submitted and blocks to
 be read with a common language-neutral interface. As the validator is redesigned
 and improved the REST API will grow with it, providing a consistent interface
-that meets the needs of app developers into the future.
+that meets the needs of application developers into the future.
 
-With that focus on app developers, the REST API treats the validator mostly as a
+With that focus on application developers, the REST API treats the validator
+mostly as a
 black box, submitting transactions and fetching the results. It is not the tool
 for all validator communication. For example, it is not used by Transaction
 Processors to communicate with a validator, or by one validator to talk to other
@@ -69,7 +70,7 @@ envelope itself (see below).
    * - 500
      - Internal Server Error
      - Something is broken in the REST API or the validator. If consistently
-       reproducable, a bug report should be submitted.
+       reproducible, a bug report should be submitted.
    * - 503
      - Service Unavailable
      - Indicates the REST API is unable to contact the validator.
@@ -120,10 +121,10 @@ both *min* and *max* may refer to either an index or a resource id.
 Within the ``"paging"`` property of the response body there will be one or more
 of these four values:
 
-   * **start_index** - the index of the first item in the fetched list
-   * **total_count** - the total number of resources available
-   * **previous** - a url for the previous page, if any
-   * **next** - a url for the next page, if any
+   * **start_index** - index of the first item in the fetched list
+   * **total_count** - total number of resources available
+   * **previous** - URL for the previous page, if any
+   * **next** - URL for the next page, if any
 
 *Example paging response:*
 
@@ -145,11 +146,11 @@ Errors
 
 If something goes wrong while processing a request, the REST API will send back
 a response envelope with only one property: ``"error"``. That error will contain
-three values which explain the problem that occured:
+three values which explain the problem that occurred:
 
-   * **code** - a machine parsable code specific to this particular error
-   * **title** - a short human-readable headline for the error
-   * **message** - a longer more detailed explanation of what went wrong
+   * **code** - machine-parsable code specific to this particular error
+   * **title** - short human-readable headline for the error
+   * **message** - longer more detailed explanation of what went wrong
 
 *Example error response:*
 
@@ -185,8 +186,8 @@ specific to a single endpoint are not listed here.
        useful to request older versions of state *(defaults to the latest chain
        head)*.
    * - **count**
-     - For paging, specificies the number of resources to fetch *(defaults to
-       1000)*.
+     - For paging, this item specifies the number of resources to fetch
+       *(defaults to 1000)*.
    * - **min**
      - For paging, specifies the id or index of the first resource to fetch
        *(defaults to 0)*.
@@ -205,7 +206,7 @@ specific to a single endpoint are not listed here.
      - For submission endpoints, instructs the REST API to wait until batches
        have been committed to the blockchain before responding to the client.
        Can be set to a positive integer to specify a timeout in seconds, or
-       without any value to use the REST API's internal time out.
+       without any value to use the REST API's internal timeout.
 
 
 Endpoints
@@ -221,15 +222,15 @@ Resource Endpoints
 In order to fetch resources stored on chain or in the validator's state,
 various resource routes are provided. As is typical with RESTful APIs, a ``GET``
 request fetches one or many resources, depending on whether or not a particular
-resource identifier was specifed (i.e. ``/resources`` vs ``/resources/{resource-
-identifier}``).
+resource identifier was specified (i.e., ``/resources`` vs
+``/resources/{resource-identifier}``).
 
    * **/blocks** - the actual blocks currently in the blockchain, referenced by
      id (aka ``header_signature``)
    * **/batches** - the batches stored on the blockchain, referenced by id
    * **/transactions** - the transactions stored on the blockchain, referenced
      by id
-   * **/state** - the ledger state, stored on the merkel trie, referenced by
+   * **/state** - the ledger state, stored on the Merkle trie, referenced by
      leaf addresses
 
 

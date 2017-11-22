@@ -117,7 +117,7 @@ response links:
 Apache Proxy Setup Guide
 ========================
 
-For further clarification, this section walks through the set up of a simple
+For further clarification, this section walks through the setup of a simple
 `Apache 2 <https://httpd.apache.org/>`_ proxy server secured with Basic Auth
 and https, pointed at an instance of the *Sawtooth* REST API.
 
@@ -137,7 +137,7 @@ We'll begin by installing Apache and its components. These commands may require
    $ a2enmod proxy_http
 
 
-Set up passwords and certificates
+Set Up Passwords and Certificates
 ---------------------------------
 
 First we'll create a password file for the user *"sawtooth"*, with the password
@@ -161,7 +161,7 @@ testing purposes.
        -out /tmp/.ssl.crt
 
 
-Configure proxy
+Configure Proxy
 ---------------
 
 Now we'll set up the proxy by editing an Apache config files. This may require
@@ -205,7 +205,7 @@ Edit the file to look like this:
    Apache will automatically set the *X-Forwarded-Host* header.
 
 
-Start Apache, A Validator, and the REST API
+Start Apache, a Validator, and the REST API
 -------------------------------------------
 
 Start or restart Apache as appropriate. This may require ``sudo``.
@@ -232,7 +232,7 @@ Start a validator, and the REST API.
 Send Test Requests
 ------------------
 
-Finally, lets use ``curl`` to make some requests and make sure everything
+Finally, let's use ``curl`` to make some requests and make sure everything
 worked. We'll start by querying the REST API directly:
 
 .. code-block:: console
@@ -266,7 +266,7 @@ And finally, if we send a properly authorized request:
    $ curl https://localhost/sawtooth/blocks --insecure -u sawtooth:sawtooth
 
 We should get back a response that looks very similar to querying the REST API
-directly, but with a new *link* that reflects the url we sent the request to:
+directly, but with a new *link* that reflects the URL we sent the request to:
 
 .. code-block:: json
 

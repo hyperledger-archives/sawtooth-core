@@ -286,7 +286,7 @@ following output:
   [21:03:55.956 DEBUG   interconnect] ServerThread sending TP_REGISTER_RESPONSE to b'6d2d80275ae280ea'
 
 
-Verifying That the REST API is Running
+Verifying that the REST API is Running
 --------------------------------------
 
 In order to configure a running validator, the REST API must be running.

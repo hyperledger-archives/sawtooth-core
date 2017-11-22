@@ -92,7 +92,7 @@ EPID
   An anonymous credential system. See E. Brickell and Jiangtao Li: “Enhanced
   Privacy ID from Bilinear Pairing for Hardware Authentication and Attestation”.
   IEEE International Conference on Social Computing / IEEE International
-  Converence on Privacy, Security, Risk and Trust. 2010.
+  Conference on Privacy, Security, Risk and Trust. 2010.
 
 EPID Pseudonym
   Pseudonym of an SGX platform used in linkable quotes.  It is
@@ -108,13 +108,13 @@ IAS Report Key
   in the current IAS API Guide.
 
 PSEmanifest
-  Platform Services Enclave manifest, it is part of an SGX quote
+  Platform Services Enclave manifest. It is part of an SGX quote
   for enclaves using Platform Services like Trusted Time and Monotonic
   Counters.
 
 AEP
   Attestation evidence payload sent to IAS (see IAS API specifications).
-  Contains JSON encodings of the quote, an optional PSEmanifest and an optional
+  Contains JSON encodings of the quote, an optional PSEmanifest, and an optional
   nonce.
 
 AVR
@@ -220,7 +220,7 @@ It exports the following functions:
 
 **Description**
 
-1. Generate fresh ECC keypair (PPK, PSK)
+1. Generate fresh ECC key pair (PPK, PSK)
 #. Create monotonic counter and save its identifier as MCID.
 #. Use the SGX ``sgx_seal_data()`` function to encrypt (PPK, PSK, MCID) with
    SealKey (using MRENCLAVE policy)
@@ -233,7 +233,7 @@ It exports the following functions:
 #. Return (PPK, report, PSEmanifest, sealedSignUpData).
 
 .. note::
-   **Implementation Note:** Normally there is a maximum number of monotonic
+   **Implementation Note:** Normally, there is a maximum number of monotonic
    counters that can be created. One way to deal with this limitation is to
    destroy a previously created monotonic counter if this is not the first time
    the generateSignupData function was called.
@@ -453,7 +453,7 @@ performed:
    checking EndPoint registry (otherwise sender needs to re-sign).
 
 #. Verify the waitCertificate.waitTimer.localMean is correct by comparing against
-   locaMean computed locally.
+   localMean computed locally.
 
 #. Verify the waitCertificate.blockDigest is a valid ECDSA signature of the SHA256
    hash of block using OPK.
@@ -580,13 +580,13 @@ Security Considerations
       multiple monotonic counters without being forced to commit to using only
       one eventually. As a monotonic counter is bound to PPK, PSK through the
       AES-GCM encryption with the Seal Key, when a validator signs-up with a PPK
-      it automatically commits to using the monotonic counter that was create
+      it automatically commits to using the monotonic counter that was created
       along with PPK, PSK.
 
 #. **Sign-up AEP replay:** the use of the nonce field in the AEP, which is set
    equal to :math:`WaitCertId_{n}`, is used to prevent the replay of old AEPs.
 
-Comments on multi-user or multi-ledger SGX enclave service
+Comments on Multi-user or Multi-ledger SGX Enclave Service
 ----------------------------------------------------------
 
 It is possible to use the same enclave for multiple users or ledgers by making

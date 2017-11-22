@@ -86,7 +86,7 @@ hexadecimal string.
 
 Transactions and their headers are built using the
 `Google Protocol Buffer <https://developers.google.com/protocol-buffers/>`_
-(or Protobuf) format. This allows data to be serialized and deserialzed
+(or Protobuf) format. This allows data to be serialized and deserialized
 consistently and efficiently across multiple platforms and multiple languages.
 The Protobuf definition files are located in the
 `/protos <https://github.com/hyperledger/sawtooth-core/tree/master/protos>`_
@@ -252,7 +252,7 @@ the same order as the Transactions themselves.
 ------------------
 
 The process for signing a BatchHeader is identical to signing the
-TransactionHeader. Create a SHA-256 hash of the the header binary, use your
+TransactionHeader. Create a SHA-256 hash of the header binary, use your
 private key to create a 64-byte secp256k1 signature, and format that signature
 as a hexadecimal string. As with signing a TransactionHeader, some of these
 steps may be handled automatically by the library you are using.

@@ -67,7 +67,7 @@ The ``validator.toml`` configuration file has the following options:
 
   Sets the advertised network endpoint URL. Default: tcp://127.0.0.1:8800.
   Replace the external interface and port values with either the
-  publicly-addressable IP address and port or with the NAT values for your
+  publicly addressable IP address and port or with the NAT values for your
   validator. For example:
 
   .. code-block:: none
@@ -82,7 +82,7 @@ The ``validator.toml`` configuration file has the following options:
 
   Note that this option is not needed in static peering mode.
 
-  Replace the seed address and port values with either the publicly-addressable
+  Replace the seed address and port values with either the publicly addressable
   IP address and port or with the NAT values for the other nodes in your
   network. For example:
 

@@ -28,7 +28,7 @@ tac-toe.
 
     The SDK contains a fully-implemented version of tic-tac-toe. This tutorial
     is meant to demonstrate the relevant concepts, rather than to create a
-    complete implementation. See the SDK_ for full implemenations in
+    complete implementation. See the SDK_ for full implementations in
     multiple languages.
 
 .. _SDK: https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples
@@ -263,7 +263,7 @@ Before we say how exactly the transaction payload will be decoded, let's look at
 ``getStateData``{% else %}``_get_state_data``{% endif %}. Now, as far as the handler
 is concerned, it doesn't matter how the game data is stored. The only thing that matters
 is that given a game name, the state store is able to give back the correct game data.
-(In our full XO implementation, the game data is stored in a Merkle-radix tree.)
+(In our full XO implementation, the game data is stored in a Merkle-Radix tree.)
 
 
 {% if language == 'JavaScript' %}
@@ -489,7 +489,7 @@ Implementing Game Play
 
 
 All that's left to do is describe how to play tic-tac-toe. The details here are fairly
-straighforward, and the {% if language == 'JavaScript' %}
+straightforward, and the {% if language == 'JavaScript' %}
 ``_playXO``{% elif language == 'Java' %}``playXo``{% else %}``_play_xo``{% endif %}
 function could certainly be implemented in different ways. To see our implementation, go
 to ``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to represent

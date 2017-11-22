@@ -155,7 +155,7 @@ attestation service.
 `Click here <https://software.intel.com/formfill/sgx-onboarding>`_ for the
 registration form.
 
-Configure the validator to use SGX PoET
+Configure the Validator to Use SGX PoET
 ---------------------------------------
 
 After installing Sawtooth, add config settings so PoET will work properly.
@@ -292,7 +292,7 @@ Genesis configuration is complete! Log out of the sawtooth account:
 
 .. _val-config:
 
-Change the validator config file
+Change the Validator Config File
 --------------------------------
 
 You must specify some networking information so that the validator advertises
@@ -356,7 +356,7 @@ Add the following content to the file:
 
 Next, locate the ``endpoint`` section in this file.
 Replace the external interface and port values with either the
-publicly-addressable IP address and port or the NAT values for your validator.
+publicly addressable IP address and port or the NAT values for your validator.
 
 .. code-block:: console
 
@@ -364,7 +364,7 @@ publicly-addressable IP address and port or the NAT values for your validator.
 
 Find the ``seeds`` section in the config file.
 Replace the seed address and port values with either the
-publicly-addressable IP address and port or the NAT values for the other nodes
+publicly addressable IP address and port or the NAT values for the other nodes
 in your network.
 
 .. code-block:: console
@@ -402,7 +402,7 @@ specify the correct bind interface.
         Jun 02 14:50:37 ubuntu systemd[1]: sawtooth-validator.service: Unit entered failed state.
         Jun 02 14:50:37 ubuntu systemd[1]: sawtooth-validator.service: Failed with result 'exit-code'.
 
-Start the Sawtooth services
+Start the Sawtooth Services
 ---------------------------
 
 Use these commands to start the Sawtooth services:
@@ -438,7 +438,7 @@ To verify that the services are running:
     $ sudo systemctl status sawtooth-settings-tp.service
     $ sudo systemctl status sawtooth-intkey-tp-python.service
 
-Stop or restart the Sawtooth services
+Stop or Restart the Sawtooth Services
 -------------------------------------
 
 If you need to stop or restart the Sawtooth services for any reason, use the

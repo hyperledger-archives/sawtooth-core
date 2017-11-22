@@ -4,7 +4,7 @@ Transaction Scheduling
 
 Sawtooth supports both serial and parallel scheduling of transactions. The
 scheduler type is specified via a command line argument or as an option in the
-Validator's configuration file when the Validator process is started.  Both
+validator's configuration file when the validator process is started.  Both
 schedulers result in the same deterministic results and are completely
 interchangeable.
 
@@ -31,9 +31,9 @@ Scheduling within the Validator
 ===============================
 
 The sawtooth-validator process has two major components which use schedulers to
-calculate state changes and the resulting merkle hashes based on transaction
+calculate state changes and the resulting Merkle hashes based on transaction
 processing: the Chain Controller and the Block Publisher.  The Chain Controller
-and Block Publisher pass a scheduler to the Executor. While the Validator
+and Block Publisher pass a scheduler to the Executor. While the validator
 contains only a single Chain Controller, a single Block Publisher, and a single
 Executor, there are numerous instances of schedulers which are dynamically
 created as needed.
@@ -46,7 +46,7 @@ pointer to the last block in the current chain).  Processing is block-based;
 when it receives a candidate block (over the network or from the Block
 Publisher), it determines whether the chain head should be updated to point to
 that candidate block.  The Chain Controller creates a scheduler to calculate
-new state with a related merkle hash for the block being published. The merkle
+new state with a related Merkle hash for the block being published. The Merkle
 hash is compared to the state root contained in the block header. If they
 match, the block is valid from a transaction execution and state standpoint.
 The Chain Controller uses this information in combination with consensus
@@ -56,7 +56,7 @@ Block Publisher
 ---------------
 
 The Block Publisher is responsible for creating new candidate blocks.  As
-batches are received by the Validator (from clients or other validator nodes),
+batches are received by the validator (from clients or other validator nodes),
 they are added to the Block Publisher's pending queue.  Only valid transactions
 will be added to the next candidate block.  For timeliness, batches are added
 to a scheduler as they are added to the pending queue; thus, transactions are
@@ -125,9 +125,9 @@ determined using these inputs/outputs declarations.
    It is possible for poorly written clients to impact parallelism by providing
    overly broad inputs/outputs declarations.  Transaction processor
    implementations can enforce specific inputs/outputs requirements to
-   incentivise correct client behavior.
+   provide an incentive for correct client behavior.
 
-The parallel scheduler calculates predecessors using a radix trie with nodes
+The parallel scheduler calculates predecessors using a Radix trie with nodes
 addressable by state addresses or namespaces. This tree is called the
 predecessor tree. Input declarations are considered reads, with output
 declarations considered writes.  By keeping track of readers and writers within

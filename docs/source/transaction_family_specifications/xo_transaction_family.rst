@@ -118,7 +118,7 @@ have a game name, an action, and, if the action is `take`, a space.
    according to the following rules:
 
    a. Player keys - If the player-1 key is null (the empty string), it
-      will be updated to key with which the transaciton was signed. If
+      will be updated to key with which the transaction was signed. If
       the player-1 key is nonnull and the player-2 key is null, the
       player-2 will be updated to the signing key. Otherwise, the
       player keys will not be changed.

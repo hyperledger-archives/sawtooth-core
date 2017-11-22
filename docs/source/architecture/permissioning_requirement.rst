@@ -88,10 +88,10 @@ State Delta Subscriber
   off-chain storage or action.
 
 Radix Merkle Tree
-  A radix merkle tree is the representation of state used by Sawtooth. The tree
-  is a merkle tree because it is a copy-on-write data structure which stores
+  A Radix Merkle tree is the representation of state used by Sawtooth. The tree
+  is a Merkle tree because it is a copy-on-write data structure which stores
   successive node hashes from leaf-to-root upon any changes to the tree. The
-  tree is also an addressable radix tree because addresses uniquely identify
+  tree is also an addressable Radix tree because addresses uniquely identify
   the paths to leaf nodes in the tree where information is stored.
 
 Validator Network
@@ -171,7 +171,7 @@ Private Network
 In a private network, only specific validators will be allowed to join the
 validator network and participate in consensus. The validators in the network
 will only accept connections from specific clients and will control if the
-client is allowed to submit batches and query specific address prefixes. in
+client is allowed to submit batches and query specific address prefixes in
 state. Only specific transaction processors and state delta subscribers will be
 allowed to connect to the local validator. Batches and transactions received by
 the validator can only be signed by permitted transactors. Transactors may also

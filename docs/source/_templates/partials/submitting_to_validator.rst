@@ -49,7 +49,7 @@ prepared the BatchList:
 
 
 And here is what it would look like if you saved the binary to a file, and then
-sent it from the command-line with *curl*:
+sent it from the command line with ``curl``:
 
 {% if language == 'JavaScript' %}
 

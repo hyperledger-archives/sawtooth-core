@@ -31,7 +31,7 @@ HTTP Status Codes
    * - 500
      - Internal Server Error
      - Something is broken internally in the REST API or the validator. This may
-       be a bug, and if reproducable, should be reported.
+       be a bug, and if reproducible, should be reported.
    * - 503
      - Service Unavailable
      - The REST API is unable to communicate with the validator. It may be down.
@@ -81,7 +81,7 @@ Error Codes and Descriptions
    * - 10
      - Unknown Validator Error
      - An unknown error occurred with the validator while processing the
-       request. This may be a bug, and if reproducable, should be reported.
+       request. This may be a bug, and if reproducible, should be reported.
    * - 15
      - Validator Not Ready
      - The validator has no genesis block, and so cannot be queried. Wait for
