@@ -678,7 +678,7 @@ Then run the following command from the validator container:
     --url http://rest-api:8008 \
     --key /root/.sawtooth/keys/my_key.priv \
     sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
-  $ sawset settings list --url http://rest-api:8008
+  $ sawtooth settings list --url http://rest-api:8008
 
 
 A TP_PROCESS_REQUEST message appears in the logging output of the validator,
