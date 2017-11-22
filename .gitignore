@@ -42,6 +42,7 @@
 /docs/build/
 /docs/source/_autogen/
 /docs/source/cli/output/
+/docs/source/sdks/
 
 /integration/**/__pycache__/
 
