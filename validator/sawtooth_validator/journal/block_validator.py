@@ -14,7 +14,9 @@
 # ------------------------------------------------------------------------------
 
 import logging
+import queue
 
+from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.concurrent.atomic import ConcurrentSet
@@ -100,6 +102,37 @@ def look_ahead(iterable):
     yield last, False
 
 
+class _BlockReceiveThread(InstrumentedThread):
+    """This thread's job is to pull blocks off of the queue and to submit them
+    for validation."""
+    def __init__(
+        self, block_queue, submit_function, callback_function,
+        exit_poll_interval=1
+    ):
+        super().__init__(name='_BlockReceiveThread')
+        self._block_queue = block_queue
+        self._submit_function = submit_function
+        self._callback_function = callback_function
+        self._exit_poll_interval = exit_poll_interval
+        self._exit = False
+
+    def run(self):
+        while True:
+            try:
+                # Set timeout so we can check if the thread has been stopped
+                block = self._block_queue.get(timeout=self._exit_poll_interval)
+                self._submit_function(block, self._callback_function)
+
+            except queue.Empty:
+                pass
+
+            if self._exit:
+                return
+
+    def stop(self):
+        self._exit = True
+
+
 class BlockValidator(object):
     """
     Responsible for validating a block, handles both chain extensions and fork
@@ -111,6 +144,7 @@ class BlockValidator(object):
                  block_cache,
                  state_view_factory,
                  transaction_executor,
+                 on_block_validated,
                  squash_handler,
                  identity_public_key,
                  data_dir,
@@ -125,6 +159,8 @@ class BlockValidator(object):
              state_view_factory: The factory object to create.
              transaction_executor: The transaction executor used to
              process transactions.
+             on_block_validated: The function to call when block validation is
+             complete.
              squash_handler: A parameter passed when creating transaction
              schedulers.
              identity_public_key: Public key used for this validator's
@@ -139,6 +175,7 @@ class BlockValidator(object):
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
+        self._on_block_validated = on_block_validated
         self._squash_handler = squash_handler
         self._identity_public_key = identity_public_key
         self._data_dir = data_dir
@@ -149,6 +186,10 @@ class BlockValidator(object):
             SettingsViewFactory(state_view_factory))
 
         self._thread_pool = InstrumentedThreadPoolExecutor(1)
+        self._block_receive_thread = None
+
+        # Blocks waiting to be processed
+        self._block_queue = queue.Queue()
 
         # Blocks that are currently being processed
         self._blocks_processing = ConcurrentSet()
@@ -157,8 +198,52 @@ class BlockValidator(object):
         # to complete
         self._blocks_pending = ConcurrentMultiMap()
 
+    def start(self):
+        self._block_receive_thread = _BlockReceiveThread(
+            block_queue=self._block_queue,
+            submit_function=self._on_block_received,
+            callback_function=self._on_block_validated)
+        self._block_receive_thread.start()
+
     def stop(self):
         self._thread_pool.shutdown(wait=True)
+        if self._block_receive_thread is not None:
+            self._block_receive_thread.stop()
+            self._block_receive_thread = None
+
+    def queue_block(self, block):
+        """
+        New block has been received, queue it with the chain controller
+        for processing.
+        """
+        self._block_queue.put(block)
+
+    def has_block(self, block_id):
+        # I am not convinced that any of these checks are necessary, since the
+        # block cache is checked in the completer and in_process and in_pending
+        # are checked in submit_blocks_for_validation.
+        if block_id in self._block_cache:
+            return True
+
+        if self.in_process(block_id):
+            return True
+
+        if self.in_pending(block_id):
+            return True
+
+        return False
+
+    def _on_block_received(self, block, callback):
+        """Checks to see if the block should be dropped, then adds the block to
+        the block cache and submits the block for validation."""
+        block_id = block.identifier
+
+        if self.has_block(block_id):
+            return
+
+        self._block_cache[block_id] = block
+
+        self.submit_blocks_for_validation([block], callback)
 
     def _get_previous_block_state_root(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:

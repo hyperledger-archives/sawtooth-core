@@ -36,14 +36,14 @@ LOGGER = logging.getLogger(__name__)
 
 class Completer(object):
     """
-    The Completer is responsible for making sure blocks are formally
-    complete before they are delivered to the chain controller. A formally
-    complete block is a block whose predecessor is in the block cache and all
-    the batches are present in the batch list and in the order specified by the
-    block header. If the predecessor or a batch is missing, a request message
-    is sent sent out over the gossip network. It also checks that all batches
-    have their dependencies satisifed, otherwise it will request the batch that
-    has the missing transaction.
+    The Completer is responsible for making sure blocks are formally complete
+    before they are passed on. A formally complete block is a block whose
+    predecessor is in the block cache and all the batches are present in the
+    batch list and in the order specified by the block header. If the
+    predecessor or a batch is missing, a request message is sent sent out over
+    the gossip network. It also checks that all batches have their dependencies
+    satisifed, otherwise it will request the batch that has the missing
+    transaction.
     """
     def __init__(self,
                  block_store,
