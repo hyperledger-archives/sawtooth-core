@@ -24,7 +24,7 @@ services:
       - 4004
     depends_on:
       - validator
-    entrypoint: settings-tp -vv tcp://validator:4004
+    entrypoint: settings-tp -vv -C tcp://validator:4004
 
   intkey-tp-python:
     image: hyperledger/sawtooth-intkey-tp-python:1.0
@@ -33,7 +33,7 @@ services:
       - 4004
     depends_on:
       - validator
-    entrypoint: intkey-tp-python -vv tcp://validator:4004
+    entrypoint: intkey-tp-python -vv -C tcp://validator:4004
 
   xo-tp-python:
     image: hyperledger/sawtooth-xo-tp-python:1.0
@@ -42,7 +42,7 @@ services:
       - 4004
     depends_on:
       - validator
-    entrypoint: xo-tp-python -vv tcp://validator:4004
+    entrypoint: xo-tp-python -vv -C tcp://validator:4004
 
   validator:
     image: hyperledger/sawtooth-validator:1.0
@@ -73,7 +73,7 @@ services:
       - "8008:8008"
     depends_on:
       - validator
-    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8008
+    entrypoint: sawtooth-rest-api -C tcp://validator:4004 --bind rest-api:8008
 
   shell:
     image: hyperledger/sawtooth-all:1.0
