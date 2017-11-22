@@ -38,4 +38,5 @@ The following sections describe each component's configuration file.
    configuring_sawtooth/path_configuration_file
    configuring_sawtooth/identity_tp_configuration
    configuring_sawtooth/settings_tp_configuration
+   configuring_sawtooth/xo_tp_configuration
    log_configuration
