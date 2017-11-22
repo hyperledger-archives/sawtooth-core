@@ -25,6 +25,10 @@ from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchTracker
 
+import logging
+
+LOGGER = logging.getLogger(__name__)
+
 def _increment_key(key, offset=1):
     if type(key) == int:
         return key + offset
@@ -106,16 +110,17 @@ class MockBlockStore(BlockStore):
         self.update_chain([BlockWrapper(block)], [])
 
 
-def make_db_and_store(size=3, start='a'):
+def make_db_and_store(size=3):
     """
     Creates and returns three related objects for testing:
         * database - dict database with evolving state
         * store - blocks with root hashes corresponding to that state
         * roots - list of root hashes used in order
     With defaults, the values at the three roots look like this:
-        * 0 - {'a': b'1'}
-        * 1 - {'a': b'2', 'b': b'4'}
-        * 2 - {'a': b'3', 'b': b'5', 'c': b'7'}
+        * 0 - {'000...1': b'1'}
+        * 1 - {'000...1': b'2', '000...2': b'4'}
+        * 2 - {'000...1': b'3', '000...2': b'5', '000...3': b'7'}
+        * 3 - {'000...1': b'4', '000...2': b'6', '000...3': b'8', '000...4': b'10'}
     """
     database = DictDatabase()
     store = MockBlockStore(size=0);
@@ -124,10 +129,18 @@ def make_db_and_store(size=3, start='a'):
     merkle = MerkleDatabase(database)
     data = {}
 
-    for i in range(size):
-        for k, v in data.items():
-            data[k] = str(int(v) + 1).encode()
-        data[_increment_key(start, i)] = str(i * size + 1).encode()
+    # Create all the keys that will be used. Keys are zero-padded hex strings
+    # starting with '1'.
+    keys = [format(i, 'x').zfill(70) for i in range(1, size + 1)]
+
+    for i in range(1, size + 1):
+        # Construct the state for this root
+        data = {}
+        for key_idx in range(i):
+            key = keys[key_idx]
+            # Calculate unique values based on the key and root
+            val = i + (2 * key_idx)
+            data[key] = str(val).encode()
 
         root = merkle.update(data, virtual=False)
         roots.append(root)
