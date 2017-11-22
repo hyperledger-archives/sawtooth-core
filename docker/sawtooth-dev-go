@@ -47,33 +47,21 @@ ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples
 
 RUN mkdir /go
 
-RUN go get -u github.com/golang/protobuf/proto \
+RUN go get -u \
+    github.com/golang/protobuf/proto \
     github.com/golang/protobuf/protoc-gen-go \
     github.com/pebbe/zmq4 \
     github.com/brianolson/cbor_go \
     github.com/satori/go.uuid \
     github.com/btcsuite/btcd/btcec \
     github.com/btcsuite/btcutil/base58 \
-    gopkg.in/fatih/set.v0 \
-    golang.org/x/crypto/ripemd160 \
     github.com/jessevdk/go-flags \
     github.com/pelletier/go-toml \
+    github.com/golang/mock/gomock \
+    github.com/golang/mock/mockgen \
+    golang.org/x/crypto/ripemd160 \
     golang.org/x/crypto/ssh/terminal \
- && cd /go/src/github.com/golang \
- && git clone https://github.com/golang/mock \
- && cd mock \
- && git checkout v1.0.0 \
- && cd /go/src/github.com/golang/mock/mockgen \
- && go build -o /go/bin/mockgen
-
-# A PR was merged into the github.com/golang/mock repository on 10/10/17 that
-# broke it due to an import issue. Since the "go get" command does not support
-# checking out specific commits/tags/branches, the above hack was used instead
-# to retrieve the dependency and checkout a stable version. The following was
-# created to track the issue: https://github.com/golang/mock/issues/116. Once
-# the issue is resolved, we can revert to using "go get" again with the paths:
-# - github.com/golang/mock/gomock
-# - github.com/golang/mock/mockgen
+    gopkg.in/fatih/set.v0
 
 EXPOSE 4004/tcp
 
