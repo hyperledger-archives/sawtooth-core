@@ -20,6 +20,7 @@ import queue
 from threading import RLock
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
+from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
     TransactionReceipt
@@ -202,6 +203,11 @@ class ChainController(object):
                 new_block = result.block
                 LOGGER.info("on_block_validated: %s", new_block)
 
+                if self._chain_head is None:
+                    # Try to set genesis
+                    self._set_genesis(new_block)
+                    return
+
                 # if the head has changed, since we started the work.
                 if result.chain_head.identifier !=\
                         self._chain_head.identifier:
@@ -271,10 +277,6 @@ class ChainController(object):
                     # do we already have this block
                     return
 
-                if self.chain_head is None:
-                    self._set_genesis(block)
-                    return
-
                 self._block_cache[block.identifier] = block
 
                 # schedule this block for validation.
@@ -309,7 +311,7 @@ class ChainController(object):
                                chain_id[:8], block.identifier[:8])
             else:
 
-                if self._block_validator.validate_block(block):
+                if block.status == BlockStatus.Valid:
                     if chain_id is None:
                         self._chain_id_manager.save_block_chain_id(
                             block.identifier)

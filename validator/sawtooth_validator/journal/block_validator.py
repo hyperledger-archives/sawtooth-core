@@ -575,6 +575,12 @@ class BlockValidator(object):
             result = BlockValidationResult(block)
             LOGGER.info("Starting block validation of : %s", block)
 
+            # If this is a genesis block, we can skip the rest
+            if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
+                valid = self.validate_block(block)
+                callback(valid, result)
+                return
+
             # Get the current chain_head and store it in the result
             chain_head = self._block_cache.block_store.chain_head
             result.chain_head = chain_head
