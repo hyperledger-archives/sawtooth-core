@@ -162,6 +162,7 @@ class _SendReceive(object):
 
         self._metrics_registry = metrics_registry
         self._received_message_counters = {}
+        self._dispatcher_queue = None
 
     @property
     def connection(self):
@@ -265,21 +266,15 @@ class _SendReceive(object):
                                None)
 
     @asyncio.coroutine
-    def _receive_message(self):
-        """
-        Internal coroutine for receiving messages
-        """
-        zmq_identity = None
+    def _dispatch_message(self):
         while True:
             try:
-                if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
-                    zmq_identity, msg_bytes = \
-                        yield from self._socket.recv_multipart()
-                    self._received_from_identity(zmq_identity)
-                else:
-                    msg_bytes = yield from self._socket.recv()
-                    self._last_message_time = time.time()
+                queue_size = self._dispatcher_queue.qsize()
+                if queue_size > 10:
+                    LOGGER.debug("Dispatch queue size: %s", queue_size)
 
+                zmq_identity, msg_bytes =\
+                    yield from self._dispatcher_queue.get()
                 message = validator_pb2.Message()
                 message.ParseFromString(msg_bytes)
                 LOGGER.debug("%s receiving %s message: %s bytes",
@@ -317,6 +312,34 @@ class _SendReceive(object):
                     my_future.timer_stop()
 
                     self._futures.remove(message.correlation_id)
+
+            except CancelledError:
+                # The concurrent.futures.CancelledError is caught by asyncio
+                # when the Task associated with the coroutine is cancelled.
+                # The raise is required to stop this component.
+                raise
+            except Exception as e:  # pylint: disable=broad-except
+                LOGGER.exception("Received a message on address %s that "
+                                 "caused an error: %s", self._address, e)
+
+    @asyncio.coroutine
+    def _receive_message(self):
+        """
+        Internal coroutine for receiving messages
+        """
+        while True:
+            try:
+                if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
+                    zmq_identity, msg_bytes = \
+                        yield from self._socket.recv_multipart()
+                    self._received_from_identity(zmq_identity)
+                    self._dispatcher_queue.put_nowait(
+                        (zmq_identity, msg_bytes))
+                else:
+                    msg_bytes = yield from self._socket.recv()
+                    self._last_message_time = time.time()
+                    self._dispatcher_queue.put_nowait((None, msg_bytes))
+
             except CancelledError:
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
@@ -485,6 +508,12 @@ class _SendReceive(object):
 
             asyncio.ensure_future(self._receive_message(),
                                   loop=self._event_loop)
+
+            asyncio.ensure_future(self._dispatch_message(),
+                                  loop=self._event_loop)
+
+            self._dispatcher_queue = asyncio.Queue()
+
             if self._monitor:
                 self._monitor_fd = "inproc://monitor.s-{}".format(
                     _generate_id()[0:5])
