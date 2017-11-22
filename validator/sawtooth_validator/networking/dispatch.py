@@ -25,6 +25,10 @@ from sawtooth_validator.protobuf import validator_pb2
 
 LOGGER = logging.getLogger(__name__)
 
+HIGH_PRIORITY = 0
+MED_PRIORITY = 1
+LOW_PRIORITY = 2
+
 
 def _gen_message_id():
     return uuid.uuid4().hex.encode()
@@ -35,11 +39,23 @@ class Dispatcher(Thread):
         super().__init__(name='Dispatcher')
         self._timeout = timeout
         self._msg_type_handlers = {}
-        self._in_queue = queue.Queue()
+        self._in_queue = queue.PriorityQueue()
         self._send_message = {}
         self._send_last_message = {}
         self._message_information = {}
         self._condition = Condition()
+        self._priority = {
+            validator_pb2.Message.NETWORK_PING: HIGH_PRIORITY,
+            validator_pb2.Message.GOSSIP_REGISTER: MED_PRIORITY,
+            validator_pb2.Message.AUTHORIZATION_CONNECTION_RESPONSE:
+                MED_PRIORITY,
+            validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST:
+                MED_PRIORITY,
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST:
+                MED_PRIORITY,
+            validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT:
+                MED_PRIORITY
+        }
 
     def add_send_message(self, connection, send_message):
         """Adds a send_message function to the Dispatcher's
@@ -110,6 +126,7 @@ class Dispatcher(Thread):
 
     def dispatch(self, connection, message, connection_id):
         if message.message_type in self._msg_type_handlers:
+            priority = self._priority.get(message.message_type, LOW_PRIORITY)
             message_id = _gen_message_id()
             self._message_information[message_id] = (
                 connection,
@@ -118,7 +135,7 @@ class Dispatcher(Thread):
                 _ManagerCollection(
                     self._msg_type_handlers[message.message_type])
             )
-            self._in_queue.put_nowait(message_id)
+            self._in_queue.put_nowait((priority, message_id))
 
             queue_size = self._in_queue.qsize()
             if queue_size > 10:
@@ -235,7 +252,7 @@ class Dispatcher(Thread):
     def run(self):
         while True:
             try:
-                msg_id = self._in_queue.get()
+                _, msg_id = self._in_queue.get()
                 if msg_id == -1:
                     break
                 self._process(msg_id)
@@ -243,7 +260,7 @@ class Dispatcher(Thread):
                 LOGGER.exception("Unhandled exception while dispatching")
 
     def stop(self):
-        self._in_queue.put_nowait(-1)
+        self._in_queue.put_nowait((HIGH_PRIORITY, -1))
 
     def block_until_complete(self):
         """Blocks until no more messages are in flight,
