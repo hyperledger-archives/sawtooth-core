@@ -15,7 +15,8 @@
 
 import hashlib
 import string
-import time
+import os
+import binascii
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
@@ -111,7 +112,7 @@ class MessageFactory(object):
                                    set_nonce=True, batcher_pub_key=None):
 
         if set_nonce:
-            nonce = str(time.time())
+            nonce = binascii.b2a_hex(os.urandom(16))
         else:
             nonce = ""
         txn_pub_key = self._signer.get_public_key().as_hex()
