@@ -1,24 +1,28 @@
-=================
-Sawtooth SDK APIs
-=================
+===================
+ Sawtooth SDK APIs
+===================
 
-- Python
 
-  - `Transaction Processor
-    <python_sdk/processor/sawtooth_sdk.processor.html#http://>`__
-  - `Signing
-    <python_sdk/signing/sawtooth_signing.html#http://>`__
+Python
+------
 
-- Go
+.. toctree::
 
-  - `Transaction Processor
-    <go_sdk/processor.html#http://>`__
-  - `Signing
-    <go_sdk/signing.html#http://>`__
+   sdks/python_sdk/processor.rst
+   sdks/python_sdk/sawtooth_signing.rst
 
-- Javascript
+Go
+--
 
-  - `Transaction Processor
-    <javascript_sdk/processor/index.html#http://>`__
-  - `Signing
-    <javascript_sdk/signing/index.html#http://>`__
+- `Transaction Processor
+  <go_sdk/processor.html#http://>`__
+- `Signing
+  <go_sdk/signing.html#http://>`__
+
+Javascript
+----------
+
+- `Transaction Processor
+  <javascript_sdk/processor/index.html#http://>`__
+- `Signing
+  <javascript_sdk/signing/index.html#http://>`__

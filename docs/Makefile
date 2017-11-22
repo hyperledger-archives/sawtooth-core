@@ -62,23 +62,12 @@ templates:
 cli:
 	$(SAWTOOTH)/bin/generate_cli_output
 
-PYTHONSDKDIR := $(HTMLDIR)/python_sdk
+PYTHONSDKDIR := source/sdks/python_sdk
+PYTHONAPIDOC := $(SPHINXAPIDOC) -f -o $(PYTHONSDKDIR)
 python:
-    # pydoc doesn't allow specifying an output directory, so make the
-    # files first and then move them.
-	mkdir -p $(PYTHONSDKDIR)/processor
-	pydoc3 -w sawtooth_sdk.processor
-	pydoc3 -w sawtooth_sdk.processor.core
-	pydoc3 -w sawtooth_sdk.processor.context
-	pydoc3 -w sawtooth_sdk.processor.handler
-	pydoc3 -w sawtooth_sdk.processor.exceptions
-	mv sawtooth_sdk.processor*.html $(PYTHONSDKDIR)/processor
-
-	mkdir -p $(PYTHONSDKDIR)/signing
-	pydoc3 -w sawtooth_signing
-	pydoc3 -w sawtooth_signing.core
-	pydoc3 -w sawtooth_signing.secp256k1
-	mv sawtooth_signing*.html $(PYTHONSDKDIR)/signing
+	mkdir -p $(PYTHONSDKDIR)
+	$(PYTHONAPIDOC) ../sdk/python/sawtooth_sdk/processor
+	$(PYTHONAPIDOC) ../signing/sawtooth_signing
 
 GOSDKDIR := $(HTMLDIR)/go_sdk
 go:

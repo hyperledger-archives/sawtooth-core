@@ -21,6 +21,8 @@ import shlex
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
+sys.path.insert(0, os.path.abspath('../../sdk/python/sawtooth_sdk'))
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -91,7 +93,10 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['community/how_to_report_issues.rst']
+exclude_patterns = [
+    'community/how_to_report_issues.rst',
+    'sdks/python_sdk/modules.rst',
+]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
