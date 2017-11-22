@@ -46,7 +46,6 @@ from sawtooth_validator.protobuf import validator_pb2
 
 
 LOGGER = logging.getLogger(__name__)
-ID_REGEX = re.compile('[0-9a-f]{128}')
 DEFAULT_TIMEOUT = 300
 MAX_PAGE_SIZE = 1000
 DEFAULT_PAGE_SIZE = 100
@@ -91,6 +90,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         self._response_proto = response_proto
         self._response_type = response_type
         self._status = response_proto
+        self._id_regex = re.compile('[0-9a-f]{128}')
 
         self._tree = tree
         self._block_store = block_store
@@ -175,7 +175,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             ResponseFailed: Failed to retrieve a head block
         """
         if request.head_id:
-            if ID_REGEX.fullmatch(request.head_id) is None:
+            if self._id_regex.fullmatch(request.head_id) is None:
                 LOGGER.debug('Invalid head id requested: %s', request.head_id)
                 raise _ResponseFailed(self._status.NO_ROOT)
             try:
@@ -296,7 +296,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
                 will be sent with the response.
         """
         for resource_id in resource_ids:
-            if ID_REGEX.fullmatch(resource_id) is None:
+            if self._id_regex.fullmatch(resource_id) is None:
                 LOGGER.debug('Invalid resource id requested: %s', resource_id)
                 raise _ResponseFailed(self._status.INVALID_ID)
 
