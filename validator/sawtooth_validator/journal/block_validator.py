@@ -435,7 +435,7 @@ class BlockValidator(object):
 
         except Exception:
             LOGGER.exception(
-                "Unhandled exception BlockPublisher.validate_block()")
+                "Unhandled exception BlockValidator.validate_block()")
             return False
 
     @staticmethod
