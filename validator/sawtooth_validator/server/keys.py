@@ -57,7 +57,7 @@ def load_identity_signer(key_dir, key_name):
     except signing.ParseError:
         try:
             private_key = Secp256k1PrivateKey.from_wif(private_key_str)
-        except signing.ParseError:
+        except signing.ParseError as e:
             raise LocalConfigurationError(
                 "Invalid key in file {}: {}".format(key_path, str(e)))
 
