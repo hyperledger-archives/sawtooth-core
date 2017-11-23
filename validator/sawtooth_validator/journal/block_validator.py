@@ -399,7 +399,12 @@ class BlockValidator(object):
                 blkw.status = BlockStatus.Invalid
                 return False
 
-            consensus = self._load_consensus(chain_head)
+            try:
+                prev_block = self._block_cache[blkw.previous_block_id]
+            except KeyError:
+                prev_block = None
+
+            consensus = self._load_consensus(prev_block)
             consensus_block_verifier = consensus.BlockVerifier(
                 block_cache=self._block_cache,
                 state_view_factory=self._state_view_factory,
