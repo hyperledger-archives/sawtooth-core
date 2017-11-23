@@ -481,8 +481,6 @@ class _PoetEnclaveSimulator(object):
                     wait_certificate.serialize().encode(),
                     poet_private_key)
 
-            LOGGER.error('****WC %s ****', wait_certificate)
-
             # In a TEE implementation we would increment the HW counter here
             # to prevent replay.
             # We can't usefully simulate a HW counter though.
