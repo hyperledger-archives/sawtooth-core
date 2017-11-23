@@ -60,7 +60,7 @@ class InvalidBatch(Exception):
     pass
 
 
-class BlockValidationResult:
+class ForkResolutionResult:
     def __init__(self, block):
         self.block = block
         self.chain_head = None
@@ -83,6 +83,41 @@ class BlockValidationResult:
         for key in keys:
             out += "%s: %s," % (key, self.__getattribute(key))
         return out[:-1] + "}"
+
+    def merge_block_result(self, block_validation_result):
+        self.transaction_count =\
+            block_validation_result.transaction_count
+        self.execution_results.extend(
+            block_validation_result.execution_results)
+
+
+class BlockValidationResult:
+    def __init__(self, block):
+        self.block = block
+        self.execution_results = []
+        self.transaction_count = 0
+
+    def __bool__(self):
+        return self.block.status == BlockStatus.Valid
+
+    def set_valid(self, is_valid):
+        if is_valid:
+            self.block.status = BlockStatus.Valid
+        else:
+            self.block.status = BlockStatus.Invalid
+
+    def merge_batch_results(self, batch_validation_results):
+        self.transaction_count =\
+            batch_validation_results.transaction_count
+        self.execution_results.extend(
+            batch_validation_results.execution_results)
+
+
+class BatchValidationResults:
+    def __init__(self):
+        self.transaction_count = 0
+        self.execution_results = []
+        self.valid = False
 
 
 def look_ahead(iterable):
@@ -281,8 +316,9 @@ class BlockValidator(object):
         return True
 
     def validate_batches_in_block(
-        self, blkw, prev_state_root, chain_commit_state, result=None
+        self, blkw, prev_state_root, chain_commit_state,
     ):
+        result = BatchValidationResults()
         if blkw.block.batches:
             scheduler = self._transaction_executor.create_scheduler(
                 self._squash_handler, prev_state_root)
@@ -317,7 +353,7 @@ class BlockValidator(object):
                              batch.header_signature[:8],
                              blkw)
                 scheduler.cancel()
-                return False
+                return result
             except:
                 scheduler.cancel()
                 raise
@@ -335,18 +371,17 @@ class BlockValidator(object):
                             batch.header_signature)
                     state_hash = batch_result.state_hash
 
-                    # Result is not always used
-                    if result is not None:
-                        result.execution_results.extend(txn_results)
-                        result.transaction_count += len(batch.transactions)
+                    result.execution_results.extend(txn_results)
+                    result.transaction_count += len(batch.transactions)
                 else:
-                    return False
+                    return result
             if blkw.state_root_hash != state_hash:
                 LOGGER.debug("Block(%s) rejected due to state root hash "
                              "mismatch: %s != %s", blkw, blkw.state_root_hash,
                              state_hash)
-                return False
-        return True
+                return result
+        result.valid = True
+        return result
 
     def validate_permissions(self, blkw, prev_state_root):
         """
@@ -373,11 +408,11 @@ class BlockValidator(object):
                 blkw, prev_state_root)
         return True
 
-    def validate_block(self, blkw, result=None, chain=None):
-        if blkw.status == BlockStatus.Valid:
-            return True
-        elif blkw.status == BlockStatus.Invalid:
-            return False
+    def validate_block(self, blkw, chain=None):
+        result = BlockValidationResult(blkw)
+
+        if blkw.status != BlockStatus.Unknown:
+            return result
 
         # pylint: disable=broad-except
         try:
@@ -389,12 +424,12 @@ class BlockValidator(object):
             prev_state_root = self._get_previous_block_state_root(blkw)
 
             if not self.validate_permissions(blkw, prev_state_root):
-                blkw.status = BlockStatus.Invalid
-                return False
+                result.set_valid(False)
+                return result
 
             if not self.validate_on_chain_rules(blkw, prev_state_root):
-                blkw.status = BlockStatus.Invalid
-                return False
+                result.set_valid(False)
+                return result
 
             try:
                 prev_block = self._block_cache[blkw.previous_block_id]
@@ -410,23 +445,20 @@ class BlockValidator(object):
                 validator_id=self._identity_public_key)
 
             if not consensus_block_verifier.verify_block(blkw):
-                blkw.status = BlockStatus.Invalid
-                return False
+                result.set_valid(False)
+                return result
 
-            if not self.validate_batches_in_block(
-                blkw, prev_state_root, chain_commit_state, result
-            ):
-                blkw.status = BlockStatus.Invalid
-                return False
+            batch_validation_results = self.validate_batches_in_block(
+                blkw, prev_state_root, chain_commit_state)
+            result.set_valid(batch_validation_results.valid)
+            result.merge_batch_results(batch_validation_results)
 
-
-            blkw.status = BlockStatus.Valid
-            return True
+            return result
 
         except Exception:
             LOGGER.exception(
                 "Unhandled exception BlockValidator.validate_block()")
-            return False
+            return result
 
     @staticmethod
     def compare_chain_height(head_a, head_b):
@@ -647,12 +679,12 @@ class BlockValidator(object):
         so that the change over can be made if necessary.
         """
         try:
-            result = BlockValidationResult(block)
+            result = ForkResolutionResult(block)
             LOGGER.info("Starting block validation of : %s", block)
 
             # If this is a genesis block, we can skip the rest
             if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
-                valid = self.validate_block(block)
+                valid = bool(self.validate_block(block))
                 callback(valid, result)
                 return
 
@@ -685,9 +717,10 @@ class BlockValidator(object):
             valid = True
             for blk in reversed(result.new_chain):
                 if valid:
-                    if not self.validate_block(
-                        blk, result, result.current_chain
-                    ):
+                    block_validation_result = self.validate_block(
+                        blk, result.current_chain)
+                    result.merge_block_result(block_validation_result)
+                    if not bool(block_validation_result):
                         LOGGER.info("Block validation failed: %s", blk)
                         valid = False
                 else:
