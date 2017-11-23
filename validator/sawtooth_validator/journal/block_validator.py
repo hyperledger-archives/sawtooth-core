@@ -373,7 +373,7 @@ class BlockValidator(object):
                 blkw, prev_state_root)
         return True
 
-    def validate_block(self, blkw, result=None, chain_head=None, chain=None):
+    def validate_block(self, blkw, result=None, chain=None):
         if blkw.status == BlockStatus.Valid:
             return True
         elif blkw.status == BlockStatus.Invalid:
@@ -381,9 +381,6 @@ class BlockValidator(object):
 
         # pylint: disable=broad-except
         try:
-            if chain_head is None:
-                chain_head = self._block_cache.block_store.chain_head
-
             if chain is None:
                 chain = []
             chain_commit_state = ChainCommitState(
@@ -422,21 +419,9 @@ class BlockValidator(object):
                 blkw.status = BlockStatus.Invalid
                 return False
 
-            # since changes to the chain-head can change the state of the
-            # blocks in BlockStore we have to revalidate this block.
-            block_store = self._block_cache.block_store
-
-            # The chain_head is None when this is the genesis block or if the
-            # block store has no chain_head.
-            if chain_head is not None:
-                if chain_head.identifier != block_store.chain_head.identifier:
-                    raise ChainHeadUpdated()
 
             blkw.status = BlockStatus.Valid
             return True
-
-        except ChainHeadUpdated:
-            raise
 
         except Exception:
             LOGGER.exception(
@@ -701,7 +686,7 @@ class BlockValidator(object):
             for blk in reversed(result.new_chain):
                 if valid:
                     if not self.validate_block(
-                        blk, result, chain_head, result.current_chain
+                        blk, result, result.current_chain
                     ):
                         LOGGER.info("Block validation failed: %s", blk)
                         valid = False
@@ -709,6 +694,13 @@ class BlockValidator(object):
                     LOGGER.info(
                         "Block marked invalid(invalid predecessor): %s", blk)
                     blk.status = BlockStatus.Invalid
+
+            # The chain_head is None when this is the genesis block or if the
+            # block store has no chain_head.
+            if chain_head is not None:
+                current_chain_head = self._block_cache.block_store.chain_head
+                if chain_head.identifier != current_chain_head.identifier:
+                    raise ChainHeadUpdated()
 
             if not valid:
                 callback(False, result)
