@@ -373,7 +373,7 @@ class BlockValidator(object):
 
         except Exception as e:
             LOGGER.exception(
-                "Unhandled exception BlockPublisher.validate_block()")
+                "Unhandled exception BlockValidator.validate_block()")
             raise e
 
     @staticmethod
