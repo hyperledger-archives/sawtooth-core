@@ -254,7 +254,7 @@ def _read_signer(key_filename):
     except ParseError:
         try:
             private_key = Secp256k1PrivateKey.from_wif(signing_key)
-        except ParseError:
+        except ParseError as e:
             raise CliException('Unable to read key in file: {}'.format(str(e)))
 
     context = create_context('secp256k1')
