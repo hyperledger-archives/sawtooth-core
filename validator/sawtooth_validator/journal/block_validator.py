@@ -28,10 +28,12 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
+from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
+from sawtooth_validator.journal.chain_commit_state import DuplicateBatch
+from sawtooth_validator.journal.chain_commit_state import MissingDependency
 from sawtooth_validator.journal.validation_rule_enforcer import \
     ValidationRuleEnforcer
 from sawtooth_validator.state.settings_view import SettingsViewFactory
-from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
@@ -51,13 +53,6 @@ class ChainHeadUpdated(Exception):
     """ Raised when a chain head changed event is detected and we need to abort
     processing and restart processing with the new chain head.
     """
-
-
-class InvalidBatch(Exception):
-    """ Raised when a batch fails validation as a signal to reject the
-    block.
-    """
-    pass
 
 
 class ForkResolutionResult:
@@ -286,74 +281,55 @@ class BlockValidator(object):
 
         return self._block_cache[blkw.previous_block_id].state_root_hash
 
-    @staticmethod
-    def validate_transactions_in_batch(batch, chain_commit_state):
-        """Verify that all transactions in this batch are unique and that all
-        transaction dependencies in this batch have been satisfied.
-
-        :param batch: the batch to verify
-        :param chain_commit_state: the current chain commit state to verify the
-            batch against
-        :return:
-        Boolean: True if all dependencies are present and all transactions
-        are unique.
-        """
-        for txn in batch.transactions:
-            txn_hdr = TransactionHeader()
-            txn_hdr.ParseFromString(txn.header)
-            if chain_commit_state.has_transaction(txn.header_signature):
-                LOGGER.debug(
-                    "Batch invalid due to duplicate transaction: %s",
-                    txn.header_signature[:8])
-                return False
-            for dep in txn_hdr.dependencies:
-                if not chain_commit_state.has_transaction(dep):
-                    LOGGER.debug(
-                        "Batch invalid due to missing transaction dependency;"
-                        " transaction %s depends on %s",
-                        txn.header_signature[:8], dep[:8])
-                    return False
-        return True
-
-    def validate_batches_in_block(
-        self, blkw, prev_state_root, chain_commit_state,
-    ):
+    def validate_batches_in_block(self, blkw, prev_state_root):
         result = BatchValidationResults()
         if blkw.block.batches:
+            chain_commit_state = ChainCommitState(
+                blkw.previous_block_id,
+                self._block_cache,
+                self._block_cache.block_store)
+
             scheduler = self._transaction_executor.create_scheduler(
                 self._squash_handler, prev_state_root)
             self._transaction_executor.execute(scheduler)
+
+            try:
+                chain_commit_state.check_for_duplicate_batches(
+                    blkw.block.batches)
+            except DuplicateBatch as err:
+                LOGGER.debug("Block(%s) rejected due to duplicate "
+                             "batch, batch: %s", blkw,
+                             err.batch_id[:8])
+                return result
+
+            transactions = []
+            for batch in blkw.block.batches:
+                transactions.extend(batch.transactions)
+
+            try:
+                chain_commit_state.check_for_duplicate_transactions(
+                    transactions)
+            except DuplicateTransaction as err:
+                LOGGER.debug(
+                    "Block(%s) rejected due to duplicate transaction: %s",
+                    blkw, err.transaction_id[:8])
+                return result
+
+            try:
+                chain_commit_state.check_for_transaction_dependencies(
+                    transactions)
+            except MissingDependency as err:
+                LOGGER.debug(
+                    "Block(%s) rejected due to missing dependency: %s",
+                    blkw, err.transaction_id[:8])
+                return result
+
             try:
                 for batch, has_more in look_ahead(blkw.block.batches):
-                    if chain_commit_state.has_batch(
-                            batch.header_signature):
-                        LOGGER.debug("Block(%s) rejected due to duplicate "
-                                     "batch, batch: %s", blkw,
-                                     batch.header_signature[:8])
-                        raise InvalidBatch()
-
-                    # Verify dependencies and uniqueness
-                    if self.validate_transactions_in_batch(
-                        batch, chain_commit_state
-                    ):
-                        # Only add transactions to commit state if all
-                        # transactions in the batch are good.
-                        chain_commit_state.add_batch(
-                            batch, add_transactions=True)
-                    else:
-                        raise InvalidBatch()
-
                     if has_more:
                         scheduler.add_batch(batch)
                     else:
                         scheduler.add_batch(batch, blkw.state_root_hash)
-            except InvalidBatch:
-                LOGGER.debug("Invalid batch %s encountered during "
-                             "verification of block %s",
-                             batch.header_signature[:8],
-                             blkw)
-                scheduler.cancel()
-                return result
             except:
                 scheduler.cancel()
                 raise
@@ -408,7 +384,7 @@ class BlockValidator(object):
                 blkw, prev_state_root)
         return True
 
-    def validate_block(self, blkw, chain=None):
+    def validate_block(self, blkw):
         result = BlockValidationResult(blkw)
 
         if blkw.status != BlockStatus.Unknown:
@@ -416,11 +392,6 @@ class BlockValidator(object):
 
         # pylint: disable=broad-except
         try:
-            if chain is None:
-                chain = []
-            chain_commit_state = ChainCommitState(
-                self._block_cache.block_store, chain)
-
             prev_state_root = self._get_previous_block_state_root(blkw)
 
             if not self.validate_permissions(blkw, prev_state_root):
@@ -449,7 +420,7 @@ class BlockValidator(object):
                 return result
 
             batch_validation_results = self.validate_batches_in_block(
-                blkw, prev_state_root, chain_commit_state)
+                blkw, prev_state_root)
             result.set_valid(batch_validation_results.valid)
             result.merge_batch_results(batch_validation_results)
 
@@ -717,8 +688,7 @@ class BlockValidator(object):
             valid = True
             for blk in reversed(result.new_chain):
                 if valid:
-                    block_validation_result = self.validate_block(
-                        blk, result.current_chain)
+                    block_validation_result = self.validate_block(blk)
                     result.merge_block_result(block_validation_result)
                     if not bool(block_validation_result):
                         LOGGER.info("Block validation failed: %s", blk)
