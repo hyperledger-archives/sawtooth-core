@@ -560,7 +560,7 @@ def _read_signer(key_filename):
 
     try:
         private_key = Secp256k1PrivateKey.from_hex(signing_key)
-    except ParseError:
+    except ParseError as e:
         try:
             private_key = Secp256k1PrivateKey.from_wif(signing_key)
         except ParseError:
