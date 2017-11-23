@@ -197,8 +197,8 @@ class TransactionExecutorThread(object):
                         d.get('version')) for d in transaction_families]
             except ValueError:
                 LOGGER.error("sawtooth.validator.transaction_families "
-                               "misconfigured. Expecting a json array, found"
-                               " %s", transaction_families)
+                             "misconfigured. Expecting a json array, found"
+                             " %s", transaction_families)
                 required_transaction_processors = []
 
             # First check if the transaction should be failed
@@ -278,7 +278,7 @@ class TransactionExecutorThread(object):
                     is_valid=False,
                     context_id=None)
                 continue
-            except CreateContextException as cce:
+            except CreateContextException:
                 LOGGER.exception("Exception creating context")
                 self._scheduler.set_transaction_execution_result(
                     txn_signature=txn.header_signature,
