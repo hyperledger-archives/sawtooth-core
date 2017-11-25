@@ -16,12 +16,42 @@
  */
 
 extern crate cc;
+extern crate glob;
+extern crate protoc_rust;
+
+use std::fs;
 
 fn main() {
+    // Compile C PEM loader file
     println!("cargo:rustc-link-lib={}={}", "dylib", "crypto");
     cc::Build::new()
         .file("../c/loader.c")
         .file("../c/c11_support.c")
         .include("../c")
         .compile("libloader.a");
+
+    // Generate protobuf files
+    let proto_src_files = glob_simple("../../protos/*.proto");
+    println!("{:?}", proto_src_files);
+
+    fs::create_dir_all("src/messages").unwrap();
+
+    protoc_rust::run(protoc_rust::Args {
+        out_dir: "src/messages",
+        input: &proto_src_files.iter().map(|a| a.as_ref()).collect::<Vec<&str>>(),
+        includes: &["src", "../../protos"],
+    }).expect("unable to run protoc");
+}
+
+fn glob_simple(pattern: &str) -> Vec<String> {
+    glob::glob(pattern)
+        .expect("glob")
+        .map(|g| {
+            g.expect("item")
+                .as_path()
+                .to_str()
+                .expect("utf-8")
+                .to_owned()
+        })
+        .collect()
 }
