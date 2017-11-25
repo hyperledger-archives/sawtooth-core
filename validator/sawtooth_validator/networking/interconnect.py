@@ -392,7 +392,7 @@ class _SendReceive(object):
 
     @asyncio.coroutine
     def _send_last_message(self, identity, msg):
-        LOGGER.debug("%s sending %s to %s",
+        LOGGER.debug("%s sending last message %s to %s",
                      self._connection,
                      get_enum_name(msg.message_type),
                      identity if identity else self._address)
@@ -424,10 +424,12 @@ class _SendReceive(object):
                 if connection_info.connection_type == \
                         ConnectionType.ZMQ_IDENTITY:
                     zmq_identity = connection_info.connection
-                    del self._connections[connection_id]
+                del self._connections[connection_id]
+
             else:
                 LOGGER.debug("Can't send to %s, not in self._connections",
                              connection_id)
+                return
 
         self._ready.wait()
 
@@ -849,9 +851,13 @@ class Interconnect(object):
                     auth_trust_request = AuthorizationTrustRequest(
                         roles=auth_type["trust"],
                         public_key=self._signer.get_public_key().as_hex())
+
                     connection.send(
                         validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
-                        auth_trust_request.SerializeToString()
+                        auth_trust_request.SerializeToString(),
+                        callback=partial(
+                            self._check_trust_success,
+                            connection_id=connection.connection_id)
                         )
 
                 if auth_type["challenge"]:
@@ -888,7 +894,9 @@ class Interconnect(object):
             self._safe_send(
                 validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST,
                 auth_trust_request.SerializeToString(),
-                connection_id
+                connection_id,
+                callback=partial(self._check_trust_success,
+                                 connection_id=connection_id)
                 )
 
         if auth_type["challenge"]:
@@ -908,6 +916,7 @@ class Interconnect(object):
         if result.message_type != \
                 validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESPONSE:
             LOGGER.debug("Unable to complete Challenge Authorization.")
+            self.remove_connection(connection.connection_id)
             return
 
         auth_challenge_response = AuthorizationChallengeResponse()
@@ -918,17 +927,21 @@ class Interconnect(object):
         auth_challenge_submit = AuthorizationChallengeSubmit(
             public_key=self._signer.get_public_key().as_hex(),
             signature=signature,
-            roles=[RoleType.Value("NETWORK")])
+            roles=[RoleType.Value("NETWORK")]
+            )
 
         connection.send(
             validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
-            auth_challenge_submit.SerializeToString())
+            auth_challenge_submit.SerializeToString(),
+            callback=partial(self._check_challenge_success,
+                             connection_id=connection.connection_id))
 
     def _inbound_challenge_authorization_callback(self, request, result,
                                                   connection_id=None):
         if result.message_type != \
                 validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESPONSE:
             LOGGER.debug("Unable to complete Challenge Authorization.")
+            self.remove_connection(connection_id)
             return
 
         auth_challenge_response = AuthorizationChallengeResponse()
@@ -944,7 +957,21 @@ class Interconnect(object):
         self._safe_send(
             validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
             auth_challenge_submit.SerializeToString(),
-            connection_id)
+            connection_id,
+            callback=partial(self._check_challenge_success,
+                             connection_id=connection_id))
+
+    def _check_trust_success(self, request, result, connection_id=None):
+        if result.message_type != \
+                validator_pb2.Message.AUTHORIZATION_TRUST_RESPONSE:
+            LOGGER.debug("Unable to complete Trust Authorization.")
+            self.remove_connection(connection_id)
+
+    def _check_challenge_success(self, request, result, connection_id=None):
+        if result.message_type != \
+                validator_pb2.Message.AUTHORIZATION_CHALLENGE_RESULT:
+            LOGGER.debug("Unable to complete Challenge Authorization.")
+            self.remove_connection(connection_id)
 
     def send(self, message_type, data, connection_id, callback=None):
         """
@@ -1034,6 +1061,7 @@ class Interconnect(object):
                                endpoint,
                                connection_info.status,
                                connection_info.public_key)
+
         else:
             LOGGER.debug("Could not update the endpoint %s for "
                          "connection_id %s. The connection does not "

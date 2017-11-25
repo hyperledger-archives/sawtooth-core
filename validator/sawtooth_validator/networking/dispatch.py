@@ -50,6 +50,7 @@ class Dispatcher(InstrumentedThread):
         self._dispatch_timers = {}
         self._priority = {
             validator_pb2.Message.PING_REQUEST: HIGH_PRIORITY,
+            validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST: MED_PRIORITY,
             validator_pb2.Message.GOSSIP_REGISTER: MED_PRIORITY,
             validator_pb2.Message.AUTHORIZATION_CONNECTION_RESPONSE:
                 MED_PRIORITY,
