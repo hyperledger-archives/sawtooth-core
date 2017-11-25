@@ -162,7 +162,7 @@ class Validator(object):
             server_private_key=network_private_key,
             heartbeat=True,
             public_endpoint=endpoint,
-            connection_timeout=30,
+            connection_timeout=120,
             max_incoming_connections=100,
             max_future_callback_workers=10,
             authorize=True,
