@@ -78,12 +78,19 @@ class TestBlockCache(unittest.TestCase):
         """ Test that misses will load from the block store.
         """
         bs = {}
-        bs["test"] = "value"
-        bs["test2"] = "value"
+        block1 = Block(
+            header=BlockHeader(previous_block_id="000").SerializeToString(),
+            header_signature="test")
+        bs["test"] = BlockWrapper(block1)
+        block2 = Block(
+            header=BlockHeader(previous_block_id="000").SerializeToString(),
+            header_signature="test2")
+        blkw2 = BlockWrapper(block2)
+        bs["test2"] = blkw2
         bc = BlockCache(bs)
 
         self.assertTrue("test" in bc)
-        self.assertTrue(bc["test2"] == "value")
+        self.assertTrue(bc["test2"] == blkw2)
 
         with self.assertRaises(KeyError):
             bc["test-missing"]
