@@ -54,6 +54,7 @@ message ClientBatchListResponse {
         NO_RESOURCE = 5;
         INVALID_PAGING = 6;
         INVALID_SORT = 7;
+        INVALID_ID = 8;
     }
     Status status = 1;
     repeated Batch batches = 2;
@@ -78,6 +79,7 @@ message ClientBatchGetResponse {
         OK = 1;
         INTERNAL_ERROR = 2;
         NO_RESOURCE = 5;
+        INVALID_ID = 8;
     }
     Status status = 1;
     Batch batch = 2;

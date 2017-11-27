@@ -68,7 +68,7 @@ On-Chain Validation Rules
 
 An on-chain setting holds a set of validation rules that are enforced for
 each block. On-chain validation rules will be stored as a string in the setting
-key sawtooth.validator.block_validation_rules. Rules will be enforce by the
+key sawtooth.validator.block_validation_rules. Rules will be enforced by the
 block validator.
 
 A simple syntax will be used for specifying validations rules as defined by

@@ -42,7 +42,7 @@ depicted.
 Launching a Sawtooth Instance
 =============================
 
-Lauch your instance from the
+Launch your instance from the
 `Sawtooth product page <https://aws.amazon.com/marketplace/pp/B075TKQCC2>`_
 on the AWS Marketplace. Detailed instructions for
 Launching an AWS Marketplace Instance can
@@ -61,7 +61,7 @@ be found `here <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/launch-market
 
   Please see Amazon's `Security Groups
   <http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_SecurityGroups.html#AddRemoveRules>`_
-  documentation for assitance with editing security group rules.
+  documentation for assistance with editing security group rules.
 
 Logging In to the Sawtooth Instance
 ===================================
@@ -71,12 +71,12 @@ Follow the Amazon guide `Connect to Your Linux Instance
 to log in to the instance you just launched. Use the username
 ``ubuntu`` when connecting.
 
-Once you've sucessfully logged in, continue to the next section.
+Once you've successfully logged in, continue to the next section.
 
 Using Sawtooth with the CLI Commands
 ====================================
 
-Creating And Submitting Transactions with intkey
+Creating and Submitting Transactions with intkey
 ------------------------------------------------
 
 The ``intkey`` CLI command is provided to create sample transactions of the

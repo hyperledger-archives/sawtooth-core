@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import re
 # pylint: disable=no-name-in-module
 from collections.abc import MutableMapping
 
@@ -21,9 +20,6 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
-
-
-ID_REGEX = re.compile('[0-9a-f]{128}')
 
 
 class BlockStore(MutableMapping):
@@ -48,8 +44,6 @@ class BlockStore(MutableMapping):
         del self._block_store[key]
 
     def __contains__(self, x):
-        if ID_REGEX.fullmatch(x) is None:
-            return False
         return x in self._block_store
 
     def __iter__(self):
@@ -258,11 +252,7 @@ class BlockStore(MutableMapping):
         Returns
             list of block wrappers found for the given block ids
         """
-        return [block for _, block in self._get_blocks_by_valid_ids(block_ids)]
-
-    def _get_blocks_by_valid_ids(self, rsc_ids, index=None):
-        valid_ids = [i for i in rsc_ids if ID_REGEX.fullmatch(i) is not None]
-        return self._block_store.get_multi(valid_ids, index=index)
+        return [block for _, block in self._block_store.get_multi(block_ids)]
 
     def get_block_by_transaction_id(self, txn_id):
         """Returns the block that contains the given transaction id.
@@ -311,7 +301,7 @@ class BlockStore(MutableMapping):
         Returns:
             True if it is contained in a committed block, False otherwise
         """
-        return self._has_resource_by_valid_id(txn_id, index='transaction')
+        return self._block_store.contains_key(txn_id, index='transaction')
 
     def get_block_by_batch_id(self, batch_id):
         """Returns the block that contains the given batch id.
@@ -343,7 +333,7 @@ class BlockStore(MutableMapping):
         Raises:
             ValueError if no block containing the batch is found
         """
-        return self._get_blocks_by_valid_ids(batch_ids, index='batch')
+        return self._block_store.get_multi(batch_ids, index='batch')
 
     def has_batch(self, batch_id):
         """Returns True if the batch is contained in a block in the
@@ -355,12 +345,7 @@ class BlockStore(MutableMapping):
         Returns:
             True if it is contained in a committed block, False otherwise
         """
-        return self._has_resource_by_valid_id(batch_id, index='batch')
-
-    def _has_resource_by_valid_id(self, resource_id, index=None):
-        if ID_REGEX.fullmatch(resource_id) is None:
-            return False
-        return self._block_store.contains_key(resource_id, index=index)
+        return self._block_store.contains_key(batch_id, index='batch')
 
     def get_batch_by_transaction(self, transaction_id):
         """
@@ -406,7 +391,7 @@ class BlockStore(MutableMapping):
         Returns:
             A list of the batches found by the given batch ids
         """
-        blocks = self._get_blocks_by_valid_ids(batch_ids, index='batch')
+        blocks = self._block_store.get_multi(batch_ids, index='batch')
 
         return [BlockStore._get_batch_from_block(block, batch_id)
                 for batch_id, block in blocks]
@@ -437,8 +422,8 @@ class BlockStore(MutableMapping):
         return BlockStore._get_txn_from_block(block, transaction_id)
 
     def get_transactions(self, transaction_ids):
-        blocks = self._get_blocks_by_valid_ids(transaction_ids,
-                                               index='transaction')
+        blocks = self._block_store.get_multi(transaction_ids,
+                                             index='transaction')
 
         return [BlockStore._get_txn_from_block(block, txn_id)
                 for txn_id, block in blocks]

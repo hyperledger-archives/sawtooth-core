@@ -215,7 +215,7 @@ class PingHandler(Handler):
         if connection_id in self._last_message:
             if time.time() - self._last_message[connection_id] < \
                     self._allowed_frequency:
-                LOGGER.debug("Too many Pings in %s seconds before"
+                LOGGER.debug("Too many Pings in %s seconds before "
                              "authorization is complete: %s",
                              self._allowed_frequency,
                              connection_id)
@@ -506,6 +506,5 @@ class AuthorizationViolationHandler(Handler):
         # Close the connection
         endpoint = self._network.connection_id_to_endpoint(connection_id)
         self._network.remove_connection(connection_id)
-        #
         self._gossip.remove_temp_endpoint(endpoint)
         return HandlerResult(HandlerStatus.DROP)

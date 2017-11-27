@@ -16,6 +16,8 @@ This allows applications to do the following:
    :align: center
    :alt: Event Subsystem
 
+.. _events-reference-label:
+
 Events
 ======
 
@@ -98,7 +100,7 @@ SIMPLE_ALL
 
   it will NOT pass this filter:
 
-      SimplyAllFilter(key="address", value="abc")
+      SimpleAllFilter(key="address", value="abc")
 
   Because it does not match all attributes with the key "address".
 

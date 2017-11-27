@@ -49,7 +49,7 @@ on your host system:
 .. code-block:: console
 
   $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-  $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe'
+  $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
   $ sudo apt-get update
 
 To use the nightly repository, run the following commands in a terminal window
@@ -286,7 +286,7 @@ following output:
   [21:03:55.956 DEBUG   interconnect] ServerThread sending TP_REGISTER_RESPONSE to b'6d2d80275ae280ea'
 
 
-Verifying That the REST API is Running
+Verifying that the REST API is Running
 --------------------------------------
 
 In order to configure a running validator, the REST API must be running.

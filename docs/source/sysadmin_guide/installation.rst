@@ -22,7 +22,7 @@ Stable Builds:
 
 .. code-block:: console
 
-  $ sudo echo "deb http://repo.sawtooth.me/ubuntu/0.8/stable xenial universe" >> /etc/apt/sources.list
+  $ sudo echo "deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe" >> /etc/apt/sources.list
 
 Nightly Builds:
 

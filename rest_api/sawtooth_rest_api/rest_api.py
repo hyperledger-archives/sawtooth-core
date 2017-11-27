@@ -54,22 +54,23 @@ def parse_args(args):
         'specified validator.')
 
     parser.add_argument('-B', '--bind',
-                        help='The host and port for the api to run on.',
+                        help='identify host and port for API to run on \
+                        default: http://localhost:8080)',
                         action='append')
     parser.add_argument('-C', '--connect',
-                        help='The url to connect to a running Validator')
+                        help='specify URL to connect to a running validator')
     parser.add_argument('-t', '--timeout',
-                        help='Seconds to wait for a validator response')
+                        help='set time (in seconds) to wait for validator \
+                        response')
     parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
-                        help='Increase level of output sent to stderr')
+                        help='enable more verbose output to stderr')
     parser.add_argument('--opentsdb-url',
-                        help='The host and port for Open TSDB database \
+                        help='specify host and port for Open TSDB database \
                         used for metrics')
     parser.add_argument('--opentsdb-db',
-                        help='The name of the database used for storing \
-                        metrics')
+                        help='specify name of database for storing metrics')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -81,7 +82,7 @@ def parse_args(args):
         action='version',
         version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
         .format(version),
-        help='print version information')
+        help='display version information')
 
     return parser.parse_args(args)
 

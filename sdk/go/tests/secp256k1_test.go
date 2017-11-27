@@ -34,7 +34,7 @@ L/8e9mXvEQPAmBC0NMiltnk4/26iN7hB1QxSQQwy/Zc=
 
 func TestSigning(t *testing.T) {
 	context := NewSecp256k1Context()
-	priv_1, _ := NewSecp256k1PrivateKey()
+	priv_1 := context.NewRandomPrivateKey()
 	pub_1 := context.GetPublicKey(priv_1)
 
 	sig_1 := context.Sign(data, priv_1)
@@ -46,7 +46,7 @@ func TestSigning(t *testing.T) {
 		)
 	}
 
-	priv_2, _ := NewSecp256k1PrivateKey()
+	priv_2 := context.NewRandomPrivateKey()
 
 	sig_2 := context.Sign(data, priv_2)
 
@@ -132,7 +132,7 @@ func TestPemLoader(t *testing.T) {
 
 func TestOtherSigning(t *testing.T) {
 	context := CreateContext("secp256k1")
-	priv, _ := NewSecp256k1PrivateKey()
+	priv := context.NewRandomPrivateKey()
 
 	factory := NewCryptoFactory(context)
 	signer := factory.NewSigner(priv)

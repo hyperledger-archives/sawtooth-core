@@ -222,7 +222,7 @@ class WorkloadGenerator(object):
                 return "UNKNOWN"
 
         except json.decoder.JSONDecodeError as e:
-            LOGGER.warning('Unable to retrieve status')
+            LOGGER.warning('Unable to retrieve status: %s', str(e))
             return "UNKNOWN"
 
         except requests.exceptions.HTTPError as e:

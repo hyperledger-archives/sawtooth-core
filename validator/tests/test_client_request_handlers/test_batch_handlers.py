@@ -48,7 +48,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2' (the latest)
-            - the default paging response, showing all 3 resources returned
+            - a paging response with a start of A_2 and 100
             - a list of batches with 3 items
             - the items are instances of Batch
             - the first item has a header_signature of 'aaa...2'
@@ -57,7 +57,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
+        self.assert_valid_paging(response, A_2, 100)
         self.assertEqual(3, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_2, response.batches[0].header_signature)
@@ -101,7 +101,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...1'
-            - a paging response showing all 2 resources returned
+            - a paging response with start of A_1 and limit 100
             - a list of batches with 2 items
             - the items are instances of Batch
             - the first item has a header_signature of 'aaa...1'
@@ -110,7 +110,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_1, response.head_id)
-        self.assert_valid_paging(response, total=2)
+        self.assert_valid_paging(response, A_1, 100)
         self.assertEqual(2, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_1, response.batches[0].header_signature)
@@ -122,7 +122,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - a status of NO_ROOT
             - that head_id, paging, and batches are missing
         """
-        response = self.make_request(head_id='bad')
+        response = self.make_request(head_id='f' * 128)
 
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.head_id)
@@ -140,7 +140,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 2 resources returned
+            - a paging response with start of A_0 and limit 100
             - a list of batches with 2 items
             - the items are instances of Batch
             - the first item has a header_signature of 'aaa...0'
@@ -150,13 +150,13 @@ class TestBatchListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, total=2)
+        self.assert_valid_paging(response, A_0, 100)
         self.assertEqual(2, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_0, response.batches[0].header_signature)
         self.assertEqual(A_2, response.batches[1].header_signature)
 
-    def test_batch_list_by_bad_ids(self):
+    def test_batch_list_by_missing_ids(self):
         """Verifies batch list requests break when ids are not found.
 
         Queries the default mock block store with three blocks:
@@ -169,14 +169,14 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - a head_id of 'bbb...2', the latest
             - that paging and batches are missing
         """
-        response = self.make_request(batch_ids=['bad', 'also-bad'])
+        response = self.make_request(batch_ids=['f' * 128, 'e' * 128])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertEqual(B_2, response.head_id)
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.batches)
 
-    def test_batch_list_by_good_and_bad_ids(self):
+    def test_batch_list_by_found_and_missing_ids(self):
         """Verifies batch list requests work filtered by good and bad ids.
 
         Queries the default mock block store with three blocks:
@@ -187,19 +187,32 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 1 resources returned
+            - a paging response with start of A_1 and limit 100
             - a list of batches with 1 items
             - that item is an instances of Batch
             - that item has a header_signature of 'aaa...1'
         """
-        response = self.make_request(batch_ids=['bad', A_1])
+        response = self.make_request(batch_ids=['f' * 128, A_1])
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, total=1)
+        self.assert_valid_paging(response, A_1, 100)
         self.assertEqual(1, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_1, response.batches[0].header_signature)
+
+    def test_batch_list_by_invalid_ids(self):
+        """Verifies batch list requests break when invalid ids are sent.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that paging and batches are missing
+        """
+        response = self.make_request(batch_ids=['not', 'valid'])
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
+        self.assertFalse(response.paging.SerializeToString())
+        self.assertFalse(response.batches)
 
     def test_batch_list_by_head_and_ids(self):
         """Verifies batch list requests work with both head and batch ids.
@@ -211,7 +224,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...1'
-            - a paging response showing all 1 resources returned
+            - a paging response with start of A_0 and limit 100
             - a list of batches with 1 item
             - that item is an instance of Batch
             - that item has a header_signature of 'aaa...0'
@@ -220,7 +233,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_1, response.head_id)
-        self.assert_valid_paging(response, total=1)
+        self.assert_valid_paging(response, A_0, 100)
         self.assertEqual(1, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_0, response.batches[0].header_signature)
@@ -244,7 +257,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assertFalse(response.batches)
 
     def test_batch_list_paginated(self):
-        """Verifies requests for batch lists work when paginated just by count.
+        """Verifies requests for batch lists work when paginated just by limit.
 
         Queries the default mock block store:
             {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...1' ...}] ...}
@@ -254,26 +267,22 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response with:
-                * a next_id of 'aaa...0'
-                * the default empty previous_id
-                * the default start_index of 0
-                * the default total resource count of 3
+            - a paging response with start of A_2, limit 2, and next b-0
             - a list of batches with 2 items
             - those items are instances of Batch
             - the first item has a header_signature of 'aaa...2'
         """
-        response = self.make_paged_request(count=2)
+        response = self.make_paged_request(limit=2)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, next_id=A_0)
+        self.assert_valid_paging(response, A_2, 2, next_id=A_0)
         self.assertEqual(2, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_2, response.batches[0].header_signature)
 
     def test_batch_list_paginated_by_start_id (self):
-        """Verifies batch list requests work paginated by count and start_id.
+        """Verifies batch list requests work paginated by limit and start_id.
 
         Queries the default mock block store:
             {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
@@ -283,77 +292,19 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response with:
-                * a next_id of 'aaa...0'
-                * a previous_id of 'aaa...2'
-                * a start_index of 1
-                * the default total resource count of 3
+            - a paging response with start of A_1 and limit 1, next A_2
             - a list of batches with 1 item
             - that item is an instance of Batch
             - that item has a header_signature of 'aaa...1'
         """
-        response = self.make_paged_request(count=1, start_id=A_1)
+        response = self.make_paged_request(limit=1, start=A_1)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, A_0, A_2, 1)
+        self.assert_valid_paging(response, A_1, 1, A_0)
         self.assertEqual(1, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_1, response.batches[0].header_signature)
-
-    def test_batch_list_paginated_by_end_id (self):
-        """Verifies batch list requests work paginated by count and end_id.
-
-        Queries the default mock block store:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response with:
-                * the default empty next_id
-                * a previous_id of 'aaa...2'
-                * a start_index of 1
-                * the default total resource count of 3
-            - a list of batches with 2 items
-            - those items are instances of Batch
-            - the first item has a header_signature of 'aaa...1'
-        """
-        response = self.make_paged_request(count=2, end_id=A_0)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, previous_id=A_2, start_index=1)
-        self.assertEqual(2, len(response.batches))
-        self.assert_all_instances(response.batches, Batch)
-        self.assertEqual(A_1, response.batches[0].header_signature)
-
-    def test_batch_list_paginated_by_index (self):
-        """Verifies batch list requests work paginated by count and min_index.
-
-        Queries the default mock block store:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response with a next_id of 'aaa...1'
-            - a list of batches with 1 item
-            - that item is an instance of Batch
-            - that item has a header_signature of 'aaa...2'
-        """
-        response = self.make_paged_request(count=1, start_index=0)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, next_id=A_1)
-        self.assertEqual(1, len(response.batches))
-        self.assert_all_instances(response.batches, Batch)
-        self.assertEqual(A_2, response.batches[0].header_signature)
 
     def test_batch_list_with_bad_pagination(self):
         """Verifies batch requests break when paging specifies missing batches.
@@ -367,7 +318,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
             - a status of INVALID_PAGING
             - that head_id, paging, and batches are missing
         """
-        response = self.make_paged_request(count=3, start_id='bad')
+        response = self.make_paged_request(limit=3, start='f' * 128)
 
         self.assertEqual(self.status.INVALID_PAGING, response.status)
         self.assertFalse(response.head_id)
@@ -384,130 +335,22 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...1'
-            - a paging response with:
-                * an empty next_id
-                * a previous_id of 'aaa...1'
-                * a start_index of 1
-                * a total resource count of 2
+            - a paging response with start of A_0 and limit 1
             - a list of batches with 1 item
             - that item is an instance of Batch
             - that has a header_signature of 'aaa...0'
         """
-        response = self.make_paged_request(count=1, start_index=1, head_id=B_1)
+        response = self.make_paged_request(limit=1, start=A_0, head_id=B_1)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_1, response.head_id)
-        self.assert_valid_paging(response, '', A_1, 1, 2)
+        self.assert_valid_paging(response, A_0, 1)
         self.assertEqual(1, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_0, response.batches[0].header_signature)
 
-    def test_batch_list_sorted_by_key(self):
-        """Verifies batch list requests work sorted by header_signature.
-
-        Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
-            - a list of batches with 3 items
-            - the items are instances of Batch
-            - the first item has a header_signature of 'aaa...0'
-            - the last item has a header_signature of 'aaa...2'
-        """
-        controls = self.make_sort_controls('header_signature')
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
-        self.assertEqual(3, len(response.batches))
-        self.assert_all_instances(response.batches, Batch)
-        self.assertEqual(A_0, response.batches[0].header_signature)
-        self.assertEqual(A_2, response.batches[2].header_signature)
-
-    def test_batch_list_sorted_by_bad_key(self):
-        """Verifies batch list requests break properly sorted by a bad key.
-
-        Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
-
-        Expects to find:
-            - a status of INVALID_SORT
-            - that head_id, paging, and batches are missing
-        """
-        controls = self.make_sort_controls('bad')
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.INVALID_SORT, response.status)
-        self.assertFalse(response.head_id)
-        self.assertFalse(response.paging.SerializeToString())
-        self.assertFalse(response.batches)
-
-    def test_batch_list_sorted_by_nested_key(self):
-        """Verifies batch list requests work sorted by header.signer_public_key.
-
-        Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
-            - a list of batches with 3 items
-            - the items are instances of Batch
-            - the first item has a header_signature of 'aaa...0'
-            - the last item has a header_signature of 'aaa...2'
-        """
-        controls = self.make_sort_controls('header', 'signer_public_key')
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
-        self.assertEqual(3, len(response.batches))
-        self.assert_all_instances(response.batches, Batch)
-        self.assertEqual(A_0, response.batches[0].header_signature)
-        self.assertEqual(A_2, response.batches[2].header_signature)
-
-    def test_batch_list_sorted_by_implied_header(self):
-        """Verifies batch list requests work sorted by an implicit header key.
-
-        Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
-
-        Expects to find:
-            - a status of OK
-            - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
-            - a list of batches with 3 items
-            - the items are instances of Batch
-            - the first item has a header_signature of 'aaa...0'
-            - the last item has a header_signature of 'aaa...2'
-        """
-        controls = self.make_sort_controls('signer_public_key')
-        response = self.make_request(sorting=controls)
-
-        self.assertEqual(self.status.OK, response.status)
-        self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
-        self.assertEqual(3, len(response.batches))
-        self.assert_all_instances(response.batches, Batch)
-        self.assertEqual(A_0, response.batches[0].header_signature)
-        self.assertEqual(A_2, response.batches[2].header_signature)
-
     def test_batch_list_sorted_in_reverse(self):
-        """Verifies batch list requests work sorted by a key in reverse.
+        """Verifies batch list requests work sorted in reverse.
 
         Queries the default mock block store with three blocks:
             {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
@@ -517,22 +360,22 @@ class TestBatchListRequests(ClientHandlerTestCase):
         Expects to find:
             - a status of OK
             - a head_id of 'bbb...2', the latest
-            - a paging response showing all 3 resources returned
+             a paging response with start of A_0 and limit 100
             - a list of batches with 3 items
             - the items are instances of Batch
             - the first item has a header_signature of 'aaa...2'
             - the last item has a header_signature of 'aaa...0'
         """
-        controls = self.make_sort_controls('header_signature', reverse=True)
+        controls = self.make_sort_controls('default', reverse=True)
         response = self.make_request(sorting=controls)
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response)
+        self.assert_valid_paging(response, A_0, 100)
         self.assertEqual(3, len(response.batches))
         self.assert_all_instances(response.batches, Batch)
-        self.assertEqual(A_2, response.batches[0].header_signature)
-        self.assertEqual(A_0, response.batches[2].header_signature)
+        self.assertEqual(A_0, response.batches[0].header_signature)
+        self.assertEqual(A_2, response.batches[2].header_signature)
 
 
 class TestBatchGetRequests(ClientHandlerTestCase):
@@ -570,16 +413,28 @@ class TestBatchGetRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.INTERNAL_ERROR, response.status)
         self.assertFalse(response.batch.SerializeToString())
 
-    def test_batch_get_with_bad_id(self):
-        """Verifies requests for a specific batch break with a bad id.
+    def test_batch_get_with_missing_id(self):
+        """Verifies requests for a specific batch break with an unfound id.
 
         Expects to find:
             - a status of NO_RESOURCE
             - that the Batch returned, when serialized, is actually empty
         """
-        response = self.make_request(batch_id='bad')
+        response = self.make_request(batch_id='f' * 128)
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
+        self.assertFalse(response.batch.SerializeToString())
+
+    def test_batch_get_with_invalid_id(self):
+        """Verifies requests for a specific batch break with an invalid id.
+
+        Expects to find:
+            - a status of INVALID_ID
+            - that the Batch returned, when serialized, is actually empty
+        """
+        response = self.make_request(batch_id='invalid')
+
+        self.assertEqual(self.status.INVALID_ID, response.status)
         self.assertFalse(response.batch.SerializeToString())
 
     def test_batch_get_with_block_id(self):

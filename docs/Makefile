@@ -62,22 +62,24 @@ templates:
 cli:
 	$(SAWTOOTH)/bin/generate_cli_output
 
+PYTHONSDKDIR := source/sdks/python_sdk
+PYTHONAPIDOC := $(SPHINXAPIDOC) -f -o $(PYTHONSDKDIR)
 python:
-    # pydoc doesn't allow specifying an output directory, so make the
-    # files first and then move them.
-	mkdir -p $(HTMLDIR)/python_sdk/processor
-	pydoc3 -w sawtooth_sdk.processor.core
-	pydoc3 -w sawtooth_sdk.processor.context
-	pydoc3 -w sawtooth_sdk.processor.handler
-	mv sawtooth_sdk.processor*.html $(HTMLDIR)/python_sdk/processor
+	mkdir -p $(PYTHONSDKDIR)
+	$(PYTHONAPIDOC) ../sdk/python/sawtooth_sdk/processor
+	$(PYTHONAPIDOC) ../signing/sawtooth_signing
 
+GOSDKDIR := $(HTMLDIR)/go_sdk
 go:
-	mkdir -p $(HTMLDIR)/go_sdk/
-	godoc -html sawtooth_sdk/processor > $(HTMLDIR)/go_sdk/processor.html
+	mkdir -p $(GOSDKDIR)
+	godoc -html sawtooth_sdk/processor > $(GOSDKDIR)/processor.html
+	godoc -html sawtooth_sdk/signing > $(GOSDKDIR)/signing.html
 
+JAVASCRIPTSDKDIR := $(HTMLDIR)/javascript_sdk
 javascript:
-	mkdir -p $(HTMLDIR)/javascript_sdk/
-	jsdoc $(SAWTOOTH)/sdk/javascript/processor/ -d $(HTMLDIR)/javascript_sdk/processor/
+	mkdir -p $(JAVASCRIPTSDKDIR)/
+	jsdoc $(SAWTOOTH)/sdk/javascript/processor/ -d $(JAVASCRIPTSDKDIR)/processor/
+	jsdoc $(SAWTOOTH)/sdk/javascript/signing -d $(JAVASCRIPTSDKDIR)/signing/
 
 html: templates cli python go javascript
 	@mkdir -p source/_static

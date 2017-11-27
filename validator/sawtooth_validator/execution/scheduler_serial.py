@@ -211,6 +211,7 @@ class SerialScheduler(Scheduler):
                     txn = self._txn_queue.get()
                 except EmptyQueue:
                     if self._final:
+                        self._condition.notify_all()
                         raise StopIteration()
                     return None
                 # Handle this transaction being invalid based on a

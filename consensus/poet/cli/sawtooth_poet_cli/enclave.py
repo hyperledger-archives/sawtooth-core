@@ -33,7 +33,7 @@ def add_enclave_parser(subparsers, parent_parser):
         default='simulator',
         choices=['simulator', 'sgx'],
         type=str,
-        help='the enclave module to query')
+        help='identify the enclave module to query')
     parser.add_argument(
         'characteristic',
         choices=['measurement', 'basename'],

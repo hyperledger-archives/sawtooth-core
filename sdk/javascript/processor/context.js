@@ -17,8 +17,25 @@
 
 'use strict'
 
-const {TpStateEntry, TpStateGetRequest, TpStateGetResponse, TpStateSetRequest, TpStateSetResponse, TpStateDeleteRequest, TpStateDeleteResponse, Message} = require('../protobuf')
-const {AuthorizationException} = require('../processor/exceptions')
+const {
+  TpStateEntry,
+  TpStateGetRequest,
+  TpStateGetResponse,
+  TpStateSetRequest,
+  TpStateSetResponse,
+  TpStateDeleteRequest,
+  TpStateDeleteResponse,
+  TpReceiptAddDataRequest,
+  TpReceiptAddDataResponse,
+  Event,
+  TpEventAddRequest,
+  TpEventAddResponse,
+  Message
+} = require('../protobuf')
+const {
+  AuthorizationException,
+  InternalError
+} = require('../processor/exceptions')
 
 const _timeoutPromise = (p, millis) => {
   if (millis !== null && millis !== undefined) {
@@ -108,7 +125,7 @@ class Context {
    * delete_state requests that each of the provided addresses be
    * unset in validator state. A list of successfully deleted
    * addresses is returned.
-
+   *
    * @param {string[]} addresses -  an array of addresses
    * @param {number} [timeout] - an optional timeout
    * @return a promise for the adddresses successfully deleted.
@@ -130,6 +147,78 @@ class Context {
       timeout)
   }
 
+  /**
+   * Add a blob to the execution result for this transaction.
+   *
+   * @param {Buffer} data - the data to add
+   * @param {number} [timeout] - an optional timeout
+   * @return {Promise} a promise that resolves to nothing on success, or an
+   * error if the operation fails
+   */
+  addReceiptData (data, timeout = null) {
+    let addReceiptRequest = TpReceiptAddDataRequest.create({
+      contextId: this._contextId,
+      data
+    })
+
+    let future = this._stream.send(Message.MessageType.TP_RECEIPT_ADD_DATA_REQUEST,
+                                   TpReceiptAddDataRequest.encode(addReceiptRequest).finish())
+
+    return _timeoutPromise(
+      future.then((buffer) => {
+        let response = TpReceiptAddDataResponse.decode(buffer)
+
+        if (response.status !== TpReceiptAddDataResponse.Status.OK) {
+          throw new InternalError('Failed to add receipt data')
+        }
+      }),
+      timeout)
+  }
+
+  /**
+   * Add a new event to the execution result for this transaction.
+   *
+   * @param {string} eventType - This is used to subscribe to events. It should
+   * be globally unique and describe what, in general, has occurred
+   * @param {string[][]} attributes - Additional information about the event that
+   * is transparent to the validator.  Attributes can be used by subscribers to
+   * filter the type of events they receive.
+   * @param {Buffer} data - Additional information about the event that is
+   * opaque to the validator.
+   * @param {number} [timeout] - an optional timeout
+   * @return {Promise} a promise that resolves to nothing on success, or an
+   * error if the operation fails
+   */
+  addEvent (eventType, attributes, data, timeout = null) {
+    if (attributes === null || attributes === undefined) {
+      attributes = []
+    }
+
+    let event = Event.create({
+      eventType,
+      attributes: attributes.map(([key, value]) =>
+                                 Event.Attribute.create({key, value})),
+      data
+    })
+
+    let request = TpEventAddRequest.encode({
+      contextId: this._contextId,
+      event
+    }).finish()
+
+    let future = this._stream.send(Message.MessageType.TP_EVENT_ADD_REQUEST,
+                                   request)
+
+    return _timeoutPromise(
+      future.then((buffer) => {
+        let response = TpEventAddResponse.decode(buffer)
+
+        if (response.status !== TpEventAddResponse.Status.OK) {
+          throw new InternalError(`Failed to add event: ${eventType}`)
+        }
+      }),
+      timeout)
+  }
 }
 
 module.exports = Context

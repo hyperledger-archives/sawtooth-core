@@ -131,6 +131,7 @@ class Context(metaclass=ABCMeta):
     @abstractmethod
     def new_random_private_key(self):
         """Generates a new random PrivateKey using this context.
+
         Returns:
             (:obj:`PrivateKey`): a random private key
         """

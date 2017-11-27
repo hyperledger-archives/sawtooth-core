@@ -20,10 +20,7 @@ set -e
 main() {
     top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-    # 1. Clean up any previous builds and create directories
-    pkg_dir=$top_dir/build/debs
-    mkdir -p $pkg_dir
-    rm -f $pkg_dir/*.deb
+    # 1. Create tmp directory
 
     build_dir=/tmp/build-debs
     rm -rf $build_dir
@@ -63,18 +60,13 @@ main() {
             ;;
     esac
 
-    # 4. Display info for all packages built
-    cd $top_dir
-    for pkg in build/debs/*.deb
-    do
-        echo
-        info "Package $pkg"
-        dpkg -I $pkg
-    done
-
 }
 
 build_python() {
+
+    pkg_dir=$top_dir/build/debs/python
+    mkdir -p $pkg_dir
+    rm -f $pkg_dir/*.deb
 
     # Group 1: No internal dependencies
     build_python_pkg "signing"
@@ -166,6 +158,13 @@ build_python() {
 
     # Copy the packages to the output directory
     find $build_dir -name python3-sawtooth*.deb -exec cp {} $pkg_dir/ \;
+
+    for pkg in $pkg_dir/*.deb
+    do
+        echo
+        info "Package $pkg"
+        dpkg -I $pkg
+    done
 }
 
 info() {
@@ -173,6 +172,10 @@ info() {
 }
 
 build_go() {
+
+    pkg_dir=$top_dir/build/debs/go
+    mkdir -p $pkg_dir
+    rm -f $pkg_dir/*.deb
 
     info "smallbank_go"
     build_go_pkg smallbank
@@ -183,9 +186,18 @@ build_go() {
     info "xo_go"
     build_go_pkg xo_go
 
+    for pkg in $pkg_dir/*.deb
+    do
+        echo
+        info "Package $pkg"
+        dpkg -I $pkg
+    done
+
 }
 
 build_go_pkg(){
+
+    pkg_dir=$top_dir/build/debs/go
     pkg=$1
     GO_TP_DASH=$(echo $pkg | sed s/_/-/)
     CHANGELOG_DIR="debian/usr/share/doc/sawtooth-tp-$GO_TP_DASH"

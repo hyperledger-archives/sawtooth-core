@@ -59,7 +59,7 @@ EndpointInfo = namedtuple('EndpointInfo',
 StaticPeerInfo = namedtuple('StaticPeerInfo',
                             ['time', 'retry_threshold', 'count'])
 
-INITIAL_RETRY_FREQUENCY = 5
+INITIAL_RETRY_FREQUENCY = 10
 MAXIMUM_RETRY_FREQUENCY = 300
 
 MAXIMUM_STATIC_RETRY_FREQUENCY = 3600
@@ -662,7 +662,7 @@ class ConnectionManager(InstrumentedThread):
                         time.time(),
                         INITIAL_RETRY_FREQUENCY)
 
-                self._network.add_outbound_connection(endpoint)
+                    self._network.add_outbound_connection(endpoint)
 
             # If the connection does exist, request peers.
             if conn_id is not None:
