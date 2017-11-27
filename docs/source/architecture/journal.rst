@@ -89,8 +89,8 @@ valid.
 
 The BlockCache keeps blocks that are currently relevant, tracked by the last
 time the block was accessed. Periodically, the blocks that have not been
-accessed recently are purged from the block cache. The time horizon for purging
-and the frequency of purging are set in the Completer.
+accessed recently are purged from the block cache, but only if none of the
+other blocks in the BlockCache reference those blocks as predecessors.
 
 The Completer
 =============
