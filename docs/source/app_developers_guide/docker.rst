@@ -33,7 +33,7 @@ transaction processors. The second validator's transaction processors are not
 depicted.
 
 
-Install Docker Engine And Docker Compose
+Install Docker Engine and Docker Compose
 ========================================
 
 Windows
@@ -225,7 +225,7 @@ container, run this ``curl`` command as root:
 
 
 To check connectivity from the host computer, open a new terminal window on your
-host system and use this curl command:
+host system and use this ``curl`` command:
 
 .. code-block:: console
 
@@ -552,7 +552,7 @@ To see which components are running, run this command from the container:
 The Settings Transaction Processor Container
 --------------------------------------------
 
-* Runs a single Settings transaction proccessor
+* Runs a single Settings transaction processor
 * Handles transactions of the Settings transaction family
 * Hostname: ``settings-tp``
 * Container name: ``sawtooth-settings-tp-default``

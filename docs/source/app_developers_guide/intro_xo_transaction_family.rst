@@ -22,14 +22,14 @@ University of Cambridge. More information regarding the origins and properties o
 *Tic-tac-toe* can be found `here <https://en.wikipedia.org/wiki/Tic-tac-toe>`_.
 
 *XO* was chosen as an example transaction family for Sawtooth due to its simplicity,
-global playerbase, and straightforward implementation as a computer program. This example
+global player base, and straightforward implementation as a computer program. This example
 transaction family demonstrates the functionality of Sawtooth, and the code that implements
 it serves as a reference for building other transaction processors.
 
-How to play XO
+How to Play XO
 ==============
 
-Game rules
+Game Rules
 ----------
 
 *Tic-tac-toe* is a two-player game in which players take turns marking spaces on a 3x3
@@ -40,7 +40,7 @@ A player wins the game by marking 3 spaces in a horizontal, vertical, or diagona
 If all 9 spaces on the grid have been marked but no player has achieved a winning board
 position, the game is considered a draw.
 
-Playing XO using the command-line interface
+Playing XO Using the Command-line Interface
 -------------------------------------------
 
 A command-line interface is provided for playing *XO* which handles the construction and
@@ -91,7 +91,7 @@ will not be allowed.
   Either user can use the ``xo reset`` command to delete their local *XO* data.
   This includes the saved URL and username.
 
-Viewing the game state
+Viewing the Game State
 ----------------------
 
 The *XO* CLI also supports commands to view the state of ongoing or finished games.
@@ -124,13 +124,13 @@ blockchain to this URL.
 .. seealso::
   :doc:`/cli/xo`
 
-Playing XO With The XO Client (Example)
+Playing XO with the XO Client (Example)
 =======================================
 
 Now that we have gone through the basics of the *XO* transaction processor, we are ready
 to play a game. The steps below show you how to set up and play a game using the *XO* CLI.
 
-Start The Necessary Components
+Start the Necessary Components
 ------------------------------
 
 To play *XO*, ensure that the following components are running and connected:
@@ -160,7 +160,7 @@ The command produces output similar to the following for both players:
     writing file: /home/ubuntu/.sawtooth/keys/jill.addr
 
 
-Create A Game
+Create a Game
 -------------
 
 Create a game with the following command:
@@ -183,7 +183,7 @@ The command outputs a list of the games that have been created:
     game                                            --------- P1-NEXT
 
 
-Take A Space As Player One
+Take a Space as Player One
 --------------------------
 
 Start playing by taking a space as the first player, "jack":
@@ -198,7 +198,7 @@ Start playing by taking a space as the first player, "jack":
     number 1, and the lower right corner is number 9.
 
 
-Take A Space As Player Two
+Take a Space as Player Two
 --------------------------
 
 Now take a space on the board as player two:
@@ -208,7 +208,7 @@ Now take a space on the board as player two:
     $ xo take game 1 --username jill
 
 
-Show The Current State Of The Game Board
+Show the Current State of the Game Board
 ----------------------------------------
 
 Whenever you want to see the current state of the game board, enter the
@@ -234,8 +234,8 @@ You will see the current state of the board displayed:
         |   |
 
 
-Continue Game
--------------
+Continue the Game
+-----------------
 
 You can continue the game until one of the players wins, or
 the game ends in a draw:

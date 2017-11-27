@@ -62,7 +62,7 @@ Message Factory and Mock Validator
 To implement these functions, we'll need a mock validator to send messages to
 and from and a way manufacture the appropriate messages. How exactly the
 messages are manufactured is not important here -- it's just a matter of
-getting the relevant information into probuf objects. This will be taken care
+getting the relevant information into protobuf objects. This will be taken care
 of for us by the *XoMessageFactory*
 (``/project/sawtooth-core/sdk/examples/xo_python/sawtooth_xo/xo_message_factory.py``),
 which itself relies on the more general *MessageFactory*

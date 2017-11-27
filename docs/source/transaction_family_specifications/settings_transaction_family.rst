@@ -121,7 +121,7 @@ a base64 encoded *SettingCandidates* message:
 	    // The proposal id, a hash of the original proposal
 	    string proposal_id = 1;
 
-	    // The active propsal
+	    // The active proposal
 	    SettingProposal proposal = 2;
 
 	    // list of votes
@@ -205,7 +205,7 @@ buffers code:
 
 	// Setting Vote
 	//
-	// In ballot mode, a propsal must be voted on.  This message indicates an
+	// In ballot mode, a proposal must be voted on.  This message indicates an
 	// acceptance or rejection of a proposal, where the proposal is identified
 	// by its id.
 	message SettingVote {
