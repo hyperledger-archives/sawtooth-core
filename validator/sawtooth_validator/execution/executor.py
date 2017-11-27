@@ -87,7 +87,7 @@ class TransactionExecutorThread(object):
 
         if metrics_registry:
             self._transaction_execution_count = CounterWrapper(
-                    metrics_registry.counter('transaction_execution_count'))
+                metrics_registry.counter('transaction_execution_count'))
         else:
             self._transaction_execution_count = CounterWrapper()
 
@@ -215,6 +215,47 @@ class TransactionExecutorThread(object):
                     is_valid=False,
                     context_id=None)
                 continue
+
+            if processor_type in required_transaction_processors:
+                # The txn processor type is in the required
+                # transaction processors: check all the outputs of
+                # the transaction match one namespace listed
+                transaction_family = \
+                    next(t for t in transaction_families
+                         if t.get('family') == header.family_name and
+                         t.get('version') == header.family_version)
+
+                # if no namespaces are indicated, then the empty prefix is
+                # inserted by default
+                namespaces = transaction_family.get('namespaces', [''])
+                if not isinstance(namespaces, list):
+                    LOGGER.warning("namespaces should be a list for "
+                                   "transaction family (name=%s, version=%s)",
+                                   processor_type.name,
+                                   processor_type.version)
+                prefixes = header.outputs
+                bad_prefixes = [prefix for prefix in prefixes if
+                                not any(prefix.startswith(n)
+                                        for n in namespaces)]
+                for prefix in bad_prefixes:
+                    # log each
+                    LOGGER.debug("failing transaction %s of type (name=%s,"
+                                 "version=%s) because of no namespace listed "
+                                 "in %s from the configuration settings can "
+                                 "match the prefix %s",
+                                 txn.header_signature,
+                                 processor_type.name,
+                                 processor_type.version,
+                                 namespaces,
+                                 prefix)
+
+                if bad_prefixes:
+                    self._scheduler.set_transaction_execution_result(
+                        txn_signature=txn.header_signature,
+                        is_valid=False,
+                        context_id=None)
+                    continue
+
             try:
                 context_id = self._context_manager.create_context(
                     state_hash=txn_info.state_hash,

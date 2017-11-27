@@ -18,34 +18,34 @@ version: "2.1"
 services:
 
   settings-tp:
-    image: hyperledger/sawtooth-tp_settings:latest
+    image: hyperledger/sawtooth-settings-tp:1.0
     container_name: sawtooth-settings-tp-default
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: settings-tp -vv tcp://validator:4004
+    entrypoint: settings-tp -vv -C tcp://validator:4004
 
   intkey-tp-python:
-    image: hyperledger/sawtooth-tp_intkey_python:latest
+    image: hyperledger/sawtooth-intkey-tp-python:1.0
     container_name: sawtooth-intkey-tp-python-default
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: intkey-tp-python -vv tcp://validator:4004
+    entrypoint: intkey-tp-python -vv -C tcp://validator:4004
 
   xo-tp-python:
-    image: hyperledger/sawtooth-tp_xo_python:latest
+    image: hyperledger/sawtooth-xo-tp-python:1.0
     container_name: sawtooth-xo-tp-python-default
     expose:
       - 4004
     depends_on:
       - validator
-    entrypoint: xo-tp-python -vv tcp://validator:4004
+    entrypoint: xo-tp-python -vv -C tcp://validator:4004
 
   validator:
-    image: hyperledger/sawtooth-validator:latest
+    image: hyperledger/sawtooth-validator:1.0
     container_name: sawtooth-validator-default
     expose:
       - 4004
@@ -53,10 +53,10 @@ services:
       - "4004:4004"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
-        sawtooth admin keygen && \
+        sawadm keygen && \
         sawtooth keygen my_key && \
-        sawtooth config genesis -k /root/.sawtooth/keys/my_key.priv && \
-        sawtooth admin genesis config-genesis.batch && \
+        sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
+        sawadm genesis config-genesis.batch && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
@@ -64,7 +64,7 @@ services:
         \""
 
   rest-api:
-    image: hyperledger/sawtooth-rest_api:latest
+    image: hyperledger/sawtooth-rest-api:1.0
     container_name: sawtooth-rest-api-default
     expose:
       - 4004
@@ -73,11 +73,11 @@ services:
       - "8008:8008"
     depends_on:
       - validator
-    entrypoint: sawtooth-rest-api --connect tcp://validator:4004 --bind rest-api:8008
+    entrypoint: sawtooth-rest-api -C tcp://validator:4004 --bind rest-api:8008
 
-  client:
-    image: hyperledger/sawtooth-all:latest
-    container_name: sawtooth-client-default
+  shell:
+    image: hyperledger/sawtooth-all:1.0
+    container_name: sawtooth-shell-default
     expose:
       - 8008
       - 4004

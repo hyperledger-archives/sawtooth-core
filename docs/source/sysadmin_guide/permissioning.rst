@@ -93,9 +93,9 @@ roles and policies.
 
   $ sawset proposal create sawtooth.identity.allowed_keys=02b2be336a6ada8f96881cd55fd848c10386d99d0a05e1778d2fc1c60c2783c2f4
 
-Once your signer key is stored in the setting, the identity cli can be used to
-set and update roles and policies. Make sure that the identity transaction
-processor and the the rest api are running.
+Once your signer key is stored in the setting, the ``identity`` CLI can be used
+to set and update roles and policies. Make sure that the identity transaction
+processor and the REST API are running.
 
 .. literalinclude:: ../cli/output/sawtooth_identity_policy_create_usage.out
   :language: console
@@ -140,11 +140,11 @@ The following are the identity roles that are used to control which transactors
 are allowed to sign transactions and batches on the system.
 
 default:
-  When evaluating role permissions, if the role has not been set the default
+  When evaluating role permissions, if the role has not been set, the default
   policy will be used. The policy can be changed to meet the network's
   requirements after initial start-up by submitting a new policy with the name
-  default. If the default policy has not been set, the default policy's default
-  policy is “PERMIT_KEY \*”.
+  default. If the default policy has not been explicitly set, the default
+  is “PERMIT_KEY \*”.
 
 transactor:
   The top level role for controlling who can sign transactions and batches on
@@ -182,7 +182,7 @@ requesters below.
 Validators are able to determine whether messages delivered to them should
 be handled or dropped based on a set of role and identities stored within the
 Identity namespace. Each requester will be identified by the public key derived
-from the their identity signing key. Permission verifiers examine incoming
+from their identity signing key. Permission verifiers examine incoming
 messages against the policy and the current configuration and either permit,
 drop, or respond with an error. In certain cases, the connection will be
 forcibly closed -- for example: if a node is not allowed to connect to the

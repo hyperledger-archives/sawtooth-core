@@ -33,7 +33,7 @@ hash on the block header, we can gain consensus on the expected version
 of state *in addition to* the consensus on the chain of blocks. If a
 validator's state transitions for a block result in a different hash,
 the block is not considered valid. For more information about general
-concepts, see the Merkle_ page on wikipedia.
+concepts, see the Merkle_ page on Wikipedia.
 
 .. image:: ../images/state_merkle_hashes.*
    :width: 80%
@@ -60,10 +60,10 @@ associated with the address. The address format contains a 3 byte
 (16,777,216) possible different namespaces in a given instance of
 Sawtooth. The remaining 32 bytes (64 hex characters) are encoded
 based on the specifications of the designer of the namespace, and may
-include schemes for subdividing further, distinguising object types,
+include schemes for subdividing further, distinguishing object types,
 and mapping domain-specific unique identifiers into portions of the address.
 For more information about general concepts, see the Radix_ page on
-wikipedia.
+Wikipedia.
 
 .. image:: ../images/state_radix.*
    :width: 80%
@@ -86,7 +86,7 @@ The byte array is opaque to the core system. It only has meaning when
 deserialized by a domain-specific component based on the rules of the
 namespace. It is critical to select a serialization scheme which is
 deterministic across executions of the transaction, across platforms, and
-across versions of the serialization framework. Data strucutres which don't
+across versions of the serialization framework. Data structures which don't
 enforce ordered serialization (e.g. sets, maps, dicts) should be
 avoided. The requirement is to consistently produce the same byte array
 across space and time. If the same byte array is not produced, the leaf
@@ -95,5 +95,3 @@ to the root. This will result in transactions and the blocks that contain
 them being considered valid on some validators and invalid on others,
 depending on the non-deterministic behavior. This is considered bad
 form.
-
-

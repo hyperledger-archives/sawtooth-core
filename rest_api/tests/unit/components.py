@@ -239,20 +239,12 @@ class BaseApiTest(AioHTTPTestCase):
     def assert_has_valid_paging(self, js_response, pb_paging,
                                 next_link=None, previous_link=None):
         """Asserts a response has a paging dict with the expected values.
-        The expected values for start_index and total_count are in pb_paging.
         """
         self.assertIn('paging', js_response)
         js_paging = js_response['paging']
 
-        self.assertIn('total_count', js_paging)
-        self.assertEqual(js_paging['total_count'], pb_paging.total_resources)
-
-        # if total resources is zero, no start index should be sent
-        if not pb_paging.total_resources:
-            self.assertNotIn('start_index', js_paging)
-        else:
-            self.assertIn('start_index', js_paging)
-            self.assertEqual(js_paging['start_index'], pb_paging.start_index)
+        if pb_paging.next:
+            self.assertIn('next_position', js_paging)
 
         if next_link is not None:
             self.assertIn('next', js_paging)
@@ -260,11 +252,6 @@ class BaseApiTest(AioHTTPTestCase):
         else:
             self.assertNotIn('next', js_paging)
 
-        if previous_link is not None:
-            self.assertIn('previous', js_paging)
-            self.assert_valid_url(js_paging['previous'], previous_link)
-        else:
-            self.assertNotIn('previous', js_paging)
 
     def assert_has_valid_error(self, response, expected_code):
         """Asserts a response has only an error dict with an expected code
@@ -388,34 +375,33 @@ class Mocks(object):
     """A static class with methods that return lists of mock Protobuf objects.
     """
     @staticmethod
-    def make_paging_controls(count=None, start_id=None, end_id=None, start_index=None):
+    def make_paging_controls(limit=None, start=None):
         """Returns a ClientPagingControls Protobuf
         """
         return ClientPagingControls(
-            count=count,
-            start_id=start_id,
-            end_id=end_id,
-            start_index=start_index)
+            limit=limit,
+            start=start
+            )
 
     @staticmethod
-    def make_paging_response(start, total, next_id=None, previous_id=None):
+    def make_paging_response(next_id=None, start=None, limit=None):
         """Returns a ClientPagingResponse Protobuf
         """
         return ClientPagingResponse(
-            start_index=start,
-            total_resources=total,
-            next_id=next_id,
-            previous_id=previous_id)
+            next=next_id,
+            start=start,
+            limit=limit
+            )
 
     @staticmethod
-    def make_sort_controls(*keys, reverse=False, compare_length=False):
+    def make_sort_controls(keys, reverse=False):
         """Returns a ClientSortControls Protobuf in a list. Use concatenation to
         combine multiple sort controls.
         """
         return [ClientSortControls(
-            keys=keys,
-            reverse=reverse,
-            compare_length=compare_length)]
+            keys=[keys],
+            reverse=reverse
+            )]
 
     @staticmethod
     def make_entries(**leaf_data):

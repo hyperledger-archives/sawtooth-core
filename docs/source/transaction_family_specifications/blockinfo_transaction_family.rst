@@ -12,7 +12,7 @@ defines a BLOCKHASH instruction which gives the processor executing the
 transaction access to the hashes of previous blocks.
 
 The Blockinfo transaction family provides a way for storing information about
-a configureable number of historic blocks.
+a configurable number of historic blocks.
 
 .. note::
 
@@ -157,7 +157,7 @@ Processor execution will use the following procedure:
 
 The payload is checked to make sure it contains a valid block number, the
 previous block id, signer public key, and header_signature are all valid hex,
-and that the timestamp is greater then zero. If any of theses checks fail, the
+and that the timestamp is greater than zero. If any of theses checks fail, the
 transaction is invalid.
 
 Read the most recent block number, oldest block number, target number of blocks,

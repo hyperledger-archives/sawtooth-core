@@ -28,12 +28,13 @@ def base_http_parser():
     base_parser.add_argument(
         '--url',
         type=str,
-        help="the URL of the validator's REST API")
+        help="identify the URL of the validator's REST API "
+        "(default: http://localhost:8008)")
     base_parser.add_argument(
         '-u', '--user',
         type=str,
         metavar='USERNAME[:PASSWORD]',
-        help='user login info to authorize request')
+        help='specify the user to authorize request')
 
     return base_parser
 
@@ -52,7 +53,7 @@ def base_list_parser():
         action='store',
         default='default',
         choices=['csv', 'json', 'yaml', 'default'],
-        help='the format to use when printing the output')
+        help='choose the output format')
 
     return base_parser
 
@@ -69,12 +70,12 @@ def base_show_parser():
     base_parser.add_argument(
         '-k', '--key',
         type=str,
-        help='specify to show a single property from the block or header')
+        help='show a single property from the block or header')
     base_parser.add_argument(
         '-F', '--format',
         action='store',
         default='yaml',
         choices=['yaml', 'json'],
-        help='the format to use for printing the output (defaults to yaml)')
+        help='choose the output format (default: yaml)')
 
     return base_parser

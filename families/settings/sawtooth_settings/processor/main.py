@@ -97,14 +97,14 @@ def create_parser(prog_name):
 
     parser.add_argument(
         '-C', '--connect',
-        help='Endpoint for the validator connection, defaults to '
-             'tcp://localhost:4004 ')
+        help='specify the endpoint for the validator connection (default: '
+             'tcp://localhost:4004) ')
 
     parser.add_argument(
         '-v', '--verbose',
         action='count',
         default=0,
-        help='Increase output sent to stderr')
+        help='enable more verbose output to stderr')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -116,7 +116,7 @@ def create_parser(prog_name):
         action='version',
         version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
         .format(version),
-        help='print version information')
+        help='display version information')
 
     return parser
 

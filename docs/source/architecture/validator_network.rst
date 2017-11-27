@@ -216,7 +216,7 @@ requesters below.
 Validators are able to determine whether messages delivered to them should
 be handled or dropped based on a set of role and identities stored within the
 Identity namespace. Each requester will be identified by the public key derived
-from the their identity signing key. Permission verifiers examine incoming
+from their identity signing key. Permission verifiers examine incoming
 messages against the policy and the current configuration and either permit,
 drop, or respond with an error. In certain cases, the connection will be
 forcibly closed -- for example: if a node is not allowed to connect to the

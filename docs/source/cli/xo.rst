@@ -76,3 +76,12 @@ already taken.
 .. literalinclude:: output/xo_take_usage.out
    :language: console
    :linenos:
+
+xo delete
+=========
+
+The ``xo delete`` subcommand deletes an existing xo game.
+
+.. literalinclude:: output/xo_delete_usage.out
+   :language: console
+   :linenos:

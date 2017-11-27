@@ -276,7 +276,7 @@ class StateDeltaSubscriberHandler:
         resp = await self._connection.send(
             Message.CLIENT_BLOCK_LIST_REQUEST,
             client_block_pb2.ClientBlockListRequest(
-                paging=client_list_control_pb2.ClientPagingControls(count=1)
+                paging=client_list_control_pb2.ClientPagingControls(limit=1)
             ).SerializeToString())
 
         block_list_resp = client_block_pb2.ClientBlockListResponse()
@@ -354,7 +354,7 @@ class StateDeltaSubscriberHandler:
     @staticmethod
     def _make_subscriptions(address_prefixes=None):
         return [
-            events_pb2.EventSubscription(event_type="state_delta"),
+            events_pb2.EventSubscription(event_type="sawtooth/state-delta"),
             events_pb2.EventSubscription(event_type="sawtooth/block-commit"),
         ]
 

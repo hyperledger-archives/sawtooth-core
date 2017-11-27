@@ -45,7 +45,7 @@ def add_settings_parser(subparsers, parent_parser):
 
     settings_parser = subparsers.add_parser(
         'settings',
-        help='List and show on-chain settings',
+        help='Displays on-chain settings',
         description='Displays the values of currently active on-chain '
                     'settings.')
 
@@ -56,16 +56,16 @@ def add_settings_parser(subparsers, parent_parser):
 
     list_parser = settings_parsers.add_parser(
         'list',
-        help='list the current keys and values of on-chain settings',
+        help='Lists the current keys and values of on-chain settings',
         description='List the current keys and values of on-chain '
-                    'settings.  The content can be exported to various '
+                    'settings. The content can be exported to various '
                     'formats for external consumption.'
     )
 
     list_parser.add_argument(
         '--url',
         type=str,
-        help="the URL of a validator's REST API",
+        help="identify the URL of a validator's REST API",
         default='http://localhost:8008')
 
     list_parser.add_argument(
@@ -78,7 +78,7 @@ def add_settings_parser(subparsers, parent_parser):
         '--format',
         default='default',
         choices=['default', 'csv', 'json', 'yaml'],
-        help='the format of the output')
+        help='choose the output format')
 
 
 def do_settings(args):

@@ -264,7 +264,7 @@ class RouteHandler(object):
         validator_query = client_state_pb2.ClientStateListRequest(
             state_root=root,
             address=request.url.query.get('address', None),
-            sorting=self._get_sorting_message(request),
+            sorting=self._get_sorting_message(request, "default"),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -330,7 +330,7 @@ class RouteHandler(object):
         validator_query = client_block_pb2.ClientBlockListRequest(
             head_id=self._get_head_id(request),
             block_ids=self._get_filter_ids(request),
-            sorting=self._get_sorting_message(request),
+            sorting=self._get_sorting_message(request, "block_num"),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -388,7 +388,7 @@ class RouteHandler(object):
         validator_query = client_batch_pb2.ClientBatchListRequest(
             head_id=self._get_head_id(request),
             batch_ids=self._get_filter_ids(request),
-            sorting=self._get_sorting_message(request),
+            sorting=self._get_sorting_message(request, "default"),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -447,7 +447,7 @@ class RouteHandler(object):
         validator_query = client_transaction_pb2.ClientTransactionListRequest(
             head_id=self._get_head_id(request),
             transaction_ids=self._get_filter_ids(request),
-            sorting=self._get_sorting_message(request),
+            sorting=self._get_sorting_message(request, "default"),
             paging=self._make_paging_message(paging_controls))
 
         response = await self._query_validator(
@@ -625,7 +625,7 @@ class RouteHandler(object):
                 client_block_pb2.ClientBlockListResponse,
                 client_block_pb2.ClientBlockListRequest(
                     paging=client_list_control_pb2.ClientPagingControls(
-                        count=1)),
+                        limit=1)),
                 error_traps)
             block = self._expand_block(response['blocks'][0])
         return (
@@ -708,54 +708,40 @@ class RouteHandler(object):
                 sort_keys=True))
 
     @classmethod
-    def _wrap_paginated_response(
-        cls, request, response, controls, data, head=None
-    ):
+    def _wrap_paginated_response(cls, request, response, controls, data,
+                                 head=None):
         """Builds the metadata for a pagingated response and wraps everying in
         a JSON encoded web.Response
         """
+        paging_response = response['paging']
         if head is None:
             head = response['head_id']
-        link = cls._build_url(request, head=head)
+        link = cls._build_url(request,
+                              head=head,
+                              start=paging_response['start'],
+                              limit=paging_response['limit'])
 
-        paging_response = response['paging']
-        total = paging_response['total_resources']
-        paging = {'total_count': total}
-
+        paging = {}
+        limit = controls.get('limit')
+        start = controls.get("start")
+        paging["limit"] = limit
+        paging["start"] = start
         # If there are no resources, there should be nothing else in paging
-        if total == 0:
+        if paging_response.get("next") == "":
             return cls._wrap_response(
                 request,
                 data=data,
                 metadata={'head': head, 'link': link, 'paging': paging})
 
-        count = controls.get('count', len(data))
-        start = paging_response['start_index']
-        paging['start_index'] = start
+        next_id = paging_response['next']
+        paging['next_position'] = next_id
 
         # Builds paging urls specific to this response
-        def build_pg_url(min_pos=None, max_pos=None):
-            return cls._build_url(request, head=head, count=count,
-                                  min=min_pos, max=max_pos)
+        def build_pg_url(start=None):
+            return cls._build_url(request, head=head, limit=limit,
+                                  start=start)
 
-        # Build paging urls based on ids
-        if 'start_id' in controls or 'end_id' in controls or \
-                paging_response['next_id']:
-            if paging_response['next_id']:
-                paging['next'] = build_pg_url(paging_response['next_id'])
-            if paging_response['previous_id']:
-                paging['previous'] = build_pg_url(
-                    max_pos=paging_response['previous_id'])
-
-        # Build paging urls based on indexes
-        else:
-            end_index = controls.get('end_index', None)
-            if end_index is None and start + count < total:
-                paging['next'] = build_pg_url(start + count)
-            elif end_index is not None and end_index + 1 < total:
-                paging['next'] = build_pg_url(end_index + 1)
-            if start - count >= 0:
-                paging['previous'] = build_pg_url(start - count)
+        paging['next'] = build_pg_url(paging_response['next'])
 
         return cls._wrap_response(
             request,
@@ -797,21 +783,16 @@ class RouteHandler(object):
             add_query('head')
             del_query('head')
 
-        if 'min' in changes:
-            add_query('min')
-        elif 'max' in changes:
-            add_query('max')
-        elif 'min' in queries:
-            add_query('min')
-        elif 'max' in queries:
-            add_query('max')
+        if 'start' in changes:
+            add_query('start')
+        elif 'start' in queries:
+            add_query('start')
 
-        del_query('min')
-        del_query('max')
+        del_query('start')
 
-        if 'count' in queries:
-            add_query('count')
-            del_query('count')
+        if 'limit' in queries:
+            add_query('limit')
+            del_query('limit')
 
         for key in sorted(queries):
             add_query(key)
@@ -893,35 +874,25 @@ class RouteHandler(object):
 
     @staticmethod
     def _get_paging_controls(request):
-        """Parses min, max, and/or count queries into A paging controls dict.
+        """Parses start and/or limit queries into a paging controls dict.
         """
-        min_pos = request.url.query.get('min', None)
-        max_pos = request.url.query.get('max', None)
-        count = request.url.query.get('count', None)
+        start = request.url.query.get('start', None)
+        limit = request.url.query.get('limit', None)
         controls = {}
 
-        if count is not None:
+        if limit is not None:
             try:
-                controls['count'] = int(count)
+                controls['limit'] = int(limit)
             except ValueError:
-                LOGGER.debug('Request query had an invalid count: %s', count)
+                LOGGER.debug('Request query had an invalid limit: %s', limit)
                 raise errors.CountInvalid()
 
-            if controls['count'] <= 0:
-                LOGGER.debug('Request query had an invalid count: %s', count)
+            if controls['limit'] <= 0:
+                LOGGER.debug('Request query had an invalid limit: %s', limit)
                 raise errors.CountInvalid()
 
-        if min_pos is not None:
-            try:
-                controls['start_index'] = int(min_pos)
-            except ValueError:
-                controls['start_id'] = min_pos
-
-        elif max_pos is not None:
-            try:
-                controls['end_index'] = int(max_pos)
-            except ValueError:
-                controls['end_id'] = max_pos
+        if start is not None:
+            controls['start'] = start
 
         return controls
 
@@ -929,57 +900,31 @@ class RouteHandler(object):
     def _make_paging_message(controls):
         """Turns a raw paging controls dict into Protobuf ClientPagingControls.
         """
-        count = controls.get('count', None)
-        end_index = controls.get('end_index', None)
-
-        # an end_index must be changed to start_index, possibly modifying count
-        if end_index is not None:
-            if count is None:
-                start_index = 0
-                count = end_index
-            elif count > end_index + 1:
-                start_index = 0
-                count = end_index + 1
-            else:
-                start_index = end_index + 1 - count
-        else:
-            start_index = controls.get('start_index', None)
 
         return client_list_control_pb2.ClientPagingControls(
-            start_id=controls.get('start_id', None),
-            end_id=controls.get('end_id', None),
-            start_index=start_index,
-            count=count)
+            start=controls.get('start', None),
+            limit=controls.get('limit', None))
 
     @staticmethod
-    def _get_sorting_message(request):
-        """Parses the sort query into a list of ClientSortControls protobuf
+    def _get_sorting_message(request, key):
+        """Parses the reverse query into a list of ClientSortControls protobuf
         messages.
         """
         control_list = []
-        sort_query = request.url.query.get('sort', None)
-        if sort_query is None:
+        reverse = request.url.query.get('reverse', None)
+        if reverse is None:
             return control_list
 
-        for key_string in sort_query.split(','):
-            if key_string[0] == '-':
-                reverse = True
-                key_string = key_string[1:]
-            else:
-                reverse = False
-
-            keys = key_string.split('.')
-
-            if keys[-1] == 'length':
-                compare_length = True
-                keys.pop()
-            else:
-                compare_length = False
-
+        if reverse.lower() == "":
             control_list.append(client_list_control_pb2.ClientSortControls(
-                keys=keys,
-                reverse=reverse,
-                compare_length=compare_length))
+                reverse=True,
+                keys=key.split(",")
+            ))
+        elif reverse.lower() != 'false':
+            control_list.append(client_list_control_pb2.ClientSortControls(
+                reverse=True,
+                keys=reverse.split(",")
+            ))
 
         return control_list
 

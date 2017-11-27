@@ -52,6 +52,9 @@ type Context interface {
 	// Returns the algorithm name used for this context.
 	GetAlgorithmName() string
 
+	// Generates a new random private key.
+	NewRandomPrivateKey() PrivateKey
+
 	// Produces a public key for the given private key.
 	GetPublicKey(private_key PrivateKey) PublicKey
 

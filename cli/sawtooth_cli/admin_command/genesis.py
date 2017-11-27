@@ -43,13 +43,14 @@ def add_genesis_parser(subparsers, parent_parser):
     parser.add_argument(
         '-o', '--output',
         type=str,
-        help='the name of the file to ouput the GenesisData')
+        help='choose the output file for GenesisData')
 
     parser.add_argument(
         'input_file',
         nargs='*',
         type=str,
-        help='input files of batches to add to the resulting GenesisData')
+        help='file or files containing batches to add to the resulting '
+        'GenesisData')
 
 
 def do_genesis(args, data_dir=None):

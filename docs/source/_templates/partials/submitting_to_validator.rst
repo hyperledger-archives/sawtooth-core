@@ -20,7 +20,7 @@ prepared the BatchList:
 
     request.post({
         url: 'http://rest.api.domain/batches',
-        body: batchBytes,
+        body: batchListBytes,
         headers: {'Content-Type': 'application/octet-stream'}
     }, (err, response) => {
         if (err) return console.log(err)
@@ -37,7 +37,7 @@ prepared the BatchList:
     try:
         request = urllib.request.Request(
             'http://rest.api.domain/batches',
-            batch_bytes,
+            batch_list_bytes,
             method='POST',
             headers={'Content-Type': 'application/octet-stream'})
         response = urllib.request.urlopen(request)
@@ -49,7 +49,7 @@ prepared the BatchList:
 
 
 And here is what it would look like if you saved the binary to a file, and then
-sent it from the command-line with *curl*:
+sent it from the command line with ``curl``:
 
 {% if language == 'JavaScript' %}
 
@@ -58,7 +58,7 @@ sent it from the command-line with *curl*:
     const fs = require('fs')
 
     const fileStream = fs.createWriteStream('intkey.batches')
-    fileStream.write(batchBytes)
+    fileStream.write(batchListBytes)
     fileStream.end()
 
 {% else %}
@@ -66,7 +66,7 @@ sent it from the command-line with *curl*:
 .. code-block:: python
 
     output = open('intkey.batches', 'wb')
-    output.write(batch_bytes)
+    output.write(batch_list_bytes)
 
 {% endif %}
 

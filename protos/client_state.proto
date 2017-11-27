@@ -55,6 +55,8 @@ message ClientStateListResponse {
         NO_RESOURCE = 5;
         INVALID_PAGING = 6;
         INVALID_SORT = 7;
+        INVALID_ADDRESS = 8;
+        INVALID_ROOT = 9;
     }
 
     // An entry in the State
@@ -98,6 +100,7 @@ message ClientStateGetResponse {
         NO_ROOT = 4;
         NO_RESOURCE = 5;
         INVALID_ADDRESS = 6;
+        INVALID_ROOT = 7;
     }
     Status status = 1;
     bytes value = 2;

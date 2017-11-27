@@ -1,4 +1,4 @@
-Encoding your Payload
+Encoding Your Payload
 =====================
 
 Transaction payloads are composed of binary-encoded data that is opaque to the

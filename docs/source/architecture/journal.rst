@@ -58,7 +58,7 @@ Transaction ID, or block number; for example, ``get_block_by_batch_id``,
 
 The BlockStore maintains internal mappings of Transaction-to-Block and
 Batch-to-Block. These may be rebuilt if missing or corrupt. This rebuild should
-be done during start up, and not during the course of normal operation. These
+be done during startup, and not during the course of normal operation. These
 mappings should be stored in a format that is cached to disk, so they are not
 required to be held in memory at all times. As the block chain grows, these will
 become quite large.
@@ -151,7 +151,7 @@ the BlockCache and GlobalState.
 Consensus.BlockPublisher
 ------------------------
 
-An implemenation of the interface Consensus.BlockPublisher is used by the
+An implementation of the interface Consensus.BlockPublisher is used by the
 BlockPublisher to create new candidate blocks to extend the chain. The
 Consensus.BlockPublisher is provided access to a read-only view of global
 state, a read-only view of the BlockStore, and an interface to publish batches.
@@ -185,7 +185,7 @@ to initialize and finalize a block so that it can be published on the chain
 Consensus.BlockVerifier
 -----------------------
 
-The Consenus.BlockVerifier implementation provides Block verification services
+The Consensus.BlockVerifier implementation provides Block verification services
 to the BlockValidator. This gives the consensus algorithm an opportunity to
 check whether the candidate block was published following the consensus rules.
 
@@ -314,10 +314,10 @@ Block validation has the following steps that are always run in order. Failure
 of any validation step results in failure, processing is stopped, and the Block
 is marked as Invalid.
 
-1. ** Transaction Permissioning ** - On-chain transaction permissions are
+1. **Transaction Permissioning** - On-chain transaction permissions are
    checked to see who is allowed to submit transactions and batches.
 
-#. ** On-chain Block Validation Rules ** - The on-chain block validation rules
+#. **On-chain Block Validation Rules** - The on-chain block validation rules
    are checked to ensure that the Block doesn't invalidate any of the
    rules stored at ``sawtooth.validator.block_validation_rules``.
 

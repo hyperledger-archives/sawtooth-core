@@ -64,19 +64,13 @@ Additional transaction families provide models for specific areas\:
       This transaction family is based on the H-Store Smallbank benchmark.
 
     * BlockInfo - Provides a methodology for storing information
-      about a configureable number of historic blocks.
+      about a configurable number of historic blocks.
 
-We also provide several example transaction families to demonstrate
+We also provide an example transaction family to demonstrate
 Sawtooth functionality\:
 
     * XO - Allows users to play Tic-Tac-Toe, also known as
       "noughts and crosses" or "Xs and Os".
-
-    * Track and Trade - Provides a methodology for users to track goods
-      as they move through a supply chain.
-      This transaction family includes the history of ownership and
-      custodianship, as well as histories for a variety of properties
-      such as temperature and location.
 
 Consensus
 =========
@@ -140,7 +134,7 @@ distributed ledger.
 Repositories
 ============
 
-One repository contains all of the the code needed:
+One repository contains all of the code needed:
 
 sawtooth-core
     Contains fundamental classes used throughout the Sawtooth project, as well as:
