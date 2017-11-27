@@ -354,7 +354,7 @@ class StateDeltaSubscriberHandler:
     @staticmethod
     def _make_subscriptions(address_prefixes=None):
         return [
-            events_pb2.EventSubscription(event_type="state_delta"),
+            events_pb2.EventSubscription(event_type="sawtooth/state-delta"),
             events_pb2.EventSubscription(event_type="sawtooth/block-commit"),
         ]
 
