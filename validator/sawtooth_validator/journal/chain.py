@@ -256,7 +256,12 @@ class BlockValidator(object):
         found to not be permitted, the block is invalid.
         """
         if blkw.block_num != 0:
-            state_root = self._get_previous_block_root_state_hash(blkw)
+            try:
+                state_root = self._get_previous_block_root_state_hash(blkw)
+            except KeyError:
+                LOGGER.debug("Block rejected due to missing" +
+                             " predecessor: %s", blkw)
+                return False
             for batch in blkw.batches:
                 if not self._permission_verifier.is_batch_signer_authorized(
                         batch, state_root):
@@ -270,7 +275,12 @@ class BlockValidator(object):
         invalid.
         """
         if blkw.block_num != 0:
-            state_root = self._get_previous_block_root_state_hash(blkw)
+            try:
+                state_root = self._get_previous_block_root_state_hash(blkw)
+            except KeyError:
+                LOGGER.debug("Block rejected due to missing" +
+                             " predecessor: %s", blkw)
+                return False
             return self._validation_rule_enforcer.validate(blkw, state_root)
         return True
 
