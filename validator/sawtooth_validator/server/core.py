@@ -329,6 +329,7 @@ class Validator(object):
 
         completer.set_on_batch_received(self._journal.on_batch_received)
         completer.set_on_block_received(self._journal.on_block_received)
+        completer.set_chain_has_block(self._journal.has_block)
 
         self._dispatcher.add_handler(
             validator_pb2.Message.TP_ADD_RECEIPT_DATA_REQUEST,
