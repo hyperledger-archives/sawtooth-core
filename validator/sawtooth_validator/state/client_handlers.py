@@ -46,7 +46,6 @@ from sawtooth_validator.protobuf import validator_pb2
 
 
 LOGGER = logging.getLogger(__name__)
-ID_REGEX = re.compile('[0-9a-f]{128}')
 DEFAULT_TIMEOUT = 300
 MAX_PAGE_SIZE = 1000
 DEFAULT_PAGE_SIZE = 100
@@ -91,6 +90,10 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         self._response_proto = response_proto
         self._response_type = response_type
         self._status = response_proto
+
+        self._id_regex = re.compile('[0-9a-f]{128}')
+        self._state_root_regex = re.compile('[0-9a-f]{64}')
+        self._namespace_regex = re.compile('^([0-9a-f]{2}){0,35}$')
 
         self._tree = tree
         self._block_store = block_store
@@ -175,7 +178,7 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
             ResponseFailed: Failed to retrieve a head block
         """
         if request.head_id:
-            if ID_REGEX.fullmatch(request.head_id) is None:
+            if self._id_regex.fullmatch(request.head_id) is None:
                 LOGGER.debug('Invalid head id requested: %s', request.head_id)
                 raise _ResponseFailed(self._status.NO_ROOT)
             try:
@@ -296,9 +299,37 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
                 will be sent with the response.
         """
         for resource_id in resource_ids:
-            if ID_REGEX.fullmatch(resource_id) is None:
+            if self._id_regex.fullmatch(resource_id) is None:
                 LOGGER.debug('Invalid resource id requested: %s', resource_id)
                 raise _ResponseFailed(self._status.INVALID_ID)
+
+    def _validate_state_root(self, state_root):
+        """Validates a state root, raising a ResponseFailed error if invalid.
+
+        Args:
+            state_root (str): The state_root to validate
+
+        Raises:
+            ResponseFailed: The state_root was invalid, and a status of
+                INVALID_ROOT will be sent with the response.
+        """
+        if self._state_root_regex.fullmatch(state_root) is None:
+            LOGGER.debug('Invalid state root: %s', state_root)
+            raise _ResponseFailed(self._status.INVALID_ROOT)
+
+    def _validate_namespace(self, namespace):
+        """Validates a namespace, raising a ResponseFailed error if invalid.
+
+        Args:
+            state_root (str): The state_root to validate
+
+        Raises:
+            ResponseFailed: The state_root was invalid, and a status of
+                INVALID_ROOT will be sent with the response.
+        """
+        if self._namespace_regex.fullmatch(namespace) is None:
+            LOGGER.debug('Invalid namespace: %s', namespace)
+            raise _ResponseFailed(self._status.INVALID_ADDRESS)
 
 
 class _Pager(object):
@@ -632,9 +663,12 @@ class StateListRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
+        if request.state_root != '':
+            self._validate_state_root(request.state_root)
         state_root = self._set_root(request)
 
         # Fetch entries and encode as protobuf
+        self._validate_namespace(request.address)
         entries = [
             client_state_pb2.ClientStateListResponse.Entry(address=a, data=v)
             for a, v in self._tree.leaves(request.address or '').items()]
@@ -682,9 +716,12 @@ class StateGetRequest(_ClientRequestHandler):
             block_store=block_store)
 
     def _respond(self, request):
+        if request.state_root != '':
+            self._validate_state_root(request.state_root)
         state_root = self._set_root(request)
 
         # Fetch leaf value
+        self._validate_namespace(request.address)
         try:
             value = self._tree.get(request.address)
         except KeyError:
