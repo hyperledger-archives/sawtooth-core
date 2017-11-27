@@ -281,6 +281,7 @@ class Validator(object):
 
         completer.set_on_batch_received(block_publisher.queue_batch)
         completer.set_on_block_received(chain_controller.queue_block)
+        completer.set_chain_has_block(chain_controller.has_block)
 
         # -- Register Message Handler -- #
         network_handlers.add(
