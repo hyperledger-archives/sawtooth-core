@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from threading import Lock
+from threading import RLock
 
 
 class Counter:
@@ -46,3 +47,80 @@ class Counter:
     def dec(self, step=1):
         with self._lock:
             self._value -= step
+
+
+class ConcurrentSet:
+    def __init__(self):
+        self.set = set()
+        self.lock = RLock()
+
+    def add(self, element):
+        with self.lock:
+            self.set.add(element)
+
+    def remove(self, element):
+        with self.lock:
+            self.set.remove(element)
+
+    def __contains__(self, element):
+        with self.lock:
+            return element in self.set
+
+
+class ConcurrentMultiMap:
+    """A dictionary that maps keys to lists of items. All methods are
+    modifications to the referenced list."""
+    def __init__(self):
+        self.dict = dict()
+        self.lock = RLock()
+
+    def __contains__(self, key):
+        with self.lock:
+            return key in self.dict
+
+    def append(self, key, item):
+        """Append item to the list at key. Creates the list at key if it
+        doesn't exist.
+        """
+        with self.lock:
+            if key in self.dict:
+                self.dict[key].append(item)
+            else:
+                self.dict[key] = [item]
+
+    def set(self, key, items):
+        """Set key to a copy of items"""
+        if not isinstance(items, list):
+            raise ValueError("items must be a list")
+        with self.lock:
+            self.dict[key] = items.copy()
+
+    def swap(self, key, items):
+        """Set key to a copy of items and return the list that was previously
+        stored if the key was set. If not key was set, returns an empty list.
+        """
+        if not isinstance(items, list):
+            raise ValueError("items must be a list")
+        return_value = []
+        with self.lock:
+            if key in self.dict:
+                return_value = self.dict[key]
+            # Make a copy since we don't want users keeping a reference that is
+            # outside the lock
+            self.dict[key] = items.copy()
+        return return_value
+
+    def pop(self, key, default):
+        """If the key is set, remove and return the list stored at key.
+        Otherwise return default."""
+        with self.lock:
+            return self.dict.pop(key, default)
+
+    def get(self, key, default):
+        """If the key is set, return a copy of the list stored at key.
+        Otherwise return default."""
+        with self.lock:
+            try:
+                return self.dict[key].copy()
+            except KeyError:
+                return default
