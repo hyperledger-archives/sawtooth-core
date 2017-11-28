@@ -145,7 +145,6 @@ class BlockValidator(object):
             'cur_chain': [],
             'committed_batches': [],
             'uncommitted_batches': [],
-            'execution_results': [],
             'num_transactions': 0
         }
         self._permission_verifier = permission_verifier
@@ -235,11 +234,9 @@ class BlockValidator(object):
                     txn_results = \
                         scheduler.get_transaction_execution_results(
                             batch.header_signature)
-                    self._result["execution_results"].extend(txn_results)
+                    blkw.execution_results.extend(txn_results)
                     state_hash = batch_result.state_hash
-                    self._result["num_transactions"] = \
-                        self._result["num_transactions"] \
-                        + len(batch.transactions)
+                    blkw.num_transactions += len(batch.transactions)
                 else:
                     return False
             if blkw.state_root_hash != state_hash:
@@ -476,6 +473,7 @@ class BlockValidator(object):
                     if not self.validate_block(block):
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
+                    self._result["num_transactions"] += block.num_transactions
                 else:
                     LOGGER.info("Block marked invalid(invalid predecessor): " +
                                 "%s", block)
@@ -816,10 +814,11 @@ class ChainController(object):
                         [block.identifier[:8] for block in descendant_blocks])
                     self._submit_blocks_for_verification(descendant_blocks)
 
-                    receipts = self._make_receipts(result["execution_results"])
-                    # Update all chain observers
-                    for observer in self._chain_observers:
-                        observer.chain_update(new_block, receipts)
+                    for block in reversed(result["new_chain"]):
+                        receipts = self._make_receipts(block.execution_results)
+                        # Update all chain observers
+                        for observer in self._chain_observers:
+                            observer.chain_update(new_block, receipts)
 
                 # If the block was determine to be invalid.
                 elif new_block.status == BlockStatus.Invalid:
