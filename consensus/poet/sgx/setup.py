@@ -121,7 +121,6 @@ setup(name='sawtooth-poet-sgx',
       packages=find_packages(),
       install_requires=[
           'toml',
-          'ecdsa',
           'sawtooth-ias-client',
           'sawtooth-poet-common'
           ],

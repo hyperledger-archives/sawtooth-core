@@ -249,6 +249,12 @@ WaitCertificate* deserialize_wait_certificate(
     const std::string& signature
     );
 
+bool _verify_wait_certificate(
+    const std::string& serializedWaitCertificate,
+    const std::string& waitCertificateSignature,
+    const std::string& poetPublicKey
+    );
+
 class Poet
 {
 public:
