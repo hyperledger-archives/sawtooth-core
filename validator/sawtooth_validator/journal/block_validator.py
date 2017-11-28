@@ -89,11 +89,17 @@ class ForkResolutionResult:
 class BlockValidationResult:
     def __init__(self, block):
         self.block = block
-        self.execution_results = []
-        self.transaction_count = 0
 
     def __bool__(self):
         return self.block.status == BlockStatus.Valid
+
+    @property
+    def execution_results(self):
+        return self.block.execution_results
+
+    @property
+    def transaction_count(self):
+        return self.block.execution_results
 
     def set_valid(self, is_valid):
         if is_valid:
@@ -102,9 +108,9 @@ class BlockValidationResult:
             self.block.status = BlockStatus.Invalid
 
     def merge_batch_results(self, batch_validation_results):
-        self.transaction_count =\
+        self.block.transaction_count += \
             batch_validation_results.transaction_count
-        self.execution_results.extend(
+        self.block.execution_results.extend(
             batch_validation_results.execution_results)
 
 
