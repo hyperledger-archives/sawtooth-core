@@ -26,8 +26,6 @@
     import time
     import toml
 
-    import ecdsa
-
     from cryptography.hazmat import backends
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives import hashes
@@ -418,31 +416,11 @@ def verify_wait_certificate(wait_certificate, poet_public_key):
     if not isinstance(poet_public_key, str):
         raise TypeError("PoET public key is not the correct type")
 
-    try:
-        # Convert the PoET public key (hex string) to a byte array as that is
-        # what the ECDSA library requires to create a verifying key object.
-        # Use the byte array to create a NIST256p curve verifying key.
-        decoded_public_key = bytes.fromhex(poet_public_key)
-        verifying_key = \
-            ecdsa.VerifyingKey.from_string(
-                decoded_public_key,
-                curve=ecdsa.NIST256p)
+    if _verify_wait_certificate(
+            wait_certificate.serialized,
+            wait_certificate.signature,
+            poet_public_key):
+        return True
+    raise ValueError('Wait Certificate signature is invalid')
 
-        # The wait certificate signature is base-64 encoded, so we need to
-        # convert it to a byte array as that is the format that the ECDSA
-        # library expects for the signature.
-        decoded_signature = base64.b64decode(wait_certificate.signature)
-
-        # At this point, all that is left to do is use the verifying key
-        # to verify the signature on the serialized wait certificate.
-        # The only catch is that we need to tell the verify method that
-        # SHA256 was the digest algorithm used.
-        verifying_key.verify(
-            decoded_signature,
-            wait_certificate.serialize().encode(),
-            hashfunc=hashlib.sha256)
-    except ecdsa.BadSignatureError:
-        raise ValueError('Wait certificate signature does not match')
-
-    return True
 %}
