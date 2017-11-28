@@ -165,7 +165,7 @@ class StateDeltaSubscriberHandler:
                 del self._subscribers[index]
 
             if not self._subscribers:
-                await self._unregister_subscriptions()
+                asyncio.ensure_future(self._unregister_subscriptions())
 
     async def _handle_disconnect(self):
         LOGGER.debug('Validator disconnected')
@@ -218,20 +218,22 @@ class StateDeltaSubscriberHandler:
                 'Unable to register: validator connection is missing.')
 
     async def _unregister_subscriptions(self):
-        if self._delta_task:
-            self._listening = False
-            self._delta_task.cancel()
-            self._delta_task = None
+        with await self._subscriber_lock:
+            if self._delta_task and not self._subscribers:
+                self._listening = False
+                self._delta_task.cancel()
+                self._delta_task = None
 
-            req = state_delta_pb2.StateDeltaUnsubscribeRequest()
-            try:
-                await self._connection.send(
-                    Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
-                    req.SerializeToString(),
-                    timeout=DEFAULT_TIMEOUT)
-                LOGGER.info('Unsubscribed to state delta events')
-            except asyncio.TimeoutError as e:
-                LOGGER.error('Unable to unsubscribe from events: %s', str(e))
+                req = state_delta_pb2.StateDeltaUnsubscribeRequest()
+                try:
+                    await self._connection.send(
+                        Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
+                        req.SerializeToString(),
+                        timeout=DEFAULT_TIMEOUT)
+                    LOGGER.info('Unsubscribed to state delta events')
+                except asyncio.TimeoutError as e:
+                    LOGGER.error('Unable to unsubscribe from events: %s',
+                                 str(e))
 
     async def _handle_get_block_deltas(self, web_sock, get_block_message):
         if 'block_id' not in get_block_message:
