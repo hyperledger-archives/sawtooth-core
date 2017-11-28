@@ -62,21 +62,33 @@ class _MessageRouter:
         """Wait for a reply to a given correlation id.  If a timeout is
         provided, it will raise a asyncio.TimeoutError.
         """
-        result = await asyncio.wait_for(
-            self._futures[correlation_id], timeout=timeout)
+        try:
+            result = await asyncio.wait_for(
+                self._futures[correlation_id], timeout=timeout)
 
-        del self._futures[correlation_id]
-
-        return result
+            return result
+        finally:
+            del self._futures[correlation_id]
 
     def _set_reply(self, correlation_id, msg):
         if correlation_id in self._futures:
-            self._futures[correlation_id].set_result(msg)
+            try:
+                self._futures[correlation_id].set_result(msg)
+            except asyncio.InvalidStateError as e:
+                LOGGER.error(
+                    'Attempting to set result on already-resolved future: %s',
+                    str(e))
 
     def _fail_reply(self, correlation_id, err):
         if correlation_id in self._futures and \
                 not self._futures[correlation_id].done():
-            self._futures[correlation_id].set_exception(err)
+            try:
+                self._futures[correlation_id].set_exception(err)
+            except asyncio.InvalidStateError as e:
+                LOGGER.error(
+                    'Attempting to set exception on already-resolved future: '
+                    '%s',
+                    str(e))
 
     def fail_all(self, err):
         """Fail all the expected replies with a given error.

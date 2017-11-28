@@ -211,6 +211,8 @@ class StateDeltaSubscriberHandler:
 
             self._listening = True
             self._delta_task = asyncio.ensure_future(self._listen_for_events())
+        except asyncio.TimeoutError as e:
+            LOGGER.error('Unable to subscribe to events: %s', str(e))
         except DisconnectError:
             LOGGER.debug(
                 'Unable to register: validator connection is missing.')
@@ -221,12 +223,15 @@ class StateDeltaSubscriberHandler:
             self._delta_task.cancel()
             self._delta_task = None
 
-            LOGGER.info('Unsubscribing for state delta events')
             req = state_delta_pb2.StateDeltaUnsubscribeRequest()
-            await self._connection.send(
-                Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
-                req.SerializeToString(),
-                timeout=DEFAULT_TIMEOUT)
+            try:
+                await self._connection.send(
+                    Message.STATE_DELTA_UNSUBSCRIBE_REQUEST,
+                    req.SerializeToString(),
+                    timeout=DEFAULT_TIMEOUT)
+                LOGGER.info('Unsubscribed to state delta events')
+            except asyncio.TimeoutError as e:
+                LOGGER.error('Unable to unsubscribe from events: %s', str(e))
 
     async def _handle_get_block_deltas(self, web_sock, get_block_message):
         if 'block_id' not in get_block_message:
