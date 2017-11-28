@@ -111,12 +111,19 @@ class ChainController(object):
 
     def _set_chain_head_from_block_store(self):
         try:
-            self._chain_head = self._block_store.chain_head
-            if self._chain_head is not None:
-                LOGGER.info("Chain controller initialized with chain head: %s",
-                            self._chain_head)
-                self._chain_head_gauge.set_value(
-                    self._chain_head.identifier[:8])
+            chain_head = self._block_store.chain_head
+            if chain_head is not None:
+                if chain_head.status == BlockStatus.Valid:
+                    self._chain_head = chain_head
+                    LOGGER.info(
+                        "Chain controller initialized with chain head: %s",
+                        self._chain_head)
+                    self._chain_head_gauge.set_value(
+                        self._chain_head.identifier[:8])
+                else:
+                    LOGGER.warning(
+                        "Tried to set chain head from block store, but chain"
+                        " head isn't valid: %s", chain_head)
         except Exception:
             LOGGER.exception(
                 "Invalid block store. Head of the block chain cannot be"

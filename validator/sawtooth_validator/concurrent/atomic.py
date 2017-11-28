@@ -62,6 +62,11 @@ class ConcurrentSet:
         with self.lock:
             self.set.remove(element)
 
+    def remove_all(self, elements):
+        with self.lock:
+            for elem in elements:
+                self.set.remove(elem)
+
     def __contains__(self, element):
         with self.lock:
             return element in self.set
@@ -84,6 +89,16 @@ class ConcurrentMultiMap:
         """
         with self.lock:
             if key in self.dict:
+                self.dict[key].append(item)
+            else:
+                self.dict[key] = [item]
+
+    def append_if_unique(self, key, item, compare_fn):
+        with self.lock:
+            if key in self.dict:
+                for i in self.dict[key]:
+                    if compare_fn(i, item):
+                        return
                 self.dict[key].append(item)
             else:
                 self.dict[key] = [item]

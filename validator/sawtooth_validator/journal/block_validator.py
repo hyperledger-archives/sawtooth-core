@@ -19,8 +19,6 @@ import queue
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
-from sawtooth_validator.concurrent.atomic import ConcurrentSet
-from sawtooth_validator.concurrent.atomic import ConcurrentMultiMap
 
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
@@ -31,6 +29,7 @@ from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
 from sawtooth_validator.journal.chain_commit_state import DuplicateBatch
 from sawtooth_validator.journal.chain_commit_state import MissingDependency
+from sawtooth_validator.journal.block_scheduler import BlockValidationScheduler
 from sawtooth_validator.journal.validation_rule_enforcer import \
     ValidationRuleEnforcer
 from sawtooth_validator.state.settings_view import SettingsViewFactory
@@ -224,35 +223,48 @@ class BlockValidator(object):
         self._thread_pool = InstrumentedThreadPoolExecutor(1)
         self._block_receive_thread = None
 
+        # Blocks waiting to be scheduled
+        self._incoming_blocks = queue.Queue()
         # Blocks waiting to be processed
-        self._block_queue = queue.Queue()
+        self._ready_blocks = queue.Queue()
 
-        # Blocks that are currently being processed
-        self._blocks_processing = ConcurrentSet()
-
-        # Descendant blocks that are waiting for an in process block
-        # to complete
-        self._blocks_pending = ConcurrentMultiMap()
+        # The scheduler reads blocks off of the incoming queue and puts blocks
+        # on the ready queue when they are ready to be validated. This
+        # allows us to make some guarantees about blocks before they are
+        # validated and enable validating a single block at a time.
+        self._block_scheduler = BlockValidationScheduler(
+            self._incoming_blocks, self._ready_blocks, block_cache)
 
     def start(self):
         self._block_receive_thread = _BlockReceiveThread(
-            block_queue=self._block_queue,
-            submit_function=self._on_block_received,
-            callback_function=self._on_block_validated)
+            block_queue=self._ready_blocks,
+            submit_function=self._on_scheduled_block_received,
+            callback_function=self.on_block_validated)
         self._block_receive_thread.start()
+        self._block_scheduler.start()
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)
         if self._block_receive_thread is not None:
             self._block_receive_thread.stop()
             self._block_receive_thread = None
+        self._block_scheduler.stop()
 
     def queue_block(self, block):
         """
-        New block has been received, queue it with the chain controller
-        for processing.
+        New block has been received, queue it with the block validator for
+        processing.
         """
-        self._block_queue.put(block)
+        self._incoming_blocks.put(block)
+
+    def on_block_validated(self, commit_new_block, result):
+        self._block_scheduler.on_block_validated(result.block.header_signature)
+        self._on_block_validated(commit_new_block, result)
+
+    def _on_scheduled_block_received(self, block, callback):
+        """Checks to see if the block should be dropped, then adds the block to
+        the block cache and submits the block for validation."""
+        self.submit_blocks_for_validation([block], callback)
 
     def has_block(self, block_id):
         # I am not convinced that any of these checks are necessary, since the
@@ -261,25 +273,13 @@ class BlockValidator(object):
         if block_id in self._block_cache:
             return True
 
-        if self.in_process(block_id):
+        if self._block_scheduler.is_processing(block_id):
             return True
 
-        if self.in_pending(block_id):
+        if self._block_scheduler.is_pending(block_id):
             return True
 
         return False
-
-    def _on_block_received(self, block, callback):
-        """Checks to see if the block should be dropped, then adds the block to
-        the block cache and submits the block for validation."""
-        block_id = block.identifier
-
-        if self.has_block(block_id):
-            return
-
-        self._block_cache[block_id] = block
-
-        self.submit_blocks_for_validation([block], callback)
 
     def _get_previous_block_state_root(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -565,88 +565,12 @@ class BlockValidator(object):
 
     def submit_blocks_for_validation(self, blocks, callback):
         for block in blocks:
-            if self.in_process(block.header_signature):
-                LOGGER.debug("Block already in process: %s", block)
-                continue
-
-            if self.in_process(block.previous_block_id):
-                LOGGER.debug(
-                    "Previous block '%s' in process,"
-                    " adding '%s' pending",
-                    block.previous_block_id, block)
-                self._add_block_to_pending(block)
-                continue
-
-            if self.in_pending(block.previous_block_id):
-                LOGGER.debug(
-                    "Previous block '%s' is pending,"
-                    " adding '%s' pending",
-                    block.previous_block_id, block)
-                self._add_block_to_pending(block)
-                continue
-
             LOGGER.debug(
                 "Adding block %s for processing", block.identifier[:6])
 
-            # Add the block to the set of blocks being processed
-            self._blocks_processing.add(block.identifier)
-
             # Schedule the block for processing
             self._thread_pool.submit(
-                self.process_block_validation, block, self._wrap_callback(
-                    block, callback))
-
-    def _wrap_callback(self, block, callback):
-        # Internal cleanup after verification
-        def wrapper(commit_new_block, result):
-            LOGGER.debug(
-                "Removing block from processing %s",
-                block.identifier[:6])
-            try:
-                self._blocks_processing.remove(block.identifier)
-            except KeyError:
-                LOGGER.warning(
-                    "Tried to remove block from in process but it"
-                    " wasn't in processes: %s",
-                    block.identifier)
-
-            # If the block is invalid, mark all descendant blocks as invalid
-            # and remove from pending.
-            if block.status == BlockStatus.Valid:
-                blocks_now_ready = self._blocks_pending.pop(
-                    block.identifier, [])
-                self.submit_blocks_for_validation(blocks_now_ready, callback)
-
-            else:
-                # Get all the pending blocks that can now be processed
-                blocks_now_invalid = self._blocks_pending.pop(
-                    block.identifier, [])
-
-                while blocks_now_invalid:
-                    invalid_block = blocks_now_invalid.pop()
-                    invalid_block.status = BlockStatus.Invalid
-
-                    LOGGER.debug(
-                        'Marking descendant block invalid: %s',
-                        invalid_block)
-
-                    # Get descendants of the descendant
-                    blocks_now_invalid.extend(
-                        self._blocks_pending.pop(invalid_block.identifier, []))
-
-            callback(commit_new_block, result)
-
-        return wrapper
-
-    def in_process(self, block_id):
-        return block_id in self._blocks_processing
-
-    def in_pending(self, block_id):
-        return block_id in self._blocks_pending
-
-    def _add_block_to_pending(self, block):
-        previous = block.previous_block_id
-        self._blocks_pending.append(previous, block)
+                self.process_block_validation, block, callback)
 
     def process_block_validation(self, block, callback):
         """

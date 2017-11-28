@@ -17,6 +17,7 @@ import logging
 from threading import RLock
 import unittest
 from unittest.mock import patch
+import queue
 
 from sawtooth_validator.database.dict_database import DictDatabase
 
@@ -823,7 +824,7 @@ class TestBlockValidator(unittest.TestCase):
 
 class TestChainController(unittest.TestCase):
     def setUp(self):
-        self.block_tree_manager = BlockTreeManager()
+        self.block_tree_manager = BlockTreeManager(with_genesis=False)
         self.gossip = MockNetwork()
         self.txn_executor = MockTransactionExecutor()
         self.block_sender = MockBlockSender()
@@ -864,12 +865,19 @@ class TestChainController(unittest.TestCase):
         # Patch the threadpool
         self.executor = SynchronousExecutor()
         self.block_validator._thread_pool = self.executor
+
+        # Set genesis after validating
+        genesis = self.block_tree_manager.generate_genesis_block()
+        self.block_validator.validate_block(genesis)
+        self.block_tree_manager.set_chain_head(genesis)
+        self.chain_ctrl._set_chain_head_from_block_store()
+
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
 
         # create a chain of length 5 extending the root
-        _, head = self.generate_chain(init_root, 5)
-        self.receive_and_process_blocks(head)
+        chain, head = self.generate_chain(init_root, 5)
+        self.receive_and_process_blocks(*chain)
         self.assert_is_chain_head(head)
 
         self.init_head = head
@@ -944,14 +952,11 @@ class TestChainController(unittest.TestCase):
     def test_fork_lengths(self):
         '''Tests competing forks of different lengths
         '''
-        _, head_2 = self.generate_chain(self.init_head, 2)
-        _, head_7 = self.generate_chain(self.init_head, 7)
-        _, head_5 = self.generate_chain(self.init_head, 5)
+        chain_2, head_2 = self.generate_chain(self.init_head, 2)
+        chain_7, head_7 = self.generate_chain(self.init_head, 7)
+        chain_5, head_5 = self.generate_chain(self.init_head, 5)
 
-        self.receive_and_process_blocks(
-            head_2,
-            head_7,
-            head_5)
+        self.receive_and_process_blocks(*(chain_2 + chain_7 + chain_5))
 
         self.assert_is_chain_head(head_7)
 
@@ -959,15 +964,15 @@ class TestChainController(unittest.TestCase):
         '''Tests the chain being advanced between a fork's
         creation and validation
         '''
-        _, fork_5 = self.generate_chain(self.init_head, 5)
-        _, fork_3 = self.generate_chain(self.init_head, 3)
+        fork_5, head_5 = self.generate_chain(self.init_head, 5)
+        fork_3, head_3 = self.generate_chain(self.init_head, 3)
 
-        self.receive_and_process_blocks(fork_3)
-        self.assert_is_chain_head(fork_3)
+        self.receive_and_process_blocks(*fork_3)
+        self.assert_is_chain_head(head_3)
 
         # fork_5 is longer than fork_3, so it should be accepted
-        self.receive_and_process_blocks(fork_5)
-        self.assert_is_chain_head(fork_5)
+        self.receive_and_process_blocks(*fork_5)
+        self.assert_is_chain_head(head_5)
 
     def test_fork_missing_block(self):
         '''Tests a fork with a missing block
@@ -975,20 +980,14 @@ class TestChainController(unittest.TestCase):
         # make new chain
         new_chain, new_head = self.generate_chain(self.init_head, 5)
 
-        self.on_block_received(new_head)
-
         # delete a block from the new chain
-        del self.chain_ctrl._block_cache[new_chain[3].identifier]
+        for block in new_chain[:3] + new_chain[4:]:
+            self.on_block_received(block)
 
-        self.executor.process_all()
+        self.receive_and_process_blocks()
 
         # chain shouldn't advance
-        self.assert_is_chain_head(self.init_head)
-
-        # try again, chain still shouldn't advance
-        self.receive_and_process_blocks(new_head)
-
-        self.assert_is_chain_head(self.init_head)
+        self.assert_is_chain_head(new_chain[2])
 
     def test_fork_bad_block(self):
         '''Tests a fork with a bad block in the middle
@@ -997,13 +996,16 @@ class TestChainController(unittest.TestCase):
         good_chain, good_head = self.generate_chain(self.init_head, 5)
         bad_chain, bad_head = self.generate_chain(self.init_head, 5)
 
-        self.on_block_received(bad_head)
-        self.on_block_received(good_head)
-
         # invalidate block in the middle of bad_chain
         bad_chain[3].status = BlockStatus.Invalid
 
-        self.executor.process_all()
+        for block in bad_chain:
+            self.on_block_received(block)
+
+        for block in good_chain:
+            self.on_block_received(block)
+
+        self.receive_and_process_blocks()
 
         # good_chain should be accepted
         self.assert_is_chain_head(good_head)
@@ -1011,18 +1013,19 @@ class TestChainController(unittest.TestCase):
     def test_advancing_fork(self):
         '''Tests a fork advancing before getting validated
         '''
-        _, fork_head = self.generate_chain(self.init_head, 5)
+        fork, fork_head = self.generate_chain(self.init_head, 5)
 
-        self.on_block_received(fork_head)
+        for block in fork:
+            self.on_block_received(block)
 
         # advance fork before it gets accepted
-        _, ext_head = self.generate_chain(fork_head, 3)
+        ext_fork, ext_head = self.generate_chain(fork_head, 3)
 
-        self.executor.process_all()
+        self.receive_and_process_blocks()
 
         self.assert_is_chain_head(fork_head)
 
-        self.receive_and_process_blocks(ext_head)
+        self.receive_and_process_blocks(*ext_fork)
 
         self.assert_is_chain_head(ext_head)
 
@@ -1036,7 +1039,7 @@ class TestChainController(unittest.TestCase):
         self.assert_is_chain_head(self.init_head)
 
         # queue up the candidate block, but don't process
-        self.on_block_received(candidate)
+        self.block_validator._block_scheduler.handle_incoming_block(candidate)
 
         # create a new block extending the candidate block
         extending_block = self.block_tree_manager.generate_block(
@@ -1046,7 +1049,15 @@ class TestChainController(unittest.TestCase):
 
         # queue and process the extending block,
         # which should be the new head
+        self.block_validator._block_scheduler.handle_incoming_block(
+            extending_block)
         self.receive_and_process_blocks(extending_block)
+
+        self.block_validator._on_scheduled_block_received(
+            candidate, self.block_validator.on_block_validated)
+        self.block_validator._on_scheduled_block_received(
+            extending_block, self.block_validator.on_block_validated)
+
         self.assert_is_chain_head(extending_block)
 
     def test_multiple_extended_forks(self):
@@ -1066,40 +1077,48 @@ class TestChainController(unittest.TestCase):
         '''
 
         # create forks of various lengths
-        _, a_0 = self.generate_chain(self.init_head, 3)
-        _, b_0 = self.generate_chain(self.init_head, 5)
-        _, c_0 = self.generate_chain(self.init_head, 7)
+        a_0_chain, a_0 = self.generate_chain(self.init_head, 3)
+        b_0_chain, b_0 = self.generate_chain(self.init_head, 5)
+        c_0_chain, c_0 = self.generate_chain(self.init_head, 7)
 
-        self.receive_and_process_blocks(a_0, b_0, c_0)
+        self.receive_and_process_blocks(*a_0_chain)
+        self.receive_and_process_blocks(*b_0_chain)
+        self.receive_and_process_blocks(*c_0_chain)
         self.assert_is_chain_head(c_0)
 
         # extend every fork by 2
-        _, a_1 = self.generate_chain(a_0, 2)
-        _, b_1 = self.generate_chain(b_0, 2)
-        _, c_1 = self.generate_chain(c_0, 2)
+        a_1_chain, a_1 = self.generate_chain(a_0, 2)
+        b_1_chain, b_1 = self.generate_chain(b_0, 2)
+        c_1_chain, c_1 = self.generate_chain(c_0, 2)
 
-        self.receive_and_process_blocks(a_1, b_1, c_1)
+        self.receive_and_process_blocks(*a_1_chain)
+        self.receive_and_process_blocks(*b_1_chain)
+        self.receive_and_process_blocks(*c_1_chain)
         self.assert_is_chain_head(c_1)
 
         # extend the forks by different lengths
-        _, a_2 = self.generate_chain(a_1, 1)
-        _, b_2 = self.generate_chain(b_1, 6)
-        _, c_2 = self.generate_chain(c_1, 3)
+        a_2_chain, a_2 = self.generate_chain(a_1, 1)
+        b_2_chain, b_2 = self.generate_chain(b_1, 6)
+        c_2_chain, c_2 = self.generate_chain(c_1, 3)
 
-        self.receive_and_process_blocks(a_2, b_2, c_2)
+        self.receive_and_process_blocks(*a_2_chain)
+        self.receive_and_process_blocks(*b_2_chain)
+        self.receive_and_process_blocks(*c_2_chain)
         self.assert_is_chain_head(b_2)
 
         # extend every fork by 2
-        _, a_3 = self.generate_chain(a_2, 8)
-        _, b_3 = self.generate_chain(b_2, 8)
-        _, c_3 = self.generate_chain(c_2, 8)
+        a_3_chain, a_3 = self.generate_chain(a_2, 8)
+        b_3_chain, b_3 = self.generate_chain(b_2, 8)
+        c_3_chain, c_3 = self.generate_chain(c_2, 8)
 
-        self.receive_and_process_blocks(a_3, b_3, c_3)
+        self.receive_and_process_blocks(*a_3_chain)
+        self.receive_and_process_blocks(*b_3_chain)
+        self.receive_and_process_blocks(*c_3_chain)
         self.assert_is_chain_head(b_3)
 
         # create a new longest chain
-        _, wow = self.generate_chain(self.init_head, 30)
-        self.receive_and_process_blocks(wow)
+        wow_chain, wow = self.generate_chain(self.init_head, 30)
+        self.receive_and_process_blocks(*wow_chain)
         self.assert_is_chain_head(wow)
 
     # next multi threaded
@@ -1111,8 +1130,9 @@ class TestChainController(unittest.TestCase):
     # helpers
 
     def on_block_received(self, block):
-        self.block_validator._on_block_received(
-            block, self.chain_ctrl.on_block_validated)
+        self.block_validator.queue_block(block)
+        self.block_validator._block_scheduler.handle_incoming_block(
+            self.block_validator._incoming_blocks.get_nowait())
 
     def assert_is_chain_head(self, block):
         chain_head_sig = self.chain_ctrl.chain_head.header_signature
@@ -1124,7 +1144,7 @@ class TestChainController(unittest.TestCase):
             'Not chain head')
 
     def generate_chain(self, root_block, num_blocks,
-                                 params={'add_to_cache': True}):
+                       params={'add_to_cache': False, 'add_to_store': False}):
         '''Returns (chain, chain_head).
         Usually only the head is needed,
         but occasionally the chain itself is used.
@@ -1143,7 +1163,14 @@ class TestChainController(unittest.TestCase):
     def receive_and_process_blocks(self, *blocks):
         for block in blocks:
             self.on_block_received(block)
-        self.executor.process_all()
+        while True:
+            try:
+                block = self.block_validator._ready_blocks.get_nowait()
+            except queue.Empty:
+                break
+            self.block_validator.submit_blocks_for_validation(
+                [block], self.block_validator.on_block_validated)
+            self.executor.process_all()
 
 
 class TestChainControllerGenesisPeer(unittest.TestCase):
@@ -1245,7 +1272,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.assertIsNone(self.chain_ctrl.chain_head)
 
     def on_block_received(self, block):
-        self.block_validator._on_block_received(
+        self.block_validator._on_scheduled_block_received(
             block, self.chain_ctrl.on_block_validated)
 
 
@@ -1313,6 +1340,8 @@ class TestJournal(unittest.TestCase):
 
             self.gossip.on_batch_received = block_publisher.queue_batch
             self.gossip.on_block_received = block_validator.queue_block
+
+            block_validator.validate_block(btm.chain_head)
 
             block_publisher.start()
             chain_controller.start()
