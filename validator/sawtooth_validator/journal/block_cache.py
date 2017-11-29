@@ -132,13 +132,19 @@ class BlockCache(MutableMapping):
             if v.count > 0:
                 if k not in self._block_store:
                     new_cache[k] = v
+                else:
+                    block = v.value
+                    if block is not None:
+                        dec_count_for.append(block.previous_block_id)
 
             elif v.timestamp > time_horizon:
                 new_cache[k] = v
 
             else:
                 block = v.value
-                dec_count_for.append(block.previous_block_id)
+                # Handle NULL_BLOCK_IDENTIFIER
+                if block is not None:
+                    dec_count_for.append(block.previous_block_id)
 
         self._cache = new_cache
         for block_id in dec_count_for:
