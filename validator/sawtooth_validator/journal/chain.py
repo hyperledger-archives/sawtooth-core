@@ -16,10 +16,9 @@
 from abc import ABCMeta
 from abc import abstractmethod
 import logging
-import queue
 from threading import RLock
 
-from sawtooth_validator.concurrent.thread import InstrumentedThread
+from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
     TransactionReceipt
@@ -42,34 +41,6 @@ class ChainObserver(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class _ChainThread(InstrumentedThread):
-    def __init__(self, chain_controller, block_queue, block_cache):
-        super().__init__(name='_ChainThread')
-        self._chain_controller = chain_controller
-        self._block_queue = block_queue
-        self._block_cache = block_cache
-        self._exit = False
-
-    def run(self):
-        try:
-            while True:
-                try:
-                    block = self._block_queue.get(timeout=1)
-                    self._chain_controller.on_block_received(block)
-                except queue.Empty:
-                    # If getting a block times out, just try again.
-                    pass
-
-                if self._exit:
-                    return
-        # pylint: disable=broad-except
-        except Exception:
-            LOGGER.exception("ChainController thread exited with error.")
-
-    def stop(self):
-        self._exit = True
-
-
 class ChainController(object):
     """
     To evaluating new blocks to determine if they should extend or replace
@@ -77,7 +48,6 @@ class ChainController(object):
     """
     def __init__(self,
                  block_cache,
-                 block_validator,
                  state_view_factory,
                  chain_head_lock,
                  on_chain_updated,
@@ -136,21 +106,24 @@ class ChainController(object):
             self._committed_transactions_count = CounterWrapper()
             self._block_num_gauge = GaugeWrapper()
 
-        self._block_queue = queue.Queue()
-        self._chain_thread = None
-
-        self._block_validator = block_validator
         # Only run this after all member variables have been bound
         self._set_chain_head_from_block_store()
 
     def _set_chain_head_from_block_store(self):
         try:
-            self._chain_head = self._block_store.chain_head
-            if self._chain_head is not None:
-                LOGGER.info("Chain controller initialized with chain head: %s",
-                            self._chain_head)
-                self._chain_head_gauge.set_value(
-                    self._chain_head.identifier[:8])
+            chain_head = self._block_store.chain_head
+            if chain_head is not None:
+                if chain_head.status == BlockStatus.Valid:
+                    self._chain_head = chain_head
+                    LOGGER.info(
+                        "Chain controller initialized with chain head: %s",
+                        self._chain_head)
+                    self._chain_head_gauge.set_value(
+                        self._chain_head.identifier[:8])
+                else:
+                    LOGGER.warning(
+                        "Tried to set chain head from block store, but chain"
+                        " head isn't valid: %s", chain_head)
         except Exception:
             LOGGER.exception(
                 "Invalid block store. Head of the block chain cannot be"
@@ -161,31 +134,12 @@ class ChainController(object):
         self._set_chain_head_from_block_store()
         self._notify_on_chain_updated(self._chain_head)
 
-        self._chain_thread = _ChainThread(
-            chain_controller=self,
-            block_queue=self._block_queue,
-            block_cache=self._block_cache)
-        self._chain_thread.start()
-
     def stop(self):
-        if self._chain_thread is not None:
-            self._chain_thread.stop()
-            self._chain_thread = None
-
-    def queue_block(self, block):
-        """
-        New block has been received, queue it with the chain controller
-        for processing.
-        """
-        self._block_queue.put(block)
+        pass
 
     @property
     def chain_head(self):
         return self._chain_head
-
-    def _submit_blocks_for_validation(self, blocks):
-        self._block_validator.submit_blocks_for_validation(
-            blocks, self.on_block_validated)
 
     def on_block_validated(self, commit_new_block, result):
         """Message back from the block validator, that the validation is
@@ -201,6 +155,11 @@ class ChainController(object):
             with self._lock:
                 new_block = result.block
                 LOGGER.info("on_block_validated: %s", new_block)
+
+                if self._chain_head is None:
+                    # Try to set genesis
+                    self._set_genesis(new_block)
+                    return
 
                 # if the head has changed, since we started the work.
                 if result.chain_head.identifier !=\
@@ -264,40 +223,6 @@ class ChainController(object):
             LOGGER.exception(
                 "Unhandled exception in ChainController.on_block_validated()")
 
-    def on_block_received(self, block):
-        try:
-            with self._lock:
-                if self.has_block(block.header_signature):
-                    # do we already have this block
-                    return
-
-                if self.chain_head is None:
-                    self._set_genesis(block)
-                    return
-
-                self._block_cache[block.identifier] = block
-
-                # schedule this block for validation.
-                self._submit_blocks_for_validation([block])
-
-        # pylint: disable=broad-except
-        except Exception:
-            LOGGER.exception(
-                "Unhandled exception in ChainController.on_block_received()")
-
-    def has_block(self, block_id):
-        with self._lock:
-            if block_id in self._block_cache:
-                return True
-
-            if self._block_validator.in_process(block_id):
-                return True
-
-            if self._block_validator.in_pending(block_id):
-                return True
-
-            return False
-
     def _set_genesis(self, block):
         # This is used by a non-genesis journal when it has received the
         # genesis block from the genesis validator
@@ -309,7 +234,7 @@ class ChainController(object):
                                chain_id[:8], block.identifier[:8])
             else:
 
-                if self._block_validator.validate_block(block):
+                if block.status == BlockStatus.Valid:
                     if chain_id is None:
                         self._chain_id_manager.save_block_chain_id(
                             block.identifier)

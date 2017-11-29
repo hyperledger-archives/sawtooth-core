@@ -249,19 +249,8 @@ class Validator(object):
             batch_injector_factory=batch_injector_factory,
             metrics_registry=metrics_registry)
 
-        block_validator = BlockValidator(
-            block_cache=block_cache,
-            state_view_factory=state_view_factory,
-            transaction_executor=transaction_executor,
-            squash_handler=context_manager.get_squash_handler(),
-            identity_public_key=identity_public_key,
-            data_dir=data_dir,
-            config_dir=config_dir,
-            permission_verifier=permission_verifier)
-
         chain_controller = ChainController(
             block_cache=block_cache,
-            block_validator=block_validator,
             state_view_factory=state_view_factory,
             chain_head_lock=block_publisher.chain_head_lock,
             on_chain_updated=block_publisher.on_chain_updated,
@@ -275,6 +264,17 @@ class Validator(object):
                 identity_observer
             ],
             metrics_registry=metrics_registry)
+
+        block_validator = BlockValidator(
+            block_cache=block_cache,
+            state_view_factory=state_view_factory,
+            transaction_executor=transaction_executor,
+            on_block_validated=chain_controller.on_block_validated,
+            squash_handler=context_manager.get_squash_handler(),
+            identity_public_key=identity_public_key,
+            data_dir=data_dir,
+            config_dir=config_dir,
+            permission_verifier=permission_verifier)
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
@@ -292,13 +292,13 @@ class Validator(object):
         responder = Responder(completer)
 
         completer.set_on_batch_received(block_publisher.queue_batch)
-        completer.set_on_block_received(chain_controller.queue_block)
+        completer.set_on_block_received(block_validator.queue_block)
 
         # -- Register Message Handler -- #
         network_handlers.add(
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
-            chain_controller.has_block, block_publisher.has_batch,
+            block_validator.has_block, block_publisher.has_batch,
             permission_verifier)
 
         component_handlers.add(
@@ -343,6 +343,7 @@ class Validator(object):
         self._gossip.start()
         self._block_publisher.start()
         self._chain_controller.start()
+        self._block_validator.start()
 
         signal_event = threading.Event()
 
