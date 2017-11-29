@@ -130,7 +130,8 @@ class BlockCache(MutableMapping):
         dec_count_for = []
         for (k, v) in self._cache.items():
             if v.count > 0:
-                new_cache[k] = v
+                if k not in self._block_store:
+                    new_cache[k] = v
 
             elif v.timestamp > time_horizon:
                 new_cache[k] = v
