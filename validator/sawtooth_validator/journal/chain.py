@@ -711,6 +711,12 @@ class ChainController(object):
                         self._block_store.update_chain(result["new_chain"],
                                                        result["cur_chain"])
 
+                        # make sure old chain is in the block_caches
+                        for block in result["cur_chain"]:
+                            if block.header_signature not in self._block_cache:
+                                self._block_cache[block.header_signature] = \
+                                    block
+
                         LOGGER.info(
                             "Chain head updated to: %s",
                             self._chain_head)
