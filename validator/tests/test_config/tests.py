@@ -160,7 +160,7 @@ class TestValidatorConfig(unittest.TestCase):
         self.assertEquals(config.bind_component, "tcp://127.0.0.1:4004")
         self.assertEquals(config.endpoint, None)
         self.assertEquals(config.peering, "static")
-        self.assertEquals(config.scheduler, "parallel")
+        self.assertEquals(config.scheduler, "serial")
 
     def test_validator_config_load_from_file(self):
         """Tests loading config settings from a TOML configuration file.

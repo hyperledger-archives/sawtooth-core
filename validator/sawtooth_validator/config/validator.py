@@ -33,7 +33,7 @@ def load_default_validator_config():
         bind_component='tcp://127.0.0.1:4004',
         endpoint=None,
         peering='static',
-        scheduler='parallel')
+        scheduler='serial')
 
 
 def load_toml_validator_config(filename):
