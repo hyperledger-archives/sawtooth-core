@@ -208,10 +208,11 @@ class ChainController(object):
                                              batch.header_signature,
                                              self.__class__.__name__)
 
-                    receipts = self._make_receipts(result.execution_results)
-                    # Update all chain observers
-                    for observer in self._chain_observers:
-                        observer.chain_update(new_block, receipts)
+                    for block in result.new_chain:
+                        receipts = self._make_receipts(block.execution_results)
+                        # Update all chain observers
+                        for observer in self._chain_observers:
+                            observer.chain_update(block, receipts)
 
                 # The block is otherwise valid, but we have determined we
                 # don't want it as the chain head.

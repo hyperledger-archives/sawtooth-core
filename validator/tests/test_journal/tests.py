@@ -522,7 +522,11 @@ class TestBlockValidator(unittest.TestCase):
         new_chain, new_head = self.generate_chain_with_head(
             self.root, 3, {'add_to_cache': True})
 
-        self.validate_block(new_head)
+        for block in chain:
+            self.validate_block(block)
+
+        for block in new_chain:
+            self.validate_block(block)
 
         self.assert_valid_block(new_head)
         self.assert_new_block_not_committed()
@@ -543,7 +547,11 @@ class TestBlockValidator(unittest.TestCase):
         new_chain, new_head = self.generate_chain_with_head(
             head, 8, {'add_to_cache': True})
 
-        self.validate_block(new_head)
+        for block in chain:
+            self.validate_block(block)
+
+        for block in new_chain:
+            self.validate_block(block)
 
         self.assert_valid_block(new_head)
         self.assert_new_block_committed()
@@ -594,7 +602,8 @@ class TestBlockValidator(unittest.TestCase):
         # Mark a predecessor as invalid
         chain[1].status = BlockStatus.Invalid
 
-        self.validate_block(head)
+        for block in chain:
+            self.validate_block(block)
 
         self.assert_invalid_block(head)
         self.assert_new_block_not_committed()

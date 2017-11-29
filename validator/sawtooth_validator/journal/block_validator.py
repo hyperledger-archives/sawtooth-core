@@ -615,18 +615,30 @@ class BlockValidator(object):
                 new_block, current_block,
                 result.new_chain, result.current_chain)
 
-            valid = True
-            for blk in reversed(result.new_chain):
-                if valid:
-                    block_validation_result = self.validate_block(blk)
-                    result.merge_block_result(block_validation_result)
-                    if not bool(block_validation_result):
-                        LOGGER.info("Block validation failed: %s", blk)
-                        valid = False
-                else:
-                    LOGGER.info(
-                        "Block marked invalid(invalid predecessor): %s", blk)
-                    blk.status = BlockStatus.Invalid
+            # First check if any predecessors are invalid or unknown
+            for blk in result.new_chain[1:]:
+                # This should never happen, because the completer and scheduler
+                # should ensure we only receive blocks in order
+                if blk.status == BlockStatus.Unknown:
+                    LOGGER.error(
+                        "Tried to validate block '%s' before predecessor '%s'",
+                        block, blk)
+                    raise BlockValidationAborted()
+
+                if blk.status == BlockStatus.Invalid:
+                    block.status = BlockStatus.Invalid
+                    callback(False, result)
+                    return
+
+            # The completer and scheduler ensure that we have already validated
+            # all previous blocks on this fork prior to receiving this block,
+            # so we only need to validate this block.
+            block_validation_result = self.validate_block(block)
+            result.merge_block_result(block_validation_result)
+            if not bool(block_validation_result):
+                LOGGER.info("Block validation failed: %s", block)
+                callback(False, result)
+                return
 
             # The chain_head is None when this is the genesis block or if the
             # block store has no chain_head.
@@ -634,10 +646,6 @@ class BlockValidator(object):
                 current_chain_head = self._block_cache.block_store.chain_head
                 if chain_head.identifier != current_chain_head.identifier:
                     raise ChainHeadUpdated()
-
-            if not valid:
-                callback(False, result)
-                return
 
             # Ask consensus if the new chain should be committed
             commit_new_chain = self._compare_forks_consensus(chain_head, block)
