@@ -818,7 +818,7 @@ class ChainController(object):
                         receipts = self._make_receipts(block.execution_results)
                         # Update all chain observers
                         for observer in self._chain_observers:
-                            observer.chain_update(new_block, receipts)
+                            observer.chain_update(block, receipts)
 
                 # If the block was determine to be invalid.
                 elif new_block.status == BlockStatus.Invalid:
