@@ -246,11 +246,16 @@ class BlockValidator(object):
 
         return False
 
-    def _get_previous_block_state_root(self, blkw):
+    def _get_previous_block(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
-            return INIT_ROOT_KEY
+            return None
 
-        return self._block_cache[blkw.previous_block_id].state_root_hash
+        return self._block_cache[blkw.previous_block_id]
+
+    def _get_state_root(self, blkw):
+        if blkw == None:
+            return INIT_ROOT_KEY
+        return blkw.state_root_hash
 
     def validate_batches_in_block(self, blkw, prev_state_root):
         result = BatchValidationResults()
@@ -362,7 +367,24 @@ class BlockValidator(object):
 
         # pylint: disable=broad-except
         try:
-            prev_state_root = self._get_previous_block_state_root(blkw)
+            try:
+                # Returns None if this is a genesis block
+                prev_block = self._get_previous_block(blkw)
+            except KeyError:
+                LOGGER.exception(
+                    "Tried to validate block %s, but can't find predecessor.",
+                    blkw)
+                raise
+
+            if prev_block is not None:
+                if prev_block.status != BlockStatus.Valid:
+                    LOGGER.info(
+                        "Short-circuiting validation, predecessor has status "
+                        "%s: %s", prev_block.status, blkw)
+                    blkw.status = prev_block.status
+                    return False
+
+            prev_state_root = self._get_state_root(prev_block)
 
             if not self.validate_permissions(blkw, prev_state_root):
                 blkw.status = BlockStatus.Invalid
@@ -371,11 +393,6 @@ class BlockValidator(object):
             if not self.validate_on_chain_rules(blkw, prev_state_root):
                 blkw.status = BlockStatus.Invalid
                 return False
-
-            try:
-                prev_block = self._block_cache[blkw.previous_block_id]
-            except KeyError:
-                prev_block = None
 
             consensus = self._load_consensus(prev_block)
             consensus_block_verifier = consensus.BlockVerifier(
@@ -549,17 +566,27 @@ class BlockValidator(object):
         """
         try:
             result = ForkResolutionResult(block)
+
+            # Get the current chain_head and store it in the result
+            chain_head = self._block_cache.block_store.chain_head
+            result.chain_head = chain_head
+
             LOGGER.info("Starting block validation of : %s", block)
+
+            # The completer and scheduler ensure that we have already validated
+            # all previous blocks on this fork prior to receiving this block,
+            # so we only need to validate this block.
+            valid = self.validate_block(block)
+            if not valid:
+                LOGGER.info("Block validation failed: %s", block)
+                callback(False, result)
+                return
 
             # If this is a genesis block, we can skip the rest
             if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
                 valid = self.validate_block(block)
                 callback(valid, result)
                 return
-
-            # Get the current chain_head and store it in the result
-            chain_head = self._block_cache.block_store.chain_head
-            result.chain_head = chain_head
 
             # Create new local variables for current and new block, since
             # these variables get modified later
@@ -594,18 +621,8 @@ class BlockValidator(object):
                     raise BlockValidationAborted()
 
                 if blk.status == BlockStatus.Invalid:
-                    block.status = BlockStatus.Invalid
                     callback(False, result)
                     return
-
-            # The completer and scheduler ensure that we have already validated
-            # all previous blocks on this fork prior to receiving this block,
-            # so we only need to validate this block.
-            valid = self.validate_block(block)
-            if not valid:
-                LOGGER.info("Block validation failed: %s", block)
-                callback(False, result)
-                return
 
             # The chain_head is None when this is the genesis block or if the
             # block store has no chain_head.

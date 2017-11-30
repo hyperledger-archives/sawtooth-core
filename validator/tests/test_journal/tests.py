@@ -488,6 +488,7 @@ class TestBlockValidator(unittest.TestCase):
 
         self.block_tree_manager = BlockTreeManager()
         self.root = self.block_tree_manager.chain_head
+        self.root.status = BlockStatus.Valid
 
         self.block_validation_handler = self.BlockValidationHandler()
         self.permission_verifier = MockPermissionVerifier()
@@ -570,7 +571,9 @@ class TestBlockValidator(unittest.TestCase):
         new_chain, new_head = self.generate_chain_with_head(
             None, 5, {'add_to_cache': True})
 
-        self.validate_block(new_head)
+        new_head.status = BlockStatus.Valid
+        for block in new_chain:
+            self.validate_block(block)
 
         self.assert_invalid_block(new_head)
         self.assert_new_block_not_committed()
@@ -586,7 +589,8 @@ class TestBlockValidator(unittest.TestCase):
         # remove one of the new blocks
         del self.block_tree_manager.block_cache[chain[1].identifier]
 
-        self.validate_block(head)
+        for block in chain:
+            self.validate_block(block)
 
         self.assert_invalid_block(head)
         self.assert_new_block_not_committed()
@@ -620,6 +624,9 @@ class TestBlockValidator(unittest.TestCase):
             add_to_cache=True,
             invalid_consensus=True)
 
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
@@ -631,6 +638,11 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+
+        self.block_tree_manager.block_cache[head.header_signature] = head
 
         new_block = self.block_tree_manager.generate_block(
             previous_block=head,
@@ -650,6 +662,10 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
 
         txn = self.block_tree_manager.generate_transaction(deps=["missing"])
         batch = self.block_tree_manager.generate_batch(txns=[txn])
@@ -671,6 +687,10 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
 
         batch = self.block_tree_manager.generate_batch()
         new_block = self.block_tree_manager.generate_block(
@@ -697,6 +717,10 @@ class TestBlockValidator(unittest.TestCase):
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
+
         batch = self.block_tree_manager.generate_batch()
 
         new_block = self.block_tree_manager.generate_block(
@@ -716,6 +740,10 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
 
         txn = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn])
@@ -745,6 +773,10 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
 
         txn = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn, txn])
