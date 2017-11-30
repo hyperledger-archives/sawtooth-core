@@ -161,6 +161,8 @@ class TestValidatorConfig(unittest.TestCase):
         self.assertEquals(config.endpoint, None)
         self.assertEquals(config.peering, "static")
         self.assertEquals(config.scheduler, "serial")
+        self.assertEquals(config.minimum_peer_connectivity, 3)
+        self.assertEquals(config.maximum_peer_connectivity, 10)
 
     def test_validator_config_load_from_file(self):
         """Tests loading config settings from a TOML configuration file.
@@ -203,6 +205,10 @@ class TestValidatorConfig(unittest.TestCase):
                 fd.write(os.linesep)
                 fd.write('opentsdb_password = "secret"')
                 fd.write(os.linesep)
+                fd.write('minimum_peer_connectivity = 1')
+                fd.write(os.linesep)
+                fd.write('maximum_peer_connectivity = 100')
+                fd.write(os.linesep)
                 fd.write('[roles]')
                 fd.write(os.linesep)
                 fd.write('network = "trust"')
@@ -221,6 +227,8 @@ class TestValidatorConfig(unittest.TestCase):
             self.assertEquals(config.opentsdb_url, "http://data_base:0000")
             self.assertEquals(config.opentsdb_username, "name")
             self.assertEquals(config.opentsdb_password, "secret")
+            self.assertEquals(config.minimum_peer_connectivity, 1)
+            self.assertEquals(config.maximum_peer_connectivity, 100)
 
 
         finally:
