@@ -112,7 +112,7 @@ class BlockTreeManager(object):
         self.signer = crypto_factory.new_signer(private_key)
 
         identity_private_key = context.new_random_private_key()
-        self.identity_signer = crypto_factory.new_signer(private_key)
+        self.identity_signer = crypto_factory.new_signer(identity_private_key)
         chain_head = None
         if with_genesis:
             self.genesis_block = self.generate_genesis_block()
