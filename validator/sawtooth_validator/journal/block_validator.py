@@ -78,41 +78,6 @@ class ForkResolutionResult:
             out += "%s: %s," % (key, self.__getattribute(key))
         return out[:-1] + "}"
 
-    def merge_block_result(self, block_validation_result):
-        self.transaction_count =\
-            block_validation_result.transaction_count
-        self.execution_results.extend(
-            block_validation_result.execution_results)
-
-
-class BlockValidationResult:
-    def __init__(self, block):
-        self.block = block
-
-    def __bool__(self):
-        return self.block.status == BlockStatus.Valid
-
-    @property
-    def execution_results(self):
-        return self.block.execution_results
-
-    @property
-    def transaction_count(self):
-        return self.block.execution_results
-
-    def set_valid(self, is_valid):
-        if is_valid:
-            self.block.status = BlockStatus.Valid
-        else:
-            self.block.status = BlockStatus.Invalid
-
-    def merge_batch_results(self, batch_validation_results):
-        self.block.transaction_count += \
-            batch_validation_results.transaction_count
-        self.block.execution_results.extend(
-            batch_validation_results.execution_results)
-
-
 class BatchValidationResults:
     def __init__(self):
         self.transaction_count = 0
@@ -391,22 +356,21 @@ class BlockValidator(object):
         return True
 
     def validate_block(self, blkw):
-        result = BlockValidationResult(blkw)
-
+        """Validate this block. Results are stored in the BlockWrapper."""
         if blkw.status != BlockStatus.Unknown:
-            return result
+            return blkw.status == BlockStatus.Valid
 
         # pylint: disable=broad-except
         try:
             prev_state_root = self._get_previous_block_state_root(blkw)
 
             if not self.validate_permissions(blkw, prev_state_root):
-                result.set_valid(False)
-                return result
+                blkw.status = BlockStatus.Invalid
+                return False
 
             if not self.validate_on_chain_rules(blkw, prev_state_root):
-                result.set_valid(False)
-                return result
+                blkw.status = BlockStatus.Invalid
+                return False
 
             try:
                 prev_block = self._block_cache[blkw.previous_block_id]
@@ -422,20 +386,23 @@ class BlockValidator(object):
                 validator_id=self._identity_public_key)
 
             if not consensus_block_verifier.verify_block(blkw):
-                result.set_valid(False)
-                return result
+                blkw.status = BlockStatus.Invalid
+                return False
 
-            batch_validation_results = self.validate_batches_in_block(
-                blkw, prev_state_root)
-            result.set_valid(batch_validation_results.valid)
-            result.merge_batch_results(batch_validation_results)
+            results = self.validate_batches_in_block(blkw, prev_state_root)
+            if results.valid:
+                blkw.status = BlockStatus.Valid
+            else:
+                blkw.status = BlockStatus.Invalid
 
-            return result
+            blkw.transaction_count += results.transaction_count
+            blkw.execution_results.extend(results.execution_results)
 
         except Exception:
             LOGGER.exception(
                 "Unhandled exception BlockValidator.validate_block()")
-            return result
+
+        return blkw.status == BlockStatus.Valid
 
     @staticmethod
     def compare_chain_height(head_a, head_b):
@@ -585,7 +552,7 @@ class BlockValidator(object):
 
             # If this is a genesis block, we can skip the rest
             if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
-                valid = bool(self.validate_block(block))
+                valid = self.validate_block(block)
                 callback(valid, result)
                 return
 
@@ -633,9 +600,8 @@ class BlockValidator(object):
             # The completer and scheduler ensure that we have already validated
             # all previous blocks on this fork prior to receiving this block,
             # so we only need to validate this block.
-            block_validation_result = self.validate_block(block)
-            result.merge_block_result(block_validation_result)
-            if not bool(block_validation_result):
+            valid = self.validate_block(block)
+            if not valid:
                 LOGGER.info("Block validation failed: %s", block)
                 callback(False, result)
                 return
