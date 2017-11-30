@@ -191,3 +191,20 @@ The ``validator.toml`` configuration file has the following options:
     ``sawtooth identity`` CLI to change this on-chain-only setting.
 
   See :doc:`../permissioning` for more information on roles and permissions.
+
+- ``minimum_peer_connectivity`` = `min`
+
+  The minimum number of peers required before stopping peer search.
+  Default: 3 For example:
+
+  .. code-block:: none
+
+    minimum_peer_connectivity = 3
+
+- ``maximum_peer_connectivity`` = `max`
+
+  The maximum number of peers that will be accepted. Default: 10. For example:
+
+  .. code-block:: none
+
+    maximum_peer_connectivity = 10
