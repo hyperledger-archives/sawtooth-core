@@ -23,7 +23,7 @@ issue within the vagrant development environment.
 Details are key. Please include the following:
 
 * OS version
-* Distributed Ledger version
+* Sawtooth version
 * Environment details (virtual, physical, etc.)
 * Steps to reproduce
 * Actual results
