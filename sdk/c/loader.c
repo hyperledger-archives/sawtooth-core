@@ -24,6 +24,8 @@
 #include <openssl/engine.h>
 #include <openssl/conf.h>
 
+#define strncpy_s strncpy
+
 // Extract the private and public keys from the PEM file, using the supplied
 // password to decrypt the file if encrypted. priv_key and pub_key must point to
 // an array o at least 65 and 131 character respectively.

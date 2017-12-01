@@ -52,7 +52,9 @@ else:
 include_dirs += ['sawtooth_poet_sgx/poet_enclave_sgx',
                  'sawtooth_poet_sgx/poet_enclave_sgx/{}'.format(platform_dir),
                  'sawtooth_poet_sgx/libpoet_shared',
-                 'sawtooth_poet_sgx/libpoet_shared/{}'.format(platform_dir)]
+                 'sawtooth_poet_sgx/libpoet_shared/{}'.format(platform_dir),
+                 '../common/c11_support',
+                 '../common/c11_support/{}'.format(platform_dir)]
 library_dirs = ['deps/lib']
 
 enclavemod = Extension('_poet_enclave',
@@ -64,8 +66,6 @@ enclavemod = Extension('_poet_enclave',
                         'sawtooth_poet_sgx/poet_enclave_sgx/signup_data.cpp',
                         'sawtooth_poet_sgx/poet_enclave_sgx/signup_info.cpp',
                         'sawtooth_poet_sgx/poet_enclave_sgx/{}/platform_support.cpp'.format(
-                            platform_dir),
-                        'sawtooth_poet_sgx/libpoet_shared/{}/c11_support.cpp'.format(
                             platform_dir)
                         ],
                        swig_opts=['-c++'],

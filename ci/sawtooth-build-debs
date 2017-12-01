@@ -92,9 +92,9 @@ RUN ln -s /usr/bin/swig3.0 /usr/bin/swig
 # Install SGX SDK for PoET
 WORKDIR /tmp
 
-RUN wget https://download.01.org/intel-sgx/linux-1.8/sgx_linux_ubuntu16.04.1_x64_sdk_1.8.100.37689.bin && \
-    chmod +x sgx_linux_ubuntu16.04.1_x64_sdk_1.8.100.37689.bin && \
-    echo "yes" | ./sgx_linux_ubuntu16.04.1_x64_sdk_1.8.100.37689.bin && \
+RUN wget https://download.01.org/intel-sgx/linux-2.0/sgx_linux_ubuntu16.04.1_x64_sdk_2.0.100.40950.bin && \
+    chmod +x sgx_linux_ubuntu16.04.1_x64_sdk_2.0.100.40950.bin && \
+    echo "yes" | ./sgx_linux_ubuntu16.04.1_x64_sdk_2.0.100.40950.bin && \
     . /tmp/sgxsdk/environment && \
     export SGXSDKInstallPath=/tmp/sgxsdk/
 
