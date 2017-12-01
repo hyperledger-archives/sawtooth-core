@@ -37,10 +37,16 @@
     #define __STDC_WANT_LIB_EXT1__ 1
 #else
     int memset_s(void *dest, size_t max, int c, size_t count);
-    #define strncpy_s(dest, size, src, count) strncpy(dest, src, count)
+    int memcpy_s(void *dest, size_t sizeInBytes, const void *src, size_t count);
+    int strncpy_s(char *dest, size_t sizeInBytes, const char *src, size_t count);
+    int strnlen_s(const char *str, size_t sizeInBytes);
 #endif // #ifdef __STDC_LIB_EXT1__
 
 #include <string.h>
+
+#ifndef STRUNCATE
+#define STRUNCATE 80
+#endif
 
 // It turns out that Microsoft has two versions of this function...one that has
 // the same signature as the C11 standard and one of their own

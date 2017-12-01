@@ -69,9 +69,9 @@ Download and install the SGX driver:
 .. code-block:: console
 
     $ mkdir ~/sgx && cd ~/sgx
-    $ wget https://download.01.org/intel-sgx/linux-1.8/sgx_linux_x64_driver_4b57088.bin
-    $ chmod +x sgx_linux_x64_driver_4b57088.bin
-    $ sudo ./sgx_linux_x64_driver_4b57088.bin
+    $ wget https://download.01.org/intel-sgx/linux-2.0/sgx_linux_x64_driver_eb61a95.bin
+    $ chmod +x sgx_linux_x64_driver_eb61a95.bin
+    $ sudo ./sgx_linux_x64_driver_eb61a95.bin
 
 Download and install the Intel Capability Licensing Client. This is presently
 available only as an .rpm, so you must convert it to a .deb package with
@@ -99,9 +99,9 @@ Download and install the Intel SGX Platform Software (PSW):
 .. code-block:: console
 
     $ cd ~/sgx
-    $ wget https://download.01.org/intel-sgx/linux-1.8/sgx_linux_ubuntu16.04.1_x64_psw_1.8.100.37689.bin
-    $ chmod +x sgx_linux_ubuntu16.04.1_x64_psw_1.8.100.37689.bin
-    $ sudo ./sgx_linux_ubuntu16.04.1_x64_psw_1.8.100.37689.bin
+    $ wget https://download.01.org/intel-sgx/linux-2.0/sgx_linux_ubuntu16.04.1_x64_psw_2.0.100.40950.bin
+    $ chmod +x sgx_linux_ubuntu16.04.1_x64_psw_2.0.100.40950.bin
+    $ sudo ./sgx_linux_ubuntu16.04.1_x64_psw_2.0.100.40950.bin
 
 Check to make sure the kernel module is loaded:
 
@@ -119,8 +119,8 @@ If you're still having trouble, the SGX software may need to be reinstalled:
 
     $ sudo /opt/intel/sgxpsw/uninstall.sh
     $ cd ~/sgx
-    $ sudo ./sgx_linux_x64_driver_4b57088.bin
-    $ sudo ./sgx_linux_ubuntu16.04.1_x64_psw_1.8.100.37689.bin
+    $ sudo ./sgx_linux_x64_driver_eb61a95.bin
+    $ sudo ./sgx_linux_ubuntu16.04.1_x64_psw_2.0.100.40950.bin
 
 After ensuring that the SGX kernel module is loaded, go to the next section
 to install and configure Sawtooth.

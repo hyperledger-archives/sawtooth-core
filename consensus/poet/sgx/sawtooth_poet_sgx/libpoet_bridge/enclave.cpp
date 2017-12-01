@@ -19,7 +19,6 @@
 #include <sstream>
 #include <stdexcept>
 
-
 #include <sgx_uae_service.h>
 #include <sgx_ukey_exchange.h>
 #include "sgx_support.h"
@@ -64,7 +63,7 @@ namespace sawtooth {
             sealedSignupDataSize(0)
         {
             uint32_t size;
-            sgx_status_t ret = sgx_get_quote_size(nullptr, &size);
+            sgx_status_t ret = sgx_calc_quote_size(nullptr, 0, &size);
             ThrowSgxError(ret, "Failed to get SGX quote size.");
             this->quoteSize = size;
         } // Enclave::Enclave
@@ -134,8 +133,9 @@ namespace sawtooth {
                 "Failed to retrieve remote attestation message (EPID group "
                 "ID)");
 
-            memcpy(
+            memcpy_s(
                 outEpidGroup,
+                sizeof(sgx_epid_group_id_t),
                 remoteAttestationMessage1.gid,
                 sizeof(sgx_epid_group_id_t));
         } // Enclave::GetEpidGroup
@@ -255,12 +255,14 @@ namespace sawtooth {
             this->ThrowPoetError(poetRet);
 
             // Copy the mr_enclave and basenaeme to the caller's buffers
-            memcpy(
+            memcpy_s(
                 outEnclaveMeasurement,
+                sizeof(*outEnclaveMeasurement),
                 &enclaveQuote->report_body.mr_enclave,
                 sizeof(*outEnclaveMeasurement));
-            memcpy(
+            memcpy_s(
                 outEnclaveBasename,
+                sizeof(*outEnclaveBasename),
                 &enclaveQuote->basename,
                 sizeof(*outEnclaveBasename));
         } // Enclave::GetEnclaveCharacteristics
@@ -286,14 +288,15 @@ namespace sawtooth {
             this->signatureRevocationList = inSignatureRevocationList;
 
             const uint8_t* pRevocationList = nullptr;
-            if (this->signatureRevocationList.size()) {
+            uint32_t revocationListSize = this->signatureRevocationList.size();
+            if (revocationListSize) {
                 pRevocationList =
                     reinterpret_cast<const uint8_t *>(
                         this->signatureRevocationList.c_str());
             }
 
             uint32_t size;
-            ThrowSgxError(sgx_get_quote_size(pRevocationList, &size));
+            ThrowSgxError(sgx_calc_quote_size(pRevocationList, revocationListSize, &size));
             this->quoteSize = size;
         } // Enclave::SetSignatureRevocationList
 
