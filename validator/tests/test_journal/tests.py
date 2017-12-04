@@ -38,7 +38,6 @@ from sawtooth_validator.journal.batch_injector import \
     DefaultBatchInjectorFactory
 
 from sawtooth_validator.server.events.subscription import EventSubscription
-from sawtooth_validator.server.events.subscription import EventFilterType
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 
 from sawtooth_validator.protobuf.batch_pb2 import Batch
@@ -50,6 +49,7 @@ from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventList
+from sawtooth_validator.protobuf.events_pb2 import EventFilter
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 
@@ -1559,7 +1559,7 @@ class TestReceiptEventExtractor(unittest.TestCase):
             EventSubscription(
                 event_type="sawtooth/state-delta",
                 filters=[factory.create(
-                    "address", "[ce]", EventFilterType.regex_any)],
+                    "address", "[ce]", EventFilter.REGEX_ANY)],
             )
         ])
         self.assertEqual(events, [Event(
