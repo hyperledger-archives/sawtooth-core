@@ -58,7 +58,8 @@ typedef struct {
     sgx_mc_uuid_t counterId;
 } ValidatorSignupData;
 
-static const std::string    NULL_IDENTIFIER = "0000000000000000";
+static const std::string    NULL_IDENTIFIER = "000000000000000000000000000000000000000000000000000000000000000000000" \
+    "00000000000000000000000000000000000000000000000000000000000";
 static const uint32_t       WAIT_CERTIFICATE_NONCE_LENGTH = 32;
 
 // Timers, once expired, should not be usuable indefinitely.
