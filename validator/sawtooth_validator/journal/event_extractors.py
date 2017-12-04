@@ -93,3 +93,6 @@ class ReceiptEventExtractor(EventExtractor):
         for subscription in subscriptions:
             if event in subscription:
                 return [event]
+
+        # Event not in subscriptions
+        return []
