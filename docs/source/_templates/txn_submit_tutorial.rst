@@ -15,7 +15,7 @@ Creating Private and Public Keys
 ================================
 
 In order to sign your Transactions, you will need a 256-bit private key.
-Sawtooth uses the secp256k1 ECSDA standard for signing, which means that almost
+Sawtooth uses the secp256k1 ECDSA standard for signing, which means that almost
 any set of 32 bytes is a valid key. A common way to generate one, is just to
 generate a random set of bytes, and then use a secp256k1 library to ensure they
 are valid.

@@ -14,7 +14,7 @@ Creating a Private Key and Signer
 =================================
 
 In order to confirm your identity and sign the information you send to the
-validator, you will need a 256-bit key. Sawtooth uses the secp256k1 ECSDA
+validator, you will need a 256-bit key. Sawtooth uses the secp256k1 ECDSA
 standard for signing, which means that almost any set of 32 bytes is a valid
 key. It is fairly simple to generate a valid key using the SDK's *signing*
 module.
