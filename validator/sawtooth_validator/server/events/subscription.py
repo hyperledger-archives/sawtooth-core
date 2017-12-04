@@ -138,9 +138,10 @@ class RegexAnyFilter(EventFilter):
         super().__init__(key, match_string)
         try:
             self.regex = re.compile(match_string)
-        except:
+        except Exception as e:
             raise InvalidFilterError(
-                "Invalid regular expression: {}".format(match_string))
+                "Invalid regular expression: {}: {}".format(
+                    match_string, str(e)))
 
     def matches(self, event):
         for attribute in event.attributes:
@@ -173,9 +174,10 @@ class RegexAllFilter(EventFilter):
         super().__init__(key, match_string)
         try:
             self.regex = re.compile(match_string)
-        except:
+        except Exception as e:
             raise InvalidFilterError(
-                "Invalid regular expression: {}".format(match_string))
+                "Invalid regular expression: {}: {}".format(
+                    match_string, str(e)))
 
     def matches(self, event):
         for attribute in event.attributes:
