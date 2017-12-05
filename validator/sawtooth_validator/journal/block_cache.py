@@ -40,9 +40,12 @@ class BlockCache(MutableMapping):
 
         def inc_count(self):
             self.count += 1
+            self.touch()
 
         def dec_count(self):
-            self.count -= 1
+            if self.count > 0:
+                self.count -= 1
+            self.touch()
 
     def __init__(self, block_store=None, keep_time=30, purge_frequency=30):
         super(BlockCache, self).__init__()
@@ -107,6 +110,24 @@ class BlockCache(MutableMapping):
                 out.append(str(v.value))
             return ','.join(out)
 
+    def add_chain(self, chain):
+        """
+        Add block in a chain in the correct order. Also add all of the blocks
+        to the cache before doing a purge.
+        """
+        with self._lock:
+            chain.sort(key=lambda x: x.block_num)
+            for block in chain:
+                block_id = block.header_signature
+                if block_id not in self._cache:
+                    self._cache[block_id] = self.CachedValue(block)
+                    if block.previous_block_id in self._cache:
+                        self._cache[block.previous_block_id].inc_count()
+
+            if time.time() > self._next_purge_time:
+                self._purge_expired()
+                self._next_purge_time = time.time() + self._purge_frequency
+
     @property
     def cache(self):
         return self._cache
@@ -133,9 +154,12 @@ class BlockCache(MutableMapping):
                 if k not in self._block_store:
                     new_cache[k] = v
                 else:
-                    block = v.value
-                    if block is not None:
-                        dec_count_for.append(block.previous_block_id)
+                    if v.timestamp > time_horizon:
+                        new_cache[k] = v
+                    else:
+                        block = v.value
+                        if block is not None:
+                            dec_count_for.append(block.previous_block_id)
 
             elif v.timestamp > time_horizon:
                 new_cache[k] = v
