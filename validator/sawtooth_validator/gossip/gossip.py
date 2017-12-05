@@ -731,15 +731,19 @@ class ConnectionManager(InstrumentedThread):
                 LOGGER.debug("Peering request to %s was successful",
                              connection_id)
                 if endpoint:
-                    self._gossip.register_peer(connection_id, endpoint)
-                    self._connection_statuses[connection_id] = PeerStatus.PEER
+                    try:
+                        self._gossip.register_peer(connection_id, endpoint)
+                        self._connection_statuses[connection_id] = \
+                            PeerStatus.PEER
+                        self._gossip.send_block_request("HEAD", connection_id)
+                    except PeeringException:
+                        # Remove unsuccessful peer
+                        self._remove_temporary_connection(connection_id)
                 else:
                     LOGGER.debug("Cannot register peer with no endpoint for "
                                  "connection_id: %s",
                                  connection_id)
                     self._remove_temporary_connection(connection_id)
-
-                self._gossip.send_block_request("HEAD", connection_id)
 
     def _remove_temporary_connection(self, connection_id):
         status = self._connection_statuses.get(connection_id)
