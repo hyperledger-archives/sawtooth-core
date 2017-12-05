@@ -334,7 +334,7 @@ class TestWaitCertificate(TestCase):
 
         # set the identifier for mock_poet_enclave_wait_certificate
         mock_poet_enclave_wait_certificate.identifier.return_value = \
-            mock_poet_enclave_wait_certificate.previous_certificate_id
+            mock_poet_enclave_wait_certificate.previous_certificate_id[:16]
 
         mock_poet_enclave_module.create_wait_certificate.return_value = \
             mock_poet_enclave_wait_certificate
