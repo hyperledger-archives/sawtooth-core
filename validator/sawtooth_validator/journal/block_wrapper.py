@@ -16,7 +16,7 @@ from enum import Enum
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
-NULL_BLOCK_IDENTIFIER = '0' * 128
+NULL_BLOCK_IDENTIFIER = "0000000000000000"
 
 
 class BlockStatus(Enum):
