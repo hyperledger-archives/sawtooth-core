@@ -19,6 +19,7 @@ import os
 import signal
 import time
 import threading
+import psutil
 
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
@@ -57,6 +58,10 @@ from sawtooth_validator.server import network_handlers
 from sawtooth_validator.server import component_handlers
 
 LOGGER = logging.getLogger(__name__)
+
+# pin process to one core
+PROCESS = psutil.Process()
+PROCESS.cpu_affinity([0])
 
 
 class Validator(object):
