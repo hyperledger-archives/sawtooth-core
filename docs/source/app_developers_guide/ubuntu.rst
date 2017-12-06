@@ -134,11 +134,6 @@ following commands:
    $ sudo sawadm keygen
    $ sudo -u sawtooth sawtooth-validator -vv
 
-.. note::
-
-  The `-vv` flag sets the log level. To run the validator with less logging
-  output, use `-v` or omit the flag.
-
 Logging output is displayed in the validator terminal window. The output
 ends with lines similar to these:
 
@@ -156,31 +151,29 @@ ends with lines similar to these:
 
 .. Tip::
 
-  If you want to stop the validator, enter CTRL-c in the validator's terminal
-  window. A single CTRL-c starts a graceful shutdown. Enter multiple CTRL-c
-  characters to force the validator to stop quickly.
+  If you want to stop the validator, enter CTRL-c several times
+  in the validator's terminal window.
 
-  You can stop any other running Sawtooth component by entering
-  CTRL-c in the appropriate window.
+Other Start-up Options for the Validator
+----------------------------------------
 
-.. note::
+In the ``sawtooth-validator`` command above, the `-vv` flag sets the log level
+to include DEBUG messages. To run the validator with less logging output,
+use `-v` or omit the flag.
 
-  By default, the validator listens on the loopback interface for both network
-  and component communications. To change the interface and port used, the
-  `--bind` flag can be used. (See :doc:`/cli/validator` for more information
-  on validator flags.) The following command is equivalent to the default
-  behavior::
+By default, the validator listens on the loopback interface for both network
+and component communications. To change the interface and port used, the
+`--bind` flag can be used. See :doc:`/cli/validator` for more information
+on the available flags.  The following command is equivalent to the default
+behavior::
 
     sudo -u sawtooth sawtooth-validator -vv --bind network:tcp://127.0.0.1:8800 --bind component:tcp://127.0.0.1:4004
 
-
-.. note::
-
-  The validator can process transactions in serial (the default) or parallel
-  with no difference in the state produced. To process in parallel, use the
-  option ``--scheduler parallel``. To get the most benefit from the parallel
-  option, start multiple transaction processors for the types of transactions
-  where there is an expected high volume.
+The validator can process transactions in serial (the default) or parallel
+with no difference in the state produced. To process in parallel, use the
+option ``--scheduler parallel``. To get the most benefit from the parallel
+option, start multiple transaction processors for the types of transactions
+where there is an expected high volume.
 
 
 Starting the REST API
@@ -196,21 +189,52 @@ REST API and connect to a local validator:
 
   $ sudo -u sawtooth sawtooth-rest-api -v
 
+Starting and Configuring the Transaction Processors
+===================================================
 
-Running a Transaction Processor
-===============================
+This section describes how to start the IntegerKey and Settings family
+transaction processors, confirm that the REST API is running, and tell
+the validator or validator network to accept transactions from these
+transaction families.
 
 Transaction processors can be started either before or after the validator is
 started.
 
-The IntegerKey transaction processor is provided as a simple example of a
-transaction family, which can also be used for testing purposes.
+Supported Transaction Families
+------------------------------
+
+Sawtooth supports multiple languages for transaction processor development and
+includes additional transaction processors written in several languages.
+Sawtooth includes following transaction processors:
+
+* settings-tp - A Settings family transaction processor written in Python
+
+* intkey-tp-go - An IntegerKey transaction processor written in Go
+
+* intkey-tp-java - An IntegerKey transaction processor written in Java
+
+* intkey-tp-javascript - An IntegerKey transaction processor written in
+  JavaScript (requires node.js)
+
+* intkey-tp-python - An IntegerKey transaction processor written in Python
+
+* poet-validator-registry-tp - A transaction family used by the PoET consensus
+  algorithm implementation to keep track of other validators
+
+* xo-tp-javascript - An XO transaction processor written in JavaScript
+  (requires node.js)
+
+* xo-tp-python - An XO transaction processor written in Python
 
 .. note::
 
   In a production environment, you should always run a transaction processor
   that supports the Settings transaction family.
-  See `Configuring the List of Transaction Families`_ for more information.
+
+Starting the IntegerKey Transaction Processor
+---------------------------------------------
+The IntegerKey transaction processor is provided as a simple example of a
+transaction family, which can also be used for testing purposes.
 
 To start an IntegerKey transaction processor, open a new terminal window, then
 run the following command:
@@ -235,50 +259,16 @@ The transaction processor produces the following output:
 
   [23:07:57 INFO    core] register attempt: OK
 
-Configuring the List of Transaction Families
-============================================
 
-This section describes how to start the Settings transaction family, confirm
-that the REST API is running, and tell the validator or validator network to
-accept transactions from the IntegerKey and Settings transaction families.
+Starting the Settings Family Transaction Processor
+--------------------------------------------------
 
 Sawtooth provides a :doc:`Settings transaction family
 <../transaction_family_specifications/settings_transaction_family>` that stores
 on-chain settings, along with a Settings family transaction processor written
 in Python.
 
-.. note::
-
-  Sawtooth supports multiple languages for transaction processor development and
-  includes additional transaction processors written in several languages.
-  The following lists the processors that are included:
-
-  * settings-tp - A Settings family transaction processor written in Python
-
-  * intkey-tp-go - An IntegerKey transaction processor written in Go
-
-  * intkey-tp-java - An IntegerKey transaction processor written in Java
-
-  * intkey-tp-javascript - An IntegerKey transaction processor written in JavaScript
-    (requires node.js)
-
-  * poet-validator-registry-tp - A transaction family used by the PoET consensus
-    algorithm implementation to keep track of other validators
-
-  * xo-tp-javascript - An XO transaction processor written in JavaScript
-    (requires node.js)
-
-  * xo-tp-python - An XO transaction processor written in Python
-
-One of the on-chain settings is the list of supported transaction families.
-To configure this setting, use the follow steps to start the Settings family
-transaction processor, start the REST API, and create and submit the batch
-to change the settings.
-
-Starting the Settings Family Processor
---------------------------------------
-
-To start the settings family transaction processor, open a new terminal window
+To start the Settings family transaction processor, open a new terminal window
 and run the following command:
 
 .. code-block:: console
@@ -293,7 +283,6 @@ following output:
 
   [21:03:55.955 INFO    processor_handlers] registered transaction processor: identity=b'6d2d80275ae280ea', family=sawtooth_settings, version=1.0, namespaces=<google.protobuf.pyext._message.RepeatedScalarContainer object at 0x7e1ff042f6c0>
   [21:03:55.956 DEBUG   interconnect] ServerThread sending TP_REGISTER_RESPONSE to b'6d2d80275ae280ea'
-
 
 Verifying that the REST API is Running
 --------------------------------------
@@ -314,22 +303,23 @@ If necessary, run the following command to start the REST API.
 
   $ sudo -u sawtooth sawtooth-rest-api -v
 
+Configuring the List of Transaction Families (Ubuntu version)
+-------------------------------------------------------------
 
-Changing the Transaction Family Settings
-----------------------------------------
+One of the on-chain settings is the list of supported transaction families.
+To configure this setting, use the following steps to
+create and submit the batch to change the transaction family settings.
 
-In the example below, a JSON array is submitted to the ``sawset``
-command, which creates and submits a batch of transactions containing the
-settings change.
+In this example, the ``sawset`` command specifies a JSON array
+which creates and submits a batch of transactions containing the
+settings change. This JSON array tells the validator or validator network
+to accept transactions of the following types:
 
-The JSON array used tells the validator or validator network to accept
-transactions of the following types:
-
-* intkey (IntegerKey transaction family)
-* sawtooth_settings (Settings transaction family)
+* ``intkey`` (IntegerKey transaction family)
+* ``sawtooth_settings`` (Settings transaction family)
 
 To create and submit the batch containing the new settings,
-enter the following commands:
+enter the following command:
 
 .. code-block:: console
 
@@ -519,9 +509,8 @@ The output of the command will be similar to this:
 Stopping Sawtooth Components
 ============================
 
-To stop the validator, enter CTRL-c in the validator's terminal
-window. A single CTRL-c starts a graceful shutdown.
-Enter multiple CTRL-c characters to force the validator to stop quickly.
+To stop the validator, enter CTRL-c several times in the validator's terminal
+window.
 
-Stop the REST API and transaction processors by by entering
-CTRL-c in the appropriate windows.
+Stop the REST API and transaction processors by entering a single CTRL-c in
+the appropriate windows.
