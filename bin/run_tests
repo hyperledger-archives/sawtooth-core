@@ -206,6 +206,8 @@ test_signing() {
 test_cli() {
     run_docker_test ./cli/tests/unit_cli.yaml
     copy_coverage .coverage.cli
+    run_docker_test test_peer_list
+    copy_coverage .coverage.peer_list
 }
 
 test_rest_api() {

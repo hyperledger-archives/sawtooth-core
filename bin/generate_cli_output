@@ -55,6 +55,9 @@ save_usage sawtooth identity role
 save_usage sawtooth identity role create
 save_usage sawtooth identity role list
 
+save_usage sawtooth peer
+save_usage sawtooth peer list
+
 save_usage sawtooth settings
 save_usage sawtooth settings list
 
