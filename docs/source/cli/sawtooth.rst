@@ -292,6 +292,30 @@ and ``<key_dir>/<key_name>.pub``. By default, ``<key_dir>`` is
   :language: console
   :linenos:
 
+sawtooth peer
+=============
+
+The ``sawtooth peer`` subcommand displays the addresses of a specified
+validator's peers.
+
+.. literalinclude:: output/sawtooth_peer_usage.out
+   :language: console
+   :linenos:
+
+sawtooth peer list
+==================
+
+The ``sawtooth peer list`` subcommand displays the addresses of a
+specified validator's peers.
+
+This subcommand requires the URL of the REST API (default:
+``http://localhost:8008``), and can specify a `username`:`password`
+combination when the REST API is behind a Basic Auth proxy.
+
+.. literalinclude:: output/sawtooth_peer_list_usage.out
+   :language: console
+   :linenos:
+
 sawtooth settings
 =================
 
@@ -361,6 +385,10 @@ decoded using that same logic.
 This subcommand requires the URL of the REST API (default:
 ``http://localhost:8008``), and can specify a `username`:`password`
 combination when the REST API is behind a Basic Auth proxy.
+
+By default, the peers are displayed as a CSV string, but other
+plain-text formats (JSON, and YAML) are available and can be piped
+into a file for further processing.
 
 .. literalinclude:: output/sawtooth_state_show_usage.out
    :language: console

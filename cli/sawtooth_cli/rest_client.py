@@ -46,6 +46,9 @@ class RestClient(object):
     def get_batch(self, batch_id):
         return self._get('/batches/' + batch_id)['data']
 
+    def list_peers(self):
+        return self._get('/peers')['data']
+
     def list_transactions(self):
         return self._get_data('/transactions')
 
