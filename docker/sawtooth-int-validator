@@ -46,7 +46,8 @@ RUN cd /debs \
 RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-validator \
     python3-sawtooth-poet-cli \
-    python3-sawtooth-cli
+    python3-sawtooth-cli \
+    python3-psutil
 
 EXPOSE 4004/tcp
 

@@ -67,6 +67,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     python3-nose2 \
     python3-pip \
     python3-protobuf \
+    python3-psutil \
     python3-psycopg2 \
     python3-pycares=2.1.1-1 \
     python3-pyformance \
