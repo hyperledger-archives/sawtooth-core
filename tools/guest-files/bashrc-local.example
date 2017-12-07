@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-
-# Rename this file to bashrc-local and any content you add to this will be
-# sourced into your bash environment in the vagrant vm.

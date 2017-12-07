@@ -142,7 +142,5 @@ sawtooth-core
     * The implementation of the validator process which runs on each node
     * SDKs for writing transaction processing or validation logic in a variety
       of languages
-    * Tools including a Vagrant environment for easily launching a network of
-      validators
     * Dockerfiles to support development or launching a network of validators
     * Source files for this documentation
