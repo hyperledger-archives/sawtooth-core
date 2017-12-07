@@ -18,7 +18,7 @@ Issues should be created in JIRA under the Hyperledger Sawtooth project
 
 When reporting an issue, please provide as much detail as possible about how
 to reproduce it.  If possible, provide instructions for how to reproduce the
-issue within the vagrant development environment.
+issue.
 
 Details are key. Please include the following:
 
