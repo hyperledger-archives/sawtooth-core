@@ -401,6 +401,7 @@ class BlockValidator(object):
         except Exception:
             LOGGER.exception(
                 "Unhandled exception BlockValidator.validate_block()")
+            blkw.status = BlockStatus.Invalid
 
         return blkw.status == BlockStatus.Valid
 
