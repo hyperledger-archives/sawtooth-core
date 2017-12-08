@@ -119,20 +119,6 @@ class PeerUnregisterHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
 
-class GossipMessageHandler(Handler):
-    def handle(self, connection_id, message_content):
-
-        ack = NetworkAcknowledgement()
-        ack.status = ack.OK
-        gossip_message = GossipMessage()
-        gossip_message.ParseFromString(message_content)
-
-        return HandlerResult(
-            HandlerStatus.RETURN_AND_PASS,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
-
-
 class GossipMessageDuplicateHandler(Handler):
     def __init__(self, completer, has_block, has_batch):
         self._completer = completer

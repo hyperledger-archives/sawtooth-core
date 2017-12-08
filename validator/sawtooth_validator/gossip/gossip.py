@@ -301,7 +301,9 @@ class Gossip(object):
                 if connection_id not in exclude:
                     self.send(message_type,
                               gossip_message.SerializeToString(),
-                              connection_id)
+                              connection_id,
+                              one_way=True
+                              )
 
     def connect_success(self, connection_id):
         """
