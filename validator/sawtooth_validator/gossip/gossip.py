@@ -141,10 +141,13 @@ class Gossip(object):
                 peer_endpoints.append(self._endpoint)
             peers_response = GetPeersResponse(peer_endpoints=peer_endpoints)
             try:
+                # Send a one_way message because the connection will be closed
+                # if this is a temp connection.
                 self._network.send(
                     validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
                     peers_response.SerializeToString(),
-                    connection_id)
+                    connection_id,
+                    one_way=True)
             except ValueError:
                 LOGGER.debug("Connection disconnected: %s", connection_id)
 

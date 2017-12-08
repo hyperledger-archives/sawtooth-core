@@ -68,13 +68,7 @@ class GetPeersResponseHandler(Handler):
 
         self._gossip.add_candidate_peer_endpoints(response.peer_endpoints)
 
-        ack = NetworkAcknowledgement()
-        ack.status = ack.OK
-
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
+        return HandlerResult(HandlerStatus.PASS)
 
 
 class PeerRegisterHandler(Handler):
