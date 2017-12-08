@@ -366,7 +366,7 @@ class EventBroadcasterTest(unittest.TestCase):
                 [create_block_commit_subscription()])).SerializeToString()
         mock_service.send.assert_called_with(
             validator_pb2.Message.CLIENT_EVENTS,
-            event_list, connection_id="test_conn_id")
+            event_list, connection_id="test_conn_id", one_way=True)
 
 
 class TpEventAddHandlerTest(unittest.TestCase):

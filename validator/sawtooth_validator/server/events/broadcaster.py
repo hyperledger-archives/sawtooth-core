@@ -262,7 +262,8 @@ class EventBroadcaster(ChainObserver):
     def _send(self, connection_id, message_bytes):
         self._service.send(validator_pb2.Message.CLIENT_EVENTS,
                            message_bytes,
-                           connection_id=connection_id)
+                           connection_id=connection_id,
+                           one_way=True)
 
 
 class EventSubscriber:
