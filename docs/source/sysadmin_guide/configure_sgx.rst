@@ -471,3 +471,6 @@ Restart Sawtooth services:
     $ sudo systemctl restart sawtooth-validator.service
     $ sudo systemctl restart sawtooth-settings-tp.service
     $ sudo systemctl restart sawtooth-intkey-tp-python.service
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

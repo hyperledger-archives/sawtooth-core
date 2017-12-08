@@ -48,3 +48,6 @@ To report issues, you will need to log into Hyperledger Sawtooth JIRA, which req
 `Linux Foundation Account <https://identity.linuxfoundation.org/>`_
 
 
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

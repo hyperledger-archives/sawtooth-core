@@ -208,3 +208,6 @@ The ``validator.toml`` configuration file has the following options:
   .. code-block:: none
 
     maximum_peer_connectivity = 10
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

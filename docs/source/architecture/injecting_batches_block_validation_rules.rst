@@ -127,3 +127,6 @@ transaction is signed by the same key that signed the block.
 - NofX:1,block_info;
 - XatY:block_info,0;
 - local:0
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

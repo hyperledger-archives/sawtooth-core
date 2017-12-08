@@ -60,3 +60,6 @@ the ``path.toml`` configuration file.
 - If ``SAWTOOTH_HOME`` is set, ``conf_dir`` = ``SAWTOOTH_HOME/etc/``
 
 - If ``SAWTOOTH_HOME`` is not set, ``conf_dir`` = ``/etc/sawtooth``
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

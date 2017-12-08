@@ -95,3 +95,6 @@ to the root. This will result in transactions and the blocks that contain
 them being considered valid on some validators and invalid on others,
 depending on the non-deterministic behavior. This is considered bad
 form.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

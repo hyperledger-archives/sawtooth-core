@@ -96,3 +96,6 @@ development panel for the JIRA issue.
 When you make a commit, add the JIRA issue key to the end of the commit message.
 Alternatively, you can add the JIRA issue key to the branch name. Either method
 should integrate your commit with the JIRA issue it references.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

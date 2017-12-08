@@ -23,3 +23,6 @@ SDKs are provided in several languages: C++, Go, Java, Javascript, and Python.
    app_developers_guide/python_sdk
    app_developers_guide/testing
    app_developers_guide/no_sdk
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

@@ -218,3 +218,6 @@ rules:
 Rule 1 enforces monotonicity of timestamps. Rule 2 adds a requirement to the
 network that all peers be roughly synchronized. It also allows historic blocks
 to be validated correctly.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/
