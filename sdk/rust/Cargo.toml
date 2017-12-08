@@ -24,7 +24,7 @@ protobuf="1.4.1"
 secp256k1 = "0.7.1"
 rand = "0.4.2"
 rust-crypto = "0.2.36"
-zmq = "0.8"
+zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
 uuid = { version = "0.5", features = ["v4"] }
 log = "0.3"
 libc = "0.2"
