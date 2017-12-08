@@ -264,7 +264,7 @@ class Gossip(object):
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
-    def send(self, message_type, message, connection_id):
+    def send(self, message_type, message, connection_id, one_way=False):
         """Sends a message via the network.
 
         Args:
@@ -273,7 +273,8 @@ class Gossip(object):
             connection_id (str): The connection to send it to.
         """
         try:
-            self._network.send(message_type, message, connection_id)
+            self._network.send(message_type, message, connection_id,
+                               one_way=one_way)
         except ValueError:
             LOGGER.debug("Connection %s is no longer valid. "
                          "Removing from list of peers.",
