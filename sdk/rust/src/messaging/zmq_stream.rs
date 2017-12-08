@@ -63,13 +63,18 @@ impl MessageConnection<ZmqMessageSender> for ZmqMessageConnection {
     }
 }
 
+#[derive(Debug)]
+enum SocketCommand {
+    Send(Message),
+    Shutdown
+}
 
 #[derive(Clone)]
 pub struct ZmqMessageSender {
     context: zmq::Context,
     address: String,
     inbound_router: InboundRouter,
-    outbound_sender: Option<SyncSender<Option<Message>>>,
+    outbound_sender: Option<SyncSender<SocketCommand>>,
 }
 
 impl ZmqMessageSender {
@@ -119,7 +124,7 @@ impl MessageSender for ZmqMessageSender {
             let future = MessageFuture::new(self.inbound_router.expect_reply(
                     String::from(correlation_id)));
 
-            sender.send(Some(msg)).unwrap();
+            sender.send(SocketCommand::Send(msg)).unwrap();
 
             Ok(future)
         } else {
@@ -137,7 +142,7 @@ impl MessageSender for ZmqMessageSender {
             msg.set_correlation_id(String::from(correlation_id));
             msg.set_content(Vec::from(contents));
 
-            match sender.send(Some(msg)) {
+            match sender.send(SocketCommand::Send(msg)) {
                 Ok(_) => Ok(()),
                 Err(_) => Err(SendError::UnknownError)
             }
@@ -148,7 +153,7 @@ impl MessageSender for ZmqMessageSender {
 
     fn close(&mut self) {
         if let Some(ref sender) = self.outbound_sender.take() {
-            sender.send(None).unwrap();
+            sender.send(SocketCommand::Shutdown).unwrap();
         }
     }
 }
@@ -190,7 +195,7 @@ impl InboundRouter {
 struct SendReceiveStream {
     address: String,
     socket: zmq::Socket,
-    outbound_recv: Receiver<Option<Message>>,
+    outbound_recv: Receiver<SocketCommand>,
     inbound_router: InboundRouter
 }
 
@@ -198,7 +203,7 @@ const POLL_TIMEOUT: i64 = 10;
 
 impl SendReceiveStream {
     fn new(context: zmq::Context, address: &str,
-           outbound_recv: Receiver<Option<Message>>,
+           outbound_recv: Receiver<SocketCommand>,
            inbound_router: InboundRouter)
         -> Self
     {
@@ -240,12 +245,12 @@ impl SendReceiveStream {
             match self.outbound_recv.recv_timeout(
                 Duration::from_millis(POLL_TIMEOUT as u64))
             {
-                Ok(Some(msg)) => {
+                Ok(SocketCommand::Send(msg)) => {
                     let message_bytes = protobuf::Message::write_to_bytes(&msg).unwrap();
                     trace!("Sending {} bytes", message_bytes.len());
                     self.socket.send(&message_bytes, 0).unwrap();
                 }
-                Ok(None) => {
+                Ok(SocketCommand::Shutdown) => {
                     trace!("Shutdown Signal Received");
                     break;
                 }
