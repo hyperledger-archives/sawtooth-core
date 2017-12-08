@@ -289,3 +289,6 @@ An Amalgamate transaction is only valid if:
 The result of a successful Amalgamate transaction is that the destination's
 checking balance is incremented by the value of the source's savings balance
 and that the source's savings balance is set to zero.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

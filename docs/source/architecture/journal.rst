@@ -471,3 +471,6 @@ block.
 
 To complete the process, all necessary transaction processors must be running.
 Minimally this includes the Sawtooth settings transaction processor.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

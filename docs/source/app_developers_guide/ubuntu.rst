@@ -514,3 +514,6 @@ window.
 
 Stop the REST API and transaction processors by entering a single CTRL-c in
 the appropriate windows.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

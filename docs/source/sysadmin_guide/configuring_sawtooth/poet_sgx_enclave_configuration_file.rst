@@ -60,3 +60,6 @@ The ``poet_enclave_sgx.toml`` configuration file has the following options:
   .. code-block:: console
 
     $ openssl pkcs12 -in cert.pfx -out cert.pem -nodes
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

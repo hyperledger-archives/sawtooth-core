@@ -439,3 +439,6 @@ combination when the REST API is behind a Basic Auth proxy.
 .. literalinclude:: output/sawtooth_transaction_show_usage.out
    :language: console
    :linenos:
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/
