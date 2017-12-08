@@ -162,13 +162,8 @@ class ResponderBlockResponseHandler(Handler):
                              connection)
 
         self._responder.remove_request(block.header_signature)
-        ack = network_pb2.NetworkAcknowledgement()
-        ack.status = ack.OK
 
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
+        return HandlerResult(HandlerStatus.PASS)
 
 
 class BatchByBatchIdResponderHandler(Handler):
@@ -341,10 +336,4 @@ class ResponderBatchResponseHandler(Handler):
         for requested_id in requests_to_remove:
             self._responder.remove_request(requested_id)
 
-        ack = network_pb2.NetworkAcknowledgement()
-        ack.status = ack.OK
-
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
+        return HandlerResult(HandlerStatus.PASS)
