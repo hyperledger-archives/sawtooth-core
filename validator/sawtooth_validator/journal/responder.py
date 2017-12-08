@@ -93,13 +93,8 @@ class BlockResponderHandler(Handler):
         if block_request_message.nonce in self._seen_requests:
             LOGGER.debug("Received repeat GossipBlockRequest from %s",
                          connection_id)
-            ack = network_pb2.NetworkAcknowledgement()
-            ack.status = ack.OK
 
-            return HandlerResult(
-                HandlerStatus.RETURN,
-                message_out=ack,
-                message_type=validator_pb2.Message.NETWORK_ACK)
+            return HandlerResult(HandlerStatus.DROP)
 
         self._seen_requests[block_request_message.nonce] = \
             block_request_message.block_id
@@ -134,13 +129,7 @@ class BlockResponderHandler(Handler):
                               block_response.SerializeToString(),
                               connection_id)
 
-        ack = network_pb2.NetworkAcknowledgement()
-        ack.status = ack.OK
-
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
+        return HandlerResult(HandlerStatus.PASS)
 
 
 class ResponderBlockResponseHandler(Handler):
@@ -194,13 +183,7 @@ class BatchByBatchIdResponderHandler(Handler):
         if batch_request_message.nonce in self._seen_requests:
             LOGGER.debug("Received repeat GossipBatchByBatchIdRequest from %s",
                          connection_id)
-            ack = network_pb2.NetworkAcknowledgement()
-            ack.status = ack.OK
-
-            return HandlerResult(
-                HandlerStatus.RETURN,
-                message_out=ack,
-                message_type=validator_pb2.Message.NETWORK_ACK)
+            return HandlerResult(HandlerStatus.DROP)
 
         self._seen_requests[batch_request_message.nonce] = \
             batch_request_message.id
@@ -234,13 +217,7 @@ class BatchByBatchIdResponderHandler(Handler):
                               batch_response.SerializeToString(),
                               connection_id)
 
-        ack = network_pb2.NetworkAcknowledgement()
-        ack.status = ack.OK
-
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
+        return HandlerResult(HandlerStatus.PASS)
 
 
 class BatchByTransactionIdResponderHandler(Handler):
@@ -255,13 +232,8 @@ class BatchByTransactionIdResponderHandler(Handler):
         if batch_request_message.nonce in self._seen_requests:
             LOGGER.debug("Received repeat GossipBatchByTransactionIdRequest"
                          " from %s", connection_id)
-            ack = network_pb2.NetworkAcknowledgement()
-            ack.status = ack.OK
 
-            return HandlerResult(
-                HandlerStatus.RETURN,
-                message_out=ack,
-                message_type=validator_pb2.Message.NETWORK_ACK)
+            return HandlerResult(HandlerStatus.DROP)
 
         self._seen_requests[batch_request_message.nonce] = \
             batch_request_message.ids
@@ -327,13 +299,7 @@ class BatchByTransactionIdResponderHandler(Handler):
                                   batch_response.SerializeToString(),
                                   connection_id)
 
-        ack = network_pb2.NetworkAcknowledgement()
-        ack.status = ack.OK
-
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
+        return HandlerResult(HandlerStatus.PASS)
 
 
 class ResponderBatchResponseHandler(Handler):
