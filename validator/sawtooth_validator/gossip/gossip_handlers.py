@@ -156,29 +156,71 @@ class GossipMessageDuplicateHandler(Handler):
 
 
 class GossipBlockResponseHandler(Handler):
+    def __init__(self, completer, responder, chain_controller_has_block):
+        self._completer = completer
+        self._responder = responder
+        self._chain_controller_has_block = chain_controller_has_block
+
     def handle(self, connection_id, message_content):
-        ack = NetworkAcknowledgement()
-        ack.status = ack.OK
         block_response_message = GossipBlockResponse()
         block_response_message.ParseFromString(message_content)
+        block = Block()
+        block.ParseFromString(block_response_message.content)
+
+        block_id = block.header_signature
+
+        if not self._has_open_requests(block_id) and self._has_block(block_id):
+            LOGGER.debug('Drop duplicate block: %s', block_id)
+            return HandlerResult(HandlerStatus.RETURN)
+
+        ack = NetworkAcknowledgement()
+        ack.status = ack.OK
 
         return HandlerResult(
             HandlerStatus.RETURN_AND_PASS,
             message_out=ack,
             message_type=validator_pb2.Message.NETWORK_ACK)
+
+    def _has_block(self, block_id):
+        return (self._completer.get_block(block_id) is not None
+                or self._chain_controller_has_block(block_id))
+
+    def _has_open_requests(self, block_id):
+        return self._responder.get_request(block_id)
 
 
 class GossipBatchResponseHandler(Handler):
+    def __init__(self, completer, responder, block_publisher_has_batch):
+        self._completer = completer
+        self._responder = responder
+        self._block_publisher_has_batch = block_publisher_has_batch
+
     def handle(self, connection_id, message_content):
-        ack = NetworkAcknowledgement()
-        ack.status = ack.OK
         batch_response_message = GossipBatchResponse()
         batch_response_message.ParseFromString(message_content)
+        batch = Batch()
+        batch.ParseFromString(batch_response_message.content)
+
+        batch_id = batch.header_signature
+
+        if not self._has_open_requests(batch_id) and self._has_batch(batch_id):
+            LOGGER.debug('Drop duplicate batch: %s', batch_id)
+            return HandlerResult(HandlerStatus.RETURN)
+
+        ack = NetworkAcknowledgement()
+        ack.status = ack.OK
 
         return HandlerResult(
             HandlerStatus.RETURN_AND_PASS,
             message_out=ack,
             message_type=validator_pb2.Message.NETWORK_ACK)
+
+    def _has_batch(self, batch_id):
+        return (self._completer.get_batch(batch_id) is not None
+                or self._block_publisher_has_batch(batch_id))
+
+    def _has_open_requests(self, batch_id):
+        return self._responder.get_request(batch_id)
 
 
 class GossipBroadcastHandler(Handler):
