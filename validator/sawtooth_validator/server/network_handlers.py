@@ -245,10 +245,10 @@ def add(
         BlockResponderHandler(responder, gossip),
         thread_pool)
 
-    # GOSSIP_BLOCK_RESPONSE 1) Sends ack to the sender
+    # GOSSIP_BLOCK_RESPONSE 1) Check for duplicate responses
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
-        GossipBlockResponseHandler(),
+        GossipBlockResponseHandler(completer, responder, has_block),
         thread_pool)
 
     # GOSSIP_MESSAGE 2) Verify Network Permissions
@@ -322,10 +322,10 @@ def add(
         ),
         thread_pool)
 
-    # GOSSIP_BATCH_RESPONSE 1) Sends ack to the sender
+    # GOSSIP_BATCH_RESPONSE 1) Check for duplicate responses
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
-        GossipBatchResponseHandler(),
+        GossipBatchResponseHandler(completer, responder, has_batch),
         thread_pool)
 
     # GOSSIP_BATCH_RESPONSE 2) Verifies signature
