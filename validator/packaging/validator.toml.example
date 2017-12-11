@@ -89,3 +89,6 @@ minimum_peer_connectivity = 3
 
 # The maximum number of peers that will be accepted.
 maximum_peer_connectivity = 10
+
+# The maximum number of batches that will be queued for processing
+maximum_batch_queue_depth = 20
