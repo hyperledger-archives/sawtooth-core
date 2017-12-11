@@ -185,31 +185,32 @@ Intel:
 
     spid_cert_file = '/etc/sawtooth/sgx-certificate.pem'
 
-Next, copy the .pem certificate file that you downloaded earlier.
+Next, install the .pem certificate file that you downloaded earlier.
 Replace [example] in the path below with the path to the certificate file on
 your local system:
 
 .. code-block:: console
 
-    $ sudo cp /[example]/sgx-certificate.pem /etc/sawtooth/sgx-certificate.pem
-
-Become the sawtooth user and change to ``/tmp``:
-
-.. code-block:: console
-
-    $ sudo -u sawtooth -s
-    $ cd /tmp
+    $ sudo install -o root -g sawtooth -m 640 \
+    /[example]/sgx-certificate.pem /etc/sawtooth/sgx-certificate.pem
 
 Create validator keys:
 
 .. code-block:: console
 
-    $ sawadm keygen
+    $ sudo sawadm keygen
+
+Become the sawtooth user and change to ``/tmp``:
 
 .. note::  If you're configuring multiple validators, the steps below are
     required for the first validator only.  For additional validators, you
     can skip to the `$ exit` command to log out of the sawtooth account,
     then continue with :ref:`val-config`.
+
+.. code-block:: console
+
+    $ sudo -u sawtooth -s
+    $ cd /tmp
 
 Create a genesis batch:
 
@@ -226,7 +227,7 @@ Create and submit a proposal:
     sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)" \
     sawtooth.poet.valid_enclave_measurements=$(poet enclave --enclave-module sgx measurement) \
     sawtooth.poet.valid_enclave_basenames=$(poet enclave --enclave-module sgx basename) \
-    sawtooth.poet.enclave_module_name=poet_enclave_sgx.poet_enclave \
+    sawtooth.poet.enclave_module_name=sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave \
     -o config.batch
 
 There’s quite a bit going on in the previous command, so let’s take a closer look at what it accomplishes:
@@ -248,7 +249,7 @@ There’s quite a bit going on in the previous command, so let’s take a closer
 
 ``sawtooth.poet.enclave_module_name``
   Specifies the name of the Python module that implements the PoET enclave.
-  In this case, ``poet_enclave_sgx.poet_enclave`` is the SGX version of
+  In this case, ``sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave`` is the SGX version of
   the enclave; it includes the Python code as well as the Python extension.
 
 When the ``sawset proposal`` command runs, you should see several
@@ -401,6 +402,13 @@ specify the correct bind interface.
         Jun 02 14:50:37 ubuntu systemd[1]: sawtooth-validator.service: Main process exited, code=exited, status=1/FAILURE
         Jun 02 14:50:37 ubuntu systemd[1]: sawtooth-validator.service: Unit entered failed state.
         Jun 02 14:50:37 ubuntu systemd[1]: sawtooth-validator.service: Failed with result 'exit-code'.
+
+Restrict permssions on ``validator.toml`` to protect the network private key.
+
+.. code-block:: console
+
+    $ sudo chown root:sawtooth /etc/sawtooth/validator.toml
+    $ sudo chown 640 /etc/sawtooth/validator.toml
 
 Start the Sawtooth Services
 ---------------------------
