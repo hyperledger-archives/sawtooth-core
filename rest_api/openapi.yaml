@@ -53,6 +53,8 @@ paths:
                 $ref: "#/definitions/Link"
         400:
           $ref: "#/responses/400BadRequest"
+        429:
+          $ref: "#/responses/429TooManyRequests"
         500:
           $ref: "#/responses/500ServerError"
         503:
@@ -472,6 +474,10 @@ responses:
       $ref: "#/definitions/Error"
   404NotFound:
     description: Address or id did not match any resource
+    schema:
+      $ref: "#/definitions/Error"
+  429TooManyRequests:
+    description: Too many requests have been made to process batches
     schema:
       $ref: "#/definitions/Error"
   500ServerError:
