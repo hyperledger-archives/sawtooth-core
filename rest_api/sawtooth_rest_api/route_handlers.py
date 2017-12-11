@@ -156,7 +156,8 @@ class RouteHandler(object):
             raise errors.BadProtobufSubmitted()
 
         # Query validator
-        error_traps = [error_handlers.BatchInvalidTrap]
+        error_traps = [error_handlers.BatchInvalidTrap,
+                       error_handlers.BatchQueueFullTrap]
         validator_query = client_batch_submit_pb2.ClientBatchSubmitRequest(
             batches=batch_list.batches)
 
