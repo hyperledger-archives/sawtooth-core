@@ -122,15 +122,15 @@ paths:
         `'COMMITTED'`, `'INVALID'`, `'PENDING'`, and `'UNKNOWN'`.
 
         The batch(es) you want to check can be specified using the `id` filter
-        parameter. If a `wait` time is specified in the url, the API will wait
+        parameter. If a `wait` time is specified in the URL, the API will wait
         to respond until all batches are committed, or the time in seconds has
-        elapsed. If the value of `wait` is not set (i.e. `?wait&id=...`), or
+        elapsed. If the value of `wait` is not set (i.e., `?wait&id=...`), or
         it is set to any non-integer value other than `false`, the wait time
-        will be just shy of the api's specified timeout (usually 300).
+        will be just under the API's specified timeout (usually 300).
 
-        Note that as this route does not return full resources, the response
-        will not be paginated, and there will be no `head` or `paging`
-        properties.
+        Note that because this route does not return full resources, the
+        response will not be paginated, and there will be no `head` or
+        `paging` properties.
       parameters:
         - name: id
           in: query
@@ -161,7 +161,7 @@ paths:
         formatted POST body rather than a query parameter. This allows for many
         more batches to be checked and should be used for more than 15 ids.
 
-        Note that since query information is not encoded in the URL, no `link`
+        Note that because query information is not encoded in the URL, no `link`
         will be returned with this query.
       consumes:
         - application/json
@@ -195,7 +195,7 @@ paths:
       summary: Fetches the data for the current state
       description: >
         Fetches a paginated list of entries for the current state, or relative
-        to a particular head block. Using the `address` filter parameter, will
+        to a particular head block. Using the `address` filter parameter will
         narrow the list to any entries that have an address beginning with the
         characters specified.
       parameters:
@@ -294,7 +294,7 @@ paths:
     parameters:
       - $ref: "#/parameters/block_id"
     get:
-      summary: Fetches a particlar block
+      summary: Fetches a particular block
       responses:
         200:
           description: Successfully retrieved block
@@ -412,7 +412,7 @@ paths:
         formatted POST body rather than a query parameter. This allows for many
         more receipts to be fetched and should be used with more than 15 ids.
 
-        Note that since query information is not encoded in the URL, no `link`
+        Note that because query information is not encoded in the URL, no `link`
         will be returned with this request.
       consumes:
         - application/json
@@ -507,7 +507,7 @@ parameters:
     in: path
     type: string
     required: true
-    description: Trainsaction id
+    description: Transaction id
   head:
     name: head
     in: query
