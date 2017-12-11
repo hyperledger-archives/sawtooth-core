@@ -68,6 +68,11 @@ class BatchInvalidTrap(_ErrorTrap):
     error = errors.SubmittedBatchesInvalid
 
 
+class BatchQueueFullTrap(_ErrorTrap):
+    trigger = client_batch_submit_pb2.ClientBatchSubmitResponse.QUEUE_FULL
+    error = errors.BatchQueueFull
+
+
 class InvalidAddressTrap(_ErrorTrap):
     trigger = client_state_pb2.ClientStateGetResponse.INVALID_ADDRESS
     error = errors.InvalidStateAddress

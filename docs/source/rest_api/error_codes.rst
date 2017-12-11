@@ -114,6 +114,10 @@ Error Codes and Descriptions
      - Submitted Batches Invalid
      - The submitted BatchList failed initial validation by the validator. It
        may have a bad signature, or be poorly formed.
+   * - 31
+     - Unable to Accept Batches
+     - The validator cannot currently accept more batches, due to a full queue.
+       Please submit your request again.
    * - 34
      - No Batches Submitted
      - The BatchList Protobuf submitted was empty and contained no Batches. All

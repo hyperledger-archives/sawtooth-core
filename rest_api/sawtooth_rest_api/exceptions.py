@@ -128,6 +128,14 @@ class SubmittedBatchesInvalid(_ApiError):
                'poorly formed, or has an invalid signature.')
 
 
+class BatchQueueFull(_ApiError):
+    api_code = 31
+    status_code = 429
+    title = 'Unable to Accept Batches'
+    message = ('The validator cannot currently accept more batches, due to a '
+               'full queue.  Please submit your request again.')
+
+
 class NoBatchesSubmitted(_ApiError):
     api_code = 34
     status_code = 400
