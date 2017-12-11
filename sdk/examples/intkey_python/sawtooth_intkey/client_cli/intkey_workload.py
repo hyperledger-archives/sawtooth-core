@@ -133,15 +133,17 @@ class IntKeyWorkload(Workload):
 
                 batch_list = batch_pb2.BatchList(batches=[batch])
 
-                post_batches(key.url, batch_list, auth_info=self._auth_info)
+                (code, _) = post_batches(key.url, batch_list,
+                                         auth_info=self._auth_info)
 
-                with self._lock:
-                    self._pending_batches[batch.header_signature] = \
-                        IntKeyState(
-                        name=key.name,
-                        url=key.url,
-                        value=key.value + 1)
-                self.delegate.on_new_batch(batch_id, key.url)
+                if code == 202:
+                    with self._lock:
+                        self._pending_batches[batch.header_signature] = \
+                            IntKeyState(
+                            name=key.name,
+                            url=key.url,
+                            value=key.value + 1)
+                    self.delegate.on_new_batch(batch_id, key.url)
 
         else:
             LOGGER.debug('Key %s completed', key.name)
@@ -172,13 +174,15 @@ class IntKeyWorkload(Workload):
             batch_id = batch.header_signature
 
             batch_list = batch_pb2.BatchList(batches=[batch])
-            post_batches(url, batch_list, auth_info=self._auth_info)
+            (code, _) = post_batches(url, batch_list,
+                                     auth_info=self._auth_info)
 
-            with self._lock:
-                self._pending_batches[batch_id] = \
-                    IntKeyState(name=name, url=url, value=0)
+            if code == 202:
+                with self._lock:
+                    self._pending_batches[batch_id] = \
+                        IntKeyState(name=name, url=url, value=0)
 
-            self.delegate.on_new_batch(batch_id, url)
+                self.delegate.on_new_batch(batch_id, url)
 
 
 def do_workload(args):
