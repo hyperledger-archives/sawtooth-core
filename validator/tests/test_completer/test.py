@@ -180,7 +180,7 @@ class TestCompleter(unittest.TestCase):
         self.completer.add_block(block)
         self.completer.add_block(block)
         self.assertIn(block.header_signature, self.blocks)
-        self.assertEquals(len(self.blocks), 1)
+        self.assertEqual(len(self.blocks), 1)
 
     def test_block_missing_predecessor(self):
         """
@@ -189,7 +189,7 @@ class TestCompleter(unittest.TestCase):
         block = self._create_blocks(1, 1, missing_predecessor=True)[0]
         self._has_block_value = False
         self.completer.add_block(block)
-        self.assertEquals(len(self.blocks), 0)
+        self.assertEqual(len(self.blocks), 0)
         self.assertIn("Missing", self.gossip.requested_blocks)
         header = BlockHeader(previous_block_id=NULL_BLOCK_IDENTIFIER)
         missing_block = Block(header_signature="Missing",
@@ -197,7 +197,7 @@ class TestCompleter(unittest.TestCase):
         self._has_block_value = True
         self.completer.add_block(missing_block)
         self.assertIn(block.header_signature, self.blocks)
-        self.assertEquals(
+        self.assertEqual(
             block,
             self.completer.get_block(block.header_signature).get_block())
 
@@ -209,7 +209,7 @@ class TestCompleter(unittest.TestCase):
         batches = self._create_batches(1, 1, True)
         block.batches.extend(batches)
         self.completer.add_block(block)
-        self.assertEquals(len(self.blocks), 0)
+        self.assertEqual(len(self.blocks), 0)
 
     def test_block_missing_batch(self):
         """
@@ -220,7 +220,7 @@ class TestCompleter(unittest.TestCase):
         block = self._create_blocks(1, 2, missing_batch=True)[0]
         self.completer.add_block(block)
         self.assertIn(block.header_signature, self.blocks)
-        self.assertEquals(
+        self.assertEqual(
             block,
             self.completer.get_block(block.header_signature).get_block())
 
@@ -263,7 +263,7 @@ class TestCompleter(unittest.TestCase):
         batches[-1] = batch
         block.batches.extend(batches)
         self.completer.add_block(block)
-        self.assertEquals(len(self.blocks), 0)
+        self.assertEqual(len(self.blocks), 0)
 
     def test_good_batch(self):
         """
@@ -273,8 +273,8 @@ class TestCompleter(unittest.TestCase):
         batch = self._create_batches(1, 1)[0]
         self.completer.add_batch(batch)
         self.assertIn(batch.header_signature, self.batches)
-        self.assertEquals(batch,
-                          self.completer.get_batch(batch.header_signature))
+        self.assertEqual(batch,
+                         self.completer.get_batch(batch.header_signature))
 
     def test_batch_with_missing_dep(self):
         """
@@ -294,5 +294,5 @@ class TestCompleter(unittest.TestCase):
         self.completer.add_batch(missing_batch)
         self.assertIn(missing_batch.header_signature, self.batches )
         self.assertIn(batch.header_signature, self.batches)
-        self.assertEquals(missing_batch,
-                          self.completer.get_batch_by_transaction("Missing"))
+        self.assertEqual(missing_batch,
+                         self.completer.get_batch_by_transaction("Missing"))

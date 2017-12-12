@@ -156,13 +156,13 @@ class TestValidatorConfig(unittest.TestCase):
             - endpoint = None
         """
         config = load_default_validator_config()
-        self.assertEquals(config.bind_network, "tcp://127.0.0.1:8800")
-        self.assertEquals(config.bind_component, "tcp://127.0.0.1:4004")
-        self.assertEquals(config.endpoint, None)
-        self.assertEquals(config.peering, "static")
-        self.assertEquals(config.scheduler, "serial")
-        self.assertEquals(config.minimum_peer_connectivity, 3)
-        self.assertEquals(config.maximum_peer_connectivity, 10)
+        self.assertEqual(config.bind_network, "tcp://127.0.0.1:8800")
+        self.assertEqual(config.bind_component, "tcp://127.0.0.1:4004")
+        self.assertEqual(config.endpoint, None)
+        self.assertEqual(config.peering, "static")
+        self.assertEqual(config.scheduler, "serial")
+        self.assertEqual(config.minimum_peer_connectivity, 3)
+        self.assertEqual(config.maximum_peer_connectivity, 10)
 
     def test_validator_config_load_from_file(self):
         """Tests loading config settings from a TOML configuration file.
@@ -222,14 +222,13 @@ class TestValidatorConfig(unittest.TestCase):
             self.assertEqual(config.peers, ["tcp://peer:8801"])
             self.assertEqual(config.seeds, ["tcp://peer:8802"])
             self.assertEqual(config.scheduler, "serial")
-            self.assertEquals(config.roles, {"network": "trust"})
-            self.assertEquals(config.opentsdb_db,  "data_base")
-            self.assertEquals(config.opentsdb_url, "http://data_base:0000")
-            self.assertEquals(config.opentsdb_username, "name")
-            self.assertEquals(config.opentsdb_password, "secret")
-            self.assertEquals(config.minimum_peer_connectivity, 1)
-            self.assertEquals(config.maximum_peer_connectivity, 100)
-
+            self.assertEqual(config.roles, {"network": "trust"})
+            self.assertEqual(config.opentsdb_db, "data_base")
+            self.assertEqual(config.opentsdb_url, "http://data_base:0000")
+            self.assertEqual(config.opentsdb_username, "name")
+            self.assertEqual(config.opentsdb_password, "secret")
+            self.assertEqual(config.minimum_peer_connectivity, 1)
+            self.assertEqual(config.maximum_peer_connectivity, 100)
 
         finally:
             os.environ.clear()

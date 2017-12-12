@@ -78,10 +78,10 @@ class TestRestApiConfig(unittest.TestCase):
             self.assertEqual(config.bind, ["test:1234"])
             self.assertEqual(config.connect, "tcp://test:4004")
             self.assertEqual(config.timeout, 10)
-            self.assertEquals(config.opentsdb_db,  "data_base")
-            self.assertEquals(config.opentsdb_url, "http://data_base:0000")
-            self.assertEquals(config.opentsdb_username, "name")
-            self.assertEquals(config.opentsdb_password, "secret")
+            self.assertEqual(config.opentsdb_db, "data_base")
+            self.assertEqual(config.opentsdb_url, "http://data_base:0000")
+            self.assertEqual(config.opentsdb_username, "name")
+            self.assertEqual(config.opentsdb_password, "secret")
 
         finally:
             os.environ.clear()

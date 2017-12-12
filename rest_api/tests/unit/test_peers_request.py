@@ -53,4 +53,4 @@ class PeersGetRequestTests(BaseApiTest):
         self.connection.assert_valid_request_sent()
 
         self.assert_has_valid_link(response, '/peers')
-        self.assertEquals(["Peer1", "Peer2"], response['data'])
+        self.assertEqual(["Peer1", "Peer2"], response['data'])
