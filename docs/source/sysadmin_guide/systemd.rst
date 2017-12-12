@@ -59,6 +59,13 @@ To start a component using *systemd*, run the following command where
   * settings-tp
   * xo-tp-python
 
+.. note::
+  Before starting the ``validator`` component you may need to generate
+  the validator keypairs using the following command:
+
+  .. code-block:: console
+    $ sudo sawadm keygen
+
 .. code-block:: console
 
   $ sudo systemctl start sawtooth-COMPONENT
