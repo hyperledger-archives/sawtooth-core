@@ -50,21 +50,23 @@ the first validator can load:
 Running Sawtooth
 ----------------
 
-To start a component using *systemd*, run the following command where
-`COMPONENT` is one of:
-
-  * validator
-  * rest_api
-  * intkey-tp-python
-  * settings-tp
-  * xo-tp-python
-
 .. note::
   Before starting the ``validator`` component you may need to generate
   the validator keypairs using the following command:
 
   .. code-block:: console
+
     $ sudo sawadm keygen
+
+
+To start a component using *systemd*, run the following command where
+`COMPONENT` is one of:
+
+  * validator
+  * rest-api
+  * intkey-tp-python
+  * settings-tp
+  * xo-tp-python
 
 .. code-block:: console
 
