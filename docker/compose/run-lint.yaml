@@ -1,0 +1,10 @@
+version: "2.1"
+
+services:
+
+  client:
+    image: sawtooth-dev-python:latest
+    container_name: run-lint
+    volumes:
+      - ../../:/project/sawtooth-core
+    entrypoint: run_lint
