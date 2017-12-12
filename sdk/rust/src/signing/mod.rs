@@ -72,63 +72,63 @@ pub trait PublicKey {
     fn as_slice(&self) -> &[u8];
 }
 
-pub trait Algorithm {
-    fn get_name(&self) -> &str;
+pub trait Context {
+    fn get_algorithm_name(&self) -> &str;
     fn sign(&self, message: &[u8], key: &PrivateKey) -> Result<String, Error>;
     fn verify(&self, signature: &str, message: &[u8], key: &PublicKey) -> Result<bool, Error>;
     fn get_public_key(&self, private_key: &PrivateKey) -> Result<Box<PublicKey>, Error>;
 }
 
-pub fn create_algorithm(name: &str) -> Result<Box<Algorithm>, Error> {
-    match name {
-        "secp256k1" => Ok(Box::new(secp256k1::Secp256k1Algorithm::new())),
-        _ => Err(Error::NoSuchAlgorithm(format!("no such algorithm: {}", name)))
+pub fn create_context(algorithm_name: &str) -> Result<Box<Context>, Error> {
+    match algorithm_name {
+        "secp256k1" => Ok(Box::new(secp256k1::Secp256k1Context::new())),
+        _ => Err(Error::NoSuchAlgorithm(format!("no such algorithm: {}", algorithm_name)))
     }
 }
 
 pub struct CryptoFactory<'a> {
-    algorithm: &'a Algorithm
+    context: &'a Context
 }
 
 impl<'a> CryptoFactory<'a> {
-    pub fn new(algorithm: &'a Algorithm) -> Self {
-        CryptoFactory{ algorithm: algorithm }
+    pub fn new(context: &'a Context) -> Self {
+        CryptoFactory{ context: context }
     }
 
-    pub fn get_algorithm(&self) -> &Algorithm {
-        return self.algorithm
+    pub fn get_context(&self) -> &Context {
+        return self.context
     }
 
     pub fn new_signer(&self, key: &'a PrivateKey) -> Signer {
-        Signer::new(self.algorithm, key)
+        Signer::new(self.context, key)
     }
 }
 
 pub struct Signer<'a> {
-    algorithm: &'a Algorithm,
+    context: &'a Context,
     key: &'a PrivateKey
 }
 
 impl<'a> Signer<'a> {
-    pub fn new(algorithm: &'a Algorithm, key: &'a PrivateKey) -> Self {
+    pub fn new(context: &'a Context, key: &'a PrivateKey) -> Self {
         Signer {
-            algorithm: algorithm,
+            context: context,
             key: key
         }
     }
 
     pub fn sign(&self, message: &[u8]) -> Result<String, Error> {
-        self.algorithm.sign(message, self.key)
+        self.context.sign(message, self.key)
     }
 }
 
 #[cfg(test)]
 mod signing_test {
-    use super::create_algorithm;
+    use super::create_context;
 
     #[test]
     fn no_such_algorithm() {
-        let result = create_algorithm("invalid");
+        let result = create_context("invalid");
         assert!(result.is_err())
     }
 }
