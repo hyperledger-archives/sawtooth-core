@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from collections import deque
+import logging
 from threading import Condition
 
 from sawtooth_validator.execution.scheduler import BatchExecutionResult
@@ -24,6 +25,8 @@ from sawtooth_validator.execution.scheduler import SchedulerIterator
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SerialScheduler(Scheduler):
@@ -73,8 +76,10 @@ class SerialScheduler(Scheduler):
         with self._condition:
             if (self._in_progress_transaction is None or
                     self._in_progress_transaction != txn_signature):
-                raise ValueError("transaction not in progress: {}".format(
-                                 txn_signature))
+                LOGGER.debug('Received result for %s, but was unscheduled',
+                             txn_signature)
+                return
+
             self._in_progress_transaction = None
 
             if txn_signature not in self._txn_to_batch:
@@ -167,6 +172,10 @@ class SerialScheduler(Scheduler):
         return list(header.dependencies)
 
     def _set_batch_result(self, txn_id, valid, state_hash):
+        if txn_id not in self._txn_to_batch:
+            # An incomplete transaction in progress will have been removed
+            return
+
         batch_id = self._txn_to_batch[txn_id]
         self._batch_statuses[batch_id] = BatchExecutionResult(
             is_valid=valid,
@@ -242,7 +251,52 @@ class SerialScheduler(Scheduler):
             return txn_info
 
     def unschedule_incomplete_batches(self):
-        pass
+        incomplete_batches = set()
+        with self._condition:
+            # remove the in-progress transaction's batch
+            if self._in_progress_transaction is not None:
+                batch_id = self._txn_to_batch[self._in_progress_transaction]
+                incomplete_batches.add(batch_id)
+
+            self._in_progress_transaction = None
+
+            txn = None
+            # drain the remaining queue
+            while txn is None:
+                try:
+                    txn = self._txn_queue.get()
+                except EmptyQueue:
+                    break
+
+                incomplete_batches.add(
+                    self._txn_to_batch[txn.header_signature])
+                del self._txn_to_batch[txn.header_signature]
+
+            # clean up the batches, including partial complete information
+            for batch_id in incomplete_batches:
+                batch = self._batch_by_id[batch_id]
+
+                for txn in batch.transactions:
+                    txn_id = txn.header_signature
+                    if txn_id in self._txn_results:
+                        del self._txn_results[txn_id]
+                    if txn_id in self._txn_to_batch:
+                        del self._txn_to_batch[txn_id]
+
+                try:
+                    self._last_in_batch.remove(
+                        batch.transactions[-1].header_signature)
+                except ValueError:
+                    # was not in the last_in_batch list
+                    pass
+
+                del self._batch_by_id[batch_id]
+
+            self._condition.notify_all()
+
+        if incomplete_batches:
+            LOGGER.debug('Removed %s incomplete batches from the schedule',
+                         len(incomplete_batches))
 
     def finalize(self):
         with self._condition:
@@ -352,6 +406,9 @@ class SimpleQueue(object):
 
     def put(self, item):
         self._queue.append(item)
+
+    def clear(self):
+        self._queue.clear()
 
 
 class EmptyQueue(Exception):
