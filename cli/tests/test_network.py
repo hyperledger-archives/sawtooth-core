@@ -98,7 +98,9 @@ class TestNetworkCompare(unittest.TestCase):
 
         print_table(graph, tails)
         print()
+
         print_tree(graph, tails)
+        print()
 
     def test_simple_graph(self):
         """Test that building the fork graph works correctly for a simple

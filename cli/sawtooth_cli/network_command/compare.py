@@ -187,48 +187,214 @@ def print_table(graph, tails):
 
 def print_tree(graph, tails):
     """Print out a tree of blocks starting from the common ancestor."""
-    num_col_width = max(
-        floor(log(max(get_heights(tails)), 10)) + 1,
-        len("NUM"))
-    col_n = 8
+    # Example:
+    # |
+    # | 5
+    # *  a {0, 1, 2, 3, 4}
+    # |
+    # | 6
+    # |\
+    # * |  b {0, 1, 2, 3}
+    # | *  n {4}
+    # | |
+    # | | 7
+    # * |  c {0, 1, 2, 3}
+    # | *  o {4}
+    # | |
+    # | | 8
+    # |\ \
+    # * | |  i {2, 3}
+    # | * |  d {0, 1}
+    # | | *  p {4}
+    # | | |
+    # | | | 9
+    # * | |  j {2, 3}
+    # | * |  e {0, 1}
+    # | | *  q {4}
+    # | | |
+    # | | | 10
+    # * | |  k {2, 3}
+    # | * |  f {0, 1}
+    # | | *  r {4}
+    # | | |
+    # | | | 11
+    # |\ \ \
+    # | | |\ \
+    # * | | | |    g {0}
+    # | * | | |    h {1}
+    # |   * | |    l {2}
+    # |   | * |    m {3}
+    # |   |   *    s {4}
+    # |  /   /
+    # | |  /
+    # | | | 12
+    # * | |   t {0}
+    # | * |   u {2}
+    # | | *   v {4}
+    # | |
+    # | | 13
+    # * |   w {0}
+    # | *   x {2}
+    # |
+    # | 14
+    # *   y {0}
+    # | 15
+    # *   z {0}
 
-    format_str = (
-        '{:<' + str(num_col_width) + '} '
-        + ('{:<' + str(col_n) + '} ') * 2 + '{}'
-    )
-
-    header = format_str.format("NUM", "PARENT", "BLOCK", "NODES")
-    print(header)
-    print('-' * len(header))
     walker = graph.walk()
+    next_block_num, next_parent, next_siblings = next(walker)
+    prev_cliques = []
 
-    next_block_num, parent, siblings = next(walker)
-    cliques = {}
-    while True:
+    done = False
+    while not done:
+        cliques = {}
         block_num = next_block_num
 
+        # Read all the cliques for this block number
         try:
             while block_num == next_block_num:
-                cliques[parent] = siblings
-                next_block_num, parent, siblings = next(walker)
+                cliques[next_parent] = next_siblings
+                next_block_num, next_parent, next_siblings = next(walker)
         except StopIteration:
-            break
+            # Do one last iteration after we've consumed the entire graph
+            done = True
 
-        print_cliques_at_height(block_num, cliques, format_str)
+        print_cliques(prev_cliques, cliques)
 
-        cliques = {}
+        print_block_num_row(block_num, prev_cliques, cliques)
 
-    print_cliques_at_height(block_num, cliques, format_str)
+        print_splits(prev_cliques, cliques)
+
+        print_folds(prev_cliques, cliques)
+
+        prev_cliques = build_ordered_cliques(prev_cliques, cliques)
+
+    print_cliques(prev_cliques, [])
 
 
-def print_cliques_at_height(block_num, cliques, format_str):
-    print(format_str.format(block_num, '', '', ''))
-    for parent, siblings in cliques.items():
-        print(format_str.format('', parent[:8], '', ''))
-        for block_id, nodes in siblings.items():
-            print(format_str.format(
-                '', '', block_id[:8], format_siblings(nodes)))
-    print()
+def build_ordered_cliques(cliques, next_cliques):
+    """Order the new cliques based on the order of their ancestors in the
+    previous iteration."""
+    def sort_key(clique):
+        return -len(clique[1])
+
+    if not cliques:
+        return list(sorted(
+            list(next_cliques.values())[0].items(),
+            key=sort_key))
+
+    ordered_cliques = []
+    for _, clique in enumerate(cliques):
+        parent, _ = clique
+
+        # If this fork continues
+        if parent in next_cliques:
+            # Sort the cliques in descending order of the size of the
+            # clique, so that the main chain tends to the left
+            ordered_cliques.extend(
+                sorted(next_cliques[parent].items(), key=sort_key))
+
+        # Else drop it
+
+    return ordered_cliques
+
+
+def print_folds(cliques, next_cliques):
+    # Need to keep track of which columns each branch is in as we fold
+    folds = []
+    for i, clique in enumerate(cliques):
+        block_id, _ = clique
+        if block_id not in next_cliques:
+            folds.append(i)
+
+    n_cliques = len(cliques)
+    for i, fold in enumerate(folds):
+        print_fold(fold, n_cliques - i, folds)
+        folds[i] = None
+        for j, _ in enumerate(folds):
+            if folds[j] is not None:
+                folds[j] -= 1
+
+
+def print_fold(column_to_fold, total_columns, skips):
+    """Print a row that removes the given column and shifts all the following
+    columns."""
+    format_str = '{:<2}' * (total_columns - 1)
+    cols = []
+    for i in range(column_to_fold):
+        # print(i)
+        if i in skips:
+            cols.append("  ")
+        else:
+            cols.append("| ")
+    for i in range(column_to_fold + 1, total_columns):
+        # print(i)
+        if i in skips:
+            cols.append("  ")
+        else:
+            cols.append(" /")
+    print(format_str.format(*cols))
+
+
+def print_block_num_row(block_num, cliques, next_cliques):
+    """Print out a row of padding and a row with the block number. Includes
+    the branches prior to this block number."""
+    n_cliques = len(cliques)
+    if n_cliques == 0:
+        print('|  {}'.format(block_num))
+        return
+
+    def mapper(clique):
+        block_id, _ = clique
+        if block_id not in next_cliques:
+            return ' '
+        return '|'
+
+    format_str = '{:<' + str(n_cliques * 2) + '} {}'
+    branches = list(map(mapper, cliques))
+    for end in ('', block_num):
+        print(format_str.format(' '.join(branches), end))
+
+
+def print_cliques(cliques, next_cliques):
+    """Print a '*' on each branch with its block id and the ids of the nodes
+    that have the block."""
+    n_cliques = len(cliques)
+    format_str = '{:<' + str(n_cliques * 2) + '}  {} {}'
+    branches = ['|'] * len(cliques)
+    for i, clique in enumerate(cliques):
+        block_id, nodes = clique
+        print(format_str.format(
+            ' '.join(branches[:i] + ['*'] + branches[i + 1:]),
+            block_id[:8], format_siblings(nodes, node_id_map)))
+        if block_id not in next_cliques:
+            branches[i] = ' '
+
+
+def print_splits(cliques, next_cliques):
+    """Print shifts for new forks."""
+    splits = 0
+    for i, clique in enumerate(cliques):
+        parent, _ = clique
+
+        # If this fork continues
+        if parent in next_cliques:
+            # If there is a new fork, print a split
+            if len(next_cliques[parent]) > 1:
+                print_split(i + splits, len(cliques) + splits)
+                splits += 1
+
+
+def print_split(column_to_split, total_columns):
+    """Print a row that splits the given column into two columns while
+    shifting all the following columns."""
+    out = ""
+    for _ in range(column_to_split):
+        out += "| "
+    out += "|\\"
+    for _ in range(column_to_split + 1, total_columns):
+        out += " \\"
+    print(out)
 
 
 def format_siblings(nodes):
