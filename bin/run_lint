@@ -53,19 +53,28 @@ lint() {
     packages=$(find_packages "$subdir" "$since")
 
     if [ "$packages" != "" ]; then
-    [ $VERBOSE = 1 ] && (
-        echo "------------------------------------------------------------------------------"
-        echo "-- Running pycodestyle in $subdir..."
-    )
-    pycodestyle --config=$top_dir/.pycodestyle $packages || error=1
+        [ $VERBOSE = 0 ] && echo "$subdir"
+
+        [ $VERBOSE = 0 ] && echo "-- pycodestyle"
+
+        [ $VERBOSE = 1 ] && (
+            echo "------------------------------------------------------------------------------"
+            echo "-- Running pycodestyle in $subdir..."
+        )
+
+        pycodestyle --config=$top_dir/.pycodestyle $packages || error=1
+
+        [ $VERBOSE = 0 ] && echo "-- pylint"
 
         [ $VERBOSE = 1 ] && (
             echo "------------------------------------------------------------------------------"
             echo "-- Running $pylint_bin $pylintrc in $subdir..."
         )
+
         $pylint_bin \
             --rcfile=$pylintrc \
             --reports=no \
+            --score=no \
             --persistent=no \
             $packages || error=1
 
@@ -74,7 +83,9 @@ lint() {
             echo "------------------------------------------------------------------------------"
             echo "-- Checking for CRLF in $subdir..."
         )
+
         file $packages | grep CRLF && error=1
+
     else
         [ $VERBOSE = 1 ] && (
             echo "------------------------------------------------------------------------------"
