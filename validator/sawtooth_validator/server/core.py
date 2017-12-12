@@ -17,6 +17,7 @@ import hashlib
 import logging
 import os
 import signal
+import sys
 import time
 import threading
 
@@ -66,7 +67,8 @@ class Validator(object):
                  identity_signer, scheduler_type, permissions,
                  minimum_peer_connectivity, maximum_peer_connectivity,
                  network_public_key=None, network_private_key=None,
-                 roles=None, metrics_registry=None
+                 roles=None, metrics_registry=None,
+                 maximum_batch_queue_depth=sys.maxsize
                  ):
         """Constructs a validator instance.
 
@@ -92,6 +94,9 @@ class Validator(object):
             config_dir (str): path to the config directory
             identity_signer (str): cryptographic signer the validator uses for
                 signing
+            maximum_batch_queue_depth (int): the maximum number of batches that
+                can be added to the pending queue, defaults to maxint (i.e. no
+                limit)
         """
 
         # -- Setup Global State Database and Factory -- #
@@ -242,7 +247,8 @@ class Validator(object):
             check_publish_block_frequency=0.1,
             batch_observers=[batch_tracker],
             batch_injector_factory=batch_injector_factory,
-            metrics_registry=metrics_registry)
+            metrics_registry=metrics_registry,
+            maximum_batch_queue_depth=maximum_batch_queue_depth)
 
         chain_controller = ChainController(
             block_sender=block_sender,
@@ -280,6 +286,7 @@ class Validator(object):
         responder = Responder(completer)
 
         completer.set_on_batch_received(block_publisher.queue_batch)
+        completer.set_can_process_batch(block_publisher.can_queue_batch)
         completer.set_on_block_received(chain_controller.queue_block)
         completer.set_chain_has_block(chain_controller.has_block)
 

@@ -15,6 +15,7 @@
 import abc
 import logging
 import queue
+import sys
 from threading import RLock
 import time
 
@@ -405,7 +406,8 @@ class BlockPublisher(object):
                  check_publish_block_frequency,
                  batch_observers,
                  batch_injector_factory=None,
-                 metrics_registry=None):
+                 metrics_registry=None,
+                 maximum_batch_queue_depth=sys.maxsize):
         """
         Initialize the BlockPublisher object
 
@@ -430,6 +432,9 @@ class BlockPublisher(object):
                 for creating BatchInjectors.
             metrics_registry (MetricsRegistry): Metrics registry used to
                 create pending batch gauge
+            maximum_batch_queue_depth (int): the maximum number of batches that
+                can be added to the pending queue, defaults to maxint (i.e. no
+                limit)
         """
         self._lock = RLock()
         self._candidate_block = None  # _CandidateBlock helper,
@@ -457,6 +462,7 @@ class BlockPublisher(object):
             if metrics_registry else None
 
         self._batch_queue = queue.Queue()
+        self._batch_queue_depth = maximum_batch_queue_depth
         self._queued_batch_ids = []
         self._batch_observers = batch_observers
         self._check_publish_block_frequency = check_publish_block_frequency
@@ -483,6 +489,12 @@ class BlockPublisher(object):
         self._queued_batch_ids.append(batch.header_signature)
         for observer in self._batch_observers:
             observer.notify_batch_pending(batch)
+
+    def can_queue_batch(self):
+        """Checks to see if there is space available in the batch queue for
+        an incoming batch.
+        """
+        return self._batch_queue.qsize() < self._batch_queue_depth
 
     @property
     def chain_head_lock(self):

@@ -17,6 +17,7 @@ import logging
 from threading import RLock
 from collections import deque
 
+from sawtooth_validator.exceptions import BatchBackPressureException
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -26,6 +27,9 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.client_batch_submit_pb2 \
     import ClientBatchSubmitRequest
+from sawtooth_validator.protobuf.client_batch_submit_pb2 \
+    import ClientBatchSubmitResponse
+from sawtooth_validator.protobuf.validator_pb2 import Message
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -78,6 +82,7 @@ class Completer(object):
         self._on_block_received = None
         self._on_batch_received = None
         self._has_block = None
+        self._can_process_batch = None
         self.lock = RLock()
 
     def _complete_block(self, block):
@@ -278,6 +283,9 @@ class Completer(object):
     def set_chain_has_block(self, set_chain_has_block):
         self._has_block = set_chain_has_block
 
+    def set_can_process_batch(self, can_process_batch_func):
+        self._can_process_batch = can_process_batch_func
+
     def add_block(self, block):
         with self.lock:
             blkw = BlockWrapper(block)
@@ -287,13 +295,18 @@ class Completer(object):
                 self._on_block_received(blkw)
                 self._process_incomplete_blocks(block.header_signature)
 
-    def add_batch(self, batch):
+    def add_batch(self, batch, force=False):
         with self.lock:
             if batch.header_signature in self.batch_cache:
                 return
             if self._complete_batch(batch):
+                if not force and not self._can_process_batch():
+                    raise BatchBackPressureException(
+                        'Unable to process batch at this time')
+
                 self.batch_cache[batch.header_signature] = batch
                 self._add_seen_txns(batch)
+
                 self._on_batch_received(batch)
                 self._process_incomplete_blocks(batch.header_signature)
                 if batch.header_signature in self._requested:
@@ -348,6 +361,11 @@ class Completer(object):
 
 
 class CompleterBatchListBroadcastHandler(Handler):
+    """This handler receives batches that have been received by this node.
+
+    Batches may be dropped, due to back pressure, and a message will be
+    returned.
+    """
 
     def __init__(self, completer, gossip):
         self._completer = completer
@@ -360,13 +378,29 @@ class CompleterBatchListBroadcastHandler(Handler):
             if batch.trace:
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
-            self._completer.add_batch(batch)
+            try:
+                self._completer.add_batch(batch)
+            except BatchBackPressureException:
+                LOGGER.warning(
+                    'Applying back pressure to batch %s',
+                    batch.header_signature)
+                response = ClientBatchSubmitResponse(
+                        status=ClientBatchSubmitResponse.QUEUE_FULL)
+                return HandlerResult(
+                    status=HandlerStatus.RETURN,
+                    message_out=response,
+                    message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE
+                )
             self._gossip.broadcast_batch(batch)
         return HandlerResult(status=HandlerStatus.PASS)
 
 
 class CompleterGossipHandler(Handler):
+    """This handler receives blocks or batches that have been received or
+    produced by other nodes in the network.
 
+    Batches may be dropped, due to back pressure.
+    """
     def __init__(self, completer):
         self._completer = completer
 
@@ -380,12 +414,20 @@ class CompleterGossipHandler(Handler):
         elif gossip_message.content_type == network_pb2.GossipMessage.BATCH:
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
-            self._completer.add_batch(batch)
+            try:
+                self._completer.add_batch(batch)
+            except BatchBackPressureException:
+                LOGGER.warning(
+                    'Applying back pressure to batch %s',
+                    batch.header_signature)
+                return HandlerResult(status=HandlerStatus.DROP)
         return HandlerResult(
             status=HandlerStatus.PASS)
 
 
 class CompleterGossipBlockResponseHandler(Handler):
+    """This handler receives blocks that have been requested by the completer.
+    """
     def __init__(self, completer):
         self._completer = completer
 
@@ -401,6 +443,10 @@ class CompleterGossipBlockResponseHandler(Handler):
 
 
 class CompleterGossipBatchResponseHandler(Handler):
+    """This handler receives batches that have been requested by the completer.
+
+    Batches will never be dropped.
+    """
     def __init__(self, completer):
         self._completer = completer
 
@@ -410,6 +456,6 @@ class CompleterGossipBatchResponseHandler(Handler):
 
         batch = Batch()
         batch.ParseFromString(batch_response_message.content)
-        self._completer.add_batch(batch)
+        self._completer.add_batch(batch, force=True)
 
         return HandlerResult(status=HandlerStatus.PASS)
