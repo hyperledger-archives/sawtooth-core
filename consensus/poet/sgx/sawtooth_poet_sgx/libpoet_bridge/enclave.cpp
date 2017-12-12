@@ -159,7 +159,7 @@ namespace sawtooth {
 
             Zero(outEnclaveMeasurement, sizeof(*outEnclaveMeasurement));
             Zero(outEnclaveBasename, sizeof(*outEnclaveBasename));
-            Zero(outEnclavePseManifestHash, sizeof(outEnclavePseManifestHash));
+            Zero(outEnclavePseManifestHash, sizeof(*outEnclavePseManifestHash));
 
             // We can get the enclave's measurement (i.e., mr_enclave) and
             // basename only by getting a quote.  To do that, we need to first
