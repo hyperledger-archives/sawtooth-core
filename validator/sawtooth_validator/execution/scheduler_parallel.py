@@ -831,6 +831,9 @@ class ParallelScheduler(Scheduler):
 
             return count
 
+    def unschedule_incomplete_batches(self):
+        pass
+
     def finalize(self):
         with self._condition:
             self._final = True

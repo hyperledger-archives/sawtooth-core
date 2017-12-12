@@ -291,6 +291,7 @@ class _CandidateBlock(object):
         In both cases the pending_batches will contain the list of batches
         that need to be added to the next Block that is built.
         """
+        self._scheduler.unschedule_incomplete_batches()
         self._scheduler.finalize()
         self._scheduler.complete(block=True)
 

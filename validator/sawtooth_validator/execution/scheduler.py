@@ -107,6 +107,12 @@ class Scheduler(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def unschedule_incomplete_batches(self):
+        """Remove any incomplete batches from the schedule.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def finalize(self):
         """Tell the scheduler that no more batches/transactions will be added.
 
