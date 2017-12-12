@@ -237,7 +237,8 @@ class Gossip(object):
             nonce=binascii.b2a_hex(os.urandom(16)))
         self.send(validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
                   block_request.SerializeToString(),
-                  connection_id)
+                  connection_id,
+                  one_way=True)
 
     def broadcast_batch(self, batch, exclude=None):
         gossip_message = GossipMessage(

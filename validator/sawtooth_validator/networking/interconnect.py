@@ -1007,7 +1007,8 @@ class Interconnect(object):
         return connection_info.connection.send(
             message_type,
             data,
-            callback=callback)
+            callback=callback,
+            one_way=one_way)
 
     def start(self):
         complete_or_error_queue = queue.Queue()
