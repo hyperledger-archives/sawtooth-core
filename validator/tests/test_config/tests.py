@@ -146,7 +146,6 @@ class TestPathConfig(unittest.TestCase):
 
 
 class TestValidatorConfig(unittest.TestCase):
-
     def test_validator_config_defaults(self):
         """Tests the default validator configuration when no other configs.
         The defaults should be as follows:
@@ -239,12 +238,14 @@ class TestValidatorConfig(unittest.TestCase):
         """Tests detecting invalid settings defined in a TOML configuration
         file.
 
-        Creates a temporary directory and writes a validator.toml config file
-        with an invalid setting inside, then loads that config and verifies an exception is thrown.
+        Creates a temporary directory and writes a validator.toml
+        config file with an invalid setting inside, then loads that
+        config and verifies an exception is thrown.
 
 
-        The test also attempts to avoid environment variables from interfering
-        with the test by clearing os.environ and restoring it after the test.
+        The test also attempts to avoid environment variables from
+        interfering with the test by clearing os.environ and restoring
+        it after the test.
         """
         orig_environ = dict(os.environ)
         os.environ.clear()

@@ -22,6 +22,7 @@ from sawtooth_signing.secp256k1 import Secp256k1Context
 class Signer:
     """A convenient wrapper of Context and PrivateKey
     """
+
     def __init__(self, context, private_key):
         """
         """
@@ -55,6 +56,7 @@ class Signer:
 class CryptoFactory:
     """Factory for generating Signers.
     """
+
     def __init__(self, context):
         self._context = context
 

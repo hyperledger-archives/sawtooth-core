@@ -77,6 +77,7 @@ def make_batches(keys):
     imf = IntkeyMessageFactory()
     return [imf.create_batch([('set', k, 0)]) for k in keys]
 
+
 class TestNamespacePermission(unittest.TestCase):
     def test_namespace_permission(self):
         """Tests that namespace permission onchain are letting block_info
@@ -92,7 +93,6 @@ class TestNamespacePermission(unittest.TestCase):
             block_info = get_block_info(i)
             self.assertEqual(block_info.block_num, i)
 
-
         # Assert block info batches are first in the block and
         # no other batch is included
         for block in get_blocks()[:-1]:
@@ -101,4 +101,3 @@ class TestNamespacePermission(unittest.TestCase):
                 block['batches'][0]['transactions'][0]['header']['family_name']
             self.assertEqual(family_name, 'block_info')
             self.assertEqual(len(block['batches']), 1)
-

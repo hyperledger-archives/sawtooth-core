@@ -182,7 +182,6 @@ class GossipBatchResponseHandler(Handler):
 
 
 class GossipBroadcastHandler(Handler):
-
     def __init__(self, gossip, completer):
         self._gossip = gossip
         self._completer = completer
@@ -206,6 +205,4 @@ class GossipBroadcastHandler(Handler):
         else:
             LOGGER.info("received %s, not BATCH or BLOCK",
                         gossip_message.content_type)
-        return HandlerResult(
-            status=HandlerStatus.PASS
-        )
+        return HandlerResult(status=HandlerStatus.PASS)

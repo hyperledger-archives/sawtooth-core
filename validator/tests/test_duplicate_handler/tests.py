@@ -50,7 +50,7 @@ class TestDuplicateHandler(unittest.TestCase):
         Test that if the block does not exist yet in the completer or the
         chain controller, the gossip message is passed.
         """
-        batch= Batch(header_signature="Batch1")
+        batch = Batch(header_signature="Batch1")
         message = GossipMessage(content_type=GossipMessage.BATCH,
                                 content=batch.SerializeToString())
         handler_status = self.handler.handle(

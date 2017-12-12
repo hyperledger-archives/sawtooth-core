@@ -31,21 +31,21 @@ if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
                        ['packaging/systemd/sawtooth-identity-tp.service']))
 
-setup(name='sawtooth-identity',
-      version=subprocess.check_output(
-          ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Identity Transaction Processor',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'colorlog',
-          'protobuf',
-          'sawtooth-sdk',
-          ],
-      data_files=data_files,
-      entry_points={
-          'console_scripts': [
-              'identity-tp= sawtooth_identity.processor.main:main'
-          ]
-      })
+setup(
+    name='sawtooth-identity',
+    version=subprocess.check_output(
+        ['../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth Identity Transaction Processor',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'colorlog',
+        'protobuf',
+        'sawtooth-sdk',
+    ],
+    data_files=data_files,
+    entry_points={
+        'console_scripts':
+        ['identity-tp= sawtooth_identity.processor.main:main']
+    })

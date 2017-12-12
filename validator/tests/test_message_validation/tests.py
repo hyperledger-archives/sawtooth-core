@@ -50,9 +50,11 @@ class TestMessageValidation(unittest.TestCase):
         txn_list = []
 
         for i in range(count):
-            payload = {'Verb': 'set',
-                       'Name': 'name' + str(random.randint(0, 100)),
-                       'Value': random.randint(0, 100)}
+            payload = {
+                'Verb': 'set',
+                'Name': 'name' + str(random.randint(0, 100)),
+                'Value': random.randint(0, 100)
+            }
             intkey_prefix = \
                 hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
 
@@ -122,9 +124,10 @@ class TestMessageValidation(unittest.TestCase):
             else:
                 signature = "bad_signature"
 
-            batch = Batch(header=header_bytes,
-                          transactions=txn_list,
-                          header_signature=signature)
+            batch = Batch(
+                header=header_bytes,
+                transactions=txn_list,
+                header_signature=signature)
 
             batch_list.append(batch)
 

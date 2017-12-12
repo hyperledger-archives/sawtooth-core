@@ -36,6 +36,7 @@ class SerialScheduler(Scheduler):
     This scheduler is intended to be used for comparison to more complex
     schedulers - for tests related to performance, correctness, etc.
     """
+
     def __init__(self, squash_handler, first_state_hash, always_persist):
         self._txn_queue = SimpleQueue()
         self._scheduled_transactions = []
@@ -77,8 +78,8 @@ class SerialScheduler(Scheduler):
             self._in_progress_transaction = None
 
             if txn_signature not in self._txn_to_batch:
-                raise ValueError("transaction not in any batches: {}".format(
-                    txn_signature))
+                raise ValueError(
+                    "transaction not in any batches: {}".format(txn_signature))
 
             if txn_signature not in self._txn_results:
                 self._txn_results[txn_signature] = TxnExecutionResult(
@@ -233,9 +234,10 @@ class SerialScheduler(Scheduler):
             self._in_progress_transaction = txn.header_signature
             base_contexts = [] if self._previous_context_id is None \
                 else [self._previous_context_id]
-            txn_info = TxnInformation(txn=txn,
-                                      state_hash=self._previous_state_hash,
-                                      base_context_ids=base_contexts)
+            txn_info = TxnInformation(
+                txn=txn,
+                state_hash=self._previous_state_hash,
+                base_context_ids=base_contexts)
             self._scheduled_transactions.append(txn_info)
             return txn_info
 
@@ -261,7 +263,7 @@ class SerialScheduler(Scheduler):
         state_hash = None
         if self._previous_valid_batch_c_id is not None:
             publishing_or_genesis = self._always_persist or \
-                                    required_state_root is None
+                required_state_root is None
             state_hash = self._squash(
                 state_root=self._previous_state_hash,
                 context_ids=[self._previous_valid_batch_c_id],
@@ -303,7 +305,7 @@ class SerialScheduler(Scheduler):
 
     def _complete(self):
         return self._final and \
-               len(self._txn_results) == len(self._txn_to_batch)
+            len(self._txn_results) == len(self._txn_to_batch)
 
     def complete(self, block):
         with self._condition:
@@ -322,9 +324,11 @@ class SerialScheduler(Scheduler):
         with self._condition:
             if not self._cancelled and not self._final \
                     and self._previous_context_id:
-                self._squash(state_root=self._previous_state_hash,
-                             context_ids=[self._previous_context_id],
-                             persist=False, clean_up=True)
+                self._squash(
+                    state_root=self._previous_state_hash,
+                    context_ids=[self._previous_context_id],
+                    persist=False,
+                    clean_up=True)
                 self._cancelled = True
                 self._condition.notify_all()
 
@@ -334,7 +338,6 @@ class SerialScheduler(Scheduler):
 
 
 class SimpleQueue(object):
-
     def __init__(self):
         self._queue = deque()
 

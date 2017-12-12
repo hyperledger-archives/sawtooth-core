@@ -338,7 +338,6 @@ class TestSchedulersWithYaml(unittest.TestCase):
                          batch_results,
                          txns_to_assert_state, name)
 
-
     def _assertions(self, tester, defined_batch_results_dict,
                     batch_results, txns_to_assert_state, name):
         self.assert_batch_validity(
@@ -423,8 +422,8 @@ class TestSchedulersWithYaml(unittest.TestCase):
 
         state_roots = self._get_state_roots(batch_results=batch_results)
         self.assertEqual(len(state_roots), 1,
-                          "The scheduler calculated more than one state "
-                          "root when only one was expected")
+                         "The scheduler calculated more than one state "
+                         "root when only one was expected")
 
     def _path_to_yaml_file(self, name):
         parent_dir = os.path.dirname(__file__)

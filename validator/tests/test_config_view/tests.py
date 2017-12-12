@@ -64,7 +64,7 @@ class TestSettingsView(unittest.TestCase):
         settings_view = self._settings_view_factory.create_settings_view(
             self._current_root_hash)
         self.assertEqual(10, settings_view.get_setting('my.setting',
-                                                     value_type=int))
+                                                       value_type=int))
 
     def test_get_setting_not_found(self):
         """Verifies the correct operation of get_setting() by using it to
@@ -84,7 +84,7 @@ class TestSettingsView(unittest.TestCase):
 
         self.assertEqual('default',
                          settings_view.get_setting('non-existant.setting',
-                                                 default_value='default'))
+                                                   default_value='default'))
 
     def test_get_setting_list(self):
         """Verifies the correct operation of get_setting_list() by using it to
@@ -120,7 +120,7 @@ class TestSettingsView(unittest.TestCase):
         self.assertEqual(
             [],
             settings_view.get_setting_list('non-existant.list',
-                                         default_value=[]))
+                                           default_value=[]))
 
     def test_get_setting_list_alternate_delimiter(self):
         """Verifies the correct operation of get_setting_list() by using it to

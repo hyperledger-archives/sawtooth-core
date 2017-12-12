@@ -112,18 +112,21 @@ def _do_config_proposal_list(args):
     Given a url, optional filters on prefix and public key, this command lists
     the current pending proposals for settings changes.
     """
+
     def _accept(candidate, public_key, prefix):
         # Check to see if the first public key matches the given public key
         # (if it is not None).  This public key belongs to the user that
         # created it.
-        has_pub_key = (not public_key or
-                       candidate.votes[0].public_key == public_key)
+        has_pub_key = (not public_key
+                       or candidate.votes[0].public_key == public_key)
         has_prefix = candidate.proposal.setting.startswith(prefix)
         return has_prefix and has_pub_key
 
     candidates_payload = _get_proposals(RestClient(args.url))
-    candidates = [c for c in candidates_payload.candidates
-                  if _accept(c, args.public_key, args.filter)]
+    candidates = [
+        c for c in candidates_payload.candidates
+        if _accept(c, args.public_key, args.filter)
+    ]
 
     if args.format == 'default':
         for candidate in candidates:
@@ -148,7 +151,7 @@ def _do_config_proposal_list(args):
             print(json.dumps(candidates_snapshot, indent=2, sort_keys=True))
         else:
             print(yaml.dump(candidates_snapshot,
-                  default_flow_style=False)[0:-1])
+                            default_flow_style=False)[0:-1])
     else:
         raise AssertionError('Unknown format {}'.format(args.format))
 
@@ -314,8 +317,7 @@ def _create_batch(signer, transactions):
     return Batch(
         header=batch_header,
         header_signature=signer.sign(batch_header),
-        transactions=transactions
-    )
+        transactions=transactions)
 
 
 def _create_propose_txn(signer, setting_key_value):

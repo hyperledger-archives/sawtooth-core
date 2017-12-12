@@ -24,14 +24,14 @@ build_str = "lib.{}-{}.{}".format(
     sys.version_info.major, sys.version_info.minor)
 
 sys.path.insert(0, os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'sdk', 'examples', 'intkey_python'))
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'sdk', 'examples', 'intkey_python'))
 sys.path.insert(0, os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'sdk', 'python'))
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'sdk', 'python'))
 sys.path.insert(0, os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'signing'))
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'signing'))
 
 from sawtooth_intkey.processor.main import main
 

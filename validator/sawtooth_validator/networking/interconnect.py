@@ -216,12 +216,15 @@ class _SendReceive(object):
                                 content=ping.SerializeToString(),
                                 message_type=validator_pb2.Message.PING_REQUEST
                             )
-                            fut = future.Future(message.correlation_id,
-                                                message.content,
-                                                )
+                            fut = future.Future(
+                                message.correlation_id,
+                                message.content,
+                            )
                             self._futures.put(fut)
-                            message_frame = [bytes(zmq_identity),
-                                             message.SerializeToString()]
+                            message_frame = [
+                                bytes(zmq_identity),
+                                message.SerializeToString()
+                            ]
                             yield from self._send_message_frame(message_frame)
                 elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
                     if self._last_message_time and \
@@ -295,9 +298,10 @@ class _SendReceive(object):
                 try:
                     self._futures.set_result(
                         message.correlation_id,
-                        future.FutureResult(message_type=message.message_type,
-                                            content=message.content,
-                                            connection_id=connection_id))
+                        future.FutureResult(
+                            message_type=message.message_type,
+                            content=message.content,
+                            connection_id=connection_id))
                 except future.FutureCollectionKeyError:
                     self._dispatcher.dispatch(self._connection,
                                               message,
@@ -802,11 +806,13 @@ class Interconnect(object):
         self._add_connection(conn, uri)
 
         connect_message = ConnectionRequest(endpoint=self._public_endpoint)
-        conn.send(validator_pb2.Message.NETWORK_CONNECT,
-                  connect_message.SerializeToString(),
-                  callback=partial(self._connect_callback,
-                                   connection=conn,
-                                   ))
+        conn.send(
+            validator_pb2.Message.NETWORK_CONNECT,
+            connect_message.SerializeToString(),
+            callback=partial(
+                self._connect_callback,
+                connection=conn,
+            ))
 
         return conn
 
@@ -816,16 +822,15 @@ class Interconnect(object):
         the validator to be authorized by the incoming connection.
         """
         connect_message = ConnectionRequest(endpoint=self._public_endpoint)
-        self._safe_send(validator_pb2.Message.NETWORK_CONNECT,
-                        connect_message.SerializeToString(),
-                        connection_id,
-                        callback=partial(
-                            self._inbound_connection_request_callback,
-                            connection_id=connection_id
-                            ))
+        self._safe_send(
+            validator_pb2.Message.NETWORK_CONNECT,
+            connect_message.SerializeToString(),
+            connection_id,
+            callback=partial(
+                self._inbound_connection_request_callback,
+                connection_id=connection_id))
 
-    def _connect_callback(self, request, result,
-                          connection=None):
+    def _connect_callback(self, request, result, connection=None):
         connection_response = ConnectionResponse()
         connection_response.ParseFromString(result.content)
 
@@ -857,8 +862,7 @@ class Interconnect(object):
                         auth_trust_request.SerializeToString(),
                         callback=partial(
                             self._check_trust_success,
-                            connection_id=connection.connection_id)
-                        )
+                            connection_id=connection.connection_id))
 
                 if auth_type["challenge"]:
                     auth_challenge_request = AuthorizationChallengeRequest()
@@ -897,7 +901,7 @@ class Interconnect(object):
                 connection_id,
                 callback=partial(self._check_trust_success,
                                  connection_id=connection_id)
-                )
+            )
 
         if auth_type["challenge"]:
             auth_challenge_request = AuthorizationChallengeRequest()
@@ -908,7 +912,7 @@ class Interconnect(object):
                 callback=partial(
                     self._inbound_challenge_authorization_callback,
                     connection_id=connection_id)
-                )
+            )
 
     def _challenge_authorization_callback(self, request, result,
                                           connection=None,
@@ -928,7 +932,7 @@ class Interconnect(object):
             public_key=self._signer.get_public_key().as_hex(),
             signature=signature,
             roles=[RoleType.Value("NETWORK")]
-            )
+        )
 
         connection.send(
             validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
@@ -983,8 +987,7 @@ class Interconnect(object):
         :return: future.Future
         """
         if connection_id not in self._connections:
-            raise ValueError("Unknown connection id: %s",
-                             connection_id)
+            raise ValueError("Unknown connection id: %s", connection_id)
         connection_info = self._connections.get(connection_id)
         if connection_info.connection_type == \
                 ConnectionType.ZMQ_IDENTITY:
@@ -995,8 +998,11 @@ class Interconnect(object):
 
             timer_tag = get_enum_name(message.message_type)
             timer_ctx = self._get_send_response_timer(timer_tag).time()
-            fut = future.Future(message.correlation_id, message.content,
-                                callback, timer_ctx=timer_ctx)
+            fut = future.Future(
+                message.correlation_id,
+                message.content,
+                callback,
+                timer_ctx=timer_ctx)
             if not one_way:
                 self._futures.put(fut)
 
@@ -1158,8 +1164,7 @@ class Interconnect(object):
         :return: future.Future
         """
         if connection_id not in self._connections:
-            raise ValueError("Unknown connection id: %s",
-                             connection_id)
+            raise ValueError("Unknown connection id: %s", connection_id)
         connection_info = self._connections.get(connection_id)
         if connection_info.connection_type == \
                 ConnectionType.ZMQ_IDENTITY:
@@ -1204,7 +1209,7 @@ class Interconnect(object):
                 message,
                 connection_id,
                 callback=callback
-                )
+            )
         except ValueError:
             LOGGER.debug("Connection disconnected: %s", connection_id)
 

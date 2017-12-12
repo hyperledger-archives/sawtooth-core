@@ -53,6 +53,7 @@ class EndpointStatus(Enum):
     # Endpoint will be used to request peers
     TOPOLOGY = 2
 
+
 EndpointInfo = namedtuple('EndpointInfo',
                           ['status', 'time', "retry_threshold"])
 
@@ -303,11 +304,11 @@ class Gossip(object):
                 exclude = []
             for connection_id in self._peers.copy():
                 if connection_id not in exclude:
-                    self.send(message_type,
-                              gossip_message.SerializeToString(),
-                              connection_id,
-                              one_way=True
-                              )
+                    self.send(
+                        message_type,
+                        gossip_message.SerializeToString(),
+                        connection_id,
+                        one_way=True)
 
     def connect_success(self, connection_id):
         """
@@ -450,10 +451,8 @@ class ConnectionManager(InstrumentedThread):
                                 set(peered_endpoints) -
                                 set([self._endpoint]))
 
-                        LOGGER.debug("Number of peers: %s",
-                                     len(peers))
-                        LOGGER.debug("Peers are: %s",
-                                     list(peers.values()))
+                        LOGGER.debug("Number of peers: %s", len(peers))
+                        LOGGER.debug("Peers are: %s", list(peers.values()))
                         LOGGER.debug("Unpeered candidates are: %s",
                                      unpeered_candidates)
 
@@ -707,9 +706,10 @@ class ConnectionManager(InstrumentedThread):
                 validator_pb2.Message.GOSSIP_REGISTER,
                 register_request.SerializeToString(),
                 connection_id,
-                callback=partial(self._peer_callback,
-                                 endpoint=endpoint,
-                                 connection_id=connection_id))
+                callback=partial(
+                    self._peer_callback,
+                    endpoint=endpoint,
+                    connection_id=connection_id))
         except KeyError:
             # if the connection uri wasn't found in the network's
             # connections, it raises a KeyError and we need to add
@@ -807,12 +807,14 @@ class ConnectionManager(InstrumentedThread):
             endpoint=self._endpoint)
         self._connection_statuses[connection_id] = PeerStatus.TEMP
         try:
-            self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
-                               register_request.SerializeToString(),
-                               connection_id,
-                               callback=partial(self._peer_callback,
-                                                connection_id=connection_id,
-                                                endpoint=endpoint))
+            self._network.send(
+                validator_pb2.Message.GOSSIP_REGISTER,
+                register_request.SerializeToString(),
+                connection_id,
+                callback=partial(
+                    self._peer_callback,
+                    connection_id=connection_id,
+                    endpoint=endpoint))
         except ValueError:
             LOGGER.debug("Connection disconnected: %s", connection_id)
 
@@ -825,10 +827,12 @@ class ConnectionManager(InstrumentedThread):
         def callback(request, result):
             # request, result are ignored, but required by the callback
             self._remove_temporary_connection(connection_id)
+
         try:
-            self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
-                               get_peers_request.SerializeToString(),
-                               connection_id,
-                               callback=callback)
+            self._network.send(
+                validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                get_peers_request.SerializeToString(),
+                connection_id,
+                callback=callback)
         except ValueError:
             LOGGER.debug("Connection disconnected: %s", connection_id)

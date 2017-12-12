@@ -64,9 +64,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 def add(
-    dispatcher, interconnect, gossip, completer, responder,
-    thread_pool, sig_pool, has_block, has_batch,
-    permission_verifier,
+        dispatcher,
+        interconnect,
+        gossip,
+        completer,
+        responder,
+        thread_pool,
+        sig_pool,
+        has_block,
+        has_batch,
+        permission_verifier,
 ):
 
     # -- Basic Networking -- #

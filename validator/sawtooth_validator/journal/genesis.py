@@ -175,8 +175,7 @@ class GenesisController(object):
                     .format(batch.header_signature))
             if result.state_hash is not None:
                 state_hash = result.state_hash
-        LOGGER.debug('Produced state hash %s for genesis block.',
-                     state_hash)
+        LOGGER.debug('Produced state hash %s for genesis block.', state_hash)
 
         block_builder = self._generate_genesis_block()
         block_builder.add_batches(genesis_batches)

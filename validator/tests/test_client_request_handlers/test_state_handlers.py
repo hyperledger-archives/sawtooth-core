@@ -55,8 +55,9 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual(self.roots[2], response.state_root)
         self.assert_valid_paging(response, "0" * 69 + '1', 100)
         self.assertEqual(3, len(response.entries))
-        self.assert_all_instances(response.entries,
-                                  client_state_pb2.ClientStateListResponse.Entry)
+        self.assert_all_instances(
+            response.entries,
+            client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual(
             b'3', self._find_value(response.entries, '0' * 69 + '1'))
 
@@ -111,8 +112,9 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response, '0' * 69 + '1', 100)
         self.assertEqual(1, len(response.entries))
 
-        self.assert_all_instances(response.entries,
-                                  client_state_pb2.ClientStateListResponse.Entry)
+        self.assert_all_instances(
+            response.entries,
+            client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('0' * 69 + '1', response.entries[0].address)
         self.assertEqual(b'1', response.entries[0].data)
 
@@ -139,8 +141,8 @@ class TestStateListRequests(ClientHandlerTestCase):
             - a status of NO_ROOT
             - that state_root, paging, and entries are missing
         """
-        # Since it is hard to predict what the state root will be ahead of time,
-        # just search for one we know is missing.
+        # Since it is hard to predict what the state root will be
+        # ahead of time, just search for one we know is missing.
         i = 0
         missing_root = format(i, 'x').zfill(64)
         while missing_root in self.roots:
@@ -175,8 +177,9 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assert_valid_paging(response, '0' * 69 + '3', 100)
         self.assertEqual(1, len(response.entries))
 
-        self.assert_all_instances(response.entries,
-                                  client_state_pb2.ClientStateListResponse.Entry)
+        self.assert_all_instances(
+            response.entries,
+            client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('0' * 69 + '3', response.entries[0].address)
         self.assertEqual(b'7', response.entries[0].data)
 
@@ -221,19 +224,23 @@ class TestStateListRequests(ClientHandlerTestCase):
             - the state_root from block 'bbb...1'
             - a paging response with start of b'4' and limit 100
             - a list of entries with 1 item
-            - that the list contains instances of ClientStateListResponse.Entry
-            - that ClientStateListResponse.Entry matches the address of '00..2',
-              and has data of b'4'
+            - that the list contains instances of
+              ClientStateListResponse.Entry
+            - that ClientStateListResponse.Entry matches the address
+              of '00..2', and has data of b'4'
+
         """
-        response = self.make_request(state_root=self.roots[1], address='0' * 69 + '2')
+        response = self.make_request(
+            state_root=self.roots[1], address='0' * 69 + '2')
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(self.roots[1], response.state_root)
         self.assert_valid_paging(response, '0' * 69 + '2', 100)
         self.assertEqual(1, len(response.entries))
 
-        self.assert_all_instances(response.entries,
-                                  client_state_pb2.ClientStateListResponse.Entry)
+        self.assert_all_instances(
+            response.entries,
+            client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('0' * 69 + '2', response.entries[0].address)
         self.assertEqual(b'4', response.entries[0].data)
 
@@ -248,7 +255,8 @@ class TestStateListRequests(ClientHandlerTestCase):
             - the state_root from block 'bbb...1'
             - that paging and entries are missing
         """
-        response = self.make_request(address='0' * 69 + '3', state_root=self.roots[1])
+        response = self.make_request(
+            address='0' * 69 + '3', state_root=self.roots[1])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertEqual(self.roots[1], response.state_root)
@@ -273,10 +281,12 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(self.roots[2], response.state_root)
-        self.assert_valid_paging(response, '0' * 69 + '1', 2, next_id='0' * 69 + '3')
+        self.assert_valid_paging(
+            response, '0' * 69 + '1', 2, next_id='0' * 69 + '3')
         self.assertEqual(2, len(response.entries))
-        self.assert_all_instances(response.entries,
-                                  client_state_pb2.ClientStateListResponse.Entry)
+        self.assert_all_instances(
+            response.entries,
+            client_state_pb2.ClientStateListResponse.Entry)
 
     def test_state_list_paginated_by_start_id(self):
         """Verifies data list requests work paginated by limit and start_id.
@@ -302,8 +312,9 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual(self.roots[2], response.state_root)
         self.assert_valid_paging(response, '0' * 69 + '2', 1, '0' * 69 + '3')
         self.assertEqual(1, len(response.entries))
-        self.assert_all_instances(response.entries,
-                                  client_state_pb2.ClientStateListResponse.Entry)
+        self.assert_all_instances(
+            response.entries,
+            client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('0' * 69 + '2', response.entries[0].address)
         self.assertEqual(b'5', response.entries[0].data)
 
@@ -345,7 +356,7 @@ class TestStateListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(self.roots[1], response.state_root)
-        self.assert_valid_paging(response, '0' * 69 + '2',  1)
+        self.assert_valid_paging(response, '0' * 69 + '2', 1)
         self.assertEqual(1, len(response.entries))
         self.assert_all_instances(
             response.entries,
@@ -374,8 +385,9 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual(self.roots[2], response.state_root)
         self.assert_valid_paging(response, '0' * 69 + '2', 1)
         self.assertEqual(1, len(response.entries))
-        self.assert_all_instances(response.entries,
-                                  client_state_pb2.ClientStateListResponse.Entry)
+        self.assert_all_instances(
+            response.entries,
+            client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('0' * 69 + '2', response.entries[0].address)
         self.assertEqual(b'5', response.entries[0].data)
 
@@ -403,8 +415,9 @@ class TestStateListRequests(ClientHandlerTestCase):
         self.assertEqual(self.roots[2], response.state_root)
         self.assert_valid_paging(response, '0' * 69 + '3', 100)
         self.assertEqual(3, len(response.entries))
-        self.assert_all_instances(response.entries,
-                                  client_state_pb2.ClientStateListResponse.Entry)
+        self.assert_all_instances(
+            response.entries,
+            client_state_pb2.ClientStateListResponse.Entry)
         self.assertEqual('0' * 69 + '3', response.entries[0].address)
         self.assertEqual(b'7', response.entries[0].data)
         self.assertEqual('0' * 69 + '1', response.entries[2].address)
@@ -503,7 +516,8 @@ class TestStateGetRequests(ClientHandlerTestCase):
             - that state_root is missing (queried by root)
             - a value of b'4'
         """
-        response = self.make_request(address='0' * 69 + '2', state_root=self.roots[1])
+        response = self.make_request(
+            address='0' * 69 + '2', state_root=self.roots[1])
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(self.roots[1], response.state_root)
@@ -529,13 +543,14 @@ class TestStateGetRequests(ClientHandlerTestCase):
             - a status of NO_ROOT
             - that value and state_root are missing
         """
-        # Since it is hard to predict what the state root will be ahead of time,
-        # just search for one we know is missing.
+        # Since it is hard to predict what the state root will be
+        # ahead of time, just search for one we know is missing.
         i = 0
         missing_root = format(i, 'x').zfill(64)
         while missing_root in self.roots:
             missing_root = format(i, 'x').zfill(64)
-        response = self.make_request(address='0' * 69 + '2', state_root=missing_root)
+        response = self.make_request(
+            address='0' * 69 + '2', state_root=missing_root)
 
         self.assertEqual(self.status.NO_ROOT, response.status)
         self.assertFalse(response.value)
@@ -551,7 +566,8 @@ class TestStateGetRequests(ClientHandlerTestCase):
             - a status of NO_RESOURCE
             - that value and state_root are missing
         """
-        response = self.make_request(address='0' * 69 + '3', state_root=self.roots[1])
+        response = self.make_request(
+            address='0' * 69 + '3', state_root=self.roots[1])
 
         self.assertEqual(self.status.NO_RESOURCE, response.status)
         self.assertFalse(response.state_root)

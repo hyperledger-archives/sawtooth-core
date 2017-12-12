@@ -103,8 +103,10 @@ def _validate_depedencies(batches):
             txn_header.ParseFromString(txn.header)
 
             if txn_header.dependencies:
-                unsatisfied_deps = [id for id in txn_header.dependencies
-                                    if id not in transaction_ids]
+                unsatisfied_deps = [
+                    id for id in txn_header.dependencies
+                    if id not in transaction_ids
+                ]
                 if unsatisfied_deps:
                     raise CliException(
                         'Unsatisfied dependency in given transactions:'

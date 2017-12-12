@@ -60,14 +60,24 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Validator(object):
-
-    def __init__(self, bind_network, bind_component, endpoint,
-                 peering, seeds_list, peer_list, data_dir, config_dir,
-                 identity_signer, scheduler_type, permissions,
-                 minimum_peer_connectivity, maximum_peer_connectivity,
-                 network_public_key=None, network_private_key=None,
-                 roles=None, metrics_registry=None
-                 ):
+    def __init__(self,
+                 bind_network,
+                 bind_component,
+                 endpoint,
+                 peering,
+                 seeds_list,
+                 peer_list,
+                 data_dir,
+                 config_dir,
+                 identity_signer,
+                 scheduler_type,
+                 permissions,
+                 minimum_peer_connectivity,
+                 maximum_peer_connectivity,
+                 network_public_key=None,
+                 network_private_key=None,
+                 roles=None,
+                 metrics_registry=None):
         """Constructs a validator instance.
 
         Args:

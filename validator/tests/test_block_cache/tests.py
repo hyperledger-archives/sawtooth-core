@@ -36,15 +36,15 @@ class BlockCacheTest(unittest.TestCase):
 
         header1 = BlockHeader(previous_block_id="000")
         block1 = BlockWrapper(Block(header=header1.SerializeToString(),
-                              header_signature="ABC"))
+                                    header_signature="ABC"))
 
         header2 = BlockHeader(previous_block_id="ABC")
         block2 = BlockWrapper(Block(header=header2.SerializeToString(),
-                              header_signature="DEF"))
+                                    header_signature="DEF"))
 
         header3 = BlockHeader(previous_block_id="BCA")
         block3 = BlockWrapper(Block(header=header3.SerializeToString(),
-                              header_signature="FED"))
+                                    header_signature="FED"))
 
         cache[block1.header_signature] = block1
         cache[block2.header_signature] = block2

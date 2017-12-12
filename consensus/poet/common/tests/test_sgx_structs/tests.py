@@ -30,7 +30,6 @@ from sawtooth_poet_common import sgx_structs
 
 
 class TestSgxStructs(unittest.TestCase):
-
     @staticmethod
     def create_random_buffer(length):
         return os.urandom(length)

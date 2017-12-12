@@ -44,9 +44,7 @@ class IntkeyClient(RestClient):
     def calculate_tolerance(self):
         length = len(list(self.list_blocks()))
         # the most recent nth of the chain, at least 2 blocks
-        return max(
-            2,
-            length // 5)
+        return max(2, length // 5)
 
     def poll_for_batches(self, batch_ids):
         """Poll timeout seconds for a batch status to become
@@ -62,7 +60,8 @@ class IntkeyClient(RestClient):
 
             res = self._get(
                 '/batch_statuses',
-                id=','.join(batch_ids), wait=(self.wait - time_waited))
+                id=','.join(batch_ids),
+                wait=(self.wait - time_waited))
 
             if 'PENDING' not in [data['status'] for data in res['data']]:
                 return

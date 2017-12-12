@@ -62,9 +62,11 @@ class TestCompleter(unittest.TestCase):
         txn_list = []
 
         for i in range(count):
-            payload = {'Verb': 'set',
-                       'Name': 'name' + str(random.randint(0, 100)),
-                       'Value': random.randint(0, 100)}
+            payload = {
+                'Verb': 'set',
+                'Name': 'name' + str(random.randint(0, 100)),
+                'Value': random.randint(0, 100)
+            }
             intkey_prefix = \
                 hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
 
@@ -117,16 +119,20 @@ class TestCompleter(unittest.TestCase):
 
             signature = self.signer.sign(header_bytes)
 
-            batch = Batch(header=header_bytes,
-                          transactions=txn_list,
-                          header_signature=signature)
+            batch = Batch(
+                header=header_bytes,
+                transactions=txn_list,
+                header_signature=signature)
 
             batch_list.append(batch)
 
         return batch_list
 
-    def _create_blocks(self, block_count, batch_count,
-                       missing_predecessor=False, missing_batch=False,
+    def _create_blocks(self,
+                       block_count,
+                       batch_count,
+                       missing_predecessor=False,
+                       missing_batch=False,
                        find_batch=True):
         block_list = []
         pred = 0
@@ -137,7 +143,7 @@ class TestCompleter(unittest.TestCase):
             if missing_predecessor:
                 predecessor = "Missing"
             else:
-                predecessor = (block_list[i-1].header_signature if i > 0 else
+                predecessor = (block_list[i - 1].header_signature if i > 0 else
                                NULL_BLOCK_IDENTIFIER)
 
             block_header = BlockHeader(
@@ -155,9 +161,10 @@ class TestCompleter(unittest.TestCase):
                     self.completer.add_batch(batch_list[-1])
                 batch_list = batch_list[:-1]
 
-            block = Block(header=header_bytes,
-                          batches=batch_list,
-                          header_signature=signature)
+            block = Block(
+                header=header_bytes,
+                batches=batch_list,
+                header_signature=signature)
 
             block_list.append(block)
 
@@ -168,7 +175,7 @@ class TestCompleter(unittest.TestCase):
         Add completed block to completer. Block should be passed to
         on_block_recieved.
         """
-        block = self._create_blocks(1,1)[0]
+        block = self._create_blocks(1, 1)[0]
         self.completer.add_block(block)
         self.assertIn(block.header_signature, self.blocks)
 
@@ -223,7 +230,6 @@ class TestCompleter(unittest.TestCase):
         self.assertEqual(
             block,
             self.completer.get_block(block.header_signature).get_block())
-
 
     def test_block_missing_batch_not_in_cache(self):
         """
@@ -289,10 +295,10 @@ class TestCompleter(unittest.TestCase):
                       self.gossip.requested_batches_by_transactin_id)
 
         missing = Transaction(header_signature="Missing")
-        missing_batch= Batch(header_signature="Missing_batch",
-                             transactions=[missing])
+        missing_batch = Batch(header_signature="Missing_batch",
+                              transactions=[missing])
         self.completer.add_batch(missing_batch)
-        self.assertIn(missing_batch.header_signature, self.batches )
+        self.assertIn(missing_batch.header_signature, self.batches)
         self.assertIn(batch.header_signature, self.batches)
         self.assertEqual(missing_batch,
                          self.completer.get_batch_by_transaction("Missing"))

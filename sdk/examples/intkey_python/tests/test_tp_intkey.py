@@ -29,7 +29,6 @@ MAX_NAME_LENGTH = 20
 
 
 class TestIntkey(TransactionProcessorTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

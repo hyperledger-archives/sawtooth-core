@@ -109,8 +109,10 @@ class MerkleDatabase(object):
         return self._set_by_addr(address, value)
 
     def _tokenize_address(self, address):
-        return [address[i:i + TOKEN_SIZE]
-                for i in range(0, len(address), TOKEN_SIZE)]
+        return [
+            address[i:i + TOKEN_SIZE]
+            for i in range(0, len(address), TOKEN_SIZE)
+        ]
 
     def _get_by_addr(self, address):
         tokens = self._tokenize_address(address)

@@ -182,7 +182,6 @@ class TestPoetBlockVerifier(TestCase):
                                                 mock_poet_settings_view,
                                                 mock_block_wrapper,
                                                 mock_consensus_state_store):
-
         """ Test verifies that PoET Block Verifier fails if a block is
         claimed by an unknown validator (the validator is not listed
         in the validator registry)
@@ -251,7 +250,6 @@ class TestPoetBlockVerifier(TestCase):
             mock_poet_settings_view,
             mock_block_wrapper,
             mock_consensus_state_store):
-
         """ Test verifies that PoET Block Verifier fails if
         a validator's signup info was not committed to
         the block chain within the allowed configured delay
@@ -324,7 +322,6 @@ class TestPoetBlockVerifier(TestCase):
                       mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
-
         """ Test verifies the K Policy: that PoET Block Verifier fails
         if a validator attempts to claim more blocks than is allowed
         by the key block claim limit
@@ -397,7 +394,6 @@ class TestPoetBlockVerifier(TestCase):
                       mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
-
         """ Test verifies the C Policy: that PoET Block Verifier fails
          if a validator attempts to claim a block before
          the block claim delay block has passed
@@ -471,7 +467,6 @@ class TestPoetBlockVerifier(TestCase):
                       mock_poet_settings_view,
                       mock_block_wrapper,
                       mock_consensus_state_store):
-
         """ Test verifies the Z Policy: that PoET Block Verifier fails
         if a validator attempts to claim more blocks frequently than is allowed
         """
@@ -544,7 +539,6 @@ class TestPoetBlockVerifier(TestCase):
             mock_poet_settings_view,
             mock_block_wrapper,
             mock_consensus_state_store):
-
         """ Test verifies that PoET Block Verifier succeeds if
         a validator successfully passes all criteria necessary
         to claim a block

@@ -72,9 +72,9 @@ def load_toml_validator_config(filename):
     bind_component = None
     for bind in toml_config.get("bind", []):
         if "network" in bind:
-            bind_network = bind[bind.find(":")+1:]
+            bind_network = bind[bind.find(":") + 1:]
         if "component" in bind:
-            bind_component = bind[bind.find(":")+1:]
+            bind_component = bind[bind.find(":") + 1:]
 
     network_public_key = None
     network_private_key = None
@@ -86,24 +86,24 @@ def load_toml_validator_config(filename):
         network_private_key = toml_config.get("network_private_key").encode()
 
     config = ValidatorConfig(
-         bind_network=bind_network,
-         bind_component=bind_component,
-         endpoint=toml_config.get("endpoint", None),
-         peering=toml_config.get("peering", None),
-         seeds=toml_config.get("seeds", None),
-         peers=toml_config.get("peers", None),
-         network_public_key=network_public_key,
-         network_private_key=network_private_key,
-         scheduler=toml_config.get("scheduler", None),
-         permissions=parse_permissions(toml_config.get("permissions", None)),
-         roles=toml_config.get("roles", None),
-         opentsdb_url=toml_config.get("opentsdb_url", None),
-         opentsdb_db=toml_config.get("opentsdb_db", None),
-         opentsdb_username=toml_config.get("opentsdb_username", None),
-         opentsdb_password=toml_config.get("opentsdb_password", None),
-         minimum_peer_connectivity=toml_config.get(
+        bind_network=bind_network,
+        bind_component=bind_component,
+        endpoint=toml_config.get("endpoint", None),
+        peering=toml_config.get("peering", None),
+        seeds=toml_config.get("seeds", None),
+        peers=toml_config.get("peers", None),
+        network_public_key=network_public_key,
+        network_private_key=network_private_key,
+        scheduler=toml_config.get("scheduler", None),
+        permissions=parse_permissions(toml_config.get("permissions", None)),
+        roles=toml_config.get("roles", None),
+        opentsdb_url=toml_config.get("opentsdb_url", None),
+        opentsdb_db=toml_config.get("opentsdb_db", None),
+        opentsdb_username=toml_config.get("opentsdb_username", None),
+        opentsdb_password=toml_config.get("opentsdb_password", None),
+        minimum_peer_connectivity=toml_config.get(
             "minimum_peer_connectivity", None),
-         maximum_peer_connectivity=toml_config.get(
+        maximum_peer_connectivity=toml_config.get(
             "maximum_peer_connectivity", None)
     )
 
@@ -171,24 +171,23 @@ def merge_validator_config(configs):
             maximum_peer_connectivity = config.maximum_peer_connectivity
 
     return ValidatorConfig(
-         bind_network=bind_network,
-         bind_component=bind_component,
-         endpoint=endpoint,
-         peering=peering,
-         seeds=seeds,
-         peers=peers,
-         network_public_key=network_public_key,
-         network_private_key=network_private_key,
-         scheduler=scheduler,
-         permissions=permissions,
-         roles=roles,
-         opentsdb_url=opentsdb_url,
-         opentsdb_db=opentsdb_db,
-         opentsdb_username=opentsdb_username,
-         opentsdb_password=opentsdb_password,
-         minimum_peer_connectivity=minimum_peer_connectivity,
-         maximum_peer_connectivity=maximum_peer_connectivity
-    )
+        bind_network=bind_network,
+        bind_component=bind_component,
+        endpoint=endpoint,
+        peering=peering,
+        seeds=seeds,
+        peers=peers,
+        network_public_key=network_public_key,
+        network_private_key=network_private_key,
+        scheduler=scheduler,
+        permissions=permissions,
+        roles=roles,
+        opentsdb_url=opentsdb_url,
+        opentsdb_db=opentsdb_db,
+        opentsdb_username=opentsdb_username,
+        opentsdb_password=opentsdb_password,
+        minimum_peer_connectivity=minimum_peer_connectivity,
+        maximum_peer_connectivity=maximum_peer_connectivity)
 
 
 def parse_permissions(permissions):

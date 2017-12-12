@@ -43,6 +43,6 @@ setup(name='sawtooth-poet-simulator',
           'sawtooth-poet-simulator',
           'sawtooth-signing',
           'sawtooth-validator',
-          ],
+      ],
       data_files=data_files,
       entry_points={})

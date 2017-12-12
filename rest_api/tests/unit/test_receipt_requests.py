@@ -28,7 +28,6 @@ ID_D = 'd' * 128
 
 
 class ReceiptGetRequestTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_RECEIPT_GET_REQUEST,
@@ -91,7 +90,8 @@ class ReceiptGetRequestTests(BaseApiTest):
             receipts=receipts,
             status=self.status.NO_RESOURCE)
 
-        response = await self.get_assert_status('/receipts?id={}'.format(ID_D), 404)
+        response = await self.get_assert_status('/receipts?id={}'.format(ID_D),
+                                                404)
         self.connection.assert_valid_request_sent(transaction_ids=[ID_D])
 
         self.assert_has_valid_error(response, 80)
@@ -110,7 +110,8 @@ class ReceiptGetRequestTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - link property ending in '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D)
+            - link property ending in
+                '/receipts?id={},{},{}' .format(ID_B, ID_C, ID_D)
             - a data property matching the batch statuses received
         """
         receipts = [
@@ -145,7 +146,8 @@ class ReceiptGetRequestTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - link property ending in '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D)
+            - link property ending in
+                '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D)
             - a data property matching the batch statuses received
         """
         receipts = [

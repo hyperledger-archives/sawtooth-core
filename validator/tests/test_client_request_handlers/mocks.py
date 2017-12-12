@@ -29,6 +29,7 @@ import logging
 
 LOGGER = logging.getLogger(__name__)
 
+
 def _increment_key(key, offset=1):
     if type(key) == int:
         return key + offset
@@ -36,6 +37,7 @@ def _increment_key(key, offset=1):
         return str(int(key) + offset)
     except ValueError:
         return chr(ord(key) + offset)
+
 
 def _make_mock_transaction(base_id='id', payload='payload'):
     txn_id = 'c' * (128 - len(base_id)) + base_id
@@ -50,6 +52,7 @@ def _make_mock_transaction(base_id='id', payload='payload'):
         header=header.SerializeToString(),
         header_signature=txn_id,
         payload=payload.encode())
+
 
 def make_mock_batch(base_id='id'):
     batch_id = 'a' * (128 - len(base_id)) + base_id
@@ -67,12 +70,14 @@ def make_mock_batch(base_id='id'):
 
 class MockBlockStore(BlockStore):
     """
-    Creates a block store with a preseeded chain of blocks.
-    With defaults, creates three blocks with ids ranging from 'bbb...0' to 'bbb...2',
-    with a single batch, and single transaction in each, with ids prefixed by
-    'aaa...'' or 'ccc...'. Using the optional root parameter for add_block, it is
-    possible to save meaningful state_root_hashes to a block.
+    Creates a block store with a preseeded chain of blocks. With defaults,
+    creates three blocks with ids ranging from 'bbb...0' to 'bbb...2',
+    with a single batch, and single transaction in each, with ids
+    prefixed by 'aaa...'' or 'ccc...'. Using the optional root
+    parameter for add_block, it is possible to save meaningful
+    state_root_hashes to a block.
     """
+
     def __init__(self, size=3, start='0'):
         super().__init__(DictDatabase(
             indexes=BlockStore.create_index_configuration()))
@@ -120,10 +125,11 @@ def make_db_and_store(size=3):
         * 0 - {'000...1': b'1'}
         * 1 - {'000...1': b'2', '000...2': b'4'}
         * 2 - {'000...1': b'3', '000...2': b'5', '000...3': b'7'}
-        * 3 - {'000...1': b'4', '000...2': b'6', '000...3': b'8', '000...4': b'10'}
+        * 3 - {'000...1': b'4', '000...2': b'6',
+               '000...3': b'8', '000...4': b'10'}
     """
     database = DictDatabase()
-    store = MockBlockStore(size=0);
+    store = MockBlockStore(size=0)
     roots = []
 
     merkle = MerkleDatabase(database)
@@ -153,7 +159,9 @@ def make_store_and_tracker(size=3):
     """
     Creates and returns two related objects for testing:
         * store - a mock block store, with a default start
-        * tracker - a batch tracker attached to the store, with one pending batch
+
+        * tracker - a batch tracker attached to the store, with one
+          pending batch
 
     With defaults, the three block ids in the store will be:
         * 'bbb...0', 'bbb...1', 'bbb...2'
@@ -169,6 +177,7 @@ def make_store_and_tracker(size=3):
     tracker.notify_txn_invalid('c' * 127 + 'f', 'error message', b'error data')
 
     return store, tracker
+
 
 class MockGossip:
     def get_peers(self):

@@ -46,14 +46,15 @@ class LMDBNoLockDatabase(database.Database):
                 os.remove(filename)
             create = True
 
-        self._lmdb = lmdb.Environment(path=filename,
-                                      map_size=1024**4,
-                                      map_async=True,
-                                      writemap=True,
-                                      readahead=False,
-                                      subdir=False,
-                                      create=create,
-                                      lock=True)
+        self._lmdb = lmdb.Environment(
+            path=filename,
+            map_size=1024**4,
+            map_async=True,
+            writemap=True,
+            readahead=False,
+            subdir=False,
+            create=create,
+            lock=True)
 
     # pylint: disable=no-value-for-parameter
     def __len__(self):

@@ -35,12 +35,14 @@ def peer_with_genesis_only(num):
     else:
         return ''
 
+
 def peer_to_preceding_only(num):
     if num > 0:
         return '--peers {}'.format(
             endpoint(num - 1))
     else:
         return ''
+
 
 def everyone_peers_with_everyone(num):
     if num > 0:
@@ -56,8 +58,15 @@ def intkey_config_registry(num):
     # all nodes get the same processors
     return 'intkey-tp-python', 'settings-tp', 'poet-validator-registry-tp'
 
+
 def intkey_config_identity_registry(num):
-    return 'intkey-tp-python', 'settings-tp', 'identity-tp', 'poet-validator-registry-tp'
+    return (
+        'intkey-tp-python',
+        'settings-tp',
+        'identity-tp',
+        'poet-validator-registry-tp',
+    )
+
 
 def intkey_xo_config_registry(num):
     # all nodes get the same processors
@@ -74,11 +83,14 @@ def intkey_xo_config_registry(num):
 def all_serial(num):
     return 'serial'
 
+
 def all_parallel(num):
     return 'parallel'
 
+
 def even_parallel_odd_serial(num):
     return 'parallel' if num % 2 == 0 else 'serial'
+
 
 def even_serial_odd_parallel(num):
     return 'parallel' if num % 2 == 1 else 'serial'
@@ -105,6 +117,7 @@ def start_node(num,
     wait_for_rest_apis(['127.0.0.1:{}'.format(8008 + num)], tries=20)
 
     return [rest_api] + processors + [validator]
+
 
 def stop_node(process_list):
     # This may seem a little dramatic, but seriously,
@@ -167,7 +180,7 @@ def validator_cmds(num,
 
     with open(
         '/project/sawtooth-core/consensus/poet/simulator/packaging/'
-        'simulator_rk_pub.pem') as fd:
+            'simulator_rk_pub.pem') as fd:
         public_key_pem = fd.read()
 
     # Use the poet CLI to get the enclave measurement so that we can put the
@@ -281,6 +294,7 @@ def processor_cmds(num, processor_func):
 
     return processor_cmds
 
+
 def processor_verbosity(processor_name):
     '''
     Transactions processors like intkey and xo are very talkative,
@@ -294,6 +308,7 @@ def processor_verbosity(processor_name):
             return '-v'
 
     return ''
+
 
 def start_processors(num, processor_func):
     return [
@@ -310,6 +325,7 @@ def rest_api_cmd(num):
         p=(8008 + num)
     )
 
+
 def start_rest_api(num):
     return start_process(
         rest_api_cmd(num))
@@ -319,14 +335,18 @@ def start_rest_api(num):
 def endpoint(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
+
 def connection_address(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)
+
 
 def http_address(num):
     return 'http://127.0.0.1:{}'.format(8008 + num)
 
+
 def bind_component(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)
+
 
 def bind_network(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)

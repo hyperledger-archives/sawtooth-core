@@ -24,7 +24,6 @@ from sawtooth_validator.state.state_view import StateViewFactory
 
 
 class TestIdentityView(unittest.TestCase):
-
     def setUp(self):
         self._database = DictDatabase()
         self._tree = MerkleDatabase(self._database)
@@ -61,9 +60,11 @@ class TestIdentityView(unittest.TestCase):
         role1.name = role1_name
         role1.policy_name = "this_is_an_example"
 
-        state_root1 = self._tree.update(set_items={
-            _get_role_address(role1_name): role_list.SerializeToString()
-        }, virtual=False)
+        state_root1 = self._tree.update(
+            set_items={
+                _get_role_address(role1_name): role_list.SerializeToString()
+            },
+            virtual=False)
 
         # 2.
         identity_view1 = identity_view_factory.create_identity_view(
@@ -74,9 +75,10 @@ class TestIdentityView(unittest.TestCase):
             "IdentityView().get_role returns the correct Role by name.")
 
         # 3.
-        self.assertIsNone(identity_view1.get_role("Not-a-Role"),
-                          "IdentityView().get_role returns None if there is "
-                          "no Role with that name.")
+        self.assertIsNone(
+            identity_view1.get_role("Not-a-Role"),
+            "IdentityView().get_role returns None if there is "
+            "no Role with that name.")
 
         # 4.
         self.assertEqual(identity_view1.get_roles(),
@@ -94,9 +96,11 @@ class TestIdentityView(unittest.TestCase):
 
         self._tree.set_merkle_root(merkle_root=state_root1)
 
-        state_root2 = self._tree.update({
-            _get_role_address(role2_name): role_list2.SerializeToString()
-        }, virtual=False)
+        state_root2 = self._tree.update(
+            {
+                _get_role_address(role2_name): role_list2.SerializeToString()
+            },
+            virtual=False)
 
         # 6.
         identity_view2 = identity_view_factory.create_identity_view(
@@ -153,9 +157,12 @@ class TestIdentityView(unittest.TestCase):
 
         policy1.name = policy1_name
 
-        state_root1 = self._tree.update(set_items={
-            _get_policy_address(policy1_name): policy_list.SerializeToString()
-        }, virtual=False)
+        state_root1 = self._tree.update(
+            set_items={
+                _get_policy_address(policy1_name):
+                policy_list.SerializeToString()
+            },
+            virtual=False)
 
         # 2.
         identity_view1 = identity_view_factory.create_identity_view(
@@ -166,9 +173,10 @@ class TestIdentityView(unittest.TestCase):
             "IdentityView().get_policy returns the correct Policy by name.")
 
         # 3.
-        self.assertIsNone(identity_view1.get_policy("Not-a-Policy"),
-                          "IdentityView().get_policy returns None if "
-                          "there is no Policy with that name.")
+        self.assertIsNone(
+            identity_view1.get_policy("Not-a-Policy"),
+            "IdentityView().get_policy returns None if "
+            "there is no Policy with that name.")
 
         # 4.
         self.assertEqual(identity_view1.get_policies(),
@@ -185,9 +193,12 @@ class TestIdentityView(unittest.TestCase):
 
         self._tree.set_merkle_root(merkle_root=state_root1)
 
-        state_root2 = self._tree.update({
-            _get_policy_address(policy2_name): policy_list2.SerializeToString()
-        }, virtual=False)
+        state_root2 = self._tree.update(
+            {
+                _get_policy_address(policy2_name):
+                policy_list2.SerializeToString()
+            },
+            virtual=False)
 
         # 6.
         identity_view2 = identity_view_factory.create_identity_view(

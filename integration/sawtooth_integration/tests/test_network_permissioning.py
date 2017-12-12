@@ -79,7 +79,6 @@ class TestNetworkPermissioning(unittest.TestCase):
 
         """
 
-
         walter = Admin("http://127.0.0.1:{}".format(8008 + 0))
 
         sawtooth_home0 = mkdtemp()
@@ -93,15 +92,19 @@ class TestNetworkPermissioning(unittest.TestCase):
                 sawtooth_home0,
                 roles={"network": "trust"},
                 endpoint="tcp://127.0.0.1:{}".format(8800 + 0),
-                bind=["network:tcp://127.0.0.1:{}".format(8800 + 0),
-                      "component:tcp://127.0.0.1:{}".format(4004 + 0)],
+                bind=[
+                    "network:tcp://127.0.0.1:{}".format(8800 + 0),
+                    "component:tcp://127.0.0.1:{}".format(4004 + 0)
+                ],
                 seeds=["tcp://127.0.0.1:{}".format(8800 + 1)],
                 peering="dynamic",
                 scheduler='parallel')
             validator_non_genesis_init(sawtooth_home1)
-            validator_genesis_init(sawtooth_home0, sawtooth_home1,
-                                   identity_pub_key=walter.pub_key,
-                                   role="network")
+            validator_genesis_init(
+                sawtooth_home0,
+                sawtooth_home1,
+                identity_pub_key=walter.pub_key,
+                role="network")
             self.processes.extend(start_validator(0, sawtooth_home0))
             self.clients.append(Client(NodeController.http_address(0)))
 
@@ -110,8 +113,10 @@ class TestNetworkPermissioning(unittest.TestCase):
                 sawtooth_home1,
                 roles={"network": "trust"},
                 endpoint="tcp://127.0.0.1:{}".format(8800 + 1),
-                bind=["network:tcp://127.0.0.1:{}".format(8800 + 1),
-                      "component:tcp://127.0.0.1:{}".format(4004 + 1)],
+                bind=[
+                    "network:tcp://127.0.0.1:{}".format(8800 + 1),
+                    "component:tcp://127.0.0.1:{}".format(4004 + 1)
+                ],
                 peering="dynamic",
                 seeds=["tcp://127.0.0.1:{}".format(8800 + 0)],
                 scheduler='parallel')
@@ -119,9 +124,13 @@ class TestNetworkPermissioning(unittest.TestCase):
             self.processes.extend(start_validator(1, sawtooth_home1))
             self.clients.append(Client(NodeController.http_address(1)))
 
-        with open(os.path.join(self.sawtooth_home[1], 'keys', 'validator.pub'), 'r') as infile:
+        with open(
+                os.path.join(self.sawtooth_home[1], 'keys', 'validator.pub'),
+                'r') as infile:
             non_genesis_key = infile.read().strip('\n')
-        with open(os.path.join(self.sawtooth_home[0], 'keys', 'validator.pub'), 'r') as infile:
+        with open(
+                os.path.join(self.sawtooth_home[0], 'keys', 'validator.pub'),
+                'r') as infile:
             genesis_key = infile.read().strip('\n')
 
         wait_for_consensus(self.clients, amount=2)
@@ -202,15 +211,19 @@ class TestNetworkPermissioning(unittest.TestCase):
                 sawtooth_home0,
                 roles={"network": "challenge"},
                 endpoint="tcp://127.0.0.1:{}".format(8800 + 2),
-                bind=["network:tcp://127.0.0.1:{}".format(8800 + 2),
-                      "component:tcp://127.0.0.1:{}".format(4004 + 2)],
+                bind=[
+                    "network:tcp://127.0.0.1:{}".format(8800 + 2),
+                    "component:tcp://127.0.0.1:{}".format(4004 + 2)
+                ],
                 seeds=["tcp://127.0.0.1:{}".format(8800 + 3)],
                 peering="dynamic",
                 scheduler='parallel')
             validator_non_genesis_init(sawtooth_home1)
-            validator_genesis_init(sawtooth_home0, sawtooth_home1,
-                                   identity_pub_key=walter.pub_key,
-                                   role="network")
+            validator_genesis_init(
+                sawtooth_home0,
+                sawtooth_home1,
+                identity_pub_key=walter.pub_key,
+                role="network")
             processes.extend(start_validator(2, sawtooth_home0))
             self.clients.append(Client(NodeController.http_address(2)))
 
@@ -219,8 +232,10 @@ class TestNetworkPermissioning(unittest.TestCase):
                 sawtooth_home1,
                 roles={"network": "challenge"},
                 endpoint="tcp://127.0.0.1:{}".format(8800 + 3),
-                bind=["network:tcp://127.0.0.1:{}".format(8800 + 3),
-                      "component:tcp://127.0.0.1:{}".format(4004 + 3)],
+                bind=[
+                    "network:tcp://127.0.0.1:{}".format(8800 + 3),
+                    "component:tcp://127.0.0.1:{}".format(4004 + 3)
+                ],
                 peering="dynamic",
                 seeds=["tcp://127.0.0.1:{}".format(8800 + 2)],
                 scheduler='parallel')
@@ -277,10 +292,12 @@ class TestNetworkPermissioning(unittest.TestCase):
         show_blocks(self.clients[0].block_list())
         show_blocks(self.clients[1].block_list())
 
+
 def write_validator_config(sawtooth_home, **kwargs):
     with open(os.path.join(sawtooth_home, 'etc',
                            'validator.toml'), mode='w') as out:
         toml.dump(kwargs, out)
+
 
 def start_validator(num, sawtooth_home):
     return NodeController.start_node(
@@ -295,15 +312,14 @@ def start_validator(num, sawtooth_home):
 
 def show_blocks(block_list):
     blocks = [("Block Num", "Block ID", "Signer Key")] + block_list
-    output = "\n" + "\n".join(["{:^5} {:^21} {:^21}".format(item[0],
-                                            item[1][:10],
-                                            item[2][:10])
-               for item in blocks])
+    output = "\n" + "\n".join([
+        "{:^5} {:^21} {:^21}".format(item[0], item[1][:10], item[2][:10])
+        for item in blocks
+    ])
     LOGGER.warning(output)
 
 
 class Client(object):
-
     def __init__(self, rest_endpoint):
         context = create_context('secp256k1')
         private_key = context.new_random_private_key()
@@ -321,13 +337,21 @@ class Client(object):
 
     def send(self):
         name = uuid4().hex[:20]
-        txns = [self._factory.create_transaction(
-            cbor.dumps({'Name': name,
-                        'Verb': 'set',
-                        'Value': 1000}),
-            inputs=[self._namespace + self._factory.sha512(name.encode())[-64:]],
-            outputs=[self._namespace + self._factory.sha512(name.encode())[-64:]],
-            deps=[])]
+        txns = [
+            self._factory.create_transaction(
+                cbor.dumps({
+                    'Name': name,
+                    'Verb': 'set',
+                    'Value': 1000
+                }),
+                inputs=[
+                    self._namespace + self._factory.sha512(name.encode())[-64:]
+                ],
+                outputs=[
+                    self._namespace + self._factory.sha512(name.encode())[-64:]
+                ],
+                deps=[])
+        ]
         self._rest.send_batches(self._factory.create_batch(txns))
 
     def block_list(self):
@@ -507,7 +531,8 @@ def validator_genesis_init(sawtooth_home_genesis,
     with open(priv, 'r') as infile:
         priv_key = infile.read().strip('\n')
 
-    priv_non = os.path.join(sawtooth_home_non_genesis, 'keys', 'validator.priv')
+    priv_non = os.path.join(sawtooth_home_non_genesis,
+                            'keys', 'validator.priv')
     with open(priv, 'r') as infile:
         priv_key_non = infile.read().strip('\n')
 
@@ -520,7 +545,7 @@ def validator_genesis_init(sawtooth_home_genesis,
 
     with open(
         '/project/sawtooth-core/consensus/poet/simulator/packaging/'
-        'simulator_rk_pub.pem') as fd:
+            'simulator_rk_pub.pem') as fd:
         public_key_pem = fd.read().strip('\n')
 
     # Use the poet CLI to get the enclave measurement so that we can put the
@@ -544,7 +569,8 @@ def validator_genesis_init(sawtooth_home_genesis,
     subprocess.run([
         'sawset', 'proposal', 'create',
         '-k', priv,
-        'sawtooth.identity.allowed_keys={},{}'.format(identity_pub_key, priv_key),
+        'sawtooth.identity.allowed_keys={},{}'.format(
+            identity_pub_key, priv_key),
         'sawtooth.consensus.algorithm=poet',
         'sawtooth.poet.report_public_key_pem={}'.format(public_key_pem),
         'sawtooth.poet.valid_enclave_measurements={}'.format(
@@ -567,9 +593,11 @@ def validator_genesis_init(sawtooth_home_genesis,
                     'policy',
                     'create',
                     '-k', priv,
-                    '-o', os.path.join(sawtooth_home_genesis, 'data', 'policy.batch'),
+                    '-o', os.path.join(sawtooth_home_genesis,
+                                       'data', 'policy.batch'),
                     policy,
-                    "PERMIT_KEY {} PERMIT_KEY {}".format(priv_key, priv_key_non)],
+                    "PERMIT_KEY {} PERMIT_KEY {}".format(priv_key,
+                                                         priv_key_non)],
                    check=True)
 
     subprocess.run(['sawtooth',
@@ -593,5 +621,5 @@ def validator_genesis_init(sawtooth_home_genesis,
 def validator_non_genesis_init(sawtooth_home):
     os.mkdir(os.path.join(sawtooth_home, 'keys'))
     subprocess.run(['sawadm', 'keygen',
-        os.path.join(sawtooth_home, 'keys', 'validator')],
+                    os.path.join(sawtooth_home, 'keys', 'validator')],
                    check=True)

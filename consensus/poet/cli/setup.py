@@ -20,25 +20,23 @@ import subprocess
 
 from setuptools import setup, find_packages
 
-
-setup(name='sawtooth-poet-cli',
-      version=subprocess.check_output(
-          ['../../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth PoET CLI',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'colorlog',
-          'protobuf',
-          'sawtooth-poet-common',
-          'sawtooth-poet-core',
-          'sawtooth-signing',
-          'sawtooth-validator',
-          'toml',
-          ],
-      entry_points={
-          'console_scripts': [
-              'poet = sawtooth_poet_cli.main:main_wrapper'
-          ]
-      })
+setup(
+    name='sawtooth-poet-cli',
+    version=subprocess.check_output(
+        ['../../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth PoET CLI',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'colorlog',
+        'protobuf',
+        'sawtooth-poet-common',
+        'sawtooth-poet-core',
+        'sawtooth-signing',
+        'sawtooth-validator',
+        'toml',
+    ],
+    entry_points={
+        'console_scripts': ['poet = sawtooth_poet_cli.main:main_wrapper']
+    })
