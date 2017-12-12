@@ -202,6 +202,11 @@ class Dispatcher(InstrumentedThread):
             LOGGER.exception("Dispatcher timeout waiting on handler result.")
             raise
 
+        if res is None:
+            LOGGER.debug('Ignoring None handler result, likely due to an '
+                         'unhandled error while executing the handler')
+            return
+
         if res.status == HandlerStatus.DROP:
             del self._message_information[message_id]
 
