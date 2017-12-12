@@ -64,10 +64,6 @@ int memcpy_s(void *dest, size_t sizeInBytes, const void *src, size_t count)
 
 int strncpy_s(char *dest, size_t sizeInBytes, const char *src, size_t count)
 {
-    if (dest == NULL) {
-        return 0;
-    }
-
     if (count == 0 && dest == NULL && sizeInBytes == 0) {
         return 0;
     }
