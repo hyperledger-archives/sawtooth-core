@@ -416,7 +416,7 @@ class TestContextManager(unittest.TestCase):
             base_contexts=[],
             inputs=[self._create_address('a')[:10]],
             outputs=[self._create_address('c')])
-        self.assertEquals(
+        self.assertEqual(
             self.context_manager.get(
                 context_id=ctx_1a,
                 address_list=[self._create_address('a')]),
@@ -427,7 +427,7 @@ class TestContextManager(unittest.TestCase):
             base_contexts=[],
             inputs=[self._create_address('b')[:6]],
             outputs=[self._create_address('z')])
-        self.assertEquals(
+        self.assertEqual(
             self.context_manager.get(
                 context_id=ctx_1b,
                 address_list=[self._create_address('b')]),
@@ -451,7 +451,7 @@ class TestContextManager(unittest.TestCase):
                     self._create_address('b')[:10]],
             outputs=[self._create_address('w')])
 
-        self.assertEquals(
+        self.assertEqual(
             self.context_manager.get(
                 context_id=ctx_2,
                 address_list=[self._create_address('z'),
@@ -558,7 +558,7 @@ class TestContextManager(unittest.TestCase):
                                       persist=True, clean_up=True)
         # 2
         self.assertIsNotNone(resulting_state_hash)
-        self.assertEquals(resulting_state_hash, self.first_state_hash)
+        self.assertEqual(resulting_state_hash, self.first_state_hash)
 
     def test_squash_deletes_no_update(self):
         """Tests that squashing a context that has no state updates,
@@ -598,7 +598,7 @@ class TestContextManager(unittest.TestCase):
                                       persist=True, clean_up=True)
         # 3)
         self.assertIsNotNone(resulting_state_hash)
-        self.assertEquals(resulting_state_hash, self.first_state_hash)
+        self.assertEqual(resulting_state_hash, self.first_state_hash)
 
     def test_reads_from_context_w_several_writes(self):
         """Tests that those context values that have been written to the
@@ -667,10 +667,11 @@ class TestContextManager(unittest.TestCase):
                 context_a,
                 list(test_addresses.writes)
             )
-        self.assertEquals(
+
+        self.assertEqual(
             address_values,
             [(a, v) for a, v in zip(test_addresses.writes, values1)]
-            )
+        )
 
         # 3)
         values2 = [bytes(v.encode()) for v in test_addresses.outputs]
@@ -691,7 +692,7 @@ class TestContextManager(unittest.TestCase):
             context_id=context_id_a1,
             address_list=list(test_addresses.outputs)
         )
-        self.assertEquals(
+        self.assertEqual(
             c_ida1_address_values,
             [(a, v) for a, v in zip(test_addresses.outputs, values2)]
         )
@@ -719,7 +720,7 @@ class TestContextManager(unittest.TestCase):
         )
 
         # 8)
-        self.assertEquals(
+        self.assertEqual(
             self.context_manager.get(
                 context_id_b,
                 list(test_addresses2.writes + test_addresses.outputs)
@@ -844,7 +845,7 @@ class TestContextManager(unittest.TestCase):
                                        self._create_address('bbbb'): b'2',
                                        self._create_address('cccc'): b'4',
                                        self._create_address('llll'): b'8'})
-        self.assertEquals(calc_state_root, cm_state_root)
+        self.assertEqual(calc_state_root, cm_state_root)
 
     def test_complex_basecontext_squash(self):
         """Tests complex context basing and squashing.
@@ -1007,13 +1008,13 @@ class TestContextManager(unittest.TestCase):
         tree = MerkleDatabase(self.database_results)
         state_hash_from_1 = tree.update(
             set_items={a: v for a, v in zip(outputs_1,
-                                        [bytes(i)
-                                         for i in range(len(outputs_1))])},
-                                        virtual=False)
-        self.assertEquals(state_hash_from_1, sh1,
-                          "The manually calculated state hash from the first "
-                          "context and the one calculated by squashing that "
-                          "state hash should be the same")
+                                            [bytes(i)
+                                             for i in range(len(outputs_1))])},
+            virtual=False)
+        self.assertEqual(state_hash_from_1, sh1,
+                         "The manually calculated state hash from the first "
+                         "context and the one calculated by squashing that "
+                         "state hash should be the same")
         tree.set_merkle_root(state_hash_from_1)
         test_sh2 = tree.update(set_items={self._create_address('aa'): bytes(0),
                                           self._create_address('ab'): bytes(0),
@@ -1026,9 +1027,9 @@ class TestContextManager(unittest.TestCase):
                                           self._create_address('nn'): bytes(0),
                                           self._create_address('cc'): bytes(0)})
 
-        self.assertEquals(sh2, test_sh2, "Manually calculated and context "
-                                         "manager calculated merkle hashes "
-                                         "are the same")
+        self.assertEqual(sh2, test_sh2, "Manually calculated and context "
+                         "manager calculated merkle hashes "
+                         "are the same")
 
     def test_wildcarded_inputs_outputs(self):
         """Tests the context manager with wildcarded inputs and outputs.
