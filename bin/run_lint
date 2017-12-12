@@ -55,9 +55,9 @@ lint() {
     if [ "$packages" != "" ]; then
     [ $VERBOSE = 1 ] && (
         echo "------------------------------------------------------------------------------"
-        echo "-- Running pep8 in $subdir..."
+        echo "-- Running pycodestyle in $subdir..."
     )
-    pep8 --config=$topdir/.pep8 $packages || error=1
+    pycodestyle --config=$top_dir/.pycodestyle $packages || error=1
 
         [ $VERBOSE = 1 ] && (
             echo "------------------------------------------------------------------------------"
