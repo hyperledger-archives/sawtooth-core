@@ -77,6 +77,9 @@ save_usage sawadm
 save_usage sawadm genesis
 save_usage sawadm keygen
 
+save_usage sawnet
+save_usage sawnet compare-chains
+
 save_usage sawtooth-validator
 save_usage sawtooth-rest-api
 save_usage settings-tp

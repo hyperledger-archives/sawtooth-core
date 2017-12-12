@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,19 +15,22 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-version: "2.1"
+import os
+import sys
+import sysconfig
 
-services:
+build_str = "lib.{}-{}.{}".format(
+    sysconfig.get_platform(),
+    sys.version_info.major, sys.version_info.minor)
 
-  unit-cli:
-    image: sawtooth-dev-python:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: nose2-3
-        -c /project/sawtooth-core/cli/nose2.cfg
-        -v
-        -s /project/sawtooth-core/cli/tests
-        test_network
-    environment:
-        PYTHONPATH: "/project/sawtooth-core/signing:\
-            /project/sawtooth-core/cli"
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'cli'))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'signing'))
+
+from sawtooth_cli.sawnet import main_wrapper
+
+if __name__ == '__main__':
+    main_wrapper()

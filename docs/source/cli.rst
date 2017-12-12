@@ -37,6 +37,7 @@ This usage information is also available on the command line by using the
 
    cli/sawtooth.rst
    cli/sawadm.rst
+   cli/sawnet.rst
    cli/sawset.rst
    cli/poet.rst
    cli/validator.rst

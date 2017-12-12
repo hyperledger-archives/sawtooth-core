@@ -13,19 +13,4 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-version: "2.1"
-
-services:
-
-  unit-cli:
-    image: sawtooth-dev-python:$ISOLATION_ID
-    volumes:
-      - $SAWTOOTH_CORE:/project/sawtooth-core
-    command: nose2-3
-        -c /project/sawtooth-core/cli/nose2.cfg
-        -v
-        -s /project/sawtooth-core/cli/tests
-        test_network
-    environment:
-        PYTHONPATH: "/project/sawtooth-core/signing:\
-            /project/sawtooth-core/cli"
+__all__ = []
