@@ -206,7 +206,7 @@ class BatchByBatchIdResponderHandler(Handler):
 
             batch_response = network_pb2.GossipBatchResponse(
                 content=batch.SerializeToString(),
-                )
+            )
 
             self._gossip.send(validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
                               batch_response.SerializeToString(),
@@ -288,7 +288,7 @@ class BatchByTransactionIdResponderHandler(Handler):
 
                 batch_response = network_pb2.GossipBatchResponse(
                     content=batch.SerializeToString(),
-                    )
+                )
 
                 self._gossip.send(validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
                                   batch_response.SerializeToString(),

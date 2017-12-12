@@ -28,7 +28,6 @@ import sawtooth_poet_common.protobuf.validator_registry_pb2 as vr_pb
 
 
 class TestValidatorRegistryGenesisTransaction(unittest.TestCase):
-
     def __init__(self, test_name):
         super().__init__(test_name)
         self._temp_dir = None

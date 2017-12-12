@@ -97,6 +97,7 @@ class RouteHandler(object):
         timeout (int, optional): The time in seconds before the Api should
             cancel a request and report that the validator is unavailable.
     """
+
     def __init__(
             self, loop, connection,
             timeout=DEFAULT_TIMEOUT, metrics_registry=None):
@@ -716,10 +717,11 @@ class RouteHandler(object):
         paging_response = response['paging']
         if head is None:
             head = response['head_id']
-        link = cls._build_url(request,
-                              head=head,
-                              start=paging_response['start'],
-                              limit=paging_response['limit'])
+        link = cls._build_url(
+            request,
+            head=head,
+            start=paging_response['start'],
+            limit=paging_response['limit'])
 
         paging = {}
         limit = controls.get('limit')
@@ -731,22 +733,29 @@ class RouteHandler(object):
             return cls._wrap_response(
                 request,
                 data=data,
-                metadata={'head': head, 'link': link, 'paging': paging})
+                metadata={
+                    'head': head,
+                    'link': link,
+                    'paging': paging
+                })
 
         next_id = paging_response['next']
         paging['next_position'] = next_id
 
         # Builds paging urls specific to this response
         def build_pg_url(start=None):
-            return cls._build_url(request, head=head, limit=limit,
-                                  start=start)
+            return cls._build_url(request, head=head, limit=limit, start=start)
 
         paging['next'] = build_pg_url(paging_response['next'])
 
         return cls._wrap_response(
             request,
             data=data,
-            metadata={'head': head, 'link': link, 'paging': paging})
+            metadata={
+                'head': head,
+                'link': link,
+                'paging': paging
+            })
 
     @classmethod
     def _get_metadata(cls, request, response, head=None):
@@ -947,8 +956,10 @@ class RouteHandler(object):
         if isinstance(item, list):
             return [self._drop_empty_props(i) for i in item]
         if isinstance(item, dict):
-            return {k: self._drop_empty_props(v)
-                    for k, v in item.items() if v != ''}
+            return {
+                k: self._drop_empty_props(v)
+                for k, v in item.items() if v != ''
+            }
         return item
 
     def _drop_id_prefixes(self, item):
@@ -957,8 +968,10 @@ class RouteHandler(object):
         if isinstance(item, list):
             return [self._drop_id_prefixes(i) for i in item]
         if isinstance(item, dict):
-            return {'id' if k.endswith('id') else k: self._drop_id_prefixes(v)
-                    for k, v in item.items()}
+            return {
+                'id' if k.endswith('id') else k: self._drop_id_prefixes(v)
+                for k, v in item.items()
+            }
         return item
 
     @classmethod

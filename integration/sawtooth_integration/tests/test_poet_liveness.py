@@ -74,7 +74,7 @@ class TestPoetLive(unittest.TestCase):
 
 def get_block(node):
     try:
-        result = requests.get((URL % node)+"/blocks?count=1")
+        result = requests.get((URL % node) + "/blocks?count=1")
         result = result.json()
         try:
             return result["data"][0]
@@ -86,7 +86,7 @@ def get_block(node):
 
 def get_chain(node):
     try:
-        result = requests.get((URL % node)+"/blocks")
+        result = requests.get((URL % node) + "/blocks")
         result = result.json()
         try:
             return result["data"]
@@ -129,7 +129,7 @@ def check_consensus(chains, block_num):
     blocks = []
     for chain in chains:
         if chain is not None:
-            block = chain[-(block_num+1)]
+            block = chain[-(block_num + 1)]
             blocks.append(block)
         else:
             return False

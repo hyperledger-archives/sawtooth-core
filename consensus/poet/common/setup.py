@@ -20,15 +20,15 @@ import subprocess
 
 from setuptools import setup, find_packages
 
-
-setup(name='sawtooth-poet-common',
-      version=subprocess.check_output(
-          ['../../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth PoET Common Modules',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'protobuf',
-          ],
-      entry_points={})
+setup(
+    name='sawtooth-poet-common',
+    version=subprocess.check_output(
+        ['../../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth PoET Common Modules',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'protobuf',
+    ],
+    entry_points={})

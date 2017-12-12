@@ -184,9 +184,9 @@ def create_validator_config(opts):
     if opts.bind:
         for bind in opts.bind:
             if "network" in bind:
-                bind_network = bind[bind.find(":")+1:]
+                bind_network = bind[bind.find(":") + 1:]
             if "component" in bind:
-                bind_component = bind[bind.find(":")+1:]
+                bind_component = bind[bind.find(":") + 1:]
     return ValidatorConfig(
         bind_network=bind_network,
         bind_component=bind_component,
@@ -200,7 +200,7 @@ def create_validator_config(opts):
         opentsdb_db=opts.opentsdb_db,
         minimum_peer_connectivity=opts.minimum_peer_connectivity,
         maximum_peer_connectivity=opts.maximum_peer_connectivity
-        )
+    )
 
 
 def main(args=None):
@@ -329,24 +329,24 @@ def main(args=None):
             password=validator_config.opentsdb_password)
         metrics_reporter.start()
 
-    validator = Validator(bind_network,
-                          bind_component,
-                          endpoint,
-                          validator_config.peering,
-                          validator_config.seeds,
-                          validator_config.peers,
-                          path_config.data_dir,
-                          path_config.config_dir,
-                          identity_signer,
-                          validator_config.scheduler,
-                          validator_config.permissions,
-                          validator_config.minimum_peer_connectivity,
-                          validator_config.maximum_peer_connectivity,
-                          validator_config.network_public_key,
-                          validator_config.network_private_key,
-                          roles=validator_config.roles,
-                          metrics_registry=wrapped_registry
-                          )
+    validator = Validator(
+        bind_network,
+        bind_component,
+        endpoint,
+        validator_config.peering,
+        validator_config.seeds,
+        validator_config.peers,
+        path_config.data_dir,
+        path_config.config_dir,
+        identity_signer,
+        validator_config.scheduler,
+        validator_config.permissions,
+        validator_config.minimum_peer_connectivity,
+        validator_config.maximum_peer_connectivity,
+        validator_config.network_public_key,
+        validator_config.network_private_key,
+        roles=validator_config.roles,
+        metrics_registry=wrapped_registry)
 
     # pylint: disable=broad-except
     try:

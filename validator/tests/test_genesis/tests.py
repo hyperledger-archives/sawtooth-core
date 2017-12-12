@@ -54,8 +54,9 @@ class TestGenesisController(unittest.TestCase):
 
     @staticmethod
     def make_block_store(data=None):
-        return BlockStore(DictDatabase(
-            data, indexes=BlockStore.create_index_configuration()))
+        return BlockStore(
+            DictDatabase(
+                data, indexes=BlockStore.create_index_configuration()))
 
     def test_requires_genesis(self):
         self._with_empty_batch_file()
@@ -70,8 +71,7 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender')
-        )
+            batch_sender=Mock('batch_sender'))
 
         self.assertEqual(True, genesis_ctrl.requires_genesis())
 
@@ -91,8 +91,7 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender')
-        )
+            batch_sender=Mock('batch_sender'))
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
 
@@ -111,8 +110,7 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender')
-        )
+            batch_sender=Mock('batch_sender'))
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
 
@@ -136,8 +134,7 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender')
-        )
+            batch_sender=Mock('batch_sender'))
 
         self.assertEqual(False, genesis_ctrl.requires_genesis())
 
@@ -152,9 +149,7 @@ class TestGenesisController(unittest.TestCase):
         self._with_empty_batch_file()
 
         block = self._create_block()
-        block_store = self.make_block_store({
-            block.header_signature: block
-        })
+        block_store = self.make_block_store({block.header_signature: block})
 
         genesis_ctrl = GenesisController(
             Mock('context_manager'),
@@ -166,8 +161,7 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender')
-        )
+            batch_sender=Mock('batch_sender'))
 
         with self.assertRaises(InvalidGenesisStateError):
             genesis_ctrl.requires_genesis()
@@ -195,8 +189,7 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender')
-        )
+            batch_sender=Mock('batch_sender'))
 
         with self.assertRaises(InvalidGenesisStateError):
             genesis_ctrl.requires_genesis()
@@ -237,8 +230,7 @@ class TestGenesisController(unittest.TestCase):
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
-            batch_sender=Mock('batch_sender')
-        )
+            batch_sender=Mock('batch_sender'))
 
         on_done_fn = Mock(return_value='')
         genesis_ctrl.start(on_done_fn)
@@ -272,9 +264,9 @@ class TestGenesisController(unittest.TestCase):
 
     def _create_block(self):
         return BlockWrapper.wrap(
-            Block(header_signature='some_block_id',
-                  batches=[],
-                  header=BlockHeader(
-                      block_num=0,
-                      previous_block_id=NULL_BLOCK_IDENTIFIER
-                  ).SerializeToString()))
+            Block(
+                header_signature='some_block_id',
+                batches=[],
+                header=BlockHeader(
+                    block_num=0, previous_block_id=NULL_BLOCK_IDENTIFIER)
+                .SerializeToString()))

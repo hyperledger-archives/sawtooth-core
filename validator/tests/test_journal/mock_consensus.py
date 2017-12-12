@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
-from sawtooth_validator.journal.consensus.consensus\
+
+from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
-from sawtooth_validator.journal.consensus.consensus\
+from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
-from sawtooth_validator.journal.consensus.consensus\
+from sawtooth_validator.journal.consensus.consensus \
     import ForkResolverInterface
 
 
 class BlockPublisher(BlockPublisherInterface):
     """ MockConsensus BlockPublisher
     """
+
     def __init__(self,
                  block_cache=None,
                  state_view_factory=None,
@@ -71,6 +73,7 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """MockConsensus BlockVerifier implementation
     """
+
     def __init__(self,
                  block_cache,
                  state_view_factory,
@@ -91,6 +94,7 @@ class BlockVerifier(BlockVerifierInterface):
 class ForkResolver(ForkResolverInterface):
     """MockConsensus ForkResolver implementation
     """
+
     def __init__(self,
                  block_cache,
                  state_view_factory,

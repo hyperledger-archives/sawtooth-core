@@ -220,6 +220,5 @@ class IntkeyClient:
         batch = Batch(
             header=header,
             transactions=transactions,
-            header_signature=signature
-        )
+            header_signature=signature)
         return BatchList(batches=[batch])

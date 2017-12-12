@@ -29,7 +29,6 @@ LOGGER.setLevel(logging.INFO)
 
 
 class TestBasicAuth(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         wait_until_status('http://rest-api:8008/blocks', status_code=200)

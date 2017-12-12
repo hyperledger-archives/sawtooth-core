@@ -29,6 +29,7 @@ LOGGER.setLevel(logging.INFO)
 WAIT = 120
 ASSERT_CONSENSUS_TIMEOUT = 90
 
+
 class TestDynamicNetwork(unittest.TestCase):
     def setUp(self):
         self.nodes = {}
@@ -191,7 +192,8 @@ class TestDynamicNetwork(unittest.TestCase):
                 raise subprocess.CalledProcessError(proc.pid, proc.returncode)
 
         self.nodes[num] = processes
-        self.clients[num] = IntkeyClient(NodeController.http_address(num), WAIT)
+        self.clients[num] = IntkeyClient(
+            NodeController.http_address(num), WAIT)
         time.sleep(1)
 
     # nodes are stopped in FIFO order
@@ -244,6 +246,7 @@ class TestDynamicNetwork(unittest.TestCase):
     def earliest_client(self):
         earliest = min(self.clients.keys())
         return self.clients[earliest]
+
 
 def make_txns():
     jacksons = 'michael', 'tito', 'jackie', 'jermaine', 'marlon'

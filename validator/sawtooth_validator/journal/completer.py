@@ -45,6 +45,7 @@ class Completer(object):
     have their dependencies satisifed, otherwise it will request the batch that
     has the missing transaction.
     """
+
     def __init__(self,
                  block_store,
                  gossip,
@@ -348,7 +349,6 @@ class Completer(object):
 
 
 class CompleterBatchListBroadcastHandler(Handler):
-
     def __init__(self, completer, gossip):
         self._completer = completer
         self._gossip = gossip
@@ -366,7 +366,6 @@ class CompleterBatchListBroadcastHandler(Handler):
 
 
 class CompleterGossipHandler(Handler):
-
     def __init__(self, completer):
         self._completer = completer
 
@@ -381,8 +380,7 @@ class CompleterGossipHandler(Handler):
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
             self._completer.add_batch(batch)
-        return HandlerResult(
-            status=HandlerStatus.PASS)
+        return HandlerResult(status=HandlerStatus.PASS)
 
 
 class CompleterGossipBlockResponseHandler(Handler):

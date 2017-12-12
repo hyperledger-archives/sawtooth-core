@@ -35,7 +35,6 @@ TEST_PUBKEY = \
 
 
 class TestConfigSmoke(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         wait_for_rest_apis(['rest-api:8008'])
@@ -53,10 +52,11 @@ class TestConfigSmoke(unittest.TestCase):
     def _run(self, args):
         try:
             LOGGER.debug("Running %s", " ".join(args))
-            proc = subprocess.run(args,
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
-                                  check=True)
+            proc = subprocess.run(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True)
             LOGGER.debug(proc.stdout.decode())
         except subprocess.CalledProcessError as err:
             LOGGER.debug(err)
@@ -99,7 +99,8 @@ class TestConfigSmoke(unittest.TestCase):
         settings = self._read_from_stdout(command, args).split('\n')
 
         _expected_output = [
-            'sawtooth.settings.vote.authorized_keys: {:15}'.format(TEST_PUBKEY),
+            'sawtooth.settings.vote.authorized_keys: {:15}'.format(
+                TEST_PUBKEY),
             'x: 1',
             'y: 1']
         _fail_msg = 'Setting results did not match.'

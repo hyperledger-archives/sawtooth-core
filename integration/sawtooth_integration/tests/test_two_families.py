@@ -38,6 +38,7 @@ INTKEY_PREFIX = '1cf126'
 XO_PREFIX = '5b7349'
 WAIT = 300
 
+
 class TestTwoFamilies(unittest.TestCase):
 
     @classmethod
@@ -136,6 +137,7 @@ def _send_xo_cmd(cmd_str):
         stderr=subprocess.PIPE,
         check=True)
 
+
 def _send_intkey_cmd(txns):
     batch = IntkeyMessageFactory().create_batch(txns)
     LOGGER.info('Sending intkey txns')
@@ -143,19 +145,22 @@ def _send_intkey_cmd(txns):
 
 # rest_api calls
 
+
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
     response = _query_rest_api(
         '/batches', data=batch, headers=headers, expected_code=202)
     return _submit_request('{}&wait={}'.format(response['link'], WAIT))
 
+
 def _get_intkey_data():
     state = _get_intkey_state()
     # state is a list of dictionaries: { data: ..., address: ... }
     dicts = [cbor.loads(b64decode(entry['data'])) for entry in state]
     LOGGER.debug(dicts)
-    data = {k:v for d in dicts for k, v in d.items()} # merge dicts
+    data = {k: v for d in dicts for k, v in d.items()}  # merge dicts
     return data
+
 
 def _get_xo_data():
     state = _get_xo_state()
@@ -163,22 +168,27 @@ def _get_xo_data():
     game_name, board, turn, _, _ = data
     return board, turn, game_name
 
+
 def _get_intkey_state():
     state = _get_state_prefix(INTKEY_PREFIX)
     return state
+
 
 def _get_xo_state():
     state = _get_state_prefix(XO_PREFIX)
     return state
 
+
 def _get_state_prefix(prefix):
     response = _query_rest_api('/state?address=' + prefix)
     return response['data']
 
+
 def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
     url = 'http://rest-api:8008' + suffix
-    return _submit_request(urllib.request.Request(url, data, headers),
-                           expected_code=expected_code)
+    return _submit_request(
+        urllib.request.Request(url, data, headers),
+        expected_code=expected_code)
 
 
 def _submit_request(request, expected_code=200):
@@ -189,6 +199,7 @@ def _submit_request(request, expected_code=200):
     return json.loads(response)
 
 # verifiers
+
 
 class XoTestVerifier:
     def __init__(self):
@@ -213,6 +224,7 @@ class XoTestVerifier:
             return state[num]
         except KeyError:
             return ()
+
 
 class IntkeyTestVerifier:
     def __init__(self):

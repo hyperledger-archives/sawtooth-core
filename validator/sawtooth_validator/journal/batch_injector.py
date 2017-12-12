@@ -21,6 +21,7 @@ from sawtooth_validator.state.settings_view import SettingsView
 
 class BatchInjectorFactory(object, metaclass=abc.ABCMeta):
     """The interface to implement for constructing batch injectors"""
+
     @abc.abstractmethod
     def create_injectors(self, previous_block_id):
         """

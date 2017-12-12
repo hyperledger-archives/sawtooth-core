@@ -30,6 +30,7 @@ VALIDATOR_COUNT = 3
 BATCH_COUNT = 20
 WAIT = 120
 
+
 class TestPoetSmoke(unittest.TestCase):
     def setUp(self):
         endpoints = ['rest-api-{}:8008'.format(i)
@@ -89,11 +90,11 @@ class TestPoetSmoke(unittest.TestCase):
                 return
             except AssertionError:
                 LOGGER.info(
-                        'Blocks not yet in consensus after %d seconds' %
-                        time.time() - start_time)
+                    'Blocks not yet in consensus after %d seconds' %
+                    time.time() - start_time)
 
         raise AssertionError(
-                'Validators were not in consensus after %d seconds' % WAIT)
+            'Validators were not in consensus after %d seconds' % WAIT)
 
     def _assert_consensus(self):
         tolerance = self.clients[0].calculate_tolerance()
@@ -118,6 +119,7 @@ class TestPoetSmoke(unittest.TestCase):
             self.assertTrue(
                 any(sig in sig_list for sig in sig_list_0),
                 'Validators are not in consensus')
+
 
 def _make_txns():
     fruits = 'fig', 'quince', 'medlar', 'cornel', 'pomegranate'

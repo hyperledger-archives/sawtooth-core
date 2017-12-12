@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+
 class MockNetwork():
     def __init__(self, roles, allow_inbound=True, is_outbound=False,
                  connection_status=None):
@@ -48,12 +49,14 @@ class MockNetwork():
     def remove_connection(self, connection_id):
         pass
 
+
 class MockPermissionVerifier():
     def __init__(self, allow=True):
         self.allow = allow
 
     def check_network_role(self, public_key):
         return self.allow
+
 
 class MockGossip():
     def __init_(self):

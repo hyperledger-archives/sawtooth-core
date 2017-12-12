@@ -42,7 +42,6 @@ STATE_TIMEOUT_SEC = 10
 
 
 class SettingsTransactionHandler(TransactionHandler):
-
     @property
     def family_name(self):
         return 'sawtooth_settings'

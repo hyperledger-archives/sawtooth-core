@@ -248,22 +248,26 @@ class EventBroadcaster(ChainObserver):
         with self._subscribers_cv:
             # Copy the subscribers
             subscribers = {
-                conn: sub.copy() for conn, sub in self._subscribers.items()
+                conn: sub.copy()
+                for conn, sub in self._subscribers.items()
             }
 
         if subscribers:
             for connection_id, subscriber in subscribers.items():
                 if subscriber.is_listening():
-                    subscriber_events = [event for event in events
-                                         if subscriber.is_subscribed(event)]
+                    subscriber_events = [
+                        event for event in events
+                        if subscriber.is_subscribed(event)
+                    ]
                     event_list = EventList(events=subscriber_events)
                     self._send(connection_id, event_list.SerializeToString())
 
     def _send(self, connection_id, message_bytes):
-        self._service.send(validator_pb2.Message.CLIENT_EVENTS,
-                           message_bytes,
-                           connection_id=connection_id,
-                           one_way=True)
+        self._service.send(
+            validator_pb2.Message.CLIENT_EVENTS,
+            message_bytes,
+            connection_id=connection_id,
+            one_way=True)
 
 
 class EventSubscriber:

@@ -33,7 +33,6 @@ __PK__ = secp256k1.PublicKey(ctx=__CTX__)  # Cache object to use as factory
 
 
 class Secp256k1PrivateKey(PrivateKey):
-
     def __init__(self, secp256k1_private_key):
         self._private_key = secp256k1_private_key
 
@@ -106,7 +105,6 @@ class Secp256k1PublicKey(PublicKey):
 
 
 class Secp256k1Context(Context):
-
     def __init__(self):
         self._ctx = __CTX__
 

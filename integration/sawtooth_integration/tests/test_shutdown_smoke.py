@@ -26,7 +26,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestShutdownSmoke(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls._sawtooth_core = cls._find_host_sawtooth_core()
@@ -51,7 +50,7 @@ class TestShutdownSmoke(unittest.TestCase):
             6) The validators' return codes are checked and asserted to be 0.
         """
 
-        #1)
+        # 1)
         containers = self._startup()
 
         try:
@@ -65,8 +64,7 @@ class TestShutdownSmoke(unittest.TestCase):
 
             end_time = time.time() - initial_time
             LOGGER.warning("Containers exited with sigint in %s seconds",
-                        end_time)
-
+                           end_time)
 
             self.assertEqual(len(sigint_exit_statuses), len(containers))
             for s in sigint_exit_statuses:
@@ -90,7 +88,7 @@ class TestShutdownSmoke(unittest.TestCase):
             3) The validators' return codes are checked and asserted to be 0.
         """
 
-            #1)
+        # 1)
         containers = self._startup()
 
         try:
@@ -104,7 +102,7 @@ class TestShutdownSmoke(unittest.TestCase):
                 containers)
             end_time = time.time() - initial_time
             LOGGER.warning("Containers exited with sigterm in %s seconds",
-                        end_time)
+                           end_time)
             self.assertEqual(len(sigterm_exit_statuses), len(containers))
             for s in sigterm_exit_statuses:
                 self.assertEqual(s, 0)
@@ -125,7 +123,7 @@ class TestShutdownSmoke(unittest.TestCase):
         # Not catching the CalledProcessError so the test errors and stops
         # if there is a problem calling docker.
         subprocess.run(
-                args, stdout=subprocess.PIPE,
+            args, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, check=True)
 
     def _log_and_clean_up(self, containers):
@@ -167,7 +165,7 @@ class TestShutdownSmoke(unittest.TestCase):
 
     def _docker_run(self, args):
         return subprocess.check_output(['docker', 'run'] + args,
-                                universal_newlines=True).strip('\n')
+                                       universal_newlines=True).strip('\n')
 
     def _run_genesis(self):
         return self._docker_run(
@@ -246,9 +244,10 @@ class TestShutdownSmoke(unittest.TestCase):
     @classmethod
     def _find_host_sawtooth_core(cls):
         hostname = socket.gethostname()
-        return subprocess.check_output(['docker', 'inspect',
-                                        '--format=\"{{ range .Mounts }}'
-                                        '{{ if and (eq .Destination "/project/sawtooth-core") '
-                                        '(eq .Type "bind") }}{{ .Source }}{{ end }}{{ end }}\"',
-                                        hostname],
-                                       universal_newlines=True).strip('\n').strip('\"')
+        return subprocess.check_output(
+            ['docker', 'inspect',
+             '--format=\"{{ range .Mounts }}'
+             '{{ if and (eq .Destination "/project/sawtooth-core") '
+             '(eq .Type "bind") }}{{ .Source }}{{ end }}{{ end }}\"',
+             hostname],
+            universal_newlines=True).strip('\n').strip('\"')

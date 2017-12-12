@@ -249,8 +249,8 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
             ids)
 
     def test_iterate_chain_on_empty_block_store(self):
-        """Given a block store with no blocks, iterate using predecessor iterator
-        and verify that it results in an empty list.
+        """Given a block store with no blocks, iterate using predecessor
+        iterator and verify that it results in an empty list.
         """
         block_store = BlockStore(DictDatabase(
             indexes=BlockStore.create_index_configuration()))
@@ -267,7 +267,7 @@ class BlockStorePredecessorIteratorTest(unittest.TestCase):
                       header=BlockHeader(
                           block_num=i,
                           previous_block_id=previous_block_id
-                      ).SerializeToString()))
+                ).SerializeToString()))
 
             previous_block_id = block.identifier
 

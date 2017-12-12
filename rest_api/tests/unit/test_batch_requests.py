@@ -28,7 +28,6 @@ DEFAULT_LIMIT = 100
 
 
 class BatchListTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_LIST_REQUEST,
@@ -53,21 +52,24 @@ class BatchListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_C
-            - a link property that ends in '/batches?start={}&limit=100&head={}'.format(ID_C, ID_C)
+            - a link property that ends in
+                '/batches?start={}&limit=100&head={}'.format(ID_C, ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - and those dicts are full batches with ids ID_C, ID_B, and ID_A
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         batches = Mocks.make_batches(ID_C, ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_C, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches')
         controls = Mocks.make_paging_controls()
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/batches?head={}&start={}&limit=100'.format(ID_C, ID_C))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=100'.format(ID_C, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_batches_well_formed(response['data'], ID_C, ID_B, ID_A)
@@ -128,14 +130,17 @@ class BatchListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response("", ID_B, DEFAULT_LIMIT)
         batches = Mocks.make_batches(ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_B, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_B, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?head={}'.format(ID_B))
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(head_id=ID_B, paging=controls)
+        self.connection.assert_valid_request_sent(
+            head_id=ID_B, paging=controls)
 
         self.assert_has_valid_head(response, ID_B)
-        self.assert_has_valid_link(response, '/batches?head={}&start={}&limit=100'.format(ID_B, ID_B))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=100'.format(ID_B, ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_batches_well_formed(response['data'], ID_B, ID_A)
@@ -152,7 +157,8 @@ class BatchListTests(BaseApiTest):
             - an error property with a code of 50
         """
         self.connection.preset_response(self.status.NO_ROOT)
-        response = await self.get_assert_status('/batches?head={}'.format(ID_D), 404)
+        response = await self.get_assert_status(
+            '/batches?head={}'.format(ID_D), 404)
 
         self.assert_has_valid_error(response, 50)
 
@@ -173,21 +179,27 @@ class BatchListTests(BaseApiTest):
             - a response status of 200
             - a head property of ID_C, the latest
             - a link property that ends in
-                '/batches?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_A, ID_C)
+                '/batches?head={}&start={}&limit=100&id={},{}'
+                    .format(ID_C, ID_C, ID_A, ID_C)
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - and those dicts are full batches with ids ID_A and ID_C
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         batches = Mocks.make_batches(ID_A, ID_C)
-        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_C, paging=paging, batches=batches)
 
-        response = await self.get_assert_200('/batches?id={},{}'.format(ID_A, ID_C))
+        response = await self.get_assert_200('/batches?id={},{}'.format(
+            ID_A, ID_C))
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(batch_ids=[ID_A, ID_C], paging=controls)
+        self.connection.assert_valid_request_sent(
+            batch_ids=[ID_A, ID_C], paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/batches?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_A, ID_C))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=100&id={},{}'.format(
+                ID_C, ID_C, ID_A, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_batches_well_formed(response['data'], ID_A, ID_C)
@@ -204,20 +216,21 @@ class BatchListTests(BaseApiTest):
             - a response status of 200
             - a head property of ID_C, the latest
             - a link property that ends in
-                '/batches?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_B, ID_D)
+                '/batches?head={}&start={}&limit=100&id={},{}'
+                    .format(ID_C, ID_C, ID_B, ID_D)
             - a paging property with only a total_count of 0
             - a data property that is an empty list
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         self.connection.preset_response(
-            self.status.NO_RESOURCE,
-            head_id=ID_C,
-            paging=paging)
-        response = await self.get_assert_200('/batches?id={},{}'.format(ID_B, ID_D))
+            self.status.NO_RESOURCE, head_id=ID_C, paging=paging)
+        response = await self.get_assert_200('/batches?id={},{}'.format(
+            ID_B, ID_D))
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response,
-            '/batches?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_B, ID_D))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=100&id={},{}'.format(
+                ID_C, ID_C, ID_B, ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -239,16 +252,19 @@ class BatchListTests(BaseApiTest):
             - a response status of 200
             - a head property of ID_B
             - a link property that ends in
-                '/batches?head={}&start={}&limit=100&id={}'.format(ID_B, ID_B, ID_A)
+                '/batches?head={}&start={}&limit=100&id={}'
+                    .format(ID_B, ID_B, ID_A)
             - a paging property that matches the paging response
             - a data property that is a list of 1 dict
             - and that dict is a full batch with an id of ID_A
         """
         paging = Mocks.make_paging_response("", ID_B, DEFAULT_LIMIT)
         batches = Mocks.make_batches(ID_A)
-        self.connection.preset_response(head_id=ID_B, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_B, paging=paging, batches=batches)
 
-        response = await self.get_assert_200('/batches?id={}&head={}'.format(ID_A, ID_B))
+        response = await self.get_assert_200('/batches?id={}&head={}'.format(
+            ID_A, ID_B))
         controls = Mocks.make_paging_controls()
         self.connection.assert_valid_request_sent(
             head_id=ID_B,
@@ -257,7 +273,8 @@ class BatchListTests(BaseApiTest):
 
         self.assert_has_valid_head(response, ID_B)
         self.assert_has_valid_link(
-            response, '/batches?head={}&start={}&limit=100&id={}'.format(ID_B, ID_B, ID_A))
+            response, '/batches?head={}&start={}&limit=100&id={}'.format(
+                ID_B, ID_B, ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_batches_well_formed(response['data'], ID_A)
@@ -268,7 +285,8 @@ class BatchListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_D
-            - a paging response with a start of ID_D, next of ID_C and limit of 1
+            - a paging response with a start of ID_D, next of ID_C and
+              limit of 1
             - one batch with the id ID_C
 
         It should send a Protobuf request with:
@@ -282,19 +300,23 @@ class BatchListTests(BaseApiTest):
             - paging that matches the response, with next and previous links
             - a data property that is a list of 1 dict
             - and that dict is a full batch with the id ID_C
+
         """
         paging = Mocks.make_paging_response(ID_C, ID_D, 1)
         batches = Mocks.make_batches(ID_C)
-        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_D, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?start=1&limit=1')
         controls = Mocks.make_paging_controls(1, start="1")
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/batches?head={}&start={}&limit=1'.format(ID_D, ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/batches?head={}&start={}&limit=1'.format(ID_D, ID_C))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=1'.format(ID_D, ID_D))
+        self.assert_has_valid_paging(
+            response, paging, '/batches?head={}&start={}&limit=1'.format(
+                ID_D, ID_C))
         self.assert_has_valid_data_list(response, 1)
         self.assert_batches_well_formed(response['data'], ID_C)
 
@@ -306,7 +328,8 @@ class BatchListTests(BaseApiTest):
             - a response status of 400
             - an error property with a code of 53
         """
-        response = await self.get_assert_status('/batches?start=2&limit=0', 400)
+        response = await self.get_assert_status('/batches?start=2&limit=0',
+                                                400)
 
         self.assert_has_valid_error(response, 53)
 
@@ -349,16 +372,19 @@ class BatchListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response(ID_B, ID_D, 2)
         batches = Mocks.make_batches(ID_D, ID_C)
-        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_D, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?limit=2')
         controls = Mocks.make_paging_controls(2)
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/batches?head={}&start={}&limit=2'.format(ID_D, ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/batches?head={}&start={}&limit=2'.format(ID_D, ID_B))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=2'.format(ID_D, ID_D))
+        self.assert_has_valid_paging(
+            response, paging, '/batches?head={}&start={}&limit=2'.format(
+                ID_D, ID_B))
         self.assert_has_valid_data_list(response, 2)
         self.assert_batches_well_formed(response['data'], ID_D, ID_C)
 
@@ -385,14 +411,16 @@ class BatchListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response("", ID_B, DEFAULT_LIMIT)
         batches = Mocks.make_batches(ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_D, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?start={}'.format(ID_B))
         controls = Mocks.make_paging_controls(None, start=ID_B)
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/batches?head={}&start={}&limit=100'.format(ID_D, ID_B))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=100'.format(ID_D, ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_batches_well_formed(response['data'], ID_B, ID_A)
@@ -412,26 +440,29 @@ class BatchListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in '/batches?head={}&start={}&limit=5'.format(ID_D, ID_C)
+            - a link property that ends in
+                '/batches?head={}&start={}&limit=5'
+                    .format(ID_D, ID_C)
             - paging that matches the response, with a previous link
             - a data property that is a list of 3 dicts
             - and those dicts are full batches with ids ID_C, ID_B, and ID_A
         """
         paging = Mocks.make_paging_response("", ID_C, 5)
         batches = Mocks.make_batches(ID_C, ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_D, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_D, paging=paging, batches=batches)
 
-        response = await self.get_assert_200('/batches?start={}&limit=5'.format(ID_C))
+        response = await self.get_assert_200(
+            '/batches?start={}&limit=5'.format(ID_C))
         controls = Mocks.make_paging_controls(5, start=ID_C)
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/batches?head={}&start={}&limit=5'.format(ID_D, ID_C))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=5'.format(ID_D, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_batches_well_formed(response['data'], ID_C, ID_B, ID_A)
-
-
 
     @unittest_run_loop
     async def test_batch_list_sorted_in_reverse(self):
@@ -450,14 +481,16 @@ class BatchListTests(BaseApiTest):
             - a status of 200
             - a head property of ID_C
             - a link property ending in
-                '/batches?head={}&start={}&limit=100&reverse'.format(ID_C, ID_C))
+                '/batches?head={}&start={}&limit=100&reverse'
+                    .format(ID_C, ID_C))
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
             - and those dicts are full batches with ids ID_C, ID_B, and ID_A
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         batches = Mocks.make_batches(ID_C, ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_C, paging=paging, batches=batches)
+        self.connection.preset_response(
+            head_id=ID_C, paging=paging, batches=batches)
 
         response = await self.get_assert_200('/batches?reverse')
         page_controls = Mocks.make_paging_controls()
@@ -467,15 +500,15 @@ class BatchListTests(BaseApiTest):
             sorting=sorting)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response,
-            '/batches?head={}&start={}&limit=100&reverse'.format(ID_C, ID_C))
+        self.assert_has_valid_link(
+            response, '/batches?head={}&start={}&limit=100&reverse'.format(
+                ID_C, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_batches_well_formed(response['data'], ID_C, ID_B, ID_A)
 
 
 class BatchGetTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BATCH_GET_REQUEST,
@@ -483,7 +516,8 @@ class BatchGetTests(BaseApiTest):
             client_batch_pb2.ClientBatchGetResponse)
 
         handlers = self.build_handlers(self.loop, self.connection)
-        return self.build_app(self.loop, '/batches/{batch_id}', handlers.fetch_batch)
+        return self.build_app(
+            self.loop, '/batches/{batch_id}', handlers.fetch_batch)
 
     @unittest_run_loop
     async def test_batch_get(self):
@@ -523,7 +557,8 @@ class BatchGetTests(BaseApiTest):
             - an error property with a code of 10
         """
         self.connection.preset_response(self.status.INTERNAL_ERROR)
-        response = await self.get_assert_status('/batches/{}'.format(ID_B), 500)
+        response = await self.get_assert_status('/batches/{}'.format(ID_B),
+                                                500)
 
         self.assert_has_valid_error(response, 10)
 
@@ -539,6 +574,7 @@ class BatchGetTests(BaseApiTest):
             - an error property with a code of 71
         """
         self.connection.preset_response(self.status.NO_RESOURCE)
-        response = await self.get_assert_status('/batches/{}'.format(ID_D), 404)
+        response = await self.get_assert_status('/batches/{}'.format(ID_D),
+                                                404)
 
         self.assert_has_valid_error(response, 71)

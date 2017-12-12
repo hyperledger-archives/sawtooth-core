@@ -31,7 +31,6 @@ from sawtooth_cli.exceptions import CliException
 
 
 class TestGenesisDependencyValidation(unittest.TestCase):
-
     def __init__(self, test_name):
         super().__init__(test_name)
         self._temp_dir = None

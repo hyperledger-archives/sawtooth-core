@@ -21,7 +21,6 @@ from sawtooth_rest_api.protobuf import client_peers_pb2
 
 
 class PeersGetRequestTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_PEERS_GET_REQUEST,

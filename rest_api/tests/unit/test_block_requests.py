@@ -28,7 +28,6 @@ DEFAULT_LIMIT = 100
 
 
 class BlockListTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BLOCK_LIST_REQUEST,
@@ -61,14 +60,16 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         blocks = Mocks.make_blocks(ID_C, ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_C, paging=paging, blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_C, paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks')
         controls = Mocks.make_paging_controls()
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/blocks?head={}&start={}&limit=100'.format(ID_C, ID_C))
+        self.assert_has_valid_link(
+            response, '/blocks?head={}&start={}&limit=100'.format(ID_C, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_blocks_well_formed(response['data'], ID_C, ID_B, ID_A)
@@ -129,14 +130,17 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response("", ID_B, DEFAULT_LIMIT)
         blocks = Mocks.make_blocks(ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_B, paging=paging, blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_B, paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?head={}'.format(ID_B))
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(head_id=ID_B, paging=controls)
+        self.connection.assert_valid_request_sent(
+            head_id=ID_B, paging=controls)
 
         self.assert_has_valid_head(response, ID_B)
-        self.assert_has_valid_link(response, '/blocks?head={}&start={}&limit=100'.format(ID_B, ID_B))
+        self.assert_has_valid_link(
+            response, '/blocks?head={}&start={}&limit=100'.format(ID_B, ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], ID_B, ID_A)
@@ -153,7 +157,8 @@ class BlockListTests(BaseApiTest):
             - an error property with a code of 50
         """
         self.connection.preset_response(self.status.NO_ROOT)
-        response = await self.get_assert_status('/blocks?head={}'.format(ID_D), 404)
+        response = await self.get_assert_status('/blocks?head={}'.format(ID_D),
+                                                404)
 
         self.assert_has_valid_error(response, 50)
 
@@ -174,22 +179,27 @@ class BlockListTests(BaseApiTest):
             - a response status of 200
             - a head property of ID_C, the latest
             - a link property that ends in
-                '/blocks?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_A, ID_C))
+                '/blocks?head={}&start={}&limit=100&id={},{}'
+                    .format(ID_C, ID_C, ID_A, ID_C))
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids ID_A and ID_C
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         blocks = Mocks.make_blocks(ID_A, ID_C)
-        self.connection.preset_response(head_id=ID_C, paging=paging, blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_C, paging=paging, blocks=blocks)
 
-        response = await self.get_assert_200('/blocks?id={},{}'.format(ID_A, ID_C))
+        response = await self.get_assert_200('/blocks?id={},{}'.format(
+            ID_A, ID_C))
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(block_ids=[ID_A, ID_C], paging=controls)
+        self.connection.assert_valid_request_sent(
+            block_ids=[ID_A, ID_C], paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(
-            response, '/blocks?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_A, ID_C))
+            response, '/blocks?head={}&start={}&limit=100&id={},{}'.format(
+                ID_C, ID_C, ID_A, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], ID_A, ID_C)
@@ -206,19 +216,20 @@ class BlockListTests(BaseApiTest):
             - a response status of 200
             - a head property of ID_C, the latest
             - a link property that ends in
-                '/blocks?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_B, ID_D))
+                '/blocks?head={}&start={}&limit=100&id={},{}'
+                    .format(ID_C, ID_C, ID_B, ID_D))
             - a data property that is an empty list
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         self.connection.preset_response(
-            self.status.NO_RESOURCE,
-            head_id=ID_C,
-            paging=paging)
-        response = await self.get_assert_200('/blocks?id={},{}'.format(ID_B, ID_D))
+            self.status.NO_RESOURCE, head_id=ID_C, paging=paging)
+        response = await self.get_assert_200('/blocks?id={},{}'.format(
+            ID_B, ID_D))
 
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(
-            response, '/blocks?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_B, ID_D))
+            response, '/blocks?head={}&start={}&limit=100&id={},{}'.format(
+                ID_C, ID_C, ID_B, ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -239,23 +250,28 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_B
-            - a link property that ends in '/blocks?head={}&id={}'.format(ID_B, ID_A)
+            - a link property that ends in
+                '/blocks?head={}&id={}'.format(ID_B, ID_A)
             - a paging property that matches the paging response
             - a data property that is a list of 1 dict
             - and that dict is a full block with an id of ID_A
         """
         paging = Mocks.make_paging_response("", ID_B, DEFAULT_LIMIT)
         blocks = Mocks.make_blocks(ID_A)
-        self.connection.preset_response(head_id=ID_B, paging=paging, blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_B, paging=paging, blocks=blocks)
 
-        response = await self.get_assert_200('/blocks?id={}&head={}'.format(ID_A, ID_B))
+        response = await self.get_assert_200('/blocks?id={}&head={}'.format(
+            ID_A, ID_B))
         self.connection.assert_valid_request_sent(
             head_id=ID_B,
             block_ids=[ID_A],
             paging=Mocks.make_paging_controls())
 
         self.assert_has_valid_head(response, ID_B)
-        self.assert_has_valid_link(response, '/blocks?head={}&start={}&limit=100&id={}'.format(ID_B, ID_B, ID_A))
+        self.assert_has_valid_link(
+            response, '/blocks?head={}&start={}&limit=100&id={}'.format(
+                ID_B, ID_B, ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_blocks_well_formed(response['data'], ID_A)
@@ -266,7 +282,8 @@ class BlockListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_D
-            - a paging response with a next of '0x0002', start of 0x0003 and limit of 1
+            - a paging response with a next of '0x0002', start of
+              0x0003 and limit of 1
             - one block with the id ID_C
 
         It should send a Protobuf request with:
@@ -276,26 +293,29 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in '/blocks?head={}&start=1&limit=1'.format(ID_D)
+            - a link property that ends in
+                '/blocks?head={}&start=1&limit=1'.format(ID_D)
             - paging that matches the response, with next and previous links
             - a data property that is a list of 1 dict
             - and that dict is a full block with the id ID_C
+
         """
         # Block list only returns a next id
         paging = Mocks.make_paging_response('0x0002', "0x0003", 1)
         blocks = Mocks.make_blocks(ID_C)
-        self.connection.preset_response(head_id=ID_D, paging=paging,
-                                        blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_D, paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?start=0x0003&limit=1')
         controls = Mocks.make_paging_controls(1, start='0x0003')
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response,
-                                   '/blocks?head={}&start=0x0003&limit=1'.format(ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/blocks?head={}&start=0x0002&limit=1'.format(ID_D))
+        self.assert_has_valid_link(
+            response, '/blocks?head={}&start=0x0003&limit=1'.format(ID_D))
+        self.assert_has_valid_paging(
+            response, paging,
+            '/blocks?head={}&start=0x0002&limit=1'.format(ID_D))
         self.assert_has_valid_data_list(response, 1)
         self.assert_blocks_well_formed(response['data'], ID_C)
 
@@ -333,7 +353,8 @@ class BlockListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_D
-            - a paging response with a next of 0x0002, start of 0x004 and limit of 2
+            - a paging response with a next of 0x0002, start of 0x004
+              and limit of 2
             - two blocks with the ids ID_D and ID_C
 
         It should send a Protobuf request with:
@@ -342,25 +363,29 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in ''/blocks?head={}&start=0x0004&limit=2'.format(ID_D)
+            - a link property that ends in
+                '/blocks?head={}&start=0x0004&limit=2'.format(ID_D)
             - paging that matches the response with a next link
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids ID_D and ID_C
+
         """
         # Block list only returns a next id
         paging = Mocks.make_paging_response('0x0002', '0x0004', 2)
         blocks = Mocks.make_blocks(ID_D, ID_C)
-        self.connection.preset_response(head_id=ID_D, paging=paging,
-                                        blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_D, paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?limit=2')
         controls = Mocks.make_paging_controls(2)
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/blocks?head={}&start=0x0004&limit=2'.format(ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/blocks?head={}&start=0x0002&limit=2'.format(ID_D))
+        self.assert_has_valid_link(
+            response, '/blocks?head={}&start=0x0004&limit=2'.format(ID_D))
+        self.assert_has_valid_paging(
+            response, paging,
+            '/blocks?head={}&start=0x0002&limit=2'.format(ID_D))
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], ID_D, ID_C)
 
@@ -379,21 +404,24 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in '/blocks?head={}&start=0x0002&limit=100'.format(ID_D)
+            - a link property that ends in
+                '/blocks?head={}&start=0x0002&limit=100'.format(ID_D)
             - paging that matches the response, with a previous link
             - a data property that is a list of 2 dicts
             - and those dicts are full blocks with ids ID_D and ID_C
         """
         paging = Mocks.make_paging_response("", "0x0002", DEFAULT_LIMIT)
         blocks = Mocks.make_blocks(ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_D, paging=paging, blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_D, paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?start=0x0002')
         controls = Mocks.make_paging_controls(None, start="0x0002")
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/blocks?head={}&start=0x0002&limit=100'.format(ID_D))
+        self.assert_has_valid_link(
+            response, '/blocks?head={}&start=0x0002&limit=100'.format(ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_blocks_well_formed(response['data'], ID_B, ID_A)
@@ -413,25 +441,27 @@ class BlockListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in '/blocks?head={}&start=0x0003&limit=5'.format(ID_C)
+            - a link property that ends in
+                '/blocks?head={}&start=0x0003&limit=5'.format(ID_C)
             - paging that matches the response, with a previous link
             - a data property that is a list of 3 dicts
             - and those dicts are full blocks with ids ID_C, ID_B, and ID_A
         """
         paging = Mocks.make_paging_response("", "0x0003", 5)
         blocks = Mocks.make_blocks(ID_C, ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_D, paging=paging, blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_D, paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?start=0x0003&limit=5')
         controls = Mocks.make_paging_controls(5, start="0x0003")
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/blocks?head={}&start=0x0003&limit=5'.format(ID_D))
+        self.assert_has_valid_link(
+            response, '/blocks?head={}&start=0x0003&limit=5'.format(ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_blocks_well_formed(response['data'], ID_C, ID_B, ID_A)
-
 
     @unittest_run_loop
     async def test_block_list_sorted_in_reverse(self):
@@ -457,27 +487,25 @@ class BlockListTests(BaseApiTest):
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         blocks = Mocks.make_blocks(ID_C, ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_C, paging=paging, blocks=blocks)
+        self.connection.preset_response(
+            head_id=ID_C, paging=paging, blocks=blocks)
 
         response = await self.get_assert_200('/blocks?reverse')
         page_controls = Mocks.make_paging_controls()
-        sorting = Mocks.make_sort_controls(
-            'block_num', reverse=True)
+        sorting = Mocks.make_sort_controls('block_num', reverse=True)
         self.connection.assert_valid_request_sent(
-            paging=page_controls,
-            sorting=sorting)
+            paging=page_controls, sorting=sorting)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response,
-            '/blocks?head={}&start={}&limit=100&reverse'.format(ID_C, ID_C))
+        self.assert_has_valid_link(
+            response, '/blocks?head={}&start={}&limit=100&reverse'.format(
+                ID_C, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_blocks_well_formed(response['data'], ID_C, ID_B, ID_A)
 
 
-
 class BlockGetTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
@@ -485,7 +513,8 @@ class BlockGetTests(BaseApiTest):
             client_block_pb2.ClientBlockGetResponse)
 
         handlers = self.build_handlers(self.loop, self.connection)
-        return self.build_app(self.loop, '/blocks/{block_id}', handlers.fetch_block)
+        return self.build_app(
+            self.loop, '/blocks/{block_id}', handlers.fetch_block)
 
     @unittest_run_loop
     async def test_block_get(self):

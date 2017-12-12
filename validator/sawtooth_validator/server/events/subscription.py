@@ -25,6 +25,7 @@ class EventSubscription:
     if its type matches the type of the subscription and, if any filters are
     included in the subscription, it passes all filters.
     """
+
     def __init__(self, event_type, filters=None):
         self.event_type = event_type
         if filters:
@@ -134,6 +135,7 @@ class RegexAnyFilter(EventFilter):
 
     Because it matches one of the two attributes with the key "address".
     """
+
     def __init__(self, key, match_string):
         super().__init__(key, match_string)
         try:
@@ -170,6 +172,7 @@ class RegexAllFilter(EventFilter):
 
     Because it does not match all attributes with the key "address".
     """
+
     def __init__(self, key, match_string):
         super().__init__(key, match_string)
         try:

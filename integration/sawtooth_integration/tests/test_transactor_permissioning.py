@@ -117,8 +117,8 @@ class TestTransactorPermissioning(unittest.TestCase):
         #
         # transactor.batch_signer subsection
         #
-        # From local configuration both Alice and Bob are allowed batch_signers,
-        # while Dave is denied.
+        # From local configuration both Alice and Bob are allowed
+        # batch_signers, while Dave is denied.
 
         self.walter.set_public_key_for_role(
             "deny_alice_as_batcher_allow_bob",
@@ -268,7 +268,8 @@ def make_intkey_payload(unique_value):
 
 
 def make_intkey_address(unique_value):
-    return INTKEY_NAMESPACE + MessageFactory.sha512(unique_value.encode())[-64:]
+    return INTKEY_NAMESPACE + MessageFactory.sha512(
+        unique_value.encode())[-64:]
 
 
 def make_xo_payload(unique_value):
@@ -285,12 +286,12 @@ def make_xo_address(unique_value):
 
 TransactionEncoder = {
     Families.INTKEY: {
-        'encoder':      cbor.dumps,
+        'encoder': cbor.dumps,
         'payload_func': make_intkey_payload,
         'address_func': make_intkey_address
     },
     Families.XO: {
-        'encoder':      xo_encode,
+        'encoder': xo_encode,
         'payload_func': make_xo_payload,
         'address_func': make_xo_address
     }
@@ -298,7 +299,6 @@ TransactionEncoder = {
 
 
 class Transactor(object):
-
     def __init__(self, name, rest_endpoint):
         """
         Args:

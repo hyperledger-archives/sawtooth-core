@@ -236,7 +236,6 @@ def wait_for_rest_apis(endpoints, tries=5):
 
 
 class SetSawtoothHome(object):
-
     def __init__(self, sawtooth_home):
         self._sawtooth_home = sawtooth_home
 

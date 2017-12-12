@@ -166,8 +166,9 @@ def _set_policy(data, context):
 
         # sort all roles by using sorted(roles, policy.name)
         # if a policy with the same name exists, replace that policy
-        policies = [x for x in policy_list.policies if x.name !=
-                    new_policy.name]
+        policies = [
+            x for x in policy_list.policies if x.name != new_policy.name
+        ]
         policies.append(new_policy)
         policies = sorted(policies, key=lambda role: role.name)
     else:
@@ -177,8 +178,9 @@ def _set_policy(data, context):
 
     # Store policy in a PolicyList incase of hash collisions
     new_policy_list = PolicyList(policies=policies)
-    addresses = context.set_state(
-        {address: new_policy_list.SerializeToString()})
+    addresses = context.set_state({
+        address: new_policy_list.SerializeToString()
+    })
 
     if not addresses:
         LOGGER.warning('Failed to set policy %s at %s', new_policy.name,
@@ -206,8 +208,8 @@ def _set_role(data, context):
 
     if entries_list == []:
         raise InvalidTransaction(
-            "Cannot set Role: {}, the Policy: {} is not set."
-            .format(role.name, role.policy_name))
+            "Cannot set Role: {}, the Policy: {} is not set.".format(
+                role.name, role.policy_name))
     else:
         policy_list = PolicyList()
         policy_list.ParseFromString(entries_list[0].data)
@@ -219,8 +221,8 @@ def _set_role(data, context):
 
         if not exist:
             raise InvalidTransaction(
-                "Cannot set Role {}, the Policy {} is not set."
-                .format(role.name, role.policy_name))
+                "Cannot set Role {}, the Policy {} is not set.".format(
+                    role.name, role.policy_name))
 
     address = _get_role_address(role.name)
     entries_list = _get_data(address, context)
@@ -236,16 +238,17 @@ def _set_role(data, context):
     roles = sorted(roles, key=lambda role: role.name)
 
     # set RoleList at the address above.
-    addresses = context.set_state(
-        {address: RoleList(roles=roles).SerializeToString()})
+    addresses = context.set_state({
+        address:
+        RoleList(roles=roles).SerializeToString()
+    })
 
     if not addresses:
         LOGGER.warning('Failed to set role %s at %s', role.name, address)
         raise InternalError('Unable to save role {}'.format(role.name))
 
     context.add_event(
-        event_type="identity/update",
-        attributes=[("updated", role.name)])
+        event_type="identity/update", attributes=[("updated", role.name)])
     LOGGER.debug("Set role: \n%s", role)
 
 

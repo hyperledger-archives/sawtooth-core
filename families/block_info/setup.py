@@ -27,21 +27,21 @@ if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
                        ['packaging/systemd/sawtooth-block-info-tp.service']))
 
-setup(name='sawtooth-block-info',
-      version=subprocess.check_output(
-          ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Block Info Transaction Processor',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'colorlog',
-          'protobuf',
-          'sawtooth-sdk',
-          ],
-      data_files=data_files,
-      entry_points={
-          'console_scripts': [
-              'block-info-tp= sawtooth_block_info.processor.main:main'
-          ]
-      })
+setup(
+    name='sawtooth-block-info',
+    version=subprocess.check_output(
+        ['../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth Block Info Transaction Processor',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'colorlog',
+        'protobuf',
+        'sawtooth-sdk',
+    ],
+    data_files=data_files,
+    entry_points={
+        'console_scripts':
+        ['block-info-tp= sawtooth_block_info.processor.main:main']
+    })

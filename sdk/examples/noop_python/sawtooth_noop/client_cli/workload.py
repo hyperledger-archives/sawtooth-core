@@ -46,7 +46,7 @@ def post_batches(url, batches):
         code, json_result = (result.status_code, result.json())
         if not (code == 200 or code == 201 or code == 202):
             LOGGER.warning("(%s): %s", code, json_result)
-        return(code, json_result)
+        return (code, json_result)
     except requests.exceptions.HTTPError as e:
         LOGGER.warning("(%s): %s", e.response.status_code, e.response.reason)
         return (e.response.status_code, e.response.reason)
@@ -62,6 +62,7 @@ class NoopWorkload(Workload):
     """
     This workload is for the Sawtooth Noop transaction family.
     """
+
     def __init__(self, delegate, args):
         super(NoopWorkload, self).__init__(delegate, args)
         self._urls = []

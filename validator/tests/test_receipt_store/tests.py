@@ -28,22 +28,24 @@ from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.execution.tp_state_handlers import TpReceiptAddDataHandler
 
 from sawtooth_validator.protobuf import processor_pb2
-from sawtooth_validator.protobuf.transaction_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
+    TransactionReceipt
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.client_receipt_pb2 import \
     ClientReceiptGetRequest
 from sawtooth_validator.protobuf.client_receipt_pb2 import \
     ClientReceiptGetResponse
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.state_context_pb2 import TpReceiptAddDataRequest
+from sawtooth_validator.protobuf.state_context_pb2 import \
+    TpReceiptAddDataRequest
 
 
 class ReceiptStoreTest(unittest.TestCase):
     def test_receipt_store_get_and_set(self):
         """Tests that we correctly get and set state changes to a ReceiptStore.
 
-        This test sets a list of receipts and then gets them back, ensuring that
-        the data is the same.
+        This test sets a list of receipts and then gets them back,
+        ensuring that the data is the same.
         """
 
         receipt_store = TransactionReceiptStore(DictDatabase())
@@ -58,20 +60,22 @@ class ReceiptStoreTest(unittest.TestCase):
                 string = str(j)
                 byte = string.encode()
 
-                state_changes.append(StateChange(
-                    address='a100000' + string,
-                    value=byte,
-                    type=StateChange.SET))
-                events.append(Event(
-                    event_type="test",
-                    data=byte,
-                    attributes=[Event.Attribute(key=string, value=string)]))
+                state_changes.append(
+                    StateChange(
+                        address='a100000' + string,
+                        value=byte,
+                        type=StateChange.SET))
+                events.append(
+                    Event(
+                        event_type="test",
+                        data=byte,
+                        attributes=[Event.Attribute(key=string,
+                                                    value=string)]))
                 data.append(byte)
 
-            receipts.append(TransactionReceipt(
-                state_changes=state_changes,
-                events=events,
-                data=data))
+            receipts.append(
+                TransactionReceipt(
+                    state_changes=state_changes, events=events, data=data))
 
         for i in range(len(receipts)):
             receipt_store.put(str(i), receipts[i])
@@ -79,7 +83,8 @@ class ReceiptStoreTest(unittest.TestCase):
         for i in range(len(receipts)):
             stored_receipt = receipt_store.get(str(i))
 
-            self.assertEqual(stored_receipt.state_changes, receipts[i].state_changes)
+            self.assertEqual(stored_receipt.state_changes,
+                             receipts[i].state_changes)
             self.assertEqual(stored_receipt.events, receipts[i].events)
             self.assertEqual(stored_receipt.data, receipts[i].data)
 
@@ -90,6 +95,7 @@ class ReceiptStoreTest(unittest.TestCase):
 
         with self.assertRaises(KeyError):
             receipt_store.get('unknown')
+
 
 class TransactionReceiptGetRequestHandlerTest(unittest.TestCase):
     def test_get_receipts(self):
@@ -115,7 +121,6 @@ class TransactionReceiptGetRequestHandlerTest(unittest.TestCase):
 
         self.assertEqual([receipt], [r for r in response.message_out.receipts])
 
-
         request = ClientReceiptGetRequest(
             transaction_ids=['unknown']).SerializeToString()
 
@@ -123,6 +128,7 @@ class TransactionReceiptGetRequestHandlerTest(unittest.TestCase):
         self.assertEqual(HandlerStatus.RETURN, response.status)
         self.assertEqual(ClientReceiptGetResponse.NO_RESOURCE,
                          response.message_out.status)
+
 
 class TpReceiptAddDataHandlerTest(unittest.TestCase):
     def test_add_event(self):

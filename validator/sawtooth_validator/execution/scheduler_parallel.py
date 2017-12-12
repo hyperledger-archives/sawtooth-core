@@ -56,8 +56,10 @@ class PredecessorTree:
         return repr(self._root)
 
     def _tokenize_address(self, address):
-        return [address[i:i + self._token_size]
-                for i in range(0, len(address), self._token_size)]
+        return [
+            address[i:i + self._token_size]
+            for i in range(0, len(address), self._token_size)
+        ]
 
     def _get(self, address, create=False):
         tokens = self._tokenize_address(address)
@@ -455,26 +457,30 @@ class ParallelScheduler(Scheduler):
             state_hash = None
             if self._is_explicit_request_for_state_root(batch_signature):
                 contexts = self._get_contexts_for_squash(batch_signature)
-                state_hash = self._squash(self._first_state_hash,
-                                          contexts,
-                                          persist=False,
-                                          clean_up=False)
+                state_hash = self._squash(
+                    self._first_state_hash,
+                    contexts,
+                    persist=False,
+                    clean_up=False)
                 if self._is_state_hash_correct(state_hash, batch_signature):
-                    self._squash(self._first_state_hash,
-                                 contexts,
-                                 persist=True,
-                                 clean_up=True)
+                    self._squash(
+                        self._first_state_hash,
+                        contexts,
+                        persist=True,
+                        clean_up=True)
                 else:
-                    self._squash(self._first_state_hash,
-                                 contexts,
-                                 persist=False,
-                                 clean_up=True)
+                    self._squash(
+                        self._first_state_hash,
+                        contexts,
+                        persist=False,
+                        clean_up=True)
             elif self._is_implicit_request_for_state_root(batch_signature):
                 contexts = self._get_contexts_for_squash(batch_signature)
-                state_hash = self._squash(self._first_state_hash,
-                                          contexts,
-                                          persist=self._always_persist,
-                                          clean_up=True)
+                state_hash = self._squash(
+                    self._first_state_hash,
+                    contexts,
+                    persist=self._always_persist,
+                    clean_up=True)
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
 
     def get_transaction_execution_results(self, batch_signature):
@@ -500,7 +506,7 @@ class ParallelScheduler(Scheduler):
 
     def _is_in_same_batch(self, txn_id_1, txn_id_2):
         return self._batches_by_txn_id[txn_id_1] == \
-               self._batches_by_txn_id[txn_id_2]
+            self._batches_by_txn_id[txn_id_2]
 
     def _is_txn_to_replay(self, txn_id, possible_successor, already_seen):
         """Decide if possible_successor should be replayed.
@@ -588,9 +594,10 @@ class ParallelScheduler(Scheduler):
             return
             # Test to see if all batches from the least_batch to
             # the prior batch to the current batch have results.
-        if all(all(t.header_signature in self._txn_results
-                   for t in b.transactions)
-               for b in self._batches[least_index: current_index]):
+        if all(
+                all(t.header_signature in self._txn_results
+                    for t in b.transactions)
+                for b in self._batches[least_index:current_index]):
             all_prior = True
         if not all_prior:
             return
@@ -609,8 +616,8 @@ class ParallelScheduler(Scheduler):
             events=None, data=None, error_message="", error_data=b""):
         with self._condition:
             if txn_signature not in self._scheduled:
-                raise SchedulerError("transaction not scheduled: {}".format(
-                    txn_signature))
+                raise SchedulerError(
+                    "transaction not scheduled: {}".format(txn_signature))
             self._set_least_batch_id(txn_signature=txn_signature)
             if not is_valid:
                 self._remove_subsequent_result_because_of_batch_failure(
@@ -654,7 +661,7 @@ class ParallelScheduler(Scheduler):
 
     def _txn_result_is_invalid(self, sig):
         return sig in self._txn_results and \
-               not self._txn_results[sig].is_valid
+            not self._txn_results[sig].is_valid
 
     def _txn_is_in_valid_batch(self, txn_id):
         """Returns whether the transaction is in a valid batch.
@@ -803,8 +810,9 @@ class ParallelScheduler(Scheduler):
 
     def _all_in_batch_have_results(self, txn_id):
         batch = self._batches_by_txn_id[txn_id]
-        return all(t.header_signature in self._txn_results
-                   for t in list(batch.transactions))
+        return all(
+            t.header_signature in self._txn_results
+            for t in list(batch.transactions))
 
     def _any_in_batch_are_invalid(self, txn_id):
         batch = self._batches_by_txn_id[txn_id]
@@ -830,7 +838,7 @@ class ParallelScheduler(Scheduler):
 
     def _complete(self):
         return self._final and \
-                    len(self._txn_results) == len(self._batches_by_txn_id)
+            len(self._txn_results) == len(self._batches_by_txn_id)
 
     def complete(self, block=True):
         with self._condition:
@@ -858,12 +866,15 @@ class ParallelScheduler(Scheduler):
     def cancel(self):
         with self._condition:
             if not self._cancelled and not self._final:
-                contexts = [tr.context_id for tr in self._txn_results.values()
-                            if tr.context_id]
-                self._squash(self._first_state_hash,
-                             contexts,
-                             persist=False,
-                             clean_up=True)
+                contexts = [
+                    tr.context_id for tr in self._txn_results.values()
+                    if tr.context_id
+                ]
+                self._squash(
+                    self._first_state_hash,
+                    contexts,
+                    persist=False,
+                    clean_up=True)
                 self._cancelled = True
                 self._condition.notify_all()
 

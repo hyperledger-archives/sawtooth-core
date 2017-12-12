@@ -37,6 +37,7 @@ class BlockWrapper(object):
     components to track the state of a block. This is the object type
     stored in the Block Cache.
     """
+
     def __init__(self, block, weight=0, status=BlockStatus.Unknown):
         self.block = block
         self._block_header = None

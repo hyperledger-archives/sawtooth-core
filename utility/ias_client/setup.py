@@ -25,14 +25,15 @@ if os.name == 'nt':
 else:
     conf_dir = "/etc/sawtooth"
 
-setup(name='sawtooth-ias-client',
-      version=subprocess.check_output(
-          ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Intel Attestation Service Client',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'requests',
-          ],
-      entry_points={})
+setup(
+    name='sawtooth-ias-client',
+    version=subprocess.check_output(
+        ['../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth Intel Attestation Service Client',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'requests',
+    ],
+    entry_points={})

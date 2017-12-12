@@ -132,7 +132,7 @@ class TestEventsAndReceipts(unittest.TestCase):
             block_num = list(filter(
                 lambda attr: attr.key == "block_num",
                 block_commit_event.attributes))[0].value
-            self.assertEqual((block_num, block_id), blocks[i+1])
+            self.assertEqual((block_num, block_id), blocks[i + 1])
 
         self._unsubscribe()
 
@@ -189,7 +189,8 @@ class TestEventsAndReceipts(unittest.TestCase):
     def _subscribe(self, subscriptions=None, last_known_block_ids=None):
         if subscriptions is None:
             subscriptions = [
-                events_pb2.EventSubscription(event_type="sawtooth/block-commit"),
+                events_pb2.EventSubscription(
+                    event_type="sawtooth/block-commit"),
             ]
         if last_known_block_ids is None:
             last_known_block_ids = []
@@ -210,15 +211,17 @@ class TestEventsAndReceipts(unittest.TestCase):
 
     def assert_block_commit_event(self, event, block_num):
         self.assertEqual(event.event_type, "sawtooth/block-commit")
-        self.assertTrue(all([
-            any(attribute.key == "block_id" for attribute in event.attributes),
-            any(attribute.key == "block_num"
-                for attribute in event.attributes),
-            any(attribute.key == "previous_block_id"
-                for attribute in event.attributes),
-            any(attribute.key == "state_root_hash"
-                for attribute in event.attributes),
-        ]))
+        self.assertTrue(
+            all([
+                any(attribute.key == "block_id"
+                    for attribute in event.attributes),
+                any(attribute.key == "block_num"
+                    for attribute in event.attributes),
+                any(attribute.key == "previous_block_id"
+                    for attribute in event.attributes),
+                any(attribute.key == "state_root_hash"
+                    for attribute in event.attributes),
+            ]))
         for attribute in event.attributes:
             if attribute.key == "block_num":
                 self.assertEqual(attribute.value, str(block_num))
@@ -256,11 +259,11 @@ class TestEventsAndReceipts(unittest.TestCase):
             msg.message_type,
             validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_RESPONSE)
 
-        subscription_response = client_event_pb2.ClientEventsSubscribeResponse()
-        subscription_response.ParseFromString(msg.content)
+        response = client_event_pb2.ClientEventsSubscribeResponse()
+        response.ParseFromString(msg.content)
 
         self.assertEqual(
-            subscription_response.status,
+            response.status,
             client_event_pb2.ClientEventsSubscribeResponse.OK)
 
     def assert_unsubscribe_response(self, msg):
@@ -268,11 +271,12 @@ class TestEventsAndReceipts(unittest.TestCase):
             msg.message_type,
             validator_pb2.Message.CLIENT_EVENTS_UNSUBSCRIBE_RESPONSE)
 
-        subscription_response = client_event_pb2.ClientEventsUnsubscribeResponse()
-        subscription_response.ParseFromString(msg.content)
+        response = client_event_pb2.ClientEventsUnsubscribeResponse()
+
+        response.ParseFromString(msg.content)
 
         self.assertEqual(
-            subscription_response.status,
+            response.status,
             client_event_pb2.ClientEventsUnsubscribeResponse.OK)
 
 

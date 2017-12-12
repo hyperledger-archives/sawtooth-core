@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+
 class MockCompleter:
     def __init__(self):
         self.blocks = {}
@@ -42,6 +43,7 @@ class MockChainController:
 
     def add_block(self, block_id):
         self.blocks[block_id] = 1
+
 
 class MockPublisher:
     def __init__(self):

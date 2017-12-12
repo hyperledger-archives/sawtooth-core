@@ -47,6 +47,7 @@ class TransactionProcessor(object):
     validator and routing transaction processing requests to a registered
     handler. It uses ZMQ and channels to handle requests concurrently.
     """
+
     def __init__(self, url):
         """
         Args:
@@ -77,8 +78,9 @@ class TransactionProcessor(object):
         :return: handler
         """
         try:
-            return next(handler for handler in self._handlers
-                        if self._matches(handler, header))
+            return next(
+                handler for handler in self._handlers
+                if self._matches(handler, header))
         except StopIteration:
             LOGGER.debug("Missing handler for header: %s", header)
             return None

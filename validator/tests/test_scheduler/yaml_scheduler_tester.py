@@ -108,15 +108,18 @@ class SchedulerTester(object):
             - string <address>
           valid: boolean. Optional. Defaults to True
           dependencies: list of string. Optional. Defaults to empty list.
-            - ..... string. No default. If a dependency is the
-                            same string as a 'name' for another txn, that txn's
-                            signature will be used for the actual Transaction's
-                            dependency. If the string is not an 'name' of another
-                            txn, if it is longer than 20 characters it will be
+            - ..... string. No default. If a dependency is the same
+                            string as a 'name' for another txn, that
+                            txn's signature will be used for the
+                            actual Transaction's dependency. If the
+                            string is not an 'name' of another txn, if
+                            it is longer than 20 characters it will be
                             used as if is is the actual
-                            Transaction.header_signature for the dependency.
-                            If not, it will be disregarded.
-          name: string. Optional. No default."""
+                            Transaction.header_signature for the
+                            dependency. If not, it will be
+                            disregarded.
+          name: string. Optional. No default.
+    """
 
     def __init__(self, file_name):
         """
@@ -175,7 +178,7 @@ class SchedulerTester(object):
 
         for i, batch in enumerate(self._batches):
             if i == len(self._batches) - 1 and \
-                            validation_state_hash is not None:
+                    validation_state_hash is not None:
                 s_h = validation_state_hash
             else:
                 s_h = self._batch_results[batch.header_signature].state_hash
@@ -428,11 +431,11 @@ class SchedulerTester(object):
                 t_id = txn.header_signature
                 is_valid, address_values, deletes = self._txn_execution[t_id]
                 partial_batch_transaction_contexts[t_id] = \
-                        TransactionExecutionContext(
-                            txn=txn,
-                            txn_num=txn_num + 1,
-                            batch_num=batch_num + 1,
-                            state=partial_batch_state_up_to_now.copy())
+                    TransactionExecutionContext(
+                        txn=txn,
+                        txn_num=txn_num + 1,
+                        batch_num=batch_num + 1,
+                        state=partial_batch_state_up_to_now.copy())
 
                 for item in address_values:
                     partial_batch_state_up_to_now.update(item)
@@ -443,8 +446,6 @@ class SchedulerTester(object):
                     break
             batch_id = batch.header_signature
             batch_is_valid = self._batch_results[batch_id].is_valid
-
-
 
             if batch_is_valid:
                 transaction_contexts.update(partial_batch_transaction_contexts)
@@ -563,12 +564,11 @@ class SchedulerTester(object):
             inputs_real = [self._address(a) for a in inputs]
             outputs_real = [self._address(a) for a in outputs]
             if self._contains_and_not_none('addresses_to_set', transaction):
-                addresses_to_set = [
-                    {self._address(a, require_full=True): self._bytes_if_none(
+                addresses_to_set = [{
+                    self._address(a, require_full=True): self._bytes_if_none(
                         d[a])
-                        for a in d}
-                    for d in transaction['addresses_to_set']
-                ]
+                    for a in d
+                } for d in transaction['addresses_to_set']]
             if self._contains_and_not_none('addresses_to_delete', transaction):
                 addresses_to_delete = [
                     self._address(a, require_full=True)
@@ -576,8 +576,10 @@ class SchedulerTester(object):
                 ]
 
             if self._contains_and_not_none('dependencies', transaction):
-                if any([a not in self._referenced_txns_in_other_batches and
-                        len(a) <= 20 for a in transaction['dependencies']]):
+                if any([
+                        a not in self._referenced_txns_in_other_batches
+                        and len(a) <= 20 for a in transaction['dependencies']
+                ]):
                     # This txn has a dependency with a txn signature that is
                     # not known about,
                     return None
@@ -585,7 +587,8 @@ class SchedulerTester(object):
                 dependencies = [
                     self._referenced_txns_in_other_batches[a]
                     if a in self._referenced_txns_in_other_batches else a
-                    for a in transaction['dependencies']]
+                    for a in transaction['dependencies']
+                ]
                 dependencies = [a for a in dependencies if len(a) > 20]
             else:
                 dependencies = []

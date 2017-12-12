@@ -36,7 +36,7 @@ class TestRestApiConfig(unittest.TestCase):
 
         """
         config = load_default_rest_api_config()
-        self.assertEqual(config.bind , ["127.0.0.1:8008"])
+        self.assertEqual(config.bind, ["127.0.0.1:8008"])
         self.assertEqual(config.connect, "tcp://localhost:4004")
         self.assertEqual(config.timeout, 300)
 

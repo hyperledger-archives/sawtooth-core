@@ -32,7 +32,6 @@ from sawtooth_poet_sgx.poet_enclave_sgx import poet_enclave as poet
 
 
 class TestIasProxyClient(TestCase):
-
     @classmethod
     def setUpClass(cls):
 

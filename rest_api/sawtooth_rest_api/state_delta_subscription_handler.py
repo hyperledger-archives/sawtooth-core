@@ -49,6 +49,7 @@ class StateDeltaSubscriberHandler:
     all are fed state deltas from the incoming complete stream, filtered by
     this handler according to their preferred filters.
     """
+
     def __init__(self, connection):
         """
         Constructs this handler on a given validator connection.

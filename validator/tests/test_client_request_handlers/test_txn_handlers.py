@@ -372,7 +372,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_2, response.transactions[0].header_signature)
 
-    def test_txn_list_paginated_by_start_id (self):
+    def test_txn_list_paginated_by_start_id(self):
         """Verifies txn list requests work paginated by limit and start_id.
 
         Queries the default mock block store:
@@ -411,7 +411,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_1, response.transactions[0].header_signature)
 
-    def test_txn_list_paginated_by_index (self):
+    def test_txn_list_paginated_by_index(self):
         """Verifies txn list requests work paginated by limit and min_index.
 
         Queries the default mock block store:
@@ -477,7 +477,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.transactions)
 
-    def test_txn_list_paginated_with_head (self):
+    def test_txn_list_paginated_with_head(self):
         """Verifies txn list requests work with both paging and a head id.
 
         Queries the default mock block store with 'bbb...1' as the head:

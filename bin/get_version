@@ -52,8 +52,9 @@ def auto_version(default, strict):
             sys.exit(1)
         else:
             print("WARNING: " + msg, file=sys.stderr)
-            print("WARNING: using setup.py version {}".format(
-                  default), file=sys.stderr)
+            print(
+                "WARNING: using setup.py version {}".format(default),
+                file=sys.stderr)
             parts[0] = default
 
     if len(parts) > 1:

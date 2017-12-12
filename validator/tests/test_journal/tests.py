@@ -358,7 +358,7 @@ class TestBlockPublisher(unittest.TestCase):
         self.batches = self.make_batches_with_duplicate_txn()
         self.receive_batches()
         self.publish_block()
-        self.assert_no_block_published() # block should be empty after batch
+        self.assert_no_block_published()  # block should be empty after batch
         # with duplicate transaction is dropped.
 
     def test_batch_injection_start_block(self):
@@ -628,7 +628,6 @@ class TestBlockValidator(unittest.TestCase):
 
         self.assert_invalid_block(new_block)
         self.assert_new_block_not_committed()
-
 
     def test_block_missing_batch_dependency(self):
         """
@@ -1108,7 +1107,7 @@ class TestChainController(unittest.TestCase):
             'Not chain head')
 
     def generate_chain(self, root_block, num_blocks,
-                                 params={'add_to_cache': True}):
+                       params={'add_to_cache': True}):
         '''Returns (chain, chain_head).
         Usually only the head is needed,
         but occasionally the chain itself is used.
@@ -1352,7 +1351,6 @@ class TestTimedCache(unittest.TestCase):
 
 
 class TestChainCommitState(unittest.TestCase):
-
     def setUp(self):
         self.commit_state = None
         self.block_tree_manager = BlockTreeManager()
@@ -1378,7 +1376,7 @@ class TestChainCommitState(unittest.TestCase):
         commit_state = self.create_chain_commit_state(
             blocks=blocks,
             uncommitted_blocks=[uncommitted_block],
-            )
+        )
         self.commit_state = commit_state
 
         # the first block is still present
@@ -1397,7 +1395,7 @@ class TestChainCommitState(unittest.TestCase):
         commit_state = self.create_chain_commit_state(
             blocks=blocks,
             uncommitted_blocks=[uncommitted_block],
-            )
+        )
         self.commit_state = commit_state
 
         # the first block is still present
@@ -1478,6 +1476,7 @@ class TestChainCommitState(unittest.TestCase):
         self.assertFalse(self.commit_state.has_batch("missing"))
         self.assertFalse(self.commit_state.has_transaction("missing"))
 
+
 class TestBlockEventExtractor(unittest.TestCase):
     def test_block_event_extractor(self):
         """Test that a sawtooth/block-commit event is generated correctly."""
@@ -1495,13 +1494,14 @@ class TestBlockEventExtractor(unittest.TestCase):
             Event(
                 event_type="sawtooth/block-commit",
                 attributes=[
-                    Event.Attribute(key="block_id",value="abcdef1234567890"),
+                    Event.Attribute(key="block_id", value="abcdef1234567890"),
                     Event.Attribute(key="block_num", value="85"),
                     Event.Attribute(
                         key="state_root_hash", value="0987654321fedcba"),
                     Event.Attribute(
                         key="previous_block_id",
                         value="0000000000000000")])])
+
 
 class TestReceiptEventExtractor(unittest.TestCase):
     def test_tf_events(self):

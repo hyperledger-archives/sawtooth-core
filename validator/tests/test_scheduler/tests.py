@@ -45,7 +45,6 @@ def _get_address_from_txn(txn_info):
 
 
 class TestSchedulers(unittest.TestCase):
-
     def setUp(self):
         self._context_manager = ContextManager(dict_database.DictDatabase())
 
@@ -327,7 +326,6 @@ class TestSchedulers(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(scheduler_iter2)
 
-
     def test_serial_completion_on_finalize(self):
         """Tests that iteration will stop when finalized is called on an
         otherwise complete serial scheduler.
@@ -349,16 +347,18 @@ class TestSchedulers(unittest.TestCase):
         otherwise complete scheduler.
 
         Notes:
-            Adds one batch and transaction, then verifies the iterable returns
-            that transaction.  Sets the execution result and then calls finalize.
-            Since the the scheduler is complete (all transactions have had
-            results set, and it's been finalized), we should get a StopIteration.
-            This check is useful in making sure the finalize() can occur after
-            all set_transaction_execution_result()s have been performed, because
-            in a normal situation, finalize will probably occur prior to those
-            calls.
+            Adds one batch and transaction, then verifies the iterable
+            returns that transaction. Sets the execution result and
+            then calls finalize. Since the the scheduler is complete
+            (all transactions have had results set, and it's been
+            finalized), we should get a StopIteration. This check is
+            useful in making sure the finalize() can occur after all
+            set_transaction_execution_result()s have been performed,
+            because in a normal situation, finalize will probably
+            occur prior to those calls.
 
         This test should work for both a serial and parallel scheduler.
+
         """
 
         private_key = self._context.new_random_private_key()
@@ -412,12 +412,14 @@ class TestSchedulers(unittest.TestCase):
             that transaction.  Finalizes then sets the execution result. The
             schedule should not be marked as complete until after the
             execution result is set.
-            This check is useful in making sure the finalize() can occur after
-            all set_transaction_execution_result()s have been performed, because
-            in a normal situation, finalize will probably occur prior to those
-            calls.
+
+            This check is useful in making sure the finalize() can
+            occur after all set_transaction_execution_result()s have
+            been performed, because in a normal situation, finalize
+            will probably occur prior to those calls.
 
         This test should work for both a serial and parallel scheduler.
+
         """
         private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
@@ -569,7 +571,6 @@ class TestSchedulers(unittest.TestCase):
         self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
     def _add_valid_batch_invalid_batch(self, scheduler, context_manager):
-
         """Tests the squash function. That the correct state hash is found
         at the end of valid and invalid batches, similar to block publishing.
 
@@ -1198,6 +1199,7 @@ class TestParallelScheduler(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(iterable)
 
-        result = self.scheduler.get_batch_execution_result(batch.header_signature)
+        result = self.scheduler.get_batch_execution_result(
+            batch.header_signature)
         self.assertIsNotNone(result)
         self.assertTrue(result.is_valid)

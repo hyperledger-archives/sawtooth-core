@@ -75,8 +75,7 @@ def do_keygen(args):
     key_dir = get_key_dir()
 
     if not os.path.exists(key_dir):
-        raise CliException(
-            "Key directory does not exist: {}".format(key_dir))
+        raise CliException("Key directory does not exist: {}".format(key_dir))
 
     priv_filename = os.path.join(key_dir, key_name + '.priv')
     pub_filename = os.path.join(key_dir, key_name + '.pub')

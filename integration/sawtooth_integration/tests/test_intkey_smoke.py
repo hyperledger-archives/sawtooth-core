@@ -36,7 +36,6 @@ INTKEY_PREFIX = '1cf126'
 
 
 class TestIntkeySmoke(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         wait_for_rest_apis(['rest-api:8008'])

@@ -57,22 +57,20 @@ include_dirs += ['sawtooth_poet_sgx/poet_enclave_sgx',
                  '../common/c11_support/{}'.format(platform_dir)]
 library_dirs = ['deps/lib']
 
-enclavemod = Extension('_poet_enclave',
-                       ['sawtooth_poet_sgx/poet_enclave_sgx/poet_enclave.i',
-                        'sawtooth_poet_sgx/poet_enclave_sgx/common.cpp',
-                        'sawtooth_poet_sgx/poet_enclave_sgx/poet.cpp',
-                        'sawtooth_poet_sgx/poet_enclave_sgx/wait_certificate.cpp',
-                        'sawtooth_poet_sgx/poet_enclave_sgx/wait_timer.cpp',
-                        'sawtooth_poet_sgx/poet_enclave_sgx/signup_data.cpp',
-                        'sawtooth_poet_sgx/poet_enclave_sgx/signup_info.cpp',
-                        'sawtooth_poet_sgx/poet_enclave_sgx/{}/platform_support.cpp'.format(
-                            platform_dir)
-                        ],
-                       swig_opts=['-c++'],
-                       extra_compile_args=extra_compile_args,
-                       include_dirs=include_dirs,
-                       libraries=libraries,
-                       library_dirs=library_dirs)
+enclavemod = Extension(
+    '_poet_enclave',
+    ['sawtooth_poet_sgx/poet_enclave_sgx/poet_enclave.i',
+     'sawtooth_poet_sgx/poet_enclave_sgx/common.cpp',
+     'sawtooth_poet_sgx/poet_enclave_sgx/poet.cpp',
+     'sawtooth_poet_sgx/poet_enclave_sgx/wait_certificate.cpp',
+     'sawtooth_poet_sgx/poet_enclave_sgx/wait_timer.cpp',
+     'sawtooth_poet_sgx/poet_enclave_sgx/signup_data.cpp',
+     'sawtooth_poet_sgx/poet_enclave_sgx/signup_info.cpp',
+     'sawtooth_poet_sgx/poet_enclave_sgx/{}/platform_support.cpp'.format(
+         platform_dir)],
+    swig_opts=['-c++'],
+    extra_compile_args=extra_compile_args, include_dirs=include_dirs,
+    libraries=libraries, library_dirs=library_dirs)
 
 
 class Build(build_module.build):
@@ -107,6 +105,7 @@ class Build(build_module.build):
         self.build_poet()
         build_module.build.run(self)
 
+
 if os.name == 'nt':
     conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"
 else:
@@ -123,7 +122,7 @@ setup(name='sawtooth-poet-sgx',
           'toml',
           'sawtooth-ias-client',
           'sawtooth-poet-common'
-          ],
+      ],
       ext_modules=[enclavemod],
       py_modules=['sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave'],
       data_files=[

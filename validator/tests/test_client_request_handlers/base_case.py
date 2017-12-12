@@ -21,6 +21,7 @@ class ClientHandlerTestCase(unittest.TestCase):
     """Parent for Client Request Handler tests that simplifies making requests.
     Run initialize as part of setUp, and then call make_request in each test.
     """
+
     def initialize(self, handler, request_proto, response_proto,
                    store=None, roots=None, tracker=None):
         self._identity = '1234567'
@@ -37,19 +38,21 @@ class ClientHandlerTestCase(unittest.TestCase):
         return self._handle(self._serialize(**kwargs))
 
     def make_paged_request(self, **kwargs):
-        """Parses out paging kwargs and adds them into a ClientPagingControls object,
-        before sending it all on to `make_request`
+        """Parses out paging kwargs and adds them into a ClientPagingControls
+        object, before sending it all on to `make_request`
         """
         paging_keys = ['start', 'limit']
         paging_args = {k: kwargs.pop(k) for k in paging_keys if k in kwargs}
-        paging_request = client_list_control_pb2.ClientPagingControls(**paging_args)
+        paging_request = client_list_control_pb2.ClientPagingControls(
+            **paging_args)
         return self.make_request(paging=paging_request, **kwargs)
 
     def make_sort_controls(self, *keys, reverse=False):
         """Creates a ClientSortControls object and returns it in a list. Use
         concatenation to combine multiple ClientSortControls.
         """
-        return [client_list_control_pb2.ClientSortControls(keys=keys, reverse=reverse)]
+        return [client_list_control_pb2.ClientSortControls(
+            keys=keys, reverse=reverse)]
 
     def _serialize(self, **kwargs):
         request = self._request_proto(**kwargs)
@@ -87,7 +90,8 @@ class ClientHandlerTestCase(unittest.TestCase):
         """Checks that a response's ClientPagingResponse is set properly.
         Defaults to expecting a single page with all mock resources.
         """
-        self.assertIsInstance(response.paging, client_list_control_pb2.ClientPagingResponse)
+        self.assertIsInstance(
+            response.paging, client_list_control_pb2.ClientPagingResponse)
         self.assertEqual(response.paging.start, start)
         self.assertEqual(response.paging.limit, limit)
         self.assertEqual(response.paging.next, next_id)

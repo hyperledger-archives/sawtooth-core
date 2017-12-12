@@ -33,6 +33,7 @@ class _MessageRouter:
     """Manages message, routing them either to an incoming queue or to the
     futures for expected replies.
     """
+
     def __init__(self):
         self._queue = asyncio.Queue()
         self._futures = {}
@@ -172,6 +173,7 @@ class _Sender:
 class DisconnectError(Exception):
     """Raised when a connection disconnects.
     """
+
     def __init__(self):
         super().__init__("The connection was lost")
 
@@ -190,6 +192,7 @@ class ConnectionEvent(Enum):
 class Connection:
     """A connection, over which validator Message objects may be sent.
     """
+
     def __init__(self, url):
         self._url = url
 

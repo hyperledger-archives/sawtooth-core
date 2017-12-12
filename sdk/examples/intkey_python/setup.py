@@ -24,29 +24,32 @@ from setuptools import setup, find_packages
 data_files = []
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-intkey-tp-python']))
+    data_files.append(
+        ('/etc/default', ['packaging/systemd/sawtooth-intkey-tp-python']))
 
 if os.path.exists("/lib/systemd/system"):
-    data_files.append(('/lib/systemd/system',
-                       ['packaging/systemd/sawtooth-intkey-tp-python.service']))
+    data_files.append(
+        ('/lib/systemd/system',
+         ['packaging/systemd/sawtooth-intkey-tp-python.service']))
 
-setup(name='sawtooth-intkey',
-      version=subprocess.check_output(
-          ['../../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Intkey Python Example',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          "cbor",
-          "colorlog",
-          "sawtooth-sdk",
-          "sawtooth-signing",
-      ],
-      data_files=data_files,
-      entry_points={
-          'console_scripts': [
-              'intkey = sawtooth_intkey.client_cli.intkey_cli:main_wrapper',
-              'intkey-tp-python = sawtooth_intkey.processor.main:main'
-          ]
-      })
+setup(
+    name='sawtooth-intkey',
+    version=subprocess.check_output(
+        ['../../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth Intkey Python Example',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        "cbor",
+        "colorlog",
+        "sawtooth-sdk",
+        "sawtooth-signing",
+    ],
+    data_files=data_files,
+    entry_points={
+        'console_scripts': [
+            'intkey = sawtooth_intkey.client_cli.intkey_cli:main_wrapper',
+            'intkey-tp-python = sawtooth_intkey.processor.main:main'
+        ]
+    })

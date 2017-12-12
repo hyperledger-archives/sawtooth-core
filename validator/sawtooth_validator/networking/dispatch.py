@@ -155,8 +155,7 @@ class Dispatcher(InstrumentedThread):
 
             queue_size = self._in_queue.qsize()
             if queue_size > 10:
-                LOGGER.debug("Dispatch incoming queue size: %s",
-                             queue_size)
+                LOGGER.debug("Dispatch incoming queue size: %s", queue_size)
         else:
             LOGGER.info("received a message of type %s "
                         "from %s but have no handler for that type",
@@ -313,6 +312,7 @@ class _ManagerCollection(object):
     """Wraps a list of _HandlerManagers and
     keeps track of which handler_manager is next
     """
+
     def __init__(self, handler_managers):
         self._chain = handler_managers
         self._index = 0
@@ -344,7 +344,6 @@ class HandlerStatus(enum.Enum):
 
 
 class Handler(object, metaclass=abc.ABCMeta):
-
     @abc.abstractmethod
     def handle(self, connection_id, message_content):
         """

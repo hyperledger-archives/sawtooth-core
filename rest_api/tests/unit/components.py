@@ -41,13 +41,14 @@ TEST_TIMEOUT = 5
 
 
 class MockConnection(object):
-    """Replaces a route handler's connection to allow tests to preset the response
-    to send back as well as run asserts on the protobufs sent to the
-    connection.
+    """Replaces a route handler's connection to allow tests to preset the
+    response to send back as well as run asserts on the protobufs sent
+    to the connection.
 
     Methods can be accessed using `self.connection` within a test case.
     MockConnection should not be initialized directly.
     """
+
     def __init__(self, test_case, request_type, request_proto, response_proto):
         self._tests = test_case
         self._request_type = request_type
@@ -70,7 +71,6 @@ class MockConnection(object):
         if status is None:
             status = proto.OK
         self._response.append(proto(status=status, **response_data))
-
 
     def assert_valid_request_sent(self, **request_data):
         """Asserts that the last sent request matches the expected data.
@@ -252,7 +252,6 @@ class BaseApiTest(AioHTTPTestCase):
         else:
             self.assertNotIn('next', js_paging)
 
-
     def assert_has_valid_error(self, response, expected_code):
         """Asserts a response has only an error dict with an expected code
         """
@@ -304,8 +303,8 @@ class BaseApiTest(AioHTTPTestCase):
         for pb_status, js_status in zip(proto_statuses, json_statuses):
             self.assertEqual(pb_status.batch_id, js_status['id'])
             pb_enum_name = \
-               client_batch_submit_pb2.ClientBatchStatus.Status.Name(
-                   pb_status.status)
+                client_batch_submit_pb2.ClientBatchStatus.Status.Name(
+                    pb_status.status)
             self.assertEqual(pb_enum_name, js_status['status'])
 
             if pb_status.invalid_transactions:
@@ -314,8 +313,10 @@ class BaseApiTest(AioHTTPTestCase):
                 for pb_txn, js_txn in txn_info:
                     self.assertEqual(pb_txn.transaction_id, js_txn['id'])
                     self.assertEqual(pb_txn.message, js_txn.get('message', ''))
-                    self.assertEqual(pb_txn.extended_data,
-                                     b64decode(js_txn.get('extended_data', b'')))
+                    self.assertEqual(
+                        pb_txn.extended_data, b64decode(
+                            js_txn.get(
+                                'extended_data', b'')))
 
     def assert_blocks_well_formed(self, blocks, *expected_ids):
         """Asserts a block dict or list of block dicts have expanded headers
@@ -329,7 +330,8 @@ class BaseApiTest(AioHTTPTestCase):
             self.assertIsInstance(block, dict)
             self.assertEqual(expected_id, block['header_signature'])
             self.assertIsInstance(block['header'], dict)
-            self.assertEqual(b'consensus', b64decode(block['header']['consensus']))
+            self.assertEqual(b'consensus', b64decode(
+                block['header']['consensus']))
 
             batches = block['batches']
             self.assertIsInstance(batches, list)
@@ -348,7 +350,8 @@ class BaseApiTest(AioHTTPTestCase):
         for batch, expected_id in zip(batches, expected_ids):
             self.assertEqual(expected_id, batch['header_signature'])
             self.assertIsInstance(batch['header'], dict)
-            self.assertEqual('public_key', batch['header']['signer_public_key'])
+            self.assertEqual(
+                'public_key', batch['header']['signer_public_key'])
 
             txns = batch['transactions']
             self.assertIsInstance(txns, list)
@@ -381,7 +384,7 @@ class Mocks(object):
         return ClientPagingControls(
             limit=limit,
             start=start
-            )
+        )
 
     @staticmethod
     def make_paging_response(next_id=None, start=None, limit=None):
@@ -391,7 +394,7 @@ class Mocks(object):
             next=next_id,
             start=start,
             limit=limit
-            )
+        )
 
     @staticmethod
     def make_sort_controls(keys, reverse=False):
@@ -401,7 +404,7 @@ class Mocks(object):
         return [ClientSortControls(
             keys=[keys],
             reverse=reverse
-            )]
+        )]
 
     @staticmethod
     def make_entries(**leaf_data):
@@ -423,11 +426,10 @@ class Mocks(object):
 
             blk_header = BlockHeader(
                 block_num=len(blocks),
-                previous_block_id=blocks[-1].header_signature if blocks else '',
-                signer_public_key='public_key',
+                previous_block_id=blocks[-1].header_signature
+                if blocks else '', signer_public_key='public_key',
                 batch_ids=[b.header_signature for b in batches],
-                consensus=b'consensus',
-                state_root_hash='root_hash')
+                consensus=b'consensus', state_root_hash='root_hash')
 
             block = Block(
                 header=blk_header.SerializeToString(),

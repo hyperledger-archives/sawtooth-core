@@ -49,7 +49,6 @@ from test_authorization_handlers.mock import MockGossip
 
 
 class TestAuthorizationHandlers(unittest.TestCase):
-
     def test_connect(self):
         """
         Test the ConnectHandler correctly responds to a ConnectionRequest.
@@ -135,9 +134,11 @@ class TestAuthorizationHandlers(unittest.TestCase):
         has finished authorization.
         """
         ping = PingRequest()
-        network = MockNetwork({},
-                              connection_status={"connection_id":
-                                                 ConnectionStatus.CONNECTED})
+        network = MockNetwork(
+            {},
+            connection_status={
+                "connection_id": ConnectionStatus.CONNECTED
+            })
         handler = PingHandler(network)
         handler_status = handler.handle("connection_id",
                                         ping.SerializeToString())
@@ -271,8 +272,9 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
         network = MockNetwork(
             roles,
-            connection_status={"connection_id":
-                               ConnectionStatus.CONNECTION_REQUEST})
+            connection_status={
+                "connection_id": ConnectionStatus.CONNECTION_REQUEST
+            })
         handler = AuthorizationChallengeRequestHandler(network)
         handler_status = handler.handle(
             "connection_id",
@@ -327,8 +329,9 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
         network = MockNetwork(
             roles,
-            connection_status={"connection_id":
-                               ConnectionStatus.AUTH_CHALLENGE_REQUEST})
+            connection_status={
+                "connection_id": ConnectionStatus.AUTH_CHALLENGE_REQUEST
+            })
         permission_verifer = MockPermissionVerifier()
         gossip = MockGossip()
         handler = AuthorizationChallengeSubmitHandler(
@@ -403,8 +406,9 @@ class TestAuthorizationHandlers(unittest.TestCase):
 
         network = MockNetwork(
             roles,
-            connection_status={"connection_id":
-                               ConnectionStatus.AUTH_CHALLENGE_REQUEST})
+            connection_status={
+                "connection_id": ConnectionStatus.AUTH_CHALLENGE_REQUEST
+            })
         permission_verifer = MockPermissionVerifier()
         gossip = MockGossip()
         handler = AuthorizationChallengeSubmitHandler(

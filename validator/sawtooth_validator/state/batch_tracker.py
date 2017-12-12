@@ -44,6 +44,7 @@ class BatchTracker(ChainObserver,
         cache_keep_time (float): Time in seconds to keep values in TimedCaches
         cache_purge_frequency (float): Time between purging the TimedCaches
     """
+
     def __init__(self,
                  block_store,
                  cache_keep_time=600,
@@ -200,6 +201,7 @@ class BatchFinishObserver(metaclass=abc.ABCMeta):
     Observers register what batches they are interested in by calling  a
     BatchTracker's "watch_statuses" method.
     """
+
     @abc.abstractmethod
     def notify_batches_finished(self, statuses):
         """This method will be called when every Batch in a set of Batches is
