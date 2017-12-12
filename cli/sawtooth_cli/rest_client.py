@@ -34,8 +34,8 @@ class RestClient(object):
         else:
             self._auth_header = None
 
-    def list_blocks(self):
-        return self._get_data('/blocks')
+    def list_blocks(self, limit=None):
+        return self._get_data('/blocks', limit=limit)
 
     def get_block(self, block_id):
         return self._get('/blocks/' + block_id)['data']
