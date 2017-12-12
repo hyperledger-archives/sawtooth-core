@@ -118,6 +118,9 @@ class MockScheduler(Scheduler):
     def next_transaction(self):
         raise NotImplementedError()
 
+    def unschedule_incomplete_batches(self):
+        pass
+
     def finalize(self):
         pass
 

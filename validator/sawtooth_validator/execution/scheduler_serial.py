@@ -241,6 +241,9 @@ class SerialScheduler(Scheduler):
             self._scheduled_transactions.append(txn_info)
             return txn_info
 
+    def unschedule_incomplete_batches(self):
+        pass
+
     def finalize(self):
         with self._condition:
             self._final = True
