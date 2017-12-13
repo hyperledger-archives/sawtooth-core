@@ -557,6 +557,7 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_valid_block(new_head)
         self.assert_new_block_committed()
 
+    @unittest.skip("Chain controller handles this now")
     def test_fork_different_genesis(self):
         """"
         Test the case where new block is from a different genesis
@@ -804,15 +805,9 @@ class TestBlockValidator(unittest.TestCase):
 
     def assert_new_block_committed(self):
         self.assert_handler_has_result()
-        self.assertTrue(
-            self.block_validation_handler.commit_new_block,
-            "New block not committed, should be")
 
     def assert_new_block_not_committed(self):
         self.assert_handler_has_result()
-        self.assertFalse(
-            self.block_validation_handler.commit_new_block,
-            "New block committed, shouldn't be")
 
     def assert_handler_has_result(self):
         msg = "Validation handler doesn't have result"
@@ -842,15 +837,15 @@ class TestBlockValidator(unittest.TestCase):
 
     class BlockValidationHandler(object):
         def __init__(self):
-            self.commit_new_block = None
-            self.result = None
+            self.block = None
+            pass
 
-        def on_block_validated(self, commit_new_block, result):
-            self.commit_new_block = commit_new_block
-            self.result = result
+        def on_block_validated(self, block):
+            self.block = block
+            pass
 
         def has_result(self):
-            return not (self.result is None or self.commit_new_block is None)
+            return self.block is not None
 
     # block tree manager interface
 
@@ -887,6 +882,7 @@ class TestChainController(unittest.TestCase):
             chain_head_lock=self._chain_head_lock,
             on_chain_updated=chain_updated,
             chain_id_manager=self.chain_id_manager,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             chain_observers=[],
@@ -1238,6 +1234,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             chain_head_lock=self.chain_head_lock,
             on_chain_updated=chain_updated,
             chain_id_manager=self.chain_id_manager,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             chain_observers=[],
@@ -1364,6 +1361,7 @@ class TestJournal(unittest.TestCase):
                 chain_head_lock=block_publisher.chain_head_lock,
                 on_chain_updated=block_publisher.on_chain_updated,
                 chain_id_manager=None,
+                identity_public_key=btm.identity_public_key,
                 data_dir=None,
                 config_dir=None,
                 chain_observers=[])

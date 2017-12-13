@@ -255,6 +255,7 @@ class Validator(object):
             chain_head_lock=block_publisher.chain_head_lock,
             on_chain_updated=block_publisher.on_chain_updated,
             chain_id_manager=chain_id_manager,
+            identity_public_key=identity_signer.get_public_key().as_hex(),
             data_dir=data_dir,
             config_dir=config_dir,
             chain_observers=[

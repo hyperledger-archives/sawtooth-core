@@ -42,41 +42,11 @@ LOGGER = logging.getLogger(__name__)
 
 class BlockValidationAborted(Exception):
     """
-    Indication that the validation of this fork has terminated for an
-    expected(handled) case and that the processing should exit.
+    Indication that the validation of this block has terminated for an expected
+    case and that the processing should exit.
     """
     pass
 
-
-class ChainHeadUpdated(Exception):
-    """ Raised when a chain head changed event is detected and we need to abort
-    processing and restart processing with the new chain head.
-    """
-
-
-class ForkResolutionResult:
-    def __init__(self, block):
-        self.block = block
-        self.chain_head = None
-        self.new_chain = []
-        self.current_chain = []
-        self.committed_batches = []
-        self.uncommitted_batches = []
-        self.execution_results = []
-        self.transaction_count = 0
-
-    def __bool__(self):
-        return self.block.status == BlockStatus.Valid
-
-    def __str__(self):
-        keys = ("block", "valid", "chain_head", "new_chain", "current_chain",
-                "committed_batches", "uncommitted_batches",
-                "execution_results", "transaction_count")
-
-        out = "{"
-        for key in keys:
-            out += "%s: %s," % (key, self.__getattribute(key))
-        return out[:-1] + "}"
 
 class BatchValidationResults:
     def __init__(self):
@@ -134,11 +104,6 @@ class _BlockReceiveThread(InstrumentedThread):
 
 
 class BlockValidator(object):
-    """
-    Responsible for validating a block, handles both chain extensions and fork
-    will determine if the new block should be the head of the chain and return
-    the information necessary to do the switch if necessary.
-    """
 
     def __init__(self,
                  block_cache,
@@ -150,28 +115,7 @@ class BlockValidator(object):
                  data_dir,
                  config_dir,
                  permission_verifier):
-        """Initialize the BlockValidator
-        Args:
-             implementation of the consensus algorithm to use for block
-             validation.
-             block_cache: The cache of all recent blocks and the processing
-             state associated with them.
-             state_view_factory: The factory object to create.
-             transaction_executor: The transaction executor used to
-             process transactions.
-             on_block_validated: The function to call when block validation is
-             complete.
-             squash_handler: A parameter passed when creating transaction
-             schedulers.
-             identity_public_key: Public key used for this validator's
-             identity.
-             data_dir: Path to location where persistent data for the
-             consensus module can be stored.
-             config_dir: Path to location where config data for the
-             consensus module can be found.
-        Returns:
-            None
-        """
+
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
@@ -217,18 +161,16 @@ class BlockValidator(object):
 
     def queue_block(self, block):
         """
-        New block has been received, queue it with the block validator for
-        processing.
+        New block has been received, queue it with the block validation
+        scheduler for processing.
         """
         self._incoming_blocks.put(block)
 
-    def on_block_validated(self, commit_new_block, result):
-        self._block_scheduler.on_block_validated(result.block.header_signature)
-        self._on_block_validated(commit_new_block, result)
+    def on_block_validated(self, block):
+        self._block_scheduler.on_block_validated(block.header_signature)
+        self._on_block_validated(block)
 
     def _on_scheduled_block_received(self, block, callback):
-        """Checks to see if the block should be dropped, then adds the block to
-        the block cache and submits the block for validation."""
         self.submit_blocks_for_validation([block], callback)
 
     def has_block(self, block_id):
@@ -253,7 +195,7 @@ class BlockValidator(object):
         return self._block_cache[blkw.previous_block_id]
 
     def _get_state_root(self, blkw):
-        if blkw == None:
+        if blkw is None:
             return INIT_ROOT_KEY
         return blkw.state_root_hash
 
@@ -422,104 +364,6 @@ class BlockValidator(object):
 
         return blkw.status == BlockStatus.Valid
 
-    @staticmethod
-    def compare_chain_height(head_a, head_b):
-        """Returns True if head_a is taller, False if head_b is taller, and True
-        if the heights are the same."""
-        return head_a.block_num - head_b.block_num >= 0
-
-    def build_fork_diff_to_common_height(self, head_long, head_short):
-        """Returns a list of blocks on the longer chain since the greatest
-        common height between the two chains. Note that the chains may not
-        have the same block id at the greatest common height.
-
-        Args:
-            head_long (BlockWrapper)
-            head_short (BlockWrapper)
-
-        Returns:
-            (list of BlockWrapper) All blocks in the longer chain since the
-            last block in the shorter chain. Ordered newest to oldest.
-
-        Raises:
-            BlockValidationAborted
-                The block is missing a predecessor. Note that normally this
-                shouldn't happen because of the completer."""
-        fork_diff = []
-
-        last = head_short.block_num
-        blk = head_long
-
-        while blk.block_num > last:
-            if blk.previous_block_id == NULL_BLOCK_IDENTIFIER:
-                break
-
-            fork_diff.append(blk)
-            try:
-                blk = self._block_cache[blk.previous_block_id]
-            except KeyError:
-                LOGGER.debug(
-                    "Failed to build fork diff due to missing predecessor: %s",
-                    blk)
-
-                # Mark all blocks in the longer chain since the invalid block
-                # as invalid.
-                for blk in fork_diff:
-                    blk.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
-
-        return blk, fork_diff
-
-    def extend_fork_diff_to_common_ancestor(
-        self, new_blkw, cur_blkw, new_chain, cur_chain
-    ):
-        """ Finds a common ancestor of the two chains. new_blkw and cur_blkw
-        must be at the same height, or this will always fail.
-        """
-
-        # Add blocks to the corresponding chains until a common ancestor is
-        # found.
-        while cur_blkw.identifier != new_blkw.identifier:
-            if cur_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER or \
-               new_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
-                # If the genesis block is reached and the identifiers are
-                # different, the forks are not for the same chain.
-                LOGGER.info(
-                    "Block rejected due to wrong genesis: %s %s",
-                    cur_blkw, new_blkw)
-
-                for b in new_chain:
-                    b.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
-
-            new_chain.append(new_blkw)
-            try:
-                new_blkw = self._block_cache[new_blkw.previous_block_id]
-            except KeyError:
-                LOGGER.debug(
-                    "Block rejected due to missing predecessor: %s",
-                    new_blkw)
-                for b in new_chain:
-                    b.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
-
-            cur_chain.append(cur_blkw)
-            cur_blkw = self._block_cache[cur_blkw.previous_block_id]
-
-    def _compare_forks_consensus(self, chain_head, new_block):
-        """Ask the consensus module which fork to choose.
-        """
-        consensus = self._load_consensus(chain_head)
-
-        fork_resolver = consensus.ForkResolver(
-            block_cache=self._block_cache,
-            state_view_factory=self._state_view_factory,
-            data_dir=self._data_dir,
-            config_dir=self._config_dir,
-            validator_id=self._identity_public_key)
-
-        return fork_resolver.compare_forks(chain_head, new_block)
-
     def _load_consensus(self, block):
         """Load the consensus module using the state as of the given block."""
         if block is not None:
@@ -529,24 +373,6 @@ class BlockValidator(object):
                     block,
                     self._state_view_factory))
         return ConsensusFactory.get_consensus_module('genesis')
-
-    @staticmethod
-    def get_batch_commit_changes(new_chain, cur_chain):
-        """
-        Get all the batches that should be committed from the new chain and
-        all the batches that should be uncommitted from the current chain.
-        """
-        committed_batches = []
-        for blkw in new_chain:
-            for batch in blkw.batches:
-                committed_batches.append(batch)
-
-        uncommitted_batches = []
-        for blkw in cur_chain:
-            for batch in blkw.batches:
-                uncommitted_batches.append(batch)
-
-        return (committed_batches, uncommitted_batches)
 
     def submit_blocks_for_validation(self, blocks, callback):
         for block in blocks:
@@ -565,11 +391,6 @@ class BlockValidator(object):
         so that the change over can be made if necessary.
         """
         try:
-            result = ForkResolutionResult(block)
-
-            # Get the current chain_head and store it in the result
-            chain_head = self._block_cache.block_store.chain_head
-            result.chain_head = chain_head
 
             LOGGER.info("Starting block validation of : %s", block)
 
@@ -579,84 +400,18 @@ class BlockValidator(object):
             valid = self.validate_block(block)
             if not valid:
                 LOGGER.info("Block validation failed: %s", block)
-                callback(False, result)
-                return
-
-            # If this is a genesis block, we can skip the rest
-            if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
-                valid = self.validate_block(block)
-                callback(valid, result)
-                return
-
-            # Create new local variables for current and new block, since
-            # these variables get modified later
-            current_block = chain_head
-            new_block = block
-
-            # Get all the blocks since the greatest common height from the
-            # longer chain.
-            if self.compare_chain_height(current_block, new_block):
-                current_block, result.current_chain =\
-                    self.build_fork_diff_to_common_height(
-                        current_block, new_block)
-            else:
-                new_block, result.new_chain =\
-                    self.build_fork_diff_to_common_height(
-                        new_block, current_block)
-
-            # Add blocks to the two chains until a common ancestor is found
-            # or raise an exception if no common ancestor is found
-            self.extend_fork_diff_to_common_ancestor(
-                new_block, current_block,
-                result.new_chain, result.current_chain)
-
-            # First check if any predecessors are invalid or unknown
-            for blk in result.new_chain[1:]:
-                # This should never happen, because the completer and scheduler
-                # should ensure we only receive blocks in order
-                if blk.status == BlockStatus.Unknown:
-                    LOGGER.error(
-                        "Tried to validate block '%s' before predecessor '%s'",
-                        block, blk)
-                    raise BlockValidationAborted()
-
-                if blk.status == BlockStatus.Invalid:
-                    callback(False, result)
-                    return
-
-            # The chain_head is None when this is the genesis block or if the
-            # block store has no chain_head.
-            if chain_head is not None:
-                current_chain_head = self._block_cache.block_store.chain_head
-                if chain_head.identifier != current_chain_head.identifier:
-                    raise ChainHeadUpdated()
-
-            # Ask consensus if the new chain should be committed
-            commit_new_chain = self._compare_forks_consensus(chain_head, block)
-
-            # If committing the new chain, get the list of committed batches
-            # from the current chain that need to be uncommitted and the list
-            # of uncommitted batches from the new chain that need to be
-            # committed.
-            if commit_new_chain:
-                commit, uncommit =\
-                    self.get_batch_commit_changes(
-                        result.new_chain, result.current_chain)
-                result.committed_batches = commit
-                result.uncommitted_batches = uncommit
+                # TODO: Should the chain controller even receive this?
 
             # Pass the results to the callback function
-            callback(commit_new_chain, result)
+            callback(block)
             LOGGER.info("Finished block validation of: %s", block)
 
         except BlockValidationAborted:
-            callback(False, result)
+            callback(block)
             return
-        except ChainHeadUpdated:
-            callback(False, result)
-            return
+
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
-                "Block validation failed with unexpected error: %s", new_block)
+                "Block validation failed with unexpected error: %s", block)
             # callback to clean up the block out of the processing list.
-            callback(False, result)
+            callback(block)
