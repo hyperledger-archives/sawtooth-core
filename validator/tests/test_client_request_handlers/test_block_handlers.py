@@ -62,7 +62,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_2, response.blocks[0].header_signature)
 
-    def test_block_list_bad_request(self):
+    def test_block_list_bad_protobufs(self):
         """Verifies requests for lists of blocks break with bad protobufs.
 
         Expects to find:
@@ -76,7 +76,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.blocks)
 
-    def test_block_list_bad_request(self):
+    def test_block_list_no_genesis(self):
         """Verifies requests for lists of blocks break with no genesis.
 
         Expects to find:

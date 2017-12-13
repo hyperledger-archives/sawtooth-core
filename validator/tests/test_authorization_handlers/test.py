@@ -147,10 +147,10 @@ class TestAuthorizationHandlers(unittest.TestCase):
             handler_status.message_type,
             validator_pb2.Message.PING_RESPONSE)
 
-    def test_ping_handler(self):
+    def test_ping_rate_limiting(self):
         """
         Test the PingHandler allows a ping from a connection who has not
-        finished authorization and returns a NetworkAck. Also test that
+        finished authorization and returns a PingResponse. Also test that
         if that connection sends another ping in a short time period, the
         connection is deemed malicious, an AuthorizationViolation is returned,
         and the connection is closed.
@@ -335,7 +335,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
         permission_verifer = MockPermissionVerifier()
         gossip = MockGossip()
         handler = AuthorizationChallengeSubmitHandler(
-            network, permission_verifer, gossip)
+            network, permission_verifer, gossip, {"connection_id": payload})
         handler_status = handler.handle(
             "connection_id",
             auth_challenge_submit.SerializeToString())
@@ -421,7 +421,7 @@ class TestAuthorizationHandlers(unittest.TestCase):
             handler_status.message_type,
             validator_pb2.Message.AUTHORIZATION_VIOLATION)
 
-    def test_authorization_challenge_submit(self):
+    def test_authorizaiton_challenge_submit_not_permitted(self):
         """
         Test the AuthorizationChallengeSubmitHandler returns an
         AuthorizationViolation and closes the connection if the permission

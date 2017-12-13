@@ -71,7 +71,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_2, response.batches[0].header_signature)
 
-    def test_batch_list_bad_request(self):
+    def test_batch_list_bad_protobufs(self):
         """Verifies requests for lists of batches break with bad protobufs.
 
         Expects to find:
@@ -85,7 +85,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.batches)
 
-    def test_batch_list_bad_request(self):
+    def test_batch_list_no_genesis(self):
         """Verifies requests for lists of batches break with no genesis.
 
         Expects to find:

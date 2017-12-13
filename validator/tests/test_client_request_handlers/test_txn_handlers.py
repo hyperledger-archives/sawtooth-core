@@ -73,7 +73,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.transactions, Transaction)
         self.assertEqual(C_2, response.transactions[0].header_signature)
 
-    def test_txn_list_bad_request(self):
+    def test_txn_list_bad_protobufs(self):
         """Verifies requests for txn lists break with bad protobufs.
 
         Expects to find:
@@ -87,7 +87,7 @@ class TestTransactionListRequests(ClientHandlerTestCase):
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.transactions)
 
-    def test_txn_list_bad_request(self):
+    def test_txn_list_no_genesis(self):
         """Verifies requests for txn lists break with no genesis.
 
         Expects to find:
