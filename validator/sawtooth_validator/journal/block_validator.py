@@ -397,21 +397,18 @@ class BlockValidator(object):
             # The completer and scheduler ensure that we have already validated
             # all previous blocks on this fork prior to receiving this block,
             # so we only need to validate this block.
-            valid = self.validate_block(block)
-            if not valid:
-                LOGGER.info("Block validation failed: %s", block)
-                # TODO: Should the chain controller even receive this?
+            if self.validate_block(block):
+                # Only pass the block onto the chain controller if it is valid
+                LOGGER.info("Finished block validation of: %s", block)
+                callback(block)
 
-            # Pass the results to the callback function
-            callback(block)
-            LOGGER.info("Finished block validation of: %s", block)
+            else:
+                LOGGER.info("Block validation failed: %s", block)
 
         except BlockValidationAborted:
-            callback(block)
+            LOGGER.info("Block validation aborted: %s", block)
             return
 
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "Block validation failed with unexpected error: %s", block)
-            # callback to clean up the block out of the processing list.
-            callback(block)

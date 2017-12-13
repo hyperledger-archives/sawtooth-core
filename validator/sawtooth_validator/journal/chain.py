@@ -280,16 +280,16 @@ class ChainController(object):
         self.extend_fork_diff_to_common_ancestor(
             new_block, current_block, result.new_chain, result.current_chain)
 
-        # First check if any predecessors are invalid or unknown
-        # TODO: If we never pass blocks onto the chain controller unless they
-        # are valid, and the block validator never marks a block as valid
-        # unless all its predecessors are valid, then this isn't needed
+        # First, double check if any predecessors are invalid or unknown.
+        # Because the BlockValidator only passes the ChainController blocks
+        # if they are valid, this should always be the case..
         for blk in result.new_chain[1:]:
             # This should never happen, because the completer and scheduler
             # should ensure we only receive blocks in order
             if blk.status == BlockStatus.Unknown:
                 LOGGER.error(
-                    "Tried to validate block '%s' before predecessor '%s'",
+                    "Chain controller received valid block '%s' but "
+                    "predecessor '%s' status is unknown",
                     block, blk)
                 raise ForkResolutionAborted()
 
