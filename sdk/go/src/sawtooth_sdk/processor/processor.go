@@ -43,7 +43,7 @@ type TransactionProcessor struct {
 	context  *zmq.Context
 	ids      map[string]string
 	handlers []TransactionHandler
-	nThreads int
+	nThreads uint
 	maxQueue uint
 	shutdown chan int
 }
@@ -60,7 +60,7 @@ func NewTransactionProcessor(uri string) *TransactionProcessor {
 		context:  context,
 		ids:      make(map[string]string),
 		handlers: make([]TransactionHandler, 0),
-		nThreads: runtime.GOMAXPROCS(0),
+		nThreads: uint(runtime.GOMAXPROCS(0)),
 		maxQueue: DEFAULT_MAX_WORK_QUEUE_SIZE,
 		shutdown: make(chan int),
 	}
@@ -75,7 +75,7 @@ func (self *TransactionProcessor) AddHandler(handler TransactionHandler) {
 
 // Set the number of worker threads to be created for handling requests. Must
 // be set before calling Start()
-func (self *TransactionProcessor) SetThreadCount(n int) {
+func (self *TransactionProcessor) SetThreadCount(n uint) {
 	self.nThreads = n
 }
 
@@ -107,13 +107,13 @@ func (self *TransactionProcessor) Start() error {
 	ids := make(map[string]string)
 
 	// Startup worker thread pool
-	for i := 0; i < self.nThreads; i++ {
+	for i := uint(0); i < self.nThreads; i++ {
 		go worker(self.context, "inproc://workers", queue, self.handlers)
 	}
 	// Setup shutdown thread
 	go shutdown(self.context, "inproc://workers", queue, self.shutdown)
 
-	workersLeft := uint(self.nThreads) + 1
+	workersLeft := self.nThreads + 1
 
 	// Setup ZMQ poller for routing messages between worker threads and validator
 	poller := zmq.NewPoller()
