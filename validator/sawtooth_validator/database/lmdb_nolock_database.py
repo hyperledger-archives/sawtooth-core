@@ -50,6 +50,7 @@ class LMDBNoLockDatabase(database.Database):
                                       map_size=1024**4,
                                       map_async=True,
                                       writemap=True,
+                                      readahead=False,
                                       subdir=False,
                                       create=create,
                                       lock=True)
