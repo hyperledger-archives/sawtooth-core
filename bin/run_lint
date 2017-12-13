@@ -155,6 +155,17 @@ fi
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 retval=0
 
+# Modules should be ranked in decreasing likelihood of having lint
+# errors. It would be nice if there was a more convenient way of
+# organizing these.
+
+# validator
+PYTHONPATH=$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+export PYTHONPATH
+lint validator "$SINCE" || retval=1
+
+# integration
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/cli
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
@@ -165,10 +176,18 @@ PYTHONPATH=$PYTHONPATH:$top_dir/families/block_info
 export PYTHONPATH
 lint integration "$SINCE" || retval=1
 
+# cli
+PYTHONPATH=$top_dir/cli
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+export PYTHONPATH
+lint cli "$SINCE" || retval=1
+
+# signing
 PYTHONPATH=$top_dir/signing
 export PYTHONPATH
 lint signing "$SINCE" || retval=1
 
+# sdk, rest api, xo, intkey
 PYTHONPATH=$top_dir/sdk/python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/xo_python
@@ -180,6 +199,7 @@ lint sdk/examples/intkey_python "$SINCE" || retval=1
 lint sdk/examples/xo_python "$SINCE" || retval=1
 lint rest_api "$SINCE" || retval=1
 
+# settings, identity
 PYTHONPATH=$top_dir/families/settings
 PYTHONPATH=$top_dir/families/identity
 PYTHONPATH=$top_dir/families/block_info
@@ -189,6 +209,7 @@ export PYTHONPATH
 lint families/settings "$SINCE" || retval=1
 lint families/identity "$SINCE" || retval=1
 
+# battleship
 PYTHONPATH=$top_dir/families/battleship
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
@@ -196,6 +217,7 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 export PYTHONPATH
 lint families/battleship "$SINCE" || retval=1
 
+# block info
 PYTHONPATH=$top_dir/families/block_info
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
@@ -203,11 +225,7 @@ PYTHONPATH=$PYTHONPATH:$top_dir/validator
 export PYTHONPATH
 lint families/block_info "$SINCE" || retval=1
 
-PYTHONPATH=$top_dir/signing
-PYTHONPATH=$PYTHONPATH:$top_dir/validator
-export PYTHONPATH
-lint validator "$SINCE" || retval=1
-
+# poet
 PYTHONPATH=$top_dir/consensus/poet/common
 PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common/tests
 export PYTHONPATH
@@ -254,6 +272,7 @@ PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/core
 export PYTHONPATH
 lint consensus/poet/cli "$SINCE" || retval=1
 
+# utility
 PYTHONPATH=$PYTHONPATH:$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_proxy
 PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_proxy/tests
@@ -269,10 +288,5 @@ PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_client
 PYTHONPATH=$PYTHONPATH:$top_dir/utility/ias_client/tests
 export PYTHONPATH
 lint utility/ias_client "$SINCE" || retval=1
-
-PYTHONPATH=$top_dir/cli
-PYTHONPATH=$PYTHONPATH:$top_dir/signing
-export PYTHONPATH
-lint cli "$SINCE" || retval=1
 
 exit $retval
