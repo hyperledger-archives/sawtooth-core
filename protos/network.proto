@@ -52,6 +52,7 @@ message GossipMessage {
     }
     bytes content = 1;
     ContentType content_type = 2;
+    uint32 time_to_live = 3;
 }
 
 // A response sent from the validator to the peer acknowledging message
@@ -73,6 +74,7 @@ message GossipBlockRequest {
     // A random string that provides uniqueness for requests with
     // otherwise identical fields.
     string nonce = 2;
+    uint32 time_to_live = 3;
 
 }
 
@@ -93,6 +95,7 @@ message GossipBatchByBatchIdRequest {
     // A random string that provides uniqueness for requests with
     // otherwise identical fields.
     string nonce = 2;
+    uint32 time_to_live = 3;
 
 }
 
@@ -103,5 +106,6 @@ message GossipBatchByTransactionIdRequest {
     // A random string that provides uniqueness for requests with
     // otherwise identical fields.
     string nonce = 2;
+    uint32 time_to_live = 3;
 
 }

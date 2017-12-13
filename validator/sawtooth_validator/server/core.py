@@ -201,13 +201,16 @@ class Validator(object):
         # -- Setup P2P Networking -- #
         gossip = Gossip(
             network_service,
+            SettingsViewFactory(state_view_factory),
+            block_store.chain_head_state_root,
             endpoint=endpoint,
             peering_mode=peering,
             initial_seed_endpoints=seeds_list,
             initial_peer_endpoints=peer_list,
             minimum_peer_connectivity=minimum_peer_connectivity,
             maximum_peer_connectivity=maximum_peer_connectivity,
-            topology_check_frequency=1)
+            topology_check_frequency=1
+        )
 
         completer = Completer(block_store, gossip)
 
