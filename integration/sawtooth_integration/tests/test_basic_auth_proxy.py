@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=protected-access
+
 import unittest
 import logging
 import ssl

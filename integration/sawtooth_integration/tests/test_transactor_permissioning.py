@@ -246,6 +246,7 @@ INTKEY_NAMESPACE = MessageFactory.sha512('intkey'.encode())[:6]
 XO_NAMESPACE = MessageFactory.sha512('xo'.encode())[:6]
 
 
+# pylint: disable=invalid-name
 class Families(enum.Enum):
     INTKEY = 1
     XO = 2

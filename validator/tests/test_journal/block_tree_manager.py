@@ -13,6 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=no-else-return
+# pylint: disable=no-value-for-parameter
+# pylint: disable=abstract-class-instantiated
+
 import logging
 import hashlib
 import random

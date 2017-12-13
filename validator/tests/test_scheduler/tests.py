@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=too-many-lines,invalid-name
+
 import unittest
 import hashlib
 import threading

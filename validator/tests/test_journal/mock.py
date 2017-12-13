@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+# pylint: disable=arguments-differ
+
 from concurrent.futures import Executor
 
 from sawtooth_validator.execution.scheduler import Scheduler
@@ -249,6 +252,7 @@ class MockChainIdManager(object):
         return self._block_chain_id
 
 
+# pylint: disable=invalid-name
 def CreateSetting(key, value):
     """
     Create a setting object to include in a MockStateFactory.

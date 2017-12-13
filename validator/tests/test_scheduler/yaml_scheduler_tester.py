@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=invalid-name
+
 import binascii
 from collections import deque
 import hashlib

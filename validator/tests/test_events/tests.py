@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=protected-access
+
 import unittest
 from unittest.mock import Mock
 from uuid import uuid4

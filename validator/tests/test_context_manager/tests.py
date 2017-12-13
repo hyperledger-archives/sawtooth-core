@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=too-many-lines,broad-except
+
 import unittest
 
 from collections import namedtuple
