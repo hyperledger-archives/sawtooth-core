@@ -62,7 +62,7 @@ class TestPoetLive(unittest.TestCase):
 
             time.sleep(15)
 
-        chains = [get_chain(i) for node in range(0, NODES)]
+        chains = [get_chain(node) for node in range(0, NODES)]
 
         # Ensure all nodes are in consensus on the target block
         self.assertTrue(check_consensus(chains, BLOCK_TO_CHECK_CONSENSUS))
