@@ -93,10 +93,10 @@ class TestIntkeySmoke(unittest.TestCase):
         self.verify_state_after_n_updates(how_many_updates)
 
     def verify_state_after_n_updates(self, num):
-        LOGGER.debug('Verifying state after {} updates'.format(num))
+        LOGGER.debug('Verifying state after %s updates', num)
         expected_state = self.verifier.state_after_n_updates(num)
         actual_state = _get_data()
-        LOGGER.info('Current state: {}'.format(actual_state))
+        LOGGER.info('Current state: %s', actual_state)
         self.assertEqual(
             expected_state,
             actual_state,
