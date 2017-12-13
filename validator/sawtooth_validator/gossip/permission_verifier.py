@@ -435,10 +435,9 @@ class NetworkConsensusPermissionHandler(Handler):
 
 
 class IdentityCache():
-    def __init__(self, identity_view_factory, current_root_func):
+    def __init__(self, identity_view_factory):
         self._identity_view_factory = identity_view_factory
         self._identity_view = None
-        self._current_root_func = current_root_func
         self._cache = {}
 
     def __len__(self):
