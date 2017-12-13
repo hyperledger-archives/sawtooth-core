@@ -15,6 +15,7 @@
 
 from ast import literal_eval
 from threading import Condition
+import logging
 from collections import deque
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -25,6 +26,8 @@ from sawtooth_validator.execution.scheduler import TxnInformation
 from sawtooth_validator.execution.scheduler import Scheduler
 from sawtooth_validator.execution.scheduler import SchedulerIterator
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
+
+LOGGER = logging.getLogger(__name__)
 
 
 class PredecessorTreeNode:
@@ -832,7 +835,37 @@ class ParallelScheduler(Scheduler):
             return count
 
     def unschedule_incomplete_batches(self):
-        pass
+        incomplete_batches = set()
+        with self._condition:
+            for txn in self._unscheduled_transactions():
+                incomplete_batches.add(
+                    self._batches_by_txn_id[txn.header_signature]
+                        .header_signature)
+
+            self._txns_available.clear()
+
+            for txn_id in self._outstanding:
+                incomplete_batches.add(
+                    self._batches_by_txn_id[txn_id].header_signature)
+
+            self._outstanding.clear()
+
+            # clean up the batches, including partial complete information
+            for batch_id in incomplete_batches:
+                batch = self._batches_by_id[batch_id]
+                del self._batches_by_id[batch_id]
+                for txn in batch.transactions:
+                    txn_id = txn.header_signature
+                    del self._batches_by_txn_id[txn_id]
+
+                    if txn_id in self._txn_results:
+                        del self._txn_results[txn_id]
+
+            self._condition.notify_all()
+
+        if incomplete_batches:
+            LOGGER.debug('Removed %s incomplete batches from the schedule',
+                         len(incomplete_batches))
 
     def finalize(self):
         with self._condition:
