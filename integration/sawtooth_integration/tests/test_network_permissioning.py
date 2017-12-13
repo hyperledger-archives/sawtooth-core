@@ -532,7 +532,7 @@ def validator_genesis_init(sawtooth_home_genesis,
 
     priv_non = os.path.join(sawtooth_home_non_genesis,
                             'keys', 'validator.priv')
-    with open(priv, 'r') as infile:
+    with open(priv_non, 'r') as infile:
         priv_key_non = infile.read().strip('\n')
 
     subprocess.run([
