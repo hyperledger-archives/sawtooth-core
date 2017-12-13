@@ -1223,7 +1223,7 @@ class TestContextManager(unittest.TestCase):
             }])
 
         try:
-            sh1 = squash(
+            squash(
                 state_root=sh0,
                 context_ids=[ctx_1, ctx_2],
                 persist=True,

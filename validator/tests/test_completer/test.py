@@ -62,7 +62,7 @@ class TestCompleter(unittest.TestCase):
     def _create_transactions(self, count, missing_dep=False):
         txn_list = []
 
-        for i in range(count):
+        for _ in range(count):
             payload = {
                 'Verb': 'set',
                 'Name': 'name' + str(random.randint(0, 100)),
@@ -107,7 +107,7 @@ class TestCompleter(unittest.TestCase):
 
         batch_list = []
 
-        for i in range(batch_count):
+        for _ in range(batch_count):
             txn_list = self._create_transactions(txn_count,
                                                  missing_dep=missing_dep)
             txn_sig_list = [txn.header_signature for txn in txn_list]
@@ -136,7 +136,7 @@ class TestCompleter(unittest.TestCase):
                        missing_batch=False,
                        find_batch=True):
         block_list = []
-        pred = 0
+
         for i in range(0, block_count):
             batch_list = self._create_batches(batch_count, 2)
             batch_ids = [batch.header_signature for batch in batch_list]

@@ -234,7 +234,7 @@ class TestSchedulers(unittest.TestCase):
         invalid batch due to a prior transaction being invalid, won't run.
         """
 
-        context_manager, scheduler = self._setup_serial_scheduler()
+        _, scheduler = self._setup_serial_scheduler()
         self._fail_fast(scheduler)
 
     def _fail_fast(self, scheduler):
@@ -329,7 +329,7 @@ class TestSchedulers(unittest.TestCase):
         otherwise complete serial scheduler.
         """
 
-        context_manager, scheduler = self._setup_serial_scheduler()
+        _, scheduler = self._setup_serial_scheduler()
         self._completion_on_finalize(scheduler)
 
     def test_parallel_completion_on_finalize(self):
@@ -337,7 +337,7 @@ class TestSchedulers(unittest.TestCase):
         otherwise complete parallel scheduler.
         """
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
+        _, scheduler = self._setup_parallel_scheduler()
         self._completion_on_finalize(scheduler)
 
     def _completion_on_finalize(self, scheduler):
@@ -390,7 +390,7 @@ class TestSchedulers(unittest.TestCase):
         has had finalize called and all txns have execution result set.
         """
 
-        context_manager, scheduler = self._setup_serial_scheduler()
+        _, scheduler = self._setup_serial_scheduler()
         self._completion_on_finalize_only_when_done(scheduler)
 
     def test_parallel_completion_on_finalize_only_when_done(self):
@@ -398,7 +398,7 @@ class TestSchedulers(unittest.TestCase):
         has had finalize called and all txns have execution result set.
         """
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
+        _, scheduler = self._setup_parallel_scheduler()
         self._completion_on_finalize_only_when_done(scheduler)
 
     def _completion_on_finalize_only_when_done(self, scheduler):
@@ -451,7 +451,7 @@ class TestSchedulers(unittest.TestCase):
         as result of add_batch().
         """
 
-        context_manager, scheduler = self._setup_serial_scheduler()
+        _, scheduler = self._setup_serial_scheduler()
         self._add_batch_after_empty_iteration(scheduler)
 
     def test_parallel_add_batch_after_empty_iteration(self):
@@ -459,7 +459,7 @@ class TestSchedulers(unittest.TestCase):
         as result of add_batch().
         """
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
+        _, scheduler = self._setup_parallel_scheduler()
         self._add_batch_after_empty_iteration(scheduler)
 
     def _add_batch_after_empty_iteration(self, scheduler):
@@ -637,7 +637,7 @@ class TestSchedulers(unittest.TestCase):
         txn_info_b = next(sched2)
         address_b = _get_address_from_txn(txn_info_b)
 
-        txn_infoInvalid = next(sched2)
+        next(sched2)
 
         txn_info_d = next(sched2)
         address_d = _get_address_from_txn(txn_info_d)
