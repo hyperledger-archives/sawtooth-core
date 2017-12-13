@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=invalid-name
+
 import os
 import shutil
 import tempfile

@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=attribute-defined-outside-init
+
 import unittest
 from sawtooth_validator.protobuf import client_list_control_pb2
 

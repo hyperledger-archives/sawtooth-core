@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=attribute-defined-outside-init,abstract-method
+
 import logging
 
 from sawtooth_validator.protobuf.block_pb2 import Block

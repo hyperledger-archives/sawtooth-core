@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=attribute-defined-outside-init
+
 from base64 import b64decode
 
 from aiohttp import web

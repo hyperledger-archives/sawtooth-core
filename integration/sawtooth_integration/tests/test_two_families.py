@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=attribute-defined-outside-init
+
 import unittest
 import logging
 import operator

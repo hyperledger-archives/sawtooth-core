@@ -13,6 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=abstract-method
+# pylint: disable=arguments-differ
+# pylint: disable=useless-super-delegation
+
 from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
 from sawtooth_validator.journal.consensus.consensus \
