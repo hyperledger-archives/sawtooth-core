@@ -16,7 +16,6 @@
 import logging
 import hashlib
 import logging
-import pprint
 import random
 import string
 
@@ -49,9 +48,6 @@ from test_journal.mock import MockBlockSender
 from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import MockPermissionVerifier
-
-
-pp = pprint.PrettyPrinter(indent=4)
 
 
 LOGGER = logging.getLogger(__name__)

@@ -19,11 +19,9 @@ class MockCompleter:
         self.batches = {}
 
     def get_block(self, block_id):
-        print(self.blocks)
         return self.blocks.get(block_id)
 
     def get_batch(self, batch_id):
-        print(self.batches)
         return self.batches.get(batch_id)
 
     def add_block(self, block_id):
@@ -38,7 +36,6 @@ class MockChainController:
         self.blocks = {}
 
     def has_block(self, block_id):
-        print(self.blocks)
         if block_id in self.blocks:
             return True
         return False
@@ -51,7 +48,6 @@ class MockPublisher:
         self.batches = []
 
     def has_batch(self, batch_id):
-        print(self.batches)
         if batch_id in self.batches:
             return True
         return False

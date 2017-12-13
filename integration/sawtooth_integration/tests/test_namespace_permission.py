@@ -96,7 +96,7 @@ class TestNamespacePermission(unittest.TestCase):
         # Assert block info batches are first in the block and
         # no other batch is included
         for block in get_blocks()[:-1]:
-            print(block['header']['block_num'])
+            LOGGER.debug(block['header']['block_num'])
             family_name = \
                 block['batches'][0]['transactions'][0]['header']['family_name']
             self.assertEqual(family_name, 'block_info')
