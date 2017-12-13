@@ -48,8 +48,7 @@ class TestPermissionVerifier(unittest.TestCase):
         self._identity_view_factory = MockIdentityViewFactory()
         self.permissions = {}
         self._identity_cache = IdentityCache(
-            self._identity_view_factory,
-            self._current_root_func)
+            self._identity_view_factory)
         self.permission_verifier = \
             PermissionVerifier(
                 permissions=self.permissions,
@@ -435,8 +434,7 @@ class TestIdentityObserver(unittest.TestCase):
     def setUp(self):
         self._identity_view_factory = MockIdentityViewFactory()
         self._identity_cache = IdentityCache(
-            self._identity_view_factory,
-            self._current_root_func)
+            self._identity_view_factory)
         self._identity_obsever = IdentityObserver(
             to_update=self._identity_cache.invalidate,
             forked=self._identity_cache.forked
@@ -528,11 +526,7 @@ class TestIdentityCache(unittest.TestCase):
     def setUp(self):
         self._identity_view_factory = MockIdentityViewFactory()
         self._identity_cache = IdentityCache(
-            self._identity_view_factory,
-            self._current_root_func)
-
-    def _current_root_func(self):
-        return "0000000000000000000000"
+            self._identity_view_factory)
 
     def test_get_role(self):
         """

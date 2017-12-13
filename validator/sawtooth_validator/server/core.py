@@ -221,8 +221,7 @@ class Validator(object):
         identity_view_factory = IdentityViewFactory(
             StateViewFactory(global_state_db))
 
-        id_cache = IdentityCache(
-            identity_view_factory, block_store.chain_head_state_root)
+        id_cache = IdentityCache(identity_view_factory)
 
         # -- Setup Permissioning -- #
         permission_verifier = PermissionVerifier(

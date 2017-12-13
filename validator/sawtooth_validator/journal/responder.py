@@ -268,7 +268,7 @@ class BatchByTransactionIdResponderHandler(Handler):
         if batches == [] and len(not_requested) == \
                 len(batch_request_message.ids):
 
-            if batch_request_message. time_to_live > 0:
+            if batch_request_message.time_to_live > 0:
                 time_to_live = batch_request_message.time_to_live
                 batch_request_message.time_to_live = time_to_live - 1
                 self._gossip.broadcast(
