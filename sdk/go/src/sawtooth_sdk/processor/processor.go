@@ -33,7 +33,7 @@ import (
 
 var logger *logging.Logger = logging.Get()
 
-const MAX_WORK_QUEUE_SIZE = 100
+const DEFAULT_MAX_WORK_QUEUE_SIZE = 100
 
 // TransactionProcessor is a generic class for communicating with a validator
 // and routing transaction processing requests to a registered handler. It uses
@@ -44,6 +44,7 @@ type TransactionProcessor struct {
 	ids      map[string]string
 	handlers []TransactionHandler
 	nThreads int
+	maxQueue uint
 	shutdown chan int
 }
 
@@ -60,6 +61,7 @@ func NewTransactionProcessor(uri string) *TransactionProcessor {
 		ids:      make(map[string]string),
 		handlers: make([]TransactionHandler, 0),
 		nThreads: runtime.GOMAXPROCS(0),
+		maxQueue: DEFAULT_MAX_WORK_QUEUE_SIZE,
 		shutdown: make(chan int),
 	}
 }
@@ -75,6 +77,10 @@ func (self *TransactionProcessor) AddHandler(handler TransactionHandler) {
 // be set before calling Start()
 func (self *TransactionProcessor) SetThreadCount(n int) {
 	self.nThreads = n
+}
+
+func (self *TransactionProcessor) SetMaxQueueSize(n uint) {
+	self.maxQueue = n
 }
 
 // Start connects the TransactionProcessor to a validator and starts listening
@@ -94,7 +100,7 @@ func (self *TransactionProcessor) Start() error {
 	}
 
 	// Make work queue. Buffer so the router doesn't block
-	queue := make(chan *validator_pb2.Message, MAX_WORK_QUEUE_SIZE)
+	queue := make(chan *validator_pb2.Message, self.maxQueue)
 
 	// Keep track of which correlation ids go to which worker threads, i.e. map
 	// corrId->workerThreadId
