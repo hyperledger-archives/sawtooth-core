@@ -18,7 +18,6 @@ import unittest
 import time
 
 from sawtooth_validator.journal.block_cache import BlockCache
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 from sawtooth_validator.protobuf.block_pb2 import Block

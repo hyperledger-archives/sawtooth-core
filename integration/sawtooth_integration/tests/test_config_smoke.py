@@ -19,10 +19,10 @@ import traceback
 import tempfile
 import os
 import subprocess
-from sawtooth_cli.main import main
 import sys
 from io import StringIO
 
+from sawtooth_cli.main import main
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 LOGGER = logging.getLogger(__name__)

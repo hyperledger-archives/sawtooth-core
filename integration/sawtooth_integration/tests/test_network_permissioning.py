@@ -19,6 +19,7 @@ import logging
 import os
 import subprocess
 from tempfile import mkdtemp
+import time
 import unittest
 from uuid import uuid4
 
@@ -33,8 +34,6 @@ from sawtooth_integration.tests.integration_tools import RestClient
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
-
-import time
 
 LOGGER = logging.getLogger(__name__)
 

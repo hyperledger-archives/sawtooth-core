@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf import block_pb2

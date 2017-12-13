@@ -16,7 +16,6 @@
 import os
 import unittest
 import shutil
-import sys
 import tempfile
 
 from sawtooth_validator.config.path import load_path_config

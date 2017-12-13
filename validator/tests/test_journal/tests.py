@@ -48,13 +48,7 @@ from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.events_pb2 import EventList
 from sawtooth_validator.protobuf.events_pb2 import EventFilter
-
-from sawtooth_validator.state.merkle import MerkleDatabase
-
-from sawtooth_validator.state.state_view import StateViewFactory
-from sawtooth_validator.state.settings_view import SettingsView
 
 from test_journal.block_tree_manager import BlockTreeManager
 

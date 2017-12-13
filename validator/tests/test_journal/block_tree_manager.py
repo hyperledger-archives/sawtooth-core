@@ -15,7 +15,6 @@
 
 import logging
 import hashlib
-import logging
 import random
 import string
 

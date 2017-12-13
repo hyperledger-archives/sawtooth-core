@@ -15,7 +15,6 @@
 
 import unittest
 import logging
-import time
 import operator
 import subprocess
 import shlex
