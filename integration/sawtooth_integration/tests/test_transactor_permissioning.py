@@ -29,11 +29,13 @@ from sawtooth_integration.tests.integration_tools import RestClient
 from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 
+REST_API = "rest-api:8008"
+
+
 class TestTransactorPermissioning(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        REST_API = "rest-api:8008"
         wait_for_rest_apis([REST_API])
         cls.REST_ENDPOINT = "http://" + REST_API
 
@@ -249,7 +251,7 @@ class Families(enum.Enum):
     XO = 2
 
 
-FamilyConfig = {
+FAMILY_CONFIG = {
     Families.INTKEY: {
         'family_name': 'intkey',
         'family_version': '1.0',
@@ -284,7 +286,7 @@ def make_xo_address(unique_value):
     return XO_NAMESPACE + MessageFactory.sha512(unique_value.encode())[:64]
 
 
-TransactionEncoder = {
+TRANSACTION_ENCODER = {
     Families.INTKEY: {
         'encoder': cbor.dumps,
         'payload_func': make_intkey_payload,
@@ -334,7 +336,7 @@ class Transactor(object):
                 transaction families.
         """
 
-        family_config = FamilyConfig[family_name]
+        family_config = FAMILY_CONFIG[family_name]
         self._factories[family_name] = MessageFactory(
             family_name=family_config['family_name'],
             family_version=family_config['family_version'],
@@ -343,11 +345,12 @@ class Transactor(object):
 
     def create_txn(self, family_name, batcher=None):
         unique_value = uuid4().hex[:20]
-        encoder = TransactionEncoder[family_name]['encoder']
+        encoder = TRANSACTION_ENCODER[family_name]['encoder']
         payload = encoder(
-            TransactionEncoder[family_name]['payload_func'](unique_value))
+            TRANSACTION_ENCODER[family_name]['payload_func'](unique_value))
 
-        address = TransactionEncoder[family_name]['address_func'](unique_value)
+        address = TRANSACTION_ENCODER[family_name]['address_func'](
+            unique_value)
 
         return self._factories[family_name].create_transaction(
             payload=payload,

@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _increment_key(key, offset=1):
-    if type(key) == int:
+    if isinstance(key, int):
         return key + offset
     try:
         return str(int(key) + offset)

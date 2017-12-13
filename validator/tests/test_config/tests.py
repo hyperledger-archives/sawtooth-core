@@ -25,9 +25,6 @@ from sawtooth_validator.config.validator import load_toml_validator_config
 
 
 class TestPathConfig(unittest.TestCase):
-    def __init__(self, test_name):
-        super().__init__(test_name)
-
     def test_path_config_defaults_sawtooth_home(self):
         """Tests the default path configuration settings when SAWTOOTH_HOME
         is set.

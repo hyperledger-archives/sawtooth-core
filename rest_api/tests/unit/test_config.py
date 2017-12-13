@@ -23,9 +23,6 @@ from sawtooth_rest_api.exceptions import RestApiConfigurationError
 
 
 class TestRestApiConfig(unittest.TestCase):
-    def __init__(self, test_name):
-        super().__init__(test_name)
-
     def test_rest_api_defaults_sawtooth_home(self):
         """Tests the default REST API configuration.
 

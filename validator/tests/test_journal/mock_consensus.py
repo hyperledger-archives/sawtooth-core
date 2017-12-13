@@ -131,5 +131,5 @@ class ForkResolver(ForkResolverInterface):
         # chains are ordered by length first, then weight
         if new_num == cur_num:
             return new_weight > cur_weight
-        else:
-            return new_num > cur_num
+
+        return new_num > cur_num

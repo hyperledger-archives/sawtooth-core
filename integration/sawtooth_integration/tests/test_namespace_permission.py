@@ -63,7 +63,9 @@ def post_batch(batch):
     return response
 
 
-def query_rest_api(suffix='', data=None, headers={}):
+def query_rest_api(suffix='', data=None, headers=None):
+    if headers is None:
+        headers = {}
     url = 'http://rest-api:8080' + suffix
     return submit_request(urllib.request.Request(url, data, headers))
 
@@ -87,8 +89,8 @@ class TestNamespacePermission(unittest.TestCase):
         batches = make_batches('abcd')
 
         # Assert all block info transactions are committed
-        for i in range(len(batches)):
-            post_batch(batches[i])
+        for i, batch in enumerate(batches):
+            post_batch(batch)
             time.sleep(1)
             block_info = get_block_info(i)
             self.assertEqual(block_info.block_num, i)

@@ -18,7 +18,7 @@ class MockGossip():
     def __init__(self):
         self.requested_blocks = []
         self.requested_batches = []
-        self.requested_batches_by_transactin_id = []
+        self.requested_batches_by_txn_id = []
 
     def broadcast_block_request(self, block_id):
         self.requested_blocks.append(block_id)
@@ -28,4 +28,4 @@ class MockGossip():
 
     def broadcast_batch_by_transaction_id_request(self, transaction_ids):
         for txn_id in transaction_ids:
-            self.requested_batches_by_transactin_id.append(txn_id)
+            self.requested_batches_by_txn_id.append(txn_id)

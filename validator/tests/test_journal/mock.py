@@ -41,7 +41,7 @@ class SynchronousExecutor(Executor):
         job()
 
     def process_all(self):
-        while len(self._work_queue):
+        while self._work_queue:
             self.process_next()
 
 

@@ -161,11 +161,11 @@ _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 
-def _short_hash(s):
-    return hashlib.sha256(s.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
+def _short_hash(name):
+    return hashlib.sha256(name.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
 
 
-def _key_to_address(k):
-    key_parts = k.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+def _key_to_address(key):
+    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
     return ''.join(_short_hash(x) for x in key_parts)

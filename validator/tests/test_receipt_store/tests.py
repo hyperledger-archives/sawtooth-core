@@ -74,16 +74,16 @@ class ReceiptStoreTest(unittest.TestCase):
                 TransactionReceipt(
                     state_changes=state_changes, events=events, data=data))
 
-        for i in range(len(receipts)):
-            receipt_store.put(str(i), receipts[i])
+        for i, receipt in enumerate(receipts):
+            receipt_store.put(str(i), receipt)
 
-        for i in range(len(receipts)):
+        for i, receipt in enumerate(receipts):
             stored_receipt = receipt_store.get(str(i))
 
             self.assertEqual(stored_receipt.state_changes,
-                             receipts[i].state_changes)
-            self.assertEqual(stored_receipt.events, receipts[i].events)
-            self.assertEqual(stored_receipt.data, receipts[i].data)
+                             receipt.state_changes)
+            self.assertEqual(stored_receipt.events, receipt.events)
+            self.assertEqual(stored_receipt.data, receipt.data)
 
     def test_raise_key_error_on_missing_receipt(self):
         """Tests that we correctly raise key error on a missing receipt
