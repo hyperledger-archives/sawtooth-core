@@ -4,7 +4,7 @@ Error Responses
 
 When the REST API encounters a problem, or receives notification that the
 validator has encountered a problem, it will notify clients with both an
-appropriate HTTP status code, and a more detailed JSON response.
+appropriate HTTP status code and a more detailed JSON response.
 
 
 HTTP Status Codes
@@ -24,14 +24,14 @@ HTTP Status Codes
        details.
    * - 404
      - Not Found
-     - The request was well formed, but an identifier specified did not
+     - The request was well formed, but the specified identifier did not
        correspond to any resource in the validator. Returned by endpoints which
        fetch a single resource. Endpoints which return lists of resources will
        simply return an empty list.
    * - 500
      - Internal Server Error
      - Something is broken internally in the REST API or the validator. This may
-       be a bug, and if reproducible, should be reported.
+       be a bug; if it is reproducible, the bug should be reported.
    * - 503
      - Service Unavailable
      - The REST API is unable to communicate with the validator. It may be down.
@@ -46,12 +46,12 @@ include a single *error* property with three values:
 
    * *code* (integer) - a machine readable error code
    * *title* (string) - a short headline for the error
-   * *message* (string) - a longer human readable description of what went wrong
+   * *message* (string) - a longer, human-readable description of what went wrong
 
 .. note::
 
-   While the title and message may change in the future, **the error code is
-   fixed**, and will always refer to this particular problem.
+   While the title and message may change in the future, the error code
+   will **not** change; it will always refer to this particular problem.
 
 
 Example JSON Response
@@ -63,7 +63,7 @@ Example JSON Response
      "error": {
        "code": 30,
        "title": "Submitted Batches Invalid",
-       "message": "The submitted BatchList is invalid. It was poorly formed, or has an invalid signature."
+       "message": "The submitted BatchList is invalid. It was poorly formed or has an invalid signature."
      }
    }
 
@@ -81,7 +81,8 @@ Error Codes and Descriptions
    * - 10
      - Unknown Validator Error
      - An unknown error occurred with the validator while processing the
-       request. This may be a bug, and if reproducible, should be reported.
+       request. This may be a bug; if it is reproducible, the bug should be
+       reported.
    * - 15
      - Validator Not Ready
      - The validator has no genesis block, and so cannot be queried. Wait for
@@ -90,8 +91,8 @@ Error Codes and Descriptions
    * - 17
      - Validator Timed Out
      - The request timed out while waiting for a response from the validator. It
-       may not be running, or have encountered an internal error. The request
-       may or may not have been processed.
+       may not be running, or may have encountered an internal error. The
+       request may not have been processed.
    * - 18
      - Validator Disconnected
      - The validator sent a disconnect signal while processing the response, and
@@ -113,11 +114,11 @@ Error Codes and Descriptions
    * - 30
      - Submitted Batches Invalid
      - The submitted BatchList failed initial validation by the validator. It
-       may have a bad signature, or be poorly formed.
+       may have a bad signature or be poorly formed.
    * - 34
      - No Batches Submitted
-     - The BatchList Protobuf submitted was empty and contained no Batches. All
-       submissions to the validator must include at least one Batch.
+     - The BatchList Protobuf submitted was empty and contained no batches. All
+       submissions to the validator must include at least one batch.
    * - 35
      - Protobuf Not Decodable
      - The REST API was unable to decode the submitted Protobuf binary. It is
