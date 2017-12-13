@@ -13,9 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import json
 from aiohttp.test_utils import unittest_run_loop
-from components import Mocks, BaseApiTest
+
+from components import BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_peers_pb2
 

@@ -13,9 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from unittest import mock
 from base64 import b64decode
+
 from aiohttp.test_utils import unittest_run_loop
+
 from components import Mocks, BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_state_pb2

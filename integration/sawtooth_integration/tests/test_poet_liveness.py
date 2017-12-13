@@ -13,11 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import time
 import unittest
 import logging
-import yaml
 
-import time
 import requests
 
 

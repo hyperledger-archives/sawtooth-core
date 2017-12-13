@@ -15,8 +15,6 @@
 
 import binascii
 from collections import deque
-from collections import namedtuple
-import copy
 import hashlib
 import itertools
 import logging

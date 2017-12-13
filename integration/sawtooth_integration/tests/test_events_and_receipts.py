@@ -18,8 +18,6 @@ import logging
 import json
 import urllib.request
 import urllib.error
-import base64
-import sys
 
 import cbor
 

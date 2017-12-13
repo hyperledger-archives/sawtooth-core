@@ -14,8 +14,6 @@
 # ------------------------------------------------------------------------------
 
 import unittest
-from unittest.mock import Mock
-from collections import deque
 import hashlib
 import threading
 import time

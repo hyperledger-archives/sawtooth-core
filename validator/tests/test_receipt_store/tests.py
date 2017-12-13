@@ -25,9 +25,6 @@ from sawtooth_validator.journal.receipt_store import \
 
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
-from sawtooth_validator.execution.tp_state_handlers import TpReceiptAddDataHandler
-
-from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
     TransactionReceipt
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange

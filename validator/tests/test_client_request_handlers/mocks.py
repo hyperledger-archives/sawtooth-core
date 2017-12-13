@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
+
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
@@ -24,8 +26,6 @@ from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.state.merkle import MerkleDatabase
 from sawtooth_validator.state.batch_tracker import BatchTracker
-
-import logging
 
 LOGGER = logging.getLogger(__name__)
 

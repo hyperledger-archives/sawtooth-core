@@ -13,10 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import re
+from base64 import b64decode
+
 from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase
-from base64 import b64decode
 
 from sawtooth_rest_api.route_handlers import RouteHandler
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2

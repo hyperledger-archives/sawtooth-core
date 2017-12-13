@@ -13,10 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 import unittest
-import cbor
 import hashlib
 import random
 import string
+
+import cbor
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory

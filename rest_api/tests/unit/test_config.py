@@ -15,7 +15,6 @@
 import os
 import unittest
 import shutil
-import sys
 import tempfile
 
 from sawtooth_rest_api.config import load_default_rest_api_config

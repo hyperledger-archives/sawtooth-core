@@ -17,12 +17,13 @@ import unittest
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipMessageDuplicateHandler
+
 from test_duplicate_handler.mock import MockCompleter
 from test_duplicate_handler.mock import MockChainController
 from test_duplicate_handler.mock import MockPublisher
-from sawtooth_validator.networking.dispatch import HandlerStatus
 
 
 class TestDuplicateHandler(unittest.TestCase):
