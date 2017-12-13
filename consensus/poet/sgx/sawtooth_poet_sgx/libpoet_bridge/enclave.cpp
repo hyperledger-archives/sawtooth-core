@@ -29,7 +29,6 @@
 #include "poet_enclave_u.h"
 #include "log.h"
 #include "error.h"
-#include "utils.h"
 #include "zero.h"
 #include "hex_string.h"
 

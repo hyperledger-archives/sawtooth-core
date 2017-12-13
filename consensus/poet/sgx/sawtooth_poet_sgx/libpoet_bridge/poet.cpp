@@ -30,7 +30,6 @@
 
 #include "error.h"
 
-#include "base64.h"
 #include "zero.h"
 #include "public_key_util.h"
 
