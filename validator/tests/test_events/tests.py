@@ -291,7 +291,7 @@ class ClientEventsGetRequestHandlerTest(unittest.TestCase):
             Mock(),
             block_store=self.block_store,
             receipt_store=self.receipt_store)
-        for block_id, txn_ids in self._txn_ids_by_block_id.items():
+        for block_id, _ in self._txn_ids_by_block_id.items():
             request = client_event_pb2.ClientEventsGetRequest()
             request.block_ids.extend([block_id])
             subscription = request.subscriptions.add()

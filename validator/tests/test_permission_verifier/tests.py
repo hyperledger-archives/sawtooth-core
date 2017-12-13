@@ -63,7 +63,7 @@ class TestPermissionVerifier(unittest.TestCase):
     def _create_transactions(self, count):
         txn_list = []
 
-        for i in range(count):
+        for _ in range(count):
             payload = {
                 'Verb': 'set',
                 'Name': 'name',
@@ -106,7 +106,7 @@ class TestPermissionVerifier(unittest.TestCase):
 
         batch_list = []
 
-        for i in range(batch_count):
+        for _ in range(batch_count):
             txn_list = self._create_transactions(txn_count)
             txn_sig_list = [txn.header_signature for txn in txn_list]
 

@@ -50,7 +50,7 @@ class TestMessageValidation(unittest.TestCase):
                              valid_batcher=True):
         txn_list = []
 
-        for i in range(count):
+        for _ in range(count):
             payload = {
                 'Verb': 'set',
                 'Name': 'name' + str(random.randint(0, 100)),
@@ -108,7 +108,7 @@ class TestMessageValidation(unittest.TestCase):
 
         batch_list = []
 
-        for i in range(batch_count):
+        for _ in range(batch_count):
             txn_list = self._create_transactions(txn_count, valid_txn,
                                                  valid_batcher)
             txn_sig_list = [txn.header_signature for txn in txn_list]
@@ -138,7 +138,7 @@ class TestMessageValidation(unittest.TestCase):
                        valid_block=True, valid_batch=True):
         block_list = []
 
-        for i in range(block_count):
+        for _ in range(block_count):
             batch_list = self._create_batches(
                 batch_count, 2, valid_batch=valid_batch)
             batch_ids = [batch.header_signature for batch in batch_list]

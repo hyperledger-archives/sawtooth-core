@@ -503,13 +503,13 @@ class TestBlockValidator(unittest.TestCase):
         as the current chain.
         """
         # create a new valid chain 5 long from the current root
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         self.block_tree_manager.set_chain_head(head)
 
         # generate candidate chain 3 long from the same root
-        new_chain, new_head = self.generate_chain_with_head(
+        _, new_head = self.generate_chain_with_head(
             self.root, 3, {'add_to_cache': True})
 
         self.validate_block(new_head)
@@ -524,13 +524,13 @@ class TestBlockValidator(unittest.TestCase):
         a different code path when finding the common root )
         """
         # create a new valid chain 5 long from the current root
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         self.block_tree_manager.set_chain_head(head)
 
         # generate candidate chain 8 long from the same root
-        new_chain, new_head = self.generate_chain_with_head(
+        _, new_head = self.generate_chain_with_head(
             head, 8, {'add_to_cache': True})
 
         self.validate_block(new_head)
@@ -543,13 +543,13 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where new block is from a different genesis
         """
         # create a new valid chain 5 long from the current root
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         self.block_tree_manager.set_chain_head(head)
 
         # generate candidate chain 5 long from its own genesis
-        new_chain, new_head = self.generate_chain_with_head(
+        _, new_head = self.generate_chain_with_head(
             None, 5, {'add_to_cache': True})
 
         self.validate_block(new_head)
@@ -593,7 +593,7 @@ class TestBlockValidator(unittest.TestCase):
         """
         Test the case where the new block has a bad batch
         """
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         new_block = self.block_tree_manager.generate_block(
@@ -610,7 +610,7 @@ class TestBlockValidator(unittest.TestCase):
         """
         Test the case where the new block has a bad batch
         """
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         new_block = self.block_tree_manager.generate_block(
@@ -628,7 +628,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where the new block has a batch that is missing a
         dependency.
         """
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         txn = self.block_tree_manager.generate_transaction(deps=["missing"])
@@ -649,7 +649,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where the new block has a batch that already committed to
         the chain.
         """
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         batch = self.block_tree_manager.generate_batch()
@@ -674,7 +674,7 @@ class TestBlockValidator(unittest.TestCase):
         """
         Test the case where the new block has a duplicate batches.
         """
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         batch = self.block_tree_manager.generate_batch()
@@ -694,7 +694,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where the new block has a transaction that is already
         committed.
         """
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         txn = self.block_tree_manager.generate_transaction()
@@ -723,7 +723,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where the new block has a batch that contains duplicate
         transactions.
         """
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         txn = self.block_tree_manager.generate_transaction()
@@ -863,7 +863,7 @@ class TestChainController(unittest.TestCase):
     def test_alternate_genesis(self):
         '''Tests a fork extending an alternate genesis block
         '''
-        chain, head = self.generate_chain(None, 5)
+        chain, _ = self.generate_chain(None, 5)
 
         for block in chain:
             self.receive_and_process_blocks(block)
@@ -975,7 +975,7 @@ class TestChainController(unittest.TestCase):
         '''Tests a fork with a bad block in the middle
         '''
         # make two chains extending chain
-        good_chain, good_head = self.generate_chain(self.init_head, 5)
+        _, good_head = self.generate_chain(self.init_head, 5)
         bad_chain, bad_head = self.generate_chain(self.init_head, 5)
 
         self.chain_ctrl.on_block_received(bad_head)
