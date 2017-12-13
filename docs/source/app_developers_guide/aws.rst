@@ -307,29 +307,6 @@ Sawtooth provides a :doc:`Settings transaction family
 on-chain settings, along with a Settings family transaction processor written
 in Python.
 
-.. note::
-
-  Sawtooth supports multiple languages for transaction processor development and
-  includes additional transaction processors written in several languages.
-  The following lists the processors that are included:
-
-  * settings-tp - A Settings family transaction processor written in Python
-
-  * intkey-tp-go - An IntegerKey transaction processor written in Go
-
-  * intkey-tp-java - An IntegerKey transaction processor written in Java
-
-  * intkey-tp-javascript - An IntegerKey transaction processor written in JavaScript
-    (requires node.js)
-
-  * poet-validator-registry-tp - A transaction family used by the PoET consensus
-    algorithm implementation to keep track of other validators
-
-  * xo-tp-javascript - An XO transaction processor written in JavaScript
-    (requires node.js)
-
-  * xo-tp-python - An XO transaction processor written in Python
-
 One of the on-chain settings is the list of supported transaction families.
 The next step describes how to configure this setting with a single command.
 
