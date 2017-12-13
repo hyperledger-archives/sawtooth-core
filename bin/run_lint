@@ -155,6 +155,16 @@ fi
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 retval=0
 
+PYTHONPATH=$PYTHONPATH:$top_dir/signing
+PYTHONPATH=$PYTHONPATH:$top_dir/cli
+PYTHONPATH=$PYTHONPATH:$top_dir/validator
+PYTHONPATH=$PYTHONPATH:$top_dir/integration
+PYTHONPATH=$PYTHONPATH:$top_dir/sdk/python
+PYTHONPATH=$PYTHONPATH:$top_dir/sdk/examples/intkey_python
+PYTHONPATH=$PYTHONPATH:$top_dir/families/block_info
+export PYTHONPATH
+lint integration "$SINCE" || retval=1
+
 PYTHONPATH=$top_dir/signing
 export PYTHONPATH
 lint signing "$SINCE" || retval=1
@@ -168,7 +178,7 @@ export PYTHONPATH
 lint sdk/python "$SINCE" || retval=1
 lint sdk/examples/intkey_python "$SINCE" || retval=1
 lint sdk/examples/xo_python "$SINCE" || retval=1
-lint rest_api/sawtooth_rest_api "$SINCE" || retval=1
+lint rest_api "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/families/settings
 PYTHONPATH=$top_dir/families/identity
@@ -196,7 +206,7 @@ lint families/block_info "$SINCE" || retval=1
 PYTHONPATH=$top_dir/signing
 PYTHONPATH=$PYTHONPATH:$top_dir/validator
 export PYTHONPATH
-lint validator/sawtooth_validator "$SINCE" || retval=1
+lint validator "$SINCE" || retval=1
 
 PYTHONPATH=$top_dir/consensus/poet/common
 PYTHONPATH=$PYTHONPATH:$top_dir/consensus/poet/common/tests
