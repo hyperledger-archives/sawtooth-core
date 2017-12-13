@@ -40,29 +40,23 @@ const DEFAULT_MAX_WORK_QUEUE_SIZE = 100
 // ZMQ and channels to handle requests concurrently.
 type TransactionProcessor struct {
 	uri      string
-	context  *zmq.Context
 	ids      map[string]string
 	handlers []TransactionHandler
 	nThreads uint
 	maxQueue uint
-	shutdown chan int
+	shutdown chan bool
 }
 
 // NewTransactionProcessor initializes a new Transaction Process and points it
 // at the given URI. If it fails to initialize, it will panic.
 func NewTransactionProcessor(uri string) *TransactionProcessor {
-	context, err := zmq.NewContext()
-	if err != nil {
-		panic(fmt.Sprint("Failed to create ZMQ context: ", err))
-	}
 	return &TransactionProcessor{
 		uri:      uri,
-		context:  context,
 		ids:      make(map[string]string),
 		handlers: make([]TransactionHandler, 0),
 		nThreads: uint(runtime.GOMAXPROCS(0)),
 		maxQueue: DEFAULT_MAX_WORK_QUEUE_SIZE,
-		shutdown: make(chan int),
+		shutdown: make(chan bool),
 	}
 }
 
@@ -86,17 +80,42 @@ func (self *TransactionProcessor) SetMaxQueueSize(n uint) {
 // Start connects the TransactionProcessor to a validator and starts listening
 // for requests and routing them to an appropriate handler.
 func (self *TransactionProcessor) Start() error {
+	for {
+		context, err := zmq.NewContext()
+		if err != nil {
+			panic(fmt.Sprint("Failed to create ZMQ context: ", err))
+		}
+		reconnect, err := self.start(context)
+		if err != nil {
+			return err
+		}
+		// If the validator disconnected, then start() returns true
+		if !reconnect {
+			break
+		}
+	}
+	return nil
+}
+
+func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
+	restart := false
+
 	// Establish a connection to the validator
-	validator, err := messaging.NewConnection(self.context, zmq.DEALER, self.uri)
+	validator, err := messaging.NewConnection(context, zmq.DEALER, self.uri)
 	if err != nil {
-		return fmt.Errorf("Could not connect to validator: %v", err)
+		return restart, fmt.Errorf("Could not connect to validator: %v", err)
 	}
 	defer validator.Close()
 
-	// Setup connection to internal worker thread pool
-	workers, err := messaging.NewConnection(self.context, zmq.ROUTER, "inproc://workers")
+	monitor, err := validator.Monitor(zmq.EVENT_DISCONNECTED)
 	if err != nil {
-		return fmt.Errorf("Could not create thread pool router: %v", err)
+		return restart, fmt.Errorf("Could not monitor validator connection: %v", err)
+	}
+
+	// Setup connection to internal worker thread pool
+	workers, err := messaging.NewConnection(context, zmq.ROUTER, "inproc://workers")
+	if err != nil {
+		return restart, fmt.Errorf("Could not create thread pool router: %v", err)
 	}
 
 	// Make work queue. Buffer so the router doesn't block
@@ -108,16 +127,17 @@ func (self *TransactionProcessor) Start() error {
 
 	// Startup worker thread pool
 	for i := uint(0); i < self.nThreads; i++ {
-		go worker(self.context, "inproc://workers", queue, self.handlers)
+		go worker(context, "inproc://workers", queue, self.handlers)
 	}
 	// Setup shutdown thread
-	go shutdown(self.context, "inproc://workers", queue, self.shutdown)
+	go shutdown(context, "inproc://workers", queue, self.shutdown)
 
 	workersLeft := self.nThreads + 1
 
 	// Setup ZMQ poller for routing messages between worker threads and validator
 	poller := zmq.NewPoller()
 	poller.Add(validator.Socket(), zmq.POLLIN)
+	poller.Add(monitor, zmq.POLLIN)
 	poller.Add(workers.Socket(), zmq.POLLIN)
 
 	// Register all handlers with the validator
@@ -125,7 +145,7 @@ func (self *TransactionProcessor) Start() error {
 		for _, version := range handler.FamilyVersions() {
 			err := register(validator, handler, version, queue)
 			if err != nil {
-				return fmt.Errorf(
+				return restart, fmt.Errorf(
 					"Error registering handler (%v, %v, %v): %v",
 					handler.FamilyName(), version,
 					handler.Namespaces(), err,
@@ -138,17 +158,20 @@ func (self *TransactionProcessor) Start() error {
 	for {
 		polled, err := poller.Poll(-1)
 		if err != nil {
-			return fmt.Errorf("Polling failed: %v", err)
+			return restart, fmt.Errorf("Polling failed: %v", err)
 		}
 		for _, ready := range polled {
 			switch socket := ready.Socket; socket {
 			case validator.Socket():
 				receiveValidator(ids, validator, workers, queue)
 
+			case monitor:
+				restart = receiveMonitor(monitor, self.shutdown)
+
 			case workers.Socket():
 				receiveWorkers(ids, validator, workers, &workersLeft)
 				if workersLeft == 0 {
-					return nil
+					return restart, nil
 				}
 			}
 		}
@@ -158,7 +181,7 @@ func (self *TransactionProcessor) Start() error {
 // Shutdown sends a message to the processor telling it to deregister.
 func (self *TransactionProcessor) Shutdown() {
 	// Initiate a clean shutdown
-	self.shutdown <- 0
+	self.shutdown <- false
 }
 
 // ShutdownOnSignal sets up signal handling to shutdown the processor when one
@@ -266,6 +289,24 @@ func receiveValidator(ids map[string]string, validator, workers messaging.Connec
 	logger.Warnf(
 		"Received unexpected message from validator: (%v, %v)", t, corrId,
 	)
+}
+
+// Handle monitor events
+func receiveMonitor(monitor *zmq.Socket, shutdown chan bool) bool {
+	restart := false
+	event, endpoint, _, err := monitor.RecvEvent(0)
+	if err != nil {
+		logger.Error(err)
+	} else {
+		if event == zmq.EVENT_DISCONNECTED {
+			logger.Infof("Validator '%v' disconnected", endpoint)
+			restart = true
+		} else {
+			logger.Errorf("Received unexpected event on monitor socket: %v", event)
+		}
+		shutdown <- true
+	}
+	return restart
 }
 
 // Handle incoming messages from the workers
