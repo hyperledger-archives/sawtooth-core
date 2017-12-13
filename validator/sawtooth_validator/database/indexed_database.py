@@ -74,6 +74,7 @@ class IndexedDatabase(database.Database):
                                       map_size=_size,
                                       map_async=True,
                                       writemap=True,
+                                      readahead=False,
                                       subdir=False,
                                       create=create,
                                       max_dbs=len(indexes) + 1,
