@@ -190,6 +190,15 @@ class GossipBroadcastHandler(Handler):
         exclude = [connection_id]
         gossip_message = GossipMessage()
         gossip_message.ParseFromString(message_content)
+        if gossip_message.time_to_live == 0:
+            # Do not forward message if it has reached its time to live limit
+            return HandlerResult(status=HandlerStatus.PASS)
+
+        else:
+            # decrement time_to_live
+            time_to_live = gossip_message.time_to_live
+            gossip_message.time_to_live = time_to_live - 1
+
         if gossip_message.content_type == GossipMessage.BATCH:
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
