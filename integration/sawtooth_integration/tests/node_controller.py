@@ -125,7 +125,7 @@ def stop_node(process_list):
     for _ in range(2):
         for process in process_list:
             pid = process.pid
-            LOGGER.debug('Stopping process {}'.format(pid))
+            LOGGER.debug('Stopping process %s', pid)
             process.send_signal(signal.SIGINT)
         time.sleep(15)
 
@@ -355,6 +355,6 @@ def bind_network(num):
 # execution
 
 def start_process(cmd):
-    LOGGER.debug('Running command {}'.format(cmd))
+    LOGGER.debug('Running command %s', cmd)
     return subprocess.Popen(
         shlex.split(cmd))

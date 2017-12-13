@@ -109,12 +109,12 @@ class TestTwoFamilies(unittest.TestCase):
             'Expected xo state to be empty')
 
     def verify_state_after_n_updates(self, num):
-        LOGGER.debug('Verifying state after {} updates'.format(num))
+        LOGGER.debug('Verifying state after %s updates', num)
 
         intkey_state = _get_intkey_data()
-        LOGGER.info('Current intkey state: {}'.format(intkey_state))
+        LOGGER.info('Current intkey state: %s', intkey_state)
         xo_data = _get_xo_data()
-        LOGGER.info('Current xo state: {}'.format(xo_data))
+        LOGGER.info('Current xo state: %s', xo_data)
 
         self.assertEqual(
             intkey_state,
