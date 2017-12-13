@@ -57,7 +57,9 @@ from test_scheduler.yaml_scheduler_tester import create_transaction
 def create_block(block_num=85,
                  previous_block_id="0000000000000000",
                  block_id="abcdef1234567890",
-                 batches=[]):
+                 batches=None):
+    if batches is None:
+        batches = []
     block_header = block_pb2.BlockHeader(
         block_num=block_num,
         state_root_hash="0987654321fedcba",

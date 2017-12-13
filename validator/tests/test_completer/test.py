@@ -293,7 +293,7 @@ class TestCompleter(unittest.TestCase):
         batch = self._create_batches(1, 1, missing_dep=True)[0]
         self.completer.add_batch(batch)
         self.assertIn("Missing",
-                      self.gossip.requested_batches_by_transactin_id)
+                      self.gossip.requested_batches_by_txn_id)
 
         missing = Transaction(header_signature="Missing")
         missing_batch = Batch(header_signature="Missing_batch",

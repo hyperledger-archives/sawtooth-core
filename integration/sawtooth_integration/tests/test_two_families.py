@@ -183,7 +183,9 @@ def _get_state_prefix(prefix):
     return response['data']
 
 
-def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
+def _query_rest_api(suffix='', data=None, headers=None, expected_code=200):
+    if headers is None:
+        headers = {}
     url = 'http://rest-api:8008' + suffix
     return _submit_request(
         urllib.request.Request(url, data, headers),
@@ -192,7 +194,7 @@ def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
 
 def _submit_request(request, expected_code=200):
     conn = urllib.request.urlopen(request)
-    assert(expected_code == conn.getcode())
+    assert expected_code == conn.getcode()
 
     response = conn.read().decode('utf-8')
     return json.loads(response)

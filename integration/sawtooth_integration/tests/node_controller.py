@@ -32,24 +32,24 @@ def peer_with_genesis_only(num):
     if num > 0:
         return '--peers {}'.format(
             endpoint(0))
-    else:
-        return ''
+
+    return ''
 
 
 def peer_to_preceding_only(num):
     if num > 0:
         return '--peers {}'.format(
             endpoint(num - 1))
-    else:
-        return ''
+
+    return ''
 
 
 def everyone_peers_with_everyone(num):
     if num > 0:
         peers = ','.join(endpoint(i) for i in range(num))
         return '--peers {}'.format(peers)
-    else:
-        return ''
+
+    return ''
 
 
 # processor arrangements
@@ -226,7 +226,7 @@ def validator_cmds(num,
             os.path.join(sawtooth_home, 'data', 'poet.batch'))
     ])
 
-    validator_cmds = (
+    validator_cmd_list = (
         [keygen, validator] if num > 0
         else [
             keygen,
@@ -238,7 +238,7 @@ def validator_cmds(num,
         ]
     )
 
-    return validator_cmds
+    return validator_cmd_list
 
 
 def simple_validator_cmds(*args, **kwargs):
@@ -284,7 +284,7 @@ def processor_cmds(num, processor_func):
     '''
     processors = processor_func(num)
 
-    processor_cmds = [
+    processor_cmd_list = [
         '{p} {v} -C {a}'.format(
             p=processor,
             v=(processor_verbosity(processor)),
@@ -292,7 +292,7 @@ def processor_cmds(num, processor_func):
         for processor in processors
     ]
 
-    return processor_cmds
+    return processor_cmd_list
 
 
 def processor_verbosity(processor_name):

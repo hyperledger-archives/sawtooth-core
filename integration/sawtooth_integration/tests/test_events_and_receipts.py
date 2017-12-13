@@ -165,9 +165,9 @@ class TestEventsAndReceipts(unittest.TestCase):
         if self.stream is not None:
             self.stream.close()
 
-    def _get_receipt(self, n):
+    def _get_receipt(self, num):
         txn_id = \
-            self.batch_submitter.batches[n].transactions[0].header_signature
+            self.batch_submitter.batches[num].transactions[0].header_signature
         request = client_receipt_pb2.ClientReceiptGetRequest(
             transaction_ids=[txn_id])
         response = self.stream.send(
@@ -295,21 +295,23 @@ class BatchSubmitter:
         return self._submit_request('{}&wait={}'.format(
             response['link'], self.timeout))
 
-    def _query_rest_api(self, suffix='', data=None, headers={},
+    def _query_rest_api(self, suffix='', data=None, headers=None,
                         expected_code=200):
+        if headers is None:
+            headers = {}
         url = 'http://rest-api:8008' + suffix
         return self._submit_request(urllib.request.Request(url, data, headers),
                                     expected_code=expected_code)
 
     def _submit_request(self, request, expected_code=200):
         conn = urllib.request.urlopen(request)
-        assert(expected_code == conn.getcode())
+        assert expected_code == conn.getcode()
 
         response = conn.read().decode('utf-8')
         return json.loads(response)
 
-    def make_batch(self, n):
-        return self.imf.create_batch([('set', str(n), 0)])
+    def make_batch(self, num):
+        return self.imf.create_batch([('set', str(num), 0)])
 
     def submit_next_batch(self):
         batch_list_bytes = self.make_batch(len(self.batches))

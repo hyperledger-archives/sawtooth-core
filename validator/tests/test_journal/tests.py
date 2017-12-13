@@ -1100,12 +1100,14 @@ class TestChainController(unittest.TestCase):
             block_sig[:8],
             'Not chain head')
 
-    def generate_chain(self, root_block, num_blocks,
-                       params={'add_to_cache': True}):
+    def generate_chain(self, root_block, num_blocks, params=None):
         '''Returns (chain, chain_head).
         Usually only the head is needed,
         but occasionally the chain itself is used.
         '''
+        if params is None:
+            params = {'add_to_cache': True}
+
         chain = self.block_tree_manager.generate_chain(
             root_block, num_blocks, params)
 
