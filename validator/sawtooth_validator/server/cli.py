@@ -101,6 +101,11 @@ def parse_args(args):
     parser.add_argument('--opentsdb-db',
                         help='specify name of database used for storing \
                         metrics')
+    parser.add_argument('--minimum-peer-connectivity',
+                        help='set the minimum number of peers required before \
+                        stopping peer search')
+    parser.add_argument('--maximum-peer-connectivity',
+                        help='set the maximum number of peers to accept')
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -192,7 +197,10 @@ def create_validator_config(opts):
         scheduler=opts.scheduler,
         roles=opts.network_auth,
         opentsdb_url=opts.opentsdb_url,
-        opentsdb_db=opts.opentsdb_db)
+        opentsdb_db=opts.opentsdb_db,
+        minimum_peer_connectivity=opts.minimum_peer_connectivity,
+        maximum_peer_connectivity=opts.maximum_peer_connectivity
+        )
 
 
 def main(args=None):
@@ -332,6 +340,8 @@ def main(args=None):
                           identity_signer,
                           validator_config.scheduler,
                           validator_config.permissions,
+                          validator_config.minimum_peer_connectivity,
+                          validator_config.maximum_peer_connectivity,
                           validator_config.network_public_key,
                           validator_config.network_private_key,
                           roles=validator_config.roles,

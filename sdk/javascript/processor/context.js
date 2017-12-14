@@ -90,7 +90,7 @@ class Context {
   }
 
   /**
-   * set_state requests that each address in the provided dictionary
+   * setState requests that each address in the provided dictionary
    * be set in validator state to its corresponding value. A list is
    * returned containing the successfully set addresses.
 
@@ -122,7 +122,7 @@ class Context {
   }
 
   /**
-   * delete_state requests that each of the provided addresses be
+   * deleteState requests that each of the provided addresses be
    * unset in validator state. A list of successfully deleted
    * addresses is returned.
    *

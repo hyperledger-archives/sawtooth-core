@@ -141,10 +141,13 @@ class Gossip(object):
                 peer_endpoints.append(self._endpoint)
             peers_response = GetPeersResponse(peer_endpoints=peer_endpoints)
             try:
+                # Send a one_way message because the connection will be closed
+                # if this is a temp connection.
                 self._network.send(
                     validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
                     peers_response.SerializeToString(),
-                    connection_id)
+                    connection_id,
+                    one_way=True)
             except ValueError:
                 LOGGER.debug("Connection disconnected: %s", connection_id)
 
@@ -234,7 +237,8 @@ class Gossip(object):
             nonce=binascii.b2a_hex(os.urandom(16)))
         self.send(validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
                   block_request.SerializeToString(),
-                  connection_id)
+                  connection_id,
+                  one_way=True)
 
     def broadcast_batch(self, batch, exclude=None):
         gossip_message = GossipMessage(
@@ -264,7 +268,7 @@ class Gossip(object):
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
-    def send(self, message_type, message, connection_id):
+    def send(self, message_type, message, connection_id, one_way=False):
         """Sends a message via the network.
 
         Args:
@@ -273,7 +277,8 @@ class Gossip(object):
             connection_id (str): The connection to send it to.
         """
         try:
-            self._network.send(message_type, message, connection_id)
+            self._network.send(message_type, message, connection_id,
+                               one_way=one_way)
         except ValueError:
             LOGGER.debug("Connection %s is no longer valid. "
                          "Removing from list of peers.",
@@ -300,7 +305,9 @@ class Gossip(object):
                 if connection_id not in exclude:
                     self.send(message_type,
                               gossip_message.SerializeToString(),
-                              connection_id)
+                              connection_id,
+                              one_way=True
+                              )
 
     def connect_success(self, connection_id):
         """
@@ -731,15 +738,19 @@ class ConnectionManager(InstrumentedThread):
                 LOGGER.debug("Peering request to %s was successful",
                              connection_id)
                 if endpoint:
-                    self._gossip.register_peer(connection_id, endpoint)
-                    self._connection_statuses[connection_id] = PeerStatus.PEER
+                    try:
+                        self._gossip.register_peer(connection_id, endpoint)
+                        self._connection_statuses[connection_id] = \
+                            PeerStatus.PEER
+                        self._gossip.send_block_request("HEAD", connection_id)
+                    except PeeringException:
+                        # Remove unsuccessful peer
+                        self._remove_temporary_connection(connection_id)
                 else:
                     LOGGER.debug("Cannot register peer with no endpoint for "
                                  "connection_id: %s",
                                  connection_id)
                     self._remove_temporary_connection(connection_id)
-
-                self._gossip.send_block_request("HEAD", connection_id)
 
     def _remove_temporary_connection(self, connection_id):
         status = self._connection_statuses.get(connection_id)

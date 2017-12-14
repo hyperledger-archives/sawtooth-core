@@ -973,7 +973,8 @@ class Interconnect(object):
             LOGGER.debug("Unable to complete Challenge Authorization.")
             self.remove_connection(connection_id)
 
-    def send(self, message_type, data, connection_id, callback=None):
+    def send(self, message_type, data, connection_id, callback=None,
+             one_way=False):
         """
         Send a message of message_type
         :param connection_id: the identity for the connection to send to
@@ -996,8 +997,8 @@ class Interconnect(object):
             timer_ctx = self._get_send_response_timer(timer_tag).time()
             fut = future.Future(message.correlation_id, message.content,
                                 callback, timer_ctx=timer_ctx)
-
-            self._futures.put(fut)
+            if not one_way:
+                self._futures.put(fut)
 
             self._send_receive_thread.send_message(msg=message,
                                                    connection_id=connection_id)
@@ -1006,7 +1007,8 @@ class Interconnect(object):
         return connection_info.connection.send(
             message_type,
             data,
-            callback=callback)
+            callback=callback,
+            one_way=one_way)
 
     def start(self):
         complete_or_error_queue = queue.Queue()
@@ -1147,7 +1149,7 @@ class Interconnect(object):
                         connection_info.connection)
 
     def send_last_message(self, message_type, data,
-                          connection_id, callback=None):
+                          connection_id, callback=None, one_way=False):
         """
         Send a message of message_type and close the connection.
         :param connection_id: the identity for the connection to send to
@@ -1169,7 +1171,8 @@ class Interconnect(object):
             fut = future.Future(message.correlation_id, message.content,
                                 callback)
 
-            self._futures.put(fut)
+            if not one_way:
+                self._futures.put(fut)
 
             self._send_receive_thread.send_last_message(
                 msg=message,
@@ -1256,7 +1259,7 @@ class OutboundConnection(object):
 
         return self._connection_id
 
-    def send(self, message_type, data, callback=None):
+    def send(self, message_type, data, callback=None, one_way=False):
         """Sends a message of message_type
 
         Args:
@@ -1275,13 +1278,14 @@ class OutboundConnection(object):
 
         fut = future.Future(message.correlation_id, message.content,
                             callback)
-
-        self._futures.put(fut)
+        if not one_way:
+            self._futures.put(fut)
 
         self._send_receive_thread.send_message(message)
         return fut
 
-    def send_last_message(self, message_type, data, callback=None):
+    def send_last_message(self, message_type, data, callback=None,
+                          one_way=False):
         """Sends a message of message_type and then close the connection.
 
         Args:
@@ -1301,7 +1305,8 @@ class OutboundConnection(object):
         fut = future.Future(message.correlation_id, message.content,
                             callback)
 
-        self._futures.put(fut)
+        if not one_way:
+            self._futures.put(fut)
 
         self._send_receive_thread.send_last_message(message)
         return fut

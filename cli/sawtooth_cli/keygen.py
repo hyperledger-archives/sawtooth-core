@@ -71,7 +71,7 @@ def do_keygen(args):
             if not args.quiet:
                 print('creating key directory: {}'.format(key_dir))
             try:
-                os.makedirs(key_dir)
+                os.makedirs(key_dir, 0o755)
             except IOError as e:
                 raise CliException('IOError: {}'.format(str(e)))
 
@@ -102,6 +102,8 @@ def do_keygen(args):
                     print('writing file: {}'.format(priv_filename))
             priv_fd.write(private_key.as_hex())
             priv_fd.write('\n')
+            # Set the private key u+rw g+r
+            os.chmod(priv_filename, 0o640)
 
         pub_exists = os.path.exists(pub_filename)
         with open(pub_filename, 'w') as pub_fd:
@@ -112,6 +114,8 @@ def do_keygen(args):
                     print('writing file: {}'.format(pub_filename))
             pub_fd.write(public_key.as_hex())
             pub_fd.write('\n')
+            # Set the public key u+rw g+r o+r
+            os.chmod(pub_filename, 0o644)
 
     except IOError as ioe:
         raise CliException('IOError: {}'.format(str(ioe)))

@@ -20,7 +20,6 @@ import subprocess
 from setuptools import setup, Extension, find_packages
 
 
-
 setup(
     name='sawtooth-signing',
     version=subprocess.check_output(

@@ -38,7 +38,6 @@ from sawtooth_validator.gossip.permission_verifier import \
     NetworkConsensusPermissionHandler
 
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
-from sawtooth_validator.gossip.gossip_handlers import GossipMessageHandler
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipMessageDuplicateHandler
 from sawtooth_validator.gossip.gossip_handlers import \
@@ -164,12 +163,6 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_UNREGISTER,
         PeerUnregisterHandler(gossip=gossip),
-        thread_pool)
-
-    # GOSSIP_MESSAGE ) Sends acknowledgement to the sender
-    dispatcher.add_handler(
-        validator_pb2.Message.GOSSIP_MESSAGE,
-        GossipMessageHandler(),
         thread_pool)
 
     # GOSSIP_MESSAGE ) Check if this is a block and if we already have it

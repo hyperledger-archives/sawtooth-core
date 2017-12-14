@@ -334,3 +334,6 @@ request, verifies the status, and closes the ZMQ connection.
 
     # Close the connection to the validator
     socket.close()
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

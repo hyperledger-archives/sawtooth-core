@@ -77,6 +77,7 @@ class Completer(object):
                                      cache_purge_frequency)
         self._on_block_received = None
         self._on_batch_received = None
+        self._has_block = None
         self.lock = RLock()
 
     def _complete_block(self, block):
@@ -105,20 +106,22 @@ class Completer(object):
             return None
 
         if block.previous_block_id not in self.block_cache:
-            if block.previous_block_id not in self._incomplete_blocks:
-                self._incomplete_blocks[block.previous_block_id] = [block]
-            elif block not in self._incomplete_blocks[block.previous_block_id]:
-                self._incomplete_blocks[block.previous_block_id] += [block]
+            if not self._has_block(block.previous_block_id):
+                if block.previous_block_id not in self._incomplete_blocks:
+                    self._incomplete_blocks[block.previous_block_id] = [block]
+                elif block not in \
+                        self._incomplete_blocks[block.previous_block_id]:
+                    self._incomplete_blocks[block.previous_block_id] += [block]
 
-            # We have already requested the block, do not do so again
-            if block.previous_block_id in self._requested:
+                # We have already requested the block, do not do so again
+                if block.previous_block_id in self._requested:
+                    return None
+
+                LOGGER.debug("Request missing predecessor: %s",
+                             block.previous_block_id)
+                self._requested[block.previous_block_id] = None
+                self.gossip.broadcast_block_request(block.previous_block_id)
                 return None
-
-            LOGGER.debug("Request missing predecessor: %s",
-                         block.previous_block_id)
-            self._requested[block.previous_block_id] = None
-            self.gossip.broadcast_block_request(block.previous_block_id)
-            return None
 
         # Check for same number of batch_ids and batches
         # If different starting building batch list, Otherwise there is a batch
@@ -271,6 +274,9 @@ class Completer(object):
 
     def set_on_batch_received(self, on_batch_received_func):
         self._on_batch_received = on_batch_received_func
+
+    def set_chain_has_block(self, set_chain_has_block):
+        self._has_block = set_chain_has_block
 
     def add_block(self, block):
         with self.lock:

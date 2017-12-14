@@ -1,3 +1,18 @@
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
 # Exclude IDE and Editor files
 /.idea/
 *.sublime*
@@ -9,13 +24,7 @@
 /tools/cache/
 /tools/ubuntu-xenial-16.04-cloudimg-console.log
 
-# Everything else
-/build/
-
-/cli/build/
-/cli/sawtooth_cli/protobuf/
-/cli/**/__pycache__/
-
+# Exclude poet build artifacts
 /consensus/**/__pycache__/
 /consensus/**/build/
 /consensus/**/protobuf/
@@ -25,6 +34,19 @@
 /consensus/poet/sgx/nose2-junit.xml
 /consensus/poet/sgx/**/poet_enclave.py
 /consensus/poet/sgx/**/poet_enclave_wrap.cpp
+/consensus/poet/sgx/cmake_install.cmake
+/consensus/poet/sgx/htmlcov/
+/consensus/poet/sgx/sawtooth_poet_sgx/libpoet_bridge/CMakeFiles/
+/consensus/poet/sgx/sawtooth_poet_sgx/libpoet_bridge/Makefile
+/consensus/poet/sgx/sawtooth_poet_sgx/libpoet_bridge/cmake_install.cmake
+/consensus/poet/sgx/sawtooth_poet_sgx/libpoet_enclave/cmake_install.cmake
+
+# Everything else
+/build/
+
+/cli/build/
+/cli/sawtooth_cli/protobuf/
+/cli/**/__pycache__/
 
 /core/sawtooth_core.egg-info/
 
@@ -103,3 +125,8 @@
 /perf/smallbank_workload/src/smallbank.rs
 /perf/smallbank_workload/Cargo.lock
 /perf/smallbank_workload/target/
+/perf/smallbank_workload/smallbank.batches
+/perf/smallbank_workload/smallbank.playlist
+/perf/smallbank_workload/smallbank.txns
+
+*.batch

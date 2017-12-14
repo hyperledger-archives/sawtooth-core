@@ -106,6 +106,14 @@ def do_keygen(args):
                     print('writing file: {}'.format(priv_filename))
             priv_fd.write(private_key.as_hex())
             priv_fd.write('\n')
+            # Get the uid and gid of the key directory
+            keydir_info = os.stat(key_dir)
+            keydir_gid = keydir_info.st_gid
+            keydir_uid = keydir_info.st_uid
+            # Set user and group on keys to the user/group of the key directory
+            os.chown(priv_filename, keydir_uid, keydir_gid)
+            # Set the private key u+rw g+r
+            os.chmod(priv_filename, 0o640)
 
         pub_exists = os.path.exists(pub_filename)
         with open(pub_filename, 'w') as pub_fd:
@@ -116,6 +124,10 @@ def do_keygen(args):
                     print('writing file: {}'.format(pub_filename))
             pub_fd.write(public_key.as_hex())
             pub_fd.write('\n')
+            # Set user and group on keys to the user/group of the key directory
+            os.chown(pub_filename, keydir_uid, keydir_gid)
+            # Set the public key u+rw g+r o+r
+            os.chmod(pub_filename, 0o644)
 
     except IOError as ioe:
         raise CliException('IOError: {}'.format(str(ioe)))

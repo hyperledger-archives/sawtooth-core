@@ -61,3 +61,6 @@ The ``rest_api.toml`` configuration file has the following options:
 - ``opentsdb_password`` = `password`
 
   Sets the password for the Open TSDB database. Default: none.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

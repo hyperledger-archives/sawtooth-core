@@ -68,13 +68,7 @@ class GetPeersResponseHandler(Handler):
 
         self._gossip.add_candidate_peer_endpoints(response.peer_endpoints)
 
-        ack = NetworkAcknowledgement()
-        ack.status = ack.OK
-
-        return HandlerResult(
-            HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
+        return HandlerResult(HandlerStatus.PASS)
 
 
 class PeerRegisterHandler(Handler):
@@ -115,20 +109,6 @@ class PeerUnregisterHandler(Handler):
 
         return HandlerResult(
             HandlerStatus.RETURN,
-            message_out=ack,
-            message_type=validator_pb2.Message.NETWORK_ACK)
-
-
-class GossipMessageHandler(Handler):
-    def handle(self, connection_id, message_content):
-
-        ack = NetworkAcknowledgement()
-        ack.status = ack.OK
-        gossip_message = GossipMessage()
-        gossip_message.ParseFromString(message_content)
-
-        return HandlerResult(
-            HandlerStatus.RETURN_AND_PASS,
             message_out=ack,
             message_type=validator_pb2.Message.NETWORK_ACK)
 

@@ -17,6 +17,8 @@ from abc import ABCMeta
 from abc import abstractmethod
 import re
 
+from sawtooth_validator.protobuf import events_pb2
+
 
 class EventSubscription:
     """Represents a subscription to events. An event is part of a subscription
@@ -55,26 +57,17 @@ class InvalidFilterError(Exception):
     pass
 
 
-class EventFilterType:
-    # Not using Enum here because we want compatibility with the protobuf
-    # filter types, which are just integers
-    simple_any = 0
-    simple_all = 1
-    regex_any = 2
-    regex_all = 3
-
-
 class EventFilterFactory:
     def __init__(self):
         self.filter_types = {
-            EventFilterType.simple_any: SimpleAnyFilter,
-            EventFilterType.simple_all: SimpleAllFilter,
-            EventFilterType.regex_any: RegexAnyFilter,
-            EventFilterType.regex_all: RegexAllFilter,
+            events_pb2.EventFilter.SIMPLE_ANY: SimpleAnyFilter,
+            events_pb2.EventFilter.SIMPLE_ALL: SimpleAllFilter,
+            events_pb2.EventFilter.REGEX_ANY: RegexAnyFilter,
+            events_pb2.EventFilter.REGEX_ALL: RegexAllFilter,
         }
 
     def create(self, key, match_string,
-               filter_type=EventFilterType.simple_any):
+               filter_type=events_pb2.EventFilter.SIMPLE_ANY):
         try:
             return self.filter_types[filter_type](key, match_string)
         except KeyError:
@@ -145,9 +138,10 @@ class RegexAnyFilter(EventFilter):
         super().__init__(key, match_string)
         try:
             self.regex = re.compile(match_string)
-        except:
+        except Exception as e:
             raise InvalidFilterError(
-                "Invalid regular expression: {}".format(match_string))
+                "Invalid regular expression: {}: {}".format(
+                    match_string, str(e)))
 
     def matches(self, event):
         for attribute in event.attributes:
@@ -180,9 +174,10 @@ class RegexAllFilter(EventFilter):
         super().__init__(key, match_string)
         try:
             self.regex = re.compile(match_string)
-        except:
+        except Exception as e:
             raise InvalidFilterError(
-                "Invalid regular expression: {}".format(match_string))
+                "Invalid regular expression: {}: {}".format(
+                    match_string, str(e)))
 
     def matches(self, event):
         for attribute in event.attributes:

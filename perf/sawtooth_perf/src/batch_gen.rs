@@ -40,13 +40,13 @@ use source::LengthDelimitedMessageSource;
 pub fn generate_signed_batches<'a>(reader: &'a mut Read,
                                    writer: &'a mut Write,
                                    max_batch_size: usize,
-                                   signing_algorithm: &signing::Algorithm,
+                                   signing_context: &signing::Context,
                                    signing_key: &signing::PrivateKey)
     -> Result<(), BatchingError>
 {
-    let crypto_factory = signing::CryptoFactory::new(signing_algorithm);
+    let crypto_factory = signing::CryptoFactory::new(signing_context);
     let signer = crypto_factory.new_signer(signing_key);
-    let pub_key = try!(signing_algorithm.get_public_key(signing_key).map_err(BatchingError::SigningError));
+    let pub_key = try!(signing_context.get_public_key(signing_key).map_err(BatchingError::SigningError));
     let public_key_str = pub_key.as_hex();
 
     let mut producer = SignedBatchProducer::new(reader, max_batch_size, &signer, public_key_str);
@@ -210,8 +210,8 @@ mod tests {
         let encoded_bytes: Vec<u8> = Vec::new();
         let mut source = Cursor::new(encoded_bytes);
 
-        let algorithm = MockAlgorthm;
-        let crypto_factory = signing::CryptoFactory::new(&algorithm);
+        let context = MockContext;
+        let crypto_factory = signing::CryptoFactory::new(&context);
         let private_key = MockPrivateKey;
         let signer = crypto_factory.new_signer(&private_key);
         let public_key = String::from("MyPubKey");
@@ -229,8 +229,8 @@ mod tests {
 
         let mut source = Cursor::new(encoded_bytes);
 
-        let algorithm = MockAlgorthm;
-        let crypto_factory = signing::CryptoFactory::new(&algorithm);
+        let context = MockContext;
+        let crypto_factory = signing::CryptoFactory::new(&context);
         let private_key = MockPrivateKey;
         let signer = crypto_factory.new_signer(&private_key);
         let public_key = String::from("MyPubKey");
@@ -260,8 +260,8 @@ mod tests {
 
         let mut source = Cursor::new(encoded_bytes);
 
-        let algorithm = MockAlgorthm;
-        let crypto_factory = signing::CryptoFactory::new(&algorithm);
+        let context = MockContext;
+        let crypto_factory = signing::CryptoFactory::new(&context);
         let private_key = MockPrivateKey;
         let signer = crypto_factory.new_signer(&private_key);
         let public_key = String::from("MyPubKey");
@@ -306,10 +306,10 @@ mod tests {
         let output_bytes: Vec<u8> = Vec::new();
         let mut output = Cursor::new(output_bytes);
 
-        let algorithm = MockAlgorthm;
+        let context = MockContext;
         let private_key = MockPrivateKey;
 
-        super::generate_signed_batches(&mut source, &mut output, 2, &algorithm, &private_key)
+        super::generate_signed_batches(&mut source, &mut output, 2, &context, &private_key)
              .expect("Should have generated batches!");
 
         // reset for reading
@@ -351,10 +351,10 @@ mod tests {
         txn.write_length_delimited_to_writer(out).expect("Unable to write delimiter");
     }
 
-    struct MockAlgorthm;
+    struct MockContext;
 
-    impl signing::Algorithm for MockAlgorthm {
-        fn get_name(&self) -> &str {
+    impl signing::Context for MockContext {
+        fn get_algorithm_name(&self) -> &str {
             "mock_algorithm"
         }
 

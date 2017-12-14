@@ -139,3 +139,6 @@ it is an invalid transaction. Otherwise, we attempt to increment the *Value* in 
 
 If the *Verb* is 'dec', the *Name* specified by the transaction request is checked determine
 if the entry exists in the state dictionary. If the *Name* does not exist in the state dictionary, it is an invalid transaction. Otherwise, we attempt to decrement the *Value* in the state dictionary by the *Value* specified in the transaction request. If this decrementation would result in a value outside the range of 0 through 2\ :sup:`32` - 1, it is considered an invalid transaction. Otherwise, the *Value* in the state dictionary is decremented.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

@@ -22,6 +22,16 @@ set -e
 TARGETS=""
 EXCLUDE=""
 
+ALL_TARGETS="
+        cxx
+        ext
+        go
+        java
+        javascript
+        python
+        rust
+"
+
 MOUNTED="mounted"
 INSTALLED="installed"
 DEBS="debs"
@@ -34,7 +44,15 @@ usage() {
     echo "  -h                 print usage and exit"
     echo "  -l Language        only build the specified language(s)"
     echo "  -t Target          only build the specified target(s)"
-    echo "  -x Language/Module exclude the specified language(s)/target(s)"
+    echo "  -x Language/Target exclude the specified language(s)/target(s) "
+    echo ""
+    echo "Language/Target options are: $ALL_TARGETS"
+    echo "Build type options: {$MOUNTED,$INSTALLED,$DEBS}"
+    echo "  $MOUNTED - build docker images that mount the Sawtooth"
+    echo "      from your file system"
+    echo "  $INSTALLED - build docker images with the Sawtooth "
+    echo "      modules installed in them."
+    echo "  $DEBS - build the debian packages for the selected targets"
 }
 
 info() {
@@ -85,18 +103,10 @@ else
     fi
 fi
 
-# If no '-m' flags are passed, run these modules
+# If no '-l' or '-t' flags are passed, run these modules
 if [[ $TARGETS = "" ]]
 then
-    TARGETS="
-        cxx
-        ext
-        go
-        java
-        javascript
-        python
-        rust
-"
+    TARGETS=$ALL_TARGETS
 fi
 
 main() {

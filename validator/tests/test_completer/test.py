@@ -38,6 +38,8 @@ class TestCompleter(unittest.TestCase):
         self.completer = Completer(self.block_store, self.gossip)
         self.completer._on_block_received = self._on_block_received
         self.completer._on_batch_received = self._on_batch_received
+        self.completer._has_block = self._has_block
+        self._has_block_value = True
 
         context = create_context('secp256k1')
         private_key = context.new_random_private_key()
@@ -52,6 +54,9 @@ class TestCompleter(unittest.TestCase):
 
     def _on_batch_received(self, batch):
         return self.batches.append(batch.header_signature)
+
+    def _has_block(self, batch):
+        return self._has_block_value
 
     def _create_transactions(self, count, missing_dep=False):
         txn_list = []
@@ -171,7 +176,7 @@ class TestCompleter(unittest.TestCase):
         """
         Submit same block twice.
         """
-        block = block = self._create_blocks(1, 1)[0]
+        block = self._create_blocks(1, 1)[0]
         self.completer.add_block(block)
         self.completer.add_block(block)
         self.assertIn(block.header_signature, self.blocks)
@@ -182,12 +187,14 @@ class TestCompleter(unittest.TestCase):
         The block is completed but the predecessor is missing.
         """
         block = self._create_blocks(1, 1, missing_predecessor=True)[0]
+        self._has_block_value = False
         self.completer.add_block(block)
-        self.assertEquals(len(self.blocks),0 )
+        self.assertEquals(len(self.blocks), 0)
         self.assertIn("Missing", self.gossip.requested_blocks)
         header = BlockHeader(previous_block_id=NULL_BLOCK_IDENTIFIER)
         missing_block = Block(header_signature="Missing",
                               header=header.SerializeToString())
+        self._has_block_value = True
         self.completer.add_block(missing_block)
         self.assertIn(block.header_signature, self.blocks)
         self.assertEquals(

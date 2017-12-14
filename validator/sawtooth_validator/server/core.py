@@ -65,9 +65,9 @@ class Validator(object):
     def __init__(self, bind_network, bind_component, endpoint,
                  peering, seeds_list, peer_list, data_dir, config_dir,
                  identity_signer, scheduler_type, permissions,
+                 minimum_peer_connectivity, maximum_peer_connectivity,
                  network_public_key=None, network_private_key=None,
-                 roles=None,
-                 metrics_registry=None
+                 roles=None, metrics_registry=None
                  ):
         """Constructs a validator instance.
 
@@ -199,8 +199,8 @@ class Validator(object):
             peering_mode=peering,
             initial_seed_endpoints=seeds_list,
             initial_peer_endpoints=peer_list,
-            minimum_peer_connectivity=3,
-            maximum_peer_connectivity=10,
+            minimum_peer_connectivity=minimum_peer_connectivity,
+            maximum_peer_connectivity=maximum_peer_connectivity,
             topology_check_frequency=1)
 
         completer = Completer(block_store, gossip)
@@ -294,6 +294,7 @@ class Validator(object):
 
         completer.set_on_batch_received(block_publisher.queue_batch)
         completer.set_on_block_received(block_validator.queue_block)
+        completer.set_chain_has_block(block_validator.has_block)
 
         # -- Register Message Handler -- #
         network_handlers.add(

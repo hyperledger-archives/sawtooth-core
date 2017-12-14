@@ -20,7 +20,7 @@ import time
 
 class TimedCache(MutableMapping):
     """
-    A dict like interface to access blocks. Stores BlockState objects.
+    A dict like interface that removes entries after sometime of no access.
 
     Accesses are Thread safe.
 

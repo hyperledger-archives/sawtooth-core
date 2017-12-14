@@ -43,7 +43,6 @@ from sawtooth_validator.journal.batch_injector import \
     DefaultBatchInjectorFactory
 
 from sawtooth_validator.server.events.subscription import EventSubscription
-from sawtooth_validator.server.events.subscription import EventFilterType
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
@@ -57,6 +56,7 @@ from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventList
+from sawtooth_validator.protobuf.events_pb2 import EventFilter
 
 from sawtooth_validator.state.merkle import MerkleDatabase
 
@@ -87,12 +87,19 @@ class TestBlockCache(unittest.TestCase):
         """ Test that misses will load from the block store.
         """
         bs = {}
-        bs["test"] = "value"
-        bs["test2"] = "value"
+        block1 = Block(
+            header=BlockHeader(previous_block_id="000").SerializeToString(),
+            header_signature="test")
+        bs["test"] = BlockWrapper(block1)
+        block2 = Block(
+            header=BlockHeader(previous_block_id="000").SerializeToString(),
+            header_signature="test2")
+        blkw2 = BlockWrapper(block2)
+        bs["test2"] = blkw2
         bc = BlockCache(bs)
 
         self.assertTrue("test" in bc)
-        self.assertTrue(bc["test2"] == "value")
+        self.assertTrue(bc["test2"] == blkw2)
 
         with self.assertRaises(KeyError):
             bc["test-missing"]
@@ -1897,7 +1904,7 @@ class TestReceiptEventExtractor(unittest.TestCase):
             EventSubscription(
                 event_type="sawtooth/state-delta",
                 filters=[factory.create(
-                    "address", "[ce]", EventFilterType.regex_any)],
+                    "address", "[ce]", EventFilter.REGEX_ANY)],
             )
         ])
         self.assertEqual(events, [Event(

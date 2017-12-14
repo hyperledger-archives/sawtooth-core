@@ -675,3 +675,6 @@ The z-test is computed as follows::
 
 If the z-test fails (False is returned) then the validator under test won
 elections at a higher average rate than expected.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

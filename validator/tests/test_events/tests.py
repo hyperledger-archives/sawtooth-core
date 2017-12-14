@@ -37,7 +37,6 @@ from sawtooth_validator.server.events.handlers \
 
 from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterFactory
-from sawtooth_validator.server.events.subscription import EventFilterType
 
 from sawtooth_validator.execution.tp_state_handlers import TpEventAddHandler
 
@@ -132,8 +131,9 @@ class EventSubscriptionTest(unittest.TestCase):
             events_pb2.Event(attributes=[
                 events_pb2.Event.Attribute(
                     key="address", value="000000" + "f" * 64)]),
-            FILTER_FACTORY.create(key="address", match_string="000000.*",
-                filter_type=EventFilterType.regex_any))
+            FILTER_FACTORY.create(
+                key="address", match_string="000000.*",
+                filter_type=events_pb2.EventFilter.REGEX_ANY))
 
         self.assertIn(
             events_pb2.Event(attributes=[
@@ -165,7 +165,12 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
             subscriptions=[events_pb2.EventSubscription(
                 event_type="test_event",
                 filters=[
-                    events_pb2.EventFilter(key="test", match_string="test")],
+                    events_pb2.EventFilter(
+                        key="test",
+                        match_string="test",
+                        filter_type=events_pb2.EventFilter.SIMPLE_ANY
+                    )
+                ],
             )],
             last_known_block_ids=["0" * 128]).SerializeToString()
 
@@ -361,7 +366,7 @@ class EventBroadcasterTest(unittest.TestCase):
                 [create_block_commit_subscription()])).SerializeToString()
         mock_service.send.assert_called_with(
             validator_pb2.Message.CLIENT_EVENTS,
-            event_list, connection_id="test_conn_id")
+            event_list, connection_id="test_conn_id", one_way=True)
 
 
 class TpEventAddHandlerTest(unittest.TestCase):
