@@ -14,7 +14,7 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Tests locally built Sawtooth Lake debs.
+#   Tests locally built Sawtooth debs.
 #
 # Build:
 #   $ cd sawtooth-core

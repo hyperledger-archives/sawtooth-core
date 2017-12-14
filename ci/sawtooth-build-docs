@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds the environment needed to build the Sawtooth Lake docs
-#   Running the image will put the Sawtooth Lake docs in
+#   Builds the environment needed to build the Sawtooth docs
+#   Running the image will put the Sawtooth docs in
 #   sawtooth-core/docs/build on your local machine.
 #
 # Build:
