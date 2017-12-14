@@ -34,7 +34,7 @@ const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)
 const _decodeRequest = (payload) =>
   new Promise((resolve, reject) => {
     payload = payload.toString().split(',')
-    if (payload.length == 3) {
+    if (payload.length === 3) {
       resolve({
         name: payload[0],
         action: payload[1],
@@ -107,7 +107,7 @@ const _display = msg => {
   let n = msg.search('\n')
   let length = 0
 
-  if (n != -1) {
+  if (n !== -1) {
     msg = msg.split('\n')
     for (let i = 0; i < msg.length; i++) {
       if (msg[i].length > length) {
@@ -123,7 +123,7 @@ const _display = msg => {
   for (let i = 0; i < msg.length; i++) {
     let len = length - msg[i].length
 
-    if (len % 2 == 1) {
+    if (len % 2 === 1) {
       console.log(
         '+ ' +
           ' '.repeat(Math.floor(len / 2)) +
@@ -173,7 +173,7 @@ const _handleCreate = (context, address, update, player) => (possibleAddressValu
   let name = update.name
 
   let stateValue = _decodeStateData(stateValueRep, name)
-  if (stateValue.board != '') {
+  if (stateValue.board !== '') {
     throw new InvalidTransaction('Invalid Action: Game already exists.')
   }
 
@@ -212,7 +212,7 @@ const _handleTake = (context, address, update, player) => (possibleAddressValues
     throw new InvalidTransaction('Invalid space ' + update.space)
   }
 
-  if (stateValue.board == '') {
+  if (stateValue.board === '') {
     throw new InvalidTransaction(
       'Invalid Action: Take requires an existing game.'
     )
@@ -234,16 +234,16 @@ const _handleTake = (context, address, update, player) => (possibleAddressValues
   }
   let boardList = stateValue.board.split('')
 
-  if (boardList[update.space - 1] != '-') {
+  if (boardList[update.space - 1] !== '-') {
     throw new InvalidTransaction('Invalid Action: Space already taken.')
   }
 
-  if (stateValue.gameState === 'P1-NEXT' && player == stateValue.player1) {
+  if (stateValue.gameState === 'P1-NEXT' && player === stateValue.player1) {
     boardList[update.space - 1] = 'X'
     stateValue.gameState = 'P2-NEXT'
   } else if (
     stateValue.gameState === 'P2-NEXT' &&
-    player == stateValue.player2
+    player === stateValue.player2
   ) {
     boardList[update.space - 1] = 'O'
     stateValue.gameState = 'P1-NEXT'
@@ -259,7 +259,7 @@ const _handleTake = (context, address, update, player) => (possibleAddressValues
     stateValue.gameState = 'P1-WIN'
   } else if (_isWin(stateValue.board, 'O')) {
     stateValue.gameState = 'P2-WIN'
-  } else if (stateValue.board.search('-') == -1) {
+  } else if (stateValue.board.search('-') === -1) {
     stateValue.gameState = 'TIE'
   }
 
@@ -325,7 +325,7 @@ class XOHandler extends TransactionHandler {
           handlerFn = _handleCreate
         } else if (update.action === 'take') {
           handlerFn = _handleTake
-        } else if (update.action == 'delete') {
+        } else if (update.action === 'delete') {
           handlerFn = _handleDelete
         } else {
           throw new InvalidTransaction(
