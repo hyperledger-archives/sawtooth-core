@@ -495,7 +495,7 @@ parameters:
     in: path
     type: string
     required: true
-    description: Radix address of a leaf, or prefix for leaves
+    description: Radix address of a leaf
   block_id:
     name: block_id
     in: path
