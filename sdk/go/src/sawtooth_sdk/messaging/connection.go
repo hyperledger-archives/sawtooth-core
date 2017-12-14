@@ -63,6 +63,7 @@ type Connection interface {
 	RecvMsgWithId(corrId string) (string, *validator_pb2.Message, error)
 	Close()
 	Socket() *zmq.Socket
+	Monitor(zmq.Event) (*zmq.Socket, error)
 	Identity() string
 }
 
@@ -72,6 +73,7 @@ type ZmqConnection struct {
 	identity string
 	uri      string
 	socket   *zmq.Socket
+	context  *zmq.Context
 	incoming map[string]*storedMsg
 }
 
@@ -106,6 +108,7 @@ func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*ZmqConnection
 		identity: identity,
 		uri:      uri,
 		socket:   socket,
+		context:  context,
 		incoming: make(map[string]*storedMsg),
 	}, nil
 }
@@ -238,6 +241,22 @@ func (self *ZmqConnection) Close() {
 // Socket returns the wrapped socket.
 func (self *ZmqConnection) Socket() *zmq.Socket {
 	return self.socket
+}
+
+// Create a new monitor socket pair and return the socket for listening
+func (self *ZmqConnection) Monitor(events zmq.Event) (*zmq.Socket, error) {
+	endpoint := fmt.Sprintf("inproc://monitor.%v", self.identity)
+	err := self.socket.Monitor(endpoint, events)
+	if err != nil {
+		return nil, err
+	}
+	monitor, err := self.context.NewSocket(zmq.PAIR)
+	err = monitor.Connect(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	return monitor, nil
 }
 
 // Identity returns the identity assigned to the wrapped socket.
