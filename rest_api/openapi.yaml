@@ -17,10 +17,10 @@ swagger: '2.0'
 
 info:
   version: "0.8.0"
-  title: Sawtooth Lake REST API
+  title: Sawtooth REST API
   description: |
-    _This HTTP pragmatic REST API is built on top of Sawtooth
-    Lake's existing ZMQ/Protobuf infrastructure, simplifying client
+    _This HTTP pragmatic REST API is built on top of Sawtooth's
+    existing ZMQ/Protobuf infrastructure, simplifying client
     interaction with the blockchain by exposing endpoints that
     use common HTTP/JSON standards._
 

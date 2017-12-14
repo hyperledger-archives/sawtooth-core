@@ -15,7 +15,7 @@
 # ------------------------------------------------------------------------------
 
 #
-# Sawtooth Lake -- IAS Proxy Configuration
+# Sawtooth -- IAS Proxy Configuration
 #
 
 # This file (minus the .example extension) should exist in the defined config

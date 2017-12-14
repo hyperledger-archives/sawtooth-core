@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds the environment needed to create the Sawtooth Lake python3 debs.
-#   Running the image will put the Sawtooth Lake debs in
+#   Builds the environment needed to create the Sawtooth python3 debs.
+#   Running the image will put the Sawtooth debs in
 #   sawtooth-core/build/debs on your local machine.
 #
 # Build:
