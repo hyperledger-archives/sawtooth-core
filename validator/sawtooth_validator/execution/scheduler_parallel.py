@@ -14,9 +14,11 @@
 # ------------------------------------------------------------------------------
 
 from ast import literal_eval
+from itertools import filterfalse
 from threading import Condition
 import logging
 from collections import deque
+from collections import namedtuple
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
@@ -28,6 +30,10 @@ from sawtooth_validator.execution.scheduler import SchedulerIterator
 from sawtooth_validator.execution.scheduler_exceptions import SchedulerError
 
 LOGGER = logging.getLogger(__name__)
+
+
+_AnnotatedBatch = namedtuple('ScheduledBatch',
+                             ['batch', 'required', 'preserve'])
 
 
 class PredecessorTreeNode:
@@ -333,8 +339,19 @@ class ParallelScheduler(Scheduler):
             if not self._batches:
                 self._least_batch_id_wo_results = batch.header_signature
 
+            preserve = required
+            if not required:
+                # If this is the first non-required batch, it is preserved for
+                # the schedule to be completed (i.e. no empty schedules in the
+                # event of unschedule_incomplete_batches being called before
+                # the first batch is completed).
+                preserve = _first(
+                    filterfalse(lambda sb: sb.required,
+                                self._batches_by_id.values())) is None
+
             self._batches.append(batch)
-            self._batches_by_id[batch.header_signature] = batch
+            self._batches_by_id[batch.header_signature] = \
+                _AnnotatedBatch(batch, required=required, preserve=preserve)
             for txn in batch.transactions:
                 self._batches_by_txn_id[txn.header_signature] = batch
                 self._txns_available.append(txn)
@@ -399,7 +416,7 @@ class ParallelScheduler(Scheduler):
         return True
 
     def _is_last_valid_batch(self, batch_signature):
-        batch = self._batches_by_id[batch_signature]
+        batch = self._batches_by_id[batch_signature].batch
         if not self._is_valid_batch(batch):
             return False
         index_of_next = self._batches.index(batch) + 1
@@ -421,7 +438,7 @@ class ParallelScheduler(Scheduler):
             (list): Context ids that haven't been previous base contexts.
         """
 
-        batch = self._batches_by_id[batch_signature]
+        batch = self._batches_by_id[batch_signature].batch
         index = self._batches.index(batch)
         contexts = []
         txns_added_predecessors = []
@@ -452,7 +469,7 @@ class ParallelScheduler(Scheduler):
             # This method calculates the BatchExecutionResult on the fly,
             # where only the TxnExecutionResults are cached, instead
             # of BatchExecutionResults, as in the SerialScheduler
-            batch = self._batches_by_id[batch_signature]
+            batch = self._batches_by_id[batch_signature].batch
 
             if not self._is_valid_batch(batch):
                 return BatchExecutionResult(is_valid=False, state_hash=None)
@@ -488,12 +505,12 @@ class ParallelScheduler(Scheduler):
 
     def get_transaction_execution_results(self, batch_signature):
         with self._condition:
-            batch = self._batches_by_id.get(batch_signature)
-            if batch is None:
+            annotated_batch = self._batches_by_id.get(batch_signature)
+            if annotated_batch is None:
                 return None
 
             results = []
-            for txn in batch.transactions:
+            for txn in annotated_batch.batch.transactions:
                 result = self._txn_results.get(txn.header_signature)
                 if result is not None:
                     results.append(result)
@@ -588,7 +605,7 @@ class ParallelScheduler(Scheduler):
         batch = self._batches_by_txn_id[txn_signature]
 
         least_index = self._index_of_batch(
-            self._batches_by_id[self._least_batch_id_wo_results])
+            self._batches_by_id[self._least_batch_id_wo_results].batch)
 
         current_index = self._index_of_batch(batch)
         all_prior = False
@@ -838,28 +855,37 @@ class ParallelScheduler(Scheduler):
         incomplete_batches = set()
         with self._condition:
             for txn in self._unscheduled_transactions():
-                incomplete_batches.add(
-                    self._batches_by_txn_id[txn.header_signature]
-                        .header_signature)
+                batch = self._batches_by_txn_id[txn.header_signature]
+                batch_id = batch.header_signature
 
-            self._txns_available.clear()
+                annotated_batch = self._batches_by_id[batch_id]
+                if not annotated_batch.preserve:
+                    incomplete_batches.add(batch_id)
 
             for txn_id in self._outstanding:
-                incomplete_batches.add(
-                    self._batches_by_txn_id[txn_id].header_signature)
+                batch = self._batches_by_txn_id[txn_id]
+                batch_id = batch.header_signature
 
-            self._outstanding.clear()
+                annotated_batch = self._batches_by_id[batch_id]
+                if not annotated_batch.preserve:
+                    incomplete_batches.add(batch_id)
 
             # clean up the batches, including partial complete information
             for batch_id in incomplete_batches:
-                batch = self._batches_by_id[batch_id]
+                annotated_batch = self._batches_by_id[batch_id]
                 del self._batches_by_id[batch_id]
-                for txn in batch.transactions:
+                for txn in annotated_batch.batch.transactions:
                     txn_id = txn.header_signature
                     del self._batches_by_txn_id[txn_id]
 
                     if txn_id in self._txn_results:
                         del self._txn_results[txn_id]
+
+                    if txn in self._txns_available:
+                        self._txns_available.remove(txn)
+
+                    if txn_id in self._outstanding:
+                        self._outstanding.remove(txn_id)
 
             self._condition.notify_all()
 
@@ -917,3 +943,10 @@ class ParallelScheduler(Scheduler):
     def is_cancelled(self):
         with self._condition:
             return self._cancelled
+
+
+def _first(iterator):
+    try:
+        return next(iterator)
+    except StopIteration:
+        return None
