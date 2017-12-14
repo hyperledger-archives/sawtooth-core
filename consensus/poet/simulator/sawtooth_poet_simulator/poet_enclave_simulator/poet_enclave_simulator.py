@@ -22,6 +22,7 @@ import hashlib
 import base64
 import time
 import os
+import random
 
 import toml
 
@@ -350,7 +351,11 @@ class _PoetEnclaveSimulator(object):
                         cls._seal_private_key))
 
             tagd = float(struct.unpack('Q', tag[-8:])[0]) / (2**64 - 1)
-
+            if tagd < 0.1:
+                LOGGER.debug("poet capping tagd that would create "
+                              "large wait time.")
+                r = float(random.randint(1, 20) / 1000)
+                tagd = 0.1 - r
             # Now compute the duration with a minimum wait time guaranteed
             duration = minimum_wait_time - local_mean * math.log(tagd)
 
