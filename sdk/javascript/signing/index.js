@@ -17,7 +17,7 @@
 
 'use strict'
 
-const {NoSuchAlgorithmError, SigningError, ParseError} = require('./core')
+const { NoSuchAlgorithmError, SigningError, ParseError } = require('./core')
 const secp256k1 = require('./secp256k1')
 
 /**
@@ -101,7 +101,7 @@ class CryptoFactory {
  * @return {Context} a context instance for the given algorithm
  * @throws {NoSuchAlgorithmError} if the algorithm is unknown
  */
-const createContext = (algorithmName) => {
+const createContext = algorithmName => {
   if (algorithmName === 'secp256k1') {
     return new secp256k1.Secp256k1Context()
   } else {

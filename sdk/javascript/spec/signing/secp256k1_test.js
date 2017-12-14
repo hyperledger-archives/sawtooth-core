@@ -19,8 +19,11 @@
 
 const assert = require('assert')
 
-const {createContext, CryptoFactory, ParseError} = require('../../signing')
-const {Secp256k1PrivateKey, Secp256k1PublicKey} = require('../../signing/secp256k1')
+const { createContext, CryptoFactory, ParseError } = require('../../signing')
+const {
+  Secp256k1PrivateKey,
+  Secp256k1PublicKey
+} = require('../../signing/secp256k1')
 
 const KEY1_PRIV_HEX =
     '2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088'
@@ -138,4 +141,3 @@ describe('Secp256k1', () => {
     })
   })
 })
-

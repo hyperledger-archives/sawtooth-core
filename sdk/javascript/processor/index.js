@@ -36,7 +36,7 @@ const {
 
 const Context = require('./context')
 
-const {Stream} = require('../messaging/stream')
+const { Stream } = require('../messaging/stream')
 
 /**
  * TransactionProcessor is a generic class for communicating with a
@@ -75,16 +75,23 @@ class TransactionProcessor {
           if (message.messageType === Message.MessageType.PING_REQUEST) {
             console.log(`Received Ping`)
             let pingResponse = PingResponse.create()
-            this._stream.sendBack(Message.MessageType.PING_RESPONSE,
-                                  message.correlationId,
-                                  PingResponse.encode(pingResponse).finish())
+            this._stream.sendBack(
+              Message.MessageType.PING_RESPONSE,
+              message.correlationId,
+              PingResponse.encode(pingResponse).finish()
+            )
             return
           }
-          console.log(`Ignoring ${Message.MessageType.stringValue(message.messageType)}`)
+          console.log(
+            `Ignoring ${Message.MessageType.stringValue(message.messageType)}`
+          )
           return
         }
 
-        const request = TpProcessRequest.toObject(TpProcessRequest.decode(message.content), {defaults: false})
+        const request = TpProcessRequest.toObject(
+          TpProcessRequest.decode(message.content),
+          { defaults: false }
+        )
         const context = new Context(this._stream, request.contextId)
 
         if (this._handlers.length > 0) {
@@ -96,11 +103,14 @@ class TransactionProcessor {
               candidate.versions.includes(txnHeader.familyVersion))
 
           if (handler) {
-            handler.apply(request, context)
-              .then(() => TpProcessResponse.create({
-                status: TpProcessResponse.Status.OK
-              }))
-              .catch((e) => {
+            handler
+              .apply(request, context)
+              .then(() =>
+                TpProcessResponse.create({
+                  status: TpProcessResponse.Status.OK
+                })
+              )
+              .catch(e => {
                 if (e instanceof InvalidTransaction) {
                   console.log(e)
                   return TpProcessResponse.create({
@@ -134,12 +144,14 @@ class TransactionProcessor {
               })
               .then((response) => {
                 if (response) {
-                  this._stream.sendBack(Message.MessageType.TP_PROCESS_RESPONSE,
-                                        message.correlationId,
-                                        TpProcessResponse.encode(response).finish())
+                  this._stream.sendBack(
+                    Message.MessageType.TP_PROCESS_RESPONSE,
+                    message.correlationId,
+                    TpProcessResponse.encode(response).finish()
+                  )
                 }
               })
-              .catch((e) => console.log('Unhandled error on sendBack', e))
+              .catch(e => console.log('Unhandled error on sendBack', e))
           }
         }
       })
@@ -155,14 +167,21 @@ class TransactionProcessor {
             }).finish())
             .then(content => TpRegisterResponse.decode(content))
             .then(ack => {
-              let {transactionFamilyName: familyName} = handler
-              let status = ack.status ===
-                  TpRegisterResponse.Status.OK ? 'succeeded' : 'failed'
-              console.log(`Registration of [${familyName} ${version}] ${status}`)
+              let { transactionFamilyName: familyName } = handler
+              let status =
+                ack.status === TpRegisterResponse.Status.OK
+                  ? 'succeeded'
+                  : 'failed'
+              console.log(
+                `Registration of [${familyName} ${version}] ${status}`
+              )
             })
             .catch(e => {
-              let {transactionFamilyName: familyName} = handler
-              console.log(`Registration of [${familyName} ${version}] Failed!`, e)
+              let { transactionFamilyName: familyName } = handler
+              console.log(
+                `Registration of [${familyName} ${version}] Failed!`,
+                e
+              )
             })
         })
       })
@@ -174,8 +193,10 @@ class TransactionProcessor {
 
   _handleShutdown () {
     console.log('Unregistering transaction processor')
-    this._stream.send(Message.MessageType.TP_UNREGISTER_REQUEST,
-                      TpUnregisterRequest.encode().finish())
+    this._stream.send(
+      Message.MessageType.TP_UNREGISTER_REQUEST,
+      TpUnregisterRequest.encode().finish()
+    )
     process.exit()
   }
 }

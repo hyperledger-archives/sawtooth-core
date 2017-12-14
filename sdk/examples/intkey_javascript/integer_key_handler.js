@@ -17,8 +17,11 @@
 
 'use strict'
 
-const {TransactionHandler} = require('sawtooth-sdk/processor/handler')
-const {InvalidTransaction, InternalError} = require('sawtooth-sdk/processor/exceptions')
+const { TransactionHandler } = require('sawtooth-sdk/processor/handler')
+const {
+  InvalidTransaction,
+  InternalError
+} = require('sawtooth-sdk/processor/exceptions')
 
 const crypto = require('crypto')
 const cbor = require('cbor')
@@ -36,7 +39,8 @@ const INT_KEY_NAMESPACE = _hash(INT_KEY_FAMILY).substring(0, 6)
 
 const _decodeCbor = (buffer) =>
   new Promise((resolve, reject) =>
-              cbor.decodeFirst(buffer, (err, obj) => err ? reject(err) : resolve(obj)))
+    cbor.decodeFirst(buffer, (err, obj) => (err ? reject(err) : resolve(obj)))
+  )
 
 const _toInternalError = (err) => {
   let message = (err.message) ? err.message : err
@@ -56,9 +60,11 @@ const _applySet = (context, address, name, value) => (possibleAddressValues) => 
   let stateValue
   if (stateValueRep && stateValueRep.length > 0) {
     stateValue = cbor.decodeFirstSync(stateValueRep)
-    if (stateValue[name]) {
+    let stateName = stateValue[name]
+    if (stateName) {
       throw new InvalidTransaction(
-        `Verb is "set" but Name already in state, Name: ${name} Value: ${stateValue[name]}`)
+        `Verb is "set" but Name already in state, Name: ${name} Value: ${stateName}`
+      )
     }
   }
 
@@ -87,12 +93,14 @@ const _applyOperator = (verb, op) => (context, address, name, value) => (possibl
 
   if (result < MIN_VALUE) {
     throw new InvalidTransaction(
-      `Verb is ${verb}, but result would be less than ${MIN_VALUE}`)
+      `Verb is ${verb}, but result would be less than ${MIN_VALUE}`
+    )
   }
 
   if (result > MAX_VALUE) {
     throw new InvalidTransaction(
-      `Verb is ${verb}, but result would be greater than ${MAX_VALUE}`)
+      `Verb is ${verb}, but result would be greater than ${MAX_VALUE}`
+    )
   }
 
   // Increment the value in state by value
@@ -122,7 +130,8 @@ class IntegerKeyHandler extends TransactionHandler {
 
         if (name.length > MAX_NAME_LENGTH) {
           throw new InvalidTransaction(
-            `Name must be a string of no more than ${MAX_NAME_LENGTH} characters`)
+            `Name must be a string of no more than ${MAX_NAME_LENGTH} characters`
+          )
         }
 
         let verb = update.Verb
@@ -138,9 +147,9 @@ class IntegerKeyHandler extends TransactionHandler {
         let parsed = parseInt(value)
         if (parsed !== value || parsed < MIN_VALUE || parsed > MAX_VALUE) {
           throw new InvalidTransaction(
-            `Value must be an integer `
-            + `no less than ${MIN_VALUE} and `
-            + `no greater than ${MAX_VALUE}`)
+            `Value must be an integer ` +
+            `no less than ${MIN_VALUE} and ` +
+            `no greater than ${MAX_VALUE}`)
         }
 
         value = parsed
@@ -163,16 +172,17 @@ class IntegerKeyHandler extends TransactionHandler {
         let getPromise = context.getState([address])
 
         // Apply the action to the promise's result:
-        let actionPromise = getPromise.then(actionFn(context, address, name, value))
+        let actionPromise = getPromise.then(
+          actionFn(context, address, name, value)
+        )
 
         // Validate that the action promise results in the correctly set address:
-        return actionPromise
-          .then((addresses) => {
-            if (addresses.length === 0) {
-              throw new InternalError('State Error!')
-            }
-            console.log(`Verb: ${verb} Name: ${name} Value: ${value}`)
-          })
+        return actionPromise.then(addresses => {
+          if (addresses.length === 0) {
+            throw new InternalError('State Error!')
+          }
+          console.log(`Verb: ${verb} Name: ${name} Value: ${value}`)
+        })
       })
   }
 }

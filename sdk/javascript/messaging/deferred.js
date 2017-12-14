@@ -34,4 +34,3 @@ function Deferred () {
 }
 
 module.exports = Deferred
-

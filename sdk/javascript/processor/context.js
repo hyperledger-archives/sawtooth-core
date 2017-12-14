@@ -32,6 +32,7 @@ const {
   TpEventAddResponse,
   Message
 } = require('../protobuf')
+
 const {
   AuthorizationException,
   InternalError
@@ -40,8 +41,12 @@ const {
 const _timeoutPromise = (p, millis) => {
   if (millis !== null && millis !== undefined) {
     return Promise.race([
-      new Promise((resolve, reject) => setTimeout(() => reject('Timeout occurred'), millis)),
-      p])
+      new Promise(
+        (resolve, reject) =>
+          setTimeout(() => reject(Error('Timeout occurred')), millis)
+      ),
+      p
+    ])
   } else {
     return p
   }
@@ -70,19 +75,28 @@ class Context {
    * @throws {AuthorizationException}
    */
   getState (addresses, timeout = null) {
-    let getRequest = TpStateGetRequest.create({addresses, contextId: this._contextId})
-    let future = this._stream.send(Message.MessageType.TP_STATE_GET_REQUEST,
-                                   TpStateGetRequest.encode(getRequest).finish())
+    let getRequest = TpStateGetRequest.create({
+      addresses,
+      contextId: this._contextId
+    })
+    let future = this._stream.send(
+      Message.MessageType.TP_STATE_GET_REQUEST,
+      TpStateGetRequest.encode(getRequest).finish()
+    )
     return _timeoutPromise(
-      future.then((buffer) => {
+      future.then(buffer => {
         let getResponse = TpStateGetResponse.decode(buffer)
 
         let results = {}
-        getResponse.entries.forEach((entry) => {
+        getResponse.entries.forEach(entry => {
           results[entry.address] = entry.data
         })
-        if (getResponse.status === TpStateGetResponse.Status.AUTHORIZATION_ERROR) {
-          throw new AuthorizationException(`Tried to get unauthorized address ${addresses}`)
+        if (
+          getResponse.status === TpStateGetResponse.Status.AUTHORIZATION_ERROR
+        ) {
+          throw new AuthorizationException(
+            `Tried to get unauthorized address ${addresses}`
+          )
         }
         return results
       }),
@@ -105,16 +119,23 @@ class Context {
     let entries = Object.keys(addressValuePairs).map((address) =>
       TpStateEntry.create({address, data: addressValuePairs[address]}))
 
-    let setRequest = TpStateSetRequest.create({entries, contextId: this._contextId})
-    let future = this._stream.send(Message.MessageType.TP_STATE_SET_REQUEST,
-                                   TpStateSetRequest.encode(setRequest).finish())
+    let setRequest = TpStateSetRequest.create({
+      entries,
+      contextId: this._contextId
+    })
+    let future = this._stream.send(
+      Message.MessageType.TP_STATE_SET_REQUEST,
+      TpStateSetRequest.encode(setRequest).finish()
+    )
 
     return _timeoutPromise(
       future.then((buffer) => {
         let setResponse = TpStateSetResponse.decode(buffer)
         if (setResponse.status === TpStateSetResponse.Status.AUTHORIZATION_ERROR) {
           let addresses = Object.keys(addressValuePairs)
-          throw new AuthorizationException(`Tried to set unauthorized address ${addresses}`)
+          throw new AuthorizationException(
+            `Tried to set unauthorized address ${addresses}`
+          )
         }
         return setResponse.addresses
       }),
@@ -132,15 +153,25 @@ class Context {
    * @throws {AuthorizationException}
    */
   deleteState (addresses, timeout = null) {
-    let getRequest = TpStateDeleteRequest.create({addresses, contextId: this._contextId})
-    let future = this._stream.send(Message.MessageType.TP_STATE_DELETE_REQUEST,
-                                   TpStateDeleteRequest.encode(getRequest).finish())
+    let getRequest = TpStateDeleteRequest.create({
+      addresses,
+      contextId: this._contextId
+    })
+    let future = this._stream.send(
+      Message.MessageType.TP_STATE_DELETE_REQUEST,
+      TpStateDeleteRequest.encode(getRequest).finish()
+    )
     return _timeoutPromise(
       future.then((buffer) => {
         let deleteResponse = TpStateDeleteResponse.decode(buffer)
 
-        if (deleteResponse.status === TpStateDeleteResponse.Status.AUTHORIZATION_ERROR) {
-          throw new AuthorizationException(`Tried to delete unauthorized address ${addresses}`)
+        if (
+          deleteResponse.status ===
+          TpStateDeleteResponse.Status.AUTHORIZATION_ERROR
+        ) {
+          throw new AuthorizationException(
+            `Tried to delete unauthorized address ${addresses}`
+          )
         }
         return deleteResponse.addresses
       }),
@@ -161,8 +192,10 @@ class Context {
       data
     })
 
-    let future = this._stream.send(Message.MessageType.TP_RECEIPT_ADD_DATA_REQUEST,
-                                   TpReceiptAddDataRequest.encode(addReceiptRequest).finish())
+    let future = this._stream.send(
+      Message.MessageType.TP_RECEIPT_ADD_DATA_REQUEST,
+      TpReceiptAddDataRequest.encode(addReceiptRequest).finish()
+    )
 
     return _timeoutPromise(
       future.then((buffer) => {
@@ -196,8 +229,9 @@ class Context {
 
     let event = Event.create({
       eventType,
-      attributes: attributes.map(([key, value]) =>
-                                 Event.Attribute.create({key, value})),
+      attributes: attributes.map(
+        ([ key, value ]) => Event.Attribute.create({ key, value })
+      ),
       data
     })
 
@@ -206,8 +240,10 @@ class Context {
       event
     }).finish()
 
-    let future = this._stream.send(Message.MessageType.TP_EVENT_ADD_REQUEST,
-                                   request)
+    let future = this._stream.send(
+      Message.MessageType.TP_EVENT_ADD_REQUEST,
+      request
+    )
 
     return _timeoutPromise(
       future.then((buffer) => {
