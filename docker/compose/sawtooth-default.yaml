@@ -20,8 +20,6 @@ services:
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:1.0
     container_name: sawtooth-settings-tp-default
-    expose:
-      - 4004
     depends_on:
       - validator
     entrypoint: settings-tp -vv -C tcp://validator:4004
@@ -29,8 +27,6 @@ services:
   intkey-tp-python:
     image: hyperledger/sawtooth-intkey-tp-python:1.0
     container_name: sawtooth-intkey-tp-python-default
-    expose:
-      - 4004
     depends_on:
       - validator
     entrypoint: intkey-tp-python -vv -C tcp://validator:4004
@@ -38,8 +34,6 @@ services:
   xo-tp-python:
     image: hyperledger/sawtooth-xo-tp-python:1.0
     container_name: sawtooth-xo-tp-python-default
-    expose:
-      - 4004
     depends_on:
       - validator
     entrypoint: xo-tp-python -vv -C tcp://validator:4004
@@ -66,8 +60,6 @@ services:
   rest-api:
     image: hyperledger/sawtooth-rest-api:1.0
     container_name: sawtooth-rest-api-default
-    expose:
-      - 4004
       - 8008
     ports:
       - "8008:8008"
@@ -78,9 +70,6 @@ services:
   shell:
     image: hyperledger/sawtooth-all:1.0
     container_name: sawtooth-shell-default
-    expose:
-      - 8008
-      - 4004
     depends_on:
       - rest-api
     entrypoint: "bash -c \"\
