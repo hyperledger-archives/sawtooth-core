@@ -41,6 +41,7 @@ class TestGenesisController(unittest.TestCase):
         super().__init__(test_name)
         self._temp_dir = None
         self._signer = None
+        self._identity_public_key = None
 
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
@@ -48,6 +49,7 @@ class TestGenesisController(unittest.TestCase):
         private_key = context.new_random_private_key()
         crypto_factory = CryptoFactory(context)
         self._signer = crypto_factory.new_signer(private_key)
+        self._identity_public_key = self._signer.get_public_key().as_hex()
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
@@ -67,6 +69,7 @@ class TestGenesisController(unittest.TestCase):
             self.make_block_store(),  # Empty block store
             StateViewFactory(DictDatabase()),
             self._signer,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -88,6 +91,7 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._signer,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -108,6 +112,7 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._signer,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -133,6 +138,7 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._signer,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -163,6 +169,7 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._signer,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -192,6 +199,7 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(DictDatabase()),
             self._signer,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),
@@ -234,6 +242,7 @@ class TestGenesisController(unittest.TestCase):
             block_store,
             StateViewFactory(state_database),
             self._signer,
+            self._identity_public_key,
             data_dir=self._temp_dir,
             config_dir=self._temp_dir,
             chain_id_manager=ChainIdManager(self._temp_dir),

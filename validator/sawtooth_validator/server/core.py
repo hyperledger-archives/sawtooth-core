@@ -25,6 +25,7 @@ from sawtooth_validator.concurrent.threadpool import \
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
+from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.genesis import GenesisController
@@ -93,6 +94,8 @@ class Validator(object):
             identity_signer (str): cryptographic signer the validator uses for
                 signing
         """
+        # Get the public key for the signing key
+        identity_public_key = identity_signer.get_public_key().as_hex()
 
         # -- Setup Global State Database and Factory -- #
         global_state_db_filename = os.path.join(
@@ -175,7 +178,7 @@ class Validator(object):
 
         batch_tracker = BatchTracker(block_store)
 
-        executor = TransactionExecutor(
+        transaction_executor = TransactionExecutor(
             service=component_service,
             context_manager=context_manager,
             settings_view_factory=SettingsViewFactory(state_view_factory),
@@ -183,7 +186,8 @@ class Validator(object):
             invalid_observers=[batch_tracker],
             metrics_registry=metrics_registry)
 
-        component_service.set_check_connections(executor.check_connections)
+        component_service.set_check_connections(
+            transaction_executor.check_connections)
 
         event_broadcaster = EventBroadcaster(
             component_service, block_store, receipt_store)
@@ -228,7 +232,7 @@ class Validator(object):
             signer=identity_signer)
 
         block_publisher = BlockPublisher(
-            transaction_executor=executor,
+            transaction_executor=transaction_executor,
             block_cache=block_cache,
             state_view_factory=state_view_factory,
             block_sender=block_sender,
@@ -236,6 +240,7 @@ class Validator(object):
             squash_handler=context_manager.get_squash_handler(),
             chain_head=block_store.chain_head,
             identity_signer=identity_signer,
+            identity_public_key=identity_signer.get_public_key().as_hex(),
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier,
@@ -245,18 +250,14 @@ class Validator(object):
             metrics_registry=metrics_registry)
 
         chain_controller = ChainController(
-            block_sender=block_sender,
             block_cache=block_cache,
             state_view_factory=state_view_factory,
-            transaction_executor=executor,
             chain_head_lock=block_publisher.chain_head_lock,
             on_chain_updated=block_publisher.on_chain_updated,
-            squash_handler=context_manager.get_squash_handler(),
             chain_id_manager=chain_id_manager,
-            identity_signer=identity_signer,
+            identity_public_key=identity_signer.get_public_key().as_hex(),
             data_dir=data_dir,
             config_dir=config_dir,
-            permission_verifier=permission_verifier,
             chain_observers=[
                 event_broadcaster,
                 receipt_store,
@@ -265,13 +266,25 @@ class Validator(object):
             ],
             metrics_registry=metrics_registry)
 
+        block_validator = BlockValidator(
+            block_cache=block_cache,
+            state_view_factory=state_view_factory,
+            transaction_executor=transaction_executor,
+            on_block_validated=chain_controller.on_block_validated,
+            squash_handler=context_manager.get_squash_handler(),
+            identity_public_key=identity_public_key,
+            data_dir=data_dir,
+            config_dir=config_dir,
+            permission_verifier=permission_verifier)
+
         genesis_controller = GenesisController(
             context_manager=context_manager,
-            transaction_executor=executor,
+            transaction_executor=transaction_executor,
             completer=completer,
             block_store=block_store,
             state_view_factory=state_view_factory,
             identity_signer=identity_signer,
+            identity_public_key=identity_signer.get_public_key().as_hex(),
             data_dir=data_dir,
             config_dir=config_dir,
             chain_id_manager=chain_id_manager,
@@ -280,22 +293,22 @@ class Validator(object):
         responder = Responder(completer)
 
         completer.set_on_batch_received(block_publisher.queue_batch)
-        completer.set_on_block_received(chain_controller.queue_block)
-        completer.set_chain_has_block(chain_controller.has_block)
+        completer.set_on_block_received(block_validator.queue_block)
+        completer.set_chain_has_block(block_validator.has_block)
 
         # -- Register Message Handler -- #
         network_handlers.add(
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
-            chain_controller.has_block, block_publisher.has_batch,
+            block_validator.has_block, block_publisher.has_batch,
             permission_verifier)
 
         component_handlers.add(
-            component_dispatcher, gossip, context_manager, executor, completer,
-            block_store, batch_tracker, global_state_db,
-            self.get_chain_head_state_root_hash, receipt_store,
-            event_broadcaster, permission_verifier, component_thread_pool,
-            sig_pool)
+            component_dispatcher, gossip, context_manager,
+            transaction_executor, completer, block_store, batch_tracker,
+            global_state_db, self.get_chain_head_state_root_hash,
+            receipt_store, event_broadcaster, permission_verifier,
+            component_thread_pool, sig_pool)
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher
@@ -309,12 +322,13 @@ class Validator(object):
         self._sig_pool = sig_pool
 
         self._context_manager = context_manager
-        self._executor = executor
+        self._transaction_executor = transaction_executor
         self._genesis_controller = genesis_controller
         self._gossip = gossip
 
         self._block_publisher = block_publisher
         self._chain_controller = chain_controller
+        self._block_validator = block_validator
 
     def start(self):
         self._component_dispatcher.start()
@@ -331,6 +345,7 @@ class Validator(object):
         self._gossip.start()
         self._block_publisher.start()
         self._chain_controller.start()
+        self._block_validator.start()
 
         signal_event = threading.Event()
 
@@ -353,11 +368,12 @@ class Validator(object):
         self._component_thread_pool.shutdown(wait=True)
         self._sig_pool.shutdown(wait=True)
 
-        self._executor.stop()
+        self._transaction_executor.stop()
         self._context_manager.stop()
 
         self._block_publisher.stop()
         self._chain_controller.stop()
+        self._block_validator.stop()
 
         threads = threading.enumerate()
 

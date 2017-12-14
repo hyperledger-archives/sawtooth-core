@@ -45,6 +45,7 @@ class GenesisController(object):
                  block_store,
                  state_view_factory,
                  identity_signer,
+                 identity_public_key,
                  data_dir,
                  config_dir,
                  chain_id_manager,
@@ -62,6 +63,8 @@ class GenesisController(object):
                 factory for creating state views during processing.
             identity_signer (:obj:`Signer`): A cryptographic signer used for
                 signing blocks.
+            identity_public_key (str): The public key corresponding to the
+                given signing key.
             data_dir (str): The directory for data files.
             config_dir (str): The directory for config files.
             chain_id_manager (ChainIdManager): utility class to manage the
@@ -74,6 +77,7 @@ class GenesisController(object):
         self._block_store = block_store
         self._state_view_factory = state_view_factory
         self._identity_signer = identity_signer
+        self._identity_public_key = identity_public_key
         self._data_dir = data_dir
         self._config_dir = config_dir
         self._chain_id_manager = chain_id_manager

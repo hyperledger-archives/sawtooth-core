@@ -44,7 +44,7 @@ class BlockWrapper(object):
         # consensus algorithm.
         self.status = status  # One of the BlockStatus types.
         self.execution_results = []
-        self.num_transactions = 0
+        self.transaction_count = 0
 
     @staticmethod
     def wrap(block, weight=0, status=BlockStatus.Unknown):
