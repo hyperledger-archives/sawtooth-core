@@ -35,7 +35,8 @@ def load_default_validator_config():
         peering='static',
         scheduler='serial',
         minimum_peer_connectivity=3,
-        maximum_peer_connectivity=10)
+        maximum_peer_connectivity=10,
+        maximum_batch_queue_depth=20)
 
 
 def load_toml_validator_config(filename):
@@ -63,7 +64,7 @@ def load_toml_validator_config(filename):
          'network_private_key', 'scheduler', 'permissions', 'roles',
          'opentsdb_url', 'opentsdb_db', 'opentsdb_username',
          'opentsdb_password', 'minimum_peer_connectivity',
-         'maximum_peer_connectivity'])
+         'maximum_peer_connectivity', 'maximum_batch_queue_depth'])
     if invalid_keys:
         raise LocalConfigurationError(
             "Invalid keys in validator config: "
@@ -104,7 +105,9 @@ def load_toml_validator_config(filename):
          minimum_peer_connectivity=toml_config.get(
             "minimum_peer_connectivity", None),
          maximum_peer_connectivity=toml_config.get(
-            "maximum_peer_connectivity", None)
+            "maximum_peer_connectivity", None),
+         maximum_batch_queue_depth=toml_config.get(
+             'maximum_batch_queue_depth', None)
     )
 
     return config
@@ -133,6 +136,7 @@ def merge_validator_config(configs):
     opentsdb_password = None
     minimum_peer_connectivity = None
     maximum_peer_connectivity = None
+    maximum_batch_queue_depth = None
 
     for config in reversed(configs):
         if config.bind_network is not None:
@@ -169,6 +173,8 @@ def merge_validator_config(configs):
             minimum_peer_connectivity = config.minimum_peer_connectivity
         if config.maximum_peer_connectivity is not None:
             maximum_peer_connectivity = config.maximum_peer_connectivity
+        if config.maximum_batch_queue_depth is not None:
+            maximum_batch_queue_depth = config.maximum_batch_queue_depth
 
     return ValidatorConfig(
          bind_network=bind_network,
@@ -187,7 +193,8 @@ def merge_validator_config(configs):
          opentsdb_username=opentsdb_username,
          opentsdb_password=opentsdb_password,
          minimum_peer_connectivity=minimum_peer_connectivity,
-         maximum_peer_connectivity=maximum_peer_connectivity
+         maximum_peer_connectivity=maximum_peer_connectivity,
+         maximum_batch_queue_depth=maximum_batch_queue_depth
     )
 
 
@@ -236,7 +243,8 @@ class ValidatorConfig:
                  roles=None, opentsdb_url=None, opentsdb_db=None,
                  opentsdb_username=None, opentsdb_password=None,
                  minimum_peer_connectivity=None,
-                 maximum_peer_connectivity=None):
+                 maximum_peer_connectivity=None,
+                 maximum_batch_queue_depth=None):
 
         self._bind_network = bind_network
         self._bind_component = bind_component
@@ -255,6 +263,7 @@ class ValidatorConfig:
         self._opentsdb_password = opentsdb_password
         self._minimum_peer_connectivity = minimum_peer_connectivity
         self._maximum_peer_connectivity = maximum_peer_connectivity
+        self._maximum_batch_queue_depth = maximum_batch_queue_depth
 
     @property
     def bind_network(self):
@@ -324,6 +333,10 @@ class ValidatorConfig:
     def maximum_peer_connectivity(self):
         return self._maximum_peer_connectivity
 
+    @property
+    def maximum_batch_queue_depth(self):
+        return self._maximum_batch_queue_depth
+
     def __repr__(self):
         # not including  password for opentsdb
         return \
@@ -332,7 +345,8 @@ class ValidatorConfig:
             "network_public_key={}, network_private_key={}, " \
             "scheduler={}, permissions={}, roles={} " \
             "opentsdb_url={}, opentsdb_db={}, opentsdb_username={}, \
-            minimum_peer_connectivity={}, maximum_peer_connectivity={}\
+            minimum_peer_connectivity={}, maximum_peer_connectivity={}, \
+            maximum_batch_queue_depth={}\
             )".format(
                 self.__class__.__name__,
                 repr(self._bind_network),
@@ -350,7 +364,8 @@ class ValidatorConfig:
                 repr(self._opentsdb_db),
                 repr(self._opentsdb_username),
                 repr(self._minimum_peer_connectivity),
-                repr(self._maximum_peer_connectivity))
+                repr(self._maximum_peer_connectivity),
+                repr(self._maximum_batch_queue_depth))
 
     def to_dict(self):
         return collections.OrderedDict([
@@ -370,7 +385,8 @@ class ValidatorConfig:
             ('opentsdb_username', self._opentsdb_username),
             ('opentsdb_password', self._opentsdb_password),
             ('minimum_peer_connectivity', self._minimum_peer_connectivity),
-            ('maximum_peer_connectivity', self._maximum_peer_connectivity)
+            ('maximum_peer_connectivity', self._maximum_peer_connectivity),
+            ('maximum_batch_queue_depth', self._maximum_batch_queue_depth)
         ])
 
     def to_toml_string(self):

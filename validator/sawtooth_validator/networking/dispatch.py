@@ -203,6 +203,10 @@ class Dispatcher(InstrumentedThread):
             LOGGER.exception("Dispatcher timeout waiting on handler result.")
             raise
 
+        if res is None:
+            LOGGER.debug('Ignoring result previous error')
+            return
+
         if res.status == HandlerStatus.DROP:
             del self._message_information[message_id]
 

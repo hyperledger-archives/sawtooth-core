@@ -72,3 +72,9 @@ class PossibleForkDetectedError(Exception):
     through the block store.
     """
     pass
+
+
+class BatchBackPressureException(Exception):
+    """Exception thrown when back pressure occurs when adding batches.
+    """
+    pass

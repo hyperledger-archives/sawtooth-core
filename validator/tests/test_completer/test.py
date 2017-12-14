@@ -19,6 +19,7 @@ import cbor
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
+from sawtooth_validator.exceptions import BatchBackPressureException
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.journal.block_store import BlockStore
@@ -39,6 +40,7 @@ class TestCompleter(unittest.TestCase):
         self.completer._on_block_received = self._on_block_received
         self.completer._on_batch_received = self._on_batch_received
         self.completer._has_block = self._has_block
+        self.completer._can_process_batch = lambda: True
         self._has_block_value = True
 
         context = create_context('secp256k1')
@@ -296,3 +298,23 @@ class TestCompleter(unittest.TestCase):
         self.assertIn(batch.header_signature, self.batches)
         self.assertEquals(missing_batch,
                           self.completer.get_batch_by_transaction("Missing"))
+
+    def test_batch_add_fails_when_cannot_process(self):
+        """When the completer's can_process_batch function reports False,
+        verify that add_batch raises an BatchBackPressureException.
+        """
+        self.completer._can_process_batch = lambda: False
+        batch = self._create_batches(1, 1)[0]
+        with self.assertRaises(BatchBackPressureException):
+            self.completer.add_batch(batch)
+
+    def test_batch_add_force_accepts_batch(self):
+        """When the completer's can_process_batch function reports False,
+        verify that add_batch with force=True still accepts the batch.
+        """
+        self.completer._can_process_batch = lambda: False
+        batch = self._create_batches(1, 1)[0]
+        self.completer.add_batch(batch, force=True)
+        self.assertIn(batch.header_signature, self.batches)
+        self.assertEquals(batch,
+                          self.completer.get_batch(batch.header_signature))
