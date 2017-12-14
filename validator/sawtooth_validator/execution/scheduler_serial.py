@@ -14,6 +14,8 @@
 # ------------------------------------------------------------------------------
 
 from collections import deque
+from collections import namedtuple
+from itertools import filterfalse
 import logging
 from threading import Condition
 
@@ -29,6 +31,10 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 LOGGER = logging.getLogger(__name__)
 
 
+_AnnotatedBatch = namedtuple('ScheduledBatch',
+                             ['batch', 'required', 'preserve'])
+
+
 class SerialScheduler(Scheduler):
     """Serial scheduler which returns transactions in the natural order.
 
@@ -41,7 +47,7 @@ class SerialScheduler(Scheduler):
     """
 
     def __init__(self, squash_handler, first_state_hash, always_persist):
-        self._txn_queue = SimpleQueue()
+        self._txn_queue = deque()
         self._scheduled_transactions = []
         self._batch_statuses = {}
         self._txn_to_batch = {}
@@ -125,8 +131,20 @@ class SerialScheduler(Scheduler):
             if self._final:
                 raise SchedulerError("Scheduler is finalized. Cannot take"
                                      " new batches")
+            preserve = required
+            if not required:
+                # If this is the first non-required batch, it is preserved for
+                # the schedule to be completed (i.e. no empty schedules in the
+                # event of unschedule_incomplete_batches being called before
+                # the first batch is completed).
+                preserve = _first(
+                    filterfalse(lambda sb: sb.required,
+                                self._batch_by_id.values())) is None
+
             batch_signature = batch.header_signature
-            self._batch_by_id[batch_signature] = batch
+            self._batch_by_id[batch_signature] = \
+                _AnnotatedBatch(batch, required=required, preserve=preserve)
+
             if state_hash is not None:
                 self._required_state_hashes[batch_signature] = state_hash
             batch_length = len(batch.transactions)
@@ -134,7 +152,7 @@ class SerialScheduler(Scheduler):
                 if idx == batch_length - 1:
                     self._last_in_batch.append(txn.header_signature)
                 self._txn_to_batch[txn.header_signature] = batch_signature
-                self._txn_queue.put(txn)
+                self._txn_queue.append(txn)
             self._condition.notify_all()
 
     def get_batch_execution_result(self, batch_signature):
@@ -147,12 +165,12 @@ class SerialScheduler(Scheduler):
             if batch_status is None:
                 return None
 
-            batch = self._batch_by_id.get(batch_signature)
-            if batch is None:
+            annotated_batch = self._batch_by_id.get(batch_signature)
+            if annotated_batch is None:
                 return None
 
             results = []
-            for txn in batch.transactions:
+            for txn in annotated_batch.batch.transactions:
                 result = self._txn_results.get(txn.header_signature)
                 if result is not None:
                     results.append(result)
@@ -180,7 +198,7 @@ class SerialScheduler(Scheduler):
         self._batch_statuses[batch_id] = BatchExecutionResult(
             is_valid=valid,
             state_hash=state_hash)
-        batch = self._batch_by_id[batch_id]
+        batch = self._batch_by_id[batch_id].batch
         for txn in batch.transactions:
             if txn.header_signature not in self._txn_results:
                 self._txn_results[txn.header_signature] = TxnExecutionResult(
@@ -218,8 +236,8 @@ class SerialScheduler(Scheduler):
             txn = None
             while txn is None:
                 try:
-                    txn = self._txn_queue.get()
-                except EmptyQueue:
+                    txn = self._txn_queue.popleft()
+                except IndexError:
                     if self._final:
                         self._condition.notify_all()
                         raise StopIteration()
@@ -251,44 +269,42 @@ class SerialScheduler(Scheduler):
             return txn_info
 
     def unschedule_incomplete_batches(self):
-        incomplete_batches = set()
+        inprogress_batch_id = None
         with self._condition:
             # remove the in-progress transaction's batch
             if self._in_progress_transaction is not None:
                 batch_id = self._txn_to_batch[self._in_progress_transaction]
-                incomplete_batches.add(batch_id)
+                annotated_batch = self._batch_by_id[batch_id]
 
-            self._in_progress_transaction = None
+                # if the batch is preserve or there are no completed batches,
+                # keep it in the schedule
+                if not annotated_batch.preserve:
+                    self._in_progress_transaction = None
+                else:
+                    inprogress_batch_id = batch_id
 
-            txn = None
-            # drain the remaining queue
-            while txn is None:
-                try:
-                    txn = self._txn_queue.get()
-                except EmptyQueue:
-                    break
+            def in_schedule(entry):
+                (batch_id, annotated_batch) = entry
+                return batch_id in self._batch_statuses or \
+                    annotated_batch.preserve or batch_id == inprogress_batch_id
 
-                incomplete_batches.add(
-                    self._txn_to_batch[txn.header_signature])
-                del self._txn_to_batch[txn.header_signature]
+            incomplete_batches = list(
+                filterfalse(in_schedule, self._batch_by_id.items()))
 
             # clean up the batches, including partial complete information
-            for batch_id in incomplete_batches:
-                batch = self._batch_by_id[batch_id]
-
-                for txn in batch.transactions:
+            for batch_id, annotated_batch in incomplete_batches:
+                for txn in annotated_batch.batch.transactions:
                     txn_id = txn.header_signature
                     if txn_id in self._txn_results:
                         del self._txn_results[txn_id]
-                    if txn_id in self._txn_to_batch:
-                        del self._txn_to_batch[txn_id]
 
-                try:
-                    self._last_in_batch.remove(
-                        batch.transactions[-1].header_signature)
-                except ValueError:
-                    # was not in the last_in_batch list
-                    pass
+                    if txn in self._txn_queue:
+                        self._txn_queue.remove(txn)
+
+                    del self._txn_to_batch[txn_id]
+
+                self._last_in_batch.remove(
+                    annotated_batch.batch.transactions[-1].header_signature)
 
                 del self._batch_by_id[batch_id]
 
@@ -394,22 +410,8 @@ class SerialScheduler(Scheduler):
             return self._cancelled
 
 
-class SimpleQueue(object):
-    def __init__(self):
-        self._queue = deque()
-
-    def get(self):
-        try:
-            return self._queue.popleft()
-        except IndexError:
-            raise EmptyQueue
-
-    def put(self, item):
-        self._queue.append(item)
-
-    def clear(self):
-        self._queue.clear()
-
-
-class EmptyQueue(Exception):
-    pass
+def _first(iterator):
+    try:
+        return next(iterator)
+    except StopIteration:
+        return None
