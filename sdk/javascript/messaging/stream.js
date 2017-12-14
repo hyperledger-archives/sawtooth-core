@@ -21,7 +21,6 @@ const crypto = require('crypto')
 const uuid = require('uuid/v4')
 const zmq = require('zeromq')
 
-const util = require('util')
 const assert = require('assert')
 
 const { Message } = require('../protobuf')
@@ -30,11 +29,11 @@ const { ValidatorConnectionError } = require('../processor/exceptions')
 
 const _encodeMessage = (messageType, correlationId, content) => {
   assert(
-    util.isNumber(messageType),
+    typeof messageType === 'number',
     `messageType must be a number; was ${messageType}`
   )
   assert(
-    util.isString(correlationId),
+    typeof correlationId === 'string',
     `correlationId must be a string; was ${correlationId}`
   )
   assert(
