@@ -34,8 +34,8 @@ class RestClient(object):
         else:
             self._auth_header = None
 
-    def list_blocks(self):
-        return self._get_data('/blocks')
+    def list_blocks(self, limit=None):
+        return self._get_data('/blocks', limit=limit)
 
     def get_block(self, block_id):
         return self._get('/blocks/' + block_id)['data']
@@ -105,10 +105,12 @@ class RestClient(object):
         if code == 200:
             return json_result
         elif code == 404:
-            raise CliException('There is no resource with the identifier "{}"'.
-                               format(path.split('/')[-1]))
+            raise CliException(
+                '{}: There is no resource with the identifier "{}"'.format(
+                    self._base_url, path.split('/')[-1]))
         else:
-            raise CliException("({}): {}".format(code, json_result))
+            raise CliException(
+                "{}: {} {}".format(self._base_url, code, json_result))
 
     def _get_data(self, path, **queries):
         url = self._base_url + path
@@ -120,10 +122,11 @@ class RestClient(object):
 
             if code == 404:
                 raise CliException(
-                    'There is no resource with the identifier "{}"'.
-                    format(path.split('/')[-1]))
+                    '{}: There is no resource with the identifier "{}"'.format(
+                        self._base_url, path.split('/')[-1]))
             elif code != 200:
-                raise CliException("({}): {}".format(code, json_result))
+                raise CliException(
+                    "{}: {} {}".format(self._base_url, code, json_result))
 
             for item in json_result.get('data', []):
                 yield item
