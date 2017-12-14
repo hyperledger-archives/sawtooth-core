@@ -85,7 +85,7 @@ const _applyOperator = (verb, op) => (context, address, name, value) => (possibl
   }
 
   let stateValue = cbor.decodeFirstSync(stateValueRep)
-  if (stateValue[name] == null || stateValue[name] == undefined) {
+  if (stateValue[name] === null || stateValue[name] === undefined) {
     throw new InvalidTransaction(`Verb is ${verb} but Name is not in state`)
   }
 
@@ -140,7 +140,7 @@ class IntegerKeyHandler extends TransactionHandler {
         }
 
         let value = update.Value
-        if (value == null || value == undefined) {
+        if (value === null || value === undefined) {
           throw new InvalidTransaction('Value is required')
         }
 
