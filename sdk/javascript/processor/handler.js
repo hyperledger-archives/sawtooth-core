@@ -58,11 +58,12 @@ class TransactionHandler {
 }
 
 const _readOnlyProperty = (instance, propertyName, value) =>
-    Object.defineProperty(instance, propertyName, {
-      writeable: false,
-      enumerable: true,
-      congigurable: true,
-      value})
+  Object.defineProperty(instance, propertyName, {
+    writeable: false,
+    enumerable: true,
+    congigurable: true,
+    value
+  })
 
 module.exports = {
   TransactionHandler

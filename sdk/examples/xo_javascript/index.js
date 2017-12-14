@@ -17,7 +17,7 @@
 
 'use strict'
 
-const {TransactionProcessor} = require('sawtooth-sdk/processor')
+const { TransactionProcessor } = require('sawtooth-sdk/processor')
 const XOHandler = require('./xo_handler')
 
 if (process.argv.length < 3) {

@@ -18,9 +18,9 @@
 'use strict'
 
 const secp256k1 = require('secp256k1')
-const {createHash, randomBytes} = require('crypto')
+const { createHash, randomBytes } = require('crypto')
 
-const {PrivateKey, PublicKey, Context, ParseError} = require('./core')
+const { PrivateKey, PublicKey, Context, ParseError } = require('./core')
 
 class Secp256k1PrivateKey extends PrivateKey {
   /**
@@ -123,7 +123,8 @@ class Secp256k1Context extends Context {
 
   getPublicKey (privateKey) {
     return new Secp256k1PublicKey(
-      secp256k1.publicKeyCreate(privateKey.privateKeyBytes))
+      secp256k1.publicKeyCreate(privateKey.privateKeyBytes)
+    )
   }
 
   newRandomPrivateKey () {
