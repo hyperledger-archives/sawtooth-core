@@ -963,6 +963,54 @@ class TestSerialScheduler(unittest.TestCase):
         self.assertIsNotNone(scheduled_txn_info)
         self.assertEqual('b', scheduled_txn_info.txn.payload.decode())
 
+    def test_unschedule_incomplete_transactions(self):
+        """Tests that unschedule_incomplete_batches will remove
+        batches above the mimimum.
+
+        Given a schedule with two batches, ensure that a call to
+        unschedule_incomplete_batches will leave one batch in the schedule.
+        """
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
+
+        txn_a, _ = create_transaction(
+            payload='A'.encode(),
+            signer=signer)
+
+        txn_b, _ = create_transaction(
+            payload='B'.encode(),
+            signer=signer)
+
+        batch_1 = create_batch(transactions=[txn_a],
+                               signer=signer)
+        batch_2 = create_batch(transactions=[txn_b],
+                               signer=signer)
+
+        self.scheduler.add_batch(batch_1)
+        self.scheduler.add_batch(batch_2)
+
+        self.scheduler.unschedule_incomplete_batches()
+        self.scheduler.finalize()
+        self.assertFalse(self.scheduler.complete(block=False))
+
+        scheduled_txn_info = self.scheduler.next_transaction()
+        self.assertIsNotNone(scheduled_txn_info)
+        self.assertEqual('A', scheduled_txn_info.txn.payload.decode())
+
+        c_id = self.context_manager.create_context(
+            self.first_state_root,
+            base_contexts=scheduled_txn_info.base_context_ids,
+            inputs=[],
+            outputs=[])
+
+        self.scheduler.set_transaction_execution_result(
+            scheduled_txn_info.txn.header_signature,
+            is_valid=True,
+            context_id=c_id)
+
+        with self.assertRaises(StopIteration):
+            scheduled_txn_info = self.scheduler.next_transaction()
+
 
 class TestParallelScheduler(unittest.TestCase):
     def setUp(self):
