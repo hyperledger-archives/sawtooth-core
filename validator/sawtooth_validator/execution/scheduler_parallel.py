@@ -324,7 +324,7 @@ class ParallelScheduler(Scheduler):
                 self._predecessor_tree.find_write_predecessors(address))
         return dependencies
 
-    def add_batch(self, batch, state_hash=None):
+    def add_batch(self, batch, state_hash=None, required=False):
         with self._condition:
             if self._final:
                 raise SchedulerError('Invalid attempt to add batch to '

@@ -91,7 +91,7 @@ class MockScheduler(Scheduler):
         self.batches = {}
         self.batch_execution_result = batch_execution_result
 
-    def add_batch(self, batch, state_hash=None):
+    def add_batch(self, batch, state_hash=None, required=False):
         self.batches[batch.header_signature] = batch
 
     def get_batch_execution_result(self, batch_signature):

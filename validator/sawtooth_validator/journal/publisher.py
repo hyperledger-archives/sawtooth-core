@@ -254,7 +254,8 @@ class _CandidateBlock(object):
                 self._pending_batches.append(b)
                 self._pending_batch_ids.add(b.header_signature)
                 try:
-                    self._scheduler.add_batch(b)
+                    injected = b.header_signature in self._injected_batch_ids
+                    self._scheduler.add_batch(b, required=injected)
                 except SchedulerError as err:
                     LOGGER.debug("Scheduler error processing batch: %s", err)
         else:
