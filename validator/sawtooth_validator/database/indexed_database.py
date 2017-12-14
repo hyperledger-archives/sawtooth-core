@@ -25,6 +25,14 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_SIZE = 1024**4
 
 
+def _identity_serializer(byte_input):
+    return byte_input
+
+
+def _identity_deserializer(byte_output):
+    return byte_output
+
+
 class IndexOutOfSyncError(Exception):
     pass
 
@@ -37,7 +45,9 @@ class IndexedDatabase(database.Database):
     It must be provided with a serializer and a deserializer.
     """
 
-    def __init__(self, filename, serializer, deserializer,
+    def __init__(self, filename,
+                 serializer=_identity_serializer,
+                 deserializer=_identity_deserializer,
                  indexes=None,
                  flag=None,
                  _size=DEFAULT_SIZE):
@@ -45,8 +55,10 @@ class IndexedDatabase(database.Database):
 
         Args:
             filename (str): The filename of the database file.
-            serializer (function): converts entries to bytes
-            deserializer (function): restores items from bytes
+            serializer (function:optional): converts entries to bytes; defaults
+                to the identity function
+            deserializer (function:optional): restores items from bytes
+                defaults to the identity function
             indexes (dict:(str,function):optional): dict of index names to key
                 functions.  The key functions use the deserialized value and
                 produce n index keys, that will reference the items primary

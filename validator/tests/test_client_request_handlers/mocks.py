@@ -123,7 +123,7 @@ def make_db_and_store(size=3):
         * 3 - {'000...1': b'4', '000...2': b'6', '000...3': b'8', '000...4': b'10'}
     """
     database = DictDatabase()
-    store = MockBlockStore(size=0);
+    store = MockBlockStore(size=0)
     roots = []
 
     merkle = MerkleDatabase(database)

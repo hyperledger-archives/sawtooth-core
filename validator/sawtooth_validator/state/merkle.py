@@ -16,7 +16,9 @@
 import copy
 import logging
 import hashlib
-import cbor
+
+from sawtooth_validator.protobuf.merkle_pb2 import MerkleNode
+from sawtooth_validator.protobuf.merkle_pb2 import MerklePath
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ class MerkleDatabase(object):
             node = self._get_by_hash(hash_key)
 
         if node["v"] is not None:
-            yield (path, self._decode(node["v"]))
+            yield (path, node["v"])
 
         for child in node["c"]:
             for value in self._yield_iter(path + child, node["c"][child]):
@@ -97,7 +99,7 @@ class MerkleDatabase(object):
         return self.get(address)
 
     def get(self, address):
-        return self._decode(self.get_node(address).get('v'))
+        return self.get_node(address).get('v')
 
     def get_node(self, address):
         return self._get_by_addr(address)
@@ -152,10 +154,27 @@ class MerkleDatabase(object):
         return nodes
 
     def _decode(self, encoded):
-        return cbor.loads(encoded)
+        merkle_node = MerkleNode()
+        merkle_node.ParseFromString(encoded)
+        return {
+            'v': (merkle_node.value
+                  if merkle_node.value_state == MerkleNode.VALUE_SET
+                  else None),
+            'c': {path.path_branch: path.hash_key
+                  for path in merkle_node.children}
+        }
 
-    def _encode(self, value):
-        return cbor.dumps(value, sort_keys=True)
+    def _encode(self, node):
+        children = [MerklePath(path_branch=path,
+                               hash_key=key)
+                    for path, key in sorted(node['c'].items(),
+                                            key=lambda child: child[0])]
+        return MerkleNode(
+                value=node['v'],
+                value_state=(MerkleNode.VALUE_SET
+                             if node['v'] is not None
+                             else MerkleNode.VALUE_UNSET),
+                children=children).SerializeToString()
 
     def _encode_and_hash(self, value):
         packed = self._encode(value)
@@ -190,7 +209,8 @@ class MerkleDatabase(object):
         """
 
         Args:
-            set_items (dict): dict key, values where keys are addresses
+            set_items (dict): dict key, values where keys are addresses, and
+                values are bytes
             delete_items (list): list of addresses
             virtual (boolean): True if not committing to disk
                                eg speculative root hash
@@ -206,7 +226,7 @@ class MerkleDatabase(object):
             # since they may add children to paths
             path_map.update(self._get_path_by_addr(set_address,
                                                    return_empty=True))
-            path_map[set_address]["v"] = self._encode(set_items[set_address])
+            path_map[set_address]["v"] = set_items[set_address]
 
         if delete_items is not None:
             for del_address in delete_items:
@@ -256,7 +276,7 @@ class MerkleDatabase(object):
         path_map = self._get_path_by_addr(address, return_empty=True)
 
         # Set the value in the leaf node
-        path_map[path_addresses[0]]["v"] = self._encode(value)
+        path_map[path_addresses[0]]["v"] = value
 
         child = path_map[path_addresses[0]]
 
