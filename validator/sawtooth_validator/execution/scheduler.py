@@ -24,7 +24,7 @@ class Scheduler(object, metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def add_batch(self, batch, state_hash=None):
+    def add_batch(self, batch, state_hash=None, required=False):
         """Adds a batch to the scheduler.
 
         The batch, and thus its associated transactions, will be added to the
@@ -34,6 +34,9 @@ class Scheduler(object, metaclass=ABCMeta):
             batch: A batch_pb2.Batch instance.
             state_hash: The expected resulting state_hash after the
                 transactions have been applied.
+            required: The given batch must be included in the completed
+                schedule.  That is, it will not be removed when a call to
+                `unschedule_incomplete_batches` is made.  Defaults to `False`.
         """
         raise NotImplementedError()
 

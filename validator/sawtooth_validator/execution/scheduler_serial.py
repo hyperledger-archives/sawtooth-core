@@ -120,7 +120,7 @@ class SerialScheduler(Scheduler):
 
             self._condition.notify_all()
 
-    def add_batch(self, batch, state_hash=None):
+    def add_batch(self, batch, state_hash=None, required=False):
         with self._condition:
             if self._final:
                 raise SchedulerError("Scheduler is finalized. Cannot take"
