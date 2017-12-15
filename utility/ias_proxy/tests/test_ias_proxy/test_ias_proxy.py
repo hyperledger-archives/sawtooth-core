@@ -71,7 +71,7 @@ class TestIasProxyClient(TestCase):
         cls._temp_dir = tempfile.mkdtemp()
 
         with mock.patch(
-                'sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave.open') as _:
+                'sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave.open'):
             with mock.patch(
                     'sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave.toml') \
                     as mock_toml:

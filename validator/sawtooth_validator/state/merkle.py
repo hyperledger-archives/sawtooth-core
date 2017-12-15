@@ -23,9 +23,10 @@ LOGGER = logging.getLogger(__name__)
 INIT_ROOT_KEY = ''
 
 # prototype node with value and list of child branch:hash pairs
-NODE_PROTO = {"v": None,
-              "c": {}
-              }
+NODE_PROTO = {
+    "v": None,
+    "c": {}
+}
 
 TOKEN_SIZE = 2
 

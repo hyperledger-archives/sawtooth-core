@@ -73,7 +73,7 @@ class ExecutionContext(object):
         return self._state_hash
 
     def _contains_and_deleted(self, address):
-        return address in self._state and\
+        return address in self._state and \
             self._state[address].deleted_in_context()
 
     def _contains_and_set(self, address):

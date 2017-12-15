@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=consider-using-enumerate
+
 import logging
 import random
 import string

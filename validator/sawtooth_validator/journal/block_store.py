@@ -270,7 +270,8 @@ class BlockStore(MutableMapping):
         """
         block = self._block_store.get(txn_id, index='transaction')
         if not block:
-            raise ValueError('Transaction "%s" not in BlockStore', txn_id)
+            raise ValueError(
+                'Transaction "{}" not in BlockStore'.format(txn_id))
 
         return block
 
@@ -289,7 +290,8 @@ class BlockStore(MutableMapping):
         block = self._block_store.get(
             BlockStore.block_num_to_hex(block_num), index='block_num')
         if not block:
-            raise KeyError('Block number "%s" not in BlockStore', block_num)
+            raise KeyError(
+                'Block number "{}" not in BlockStore'.format(block_num))
 
         return block
 
@@ -319,7 +321,7 @@ class BlockStore(MutableMapping):
         """
         block = self._block_store.get(batch_id, index='batch')
         if not block:
-            raise ValueError('Batch "%s" not in BlockStore', batch_id)
+            raise ValueError('Batch "{}" not in BlockStore'.format(batch_id))
 
         return block
 

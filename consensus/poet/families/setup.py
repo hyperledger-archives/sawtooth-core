@@ -34,23 +34,24 @@ if os.path.exists("/lib/systemd/system"):
          ['packaging/systemd/sawtooth-poet-validator-registry-tp.service']))
 
 
-setup(name='sawtooth-poet-families',
-      version=subprocess.check_output(
-          ['../../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Transaction Processor Families',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'colorlog',
-          'cryptography>=1.7.1',
-          'sawtooth-poet-common',
-          'sawtooth-sdk',
-          'sawtooth-signing',
-      ],
-      data_files=data_files,
-      entry_points={
-          'console_scripts': [
-              'poet-validator-registry-tp = sawtooth_validator_registry.validator_registry.processor.main:main'
-          ]
-      })
+setup(
+    name='sawtooth-poet-families',
+    version=subprocess.check_output(
+        ['../../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth Transaction Processor Families',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'colorlog',
+        'cryptography>=1.7.1',
+        'sawtooth-poet-common',
+        'sawtooth-sdk',
+        'sawtooth-signing',
+    ],
+    data_files=data_files,
+    entry_points={
+        'console_scripts': [
+            'poet-validator-registry-tp = sawtooth_validator_registry.validator_registry.processor.main:main'
+        ]
+    })

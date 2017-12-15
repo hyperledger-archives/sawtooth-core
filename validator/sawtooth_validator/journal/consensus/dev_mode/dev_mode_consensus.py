@@ -19,11 +19,11 @@ import hashlib
 import logging
 
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.consensus.consensus\
+from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
-from sawtooth_validator.journal.consensus.consensus\
+from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
-from sawtooth_validator.journal.consensus.consensus\
+from sawtooth_validator.journal.consensus.consensus \
     import ForkResolverInterface
 
 from sawtooth_validator.state.settings_view import SettingsView
@@ -108,7 +108,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             Boolean: True if the candidate block_header should be claimed.
         """
-        if self._valid_block_publishers\
+        if self._valid_block_publishers \
                 and block_header.signer_public_key \
                 not in self._valid_block_publishers:
             return False

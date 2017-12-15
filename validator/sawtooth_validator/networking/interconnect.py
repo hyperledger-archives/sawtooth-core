@@ -276,7 +276,7 @@ class _SendReceive(object):
                 if queue_size > 10:
                     LOGGER.debug("Dispatch queue size: %s", queue_size)
 
-                zmq_identity, msg_bytes =\
+                zmq_identity, msg_bytes = \
                     yield from self._dispatcher_queue.get()
                 message = validator_pb2.Message()
                 message.ParseFromString(msg_bytes)
@@ -987,7 +987,7 @@ class Interconnect(object):
         :return: future.Future
         """
         if connection_id not in self._connections:
-            raise ValueError("Unknown connection id: %s", connection_id)
+            raise ValueError("Unknown connection id: {}".format(connection_id))
         connection_info = self._connections.get(connection_id)
         if connection_info.connection_type == \
                 ConnectionType.ZMQ_IDENTITY:
@@ -1164,7 +1164,7 @@ class Interconnect(object):
         :return: future.Future
         """
         if connection_id not in self._connections:
-            raise ValueError("Unknown connection id: %s", connection_id)
+            raise ValueError("Unknown connection id: {}".format(connection_id))
         connection_info = self._connections.get(connection_id)
         if connection_info.connection_type == \
                 ConnectionType.ZMQ_IDENTITY:

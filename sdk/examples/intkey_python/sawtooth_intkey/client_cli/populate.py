@@ -15,6 +15,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=consider-using-enumerate
+
 import argparse
 import hashlib
 import os
