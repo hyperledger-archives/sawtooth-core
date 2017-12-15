@@ -137,6 +137,9 @@ do
     esac
 done
 
+echo "pycodestyle $(pycodestyle --version)"
+echo "$(pylint --version)"
+
 if [ "$DRY_RUN" = "1" ]; then
     for dir in core signing validator sdk/python sdk/examples/intkey_python \
         extensions/arcade consensus/poet/cli consensus/poet/common \
