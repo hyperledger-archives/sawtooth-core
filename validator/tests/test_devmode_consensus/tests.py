@@ -30,9 +30,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestCheckPublishBlock(unittest.TestCase):
-    def __init__(self, test_name):
-        super().__init__(test_name)
-
     def create_block_header(self, signer_public_key=None):
         return BlockHeader(signer_public_key=signer_public_key)
 

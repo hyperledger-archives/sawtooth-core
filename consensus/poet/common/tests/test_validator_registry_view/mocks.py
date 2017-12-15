@@ -36,6 +36,8 @@ class MockStateView(object):
 
     def leaves(self, prefix):
         """See sawtooth_validator.state.state_view.StateView.leaves"""
-        return {address: data
-                for address, data in self._state.items()
-                if address.startswith(prefix)}
+        return {
+            address: data
+            for address, data in self._state.items()
+            if address.startswith(prefix)
+        }

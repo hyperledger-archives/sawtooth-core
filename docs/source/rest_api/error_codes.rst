@@ -192,3 +192,6 @@ Error Codes and Descriptions
      - Requests for transaction receipts sent as a GET request must have an 'id'
        query parameter with a comma-separated list of at least one transaction
        id.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

@@ -25,6 +25,7 @@ class ChainIdManager(object):
     The ChainIdManager is in charge of of keeping track of the block-chain-id
     stored in the data_dir.
     """
+
     def __init__(self, data_dir):
         self._data_dir = data_dir
 

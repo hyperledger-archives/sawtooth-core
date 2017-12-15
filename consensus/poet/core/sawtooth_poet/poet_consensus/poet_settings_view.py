@@ -35,7 +35,7 @@ class PoetSettingsView(object):
     _MINIMUM_WAIT_TIME_ = 1.0
     # pylint: disable=invalid-name
     _POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50
-    _SIGNUP_COMMIT_MAXIMUM_DELAY_ = 0
+    _SIGNUP_COMMIT_MAXIMUM_DELAY_ = 10
     _TARGET_WAIT_TIME_ = 20.0
     _ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
     _ZTEST_MINIMUM_WIN_COUNT_ = 3

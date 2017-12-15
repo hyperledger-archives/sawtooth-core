@@ -13,9 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=attribute-defined-outside-init
+
 import unittest
 import logging
-import time
 import operator
 import subprocess
 import shlex
@@ -37,6 +38,7 @@ LOGGER.setLevel(logging.INFO)
 INTKEY_PREFIX = '1cf126'
 XO_PREFIX = '5b7349'
 WAIT = 300
+
 
 class TestTwoFamilies(unittest.TestCase):
 
@@ -108,12 +110,12 @@ class TestTwoFamilies(unittest.TestCase):
             'Expected xo state to be empty')
 
     def verify_state_after_n_updates(self, num):
-        LOGGER.debug('Verifying state after {} updates'.format(num))
+        LOGGER.debug('Verifying state after %s updates', num)
 
         intkey_state = _get_intkey_data()
-        LOGGER.info('Current intkey state: {}'.format(intkey_state))
+        LOGGER.info('Current intkey state: %s', intkey_state)
         xo_data = _get_xo_data()
-        LOGGER.info('Current xo state: {}'.format(xo_data))
+        LOGGER.info('Current xo state: %s', xo_data)
 
         self.assertEqual(
             intkey_state,
@@ -136,6 +138,7 @@ def _send_xo_cmd(cmd_str):
         stderr=subprocess.PIPE,
         check=True)
 
+
 def _send_intkey_cmd(txns):
     batch = IntkeyMessageFactory().create_batch(txns)
     LOGGER.info('Sending intkey txns')
@@ -143,19 +146,22 @@ def _send_intkey_cmd(txns):
 
 # rest_api calls
 
+
 def _post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
     response = _query_rest_api(
         '/batches', data=batch, headers=headers, expected_code=202)
     return _submit_request('{}&wait={}'.format(response['link'], WAIT))
 
+
 def _get_intkey_data():
     state = _get_intkey_state()
     # state is a list of dictionaries: { data: ..., address: ... }
     dicts = [cbor.loads(b64decode(entry['data'])) for entry in state]
     LOGGER.debug(dicts)
-    data = {k:v for d in dicts for k, v in d.items()} # merge dicts
+    data = {k: v for d in dicts for k, v in d.items()}  # merge dicts
     return data
+
 
 def _get_xo_data():
     state = _get_xo_state()
@@ -163,32 +169,40 @@ def _get_xo_data():
     game_name, board, turn, _, _ = data
     return board, turn, game_name
 
+
 def _get_intkey_state():
     state = _get_state_prefix(INTKEY_PREFIX)
     return state
+
 
 def _get_xo_state():
     state = _get_state_prefix(XO_PREFIX)
     return state
 
+
 def _get_state_prefix(prefix):
     response = _query_rest_api('/state?address=' + prefix)
     return response['data']
 
-def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
+
+def _query_rest_api(suffix='', data=None, headers=None, expected_code=200):
+    if headers is None:
+        headers = {}
     url = 'http://rest-api:8008' + suffix
-    return _submit_request(urllib.request.Request(url, data, headers),
-                           expected_code=expected_code)
+    return _submit_request(
+        urllib.request.Request(url, data, headers),
+        expected_code=expected_code)
 
 
 def _submit_request(request, expected_code=200):
     conn = urllib.request.urlopen(request)
-    assert(expected_code == conn.getcode())
+    assert expected_code == conn.getcode()
 
     response = conn.read().decode('utf-8')
     return json.loads(response)
 
 # verifiers
+
 
 class XoTestVerifier:
     def __init__(self):
@@ -213,6 +227,7 @@ class XoTestVerifier:
             return state[num]
         except KeyError:
             return ()
+
 
 class IntkeyTestVerifier:
     def __init__(self):

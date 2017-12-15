@@ -24,7 +24,9 @@ misrepresented as being the original source code.
 Ren� Nyffenegger rene.nyffenegger@adp-gmbh.ch
 
 */
-// source: http://www.adp-gmbh.ch/cpp/common/base64.html
+// source: https://github.com/ReneNyffenegger/cpp-base64
+// Notice: This version has been modified from the original
+
 #include "base64.h"
 #include <iostream>
 

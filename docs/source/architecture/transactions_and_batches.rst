@@ -198,3 +198,6 @@ in the batcher_public_key field.  This is to prevent transactions from being reu
 separate from the intended batch.  So, for example, unless you have the
 batcher's private key, it is not possible to take transactions from a batch and
 repackage them into a new batch, omitting some of the transactions.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

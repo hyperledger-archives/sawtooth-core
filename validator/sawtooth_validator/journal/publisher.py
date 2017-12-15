@@ -43,6 +43,7 @@ class PendingBatchObserver(metaclass=abc.ABCMeta):
     """An interface class for components wishing to be notified when a Batch
     has begun being processed.
     """
+
     @abc.abstractmethod
     def notify_batch_pending(self, batch):
         """This method will be called when a Batch has passed initial
@@ -101,6 +102,7 @@ class _CandidateBlock(object):
     This allows the BlockPublisher to focus on when to create and finalize
     a block and not worry about how the block is built.
     """
+
     def __init__(self,
                  block_store,
                  consensus,
@@ -354,8 +356,10 @@ class _CandidateBlock(object):
                     # one in the list.
                     bad_batches.append(batch)
                     pending_batches.clear()
-                    pending_batches.extend([x for x in self._pending_batches
-                                            if x not in bad_batches])
+                    pending_batches.extend([
+                        x for x in self._pending_batches
+                        if x not in bad_batches
+                    ])
                     return None
                 else:
                     builder.add_batch(batch)
@@ -390,6 +394,7 @@ class BlockPublisher(object):
     Responsible for generating new blocks and publishing them when the
     Consensus deems it appropriate.
     """
+
     def __init__(self,
                  transaction_executor,
                  block_cache,
@@ -662,8 +667,8 @@ class BlockPublisher(object):
                     self._build_candidate_block(self._chain_head)
 
                 if self._candidate_block and (
-                            force or
-                            self._candidate_block.has_pending_batches()) and \
+                    force or
+                    self._candidate_block.has_pending_batches()) and \
                         self._candidate_block.check_publish_block():
 
                     pending_batches = []  # will receive the list of batches

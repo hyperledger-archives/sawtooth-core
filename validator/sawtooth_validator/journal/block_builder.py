@@ -20,6 +20,7 @@ class BlockBuilder(object):
     """
     Utility class to assemble new blocks. Used by the block publisher.
     """
+
     def __init__(self, block_header):
         self._header_signature = None
         self.batches = []

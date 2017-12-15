@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=protected-access
+
 import unittest
 import logging
 import ssl
@@ -29,7 +31,6 @@ LOGGER.setLevel(logging.INFO)
 
 
 class TestBasicAuth(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         wait_until_status('http://rest-api:8008/blocks', status_code=200)

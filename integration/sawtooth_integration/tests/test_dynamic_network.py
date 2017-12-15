@@ -29,6 +29,7 @@ LOGGER.setLevel(logging.INFO)
 WAIT = 120
 ASSERT_CONSENSUS_TIMEOUT = 90
 
+
 class TestDynamicNetwork(unittest.TestCase):
     def setUp(self):
         self.nodes = {}
@@ -154,7 +155,7 @@ class TestDynamicNetwork(unittest.TestCase):
             client.poll_for_batches([batch_id])
 
     def send_increment_batch(self, client, batch_num, time_between_batches):
-        LOGGER.info('Sending batch {} @ {}'.format(batch_num, client.url))
+        LOGGER.info('Sending batch %s @ %s', batch_num, client.url)
         return client.send_txns(self.increment)
 
     def send_populate_batch(self, time_between_batches):
@@ -178,7 +179,7 @@ class TestDynamicNetwork(unittest.TestCase):
                    peering,
                    schedulers,
                    poet_kwargs):
-        LOGGER.info('Starting node {}'.format(num))
+        LOGGER.info('Starting node %s', num)
         sawtooth_home = mkdtemp()
         with SetSawtoothHome(sawtooth_home):
             processes = NodeController.start_node(
@@ -191,7 +192,8 @@ class TestDynamicNetwork(unittest.TestCase):
                 raise subprocess.CalledProcessError(proc.pid, proc.returncode)
 
         self.nodes[num] = processes
-        self.clients[num] = IntkeyClient(NodeController.http_address(num), WAIT)
+        self.clients[num] = IntkeyClient(
+            NodeController.http_address(num), WAIT)
         time.sleep(1)
 
     # nodes are stopped in FIFO order
@@ -203,7 +205,7 @@ class TestDynamicNetwork(unittest.TestCase):
             self.clients.pop(num)
 
     def stop_node(self, num):
-        LOGGER.info('Stopping node {}'.format(num))
+        LOGGER.info('Stopping node %s', num)
         processes = self.nodes[num]
         NodeController.stop_node(processes)
         time.sleep(1)
@@ -220,12 +222,12 @@ class TestDynamicNetwork(unittest.TestCase):
     def in_consensus(self):
         tolerance = self.earliest_client().calculate_tolerance()
 
-        LOGGER.info('Verifying consensus @ tolerance {}'.format(tolerance))
+        LOGGER.info('Verifying consensus @ tolerance %s', tolerance)
 
         # for convenience, list the blocks
         for client in self.clients.values():
             url = client.url
-            LOGGER.info('Blocks @ {}'.format(url))
+            LOGGER.info('Blocks @ %s', url)
             subprocess.run(shlex.split(
                 'sawtooth block list --url {}'.format(url)))
 
@@ -244,6 +246,7 @@ class TestDynamicNetwork(unittest.TestCase):
     def earliest_client(self):
         earliest = min(self.clients.keys())
         return self.clients[earliest]
+
 
 def make_txns():
     jacksons = 'michael', 'tito', 'jackie', 'jermaine', 'marlon'

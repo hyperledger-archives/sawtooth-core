@@ -18,7 +18,7 @@ Settings Transaction Processor CLI (sawtooth-settings)
 ******************************************************
 
 The Settings transaction processor CLI, ``sawtooth-settings``, starts
-starts a Settings transaction processor. This transaction family provides
+a Settings transaction processor. This transaction family provides
 a methodology for storing on-chain configuration settings.
 
 The settings stored in state as a result of this transaction family play a
@@ -45,3 +45,6 @@ which is required in order to apply changes to on-chain settings.
 .. literalinclude:: output/settings-tp_usage.out
    :language: console
    :linenos:
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

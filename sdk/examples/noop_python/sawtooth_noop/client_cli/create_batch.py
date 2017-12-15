@@ -34,7 +34,8 @@ LOGGER = logging.getLogger(__name__)
 
 class NoopPayload(object):
     def __init__(self):
-        self.nonce = binascii.b2a_hex(random.getrandbits(8*8).to_bytes(8,hbyteorder='little'))
+        self.nonce = binascii.b2a_hex(random.getrandbits(
+            8 * 8).to_bytes(8, hbyteorder='little'))
         self._sha512 = None
 
     def sha512(self):

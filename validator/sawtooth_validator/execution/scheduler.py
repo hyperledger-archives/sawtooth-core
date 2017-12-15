@@ -233,6 +233,7 @@ class BatchExecutionResult(object):
             in the BatchExecutionResult for batches that were added to
             add_batch with a state hash.
     """
+
     def __init__(self, is_valid, state_hash):
         self.is_valid = is_valid
         self.state_hash = state_hash
@@ -258,6 +259,7 @@ class TxnExecutionResult:
         error_data (bytes): Error data that was returned while executing this
             transaction.
     """
+
     def __init__(self, signature, is_valid, context_id=None, state_hash=None,
                  state_changes=None, events=None, data=None, error_message="",
                  error_data=b""):
@@ -291,6 +293,7 @@ class TxnInformation(object):
         state_hash (str): the state hash that
                                  this txn should be applied against
     """
+
     def __init__(self, txn, state_hash, base_context_ids):
         self.txn = txn
         self.state_hash = state_hash

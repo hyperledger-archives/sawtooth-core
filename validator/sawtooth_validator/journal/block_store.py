@@ -28,13 +28,15 @@ class BlockStore(MutableMapping):
     objects are correctly wrapped and unwrapped as they are stored and
     retrieved.
     """
+
     def __init__(self, block_db):
         self._block_store = block_db
 
     def __setitem__(self, key, value):
         if key != value.identifier:
-            raise KeyError("Invalid key to store block under: {} expected {}".
-                           format(key, value.identifier))
+            raise KeyError(
+                "Invalid key to store block under: {} expected {}".format(
+                    key, value.identifier))
         self._block_store.put(key, value)
 
     def __getitem__(self, key):
@@ -184,8 +186,8 @@ class BlockStore(MutableMapping):
                 start_block_num = BlockStore.block_num_to_hex(
                     start_block.block_num)
                 if not curs.seek(start_block_num):
-                    raise ValueError('block {} is not a valid block'.format(
-                        start_block))
+                    raise ValueError(
+                        'block {} is not a valid block'.format(start_block))
             elif start_block_num:
                 if not curs.seek(start_block_num):
                     raise ValueError('Block number {} does not reference a '
@@ -393,8 +395,10 @@ class BlockStore(MutableMapping):
         """
         blocks = self._block_store.get_multi(batch_ids, index='batch')
 
-        return [BlockStore._get_batch_from_block(block, batch_id)
-                for batch_id, block in blocks]
+        return [
+            BlockStore._get_batch_from_block(block, batch_id)
+            for batch_id, block in blocks
+        ]
 
     @staticmethod
     def _get_batch_from_block(block, batch_id):
@@ -425,8 +429,10 @@ class BlockStore(MutableMapping):
         blocks = self._block_store.get_multi(transaction_ids,
                                              index='transaction')
 
-        return [BlockStore._get_txn_from_block(block, txn_id)
-                for txn_id, block in blocks]
+        return [
+            BlockStore._get_txn_from_block(block, txn_id)
+            for txn_id, block in blocks
+        ]
 
     @staticmethod
     def _get_txn_from_block(block, txn_id):

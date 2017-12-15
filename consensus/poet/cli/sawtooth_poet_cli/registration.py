@@ -198,8 +198,7 @@ def do_create(args):
         with open(args.output, 'wb') as batch_file:
             batch_file.write(batch_list.SerializeToString())
     except IOError as e:
-        raise CliException(
-            'Unable to write to batch file: {}'.format(str(e)))
+        raise CliException('Unable to write to batch file: {}'.format(str(e)))
 
 
 def _create_batch(signer, transactions):
@@ -222,8 +221,7 @@ def _create_batch(signer, transactions):
     return batch_pb.Batch(
         header=batch_header,
         header_signature=signer.sign(batch_header),
-        transactions=transactions
-    )
+        transactions=transactions)
 
 
 def _read_signer(key_filename):

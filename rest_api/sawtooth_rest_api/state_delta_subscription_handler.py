@@ -49,6 +49,7 @@ class StateDeltaSubscriberHandler:
     all are fed state deltas from the incoming complete stream, filtered by
     this handler according to their preferred filters.
     """
+
     def __init__(self, connection):
         """
         Constructs this handler on a given validator connection.
@@ -168,7 +169,7 @@ class StateDeltaSubscriberHandler:
                 del self._subscribers[index]
 
             if not self._subscribers:
-                await self._unregister_subscriptions()
+                asyncio.ensure_future(self._unregister_subscriptions())
 
     async def _handle_disconnect(self):
         LOGGER.debug('Validator disconnected')
@@ -215,22 +216,29 @@ class StateDeltaSubscriberHandler:
 
             self._listening = True
             self._delta_task = asyncio.ensure_future(self._listen_for_events())
+        except asyncio.TimeoutError as e:
+            LOGGER.error('Unable to subscribe to events: %s', str(e))
         except DisconnectError:
             LOGGER.debug(
                 'Unable to register: validator connection is missing.')
 
     async def _unregister_subscriptions(self):
-        if self._delta_task:
-            self._listening = False
-            self._delta_task.cancel()
-            self._delta_task = None
+        with await self._subscriber_lock:
+            if self._delta_task and not self._subscribers:
+                self._listening = False
+                self._delta_task.cancel()
+                self._delta_task = None
 
-            LOGGER.info('Unsubscribing for state delta events')
-            req = client_event_pb2.ClientEventsUnsubscribeRequest()
-            await self._connection.send(
-                Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
-                req.SerializeToString(),
-                timeout=DEFAULT_TIMEOUT)
+                req = client_event_pb2.ClientEventsUnsubscribeRequest()
+                try:
+                    await self._connection.send(
+                        Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
+                        req.SerializeToString(),
+                        timeout=DEFAULT_TIMEOUT)
+                    LOGGER.info('Unsubscribed to state delta events')
+                except asyncio.TimeoutError as e:
+                    LOGGER.error('Unable to unsubscribe from events: %s',
+                                 str(e))
 
     async def _handle_get_block_deltas(self, web_sock, get_block_message):
         if 'block_id' not in get_block_message:

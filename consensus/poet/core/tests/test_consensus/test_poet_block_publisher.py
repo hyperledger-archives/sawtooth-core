@@ -170,7 +170,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_signup_info,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ Test verifies that PoET Block Publisher fails if
         a validator's signup info was not committed to
         the block chain within the allowed configured delay
@@ -296,7 +295,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_signup_info,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ K Policy: Test verifies that PoET Block Publisher fails if
             if a validator attempts to claim more blocks than is allowed
             by the key block claim limit
@@ -423,7 +421,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_signup_info,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ C Policy: Test verifies that PoET Block Publisher fails
         if a validator attempts to claim a block before
         the block claim delay block has passed
@@ -538,7 +535,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_signup_info,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ Z Policy: Test verifies that PoET Block Publisher fails
         if a validator attempts to claim more blocks frequently than is allowed
         """
@@ -651,7 +647,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_signup_info,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ Test verifies that PoET Block Publisher succeeds
         if a validator successfully passes all criteria necessary
         to publish a block
@@ -753,7 +748,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_wait_time,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ Test verifies that PoET Block Publisher only claims
          readiness if the wait timer has expired
         """
@@ -865,7 +859,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_wait_time,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ Test verifies that PoET Block Publisher doesn't
          claims readiness if the wait timer hasn't expired
         """

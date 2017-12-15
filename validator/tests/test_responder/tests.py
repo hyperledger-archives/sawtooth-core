@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=invalid-name
+
 import unittest
+
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf import block_pb2
@@ -83,7 +86,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_sent(
             connection_id="Connection_1",
             message_type=validator_pb2.Message.GOSSIP_BLOCK_RESPONSE
-            )
+        )
 
     def test_block_responder_handler_requested(self):
         """
@@ -135,7 +138,6 @@ class TestResponder(unittest.TestCase):
             requested_id="ABC", connection_id="Connection_2")
         self.assert_message_not_sent(connection_id="Connection_2")
 
-
     def test_responder_block_response_handler(self):
         """
         Test that the ResponderBlockResponseHandler, after receiving a Block
@@ -175,7 +177,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_sent(
             connection_id="Connection_2",
             message_type=validator_pb2.Message.GOSSIP_BLOCK_RESPONSE
-            )
+        )
         # The request for block "ABC" from "Connection_2" is no longer pending
         # it should be removed from the pending request cache.
         self.assert_request_not_pending(requested_id="ABC")
@@ -214,7 +216,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_sent(
             connection_id="Connection_1",
             message_type=validator_pb2.Message.GOSSIP_BATCH_RESPONSE
-            )
+        )
 
     def test_batch_by_id_responder_handler_requested(self):
         """
@@ -264,7 +266,6 @@ class TestResponder(unittest.TestCase):
             requested_id="abc", connection_id="Connection_2")
         self.assert_message_not_sent(connection_id="Connection_2")
 
-
     def test_batch_by_transaction_id_response_handler(self):
         """
         Test that the BatchByTransactionIdResponderHandler correctly broadcasts
@@ -284,7 +285,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_was_broadcasted(
             message,
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST
-            )
+        )
         self.assert_request_pending(
             requested_id="123", connection_id="Connection_1")
         self.assert_message_not_sent(connection_id="Connection_1")
@@ -305,7 +306,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_sent(
             connection_id="Connection_1",
             message_type=validator_pb2.Message.GOSSIP_BATCH_RESPONSE
-            )
+        )
 
     def test_batch_by_transaction_id_response_handler_requested(self):
         """
@@ -325,7 +326,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_was_broadcasted(
             message,
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST
-            )
+        )
         self.assert_request_pending(
             requested_id="123", connection_id="Connection_1")
         self.assert_message_not_sent(connection_id="Connection_1")
@@ -340,7 +341,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_was_not_broadcasted(
             message,
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST
-            )
+        )
 
         self.assert_request_not_pending(
             requested_id="123", connection_id="Connection_2")
@@ -354,12 +355,10 @@ class TestResponder(unittest.TestCase):
         self.assert_message_was_not_broadcasted(
             message,
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST
-            )
+        )
         self.assert_request_pending(
             requested_id="123", connection_id="Connection_2")
         self.assert_message_not_sent(connection_id="Connection_2")
-
-
 
     def test_batch_by_transaction_id_multiple_txn_ids(self):
         """
@@ -385,7 +384,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_sent(
             connection_id="Connection_1",
             message_type=validator_pb2.Message.GOSSIP_BATCH_RESPONSE
-            )
+        )
 
         # Broadcast a BatchByTransactionIdRequest for just 456
         request_message = \
@@ -439,7 +438,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_sent(
             connection_id="Connection_2",
             message_type=validator_pb2.Message.GOSSIP_BATCH_RESPONSE
-            )
+        )
         # The request for batch "abc" from "Connection_2" is no longer pending
         # it should be removed from the pending request cache.
         self.assert_request_not_pending(requested_id="abc")
@@ -481,7 +480,7 @@ class TestResponder(unittest.TestCase):
         self.assert_message_sent(
             connection_id="Connection_2",
             message_type=validator_pb2.Message.GOSSIP_BATCH_RESPONSE
-            )
+        )
         # The request for transaction_id "123" from "Connection_2" is no
         # longer pending it should be removed from the pending request cache.
         self.assert_request_not_pending(requested_id="123")
@@ -501,8 +500,8 @@ class TestResponder(unittest.TestCase):
 
     def assert_message_sent(self, connection_id, message_type):
         self.assertIsNotNone(self.gossip.sent.get(connection_id))
-        self.assertTrue(self.gossip.sent.get(connection_id)[0][0] == \
-            message_type)
+        self.assertTrue(self.gossip.sent.get(connection_id)[0][0] ==
+                        message_type)
 
     def assert_request_pending(self, requested_id, connection_id):
         self.assertIn(connection_id, self.responder.get_request(requested_id))

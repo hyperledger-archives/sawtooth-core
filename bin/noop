@@ -24,8 +24,8 @@ build_str = "lib.{}-{}.{}".format(
     sys.version_info.major, sys.version_info.minor)
 
 sys.path.insert(0, os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'signing'))
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'signing'))
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__))),

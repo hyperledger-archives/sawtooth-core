@@ -232,3 +232,6 @@ the address where the validator_info should be stored. Store the serialized
 ValidatorInfo protocol buffer in state at the address as mentioned above. If
 this validator is new (not updating its SignUpInfo), the validator’s id needs
 to be added to the validator_map.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

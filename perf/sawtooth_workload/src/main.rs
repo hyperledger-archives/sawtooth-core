@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Intel Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
 extern crate clap;
 extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
@@ -105,10 +121,10 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     buf.pop(); // remove the new line
 
     let private_key = try!(Secp256k1PrivateKey::from_wif(&buf));
-    let algorithm = try!(signing::create_algorithm("secp256k1"));
+    let context = try!(signing::create_context("secp256k1"));
 
     if let Err(err) = generate_signed_batches(&mut in_file, &mut out_file,
-                                              max_txns, algorithm.as_ref(), &private_key) {
+                                              max_txns, context.as_ref(), &private_key) {
         return Err(Box::new(err));
     }
 

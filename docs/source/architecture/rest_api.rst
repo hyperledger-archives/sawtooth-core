@@ -309,3 +309,6 @@ require some strategy for persistent storage.
    While the REST API does not support any sort of authorization internally, it
    is entirely possible to put it behind a proxy that does. See:
    :doc:`/sysadmin_guide/rest_auth_proxy`
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

@@ -31,7 +31,6 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.protobuf.validator_pb2 import Message
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -157,6 +156,7 @@ class BatchListStructureVerifier(Handler):
                 status=HandlerStatus.RETURN,
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+
         try:
             request = client_batch_submit_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)

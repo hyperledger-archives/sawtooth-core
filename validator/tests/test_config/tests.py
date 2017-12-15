@@ -16,7 +16,6 @@
 import os
 import unittest
 import shutil
-import sys
 import tempfile
 
 from sawtooth_validator.config.path import load_path_config
@@ -26,9 +25,6 @@ from sawtooth_validator.config.validator import load_toml_validator_config
 
 
 class TestPathConfig(unittest.TestCase):
-    def __init__(self, test_name):
-        super().__init__(test_name)
-
     def test_path_config_defaults_sawtooth_home(self):
         """Tests the default path configuration settings when SAWTOOTH_HOME
         is set.
@@ -146,7 +142,6 @@ class TestPathConfig(unittest.TestCase):
 
 
 class TestValidatorConfig(unittest.TestCase):
-
     def test_validator_config_defaults(self):
         """Tests the default validator configuration when no other configs.
         The defaults should be as follows:
@@ -156,11 +151,13 @@ class TestValidatorConfig(unittest.TestCase):
             - endpoint = None
         """
         config = load_default_validator_config()
-        self.assertEquals(config.bind_network, "tcp://127.0.0.1:8800")
-        self.assertEquals(config.bind_component, "tcp://127.0.0.1:4004")
-        self.assertEquals(config.endpoint, None)
-        self.assertEquals(config.peering, "static")
-        self.assertEquals(config.scheduler, "serial")
+        self.assertEqual(config.bind_network, "tcp://127.0.0.1:8800")
+        self.assertEqual(config.bind_component, "tcp://127.0.0.1:4004")
+        self.assertEqual(config.endpoint, None)
+        self.assertEqual(config.peering, "static")
+        self.assertEqual(config.scheduler, "serial")
+        self.assertEqual(config.minimum_peer_connectivity, 3)
+        self.assertEqual(config.maximum_peer_connectivity, 10)
 
     def test_validator_config_load_from_file(self):
         """Tests loading config settings from a TOML configuration file.
@@ -203,6 +200,10 @@ class TestValidatorConfig(unittest.TestCase):
                 fd.write(os.linesep)
                 fd.write('opentsdb_password = "secret"')
                 fd.write(os.linesep)
+                fd.write('minimum_peer_connectivity = 1')
+                fd.write(os.linesep)
+                fd.write('maximum_peer_connectivity = 100')
+                fd.write(os.linesep)
                 fd.write('[roles]')
                 fd.write(os.linesep)
                 fd.write('network = "trust"')
@@ -216,12 +217,13 @@ class TestValidatorConfig(unittest.TestCase):
             self.assertEqual(config.peers, ["tcp://peer:8801"])
             self.assertEqual(config.seeds, ["tcp://peer:8802"])
             self.assertEqual(config.scheduler, "serial")
-            self.assertEquals(config.roles, {"network": "trust"})
-            self.assertEquals(config.opentsdb_db,  "data_base")
-            self.assertEquals(config.opentsdb_url, "http://data_base:0000")
-            self.assertEquals(config.opentsdb_username, "name")
-            self.assertEquals(config.opentsdb_password, "secret")
-
+            self.assertEqual(config.roles, {"network": "trust"})
+            self.assertEqual(config.opentsdb_db, "data_base")
+            self.assertEqual(config.opentsdb_url, "http://data_base:0000")
+            self.assertEqual(config.opentsdb_username, "name")
+            self.assertEqual(config.opentsdb_password, "secret")
+            self.assertEqual(config.minimum_peer_connectivity, 1)
+            self.assertEqual(config.maximum_peer_connectivity, 100)
 
         finally:
             os.environ.clear()
@@ -232,12 +234,14 @@ class TestValidatorConfig(unittest.TestCase):
         """Tests detecting invalid settings defined in a TOML configuration
         file.
 
-        Creates a temporary directory and writes a validator.toml config file
-        with an invalid setting inside, then loads that config and verifies an exception is thrown.
+        Creates a temporary directory and writes a validator.toml
+        config file with an invalid setting inside, then loads that
+        config and verifies an exception is thrown.
 
 
-        The test also attempts to avoid environment variables from interfering
-        with the test by clearing os.environ and restoring it after the test.
+        The test also attempts to avoid environment variables from
+        interfering with the test by clearing os.environ and restoring
+        it after the test.
         """
         orig_environ = dict(os.environ)
         os.environ.clear()

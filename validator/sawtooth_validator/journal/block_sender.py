@@ -33,7 +33,6 @@ class BlockSender(object, metaclass=abc.ABCMeta):
 
 
 class BroadcastBlockSender(BlockSender):
-
     def __init__(self, completer, gossip):
         self._completer = completer
         self._gossip = gossip

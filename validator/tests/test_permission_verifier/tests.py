@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+# pylint: disable=invalid-name
+
 import unittest
-import cbor
 import hashlib
-import random
-import string
+
+import cbor
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
@@ -27,12 +29,13 @@ from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.transaction_receipt_pb2 import TransactionReceipt
+from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
+    TransactionReceipt
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import IdentityCache
 from sawtooth_validator.gossip.identity_observer import IdentityObserver
-from test_permission_verifier.mocks import  MockIdentityViewFactory
+from test_permission_verifier.mocks import MockIdentityViewFactory
 from test_permission_verifier.mocks import make_policy
 
 
@@ -62,10 +65,14 @@ class TestPermissionVerifier(unittest.TestCase):
 
     def _create_transactions(self, count):
         txn_list = []
-        for i in range(count):
-            payload = {'Verb': 'set',
-                       'Name': 'name' ,
-                       'Value': 1}
+
+        for _ in range(count):
+            payload = {
+                'Verb': 'set',
+                'Name': 'name',
+                'Value': 1,
+            }
+
             intkey_prefix = \
                 hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
 
@@ -102,7 +109,7 @@ class TestPermissionVerifier(unittest.TestCase):
 
         batch_list = []
 
-        for i in range(batch_count):
+        for _ in range(batch_count):
             txn_list = self._create_transactions(txn_count)
             txn_sig_list = [txn.header_signature for txn in txn_list]
 
@@ -114,9 +121,10 @@ class TestPermissionVerifier(unittest.TestCase):
 
             signature = self.signer.sign(header_bytes)
 
-            batch = Batch(header=header_bytes,
-                          transactions=txn_list,
-                          header_signature=signature)
+            batch = Batch(
+                header=header_bytes,
+                transactions=txn_list,
+                header_signature=signature)
 
             batch_list.append(batch)
 
@@ -154,8 +162,8 @@ class TestPermissionVerifier(unittest.TestCase):
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
         """
-        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +  \
-                                               self.public_key])
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +
+                                                           self.public_key])
         self._identity_view_factory.add_role("transactor", "policy1")
         batch = self._create_batches(1, 1)[0]
         allowed = self.permission_verifier.is_batch_signer_authorized(batch)
@@ -174,8 +182,8 @@ class TestPermissionVerifier(unittest.TestCase):
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
         """
-        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +  \
-                                               self.public_key])
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +
+                                                           self.public_key])
         self._identity_view_factory.add_role("transactor.batch_signer",
                                              "policy1")
         batch = self._create_batches(1, 1)[0]
@@ -196,8 +204,8 @@ class TestPermissionVerifier(unittest.TestCase):
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
         """
-        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +  \
-                                               self.public_key])
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +
+                                                           self.public_key])
         self._identity_view_factory.add_role("transactor.transaction_signer",
                                              "policy1")
         batch = self._create_batches(1, 1)[0]
@@ -219,8 +227,8 @@ class TestPermissionVerifier(unittest.TestCase):
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
         """
-        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +  \
-                                               self.public_key])
+        self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY " +
+                                                           self.public_key])
         self._identity_view_factory.add_role(
             "transactor.transaction_signer.intkey",
             "policy1")
@@ -284,10 +292,11 @@ class TestPermissionVerifier(unittest.TestCase):
 
     def test_off_chain_transactor_transaction_signer(self):
         """
-        Test that role:"transactor.transaction_signer" is checked properly if in
-        permissions.
+        Test that role:"transactor.transaction_signer" is checked
+        properly if in permissions.
             1. Set policy to permit signing key. Batch should be allowed.
             2. Set policy to permit some other key. Batch should be rejected.
+
         """
         policy = make_policy("policy1", ["PERMIT_KEY " + self.public_key])
         self.permissions["transactor.transaction_signer"] = policy
@@ -354,8 +363,8 @@ class TestPermissionVerifier(unittest.TestCase):
             "policy1", ["PERMIT_KEY " + self.public_key])
 
         self._identity_view_factory.add_role(
-                "network",
-                "policy1")
+            "network",
+            "policy1")
 
         allowed = self.permission_verifier.check_network_role(self.public_key)
         self.assertTrue(allowed)
@@ -363,8 +372,8 @@ class TestPermissionVerifier(unittest.TestCase):
         self._identity_cache.forked()
         self._identity_view_factory.add_policy("policy2", ["PERMIT_KEY other"])
         self._identity_view_factory.add_role(
-                "network",
-                "policy2")
+            "network",
+            "policy2")
         allowed = self.permission_verifier.check_network_role(self.public_key)
         self.assertFalse(allowed)
 
@@ -405,8 +414,8 @@ class TestPermissionVerifier(unittest.TestCase):
             "policy1", ["PERMIT_KEY " + self.public_key])
 
         self._identity_view_factory.add_role(
-                "network.consensus",
-                "policy1")
+            "network.consensus",
+            "policy1")
 
         allowed = self.permission_verifier.check_network_consensus_role(
             self.public_key)
@@ -415,8 +424,8 @@ class TestPermissionVerifier(unittest.TestCase):
         self._identity_cache.forked()
         self._identity_view_factory.add_policy("policy2", ["PERMIT_KEY other"])
         self._identity_view_factory.add_role(
-                "network.consensus",
-                "policy2")
+            "network.consensus",
+            "policy2")
         allowed = self.permission_verifier.check_network_consensus_role(
             self.public_key)
         self.assertFalse(allowed)
@@ -436,8 +445,8 @@ class TestIdentityObserver(unittest.TestCase):
         # Make sure IdentityCache has populated roles and policy
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
         self._identity_view_factory.add_role(
-                "network",
-                "policy1")
+            "network",
+            "policy1")
         self._identity_cache.get_role("network", "state_root")
         self._identity_cache.get_policy("policy1", "state_root")
 
@@ -449,9 +458,10 @@ class TestIdentityObserver(unittest.TestCase):
             block_num=85,
             state_root_hash="0987654321fedcba",
             previous_block_id=previous_block_id)
-        block = BlockWrapper(Block(
-            header_signature="abcdef1234567890",
-            header=block_header.SerializeToString()))
+        block = BlockWrapper(
+            Block(
+                header_signature="abcdef1234567890",
+                header=block_header.SerializeToString()))
         return block
 
     def test_chain_update(self):
@@ -469,24 +479,24 @@ class TestIdentityObserver(unittest.TestCase):
 
         # Add next block and event that says network was updated.
         block2 = self.create_block("abcdef1234567890")
-        event = Event(event_type="identity/update",
-                      attributes=[Event.Attribute(key="updated",
-                                                  value="network")])
+        event = Event(
+            event_type="identity/update",
+            attributes=[Event.Attribute(key="updated", value="network")])
         receipts = TransactionReceipt(events=[event])
         self._identity_obsever.chain_update(block2, [receipts])
         # Check that only "network" was invalidated
-        self.assertEquals(self._identity_cache["network"], None)
+        self.assertEqual(self._identity_cache["network"], None)
         self.assertNotEqual(self._identity_cache["policy1"], None)
 
         # check that the correct values can be fetched from state.
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
 
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_role("network", "state_root"),
             identity_view.get_role("network"))
 
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_policy("policy1", "state_root"),
             identity_view.get_policy("policy1"))
 
@@ -499,17 +509,17 @@ class TestIdentityObserver(unittest.TestCase):
         self._identity_obsever.chain_update(block, [])
         # Check that all items are invalid
         for key in self._identity_cache:
-            self.assertEquals(self._identity_cache[key], None)
+            self.assertEqual(self._identity_cache[key], None)
 
         # Check that the items can be fetched from state.
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
 
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_role("network", "state_root"),
             identity_view.get_role("network"))
 
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_policy("policy1", "state_root"),
             identity_view.get_policy("policy1"))
 
@@ -530,13 +540,13 @@ class TestIdentityCache(unittest.TestCase):
         """
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
         self._identity_view_factory.add_role(
-                "network",
-                "policy1")
+            "network",
+            "policy1")
         self.assertIsNone(self._identity_cache["network"])
 
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_role("network", "state_root"),
             identity_view.get_role("network"))
 
@@ -546,13 +556,13 @@ class TestIdentityCache(unittest.TestCase):
         """
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
         self._identity_view_factory.add_role(
-                "network",
-                "policy1")
+            "network",
+            "policy1")
         self.assertIsNone(self._identity_cache["policy1"])
 
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_policy("policy1", "state_root"),
             identity_view.get_policy("policy1"))
 
@@ -562,14 +572,14 @@ class TestIdentityCache(unittest.TestCase):
         """
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
         self._identity_view_factory.add_role(
-                "network",
-                "policy1")
+            "network",
+            "policy1")
         self._identity_cache.invalidate("network")
-        self.assertEquals(self._identity_cache["network"], None)
+        self.assertEqual(self._identity_cache["network"], None)
 
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_role("network", "state_root"),
             identity_view.get_role("network"))
 
@@ -579,14 +589,14 @@ class TestIdentityCache(unittest.TestCase):
         """
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
         self._identity_view_factory.add_role(
-                "network",
-                "policy1")
+            "network",
+            "policy1")
         self._identity_cache.invalidate("policy1")
         self.assertEqual(self._identity_cache["policy1"], None)
 
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_policy("policy1", "state_root"),
             identity_view.get_policy("policy1"))
 
@@ -597,8 +607,8 @@ class TestIdentityCache(unittest.TestCase):
         """
         self._identity_view_factory.add_policy("policy1", ["PERMIT_KEY key"])
         self._identity_view_factory.add_role(
-                "network",
-                "policy1")
+            "network",
+            "policy1")
 
         identity_view = \
             self._identity_view_factory.create_identity_view("state_root")
@@ -606,16 +616,16 @@ class TestIdentityCache(unittest.TestCase):
         self._identity_cache.get_policy("policy1", "state_root")
         self._identity_cache.get_role("network", "state_root")
 
-        self.assertEquals(len(self._identity_cache), 2)
+        self.assertEqual(len(self._identity_cache), 2)
         self._identity_cache.forked()
 
-        self.assertEquals(self._identity_cache["network"], None)
-        self.assertEquals(self._identity_cache["policy1"], None)
+        self.assertEqual(self._identity_cache["network"], None)
+        self.assertEqual(self._identity_cache["policy1"], None)
 
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_policy("policy1", "state_root"),
             identity_view.get_policy("policy1"))
 
-        self.assertEquals(
+        self.assertEqual(
             self._identity_cache.get_role("network", "state_root"),
             identity_view.get_role("network"))

@@ -37,6 +37,7 @@ This usage information is also available on the command line by using the
 
    cli/sawtooth.rst
    cli/sawadm.rst
+   cli/sawnet.rst
    cli/sawset.rst
    cli/poet.rst
    cli/validator.rst
@@ -45,3 +46,6 @@ This usage information is also available on the command line by using the
    cli/xo.rst
    cli/settings-tp.rst
    cli/identity-tp.rst
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

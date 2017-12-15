@@ -60,8 +60,7 @@ def _signer():
 
 
 class MessageFactory(object):
-    def __init__(self, family_name, family_version,
-                 namespace, signer=None):
+    def __init__(self, family_name, family_version, namespace, signer=None):
         self.family_name = family_name
         self.family_version = family_version
         if isinstance(namespace, (list)):
@@ -93,8 +92,7 @@ class MessageFactory(object):
         return TpRegisterRequest(
             family=self.family_name,
             version=self.family_version,
-            namespaces=self.namespaces
-        )
+            namespaces=self.namespaces)
 
     def create_tp_response(self, status):
         responses = {
@@ -141,8 +139,7 @@ class MessageFactory(object):
         signature = self._create_signature(header.SerializeToString())
         return header, signature
 
-    def create_transaction(self, payload, inputs, outputs, deps,
-                           batcher=None):
+    def create_transaction(self, payload, inputs, outputs, deps, batcher=None):
         header, signature = self._create_header_and_sig(
             payload, inputs, outputs, deps, batcher=batcher)
 

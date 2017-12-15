@@ -38,6 +38,7 @@ class WorkloadGenerator(object):
     keeps track of submitted and committed batches. To run, it must first have
     a Workload set, as this is where the batches are created.
     """
+
     def __init__(self, args):
         self._workload = None
         self._auth_info = args.auth_info

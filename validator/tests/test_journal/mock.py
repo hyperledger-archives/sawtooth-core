@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+# pylint: disable=arguments-differ
+
 from concurrent.futures import Executor
 
 from sawtooth_validator.execution.scheduler import Scheduler
@@ -28,6 +31,7 @@ from sawtooth_validator.protobuf.setting_pb2 import Setting
 
 from sawtooth_validator.state.settings_view import SettingsView
 
+
 class SynchronousExecutor(Executor):
     def __init__(self):
         self._work_queue = []
@@ -40,7 +44,7 @@ class SynchronousExecutor(Executor):
         job[0](*job[1], **job[2])
 
     def process_all(self):
-        while len(self._work_queue):
+        while self._work_queue:
             self.process_next()
 
 
@@ -102,7 +106,7 @@ class MockScheduler(Scheduler):
 
         return BatchExecutionResult(
             is_valid=result,
-            state_hash='0'*70)
+            state_hash='0' * 70)
 
     def get_transaction_execution_results(self, batch_signature):
         return []
@@ -153,14 +157,15 @@ class MockBlockSender(BlockSender):
         self.new_block = None
 
     def send(self, block):
-         self.new_block = block
+        self.new_block = block
+
 
 class MockBatchSender(BatchSender):
     def __init__(self):
         self.new_batch = None
 
     def send(self, batch):
-         self.new_batch = batch
+        self.new_batch = batch
 
 
 class MockStateViewFactory(object):
@@ -180,7 +185,6 @@ class MockStateViewFactory(object):
         self._database = database
         if self._database is None:
             self._database = {}
-
 
     def create_view(self, state_root_hash=None):
         """Creates a StateView for the given state root hash.
@@ -237,6 +241,7 @@ class MockChainIdManager(object):
     """Mock for the ChainIdManager, which provides the value of the
     block-chain-id stored in the data_dir.
     """
+
     def __init__(self):
         self._block_chain_id = None
 
@@ -247,6 +252,7 @@ class MockChainIdManager(object):
         return self._block_chain_id
 
 
+# pylint: disable=invalid-name
 def CreateSetting(key, value):
     """
     Create a setting object to include in a MockStateFactory.

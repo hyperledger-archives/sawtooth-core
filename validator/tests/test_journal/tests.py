@@ -13,6 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=too-many-lines
+# pylint: disable=pointless-statement
+# pylint: disable=protected-access
+# pylint: disable=unbalanced-tuple-unpacking
+
 import logging
 from threading import RLock
 import unittest
@@ -43,7 +48,6 @@ from sawtooth_validator.journal.batch_injector import \
     DefaultBatchInjectorFactory
 
 from sawtooth_validator.server.events.subscription import EventSubscription
-from sawtooth_validator.server.events.subscription import EventFilterType
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
@@ -56,12 +60,7 @@ from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.events_pb2 import EventList
-
-from sawtooth_validator.state.merkle import MerkleDatabase
-
-from sawtooth_validator.state.state_view import StateViewFactory
-from sawtooth_validator.state.settings_view import SettingsView
+from sawtooth_validator.protobuf.events_pb2 import EventFilter
 
 from test_journal.block_tree_manager import BlockTreeManager
 
@@ -87,12 +86,19 @@ class TestBlockCache(unittest.TestCase):
         """ Test that misses will load from the block store.
         """
         bs = {}
-        bs["test"] = "value"
-        bs["test2"] = "value"
+        block1 = Block(
+            header=BlockHeader(previous_block_id="000").SerializeToString(),
+            header_signature="test")
+        bs["test"] = BlockWrapper(block1)
+        block2 = Block(
+            header=BlockHeader(previous_block_id="000").SerializeToString(),
+            header_signature="test2")
+        blkw2 = BlockWrapper(block2)
+        bs["test2"] = blkw2
         bc = BlockCache(bs)
 
         self.assertTrue("test" in bc)
-        self.assertTrue(bc["test2"] == "value")
+        self.assertTrue(bc["test2"] == blkw2)
 
         with self.assertRaises(KeyError):
             bc["test-missing"]
@@ -361,7 +367,7 @@ class TestBlockPublisher(unittest.TestCase):
         self.batches = self.make_batches_with_duplicate_txn()
         self.receive_batches()
         self.publish_block()
-        self.assert_no_block_published() # block should be empty after batch
+        self.assert_no_block_published()  # block should be empty after batch
         # with duplicate transaction is dropped.
 
     def test_batch_injection_start_block(self):
@@ -655,7 +661,6 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_invalid_block(new_block)
         self.assert_new_block_not_committed()
 
-
     def test_block_missing_batch_dependency(self):
         """
         Test the case where the new block has a batch that is missing a
@@ -927,7 +932,7 @@ class TestChainController(unittest.TestCase):
     def test_alternate_genesis(self):
         '''Tests a fork extending an alternate genesis block
         '''
-        chain, head = self.generate_chain(None, 5)
+        chain, _ = self.generate_chain(None, 5)
 
         for block in chain:
             self.receive_and_process_blocks(block)
@@ -1186,6 +1191,9 @@ class TestChainController(unittest.TestCase):
         Usually only the head is needed,
         but occasionally the chain itself is used.
         '''
+        if params is None:
+            params = {'add_to_cache': True}
+
         chain = self.block_tree_manager.generate_chain(
             root_block, num_blocks, params)
 
@@ -1816,6 +1824,7 @@ class TestChainCommitState(unittest.TestCase):
         return ChainCommitState(head_id, block_cache, block_store)
 
 
+
 class TestBlockEventExtractor(unittest.TestCase):
     def test_block_event_extractor(self):
         """Test that a sawtooth/block-commit event is generated correctly."""
@@ -1833,13 +1842,14 @@ class TestBlockEventExtractor(unittest.TestCase):
             Event(
                 event_type="sawtooth/block-commit",
                 attributes=[
-                    Event.Attribute(key="block_id",value="abcdef1234567890"),
+                    Event.Attribute(key="block_id", value="abcdef1234567890"),
                     Event.Attribute(key="block_num", value="85"),
                     Event.Attribute(
                         key="state_root_hash", value="0987654321fedcba"),
                     Event.Attribute(
                         key="previous_block_id",
                         value="0000000000000000")])])
+
 
 class TestReceiptEventExtractor(unittest.TestCase):
     def test_tf_events(self):
@@ -1897,7 +1907,7 @@ class TestReceiptEventExtractor(unittest.TestCase):
             EventSubscription(
                 event_type="sawtooth/state-delta",
                 filters=[factory.create(
-                    "address", "[ce]", EventFilterType.regex_any)],
+                    "address", "[ce]", EventFilter.REGEX_ANY)],
             )
         ])
         self.assertEqual(events, [Event(

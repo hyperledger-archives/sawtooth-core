@@ -221,3 +221,6 @@ a new ``RoleList`` object is created, the new role is added, and the policy
 list is applied to state. If there is data, it is parsed into a ``RoleList``.
 The new role is added to the role list, replacing any role with the same name,
 and the role list is applied to state.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

@@ -27,7 +27,7 @@ use self::rust_base58::base58::FromBase58Error;
 
 use super::PrivateKey;
 use super::PublicKey;
-use super::Algorithm;
+use super::Context;
 use super::Error;
 use super::pem_loader::load_pem_key;
 
@@ -114,20 +114,20 @@ impl PublicKey for Secp256k1PublicKey {
     }
 }
 
-pub struct Secp256k1Algorithm {
+pub struct Secp256k1Context {
     context: secp256k1::Secp256k1
 }
 
-impl Secp256k1Algorithm {
+impl Secp256k1Context {
     pub fn new() -> Self {
-        Secp256k1Algorithm{
+        Secp256k1Context{
             context: secp256k1::Secp256k1::new()
         }
     }
 }
 
-impl Algorithm for Secp256k1Algorithm {
-    fn get_name(&self) -> &str {
+impl Context for Secp256k1Context {
+    fn get_algorithm_name(&self) -> &str {
         "secp256k1"
     }
 
@@ -207,7 +207,7 @@ mod secp256k1_test {
     use super::super::CryptoFactory;
     use super::super::PrivateKey;
     use super::super::PublicKey;
-    use super::super::create_algorithm;
+    use super::super::create_context;
 
     static KEY1_PRIV_WIF: &'static str = "5JB3B6o5cbtYfgabgNKDwyYjs58jgUwCLDopNuS5QQdaGv1EHt2";
     static KEY1_PRIV_HEX: &'static str = "2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088";
@@ -248,21 +248,21 @@ mod secp256k1_test {
 
     #[test]
     fn priv_to_public_key() {
-        let algorithm = create_algorithm("secp256k1").unwrap();
-        assert_eq!(algorithm.get_name(), "secp256k1");
+        let context = create_context("secp256k1").unwrap();
+        assert_eq!(context.get_algorithm_name(), "secp256k1");
 
         let priv_key1 = Secp256k1PrivateKey::from_hex(KEY1_PRIV_HEX).unwrap();
         assert_eq!(priv_key1.get_algorithm_name(), "secp256k1");
         assert_eq!(priv_key1.as_hex(), KEY1_PRIV_HEX);
 
-        let public_key1 = algorithm.get_public_key(&priv_key1).unwrap();
+        let public_key1 = context.get_public_key(&priv_key1).unwrap();
         assert_eq!(public_key1.as_hex(), KEY1_PUB_HEX);
 
         let priv_key2 = Secp256k1PrivateKey::from_hex(KEY2_PRIV_HEX).unwrap();
         assert_eq!(priv_key2.get_algorithm_name(), "secp256k1");
         assert_eq!(priv_key2.as_hex(), KEY2_PRIV_HEX);
 
-        let public_key2 = algorithm.get_public_key(&priv_key2).unwrap();
+        let public_key2 = context.get_public_key(&priv_key2).unwrap();
         assert_eq!(public_key2.as_hex(), KEY2_PUB_HEX);
     }
 
@@ -283,11 +283,11 @@ mod secp256k1_test {
 
     #[test]
     fn single_key_signing() {
-        let algorithm = create_algorithm("secp256k1").unwrap();
-        assert_eq!(algorithm.get_name(), "secp256k1");
+        let context = create_context("secp256k1").unwrap();
+        assert_eq!(context.get_algorithm_name(), "secp256k1");
 
-        let factory = CryptoFactory::new(&*algorithm);
-        assert_eq!(factory.get_algorithm().get_name(), "secp256k1");
+        let factory = CryptoFactory::new(&*context);
+        assert_eq!(factory.get_context().get_algorithm_name(), "secp256k1");
 
         let priv_key = Secp256k1PrivateKey::from_hex(KEY1_PRIV_HEX).unwrap();
         assert_eq!(priv_key.get_algorithm_name(), "secp256k1");
@@ -300,8 +300,8 @@ mod secp256k1_test {
 
     #[test]
     fn many_key_signing() {
-        let algorithm = create_algorithm("secp256k1").unwrap();
-        assert_eq!(algorithm.get_name(), "secp256k1");
+        let context = create_context("secp256k1").unwrap();
+        assert_eq!(context.get_algorithm_name(), "secp256k1");
 
         let priv_key1 = Secp256k1PrivateKey::from_hex(KEY1_PRIV_HEX).unwrap();
         assert_eq!(priv_key1.get_algorithm_name(), "secp256k1");
@@ -311,12 +311,12 @@ mod secp256k1_test {
         assert_eq!(priv_key2.get_algorithm_name(), "secp256k1");
         assert_eq!(priv_key2.as_hex(), KEY2_PRIV_HEX);
 
-        let signature = algorithm.sign(
+        let signature = context.sign(
             &String::from(MSG1).into_bytes(),
             &priv_key1).unwrap();
         assert_eq!(signature, MSG1_KEY1_SIG);
 
-        let signature = algorithm.sign(
+        let signature = context.sign(
             &String::from(MSG2).into_bytes(),
             &priv_key2).unwrap();
         assert_eq!(signature, MSG2_KEY2_SIG);
@@ -324,32 +324,32 @@ mod secp256k1_test {
 
     #[test]
     fn verification() {
-        let algorithm = create_algorithm("secp256k1").unwrap();
-        assert_eq!(algorithm.get_name(), "secp256k1");
+        let context = create_context("secp256k1").unwrap();
+        assert_eq!(context.get_algorithm_name(), "secp256k1");
 
         let pub_key1 = Secp256k1PublicKey::from_hex(KEY1_PUB_HEX).unwrap();
         assert_eq!(pub_key1.get_algorithm_name(), "secp256k1");
         assert_eq!(pub_key1.as_hex(), KEY1_PUB_HEX);
 
-        let result = algorithm.verify(MSG1_KEY1_SIG,
-                                     &String::from(MSG1).into_bytes(),
-                                     &pub_key1);
+        let result = context.verify(MSG1_KEY1_SIG,
+                                    &String::from(MSG1).into_bytes(),
+                                    &pub_key1);
         assert_eq!(result.unwrap(), true);
     }
 
     #[test]
     fn verification_error() {
-        let algorithm = create_algorithm("secp256k1").unwrap();
-        assert_eq!(algorithm.get_name(), "secp256k1");
+        let context = create_context("secp256k1").unwrap();
+        assert_eq!(context.get_algorithm_name(), "secp256k1");
 
         let pub_key1 = Secp256k1PublicKey::from_hex(KEY1_PUB_HEX).unwrap();
         assert_eq!(pub_key1.get_algorithm_name(), "secp256k1");
         assert_eq!(pub_key1.as_hex(), KEY1_PUB_HEX);
 
         // This signature doesn't match for MSG1/KEY1
-        let result = algorithm.verify(MSG2_KEY2_SIG,
-                                      &String::from(MSG1).into_bytes(),
-                                      &pub_key1);
+        let result = context.verify(MSG2_KEY2_SIG,
+                                    &String::from(MSG1).into_bytes(),
+                                    &pub_key1);
         assert_eq!(result.unwrap(), false);
     }
 }
