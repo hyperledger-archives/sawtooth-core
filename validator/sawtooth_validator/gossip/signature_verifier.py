@@ -219,7 +219,6 @@ class GossipBatchResponseSignatureVerifier(Handler):
 
 
 class BatchListSignatureVerifier(Handler):
-
     def handle(self, connection_id, message_content):
         response_proto = client_batch_submit_pb2.ClientBatchSubmitResponse
 
@@ -228,6 +227,7 @@ class BatchListSignatureVerifier(Handler):
                 status=HandlerStatus.RETURN,
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+
         try:
             request = client_batch_submit_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)

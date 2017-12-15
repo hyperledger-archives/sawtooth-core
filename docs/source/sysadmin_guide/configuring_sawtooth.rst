@@ -33,3 +33,6 @@ The following sections describe each component's configuration file.
    configuring_sawtooth/settings_tp_configuration
    configuring_sawtooth/xo_tp_configuration
    log_configuration
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

@@ -409,3 +409,6 @@ Authorization Violation
 .. [#f1] http://web.mit.edu/devavrat/www/GossipBook.pdf
 .. [#f2] http://zguide.zeromq.org/php:chapter3#toc19
 .. [#f3] https://github.com/zeromq/pyzmq/blob/master/examples/security/ironhouse.py
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

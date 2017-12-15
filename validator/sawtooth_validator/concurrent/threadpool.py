@@ -27,7 +27,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
-
     def __init__(self, max_workers=None, name='', trace=None):
         if trace is None:
             self._trace = 'SAWTOOTH_TRACE_LOGGING' in os.environ
@@ -38,8 +37,7 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
         if name == '':
             self._name = 'Instrumented'
 
-        LOGGER.debug(
-            'Creating thread pool executor %s', self._name)
+        LOGGER.debug('Creating thread pool executor %s', self._name)
 
         self._workers_in_use = atomic.Counter()
 

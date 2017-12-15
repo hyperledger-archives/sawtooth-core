@@ -32,6 +32,7 @@ class ExecutionContext(object):
     """A thread-safe data structure holding address-_ContextFuture pairs and
     the addresses that can be written to and read from.
     """
+
     def __init__(self, state_hash, read_list, write_list, base_context_ids):
         """
 

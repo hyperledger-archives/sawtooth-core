@@ -24,30 +24,27 @@ from setuptools import setup, find_packages
 data_files = []
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-rest-api']))
+    data_files.append(
+        ('/etc/default', ['packaging/systemd/sawtooth-rest-api']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
                        ['packaging/systemd/sawtooth-rest-api.service']))
 
-setup(name='sawtooth-rest-api',
-      version=subprocess.check_output(
+setup(
+    name='sawtooth-rest-api',
+    version=subprocess.check_output(
         ['../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth REST API',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'aiodns',
-          'aiohttp>=2.3.2',
-          'cchardet',
-          'protobuf',
-          'sawtooth-sdk',
-          'pyformance'
-          ],
-      data_files=data_files,
-      entry_points={
-          'console_scripts': [
-              'sawtooth-rest-api = sawtooth_rest_api.rest_api:main'
-          ]
-      })
+    description='Sawtooth REST API',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'aiodns', 'aiohttp>=2.3.2', 'cchardet', 'protobuf', 'sawtooth-sdk',
+        'pyformance'
+    ],
+    data_files=data_files,
+    entry_points={
+        'console_scripts':
+        ['sawtooth-rest-api = sawtooth_rest_api.rest_api:main']
+    })

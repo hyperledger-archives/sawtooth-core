@@ -31,21 +31,21 @@ if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
                        ['packaging/systemd/sawtooth-settings-tp.service']))
 
-setup(name='sawtooth-settings',
-      version=subprocess.check_output(
-          ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Settings Transaction Processor',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'colorlog',
-          'protobuf',
-          'sawtooth-sdk',
-          ],
-      data_files=data_files,
-      entry_points={
-          'console_scripts': [
-              'settings-tp= sawtooth_settings.processor.main:main'
-          ]
-      })
+setup(
+    name='sawtooth-settings',
+    version=subprocess.check_output(
+        ['../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth Settings Transaction Processor',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'colorlog',
+        'protobuf',
+        'sawtooth-sdk',
+    ],
+    data_files=data_files,
+    entry_points={
+        'console_scripts':
+        ['settings-tp= sawtooth_settings.processor.main:main']
+    })

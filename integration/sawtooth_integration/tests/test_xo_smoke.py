@@ -32,7 +32,6 @@ REST_API = 'rest-api:8008'
 
 
 class TestXoSmoke(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.client = XoClient('http://' + REST_API)

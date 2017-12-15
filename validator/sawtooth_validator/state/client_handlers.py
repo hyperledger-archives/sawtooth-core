@@ -60,6 +60,7 @@ class _ResponseFailed(BaseException):
     Attributes:
         status (enum): Status to be sent with the incomplete response
     """
+
     def __init__(self, status):
         super().__init__()
         self.status = status
@@ -282,8 +283,9 @@ class _ClientRequestHandler(Handler, metaclass=abc.ABCMeta):
         # If filtering by head AND ids, the traverse results must be winnowed
         if request.head_id and filter_ids:
             matches = {
-                r.header_signature: r for r in resources
-                if r.header_signature in filter_ids}
+                r.header_signature: r
+                for r in resources if r.header_signature in filter_ids
+            }
             resources = [matches[i] for i in filter_ids if i in matches]
 
         return resources
@@ -339,6 +341,7 @@ class _Pager(object):
     resource by its id (either address or header_signature), or conversely
     to fetch the id by an index.
     """
+
     @classmethod
     def paginate_resources(cls, request, resources, on_fail_status):
         """Truncates a list of resources based on ClientPagingControls
@@ -426,6 +429,7 @@ class _Sorter(object):
     """A static class containing a method to sort lists of resources based on
     ClientSortControls sent with the request.
     """
+
     @classmethod
     def sort_resources(cls, request, resources, fail_enum, header_proto=None):
         """Sorts a list of resources based on a list of sort controls
@@ -483,6 +487,7 @@ class _Sorter(object):
             fail_status (integer, enum): Status to send when controls are bad
             header_proto (class): Class to decode the resource header
         """
+
         def __init__(self, controls, fail_status, header_proto=None):
             self._keys = controls.keys
             self._fail_status = fail_status
@@ -546,10 +551,11 @@ def _format_batch_statuses(statuses, batch_ids, tracker):
         else:
             invalid_txns = None
 
-        proto_statuses.append(client_batch_submit_pb2.ClientBatchStatus(
-            batch_id=batch_id,
-            status=statuses[batch_id],
-            invalid_transactions=invalid_txns))
+        proto_statuses.append(
+            client_batch_submit_pb2.ClientBatchStatus(
+                batch_id=batch_id,
+                status=statuses[batch_id],
+                invalid_transactions=invalid_txns))
 
     return proto_statuses
 
@@ -563,6 +569,7 @@ class _BatchWaiter(BatchFinishObserver):
             BatchWaiter that all of the batches it is interested in are no
             longer PENDING.
     """
+
     def __init__(self, batch_tracker):
         self._batch_tracker = batch_tracker
         self._wait_condition = Condition()
@@ -805,7 +812,7 @@ class BlockListRequest(_ClientRequestHandler):
                 next=next_block_num,
                 limit=limit,
                 start=BlockStore.block_num_to_hex(start)
-                )
+            )
 
         if not blocks:
             return self._wrap_response(
@@ -1057,7 +1064,7 @@ class PeersGetRequest(_ClientRequestHandler):
             client_peers_pb2.ClientPeersGetRequest,
             client_peers_pb2.ClientPeersGetResponse,
             validator_pb2.Message.CLIENT_PEERS_GET_RESPONSE
-            )
+        )
         self._gossip = gossip
 
     def _respond(self, request):

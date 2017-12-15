@@ -32,22 +32,24 @@ def peer_with_genesis_only(num):
     if num > 0:
         return '--peers {}'.format(
             endpoint(0))
-    else:
-        return ''
+
+    return ''
+
 
 def peer_to_preceding_only(num):
     if num > 0:
         return '--peers {}'.format(
             endpoint(num - 1))
-    else:
-        return ''
+
+    return ''
+
 
 def everyone_peers_with_everyone(num):
     if num > 0:
         peers = ','.join(endpoint(i) for i in range(num))
         return '--peers {}'.format(peers)
-    else:
-        return ''
+
+    return ''
 
 
 # processor arrangements
@@ -56,8 +58,15 @@ def intkey_config_registry(num):
     # all nodes get the same processors
     return 'intkey-tp-python', 'settings-tp', 'poet-validator-registry-tp'
 
+
 def intkey_config_identity_registry(num):
-    return 'intkey-tp-python', 'settings-tp', 'identity-tp', 'poet-validator-registry-tp'
+    return (
+        'intkey-tp-python',
+        'settings-tp',
+        'identity-tp',
+        'poet-validator-registry-tp',
+    )
+
 
 def intkey_xo_config_registry(num):
     # all nodes get the same processors
@@ -74,11 +83,14 @@ def intkey_xo_config_registry(num):
 def all_serial(num):
     return 'serial'
 
+
 def all_parallel(num):
     return 'parallel'
 
+
 def even_parallel_odd_serial(num):
     return 'parallel' if num % 2 == 0 else 'serial'
+
 
 def even_serial_odd_parallel(num):
     return 'parallel' if num % 2 == 1 else 'serial'
@@ -106,13 +118,14 @@ def start_node(num,
 
     return [rest_api] + processors + [validator]
 
+
 def stop_node(process_list):
     # This may seem a little dramatic, but seriously,
     # validators don't go down without a fight.
     for _ in range(2):
         for process in process_list:
             pid = process.pid
-            LOGGER.debug('Stopping process {}'.format(pid))
+            LOGGER.debug('Stopping process %s', pid)
             process.send_signal(signal.SIGINT)
         time.sleep(15)
 
@@ -167,7 +180,7 @@ def validator_cmds(num,
 
     with open(
         '/project/sawtooth-core/consensus/poet/simulator/packaging/'
-        'simulator_rk_pub.pem') as fd:
+            'simulator_rk_pub.pem') as fd:
         public_key_pem = fd.read()
 
     # Use the poet CLI to get the enclave measurement so that we can put the
@@ -213,7 +226,7 @@ def validator_cmds(num,
             os.path.join(sawtooth_home, 'data', 'poet.batch'))
     ])
 
-    validator_cmds = (
+    validator_cmd_list = (
         [keygen, validator] if num > 0
         else [
             keygen,
@@ -225,7 +238,7 @@ def validator_cmds(num,
         ]
     )
 
-    return validator_cmds
+    return validator_cmd_list
 
 
 def simple_validator_cmds(*args, **kwargs):
@@ -271,7 +284,7 @@ def processor_cmds(num, processor_func):
     '''
     processors = processor_func(num)
 
-    processor_cmds = [
+    processor_cmd_list = [
         '{p} {v} -C {a}'.format(
             p=processor,
             v=(processor_verbosity(processor)),
@@ -279,7 +292,8 @@ def processor_cmds(num, processor_func):
         for processor in processors
     ]
 
-    return processor_cmds
+    return processor_cmd_list
+
 
 def processor_verbosity(processor_name):
     '''
@@ -294,6 +308,7 @@ def processor_verbosity(processor_name):
             return '-v'
 
     return ''
+
 
 def start_processors(num, processor_func):
     return [
@@ -310,6 +325,7 @@ def rest_api_cmd(num):
         p=(8008 + num)
     )
 
+
 def start_rest_api(num):
     return start_process(
         rest_api_cmd(num))
@@ -319,14 +335,18 @@ def start_rest_api(num):
 def endpoint(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
 
+
 def connection_address(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)
+
 
 def http_address(num):
     return 'http://127.0.0.1:{}'.format(8008 + num)
 
+
 def bind_component(num):
     return 'tcp://127.0.0.1:{}'.format(4004 + num)
+
 
 def bind_network(num):
     return 'tcp://127.0.0.1:{}'.format(8800 + num)
@@ -335,6 +355,6 @@ def bind_network(num):
 # execution
 
 def start_process(cmd):
-    LOGGER.debug('Running command {}'.format(cmd))
+    LOGGER.debug('Running command %s', cmd)
     return subprocess.Popen(
         shlex.split(cmd))

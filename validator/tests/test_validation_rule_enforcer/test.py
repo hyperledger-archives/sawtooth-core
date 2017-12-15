@@ -16,7 +16,6 @@ import unittest
 
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
-from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
@@ -25,14 +24,15 @@ from sawtooth_validator.journal.validation_rule_enforcer import \
     ValidationRuleEnforcer
 from test_validation_rule_enforcer.mock import MockSettingsViewFactory
 
-class ValidationRuleEnforcerTest(unittest.TestCase):
 
+class ValidationRuleEnforcerTest(unittest.TestCase):
     def setUp(self):
         self._settings_view_factory = MockSettingsViewFactory()
         self._validation_rule_enforcer = ValidationRuleEnforcer(
             self._settings_view_factory)
 
-    def _make_block(self, txns_family, signer_public_key, same_public_key=True):
+    def _make_block(self, txns_family, signer_public_key,
+                    same_public_key=True):
         transactions = []
         for family in txns_family:
             txn_header = TransactionHeader(
@@ -56,7 +56,6 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
         blkw = self._make_block(["intkey"], "pub_key")
         self.assertTrue(
             self._validation_rule_enforcer.validate(blkw, "state_root"))
-
 
     def test_n_of_x(self):
         """
@@ -87,7 +86,6 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
 
         self.assertTrue(
             self._validation_rule_enforcer.validate(blkw, "state_root"))
-
 
     def test_x_at_y(self):
         """

@@ -26,8 +26,7 @@ class IntkeyMessageFactory:
             family_name='intkey',
             family_version='1.0',
             namespace=INTKEY_ADDRESS_PREFIX,
-            signer=signer
-        )
+            signer=signer)
 
     def _dumps(self, obj):
         return cbor.dumps(obj, sort_keys=True)
@@ -57,8 +56,10 @@ class IntkeyMessageFactory:
         return self._create_txn(txn_function, verb, name, value)
 
     def create_batch(self, triples):
-        txns = [self.create_transaction(verb, name, value)
-                for verb, name, value in triples]
+        txns = [
+            self.create_transaction(verb, name, value)
+            for verb, name, value in triples
+        ]
 
         return self._factory.create_batch(txns)
 

@@ -1,6 +1,7 @@
-# Contributing to Distributed Ledger
+# Contributing to Hyperledger Sawtooth
 
-This document covers how to report issues and contribute code.
+This document covers how to report issues and contribute code
+to the Hyperledger Sawtooth project.
 
 ## Topics
 
@@ -9,14 +10,15 @@ This document covers how to report issues and contribute code.
 
 # Reporting Issues
 
-Please refer to the article on [Issue Tracking](http://intelledger.github.io/community/issue_tracking.html) in the Sawtooth Lake documentation.
+Please refer to [Issue Tracking](https://sawtooth.hyperledger.org/docs/core/releases/latest/community/issue_tracking.html)
+in the Sawtooth documentation.
 
 # Contributing Code
 
-Distributed Ledger is Apache 2.0 licensed and accepts contributions via 
-[GitHub](https://github.com/hyperledger/) pull requests.
+Hyperledger Sawtooth is Apache 2.0 licensed and accepts contributions via
+[GitHub](https://github.com/hyperledger/sawtooth-core) pull requests.
 
-Please refer to the article on 
-[Contributing](http://intelledger.github.io/community/contributing.html)
-in the Sawtooth Lake documentation for information on contributing, and the 
-guidelines to use. 
+Please see
+[Contributing](https://sawtooth.hyperledger.org/docs/core/releases/latest/community/contributing.html)
+in the Sawtooth documentation for information on how to contribute and the guidelines for contributions.
+

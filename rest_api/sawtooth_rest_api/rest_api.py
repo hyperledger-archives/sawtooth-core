@@ -130,9 +130,12 @@ def start_rest_api(host, port, connection, timeout, registry):
     # Start app
     LOGGER.info('Starting REST API on %s:%s', host, port)
 
-    web.run_app(app, host=host, port=port,
-                access_log=LOGGER,
-                access_log_format='%r: %s status, %b size, in %Tf s')
+    web.run_app(
+        app,
+        host=host,
+        port=port,
+        access_log=LOGGER,
+        access_log_format='%r: %s status, %b size, in %Tf s')
 
 
 def load_rest_api_config(first_config):

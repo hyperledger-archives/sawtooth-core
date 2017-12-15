@@ -19,26 +19,22 @@ import subprocess
 
 from setuptools import setup, find_packages
 
-
-setup(name='sawtooth-cli',
-      version=subprocess.check_output(
-          ['../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth CLI',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'colorlog',
-          'protobuf',
-          'sawtooth-signing',
-          'toml',
-          'PyYAML',
-          'requests'
-          ],
-      entry_points={
-          'console_scripts': [
-              'sawadm = sawtooth_cli.sawadm:main_wrapper',
-              'sawset = sawtooth_cli.sawset:main_wrapper',
-              'sawtooth = sawtooth_cli.main:main_wrapper'
-          ]
-      })
+setup(
+    name='sawtooth-cli',
+    version=subprocess.check_output(
+        ['../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth CLI',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'colorlog', 'protobuf', 'sawtooth-signing', 'toml', 'PyYAML',
+        'requests'
+    ],
+    entry_points={
+        'console_scripts': [
+            'sawadm = sawtooth_cli.sawadm:main_wrapper',
+            'sawset = sawtooth_cli.sawset:main_wrapper',
+            'sawtooth = sawtooth_cli.main:main_wrapper'
+        ]
+    })

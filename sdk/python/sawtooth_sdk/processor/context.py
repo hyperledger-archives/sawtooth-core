@@ -30,6 +30,7 @@ class Context(object):
         _context_id (str): the context_id passed in from the validator
 
     """
+
     def __init__(self, stream, context_id):
         self._stream = stream
         self._context_id = context_id
@@ -83,9 +84,10 @@ class Context(object):
         Raises:
             AuthorizationException
         """
-        state_entries = [state_context_pb2.TpStateEntry(
-            address=e,
-            data=entries[e]) for e in entries]
+        state_entries = [
+            state_context_pb2.TpStateEntry(address=e, data=entries[e])
+            for e in entries
+        ]
         request = state_context_pb2.TpStateSetRequest(
             entries=state_entries,
             context_id=self._context_id).SerializeToString()

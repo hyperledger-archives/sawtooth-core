@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
+#include "c11_support.h"
+
 #include <string.h>
 
 #include <openssl/bio.h>
@@ -80,8 +82,8 @@ int load_pem_key(char *pemstr, size_t pemstr_len, char *password,
 
   priv_key_hex = BN_bn2hex(priv_key);
   pub_key_hex = BN_bn2hex(pub_key);
-  strncpy(out_priv_key, priv_key_hex, 64 + 1);
-  strncpy(out_pub_key, pub_key_hex, 130 + 1);
+  strncpy_s(out_priv_key, 64 + 1, priv_key_hex, 64 + 1);
+  strncpy_s(out_pub_key, 130 + 1, pub_key_hex, 130 + 1);
   OPENSSL_free(priv_key_hex);
   OPENSSL_free(pub_key_hex);
   return 0;

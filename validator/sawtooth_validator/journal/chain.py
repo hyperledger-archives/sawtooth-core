@@ -78,6 +78,7 @@ class ChainController(object):
     To evaluating new blocks to determine if they should extend or replace
     the current chain. If they are valid extend the chain.
     """
+
     def __init__(self,
                  block_cache,
                  state_view_factory,

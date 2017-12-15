@@ -13,10 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=no-else-return
+# pylint: disable=no-value-for-parameter
+# pylint: disable=abstract-class-instantiated
+
 import logging
 import hashlib
-import logging
-import pprint
 import random
 import string
 
@@ -49,9 +51,6 @@ from test_journal.mock import MockBlockSender
 from test_journal.mock import MockStateViewFactory
 from test_journal.mock import MockTransactionExecutor
 from test_journal.mock import MockPermissionVerifier
-
-
-pp = pprint.PrettyPrinter(indent=4)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -163,7 +162,7 @@ class BlockTreeManager(object):
         header = BlockHeader(
             previous_block_id=previous.identifier,
             signer_public_key=self.identity_signer.get_public_key().as_hex(),
-            block_num=previous.block_num+1)
+            block_num=previous.block_num + 1)
 
         block_builder = BlockBuilder(header)
         if batches:
@@ -178,7 +177,7 @@ class BlockTreeManager(object):
             block_builder.add_batches(
                 [self._generate_batch_from_payload('BAD')])
 
-        block_builder.set_state_hash('0'*70)
+        block_builder.set_state_hash('0' * 70)
 
         consensus = mock_consensus.BlockPublisher()
         consensus.finalize_block(block_builder.block_header, weight=weight)
@@ -252,7 +251,7 @@ class BlockTreeManager(object):
         block_builder.add_batches(
             [self._generate_batch_from_payload(payload)
                 for _ in range(batch_count)])
-        block_builder.set_state_hash('0'*70)
+        block_builder.set_state_hash('0' * 70)
 
         header_bytes = block_builder.block_header.SerializeToString()
         signature = self.identity_signer.sign(header_bytes)

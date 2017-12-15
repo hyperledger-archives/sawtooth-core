@@ -13,11 +13,12 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import unittest
-import logging
-import yaml
+# pylint: disable=bare-except
 
 import time
+import unittest
+import logging
+
 import requests
 
 
@@ -63,7 +64,7 @@ class TestPoetLive(unittest.TestCase):
 
             time.sleep(15)
 
-        chains = [get_chain(i) for node in range(0, NODES)]
+        chains = [get_chain(node) for node in range(0, NODES)]
 
         # Ensure all nodes are in consensus on the target block
         self.assertTrue(check_consensus(chains, BLOCK_TO_CHECK_CONSENSUS))
@@ -74,7 +75,7 @@ class TestPoetLive(unittest.TestCase):
 
 def get_block(node):
     try:
-        result = requests.get((URL % node)+"/blocks?count=1")
+        result = requests.get((URL % node) + "/blocks?count=1")
         result = result.json()
         try:
             return result["data"][0]
@@ -86,7 +87,7 @@ def get_block(node):
 
 def get_chain(node):
     try:
-        result = requests.get((URL % node)+"/blocks")
+        result = requests.get((URL % node) + "/blocks")
         result = result.json()
         try:
             return result["data"]
@@ -129,7 +130,7 @@ def check_consensus(chains, block_num):
     blocks = []
     for chain in chains:
         if chain is not None:
-            block = chain[-(block_num+1)]
+            block = chain[-(block_num + 1)]
             blocks.append(block)
         else:
             return False

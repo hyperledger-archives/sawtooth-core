@@ -46,7 +46,6 @@ MSG2_KEY2_SIG = ("d589c7b1fa5f8a4c5a389de80ae9582c2f7f2a5e21bab5450b670214e5b1"
 
 
 class Secp256k1SigningTest(unittest.TestCase):
-
     def test_hex_key(self):
         priv_key = Secp256k1PrivateKey.from_hex(KEY1_PRIV_HEX)
         self.assertEqual(priv_key.get_algorithm_name(), "secp256k1")

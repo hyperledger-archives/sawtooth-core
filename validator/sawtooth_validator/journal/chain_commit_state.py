@@ -191,6 +191,7 @@ class _CommitCache(object):
     committed state at a previous state of the BlockStore and we allow for the
     identifiers to be re-committed.
     """
+
     def __init__(self, block_store_check):
         self.block_store_check = block_store_check
         self._committed = set()  # the set of items
@@ -220,6 +221,7 @@ class TransactionCommitCache(_CommitCache):
     blockchain. This is used to detect duplicate transactions or missing
     dependencies when building a block.
     """
+
     def __init__(self, block_store):
         super(TransactionCommitCache, self).__init__(
             block_store.has_transaction)

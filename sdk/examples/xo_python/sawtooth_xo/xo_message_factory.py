@@ -22,8 +22,7 @@ class XoMessageFactory:
             family_name="xo",
             family_version="1.0",
             namespace=MessageFactory.sha512("xo".encode("utf-8"))[0:6],
-            signer=signer
-        )
+            signer=signer)
 
     def _game_to_address(self, game):
         return self._factory.namespace + \

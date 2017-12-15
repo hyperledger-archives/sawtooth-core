@@ -373,3 +373,6 @@ can request a transaction receipt for a given transaction id.
       }
       Status status = 1;
       repeated TransactionReceipt receipts = 2;
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

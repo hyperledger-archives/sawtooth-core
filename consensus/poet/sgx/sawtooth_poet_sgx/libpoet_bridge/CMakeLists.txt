@@ -25,11 +25,14 @@ ELSE()
     SET(PLATFORM_DIR_NAME linux)
 ENDIF()
 
-FILE(GLOB PROJECT_HEADERS *.h ../libpoet_shared/*.h ../libpoet_shared/${PLATFORM_DIR_NAME}/*.h)
-FILE(GLOB PROJECT_SOURCES *.cpp ${PLATFORM_DIR_NAME}/*.cpp ../libpoet_shared/*.cpp ../libpoet_shared/${PLATFORM_DIR_NAME}/*.cpp)
+SET(C11_SUPPORT ../../../common/c11_support)
+
+FILE(GLOB PROJECT_HEADERS *.h ../libpoet_shared/*.h ../libpoet_shared/${PLATFORM_DIR_NAME}/*.h ${C11_SUPPORT}/${PLATFORM_DIR_NAME}/*.h)
+FILE(GLOB PROJECT_SOURCES *.cpp ${PLATFORM_DIR_NAME}/*.cpp ../libpoet_shared/*.cpp ../libpoet_shared/${PLATFORM_DIR_NAME}/*.cpp ${C11_SUPPORT}/${PLATFORM_DIR_NAME}/*.cpp)
 SOURCE_GROUP("Source" FILES ${PROJECT_HEADERS} ${PROJECT_SOURCES})
 
-INCLUDE_DIRECTORIES(. ../libpoet_shared ../libpoet_shared/${PLATFORM_DIR_NAME})
+INCLUDE_DIRECTORIES(. ${C11_SUPPORT} ${C11_SUPPORT}/${PLATFORM_DIR_NAME})
+INCLUDE_DIRECTORIES(../libpoet_shared ../libpoet_shared/${PLATFORM_DIR_NAME})
 
 IF(MSVC)
     SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")

@@ -23,31 +23,33 @@ from setuptools import setup, find_packages
 data_files = []
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-xo-tp-python']))
+    data_files.append(
+        ('/etc/default', ['packaging/systemd/sawtooth-xo-tp-python']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',
                        ['packaging/systemd/sawtooth-xo-tp-python.service']))
 
-setup(name='sawtooth-xo',
-      version=subprocess.check_output(
-          ['../../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth XO Example',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'aiohttp',
-          'colorlog',
-          'protobuf',
-          'sawtooth-sdk',
-          'sawtooth-signing',
-          'PyYAML',
-          ],
-      data_files=data_files,
-      entry_points={
-          'console_scripts': [
-              'xo = sawtooth_xo.xo_cli:main_wrapper',
-              'xo-tp-python = sawtooth_xo.processor.main:main',
-          ]
-      })
+setup(
+    name='sawtooth-xo',
+    version=subprocess.check_output(
+        ['../../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth XO Example',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'aiohttp',
+        'colorlog',
+        'protobuf',
+        'sawtooth-sdk',
+        'sawtooth-signing',
+        'PyYAML',
+    ],
+    data_files=data_files,
+    entry_points={
+        'console_scripts': [
+            'xo = sawtooth_xo.xo_cli:main_wrapper',
+            'xo-tp-python = sawtooth_xo.processor.main:main',
+        ]
+    })

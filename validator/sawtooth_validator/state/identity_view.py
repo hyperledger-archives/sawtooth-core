@@ -42,9 +42,10 @@ def _create_role_address(name):
 
     parts = name.split(".", maxsplit=_NUM_PARTS - 1)
 
-    hashed_parts = [_short_hash(d.encode()) if i is not 0
-                    else _short_hash(d.encode(), 14)
-                    for i, d in enumerate(parts)]
+    hashed_parts = [
+        _short_hash(d.encode()) if i is not 0 else _short_hash(d.encode(), 14)
+        for i, d in enumerate(parts)
+    ]
     hashed_parts.extend([_NULL_HASH] * (_NUM_PARTS - len(parts)))
     return prefix + "".join(hashed_parts)
 
@@ -72,7 +73,6 @@ def _create_from_bytes(data, protobuf_klass):
 
 
 class IdentityView(object):
-
     def __init__(self, state_view):
         """Creates an IdentityView from a StateView that is passed in.
 
@@ -118,8 +118,10 @@ class IdentityView(object):
 
         prefix = _IDENTITY_NS + _ROLE_NS
         role_list_bytes_dict = self._state_view.leaves(prefix=prefix)
-        rolelist_list = [_create_from_bytes(d, identity_pb2.RoleList)
-                         for d in role_list_bytes_dict.values()]
+        rolelist_list = [
+            _create_from_bytes(d, identity_pb2.RoleList)
+            for d in role_list_bytes_dict.values()
+        ]
         roles = []
         for role_list in rolelist_list:
             for role in role_list.roles:
@@ -162,8 +164,10 @@ class IdentityView(object):
 
         prefix = _IDENTITY_NS + _POLICY_NS
         policy_list_bytes_dict = self._state_view.leaves(prefix=prefix)
-        policylist_list = [_create_from_bytes(d, identity_pb2.PolicyList)
-                           for d in policy_list_bytes_dict.values()]
+        policylist_list = [
+            _create_from_bytes(d, identity_pb2.PolicyList)
+            for d in policy_list_bytes_dict.values()
+        ]
         policies = []
         for policy_list in policylist_list:
             for policy in policy_list.policies:
@@ -172,7 +176,6 @@ class IdentityView(object):
 
 
 class IdentityViewFactory(object):
-
     def __init__(self, state_view_factory):
         """Creates a factory for producing IdentityViews based on the passed
         in StateViewFactory.

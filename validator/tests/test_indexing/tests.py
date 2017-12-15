@@ -36,13 +36,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         """Test that a database with three records, plus an index will
         return the correct count of primary key/values, using `len`.
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -57,13 +57,13 @@ class IndexedDatabaseTest(unittest.TestCase):
          - a non-existent key will return False for both of those methods
          - an index key will return True for `contains_key`, using the index
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -86,13 +86,13 @@ class IndexedDatabaseTest(unittest.TestCase):
          - ignores keys that do not exist (i.e. no error is thrown)
          - it works with index keys in the same manor
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -123,13 +123,13 @@ class IndexedDatabaseTest(unittest.TestCase):
     def test_indexing(self):
         """Test basic indexing around name
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -145,13 +145,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         """Test iteration on over the items in a database, using the natural
         order of the primary keys.
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -174,9 +174,9 @@ class IndexedDatabaseTest(unittest.TestCase):
                              _serialize_tuple, _deserialize_tuple,
                              indexes={
                                  'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        },
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -197,13 +197,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         - not change the results
         - not interrupt the iteration with an error
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -227,13 +227,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         test that the cursor can be properly position to the first element in
         the natural order of the keys
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "alice", "Alice's data"))
         db.put('2', (2, "bob", "Bob's data"))
@@ -265,13 +265,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         test that the cursor can be properly position to the last element in
         the natural order of the keys
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "alice", "Alice's data"))
         db.put('2', (2, "bob", "Bob's data"))
@@ -303,13 +303,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         test that the cursor can be properly position to an arbitrary element
         in the natural order of the keys
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "alice", "Alice's data"))
         db.put('2', (2, "bob", "Bob's data"))
@@ -328,13 +328,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         """Given an empty database, show that the cursor will return a value of
         None for the first position.
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         with db.cursor(index='name') as curs:
             curs.first()
@@ -348,13 +348,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         """Test iteration over the items in a database, using the natural order
         of the index keys.
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -373,13 +373,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         """Test reverse iteration over the items in a database, using the
         reverse natural order of the index keys.
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -400,13 +400,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         - not change the results
         - not interrupt the iteration with an error
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -432,13 +432,13 @@ class IndexedDatabaseTest(unittest.TestCase):
             'key_fn': lambda tup: [struct.pack('I', tup[0])],
             'integerkey': True
         }
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'age': int_index_config
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'age': int_index_config},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (30, "alice", "Alice's data"))
@@ -460,19 +460,20 @@ class IndexedDatabaseTest(unittest.TestCase):
         """Test that an index that uses hex-encoded keys will properly order
         the keys (i.e. the natural order of the keys is in numerical order).
         """
+
         def to_hex(num):
             return "{0:#0{1}x}".format(num, 18)
 
         def age_index_key_fn(tup):
             return [to_hex(tup[0]).encode()]
 
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'age': age_index_key_fn
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'age': age_index_key_fn},
+            flag='c',
+            _size=1024**2)
 
         entry_count = 100
         for i in range(1, entry_count):
@@ -485,13 +486,13 @@ class IndexedDatabaseTest(unittest.TestCase):
     def test_delete(self):
         """Test that items are deleted, including their index references.
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -520,13 +521,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         """Test that a database will commit both inserts and deletes using the
         update method.
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
 
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
@@ -543,13 +544,13 @@ class IndexedDatabaseTest(unittest.TestCase):
         - inserted items index should be correct
         - deleted items should be removed
         """
-        db = IndexedDatabase(os.path.join(self._temp_dir, 'test_db'),
-                             _serialize_tuple, _deserialize_tuple,
-                             indexes={
-                                 'name': lambda tup: [tup[1].encode()]
-                             },
-                             flag='c',
-                             _size=1024**2)
+        db = IndexedDatabase(
+            os.path.join(self._temp_dir, 'test_db'),
+            _serialize_tuple,
+            _deserialize_tuple,
+            indexes={'name': lambda tup: [tup[1].encode()]},
+            flag='c',
+            _size=1024**2)
         db.put('1', (1, "foo", "bar"))
         db.put('2', (2, "alice", "Alice's data"))
         db.put('3', (3, "bob", "Bob's data"))

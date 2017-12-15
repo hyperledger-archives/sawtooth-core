@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from aiohttp.test_utils import unittest_run_loop
+
 from components import Mocks, BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_transaction_pb2
@@ -28,7 +29,6 @@ DEFAULT_LIMIT = 100
 
 
 class TransactionListTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_TRANSACTION_LIST_REQUEST,
@@ -36,7 +36,8 @@ class TransactionListTests(BaseApiTest):
             client_transaction_pb2.ClientTransactionListResponse)
 
         handlers = self.build_handlers(self.loop, self.connection)
-        app = self.build_app(self.loop, '/transactions', handlers.list_transactions)
+        app = self.build_app(self.loop, '/transactions',
+                             handlers.list_transactions)
         return app
 
     @unittest_run_loop
@@ -138,9 +139,11 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns(ID_B, ID_A))
 
-        response = await self.get_assert_200('/transactions?head={}'.format(ID_B))
+        response = await self.get_assert_200(
+            '/transactions?head={}'.format(ID_B))
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(head_id=ID_B, paging=controls)
+        self.connection.assert_valid_request_sent(
+            head_id=ID_B, paging=controls)
         self.assert_has_valid_head(response, ID_B)
         self.assert_has_valid_link(
             response,
@@ -161,7 +164,8 @@ class TransactionListTests(BaseApiTest):
             - an error property with a code of 50
         """
         self.connection.preset_response(self.status.NO_ROOT)
-        response = await self.get_assert_status('/transactions?head={}'.format(ID_D), 404)
+        response = await self.get_assert_status(
+            '/transactions?head={}'.format(ID_D), 404)
 
         self.assert_has_valid_error(response, 50)
 
@@ -182,22 +186,28 @@ class TransactionListTests(BaseApiTest):
             - a response status of 200
             - a head property of ID_C, the latest
             - a link property that ends in
-                '/transactions?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_A, ID_C))
+                '/transactions?head={}&start={}&limit=100&id={},{}'
+                    .format(ID_C, ID_C, ID_A, ID_C))
             - a paging property that matches the paging response
             - a data property that is a list of 2 dicts
             - those dicts are full transactions with ids ID_A and ID_C
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         transactions = Mocks.make_txns(ID_A, ID_C)
-        self.connection.preset_response(head_id=ID_C, paging=paging, transactions=transactions)
+        self.connection.preset_response(
+            head_id=ID_C, paging=paging, transactions=transactions)
 
-        response = await self.get_assert_200('/transactions?id={},{}'.format(ID_A, ID_C))
+        response = await self.get_assert_200('/transactions?id={},{}'.format(
+            ID_A, ID_C))
         controls = Mocks.make_paging_controls()
-        self.connection.assert_valid_request_sent(transaction_ids=[ID_A, ID_C], paging=controls)
+        self.connection.assert_valid_request_sent(
+            transaction_ids=[ID_A, ID_C], paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(
-            response, '/transactions?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_A, ID_C))
+            response,
+            '/transactions?head={}&start={}&limit=100&id={},{}'.format(
+                ID_C, ID_C, ID_A, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_A, ID_C)
@@ -214,21 +224,22 @@ class TransactionListTests(BaseApiTest):
             - a response status of 200
             - a head property of ID_C, the latest
             - a link property that ends in
-                '/transactions?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_B, ID_D))
+                '/transactions?head={}&start={}&limit=100&id={},{}'
+                    .format(ID_C, ID_C, ID_B, ID_D))
             - a paging property with only a total_count of 0
             - a data property that is an empty list
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         self.connection.preset_response(
-            self.status.NO_RESOURCE,
-            head_id=ID_C,
-            paging=paging)
-        response = await self.get_assert_200('/transactions?id={},{}'.format(ID_B, ID_D))
+            self.status.NO_RESOURCE, head_id=ID_C, paging=paging)
+        response = await self.get_assert_200('/transactions?id={},{}'.format(
+            ID_B, ID_D))
 
         self.assert_has_valid_head(response, ID_C)
         self.assert_has_valid_link(
             response,
-            '/transactions?head={}&start={}&limit=100&id={},{}'.format(ID_C, ID_C, ID_B, ID_D))
+            '/transactions?head={}&start={}&limit=100&id={},{}'.format(
+                ID_C, ID_C, ID_B, ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -250,27 +261,26 @@ class TransactionListTests(BaseApiTest):
             - a response status of 200
             - a head property of ID_B
             - a link property that ends in
-                '/transactions?head={}&start={}&limit=100&id={}'.format(ID_B, ID_B, ID_A))
+                '/transactions?head={}&start={}&limit=100&id={}'
+                    .format(ID_B, ID_B, ID_A))
             - a paging property that matches the paging response
             - a data property that is a list of 1 dict
             - that dict is a full transaction with an id of ID_A
         """
         paging = Mocks.make_paging_response("", ID_B, DEFAULT_LIMIT)
         self.connection.preset_response(
-            head_id=ID_B,
-            paging=paging,
-            transactions=Mocks.make_txns(ID_A))
+            head_id=ID_B, paging=paging, transactions=Mocks.make_txns(ID_A))
 
-        response = await self.get_assert_200('/transactions?id={}&head={}'.format(ID_A, ID_B))
+        response = await self.get_assert_200(
+            '/transactions?id={}&head={}'.format(ID_A, ID_B))
         controls = Mocks.make_paging_controls()
         self.connection.assert_valid_request_sent(
-            head_id=ID_B,
-            transaction_ids=[ID_A],
-            paging=controls)
+            head_id=ID_B, transaction_ids=[ID_A], paging=controls)
 
         self.assert_has_valid_head(response, ID_B)
         self.assert_has_valid_link(
-            response, '/transactions?head={}&start={}&limit=100&id={}'.format(ID_B, ID_B, ID_A))
+            response, '/transactions?head={}&start={}&limit=100&id={}'.format(
+                ID_B, ID_B, ID_A))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_txns_well_formed(response['data'], ID_A)
@@ -309,7 +319,8 @@ class TransactionListTests(BaseApiTest):
 
         It will receive a Protobuf response with:
             - a head id of ID_D
-            - a paging response with a start of ID_D, next of ID_B and limit of 2
+            - a paging response with a start of ID_D, next of ID_B and
+              limit of 2
             - two transactions with the ids ID_D and ID_C
 
         It should send a Protobuf request with:
@@ -335,11 +346,12 @@ class TransactionListTests(BaseApiTest):
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response,
-            '/transactions?head={}&start={}&limit=2'.format(ID_D, ID_D))
+        self.assert_has_valid_link(
+            response, '/transactions?head={}&start={}&limit=2'.format(
+                ID_D, ID_D))
         self.assert_has_valid_paging(
-            response, paging,
-            '/transactions?head={}&start={}&limit=2'.format(ID_D, ID_B))
+            response, paging, '/transactions?head={}&start={}&limit=2'.format(
+                ID_D, ID_B))
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_D, ID_C)
 
@@ -376,7 +388,8 @@ class TransactionListTests(BaseApiTest):
 
         self.assert_has_valid_head(response, ID_D)
         self.assert_has_valid_link(
-            response, '/transactions?head={}&start={}&limit=100'.format(ID_D, ID_D))
+            response, '/transactions?head={}&start={}&limit=100'.format(
+                ID_D, ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_txns_well_formed(response['data'], ID_B, ID_A)
@@ -408,16 +421,18 @@ class TransactionListTests(BaseApiTest):
             paging=paging,
             transactions=Mocks.make_txns(ID_C, ID_B, ID_A))
 
-        response = await self.get_assert_200('/transactions?start={}&limit=5'.format(ID_C))
+        response = await self.get_assert_200(
+            '/transactions?start={}&limit=5'.format(ID_C))
         controls = Mocks.make_paging_controls(5, start=ID_C)
         self.connection.assert_valid_request_sent(paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/transactions?head={}&start={}&limit=5'.format(ID_D, ID_C))
+        self.assert_has_valid_link(
+            response, '/transactions?head={}&start={}&limit=5'.format(
+                ID_D, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_txns_well_formed(response['data'], ID_C, ID_B, ID_A)
-
 
     @unittest_run_loop
     async def test_txn_list_sorted_in_reverse(self):
@@ -436,14 +451,17 @@ class TransactionListTests(BaseApiTest):
             - a status of 200
             - a head property of ID_C
             - a link property ending in
-                '/transactions?head={}&start={}&limit=100&reverse'.format(ID_C, ID_C))
+                '/transactions?head={}&start={}&limit=100&reverse'
+                    .format(ID_C, ID_C))
             - a paging property that matches the paging response
             - a data property that is a list of 3 dicts
-            - and those dicts are full transactions with ids ID_C, ID_B, and ID_A
+            - and those dicts are full transactions with ids ID_C,
+              ID_B, and ID_A
         """
         paging = Mocks.make_paging_response("", ID_C, DEFAULT_LIMIT)
         transactions = Mocks.make_txns(ID_C, ID_B, ID_A)
-        self.connection.preset_response(head_id=ID_C, paging=paging, transactions=transactions)
+        self.connection.preset_response(
+            head_id=ID_C, paging=paging, transactions=transactions)
         response = await self.get_assert_200('/transactions?reverse')
         page_controls = Mocks.make_paging_controls()
         sorting = Mocks.make_sort_controls("default", reverse=True)
@@ -452,15 +470,16 @@ class TransactionListTests(BaseApiTest):
             sorting=sorting)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response,
-            '/transactions?head={}&start={}&limit=100&reverse'.format(ID_C, ID_C))
+        self.assert_has_valid_link(
+            response,
+            '/transactions?head={}&start={}&limit=100&reverse'.format(
+                ID_C, ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_txns_well_formed(response['data'], ID_C, ID_B, ID_A)
 
 
 class TransactionGetTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_TRANSACTION_GET_REQUEST,
@@ -501,7 +520,8 @@ class TransactionGetTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_txn_get_with_validator_error(self):
-        """Verifies GET /transactions/{transaction_id} w/ validator error breaks.
+        """Verifies GET /transactions/{transaction_id} w/ validator error
+        breaks.
 
         It will receive a Protobuf response with:
             - a status of INTERNAL_ERROR
@@ -511,7 +531,8 @@ class TransactionGetTests(BaseApiTest):
             - an error property with a code of 10
         """
         self.connection.preset_response(self.status.INTERNAL_ERROR)
-        response = await self.get_assert_status('/transactions/{}'.format(ID_B), 500)
+        response = await self.get_assert_status(
+            '/transactions/{}'.format(ID_B), 500)
 
         self.assert_has_valid_error(response, 10)
 
@@ -527,6 +548,7 @@ class TransactionGetTests(BaseApiTest):
             - an error property with a code of 72
         """
         self.connection.preset_response(self.status.NO_RESOURCE)
-        response = await self.get_assert_status('/transactions/{}'.format(ID_D), 404)
+        response = await self.get_assert_status(
+            '/transactions/{}'.format(ID_D), 404)
 
         self.assert_has_valid_error(response, 72)

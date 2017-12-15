@@ -24,7 +24,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestXo(TransactionProcessorTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

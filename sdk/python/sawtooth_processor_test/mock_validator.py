@@ -49,7 +49,6 @@ class UnexpectedMessageException(Exception):
 
 
 class MockValidator(object):
-
     def __init__(self):
         self._comparators = {}
 
@@ -156,8 +155,7 @@ class MockValidator(object):
         )
 
         return self._loop.run_until_complete(
-            self._send(self._tp_ident, message)
-        )
+            self._send(self._tp_ident, message))
 
     async def _send(self, ident, message):
         """

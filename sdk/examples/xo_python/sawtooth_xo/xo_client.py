@@ -68,19 +68,29 @@ class XoClient:
             .new_signer(private_key)
 
     def create(self, name, wait=None, auth_user=None, auth_password=None):
-        return self._send_xo_txn(name, "create", wait=wait,
-                                 auth_user=auth_user,
-                                 auth_password=auth_password)
+        return self._send_xo_txn(
+            name,
+            "create",
+            wait=wait,
+            auth_user=auth_user,
+            auth_password=auth_password)
 
     def delete(self, name, wait=None, auth_user=None, auth_password=None):
-        return self._send_xo_txn(name, "delete", wait=wait,
-                                 auth_user=auth_user,
-                                 auth_password=auth_password)
+        return self._send_xo_txn(
+            name,
+            "delete",
+            wait=wait,
+            auth_user=auth_user,
+            auth_password=auth_password)
 
     def take(self, name, space, wait=None, auth_user=None, auth_password=None):
-        return self._send_xo_txn(name, "take", space, wait=wait,
-                                 auth_user=auth_user,
-                                 auth_password=auth_password)
+        return self._send_xo_txn(
+            name,
+            "take",
+            space,
+            wait=wait,
+            auth_user=auth_user,
+            auth_password=auth_password)
 
     def list(self, auth_user=None, auth_password=None):
         xo_prefix = self._get_prefix()
@@ -88,8 +98,7 @@ class XoClient:
         result = self._send_request(
             "state?address={}".format(xo_prefix),
             auth_user=auth_user,
-            auth_password=auth_password
-        )
+            auth_password=auth_password)
 
         try:
             encoded_entries = yaml.safe_load(result)["data"]
@@ -104,9 +113,11 @@ class XoClient:
     def show(self, name, auth_user=None, auth_password=None):
         address = self._get_address(name)
 
-        result = self._send_request("state/{}".format(address), name=name,
-                                    auth_user=auth_user,
-                                    auth_password=auth_password)
+        result = self._send_request(
+            "state/{}".format(address),
+            name=name,
+            auth_user=auth_user,
+            auth_password=auth_password)
         try:
             return base64.b64decode(yaml.safe_load(result)["data"])
 
@@ -131,9 +142,13 @@ class XoClient:
         game_address = _sha512(name.encode('utf-8'))[0:64]
         return xo_prefix + game_address
 
-    def _send_request(
-            self, suffix, data=None,
-            content_type=None, name=None, auth_user=None, auth_password=None):
+    def _send_request(self,
+                      suffix,
+                      data=None,
+                      content_type=None,
+                      name=None,
+                      auth_user=None,
+                      auth_password=None):
         if self._base_url.startswith("http://"):
             url = "{}/{}".format(self._base_url, suffix)
         else:
@@ -171,8 +186,13 @@ class XoClient:
 
         return result.text
 
-    def _send_xo_txn(self, name, action, space="", wait=None,
-                     auth_user=None, auth_password=None):
+    def _send_xo_txn(self,
+                     name,
+                     action,
+                     space="",
+                     wait=None,
+                     auth_user=None,
+                     auth_password=None):
         # Serialization is just a delimited utf-8 encoded string
         payload = ",".join([name, action, str(space)]).encode()
 
@@ -209,15 +229,13 @@ class XoClient:
                 "batches", batch_list.SerializeToString(),
                 'application/octet-stream',
                 auth_user=auth_user,
-                auth_password=auth_password
-            )
+                auth_password=auth_password)
             while wait_time < wait:
                 status = self._get_status(
                     batch_id,
                     wait - int(wait_time),
                     auth_user=auth_user,
-                    auth_password=auth_password
-                )
+                    auth_password=auth_password)
                 wait_time = time.time() - start_time
 
                 if status != 'PENDING':
@@ -229,8 +247,7 @@ class XoClient:
             "batches", batch_list.SerializeToString(),
             'application/octet-stream',
             auth_user=auth_user,
-            auth_password=auth_password
-        )
+            auth_password=auth_password)
 
     def _create_batch_list(self, transactions):
         transaction_signatures = [t.header_signature for t in transactions]
@@ -245,6 +262,5 @@ class XoClient:
         batch = Batch(
             header=header,
             transactions=transactions,
-            header_signature=signature
-        )
+            header_signature=signature)
         return BatchList(batches=[batch])

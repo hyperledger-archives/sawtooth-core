@@ -301,3 +301,6 @@ Validation of configuration settings is as follows:
 - *sawtooth.settings.vote.approval_threshold* must be a positive integer and
   must be between 1 (the default) and the number of authorized keys, inclusive
 - *sawtooth.settings.vote.proposals* may not be set by a proposal
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

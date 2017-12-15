@@ -27,6 +27,7 @@ B_2 = 'b' * 127 + '2'
 A_1 = 'a' * 127 + '1'
 C_1 = 'c' * 127 + '1'
 
+
 class TestBlockListRequests(ClientHandlerTestCase):
     def setUp(self):
         store = MockBlockStore()
@@ -56,12 +57,12 @@ class TestBlockListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response, '0x0000000000000002',100)
+        self.assert_valid_paging(response, '0x0000000000000002', 100)
         self.assertEqual(3, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_2, response.blocks[0].header_signature)
 
-    def test_block_list_bad_request(self):
+    def test_block_list_bad_protobufs(self):
         """Verifies requests for lists of blocks break with bad protobufs.
 
         Expects to find:
@@ -75,7 +76,7 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.blocks)
 
-    def test_block_list_bad_request(self):
+    def test_block_list_no_genesis(self):
         """Verifies requests for lists of blocks break with no genesis.
 
         Expects to find:
@@ -278,8 +279,11 @@ class TestBlockListRequests(ClientHandlerTestCase):
         self.assertEqual(2, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_2, response.blocks[0].header_signature)
-        self.assert_valid_paging(response, '0x0000000000000002', 2,
-                                 next_id=BlockStore.block_num_to_hex(0))
+        self.assert_valid_paging(
+            response,
+            '0x0000000000000002',
+            2,
+            next_id=BlockStore.block_num_to_hex(0))
 
     def test_block_list_paginated_by_start(self):
         """Verifies block list requests work paginated by limit and start.
@@ -305,9 +309,11 @@ class TestBlockListRequests(ClientHandlerTestCase):
 
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(B_2, response.head_id)
-        self.assert_valid_paging(response,
-                                 '0x0000000000000001', 1,
-                                 next_id=BlockStore.block_num_to_hex(0))
+        self.assert_valid_paging(
+            response,
+            '0x0000000000000001',
+            1,
+            next_id=BlockStore.block_num_to_hex(0))
         self.assertEqual(1, len(response.blocks))
         self.assert_all_instances(response.blocks, Block)
         self.assertEqual(B_1, response.blocks[0].header_signature)

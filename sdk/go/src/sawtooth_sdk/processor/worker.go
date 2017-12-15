@@ -151,7 +151,7 @@ func findHandler(handlers []TransactionHandler, header *transaction_pb2.Transact
 }
 
 // Waits for something to come along a channel and then initiates processor shutdown
-func shutdown(context *zmq.Context, uri string, queue chan *validator_pb2.Message, wait chan int) {
+func shutdown(context *zmq.Context, uri string, queue chan *validator_pb2.Message, wait chan bool) {
 	// Wait for a request to shutdown
 	connection, err := messaging.NewConnection(context, zmq.DEALER, uri)
 	if err != nil {
@@ -161,39 +161,41 @@ func shutdown(context *zmq.Context, uri string, queue chan *validator_pb2.Messag
 	defer connection.Close()
 	id := "shutdown"
 
-	<-wait
+	force := <-wait
 
-	// Send a request to be unregistered
-	data, err := proto.Marshal(&processor_pb2.TpUnregisterRequest{})
-	if err != nil {
-		logger.Errorf(
-			"Failed to unregister: %v", err,
+	if !force {
+		// Send a request to be unregistered
+		data, err := proto.Marshal(&processor_pb2.TpUnregisterRequest{})
+		if err != nil {
+			logger.Errorf(
+				"Failed to unregister: %v", err,
+			)
+		}
+		corrId, err := connection.SendNewMsg(
+			validator_pb2.Message_TP_UNREGISTER_REQUEST, data,
 		)
-	}
-	corrId, err := connection.SendNewMsg(
-		validator_pb2.Message_TP_UNREGISTER_REQUEST, data,
-	)
-	if err != nil {
-		logger.Errorf(
-			"Failed to unregister: %v", err,
-		)
-	}
+		if err != nil {
+			logger.Errorf(
+				"Failed to unregister: %v", err,
+			)
+		}
 
-	// Wait for a response
-	_, msg, err := connection.RecvMsgWithId(corrId)
-	if err != nil {
-		logger.Errorf("Failed to receive TpUnregisterResponse: %v", err)
-	}
-	if msg.GetCorrelationId() != corrId {
-		logger.Errorf(
-			"Expected message with correlation id %v but got %v",
-			corrId, msg.GetCorrelationId(),
-		)
-	}
-	if msg.GetMessageType() != validator_pb2.Message_TP_UNREGISTER_RESPONSE {
-		logger.Errorf(
-			"Expected TP_UNREGISTER_RESPONSE but got %v", msg.GetMessageType(),
-		)
+		// Wait for a response
+		_, msg, err := connection.RecvMsgWithId(corrId)
+		if err != nil {
+			logger.Errorf("Failed to receive TpUnregisterResponse: %v", err)
+		}
+		if msg.GetCorrelationId() != corrId {
+			logger.Errorf(
+				"Expected message with correlation id %v but got %v",
+				corrId, msg.GetCorrelationId(),
+			)
+		}
+		if msg.GetMessageType() != validator_pb2.Message_TP_UNREGISTER_RESPONSE {
+			logger.Errorf(
+				"Expected TP_UNREGISTER_RESPONSE but got %v", msg.GetMessageType(),
+			)
+		}
 	}
 
 	// Close the work queue, telling the worker threads there's no more work

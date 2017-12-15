@@ -145,3 +145,6 @@ have a game name, an action, and, if the action is `take`, a space.
       - If `O` has a win on the board and `X` doesn't, the updated state will be `P2-WINS`.
       - Otherwise, if the updated board doesn't contain `-` (if the board has no empty spaces), the updated state will be `TIE`.
       - Otherwise, the updated state will be `P2-NEXT` if the initial state is `P1-NEXT` and `P1-NEXT` and if the initial state is `P2-NEXT`.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/
