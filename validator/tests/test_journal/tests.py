@@ -488,6 +488,7 @@ class TestBlockValidator(unittest.TestCase):
 
         self.block_tree_manager = BlockTreeManager()
         self.root = self.block_tree_manager.chain_head
+        self.root.status = BlockStatus.Valid
 
         self.block_validation_handler = self.BlockValidationHandler()
         self.permission_verifier = MockPermissionVerifier()
@@ -522,7 +523,11 @@ class TestBlockValidator(unittest.TestCase):
         new_chain, new_head = self.generate_chain_with_head(
             self.root, 3, {'add_to_cache': True})
 
-        self.validate_block(new_head)
+        for block in chain:
+            self.validate_block(block)
+
+        for block in new_chain:
+            self.validate_block(block)
 
         self.assert_valid_block(new_head)
         self.assert_new_block_not_committed()
@@ -543,11 +548,16 @@ class TestBlockValidator(unittest.TestCase):
         new_chain, new_head = self.generate_chain_with_head(
             head, 8, {'add_to_cache': True})
 
-        self.validate_block(new_head)
+        for block in chain:
+            self.validate_block(block)
+
+        for block in new_chain:
+            self.validate_block(block)
 
         self.assert_valid_block(new_head)
         self.assert_new_block_committed()
 
+    @unittest.skip("Chain controller handles this now")
     def test_fork_different_genesis(self):
         """"
         Test the case where new block is from a different genesis
@@ -562,7 +572,9 @@ class TestBlockValidator(unittest.TestCase):
         new_chain, new_head = self.generate_chain_with_head(
             None, 5, {'add_to_cache': True})
 
-        self.validate_block(new_head)
+        new_head.status = BlockStatus.Valid
+        for block in new_chain:
+            self.validate_block(block)
 
         self.assert_invalid_block(new_head)
         self.assert_new_block_not_committed()
@@ -578,7 +590,8 @@ class TestBlockValidator(unittest.TestCase):
         # remove one of the new blocks
         del self.block_tree_manager.block_cache[chain[1].identifier]
 
-        self.validate_block(head)
+        for block in chain:
+            self.validate_block(block)
 
         self.assert_invalid_block(head)
         self.assert_new_block_not_committed()
@@ -594,7 +607,8 @@ class TestBlockValidator(unittest.TestCase):
         # Mark a predecessor as invalid
         chain[1].status = BlockStatus.Invalid
 
-        self.validate_block(head)
+        for block in chain:
+            self.validate_block(block)
 
         self.assert_invalid_block(head)
         self.assert_new_block_not_committed()
@@ -611,6 +625,9 @@ class TestBlockValidator(unittest.TestCase):
             add_to_cache=True,
             invalid_consensus=True)
 
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
@@ -622,6 +639,11 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+
+        self.block_tree_manager.block_cache[head.header_signature] = head
 
         new_block = self.block_tree_manager.generate_block(
             previous_block=head,
@@ -641,6 +663,10 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
 
         txn = self.block_tree_manager.generate_transaction(deps=["missing"])
         batch = self.block_tree_manager.generate_batch(txns=[txn])
@@ -662,6 +688,10 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
 
         batch = self.block_tree_manager.generate_batch()
         new_block = self.block_tree_manager.generate_block(
@@ -688,6 +718,10 @@ class TestBlockValidator(unittest.TestCase):
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
+
         batch = self.block_tree_manager.generate_batch()
 
         new_block = self.block_tree_manager.generate_block(
@@ -707,6 +741,10 @@ class TestBlockValidator(unittest.TestCase):
         """
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
+
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
 
         txn = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn])
@@ -737,6 +775,10 @@ class TestBlockValidator(unittest.TestCase):
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
+        for block in chain:
+            self.validate_block(block)
+            self.block_tree_manager.block_cache[block.header_signature] = block
+
         txn = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn, txn])
         new_block = self.block_tree_manager.generate_block(
@@ -763,15 +805,9 @@ class TestBlockValidator(unittest.TestCase):
 
     def assert_new_block_committed(self):
         self.assert_handler_has_result()
-        self.assertTrue(
-            self.block_validation_handler.commit_new_block,
-            "New block not committed, should be")
 
     def assert_new_block_not_committed(self):
         self.assert_handler_has_result()
-        self.assertFalse(
-            self.block_validation_handler.commit_new_block,
-            "New block committed, shouldn't be")
 
     def assert_handler_has_result(self):
         msg = "Validation handler doesn't have result"
@@ -801,15 +837,15 @@ class TestBlockValidator(unittest.TestCase):
 
     class BlockValidationHandler(object):
         def __init__(self):
-            self.commit_new_block = None
-            self.result = None
+            self.block = None
+            pass
 
-        def on_block_validated(self, commit_new_block, result):
-            self.commit_new_block = commit_new_block
-            self.result = result
+        def on_block_validated(self, block):
+            self.block = block
+            pass
 
         def has_result(self):
-            return not (self.result is None or self.commit_new_block is None)
+            return self.block is not None
 
     # block tree manager interface
 
@@ -846,6 +882,7 @@ class TestChainController(unittest.TestCase):
             chain_head_lock=self._chain_head_lock,
             on_chain_updated=chain_updated,
             chain_id_manager=self.chain_id_manager,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             chain_observers=[],
@@ -1197,6 +1234,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             chain_head_lock=self.chain_head_lock,
             on_chain_updated=chain_updated,
             chain_id_manager=self.chain_id_manager,
+            identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             chain_observers=[],
@@ -1323,6 +1361,7 @@ class TestJournal(unittest.TestCase):
                 chain_head_lock=block_publisher.chain_head_lock,
                 on_chain_updated=block_publisher.on_chain_updated,
                 chain_id_manager=None,
+                identity_public_key=btm.identity_public_key,
                 data_dir=None,
                 config_dir=None,
                 chain_observers=[])
