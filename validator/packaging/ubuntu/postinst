@@ -25,23 +25,25 @@ directories="
 user="sawtooth"
 group="sawtooth"
 
-if ! getent group $group > /dev/null; then
-    addgroup --quiet --system $group
+if [ "$1" = install ]; then
+    if ! getent group $group > /dev/null; then
+        addgroup --quiet --system $group
+    fi
+
+    if ! getent passwd $user > /dev/null; then
+        adduser --quiet --system --ingroup $group $user
+    fi
+
+    for dir in $directories
+    do
+        chown -R $user:$group $dir
+        chmod 750 $dir
+    done
+
+    chown -R root:root /etc/sawtooth
+    chmod 755 /etc/sawtooth
+    chmod 640 /etc/sawtooth/*.toml*
+    chown root:$group /etc/sawtooth/*.toml*
+    chown root:$group /etc/sawtooth/keys
+    chmod 755 /etc/sawtooth/keys
 fi
-
-if ! getent passwd $user > /dev/null; then
-    adduser --quiet --system --ingroup $group $user
-fi
-
-for dir in $directories
-do
-    chown -R $user:$group $dir
-    chmod 750 $dir
-done
-
-chown -R root:root /etc/sawtooth
-chmod 755 /etc/sawtooth
-chmod 640 /etc/sawtooth/*.toml*
-chown root:$group /etc/sawtooth/*.toml*
-chown root:$group /etc/sawtooth/keys
-chmod 755 /etc/sawtooth/keys
