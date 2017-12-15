@@ -39,13 +39,15 @@ class ConsensusFactory(object):
         """
         module_package = module_name
         if module_name == 'genesis':
-            module_package = \
-                'sawtooth_validator.journal.consensus.genesis.'\
+            module_package = (
+                'sawtooth_validator.journal.consensus.genesis.'
                 'genesis_consensus'
+            )
         elif module_name == 'devmode':
-            module_package = \
-                'sawtooth_validator.journal.consensus.dev_mode.'\
+            module_package = (
+                'sawtooth_validator.journal.consensus.dev_mode.'
                 'dev_mode_consensus'
+            )
         elif module_name == 'poet':
             module_package = 'sawtooth_poet.poet_consensus'
 

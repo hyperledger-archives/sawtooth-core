@@ -19,10 +19,10 @@ import argparse
 import os
 from urllib.parse import urlparse
 import pkg_resources
-import netifaces
 
 from pyformance import MetricsRegistry
 from pyformance.reporters import InfluxReporter
+import netifaces
 
 from sawtooth_validator.config.path import load_path_config
 from sawtooth_validator.config.validator import load_default_validator_config

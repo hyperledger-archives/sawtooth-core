@@ -15,15 +15,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import argparse
 import hashlib
-import os
 import logging
 import binascii
 import random
-import string
 import time
-import cbor
 
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2

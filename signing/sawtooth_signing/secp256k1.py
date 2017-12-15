@@ -16,16 +16,15 @@
 import binascii
 import warnings
 
+import secp256k1
+import bitcoin as pybitcointools
+
 from sawtooth_signing.core import SigningError
 from sawtooth_signing.core import ParseError
 
 from sawtooth_signing.core import PrivateKey
 from sawtooth_signing.core import PublicKey
 from sawtooth_signing.core import Context
-
-import secp256k1
-
-import bitcoin as pybitcointools
 
 __CONTEXTBASE__ = secp256k1.Base(ctx=None, flags=secp256k1.ALL_FLAGS)
 __CTX__ = __CONTEXTBASE__.ctx

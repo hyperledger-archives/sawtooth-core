@@ -102,7 +102,7 @@ class TransactionCommitCache(_CommitCache):
         super(TransactionCommitCache, self).__init__(
             block_store.has_transaction)
 
-    def add_batch(self, batch, add_transactions=True):
+    def add_batch(self, batch):
         for txn in batch.transactions:
             self._committed.add(txn.header_signature)
 

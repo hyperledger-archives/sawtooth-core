@@ -83,8 +83,11 @@ class MockValidator(object):
 
         # User ROUTER socket, the TransactionProcessor uses DEALER
         self._socket = self._context.socket(zmq.ROUTER)
-        LOGGER.debug("Binding to " + self._url)
+
+        LOGGER.debug("Binding to %s", self._url)
+
         self._socket.set(zmq.LINGER, 0)
+
         try:
             self._socket.bind(self._url)
 

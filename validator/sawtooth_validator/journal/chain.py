@@ -175,18 +175,20 @@ class BlockValidator(object):
         """
         for txn in batch.transactions:
             txn_hdr = self._txn_header(txn)
-            if self._chain_commit_state. \
-                    has_transaction(txn.header_signature):
-                LOGGER.debug("Block rejected due to duplicate" +
-                             " transaction, transaction: %s",
-                             txn.header_signature[:8])
+            if self._chain_commit_state.has_transaction(txn.header_signature):
+                LOGGER.debug(
+                    "Block rejected due to duplicate"
+                    " transaction, transaction: %s",
+                    txn.header_signature[:8])
                 raise InvalidBatch()
             for dep in txn_hdr.dependencies:
                 if not self._chain_commit_state.has_transaction(dep):
-                    LOGGER.debug("Block rejected due to missing "
-                                 "transaction dependency, transaction %s "
-                                 "depends on %s",
-                                 txn.header_signature[:8], dep[:8])
+                    LOGGER.debug(
+                        "Block rejected due to missing "
+                        "transaction dependency, transaction %s "
+                        "depends on %s",
+                        txn.header_signature[:8],
+                        dep[:8])
                     raise InvalidBatch()
             self._chain_commit_state.add_txn(txn.header_signature)
 
@@ -314,16 +316,17 @@ class BlockValidator(object):
                 # since changes to the chain-head can change the state of the
                 # blocks in BlockStore we have to revalidate this block.
                 block_store = self._block_cache.block_store
-                if self._chain_head is not None and\
-                        self._chain_head.identifier !=\
-                        block_store.chain_head.identifier:
+                if (self._chain_head is not None
+                        and self._chain_head.identifier !=
+                        block_store.chain_head.identifier):
                     raise ChainHeadUpdated()
 
-                blkw.status = BlockStatus.Valid if\
-                    valid else BlockStatus.Invalid
+                blkw.status = \
+                    BlockStatus.Valid if valid else BlockStatus.Invalid
+
                 return valid
-        except ChainHeadUpdated:
-            raise
+        except ChainHeadUpdated as chu:
+            raise chu
         except Exception:
             LOGGER.exception(
                 "Unhandled exception BlockPublisher.validate_block()")
@@ -365,10 +368,8 @@ class BlockValidator(object):
             # current chain is longer
             # walk the current chain back until we find the block that is the
             # same height as the new chain.
-            while cur_blkw.block_num > \
-                    new_blkw.block_num \
-                    and new_blkw.previous_block_id != \
-                    NULL_BLOCK_IDENTIFIER:
+            while (cur_blkw.block_num > new_blkw.block_num
+                   and new_blkw.previous_block_id != NULL_BLOCK_IDENTIFIER):
                 cur_chain.append(cur_blkw)
                 cur_blkw = self._block_cache[cur_blkw.previous_block_id]
         return (new_blkw, cur_blkw)
@@ -376,24 +377,19 @@ class BlockValidator(object):
     def _find_common_ancestor(self, new_blkw, cur_blkw, new_chain, cur_chain):
         """ Finds a common ancestor of the two chains.
         """
-        while cur_blkw.identifier != \
-                new_blkw.identifier:
-            if cur_blkw.previous_block_id ==  \
-                    NULL_BLOCK_IDENTIFIER or \
-                    new_blkw.previous_block_id == \
-                    NULL_BLOCK_IDENTIFIER:
-                # We are at a genesis block and the blocks are not the
-                # same
-                LOGGER.info("Block rejected due to wrong genesis: %s %s",
-                            cur_blkw, new_blkw)
+        while cur_blkw.identifier != new_blkw.identifier:
+            if (cur_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER
+                    or new_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER):
+                # We are at a genesis block and the blocks are not the same
+                LOGGER.info(
+                    "Block rejected due to wrong genesis: %s %s",
+                    cur_blkw, new_blkw)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
                 raise BlockValidationAborted()
             new_chain.append(new_blkw)
             try:
-                new_blkw = \
-                    self._block_cache[
-                        new_blkw.previous_block_id]
+                new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
                 LOGGER.debug(
                     "Block rejected due to missing" + " predecessor: %s",
@@ -403,19 +399,19 @@ class BlockValidator(object):
                 raise BlockValidationAborted()
 
             cur_chain.append(cur_blkw)
-            cur_blkw = \
-                self._block_cache[cur_blkw.previous_block_id]
+            cur_blkw = self._block_cache[cur_blkw.previous_block_id]
 
     def _test_commit_new_chain(self):
         """ Compare the two chains and determine which should be the head.
         """
         public_key = self._identity_signer.get_public_key().as_hex()
-        fork_resolver = self._consensus_module.\
-            ForkResolver(block_cache=self._block_cache,
-                         state_view_factory=self._state_view_factory,
-                         data_dir=self._data_dir,
-                         config_dir=self._config_dir,
-                         validator_id=public_key)
+        fork_resolver = \
+            self._consensus_module.ForkResolver(
+                block_cache=self._block_cache,
+                state_view_factory=self._state_view_factory,
+                data_dir=self._data_dir,
+                config_dir=self._config_dir,
+                validator_id=public_key)
 
         return fork_resolver.compare_forks(self._chain_head, self._new_block)
 
@@ -492,14 +488,15 @@ class BlockValidator(object):
             # 5) Consensus to compute batch sets (only if we are switching).
             if commit_new_chain:
                 (self._result["committed_batches"],
-                 self._result["uncommitted_batches"]) =\
+                 self._result["uncommitted_batches"]) = \
                     self._compute_batch_change(new_chain, cur_chain)
 
             # 6) Tell the journal we are done.
-            self._done_cb(commit_new_chain,
-                          self._result)
-            LOGGER.info("Finished block validation of: %s",
-                        self._new_block)
+            self._done_cb(commit_new_chain, self._result)
+
+            LOGGER.info(
+                "Finished block validation of: %s",
+                self._new_block)
         except BlockValidationAborted:
             self._done_cb(False, self._result)
             return
@@ -644,9 +641,10 @@ class ChainController(object):
             self._block_num_gauge = GaugeWrapper()
 
         self._block_queue = queue.Queue()
-        self._thread_pool = \
-            InstrumentedThreadPoolExecutor(1) \
+        self._thread_pool = (
+            InstrumentedThreadPoolExecutor(1)
             if thread_pool is None else thread_pool
+        )
         self._chain_thread = None
 
         # Only run this after all member variables have been bound
@@ -744,7 +742,7 @@ class ChainController(object):
                     self._blocks_pending.pop(new_block.identifier, [])
 
                 # if the head has changed, since we started the work.
-                if result["chain_head"].identifier !=\
+                if result["chain_head"].identifier != \
                         self._chain_head.identifier:
                     LOGGER.info(
                         'Chain head updated from %s to %s while processing '
@@ -877,15 +875,15 @@ class ChainController(object):
                 self._block_cache[block.identifier] = block
                 self._blocks_pending[block.identifier] = []
                 LOGGER.debug("Block received: %s", block)
-                if block.previous_block_id in self._blocks_processing or \
-                        block.previous_block_id in self._blocks_pending:
+                if (block.previous_block_id in self._blocks_processing
+                        or block.previous_block_id in self._blocks_pending):
                     LOGGER.debug('Block pending: %s', block)
                     # if the previous block is being processed, put it in a
                     # wait queue, Also need to check if previous block is
                     # in the wait queue.
-                    pending_blocks = \
-                        self._blocks_pending.get(block.previous_block_id,
-                                                 [])
+                    pending_blocks = self._blocks_pending.get(
+                        block.previous_block_id,
+                        [])
                     # Though rare, the block may already be in the
                     # pending_block list and should not be re-added.
                     if block not in pending_blocks:

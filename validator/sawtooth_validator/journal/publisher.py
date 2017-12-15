@@ -142,8 +142,10 @@ class _CandidateBlock(object):
     def last_batch(self):
         if self._pending_batches:
             return self._pending_batches[-1]
-        raise ValueError('last_batch called on an empty block.'
-                         'Empty block publishing is not supported.')
+        raise ValueError(
+            'last_batch called on an empty block.'
+            'Empty block publishing is not supported.'
+        )
 
     @property
     def batches(self):
@@ -151,8 +153,10 @@ class _CandidateBlock(object):
 
     @property
     def can_add_batch(self):
-        return self._max_batches == 0 or\
-            len(self._pending_batches) < self._max_batches
+        return (
+            self._max_batches == 0
+            or len(self._pending_batches) < self._max_batches
+        )
 
     def _check_batch_dependencies(self, batch, committed_txn_cache):
         """Check the dependencies for all transactions in this are present.
@@ -166,9 +170,9 @@ class _CandidateBlock(object):
         """
         for txn in batch.transactions:
             if self._is_txn_already_committed(txn, committed_txn_cache):
-                LOGGER.debug("Transaction rejected as it " +
-                             "is already in the chain " +
-                             "%s", txn.header_signature[:8])
+                LOGGER.debug(
+                    "Transaction rejected as it is already in the chain %s",
+                    txn.header_signature[:8])
                 return False
             elif not self._check_transaction_dependencies(
                     txn, committed_txn_cache):
@@ -192,9 +196,10 @@ class _CandidateBlock(object):
         txn_hdr.ParseFromString(txn.header)
         for dep in txn_hdr.dependencies:
             if dep not in committed_txn_cache:
-                LOGGER.debug("Transaction rejected due " +
-                             "missing dependency, transaction " +
-                             "%s depends on %s", txn.header_signature, dep)
+                LOGGER.debug(
+                    "Transaction rejected due missing dependency, "
+                    "transaction %s depends on %s",
+                    txn.header_signature, dep)
                 return False
         return True
 
@@ -547,12 +552,13 @@ class BlockPublisher(object):
             self._block_cache.block_store)
 
         self._transaction_executor.execute(scheduler)
-        self._candidate_block = _CandidateBlock(self._block_cache.block_store,
-                                                consensus, scheduler,
-                                                committed_txn_cache,
-                                                block_builder,
-                                                max_batches,
-                                                batch_injectors)
+        self._candidate_block = _CandidateBlock(
+            self._block_cache.block_store,
+            consensus, scheduler,
+            committed_txn_cache,
+            block_builder,
+            max_batches,
+            batch_injectors)
 
         for batch in self._pending_batches:
             if self._candidate_block.can_add_batch:
@@ -660,9 +666,9 @@ class BlockPublisher(object):
         """
         try:
             with self._lock:
-                if self._chain_head is not None and\
-                        self._candidate_block is None and\
-                        self._pending_batches:
+                if (self._chain_head is not None
+                        and self._candidate_block is None
+                        and self._pending_batches):
                     self._build_candidate_block(self._chain_head)
 
                 if self._candidate_block and (
@@ -680,10 +686,9 @@ class BlockPublisher(object):
                     # Update the _pending_batches to reflect what we learned.
 
                     last_batch_index = self._pending_batches.index(last_batch)
-                    unsent_batches =\
+                    unsent_batches = \
                         self._pending_batches[last_batch_index + 1:]
-                    self._pending_batches =\
-                        pending_batches + unsent_batches
+                    self._pending_batches = pending_batches + unsent_batches
 
                     self._set_gauge(len(self._pending_batches))
 

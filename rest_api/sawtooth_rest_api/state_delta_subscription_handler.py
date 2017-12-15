@@ -206,8 +206,8 @@ class StateDeltaSubscriberHandler:
                     last_known_block_ids=[last_known_block_id],
                 ).SerializeToString())
 
-            subscription = client_event_pb2.\
-                ClientEventsSubscribeResponse()
+            subscription = \
+                client_event_pb2. ClientEventsSubscribeResponse()
             subscription.ParseFromString(resp.content)
 
             if subscription.status != \

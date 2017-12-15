@@ -16,8 +16,7 @@
 import os
 import subprocess
 
-# from distutils.core import setup, Extension, find_packages
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, find_packages
 
 if os.name == 'nt':
     conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"

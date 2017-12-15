@@ -328,6 +328,7 @@ def _display(msg):
         length = len(msg)
         msg = [msg]
 
+    # pylint: disable=logging-not-lazy
     LOGGER.debug("+" + (length + 2) * "-" + "+")
     for line in msg:
         LOGGER.debug("+ " + line.center(length) + " +")

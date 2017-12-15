@@ -325,31 +325,31 @@ class ValidatorConfig:
 
     def __repr__(self):
         # not including  password for opentsdb
-        return \
-            "{}(bind_network={}, bind_component={}, " \
-            "endpoint={}, peering={}, seeds={}, peers={}, "\
-            "network_public_key={}, network_private_key={}, " \
-            "scheduler={}, permissions={}, roles={} " \
-            "opentsdb_url={}, opentsdb_db={}, opentsdb_username={}, \
-            minimum_peer_connectivity={}, maximum_peer_connectivity={}\
-            )".format(
-                self.__class__.__name__,
-                repr(self._bind_network),
-                repr(self._bind_component),
-                repr(self._endpoint),
-                repr(self._peering),
-                repr(self._seeds),
-                repr(self._peers),
-                repr(self._network_public_key),
-                repr(self._network_private_key),
-                repr(self._scheduler),
-                repr(self._permissions),
-                repr(self._roles),
-                repr(self._opentsdb_url),
-                repr(self._opentsdb_db),
-                repr(self._opentsdb_username),
-                repr(self._minimum_peer_connectivity),
-                repr(self._maximum_peer_connectivity))
+        return (
+            "{}(bind_network={}, bind_component={}, "
+            "endpoint={}, peering={}, seeds={}, peers={}, "
+            "network_public_key={}, network_private_key={}, "
+            "scheduler={}, permissions={}, roles={} "
+            "opentsdb_url={}, opentsdb_db={}, opentsdb_username={}, "
+            "minimum_peer_connectivity={}, maximum_peer_connectivity={})"
+        ).format(
+            self.__class__.__name__,
+            repr(self._bind_network),
+            repr(self._bind_component),
+            repr(self._endpoint),
+            repr(self._peering),
+            repr(self._seeds),
+            repr(self._peers),
+            repr(self._network_public_key),
+            repr(self._network_private_key),
+            repr(self._scheduler),
+            repr(self._permissions),
+            repr(self._roles),
+            repr(self._opentsdb_url),
+            repr(self._opentsdb_db),
+            repr(self._opentsdb_username),
+            repr(self._minimum_peer_connectivity),
+            repr(self._maximum_peer_connectivity))
 
     def to_dict(self):
         return collections.OrderedDict([

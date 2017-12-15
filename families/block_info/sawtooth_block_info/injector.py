@@ -99,10 +99,10 @@ class BlockInfoInjector(BatchInjector):
         return [self.create_batch(block_info)]
 
     def before_batch(self, previous_block_id, batch):
-        return None
+        pass
 
     def after_batch(self, previous_block_id, batch):
-        return None
+        pass
 
     def block_end(self, previous_block_id, batches):
-        return None
+        pass
