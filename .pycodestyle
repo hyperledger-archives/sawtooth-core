@@ -17,4 +17,4 @@
 # W503: line break before binary operator
 # E722 do not use bare except
 ignore=W503,E722
-exclude=build,docs,ECDSARecoverModule.py,poet0_enclave_simulator.py,poet1_enclave_simulator.py,*_pb2.py
+exclude=build,docs,*_pb2.py
