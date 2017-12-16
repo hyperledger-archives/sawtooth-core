@@ -64,6 +64,7 @@ class InvalidBatch(Exception):
     pass
 
 
+# pylint: disable=stop-iteration-return
 def look_ahead(iterable):
     """Pass through all values from the given iterable, augmented by the
     information if there are more values to come after the current one

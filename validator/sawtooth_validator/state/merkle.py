@@ -44,6 +44,7 @@ class MerkleDatabase(object):
         try:
             node = self._get_by_addr(path)
         except KeyError:
+            # pylint: disable=stop-iteration-return
             raise StopIteration()
 
         if path == INIT_ROOT_KEY:

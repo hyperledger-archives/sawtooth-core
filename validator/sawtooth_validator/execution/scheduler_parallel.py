@@ -918,10 +918,11 @@ class ParallelScheduler(Scheduler):
         with self._condition:
             if self._complete():
                 return True
+
             if block:
-                self._condition.wait_for(self._complete)
-            else:
-                return False
+                return self._condition.wait_for(self._complete)
+
+            return False
 
     def __del__(self):
         self.cancel()
