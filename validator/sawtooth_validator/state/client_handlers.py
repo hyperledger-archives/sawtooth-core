@@ -587,6 +587,7 @@ class _BatchWaiter(BatchFinishObserver):
             self._statuses = statuses
             self._wait_condition.notify()
 
+    # pylint: disable=inconsistent-return-statements
     def wait_for_batches(self, batch_ids, timeout=None):
         """Locks until a list of batch ids is committed to the block chain
         or a timeout is exceeded. Returns the statuses of those batches.

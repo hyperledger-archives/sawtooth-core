@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=inconsistent-return-statements
+
 import time
 import random
 import hashlib

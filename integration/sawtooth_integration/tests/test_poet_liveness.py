@@ -110,15 +110,18 @@ def log_block(node, block):
 
 
 def check_block_batch_count(block, batch_range):
-    batches = len(block["header"]["batch_ids"])
-    if batch_range[0] <= batches <= batch_range[1]:
-        return True
-    else:
+    batch_count = len(block["header"]["batch_ids"])
+
+    valid = batch_range[0] <= batch_count <= batch_range[1]
+
+    if not valid:
         LOGGER.error(
             "Block (%s, %s) had %s batches in it",
             block["header"]["block_num"],
             block["header_signature"],
-            batches)
+            batch_count)
+
+    return valid
 
 
 def check_min_batches(chain, min_batches):

@@ -39,6 +39,8 @@ class BlockEventExtractor(EventExtractor):
                 if sub.event_type == "sawtooth/block-commit":
                     return [self._make_event()]
 
+        return None
+
 
 class ReceiptEventExtractor(EventExtractor):
     def __init__(self, receipts):

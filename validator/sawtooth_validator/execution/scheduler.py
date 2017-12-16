@@ -203,6 +203,7 @@ class SchedulerIterator(object):
         self._condition = condition
         self._next_index = start_index
 
+    # pylint: disable=inconsistent-return-statements
     def __next__(self):
         with self._condition:
             # Catch-up.  This will return transactions that have already been

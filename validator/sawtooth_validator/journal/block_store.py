@@ -371,6 +371,7 @@ class BlockStore(MutableMapping):
             for txn in batch.transactions:
                 if txn.header_signature == transaction_id:
                     return batch
+        return None
 
     def get_batch(self, batch_id):
         """

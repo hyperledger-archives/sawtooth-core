@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+# pylint: disable=inconsistent-return-statements
+
 import abc
 import logging
 import queue
@@ -719,3 +722,5 @@ class BlockPublisher(object):
                 return True
             if batch_id in self._queued_batch_ids:
                 return True
+
+        return False
