@@ -190,6 +190,8 @@ class RestClient(object):
             return (e.response.status_code, e.response.reason)
         except RemoteDisconnected as e:
             raise CliException(e)
+        except requests.exceptions.MissingSchema as e:
+            raise CliException(e)
         except requests.exceptions.ConnectionError as e:
             raise CliException(
                 ('Unable to connect to "{}": '
