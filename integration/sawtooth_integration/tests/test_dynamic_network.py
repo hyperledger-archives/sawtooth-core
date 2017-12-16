@@ -228,8 +228,10 @@ class TestDynamicNetwork(unittest.TestCase):
         for client in self.clients.values():
             url = client.url
             LOGGER.info('Blocks @ %s', url)
-            subprocess.run(shlex.split(
-                'sawtooth block list --url {}'.format(url)))
+            subprocess.run(
+                shlex.split(
+                    'sawtooth block list --url {}'.format(url)),
+                check=True)
 
         list_of_sig_lists = [
             client.recent_block_signatures(tolerance)
