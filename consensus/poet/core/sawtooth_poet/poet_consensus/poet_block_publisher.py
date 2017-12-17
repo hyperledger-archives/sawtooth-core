@@ -58,6 +58,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
     _previous_block_id = None
 
+    _last_initialization_status = ''
+
     _validator_registry_namespace = \
         hashlib.sha256('validator_registry'.encode()).hexdigest()[0:6]
     _validator_map_address = \
@@ -229,6 +231,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
         # that the validator can go do something more useful.
         if block_header.previous_block_id == \
                 PoetBlockPublisher._previous_block_id:
+            LOGGER.debug(PoetBlockPublisher._last_initialization_status)
             return False
         PoetBlockPublisher._previous_block_id = block_header.previous_block_id
 
@@ -271,7 +274,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 self._register_signup_information(
                     block_header=block_header,
                     poet_enclave_module=poet_enclave_module)
-
+            PoetBlockPublisher._last_initialization_status = \
+                'Cannot initialize a block, not yet registered'
             return False
 
         # Retrieve the key state corresponding to the PoET public key in our
@@ -309,7 +313,9 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 PoetKeyState(
                     sealed_signup_data=dummy_data,
                     has_been_refreshed=True)
-
+            PoetBlockPublisher._last_initialization_status = \
+                'Cannot initialize a block, PPK not found in key state store '\
+                'must signup again'
             return False
 
         # Check the key state.  If it is marked as being refreshed, then we are
@@ -321,6 +327,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 'key to show up in validator registry.',
                 validator_info.signup_info.poet_public_key[:8],
                 validator_info.signup_info.poet_public_key[-8:])
+            PoetBlockPublisher._last_initialization_status = \
+                'Cannot initialize a block, waiting for registration to commit'
             return False
 
         # If the PoET public key in the validator registry is not the active
@@ -343,6 +351,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 active_poet_public_key[:8],
                 active_poet_public_key[-8:])
             self._poet_key_state_store.active_key = None
+            PoetBlockPublisher._last_initialization_status = \
+                'Cannot initialize a block, unuseable signup data'
             return False
 
         assert active_poet_public_key == unsealed_poet_public_key
@@ -379,6 +389,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
             self._register_signup_information(
                 block_header=block_header,
                 poet_enclave_module=poet_enclave_module)
+            PoetBlockPublisher._last_initialization_status = \
+                'Cannot initialize a block, registration not fresh'
             return False
 
         # Using the consensus state for the block upon which we want to
@@ -427,6 +439,9 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 'Reject building on block %s: Validator has reached maximum '
                 'number of blocks with key pair.',
                 block_header.previous_block_id[:8])
+            PoetBlockPublisher._last_initialization_status = \
+                'Cannot initialize a block, reached maximum number ' \
+                'of blocks with key pair.'
             return False
 
         # Verify that we are abiding by the block claim delay (i.e., waiting a
@@ -442,6 +457,9 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 'Reject building on block %s: Validator has not waited long '
                 'enough since registering validator information.',
                 block_header.previous_block_id[:8])
+            PoetBlockPublisher._last_initialization_status = \
+                'Cannot initialize a block, not waited long enough ' \
+                'since registration'
             return False
 
         # We need to create a wait timer for the block...this is what we
@@ -482,6 +500,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 'Reject building on block %s: Validator is claiming blocks '
                 'too frequently.',
                 block_header.previous_block_id[:8])
+            PoetBlockPublisher._last_initialization_status = \
+                'Cannot initialize a block, claiming blocks too frequently'
             return False
 
         # At this point, we know that if we are able to claim the block we are
@@ -490,7 +510,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
 
         self._wait_timer = wait_timer
         PoetBlockPublisher._previous_block_id = None
-
+        PoetBlockPublisher._last_initialization_status = ''
         LOGGER.debug('Created wait timer: %s', self._wait_timer)
 
         return True
