@@ -19,6 +19,8 @@ from sawtooth_validator.execution import tp_state_handlers
 
 from sawtooth_validator.journal.completer import \
     CompleterBatchListBroadcastHandler
+from sawtooth_validator.journal.back_pressure_handlers import \
+    ClientBatchSubmitBackpressureHandler
 
 from sawtooth_validator.gossip import structure_verifier
 
@@ -60,6 +62,7 @@ def add(
         permission_verifier,
         thread_pool,
         sig_pool,
+        block_publisher
 ):
 
     # -- Transaction Processor -- #
@@ -107,6 +110,11 @@ def add(
         sig_pool)
 
     # Submit
+    dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
+        ClientBatchSubmitBackpressureHandler(block_publisher.can_accept_batch),
+        thread_pool)
+
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
         signature_verifier.BatchListSignatureVerifier(),
