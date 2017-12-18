@@ -410,6 +410,9 @@ class ParallelScheduler(Scheduler):
 
     def _is_valid_batch(self, batch):
         for txn in batch.transactions:
+            if txn.header_signature not in self._txn_results:
+                raise _UnscheduledTransactionError()
+
             result = self._txn_results[txn.header_signature]
             if not result.is_valid:
                 return False
@@ -469,38 +472,46 @@ class ParallelScheduler(Scheduler):
             # This method calculates the BatchExecutionResult on the fly,
             # where only the TxnExecutionResults are cached, instead
             # of BatchExecutionResults, as in the SerialScheduler
+            if batch_signature not in self._batches_by_id:
+                return None
+
             batch = self._batches_by_id[batch_signature].batch
 
             if not self._is_valid_batch(batch):
                 return BatchExecutionResult(is_valid=False, state_hash=None)
 
             state_hash = None
-            if self._is_explicit_request_for_state_root(batch_signature):
-                contexts = self._get_contexts_for_squash(batch_signature)
-                state_hash = self._squash(
-                    self._first_state_hash,
-                    contexts,
-                    persist=False,
-                    clean_up=False)
-                if self._is_state_hash_correct(state_hash, batch_signature):
-                    self._squash(
-                        self._first_state_hash,
-                        contexts,
-                        persist=True,
-                        clean_up=True)
-                else:
-                    self._squash(
+            try:
+                if self._is_explicit_request_for_state_root(batch_signature):
+                    contexts = self._get_contexts_for_squash(batch_signature)
+                    state_hash = self._squash(
                         self._first_state_hash,
                         contexts,
                         persist=False,
+                        clean_up=False)
+                    if self._is_state_hash_correct(state_hash,
+                                                   batch_signature):
+                        self._squash(
+                            self._first_state_hash,
+                            contexts,
+                            persist=True,
+                            clean_up=True)
+                    else:
+                        self._squash(
+                            self._first_state_hash,
+                            contexts,
+                            persist=False,
+                            clean_up=True)
+                elif self._is_implicit_request_for_state_root(batch_signature):
+                    contexts = self._get_contexts_for_squash(batch_signature)
+                    state_hash = self._squash(
+                        self._first_state_hash,
+                        contexts,
+                        persist=self._always_persist,
                         clean_up=True)
-            elif self._is_implicit_request_for_state_root(batch_signature):
-                contexts = self._get_contexts_for_squash(batch_signature)
-                state_hash = self._squash(
-                    self._first_state_hash,
-                    contexts,
-                    persist=self._always_persist,
-                    clean_up=True)
+            except _UnscheduledTransactionError:
+                return None
+
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
 
     def get_transaction_execution_results(self, batch_signature):
@@ -873,6 +884,7 @@ class ParallelScheduler(Scheduler):
             # clean up the batches, including partial complete information
             for batch_id in incomplete_batches:
                 annotated_batch = self._batches_by_id[batch_id]
+                self._batches.remove(annotated_batch.batch)
                 del self._batches_by_id[batch_id]
                 for txn in annotated_batch.batch.transactions:
                     txn_id = txn.header_signature
@@ -950,3 +962,10 @@ def _first(iterator):
         return next(iterator)
     except StopIteration:
         return None
+
+
+class _UnscheduledTransactionError(Exception):
+    """Thrown when information on a transaction is requested, but the
+    transaction has been unscheduled.
+    """
+    pass
