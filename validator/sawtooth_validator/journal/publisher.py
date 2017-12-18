@@ -506,6 +506,12 @@ class BlockPublisher(object):
         for observer in self._batch_observers:
             observer.notify_batch_pending(batch)
 
+    def can_accept_batch(self):
+        # Limit the number of batches to 2 times the publishing average.  This
+        # allows the queue to grow geometrically, if the queue is drained.
+        return len(self._pending_batches) < \
+            (2 * self._publish_count_average.value)
+
     @property
     def chain_head_lock(self):
         return self._lock
