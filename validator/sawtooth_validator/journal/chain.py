@@ -21,6 +21,7 @@ from threading import RLock
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.block_pipeline import SimpleReceiverThread
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
@@ -130,6 +131,8 @@ class ChainController(object):
 
         self._chain_observers = chain_observers
 
+        self._block_receive_thread = None
+
         if metrics_registry:
             self._chain_head_gauge = GaugeWrapper(
                 metrics_registry.gauge('chain_head', default='no chain head'))
@@ -144,6 +147,8 @@ class ChainController(object):
 
         # Only run this after all member variables have been bound
         self._set_chain_head_from_block_store()
+
+        self._chain_controller_thread = None
 
     def _set_chain_head_from_block_store(self):
         try:
@@ -166,12 +171,18 @@ class ChainController(object):
                 " determined")
             raise
 
-    def start(self):
+    def start(self, receiver):
         self._set_chain_head_from_block_store()
         self._notify_on_chain_updated(self._chain_head)
+        self._chain_controller_thread = SimpleReceiverThread(
+            receiver=receiver,
+            task=self.on_block_validated,
+            name='ChainControllerThread')
+        self._chain_controller_thread.start()
 
     def stop(self):
-        pass
+        if self._chain_controller_thread is not None:
+            self._chain_controller_thread.stop()
 
     @property
     def chain_head(self):

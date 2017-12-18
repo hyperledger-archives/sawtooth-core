@@ -14,12 +14,12 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import queue
 
-from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.concurrent.atomic import ConcurrentSet
 from sawtooth_validator.concurrent.atomic import ConcurrentMultiMap
 
+from sawtooth_validator.journal.block_pipeline import BlockPipelineStage
+from sawtooth_validator.journal.block_pipeline import SimpleReceiverThread
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
@@ -27,34 +27,31 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 LOGGER = logging.getLogger(__name__)
 
 
-class _BlockValidationSchedulerThread(InstrumentedThread):
-    """This thread's job is to pull blocks off of the queue and to submit them
-    for scheduling."""
-    def __init__(self, block_queue, submit_function, exit_poll_interval=1):
-        super().__init__(name='_BlockValidationSchedulerThread')
-        self._block_queue = block_queue
-        self._submit_function = submit_function
-        self._exit_poll_interval = exit_poll_interval
-        self._exit = False
+class BlockValidationDoneNotifier(BlockPipelineStage):
+    def __init__(self, scheduler):
+        self._scheduler = scheduler
+        self._receive_thread = None
+        self._sender = None
 
-    def run(self):
-        while True:
-            try:
-                # Set timeout so we can check if the thread has been stopped
-                block = self._block_queue.get(timeout=self._exit_poll_interval)
-                self._submit_function(block)
-
-            except queue.Empty:
-                pass
-
-            if self._exit:
-                return
+    def start(self, receiver, sender):
+        self._sender = sender
+        self._receive_thread = SimpleReceiverThread(
+            receiver=receiver,
+            task=self.notify_scheduler)
+        self._receive_thread.start()
 
     def stop(self):
-        self._exit = True
+        self._receive_thread.stop()
+
+    def notify_scheduler(self, block):
+        self._scheduler.on_block_validated(block.header_signature)
+        self._sender.send(block)
+
+    def has_block(self, block_id):
+        return False
 
 
-class BlockValidationScheduler:
+class BlockValidationScheduler(BlockPipelineStage):
     """BlockValidationScheduler is responsible for receiving blocks from an
     incoming queue and determining when they are ready to be validated. A block
     is ready to be validated when:
@@ -66,9 +63,9 @@ class BlockValidationScheduler:
     The BlockValidationScheduler does not do any validation itself.
     """
 
-    def __init__(self, incoming, outgoing, block_cache):
-        self._incoming = incoming
-        self._outgoing = outgoing
+    def __init__(self, block_cache):
+        self._incoming = None
+        self._outgoing = None
         self._block_cache = block_cache
 
         # In process
@@ -78,10 +75,13 @@ class BlockValidationScheduler:
         self._blocks_pending = ConcurrentSet()
         self._block_dependencies = ConcurrentMultiMap()
 
-        self._receive_thread = _BlockValidationSchedulerThread(
-            self._incoming, self.handle_incoming_block)
+        self._receive_thread = None
 
-    def start(self):
+    def start(self, receiver, sender):
+        self._outgoing = sender
+        self._receive_thread = SimpleReceiverThread(
+            receiver=receiver,
+            task=self.handle_incoming_block)
         self._receive_thread.start()
 
     def stop(self):
@@ -148,7 +148,7 @@ class BlockValidationScheduler:
         LOGGER.error("Received block before predecessor: %s", block)
 
     def schedule_block(self, block):
-        self._outgoing.put(block)
+        self._outgoing.send(block)
         self._blocks_processing.add(block.header_signature)
 
     def add_to_pending(self, block):
@@ -167,6 +167,9 @@ class BlockValidationScheduler:
     def is_processing(self, block_id):
         """Return whether this block is being validated."""
         return block_id in self._blocks_processing
+
+    def has_block(self, block_id):
+        return self.is_pending(block_id) or self.is_processing(block_id)
 
     def release_pending_blocks(self, block_id):
         """Remove blocks that were pending on the validation of the block with

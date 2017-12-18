@@ -261,15 +261,15 @@ class BlockTreeManager(object):
         LOGGER.debug("Generated %s", dumps_block(block_wrapper))
         return block_wrapper
 
-    def generate_genesis_block(self):
+    def generate_genesis_block(self, valid=True):
         return self.create_block(
             payload='Genesis',
             previous_block_id=NULL_BLOCK_IDENTIFIER,
-            block_num=0)
+            block_num=0 if valid else 1)
 
     def _block_def(self,
                    add_to_store=False,
-                   add_to_cache=False,
+                   add_to_cache=True,
                    batch_count=1,
                    status=BlockStatus.Unknown,
                    invalid_consensus=False,

@@ -25,6 +25,10 @@ from sawtooth_validator.concurrent.threadpool import \
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
+from sawtooth_validator.journal.block_pipeline import BlockPipeline
+from sawtooth_validator.journal.block_scheduler import BlockValidationScheduler
+from sawtooth_validator.journal.block_scheduler import \
+    BlockValidationDoneNotifier
 from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
@@ -278,16 +282,19 @@ class Validator(object):
             ],
             metrics_registry=metrics_registry)
 
+        block_scheduler = BlockValidationScheduler(block_cache)
+
         block_validator = BlockValidator(
             block_cache=block_cache,
             state_view_factory=state_view_factory,
             transaction_executor=transaction_executor,
-            on_block_validated=chain_controller.on_block_validated,
             squash_handler=context_manager.get_squash_handler(),
             identity_public_key=identity_public_key,
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier)
+
+        block_done_notifier = BlockValidationDoneNotifier(block_scheduler)
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
@@ -305,8 +312,14 @@ class Validator(object):
         responder = Responder(completer)
 
         completer.set_on_batch_received(block_publisher.queue_batch)
-        completer.set_on_block_received(block_validator.queue_block)
-        completer.set_chain_has_block(block_validator.has_block)
+
+        block_pipeline = BlockPipeline()
+        block_pipeline.add_stage(block_scheduler)
+        block_pipeline.add_stage(block_validator)
+        block_pipeline.add_stage(block_done_notifier)
+
+        completer.set_on_block_received(block_pipeline.submit)
+        completer.set_chain_has_block(block_pipeline.has_block)
 
         # -- Register Message Handler -- #
         network_handlers.add(
@@ -340,11 +353,12 @@ class Validator(object):
 
         self._block_publisher = block_publisher
         self._chain_controller = chain_controller
-        self._block_validator = block_validator
+        self._block_pipeline = block_pipeline
 
     def start(self):
         self._component_dispatcher.start()
         self._component_service.start()
+        self._block_pipeline.start()
         if self._genesis_controller.requires_genesis():
             self._genesis_controller.start(self._start)
         else:
@@ -356,8 +370,7 @@ class Validator(object):
 
         self._gossip.start()
         self._block_publisher.start()
-        self._chain_controller.start()
-        self._block_validator.start()
+        self._chain_controller.start(self._block_pipeline.receiver)
 
         signal_event = threading.Event()
 
@@ -385,7 +398,7 @@ class Validator(object):
 
         self._block_publisher.stop()
         self._chain_controller.stop()
-        self._block_validator.stop()
+        self._block_pipeline.stop()
 
         threads = threading.enumerate()
 

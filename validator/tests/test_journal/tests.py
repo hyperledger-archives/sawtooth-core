@@ -21,8 +21,6 @@
 import logging
 from threading import RLock
 import unittest
-from unittest.mock import patch
-import queue
 
 from sawtooth_validator.database.dict_database import DictDatabase
 
@@ -31,6 +29,10 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
+from sawtooth_validator.journal.block_pipeline import BlockPipeline
+from sawtooth_validator.journal.block_scheduler import BlockValidationScheduler
+from sawtooth_validator.journal.block_scheduler import \
+    BlockValidationDoneNotifier
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.chain import ChainController
@@ -496,7 +498,6 @@ class TestBlockValidator(unittest.TestCase):
         self.root = self.block_tree_manager.chain_head
         self.root.status = BlockStatus.Valid
 
-        self.block_validation_handler = self.BlockValidationHandler()
         self.permission_verifier = MockPermissionVerifier()
 
     # fork based tests
@@ -512,7 +513,6 @@ class TestBlockValidator(unittest.TestCase):
         self.validate_block(new_block)
 
         self.assert_valid_block(new_block)
-        self.assert_new_block_committed()
 
     def test_good_fork_lower(self):
         """
@@ -536,7 +536,6 @@ class TestBlockValidator(unittest.TestCase):
             self.validate_block(block)
 
         self.assert_valid_block(new_head)
-        self.assert_new_block_not_committed()
 
     def test_good_fork_higher(self):
         """
@@ -561,7 +560,6 @@ class TestBlockValidator(unittest.TestCase):
             self.validate_block(block)
 
         self.assert_valid_block(new_head)
-        self.assert_new_block_committed()
 
     @unittest.skip("Chain controller handles this now")
     def test_fork_different_genesis(self):
@@ -583,8 +581,8 @@ class TestBlockValidator(unittest.TestCase):
             self.validate_block(block)
 
         self.assert_invalid_block(new_head)
-        self.assert_new_block_not_committed()
 
+    @unittest.skip("Chain controller only gets valid blocks now")
     def test_fork_missing_predecessor(self):
         """"
         Test the case where new block is missing the a predecessor
@@ -600,7 +598,6 @@ class TestBlockValidator(unittest.TestCase):
             self.validate_block(block)
 
         self.assert_invalid_block(head)
-        self.assert_new_block_not_committed()
 
     def test_fork_invalid_predecessor(self):
         """"
@@ -617,7 +614,6 @@ class TestBlockValidator(unittest.TestCase):
             self.validate_block(block)
 
         self.assert_invalid_block(head)
-        self.assert_new_block_not_committed()
 
     def test_block_bad_consensus(self):
         """
@@ -637,7 +633,6 @@ class TestBlockValidator(unittest.TestCase):
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_bad_batch(self):
         """
@@ -659,7 +654,6 @@ class TestBlockValidator(unittest.TestCase):
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_missing_batch_dependency(self):
         """
@@ -684,7 +678,6 @@ class TestBlockValidator(unittest.TestCase):
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_duplicate_batch(self):
         """
@@ -714,7 +707,6 @@ class TestBlockValidator(unittest.TestCase):
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_duplicate_batch_in_block(self):
         """
@@ -737,7 +729,6 @@ class TestBlockValidator(unittest.TestCase):
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_duplicate_transaction(self):
         """
@@ -770,7 +761,6 @@ class TestBlockValidator(unittest.TestCase):
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     def test_block_duplicate_transaction_in_batch(self):
         """
@@ -794,7 +784,6 @@ class TestBlockValidator(unittest.TestCase):
         self.validate_block(new_block)
 
         self.assert_invalid_block(new_block)
-        self.assert_new_block_not_committed()
 
     # assertions
 
@@ -808,24 +797,10 @@ class TestBlockValidator(unittest.TestCase):
             block.status, BlockStatus.Invalid,
             "Block should be invalid")
 
-    def assert_new_block_committed(self):
-        self.assert_handler_has_result()
-
-    def assert_new_block_not_committed(self):
-        self.assert_handler_has_result()
-
-    def assert_handler_has_result(self):
-        msg = "Validation handler doesn't have result"
-        self.assertTrue(self.block_validation_handler.has_result(), msg)
-
-    # block validation
-
     def validate_block(self, block):
         validator = self.create_block_validator()
         validator._load_consensus = lambda block: mock_consensus
-        validator.process_block_validation(
-            block,
-            self.block_validation_handler.on_block_validated)
+        validator.validate_block(block)
 
     def create_block_validator(self):
         return BlockValidator(
@@ -833,22 +808,11 @@ class TestBlockValidator(unittest.TestCase):
             block_cache=self.block_tree_manager.block_cache,
             transaction_executor=MockTransactionExecutor(
                 batch_execution_result=None),
-            on_block_validated=None,
             squash_handler=None,
             identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier)
-
-    class BlockValidationHandler(object):
-        def __init__(self):
-            self.block = None
-
-        def on_block_validated(self, block):
-            self.block = block
-
-        def has_result(self):
-            return self.block is not None
 
     # block tree manager interface
 
@@ -895,7 +859,6 @@ class TestChainController(unittest.TestCase):
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
             transaction_executor=self.transaction_executor,
-            on_block_validated=self.chain_ctrl.on_block_validated,
             squash_handler=None,
             identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
@@ -1021,14 +984,13 @@ class TestChainController(unittest.TestCase):
         new_chain, _ = self.generate_chain(self.init_head, 5)
 
         # delete a block from the new chain
-        for block in new_chain[:3] + new_chain[4:]:
-            self.on_block_received(block)
-
-        self.receive_and_process_blocks()
+        self.receive_and_process_blocks(*new_chain[:3])
+        self.receive_and_process_blocks(*new_chain[4:])
 
         # chain shouldn't advance
         self.assert_is_chain_head(new_chain[2])
 
+    @unittest.skip("Chain controller only gets valid blocks now")
     def test_fork_bad_block(self):
         '''Tests a fork with a bad block in the middle
         '''
@@ -1049,56 +1011,6 @@ class TestChainController(unittest.TestCase):
 
         # good_chain should be accepted
         self.assert_is_chain_head(good_head)
-
-    def test_advancing_fork(self):
-        '''Tests a fork advancing before getting validated
-        '''
-        fork, fork_head = self.generate_chain(self.init_head, 5)
-
-        for block in fork:
-            self.on_block_received(block)
-
-        # advance fork before it gets accepted
-        ext_fork, ext_head = self.generate_chain(fork_head, 3)
-
-        self.receive_and_process_blocks()
-
-        self.assert_is_chain_head(fork_head)
-
-        self.receive_and_process_blocks(*ext_fork)
-
-        self.assert_is_chain_head(ext_head)
-
-    def test_block_extends_in_validation(self):
-        '''Tests a block getting extended while being validated
-        '''
-        # create candidate block
-        candidate = self.block_tree_manager.generate_block(
-            previous_block=self.init_head)
-
-        self.assert_is_chain_head(self.init_head)
-
-        # queue up the candidate block, but don't process
-        self.block_validator._block_scheduler.handle_incoming_block(candidate)
-
-        # create a new block extending the candidate block
-        extending_block = self.block_tree_manager.generate_block(
-            previous_block=candidate)
-
-        self.assert_is_chain_head(self.init_head)
-
-        # queue and process the extending block,
-        # which should be the new head
-        self.block_validator._block_scheduler.handle_incoming_block(
-            extending_block)
-        self.receive_and_process_blocks(extending_block)
-
-        self.block_validator._on_scheduled_block_received(
-            candidate, self.block_validator.on_block_validated)
-        self.block_validator._on_scheduled_block_received(
-            extending_block, self.block_validator.on_block_validated)
-
-        self.assert_is_chain_head(extending_block)
 
     def test_multiple_extended_forks(self):
         '''A more involved example of competing forks
@@ -1169,11 +1081,6 @@ class TestChainController(unittest.TestCase):
 
     # helpers
 
-    def on_block_received(self, block):
-        self.block_validator.queue_block(block)
-        self.block_validator._block_scheduler.handle_incoming_block(
-            self.block_validator._incoming_blocks.get_nowait())
-
     def assert_is_chain_head(self, block):
         chain_head_sig = self.chain_ctrl.chain_head.header_signature
         block_sig = block.header_signature
@@ -1189,7 +1096,7 @@ class TestChainController(unittest.TestCase):
         but occasionally the chain itself is used.
         '''
         if params is None:
-            params = {'add_to_cache': False, 'add_to_store': False}
+            params = {'add_to_cache': True, 'add_to_store': False}
 
         chain = self.block_tree_manager.generate_chain(
             root_block, num_blocks, params)
@@ -1204,15 +1111,10 @@ class TestChainController(unittest.TestCase):
 
     def receive_and_process_blocks(self, *blocks):
         for block in blocks:
-            self.on_block_received(block)
-        while True:
-            try:
-                block = self.block_validator._ready_blocks.get_nowait()
-            except queue.Empty:
+            valid = self.block_validator.validate_block(block)
+            if not valid:
                 break
-            self.block_validator.submit_blocks_for_validation(
-                [block], self.block_validator.on_block_validated)
-            self.executor.process_all()
+            self.chain_ctrl.on_block_validated(block)
 
 
 class TestChainControllerGenesisPeer(unittest.TestCase):
@@ -1249,7 +1151,6 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             state_view_factory=self.state_view_factory,
             block_cache=self.block_tree_manager.block_cache,
             transaction_executor=self.transaction_executor,
-            on_block_validated=self.chain_ctrl.on_block_validated,
             squash_handler=None,
             identity_public_key=self.block_tree_manager.identity_public_key,
             data_dir=None,
@@ -1270,7 +1171,9 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.chain_id_manager.save_block_chain_id('my_chain_id')
         some_other_genesis_block = \
             self.block_tree_manager.generate_genesis_block()
-        self.on_block_received(some_other_genesis_block)
+
+        self.block_validator.validate_block(some_other_genesis_block)
+        self.chain_ctrl.on_block_validated(some_other_genesis_block)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 
@@ -1282,12 +1185,9 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         chain_id = my_genesis_block.header_signature
         self.chain_id_manager.save_block_chain_id(chain_id)
 
-        with patch.object(BlockValidator,
-                          'validate_block',
-                          return_value=True):
-            self.on_block_received(my_genesis_block)
+        self.block_validator.validate_block(my_genesis_block)
+        self.chain_ctrl.on_block_validated(my_genesis_block)
 
-        self.executor.process_all()
         self.assertIsNotNone(self.chain_ctrl.chain_head)
         chain_head_sig = self.chain_ctrl.chain_head.header_signature
 
@@ -1299,6 +1199,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         self.assertEqual(chain_id,
                          self.chain_id_manager.get_block_chain_id())
 
+    @unittest.skip("Chain controller only gets valid blocks now")
     def test_invalid_genesis_block_matches_block_chain_id(self):
         '''Test that a validator with no chain will drop an invalid genesis
         block that matches the block-chain-id stored on disk.
@@ -1307,16 +1208,10 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
         chain_id = my_genesis_block.header_signature
         self.chain_id_manager.save_block_chain_id(chain_id)
 
-        with patch.object(BlockValidator,
-                          'validate_block',
-                          return_value=False):
-            self.on_block_received(my_genesis_block)
+        self.block_validator.validate_block(my_genesis_block)
+        self.chain_ctrl.on_block_validated(my_genesis_block)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
-
-    def on_block_received(self, block):
-        self.block_validator._on_scheduled_block_received(
-            block, self.chain_ctrl.on_block_validated)
 
 
 class TestJournal(unittest.TestCase):
@@ -1371,25 +1266,33 @@ class TestJournal(unittest.TestCase):
                 config_dir=None,
                 chain_observers=[])
 
+            block_scheduler = BlockValidationScheduler(btm.block_cache)
+
             block_validator = BlockValidator(
                 state_view_factory=MockStateViewFactory(btm.state_db),
                 block_cache=btm.block_cache,
                 transaction_executor=self.txn_executor,
-                on_block_validated=chain_controller.on_block_validated,
                 squash_handler=None,
                 identity_public_key=btm.identity_public_key,
                 data_dir=None,
                 config_dir=None,
                 permission_verifier=self.permission_verifier)
 
+            block_done_notifier = BlockValidationDoneNotifier(block_scheduler)
+
+            block_pipeline = BlockPipeline()
+            block_pipeline.add_stage(block_scheduler)
+            block_pipeline.add_stage(block_validator)
+            block_pipeline.add_stage(block_done_notifier)
+
             self.gossip.on_batch_received = block_publisher.queue_batch
-            self.gossip.on_block_received = block_validator.queue_block
+            self.gossip.on_block_received = block_pipeline.submit
 
             block_validator.validate_block(btm.chain_head)
 
             block_publisher.start()
-            chain_controller.start()
-            block_validator.start()
+            block_pipeline.start()
+            chain_controller.start(block_pipeline.receiver)
 
             # feed it a batch
             batch = Batch()
@@ -1399,7 +1302,7 @@ class TestJournal(unittest.TestCase):
             self.assertTrue(self.block_sender.new_block is not None)
 
             block = BlockWrapper(self.block_sender.new_block)
-            block_validator.queue_block(block)
+            block_pipeline.submit(block)
 
             # wait for the chain_head to be updated.
             wait_until(lambda: btm.chain_head.identifier ==
@@ -1410,8 +1313,8 @@ class TestJournal(unittest.TestCase):
                 block_publisher.stop()
             if chain_controller is not None:
                 chain_controller.stop()
-            if block_validator is not None:
-                block_validator.stop()
+            if block_pipeline is not None:
+                block_pipeline.stop()
 
 
 class TestTimedCache(unittest.TestCase):
