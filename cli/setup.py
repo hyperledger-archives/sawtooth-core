@@ -34,6 +34,7 @@ setup(
     entry_points={
         'console_scripts': [
             'sawadm = sawtooth_cli.sawadm:main_wrapper',
+            'sawnet = sawtooth_cli.sawnet:main_wrapper',
             'sawset = sawtooth_cli.sawset:main_wrapper',
             'sawtooth = sawtooth_cli.main:main_wrapper'
         ]
