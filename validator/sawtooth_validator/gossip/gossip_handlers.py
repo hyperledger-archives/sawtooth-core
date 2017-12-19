@@ -40,8 +40,8 @@ class GetPeersRequestHandler(Handler):
     def handle(self, connection_id, message_content):
         request = GetPeersRequest()
         request.ParseFromString(message_content)
-        LOGGER.debug("got peers request message "
-                     "from %s. sending ack", connection_id)
+
+        LOGGER.debug("Got peers request message from %s", connection_id)
 
         self._gossip.send_peers(connection_id)
 
@@ -61,8 +61,8 @@ class GetPeersResponseHandler(Handler):
     def handle(self, connection_id, message_content):
         response = GetPeersResponse()
         response.ParseFromString(message_content)
-        LOGGER.debug("got peers response message "
-                     "from %s. sending ack", connection_id)
+
+        LOGGER.debug("Got peers response message from %s", connection_id)
 
         LOGGER.debug("PEERS RESPONSE ENDPOINTS: %s", response.peer_endpoints)
 
@@ -78,8 +78,8 @@ class PeerRegisterHandler(Handler):
     def handle(self, connection_id, message_content):
         request = PeerRegisterRequest()
         request.ParseFromString(message_content)
-        LOGGER.debug("got peer register message "
-                     "from %s. sending ack", connection_id)
+
+        LOGGER.debug("Got peer register message from %s", connection_id)
 
         ack = NetworkAcknowledgement()
         try:
@@ -101,8 +101,9 @@ class PeerUnregisterHandler(Handler):
     def handle(self, connection_id, message_content):
         request = PeerUnregisterRequest()
         request.ParseFromString(message_content)
-        LOGGER.debug("got peer unregister message "
-                     "from %s. sending ack", connection_id)
+
+        LOGGER.debug("Got peer unregister message from %s", connection_id)
+
         self._gossip.unregister_peer(connection_id)
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
