@@ -16,12 +16,15 @@
 # ------------------------------------------------------------------------------
 
 set -e
+set -x
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-echo -e "\n\n********** Building cxx sdk [sawtooth and proto libs] **********"
-$top_dir/bin/build_cxx_sdk
-
-echo -e "\n\n********** Building intkey-tp-cxx example **********"
-$top_dir/bin/build_cxx_intkey
-
+echo -e "\033[0;32m--- Building cxx sdk ---\n\033[0m"
+cd $top_dir/sdk/examples/intkey_cxx
+mkdir -p build
+cd build
+# To build with debug symbols use:
+# cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake ..
+make
