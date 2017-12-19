@@ -236,3 +236,8 @@ def add_workload_parser(subparsers, parent_parser):
                         type=str,
                         help='password for authentication '
                              'if REST API is using Basic Auth')
+    parser.add_argument(
+                        '-p',
+                        '--protobuf',
+                        action='store_true',
+                        help='use protobuf format instead of CBOR format(for CXX TP only)')

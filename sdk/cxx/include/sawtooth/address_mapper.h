@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 
+#include "sawtooth_sdk.h"
 #include "sawtooth/message_stream.h"
 
 namespace sawtooth {
@@ -44,17 +45,19 @@ class AddressFormatError: public std::runtime_error {
 // namespace prefix when it is constructed. If your transaction processor
 // operates on multiple namespaces, it is recommended that you use an instance
 // for each namespace.
-class AddressMapper {
+class AddressMapper: public AddressMapperIF {
  public:
     // Constructor for an address mapping object, Takes the
     // unencoded namespace name, it will be mapping objects, to as a parameter.
     // The namespace argument passed will be mapped to a namespace_prefix
-    explicit AddressMapper(const std::string& namespace_);
+    //explicit AddressMapper(const std::string& namespace_);
+
+    AddressMapper(const std::string& namespace_);
     virtual ~AddressMapper() {}
 
-    AddressMapper (const AddressMapper&) = delete;
-    AddressMapper (const AddressMapper&&) = delete;
-    AddressMapper& operator= (const AddressMapper&) = delete;
+    //AddressMapper (const AddressMapper&) = delete;
+    //AddressMapper (const AddressMapper&&) = delete;
+    //AddressMapper& operator= (const AddressMapper&) = delete;
 
     // Maps an namespace string to an namespace address prefix.
     // this provides a default implementation using SHA512.
@@ -89,7 +92,5 @@ class AddressMapper {
     std::string namespace_prefix;
 };
 
-typedef std::shared_ptr<AddressMapper> AddressMapperPtr;
-typedef std::unique_ptr<AddressMapper> AddressMapperUPtr;
 
 }  // namespace sawtooth

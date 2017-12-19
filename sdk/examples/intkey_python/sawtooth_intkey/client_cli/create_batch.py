@@ -22,7 +22,6 @@ import logging
 import random
 import string
 import time
-import cbor
 
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
@@ -31,36 +30,9 @@ import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
 
 from sawtooth_intkey.processor.handler import make_intkey_address
-
+from sawtooth_intkey.client_cli.intkey_client import IntkeyPayload
 
 LOGGER = logging.getLogger(__name__)
-
-
-class IntKeyPayload(object):
-    def __init__(self, verb, name, value):
-        self._verb = verb
-        self._name = name
-        self._value = value
-
-        self._cbor = None
-        self._sha512 = None
-
-    def to_hash(self):
-        return {
-            'Verb': self._verb,
-            'Name': self._name,
-            'Value': self._value
-        }
-
-    def to_cbor(self):
-        if self._cbor is None:
-            self._cbor = cbor.dumps(self.to_hash(), sort_keys=True)
-        return self._cbor
-
-    def sha512(self):
-        if self._sha512 is None:
-            self._sha512 = hashlib.sha512(self.to_cbor()).hexdigest()
-        return self._sha512
 
 
 def create_intkey_transaction(verb, name, value, deps, signer):
@@ -81,7 +53,7 @@ def create_intkey_transaction(verb, name, value, deps, signer):
         transaction (transaction_pb2.Transaction): the signed intkey
             transaction
     """
-    payload = IntKeyPayload(
+    payload = IntkeyPayload(
         verb=verb, name=name, value=value)
 
     # The prefix should eventually be looked up from the
@@ -105,7 +77,7 @@ def create_intkey_transaction(verb, name, value, deps, signer):
 
     transaction = transaction_pb2.Transaction(
         header=header_bytes,
-        payload=payload.to_cbor(),
+        payload=payload.to_raw_data(),
         header_signature=signature)
 
     return transaction
@@ -271,3 +243,9 @@ def add_create_batch_parser(subparsers, parent_parser):
         help='number of keys to set initially',
         default=1,
         metavar='')
+
+    parser.add_argument(
+        '-p',
+        '--protobuf',
+        action='store_true',
+        help='use protobuf format instead of CBOR format(for CXX TP only)')

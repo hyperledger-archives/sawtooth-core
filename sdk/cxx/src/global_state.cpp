@@ -22,7 +22,7 @@
 #include "proto/state_context.pb.h"
 
 #include "sawtooth/global_state.h"
-#include "sawtooth/exceptions.h"
+#include "exceptions.h"
 
 namespace sawtooth {
 

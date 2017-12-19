@@ -19,98 +19,113 @@
 #include <list>
 #include <string>
 
+#include "sawtooth_sdk.h"
 #include "proto/transaction.pb.h"
 
 #include "sawtooth/global_state.h"
 
 namespace sawtooth {
 
-// Utility types to allow for managed instances of std::string on the heap.
-typedef std::unique_ptr<std::string> StringUPtr;
-typedef std::shared_ptr<std::string> StringPtr;
+class TxHeaderWrapper: public TxHeaderIF
+{
+public:
+    TxHeaderWrapper(TransactionHeader* header): header_(header) {};
+    virtual ~TxHeaderWrapper()
+    {
+        if (header_ != NULL)
+        {
+            delete header_;
+        }
+    };
 
-// The transaction data for a Transaction Processing request.
-class Transaction final {
- public:
-    Transaction(TransactionHeader* header, StringPtr payload, StringPtr signature):
-            payload_(payload), signature_(signature) {
-    }
+    virtual int GetCount(TxHeaderField field)
+    {
+        int count = 0;
+        switch (field)
+        {
+            case TxHeaderStringDependencies:
+                count = header_->dependencies_size();
+                break;
 
-    Transaction (const Transaction&) = delete;
-    Transaction (const Transaction&&) = delete;
-    Transaction& operator= (const Transaction&) = delete;
+            case TxHeaderInputs:
+                count = header_->inputs_size();
+                break;
 
-    const TransactionHeader& header() const {
-        return this->header_;
-    }
+            case TxHeaderOutputs:
+                count = header_->outputs_size();
+                break;
 
-    const std::string& payload() const {
-        return *(this->payload_);
-    }
+            case TxHeaderNonce:
+            case TxHeaderFamilyName:
+            case TxHeaderFamilyVersion:
+            case TxHeaderPayloadSha512:
+            case TxHeaderBatcherPublicKey:
+            case TxHeaderSignerPublicKey:
+                count = 1;
+                break;
 
-    const std::string& signature() const {
-        return *(this->signature_);
-    }
+            default:
+                count = 0;
+                break;
+        }
 
- private:
-    TransactionHeader header_;
-    StringPtr payload_;
-    StringPtr signature_;
+        return count;
+    };
+
+    virtual const ::std::string& GetValue(TxHeaderField field, int index)
+     {
+        int count = 0;
+
+        switch (field)
+        {
+            case TxHeaderStringDependencies:
+                return header_->dependencies(index);
+                break;
+
+            case TxHeaderInputs:
+                return header_->inputs(index);
+                break;
+
+            case TxHeaderOutputs:
+                return header_->outputs(index);
+                break;
+
+            case TxHeaderNonce:
+                return header_->nonce();
+                break;
+
+            case TxHeaderFamilyName:
+                return header_->family_name();
+                break;
+
+            case TxHeaderFamilyVersion:
+                return header_->family_version();
+                break;
+
+            case TxHeaderPayloadSha512:
+                return header_->payload_sha512();
+                break;
+
+            case TxHeaderBatcherPublicKey:
+                return header_->batcher_public_key();
+                break;
+
+            case TxHeaderSignerPublicKey:
+                return header_->signer_public_key();
+                break;
+
+            default:
+                return dummy;
+                break;
+        }
+        return dummy;
+     };
+
+private:
+    TransactionHeader* header_;
+    ::std::string dummy;
 };
-typedef std::unique_ptr<Transaction> TransactionUPtr;
 
 
-// TransactionApplicator is an interface that defined to represent the
-// processing of a single transaction. This object should make no assumptions
-// about the thread and timing of when it will execute. The
-// TransactionApplicator owns the reference to the transaction and the global
-// state it is passed.
-class TransactionApplicator {
- public:
-    TransactionApplicator(sawtooth::TransactionUPtr txn,
-        sawtooth::GlobalStateUPtr state) : txn(std::move(txn)),
-        state(std::move(state)) {}
-    virtual ~TransactionApplicator() {}
-
-
-    // Process the transaction, this function should do all of the processing
-    // of the given transaction. The general framework should be:
-    // 1) Validate the transaction
-    // 2) retrieve the state from GlobalState
-    // 3) validate the transaction changes are valid
-    // 4) Write the updated state to GlobalState
-    //
-    // Any exception thrown from this function will result in the transaction
-    // being marked as invalid.
-    virtual void Apply() = 0;
- protected:
-    sawtooth::TransactionUPtr txn;
-    sawtooth::GlobalStateUPtr state;
-};
-typedef std::unique_ptr<TransactionApplicator> TransactionApplicatorUPtr;
-
-
-// Definition of a TransactionHandler to be registered with the validator.
-// Every Transaction Processor should register at least one of these. This
-// definition allows for the handler to declare multiple version.
-// that it supports.
-class TransactionHandler {
- public:
-    virtual ~TransactionHandler() {};
-
-    virtual std::string transaction_family_name() const = 0;
-    virtual std::list<std::string> versions() const = 0;
-    virtual std::list<std::string> namespaces() const = 0;
-    // When a Transaction processing reqquest is received, the
-    // TransactionHandler is called with the Transaction and the GlobalState
-    // context to be processed. The Handler should return a subclassed instance
-    // of TransactionApplicator that will handle the processing. As little work
-    // as possible should be done in this function.
-    virtual TransactionApplicatorUPtr GetApplicator(
-        TransactionUPtr txn,
-        GlobalStateUPtr state) = 0;
-};
-typedef std::unique_ptr<TransactionHandler> TransactionHandlerUPtr;
-typedef std::shared_ptr<TransactionHandler> TransactionHandlerPtr;
 
 }  // namespace sawtooth
