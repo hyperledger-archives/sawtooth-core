@@ -34,6 +34,7 @@ from sawtooth_intkey.client_cli.load import do_load
 from sawtooth_intkey.client_cli.intkey_workload import add_workload_parser
 from sawtooth_intkey.client_cli.intkey_workload import do_workload
 
+from sawtooth_intkey.client_cli.intkey_client import IntkeyPayload
 from sawtooth_intkey.client_cli.intkey_client import IntkeyClient
 from sawtooth_intkey.client_cli.exceptions import IntKeyCliException
 from sawtooth_intkey.client_cli.exceptions import IntkeyClientException
@@ -80,10 +81,12 @@ def setup_loggers(verbose_level):
 
 def create_parent_parser(prog_name):
     parent_parser = argparse.ArgumentParser(prog=prog_name, add_help=False)
+
     parent_parser.add_argument(
         '-v', '--verbose',
         action='count',
         help='enable more verbose output')
+
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -160,6 +163,13 @@ def add_set_parser(subparsers, parent_parser):
         type=int,
         help='set time, in seconds, to wait for transaction to commit')
 
+    parser.add_argument(
+        '-p',
+        '--protobuf',
+        action='store_true',
+        help='use protobuf format instead of CBOR format(for CXX TP only)')
+
+
 
 def do_set(args):
     name, value, wait = args.name, args.value, args.wait
@@ -204,6 +214,12 @@ def add_inc_parser(subparsers, parent_parser):
         type=int,
         help='set time, in seconds, to wait for transaction to commit')
 
+    parser.add_argument(
+        '-p',
+        '--protobuf',
+        action='store_true',
+        help='use protobuf format instead of CBOR format(for CXX TP only)')
+
 
 def do_inc(args):
     name, value, wait = args.name, args.value, args.wait
@@ -247,6 +263,12 @@ def add_dec_parser(subparsers, parent_parser):
         const=sys.maxsize,
         type=int,
         help='set time, in seconds, to wait for transaction to commit')
+
+    parser.add_argument(
+        '-p',
+        '--protobuf',
+        action='store_true',
+        help='use protobuf format instead of CBOR format(for CXX TP only)')
 
 
 def do_dec(args):
@@ -337,6 +359,21 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
     else:
         verbose_level = args.verbose
     setup_loggers(verbose_level=verbose_level)
+
+    if args.command == 'set' or \
+            args.command == 'inc' or \
+            args.command == 'dec' or \
+            args.command == 'generate' or \
+            args.command == 'populate' or \
+            args.command == 'create_batch' or \
+            args.command == 'load' or \
+            args.command == 'workload':
+        if args.protobuf == False:
+            print("Using CBOR format")
+            IntkeyPayload.use_protobuf = 0
+        else:
+            print("Using PROTOBUF format")
+            IntkeyPayload.use_protobuf = 1
 
     if not args.command:
         parser.print_help()

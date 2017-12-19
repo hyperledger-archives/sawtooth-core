@@ -33,6 +33,48 @@ from sawtooth_sdk.protobuf.batch_pb2 import Batch
 
 from sawtooth_intkey.client_cli.exceptions import IntkeyClientException
 
+import intkey_tp_pb2
+
+
+
+class IntkeyPayload:
+    use_protobuf = 0
+
+    def __init__(self, verb, name, value):
+        self._verb = verb
+        self._name = name
+        self._value = value
+
+        self._raw_data = None
+        self._sha512 = None
+
+    def to_hash(self):
+        return {
+            'Verb': self._verb,
+            'Name': self._name,
+            'Value': self._value
+        }
+
+    def make_protobuf_raw_data(self):
+        if IntkeyPayload.use_protobuf == 0:
+            self._raw_data = cbor.dumps(self.to_hash(), sort_keys=True)
+        else:
+            intkeyTpProto = intkey_tp_pb2.IntkeyTp()
+            intkeyTpProto.name = self._name
+            intkeyTpProto.verb = self._verb
+            intkeyTpProto.value = self._value
+            self._raw_data = intkeyTpProto.SerializeToString()
+
+    def to_raw_data(self):
+        if self._raw_data is None:
+            self.make_protobuf_raw_data()
+        return self._raw_data
+
+    def sha512(self):
+        if self._sha512 is None:
+            self._sha512 = hashlib.sha512(self.to_raw_data()).hexdigest()
+        return self._sha512
+
 
 def _sha512(data):
     return hashlib.sha512(data).hexdigest()
@@ -151,11 +193,8 @@ class IntkeyClient:
         return result.text
 
     def _send_transaction(self, verb, name, value, wait=None):
-        payload = cbor.dumps({
-            'Verb': verb,
-            'Name': name,
-            'Value': value,
-        })
+        intkeyPayload = IntkeyPayload(verb, name, value)
+        payload = intkeyPayload.to_raw_data()
 
         # Construct the address
         address = self._get_address(name)
