@@ -18,15 +18,14 @@
 #include <memory>
 #include <string>
 
+#include "sawtooth_sdk.h"
 #include "sawtooth/message_stream.h"
 
 namespace sawtooth {
 
 // Provides access to the global state
-class GlobalState {
+class GlobalState: public GlobalStateIF {
  public:
-    typedef std::pair<std::string, std::string> KeyValue;
-
     // Takes the messages stream that it will use to communicate with the
     // Validator to retrieve the current state. It is not expected that this
     // will be called directly from a Transaction Processor. An instance will
@@ -70,7 +69,5 @@ class GlobalState {
     std::string context_id;
     MessageStreamPtr message_stream;
 };
-typedef std::shared_ptr<GlobalState> GlobalStatePtr;
-typedef std::unique_ptr<GlobalState> GlobalStateUPtr;
 
 }  // namespace sawtooth

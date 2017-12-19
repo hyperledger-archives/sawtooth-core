@@ -25,7 +25,7 @@
 #include "proto/processor.pb.h"
 #include "proto/transaction.pb.h"
 
-#include "sawtooth/exceptions.h"
+#include "exceptions.h"
 #include "sawtooth/transaction_processor.h"
 
 namespace sawtooth {
@@ -88,11 +88,12 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
         request.ParseFromArray(msg, msg_size);
 
         TransactionHeader* txn_header(request.release_header());
+        TxHeaderPtr txHeader(new TxHeaderWrapper(txn_header)); // YYY TBD
 
         StringPtr payload_data(request.release_payload());
         StringPtr signature_data(request.release_signature());
 
-        TransactionUPtr txn(new Transaction( txn_header,
+        TransactionUPtr txn(new Transaction( txHeader, //txn_header, YYY TBD
             payload_data,
             signature_data));
 
@@ -215,6 +216,12 @@ void TransactionProcessor::Run() {
     } catch(std::exception& e) {
         LOG4CXX_ERROR(logger, "TransactionProcessor::Run ERROR: " << e.what());
     }
+}
+
+
+TxProcessorIF* TxProcessorIF::Create(const std::string& connection_string)
+{
+    return new TransactionProcessor(connection_string);
 }
 
 }  // namespace sawtooth

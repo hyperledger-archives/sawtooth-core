@@ -112,5 +112,12 @@ std::string AddressMapper::MakeAddress(const std::string& key) {
     return addr;
 }
 
+
+AddressMapperIF* AddressMapperIF::Create(const std::string& namespace_)
+{
+    return new AddressMapper(namespace_);
+}
+
+
 }  // namespace sawtooth
 

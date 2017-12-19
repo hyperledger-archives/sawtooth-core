@@ -18,13 +18,14 @@
 #include <memory>
 #include <string>
 
+#include "sawtooth_sdk.h"
 #include "sawtooth/transaction_handler.h"
 #include "sawtooth/message_dispatcher.h"
 
 namespace sawtooth {
 
 // The main processing class for the Sawtooth SDK.
-class TransactionProcessor {
+class TransactionProcessor: public TxProcessorIF {
  public:
     // Pass a valid ZMQ connection string for the Validator interconnect
     // address
