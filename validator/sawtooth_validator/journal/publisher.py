@@ -535,7 +535,8 @@ class BlockPublisher(object):
         if self._batch_injector_factory is not None:
             batch_injectors = self._batch_injector_factory.create_injectors(
                 chain_head.identifier)
-            LOGGER.debug("Loaded batch injectors: %s", str(batch_injectors))
+            if batch_injectors:
+                LOGGER.debug("Loaded batch injectors: %s", batch_injectors)
 
         block_header = BlockHeader(
             block_num=chain_head.block_num + 1,
