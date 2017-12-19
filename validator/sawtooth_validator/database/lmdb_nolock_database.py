@@ -49,8 +49,8 @@ class LMDBNoLockDatabase(database.Database):
         self._lmdb = lmdb.Environment(
             path=filename,
             map_size=1024**4,
-            map_async=True,
-            writemap=True,
+            map_async=False,
+            writemap=False,
             readahead=False,
             subdir=False,
             create=create,
