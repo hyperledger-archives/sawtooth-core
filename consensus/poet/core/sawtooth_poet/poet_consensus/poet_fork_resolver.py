@@ -125,9 +125,10 @@ class PoetForkResolver(ForkResolverInterface):
         if current_fork_wait_certificate is None:
             if new_fork_head.previous_block_id == cur_fork_head.identifier:
                 LOGGER.info(
-                    'Choose new fork %s: New fork head switches consensus to '
-                    'PoET',
-                    new_fork_head.identifier[:8])
+                    'Choose new fork %s over current fork %s: '
+                    'New fork head switches consensus to PoET',
+                    new_fork_head.header_signature[:8],
+                    cur_fork_head.header_signature[:8])
                 chosen_fork_head = new_fork_head
             else:
                 raise \
@@ -144,18 +145,22 @@ class PoetForkResolver(ForkResolverInterface):
             if current_fork_wait_certificate.duration < \
                     new_fork_wait_certificate.duration:
                 LOGGER.info(
-                    'Choose current fork %s: Current fork wait duration '
-                    '(%f) less than new fork wait duration (%f)',
+                    'Choose current fork %s over new fork %s: '
+                    'Current fork wait duration (%f) less than new fork wait '
+                    'duration (%f)',
                     cur_fork_head.header_signature[:8],
+                    new_fork_head.header_signature[:8],
                     current_fork_wait_certificate.duration,
                     new_fork_wait_certificate.duration)
                 chosen_fork_head = cur_fork_head
             elif new_fork_wait_certificate.duration < \
                     current_fork_wait_certificate.duration:
                 LOGGER.info(
-                    'Choose new fork %s: New fork wait duration (%f) '
-                    'less than current fork wait duration (%f)',
+                    'Choose new fork %s over current fork %s: '
+                    'New fork wait duration (%f) less than current fork wait '
+                    'duration (%f)',
                     new_fork_head.header_signature[:8],
+                    cur_fork_head.header_signature[:8],
                     new_fork_wait_certificate.duration,
                     current_fork_wait_certificate.duration)
                 chosen_fork_head = new_fork_head
@@ -191,20 +196,22 @@ class PoetForkResolver(ForkResolverInterface):
             if current_fork_consensus_state.aggregate_local_mean > \
                     new_fork_aggregate_local_mean:
                 LOGGER.info(
-                    'Choose current fork %s: Current fork aggregate '
-                    'local mean (%f) greater than new fork aggregate '
-                    'local mean (%f)',
+                    'Choose current fork %s over new fork %s: '
+                    'Current fork aggregate local mean (%f) greater than new '
+                    'fork aggregate local mean (%f)',
                     cur_fork_head.header_signature[:8],
+                    new_fork_head.header_signature[:8],
                     current_fork_consensus_state.aggregate_local_mean,
                     new_fork_aggregate_local_mean)
                 chosen_fork_head = cur_fork_head
             elif new_fork_aggregate_local_mean > \
                     current_fork_consensus_state.aggregate_local_mean:
                 LOGGER.info(
-                    'Choose new fork %s: New fork aggregate local mean '
-                    '(%f) greater than current fork aggregate local mean '
-                    '(%f)',
+                    'Choose new fork %s over current fork %s: '
+                    'New fork aggregate local mean (%f) greater than current '
+                    'fork aggregate local mean (%f)',
                     new_fork_head.header_signature[:8],
+                    cur_fork_head.header_signature[:8],
                     new_fork_aggregate_local_mean,
                     current_fork_consensus_state.aggregate_local_mean)
                 chosen_fork_head = new_fork_head
@@ -218,17 +225,21 @@ class PoetForkResolver(ForkResolverInterface):
             if cur_fork_head.header_signature > \
                     new_fork_head.header_signature:
                 LOGGER.info(
-                    'Choose current fork %s: Current fork header signature'
-                    '(%s) greater than new fork header signature (%s)',
+                    'Choose current fork %s over new fork %s: '
+                    'Current fork header signature (%s) greater than new fork '
+                    'header signature (%s)',
                     cur_fork_head.header_signature[:8],
+                    new_fork_head.header_signature[:8],
                     cur_fork_head.header_signature[:8],
                     new_fork_head.header_signature[:8])
                 chosen_fork_head = cur_fork_head
             else:
                 LOGGER.info(
-                    'Choose new fork %s: New fork header signature (%s) '
-                    'greater than current fork header signature (%s)',
+                    'Choose new fork %s over current fork %s: '
+                    'New fork header signature (%s) greater than current fork '
+                    'header signature (%s)',
                     new_fork_head.header_signature[:8],
+                    cur_fork_head.header_signature[:8],
                     new_fork_head.header_signature[:8],
                     cur_fork_head.header_signature[:8])
                 chosen_fork_head = new_fork_head

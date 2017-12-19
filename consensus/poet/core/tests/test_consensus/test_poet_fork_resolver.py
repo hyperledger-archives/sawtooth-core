@@ -478,23 +478,9 @@ class TestPoetForkResolver(TestCase):
              mock_new_fork_consensus_state]
 
         # check test
-        with mock.patch('sawtooth_poet.poet_consensus.poet_fork_resolver.'
-                        'LOGGER') as mock_logger:
-            self.assertFalse(fork_resolver.compare_forks(
-                cur_fork_head=mock_cur_fork_header,
-                new_fork_head=mock_new_fork_header))
-
-            # Could be a hack, but verify that the appropriate log message is
-            # generated - so we at least have some faith that the failure was
-            # because of what we are testing and not something else.  I know
-            # that this is fragile if the log message is changed, so would
-            # accept any suggestions on a better way to verify that the
-            # function fails for the reason we expect.
-
-            (message, *_), _ = mock_logger.info.call_args
-            self.assertTrue('Current fork aggregate local mean (%f) '
-                            'greater than new fork aggregate local mean'
-                            in message)
+        self.assertFalse(fork_resolver.compare_forks(
+            cur_fork_head=mock_cur_fork_header,
+            new_fork_head=mock_new_fork_header))
 
         # Subtest 2: when the new fork head has
         # the higher aggregate local mean
@@ -511,23 +497,9 @@ class TestPoetForkResolver(TestCase):
         mock_new_fork_consensus_state.aggregate_local_mean = 1.0
 
         # check test
-        with mock.patch('sawtooth_poet.poet_consensus.poet_fork_resolver.'
-                        'LOGGER') as mock_logger:
-            self.assertTrue(fork_resolver.compare_forks(
-                cur_fork_head=mock_cur_fork_header,
-                new_fork_head=mock_new_fork_header))
-
-            # Could be a hack, but verify that the appropriate log message is
-            # generated - so we at least have some faith that the failure was
-            # because of what we are testing and not something else.  I know
-            # that this is fragile if the log message is changed, so would
-            # accept any suggestions on a better way to verify that the
-            # function fails for the reason we expect.
-
-            (message, *_), _ = mock_logger.info.call_args
-            self.assertTrue('New fork aggregate local mean (%f) '
-                            'greater than current fork aggregate local mean '
-                            in message)
+        self.assertTrue(fork_resolver.compare_forks(
+            cur_fork_head=mock_cur_fork_header,
+            new_fork_head=mock_new_fork_header))
 
         # Subtest 3: when both the new & current fork heads have
         # the same aggregate local mean
@@ -544,23 +516,9 @@ class TestPoetForkResolver(TestCase):
         mock_new_fork_consensus_state.aggregate_local_mean = 1.0
 
         # check test
-        with mock.patch('sawtooth_poet.poet_consensus.poet_fork_resolver.'
-                        'LOGGER') as mock_logger:
-            self.assertTrue(fork_resolver.compare_forks(
-                cur_fork_head=mock_cur_fork_header,
-                new_fork_head=mock_new_fork_header))
-
-            # Could be a hack, but verify that the appropriate log message is
-            # generated - so we at least have some faith that the failure was
-            # because of what we are testing and not something else.  I know
-            # that this is fragile if the log message is changed, so would
-            # accept any suggestions on a better way to verify that the
-            # function fails for the reason we expect.
-
-            (message, *_), _ = mock_logger.info.call_args
-            self.assertTrue('New fork header signature (%s) '
-                            'greater than current fork header signature (%s)'
-                            in message)
+        self.assertTrue(fork_resolver.compare_forks(
+            cur_fork_head=mock_cur_fork_header,
+            new_fork_head=mock_new_fork_header))
 
         # Subset 4: If we have gotten to this point and we have not chosen
         # a fork head yet, we are going to fall back
@@ -588,23 +546,9 @@ class TestPoetForkResolver(TestCase):
 
         # check test when Current fork header signature is greater than
         # the new fork header signature
-        with mock.patch('sawtooth_poet.poet_consensus.poet_fork_resolver.'
-                        'LOGGER') as mock_logger:
-            self.assertFalse(fork_resolver.compare_forks(
-                cur_fork_head=mock_cur_fork_header,
-                new_fork_head=mock_smaller_header_signature))
-
-            # Could be a hack, but verify that the appropriate log message is
-            # generated - so we at least have some faith that the failure was
-            # because of what we are testing and not something else.  I know
-            # that this is fragile if the log message is changed, so would
-            # accept any suggestions on a better way to verify that the
-            # function fails for the reason we expect.
-
-            (message, *_), _ = mock_logger.info.call_args
-            self.assertTrue('Current fork header signature'
-                            '(%s) greater than new fork header signature (%s)'
-                            in message)
+        self.assertFalse(fork_resolver.compare_forks(
+            cur_fork_head=mock_cur_fork_header,
+            new_fork_head=mock_smaller_header_signature))
 
         # Subtest 5: Check when new header signature is greater than
         # the current fork header signature
@@ -619,20 +563,6 @@ class TestPoetForkResolver(TestCase):
         mock_new_fork_consensus_state.aggregate_local_mean = 0.0
 
         # check test
-        with mock.patch('sawtooth_poet.poet_consensus.poet_fork_resolver.'
-                        'LOGGER') as mock_logger:
-            self.assertTrue(fork_resolver.compare_forks(
-                cur_fork_head=mock_smaller_header_signature,
-                new_fork_head=mock_new_fork_header))
-
-            # Could be a hack, but verify that the appropriate log message is
-            # generated - so we at least have some faith that the failure was
-            # because of what we are testing and not something else.  I know
-            # that this is fragile if the log message is changed, so would
-            # accept any suggestions on a better way to verify that the
-            # function fails for the reason we expect.
-
-            (message, *_), _ = mock_logger.info.call_args
-            self.assertTrue('New fork header signature (%s) '
-                            'greater than current fork header signature (%s)'
-                            in message)
+        self.assertTrue(fork_resolver.compare_forks(
+            cur_fork_head=mock_smaller_header_signature,
+            new_fork_head=mock_new_fork_header))
