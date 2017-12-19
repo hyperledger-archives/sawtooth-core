@@ -484,6 +484,21 @@ class BlockValidator(object):
 
             # 4) Evaluate the 2 chains to see if the new chain should be
             # committed
+            LOGGER.info(
+                "Comparing current chain head '%s' against new block '%s'",
+                self._chain_head, self._new_block)
+            for i in range(max(len(new_chain), len(cur_chain))):
+                cur = new = num = "-"
+                if i < len(cur_chain):
+                    cur = cur_chain[i].header_signature[:8]
+                    num = cur_chain[i].block_num
+                if i < len(new_chain):
+                    new = new_chain[i].header_signature[:8]
+                    num = new_chain[i].block_num
+                LOGGER.info(
+                    "Fork comparison at height %s is between %s and %s",
+                    num, cur, new)
+
             commit_new_chain = self._test_commit_new_chain()
 
             # 5) Consensus to compute batch sets (only if we are switching).
