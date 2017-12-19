@@ -29,7 +29,7 @@ FIND_LIBRARY(ZMQ_LIB zmq)
 FILE(GLOB src "src/*.cpp" "src/*.h" )
 SOURCE_GROUP("Src" FILES ${src})
 
-FILE(GLOB inc "include/sawtooth/*.h" )
+FILE(GLOB inc "include/*.h" "include/sawtooth/*.h" )
 SOURCE_GROUP("Include" FILES ${inc})
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
@@ -52,4 +52,36 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME} INTERFACE log4cxx)
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} INTERFACE cryptopp)
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE Threads::Threads)
 
-add_subdirectory(../examples/intkey_cxx examples/intkey_cxx)
+INSTALL(DIRECTORY ${LIBRARY_OUTPUT_PATH} DESTINATION .)
+
+FILE(GLOB inc_sdk "include/*.h")
+INSTALL(FILES ${inc_sdk} DESTINATION include/sawtooth_sdk)
+INSTALL(FILES ../../LICENSE DESTINATION include/sawtooth_sdk)
+
+SET(CPACK_PACKAGE_NAME "Sawtooth-CXX-SDK")
+SET(CPACK_PACKAGE_VENDOR "Hyperledger: https://hyperledger.org")
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Hyperledger Sawtooth C++ SDK, https://sawtooth.hyperledger.org")
+SET(CPACK_PACKAGE_VERSION "$ENV{sawtooth_version}")
+SET(CPACK_PACKAGE_VERSION_MAJOR "$ENV{sawtooth_major}")
+SET(CPACK_PACKAGE_VERSION_MINOR "$ENV{sawtooth_minor}")
+SET(CPACK_PACKAGE_VERSION_PATCH "$ENV{sawtooth_patch}")
+
+SET(CPACK_PACKAGE_INSTALL_DIRECTORY "Sawtooth_SDK_CXX")
+SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../../LICENSE")
+
+
+SET(CPACK_GENERATOR "DEB")
+SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Hyperledger - https://hyperledger.org")
+# setting arch below causses dependency issues because libs are often build with amd64
+# SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "x86_64")
+SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE https://sawtooth.hyperledger.org)
+
+# uncomment line below if a custom preinst(all) script is needed
+#SET(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/preinst")
+
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS libcrypto++-dev,liblog4cxx-dev,libzmqpp-dev,libtool,libssl-dev,protobuf)
+
+#This one must be the last
+INCLUDE(CPack)
+
+
