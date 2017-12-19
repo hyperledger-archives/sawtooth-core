@@ -120,7 +120,9 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     try!(key_file.read_to_string(&mut buf));
     buf.pop(); // remove the new line
 
-    let private_key = try!(Secp256k1PrivateKey::from_wif(&buf));
+    let private_key = try!(
+        Secp256k1PrivateKey::from_hex(&buf).or(
+            Secp256k1PrivateKey::from_wif(&buf)));
     let context = try!(signing::create_context("secp256k1"));
 
     if let Err(err) = generate_signed_batches(&mut in_file, &mut out_file,
