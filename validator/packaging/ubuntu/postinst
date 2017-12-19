@@ -25,7 +25,8 @@ directories="
 user="sawtooth"
 group="sawtooth"
 
-if [ "$1" = install ]; then
+# Run on install and not upgrade
+if [ "$1" = configure ] && [ -z "$2" ]; then
     if ! getent group $group > /dev/null; then
         addgroup --quiet --system $group
     fi
