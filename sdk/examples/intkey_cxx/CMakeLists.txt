@@ -13,13 +13,38 @@
 # limitations under the License.
 #------------------------------------------------------------------------------
 cmake_minimum_required (VERSION 3.5)
-PROJECT(intkey_cxx)
+PROJECT(intkey_tp_cxx)
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
-SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
+#SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/../../../cxx/build/lib)
+#SET(LIBRARY_OUTPUT_PATH ../../../cxx/build/lib)
 
-FILE(GLOB src "*.cpp" "*.h" )
+FILE(GLOB src "*.cpp" "*.h" "*.hpp" "../proto/cxx/*.cc" "../proto/cxx/*.h")
 SOURCE_GROUP("Src" FILES ${src})
 
+#INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/../../../cxx/build/)
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/../../../cxx/include/)
+INCLUDE_DIRECTORIES(/usr/include/sawtooth_sdk) # YYY - dev specific
+
+
+IF( UNIX )
+    SET(CMAKE_CXX_FLAGS "-std=c++11" ${CMAKE_CXX_FLAGS})
+ENDIF()
+
+#link_directories(/project/sawtooth-core/sdk/cxx/build/lib)
+link_directories(${CMAKE_BINARY_DIR}/../../../cxx/build/lib)
+
+
+
+
 ADD_EXECUTABLE(${PROJECT_NAME} ${src} )
+
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} sawtooth )
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} proto )
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} protobuf )
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} zmq)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} zmqpp)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} log4cxx)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} cryptopp)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} pthread)
