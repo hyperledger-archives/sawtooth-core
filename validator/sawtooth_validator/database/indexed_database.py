@@ -73,8 +73,8 @@ class IndexedDatabase(database.Database):
         self._lmdb = lmdb.Environment(
             path=filename,
             map_size=_size,
-            map_async=True,
-            writemap=True,
+            map_async=False,
+            writemap=False,
             readahead=False,
             subdir=False,
             create=create,
