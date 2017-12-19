@@ -543,7 +543,6 @@ class BlockPublisher(object):
             signer_public_key=public_key)
         block_builder = BlockBuilder(block_header)
         if not consensus.initialize_block(block_builder.block_header):
-            LOGGER.debug("Consensus not ready to build candidate block.")
             return None
 
         # create a new scheduler
