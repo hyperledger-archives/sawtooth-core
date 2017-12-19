@@ -27,9 +27,11 @@ from sawtooth_validator.metrics.wrappers import TimerWrapper
 
 LOGGER = logging.getLogger(__name__)
 
-HIGH_PRIORITY = 0
-MED_PRIORITY = 1
-LOW_PRIORITY = 2
+
+class Priority(enum.IntEnum):
+    HIGH = 0
+    MEDIUM = 1
+    LOW = 2
 
 
 def _gen_message_id():
@@ -48,19 +50,7 @@ class Dispatcher(InstrumentedThread):
         self._condition = Condition()
         self._metrics_registry = metrics_registry
         self._dispatch_timers = {}
-        self._priority = {
-            validator_pb2.Message.PING_REQUEST: HIGH_PRIORITY,
-            validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST: MED_PRIORITY,
-            validator_pb2.Message.GOSSIP_REGISTER: MED_PRIORITY,
-            validator_pb2.Message.AUTHORIZATION_CONNECTION_RESPONSE:
-                MED_PRIORITY,
-            validator_pb2.Message.AUTHORIZATION_TRUST_REQUEST:
-                MED_PRIORITY,
-            validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST:
-                MED_PRIORITY,
-            validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT:
-                MED_PRIORITY
-        }
+        self._priority = {}
 
     def _get_dispatch_timer(self, tag):
         if tag not in self._dispatch_timers:
@@ -142,7 +132,7 @@ class Dispatcher(InstrumentedThread):
 
     def dispatch(self, connection, message, connection_id):
         if message.message_type in self._msg_type_handlers:
-            priority = self._priority.get(message.message_type, LOW_PRIORITY)
+            priority = self._priority.get(message.message_type, Priority.LOW)
             message_id = _gen_message_id()
             self._message_information[message_id] = (
                 connection,
@@ -162,7 +152,7 @@ class Dispatcher(InstrumentedThread):
                         get_enum_name(message.message_type),
                         connection_id)
 
-    def add_handler(self, message_type, handler, executor):
+    def add_handler(self, message_type, handler, executor, priority=None):
         if not isinstance(handler, Handler):
             raise TypeError("%s is not a Handler subclass" % handler)
         if message_type not in self._msg_type_handlers:
@@ -171,6 +161,12 @@ class Dispatcher(InstrumentedThread):
         else:
             self._msg_type_handlers[message_type].append(
                 _HandlerManager(executor, handler))
+
+        if priority is not None:
+            self._priority[message_type] = priority
+
+    def set_message_priority(self, message_type, priority):
+        self._priority[message_type] = priority
 
     def _process(self, message_id):
         _, connection_id, \
@@ -299,7 +295,7 @@ class Dispatcher(InstrumentedThread):
                 LOGGER.exception("Unhandled exception while dispatching")
 
     def stop(self):
-        self._in_queue.put_nowait((HIGH_PRIORITY, -1))
+        self._in_queue.put_nowait((Priority.HIGH, -1))
 
     def block_until_complete(self):
         """Blocks until no more messages are in flight,
