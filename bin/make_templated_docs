@@ -32,7 +32,7 @@ template_abs = DOCS_ABS + TEMPLATE_REL
 
 # Comment chars
 comments = {
-    '.rst': {'start': '.. /', 'line':' '},
+    '.rst': {'start': '.. /', 'line': ' '},
     '.html': {'start': '<!---', 'end': '--->'},
     '.md': {'start': '<!---', 'end': '--->'},
     '.py': {'line': '#'},

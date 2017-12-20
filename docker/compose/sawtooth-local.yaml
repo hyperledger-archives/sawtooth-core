@@ -22,8 +22,6 @@ services:
     container_name: sawtooth-settings-tp-local
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 4004
     depends_on:
       - validator
     command: settings-tp -vv -C tcp://validator:4004
@@ -34,8 +32,6 @@ services:
     container_name: sawtooth-intkey-tp-python-local
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 4004
     depends_on:
       - validator
     command: intkey-tp-python -vv -C tcp://validator:4004
@@ -46,8 +42,6 @@ services:
     container_name: sawtooth-xo-tp-python-local
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 4004
     depends_on:
       - validator
     command: xo-tp-python -vv -C tcp://validator:4004
@@ -79,8 +73,6 @@ services:
     container_name: sawtooth-rest-api-local
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 4004
       - 8008
     ports:
       - "8008:8008"
@@ -94,9 +86,6 @@ services:
     container_name: sawtooth-client-local
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 8008
-      - 4004
     depends_on:
       - rest-api
     entrypoint: "bash -c \"\

@@ -16,19 +16,5 @@
 */
 
 #pragma once
-
-// The SGX SDK has support for:
-//
-// memset_s
-// snprintf
-//
-// The SGX SDK does not have support for:
-//
-// strncpy_s
-// vsnprintf_s
-
-#include <string.h>
-#include <stdio.h>
-
-#define strncpy_s(dest, size, src, count) strncpy(dest, src, count)
-#define vsnprintf_s(str, size, format, args) vsnprintf(str, size, format, args)
+// Do Nothing - All secure functions for enclave are now implemented by sgx 2.0
+// This file is redundant

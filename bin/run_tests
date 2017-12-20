@@ -206,6 +206,8 @@ test_signing() {
 test_cli() {
     run_docker_test ./cli/tests/unit_cli.yaml
     copy_coverage .coverage.cli
+    run_docker_test test_peer_list
+    copy_coverage .coverage.peer_list
 }
 
 test_rest_api() {
@@ -333,6 +335,7 @@ test_rust_sdk() {
 test_integration() {
     run_docker_test test_xo_smoke_all
     copy_coverage .coverage.test_xo_smoke_all
+    run_docker_test test_web_socket_subscription
     run_docker_test test_poet_smoke
     copy_coverage .coverage.test_poet_smoke
     run_docker_test test_dynamic_network --timeout 600
@@ -341,8 +344,6 @@ test_integration() {
     copy_coverage .coverage.test_basic_auth_proxy
     run_docker_test test_transactor_permissioning
     copy_coverage .coverage.test_transactor_permissioning
-    run_docker_test test_network_permissioning --timeout 800
-    copy_coverage .coverage.test_network_permissioning
     run_docker_test test_poet_liveness
     copy_coverage .coverage.test_poet_liveness
 }

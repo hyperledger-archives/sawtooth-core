@@ -54,8 +54,10 @@ class ContextTest(unittest.TestCase):
 
     def _make_entries(self, protobuf=True):
         if protobuf:
-            return [TpStateEntry(address=a, data=d)
-                    for a, d in zip(self.addresses, self.data)]
+            return [
+                TpStateEntry(address=a, data=d)
+                for a, d in zip(self.addresses, self.data)
+            ]
 
         entries = OrderedDict()
         for a, d in zip(self.addresses, self.data):

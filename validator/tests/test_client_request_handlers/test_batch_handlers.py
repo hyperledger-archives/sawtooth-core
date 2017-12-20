@@ -41,9 +41,18 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies requests for batch lists without parameters work properly.
 
         Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...2',
+                 batches: [{header_signature: 'aaa...2' ...}] ...
+            }
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK
@@ -62,7 +71,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_2, response.batches[0].header_signature)
 
-    def test_batch_list_bad_request(self):
+    def test_batch_list_bad_protobufs(self):
         """Verifies requests for lists of batches break with bad protobufs.
 
         Expects to find:
@@ -76,7 +85,7 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.batches)
 
-    def test_batch_list_bad_request(self):
+    def test_batch_list_no_genesis(self):
         """Verifies requests for lists of batches break with no genesis.
 
         Expects to find:
@@ -95,8 +104,14 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies requests for lists of batches work properly with a head id.
 
         Queries the default mock block store with '1' as the head:
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK
@@ -133,9 +148,18 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies requests for lists of batches work filtered by batch ids.
 
         Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...2',
+                 batches: [{header_signature: 'aaa...2' ...}] ...
+            }
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK
@@ -160,9 +184,18 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies batch list requests break when ids are not found.
 
         Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...2',
+                 batches: [{header_signature: 'aaa...2' ...}] ...
+            }
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of NO_RESOURCE
@@ -180,9 +213,18 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies batch list requests work filtered by good and bad ids.
 
         Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...2',
+                 batches: [{header_signature: 'aaa...2' ...}] ...
+            }
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK
@@ -218,8 +260,14 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies batch list requests work with both head and batch ids.
 
         Queries the default mock block store with '1' as the head:
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK
@@ -242,7 +290,10 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies batch list requests break when ids not found with head.
 
         Queries the default mock block store with '0' as the head:
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of NO_RESOURCE
@@ -260,9 +311,18 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies requests for batch lists work when paginated just by limit.
 
         Queries the default mock block store:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...2',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK
@@ -281,13 +341,22 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assert_all_instances(response.batches, Batch)
         self.assertEqual(A_2, response.batches[0].header_signature)
 
-    def test_batch_list_paginated_by_start_id (self):
+    def test_batch_list_paginated_by_start_id(self):
         """Verifies batch list requests work paginated by limit and start_id.
 
         Queries the default mock block store:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...2',
+                 batches: [{header_signature: 'aaa...2' ...}] ...
+            }
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK
@@ -310,9 +379,18 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies batch requests break when paging specifies missing batches.
 
         Queries the default mock block store:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...2',
+                 batches: [{header_signature: 'aaa...2' ...}] ...
+            }
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of INVALID_PAGING
@@ -325,12 +403,18 @@ class TestBatchListRequests(ClientHandlerTestCase):
         self.assertFalse(response.paging.SerializeToString())
         self.assertFalse(response.batches)
 
-    def test_batch_list_paginated_with_head (self):
+    def test_batch_list_paginated_with_head(self):
         """Verifies batch list requests work with both paging and a head id.
 
         Queries the default mock block store with 'bbb...1' as the head:
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK
@@ -353,9 +437,18 @@ class TestBatchListRequests(ClientHandlerTestCase):
         """Verifies batch list requests work sorted in reverse.
 
         Queries the default mock block store with three blocks:
-            {header_signature: 'bbb...2', batches: [{header_signature: 'aaa...2' ...}] ...}
-            {header_signature: 'bbb...1', batches: [{header_signature: 'aaa...1' ...}] ...}
-            {header_signature: 'bbb...0', batches: [{header_signature: 'aaa...0' ...}] ...}
+            {
+                header_signature: 'bbb...2',
+                 batches: [{header_signature: 'aaa...2' ...}] ...
+            }
+            {
+                header_signature: 'bbb...1',
+                 batches: [{header_signature: 'aaa...1' ...}] ...
+            }
+            {
+                header_signature: 'bbb...0',
+                 batches: [{header_signature: 'aaa...0' ...}] ...
+            }
 
         Expects to find:
             - a status of OK

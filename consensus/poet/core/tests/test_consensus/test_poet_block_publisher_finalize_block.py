@@ -76,7 +76,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_wait_certificate,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ Test verifies that PoET Block Publisher doesn't finalize
             a candidate block that doesn't have a valid wait certificate.
         """
@@ -177,7 +176,6 @@ class TestPoetBlockPublisher(TestCase):
             mock_wait_certificate,
             mock_poet_settings_view,
             mock_block_wrapper):
-
         """ Test verifies that PoET Block Publisher finalizes the block,
             meaning that the candidate block is good and should be generated.
         """

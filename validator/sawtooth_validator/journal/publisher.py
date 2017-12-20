@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+# pylint: disable=inconsistent-return-statements
+
 import abc
 import logging
 import queue
@@ -43,6 +46,7 @@ class PendingBatchObserver(metaclass=abc.ABCMeta):
     """An interface class for components wishing to be notified when a Batch
     has begun being processed.
     """
+
     @abc.abstractmethod
     def notify_batch_pending(self, batch):
         """This method will be called when a Batch has passed initial
@@ -101,6 +105,7 @@ class _CandidateBlock(object):
     This allows the BlockPublisher to focus on when to create and finalize
     a block and not worry about how the block is built.
     """
+
     def __init__(self,
                  block_store,
                  consensus,
@@ -140,8 +145,10 @@ class _CandidateBlock(object):
     def last_batch(self):
         if self._pending_batches:
             return self._pending_batches[-1]
-        raise ValueError('last_batch called on an empty block.'
-                         'Empty block publishing is not supported.')
+        raise ValueError(
+            'last_batch called on an empty block.'
+            'Empty block publishing is not supported.'
+        )
 
     @property
     def batches(self):
@@ -149,8 +156,10 @@ class _CandidateBlock(object):
 
     @property
     def can_add_batch(self):
-        return self._max_batches == 0 or\
-            len(self._pending_batches) < self._max_batches
+        return (
+            self._max_batches == 0
+            or len(self._pending_batches) < self._max_batches
+        )
 
     def _check_batch_dependencies(self, batch, committed_txn_cache):
         """Check the dependencies for all transactions in this are present.
@@ -164,9 +173,9 @@ class _CandidateBlock(object):
         """
         for txn in batch.transactions:
             if self._is_txn_already_committed(txn, committed_txn_cache):
-                LOGGER.debug("Transaction rejected as it " +
-                             "is already in the chain " +
-                             "%s", txn.header_signature[:8])
+                LOGGER.debug(
+                    "Transaction rejected as it is already in the chain %s",
+                    txn.header_signature[:8])
                 return False
             elif not self._check_transaction_dependencies(
                     txn, committed_txn_cache):
@@ -190,9 +199,10 @@ class _CandidateBlock(object):
         txn_hdr.ParseFromString(txn.header)
         for dep in txn_hdr.dependencies:
             if dep not in committed_txn_cache:
-                LOGGER.debug("Transaction rejected due " +
-                             "missing dependency, transaction " +
-                             "%s depends on %s", txn.header_signature, dep)
+                LOGGER.debug(
+                    "Transaction rejected due missing dependency, "
+                    "transaction %s depends on %s",
+                    txn.header_signature, dep)
                 return False
         return True
 
@@ -252,7 +262,8 @@ class _CandidateBlock(object):
                 self._pending_batches.append(b)
                 self._pending_batch_ids.add(b.header_signature)
                 try:
-                    self._scheduler.add_batch(b)
+                    injected = b.header_signature in self._injected_batch_ids
+                    self._scheduler.add_batch(b, required=injected)
                 except SchedulerError as err:
                     LOGGER.debug("Scheduler error processing batch: %s", err)
         else:
@@ -289,6 +300,7 @@ class _CandidateBlock(object):
         In both cases the pending_batches will contain the list of batches
         that need to be added to the next Block that is built.
         """
+        self._scheduler.unschedule_incomplete_batches()
         self._scheduler.finalize()
         self._scheduler.complete(block=True)
 
@@ -354,8 +366,10 @@ class _CandidateBlock(object):
                     # one in the list.
                     bad_batches.append(batch)
                     pending_batches.clear()
-                    pending_batches.extend([x for x in self._pending_batches
-                                            if x not in bad_batches])
+                    pending_batches.extend([
+                        x for x in self._pending_batches
+                        if x not in bad_batches
+                    ])
                     return None
                 else:
                     builder.add_batch(batch)
@@ -390,6 +404,7 @@ class BlockPublisher(object):
     Responsible for generating new blocks and publishing them when the
     Consensus deems it appropriate.
     """
+
     def __init__(self,
                  transaction_executor,
                  block_cache,
@@ -543,12 +558,13 @@ class BlockPublisher(object):
             self._block_cache.block_store)
 
         self._transaction_executor.execute(scheduler)
-        self._candidate_block = _CandidateBlock(self._block_cache.block_store,
-                                                consensus, scheduler,
-                                                committed_txn_cache,
-                                                block_builder,
-                                                max_batches,
-                                                batch_injectors)
+        self._candidate_block = _CandidateBlock(
+            self._block_cache.block_store,
+            consensus, scheduler,
+            committed_txn_cache,
+            block_builder,
+            max_batches,
+            batch_injectors)
 
         for batch in self._pending_batches:
             if self._candidate_block.can_add_batch:
@@ -656,14 +672,14 @@ class BlockPublisher(object):
         """
         try:
             with self._lock:
-                if self._chain_head is not None and\
-                        self._candidate_block is None and\
-                        self._pending_batches:
+                if (self._chain_head is not None
+                        and self._candidate_block is None
+                        and self._pending_batches):
                     self._build_candidate_block(self._chain_head)
 
                 if self._candidate_block and (
-                            force or
-                            self._candidate_block.has_pending_batches()) and \
+                    force or
+                    self._candidate_block.has_pending_batches()) and \
                         self._candidate_block.check_publish_block():
 
                     pending_batches = []  # will receive the list of batches
@@ -676,10 +692,9 @@ class BlockPublisher(object):
                     # Update the _pending_batches to reflect what we learned.
 
                     last_batch_index = self._pending_batches.index(last_batch)
-                    unsent_batches =\
+                    unsent_batches = \
                         self._pending_batches[last_batch_index + 1:]
-                    self._pending_batches =\
-                        pending_batches + unsent_batches
+                    self._pending_batches = pending_batches + unsent_batches
 
                     self._set_gauge(len(self._pending_batches))
 
@@ -710,3 +725,5 @@ class BlockPublisher(object):
                 return True
             if batch_id in self._queued_batch_ids:
                 return True
+
+        return False

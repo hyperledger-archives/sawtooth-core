@@ -25,6 +25,7 @@ CONTEXT = create_context('secp256k1')
 class AttrDict(dict):
     """ A simple mocking class.
      """
+
     def __init__(self, **kwargs):
         dict.__init__(self, *(), **kwargs)
 

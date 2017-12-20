@@ -15,7 +15,7 @@
 
 # Description:
 #   Builds an image with the Sawtooth Identity TP package installed from
-#   the Sawtooth Lake Package Repository.
+#   the Sawtooth Package Repository.
 #
 
 FROM ubuntu:xenial

@@ -48,4 +48,18 @@ The ``poet_enclave_sgx.toml`` configuration file has the following options:
 
   Identifies the PEM-encoded certificate file that was submitted to Intel in
   order to obtain a SPID. Default: none. Specify the full path to the
-  certificate file.
+  certificate file. This pem file can be created from ``cert.crt`` and 
+  ``cert.key`` files with this command:
+
+  .. code-block:: console 
+
+    $ cat cert.crt cert.key > cert.pem
+
+  Or from ``cert.pfx`` file with following command:
+
+  .. code-block:: console
+
+    $ openssl pkcs12 -in cert.pfx -out cert.pem -nodes
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

@@ -60,7 +60,6 @@ class TestPoetForkResolver(TestCase):
             mock_consensus_state,
             mock_poet_enclave_factory,
             mock_consensus_state_store):
-
         """ Test verifies that if the new fork head is not a valid block,
             raises appropriate exception
         """
@@ -129,7 +128,6 @@ class TestPoetForkResolver(TestCase):
             mock_consensus_state,
             mock_poet_enclave_factory,
             mock_consensus_state_store):
-
         """ Test verifies that if the current fork head is not a valid block,
             and if new_fork_head.previous_block_id == cur_fork_head.identifier
             then the new fork head switches consensus. Otherwise, raises the
@@ -239,7 +237,6 @@ class TestPoetForkResolver(TestCase):
             mock_consensus_state,
             mock_poet_enclave_factory,
             mock_consensus_state_store):
-
         """ If both current and new fork heads are valid PoET blocks,
             the test checks if they share the same immediate previous block,
             then the one with the smaller wait duration is chosen
@@ -400,7 +397,6 @@ class TestPoetForkResolver(TestCase):
             mock_consensus_state,
             mock_poet_enclave_factory,
             mock_consensus_state_store):
-
         """ When both current and new fork heads are valid
             PoET blocks with different previous block ids,
             the test verifies that the one with

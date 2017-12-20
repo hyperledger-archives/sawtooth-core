@@ -17,7 +17,7 @@
 
 'use strict'
 
-const {TransactionProcessor} = require('sawtooth-sdk/processor')
+const { TransactionProcessor } = require('sawtooth-sdk/processor')
 const IntegerKeyHandler = require('./integer_key_handler')
 
 if (process.argv.length < 3) {

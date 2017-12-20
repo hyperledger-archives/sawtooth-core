@@ -32,8 +32,8 @@ LOGGER.setLevel(logging.INFO)
 WORKLOAD_TIME = 5
 MINIMUM_BLOCK_COUNT = 3
 
-class TestWorkload(unittest.TestCase):
 
+class TestWorkload(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         url = 'rest-api:8008'

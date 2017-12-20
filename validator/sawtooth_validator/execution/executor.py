@@ -44,6 +44,7 @@ class TransactionExecutorThread(object):
     Provides the functionality that the journal can process on several
     schedulers at once.
     """
+
     def __init__(self,
                  service,
                  context_manager,
@@ -111,7 +112,8 @@ class TransactionExecutorThread(object):
 
             state_changes = [
                 transaction_receipt_pb2.StateChange(
-                    address=addr, value=value,
+                    address=addr,
+                    value=value,
                     type=transaction_receipt_pb2.StateChange.SET)
                 for addr, value in state_sets.items()
             ] + [
@@ -234,9 +236,10 @@ class TransactionExecutorThread(object):
                                    processor_type.name,
                                    processor_type.version)
                 prefixes = header.outputs
-                bad_prefixes = [prefix for prefix in prefixes if
-                                not any(prefix.startswith(n)
-                                        for n in namespaces)]
+                bad_prefixes = [
+                    prefix for prefix in prefixes
+                    if not any(prefix.startswith(n) for n in namespaces)
+                ]
                 for prefix in bad_prefixes:
                     # log each
                     LOGGER.debug("failing transaction %s of type (name=%s,"
@@ -304,11 +307,12 @@ class TransactionExecutorThread(object):
             if processor_type not in self._waiters_by_type:
                 in_queue = queue.Queue()
                 in_queue.put_nowait((content, signature))
-                waiter = _Waiter(self._send_and_process_result,
-                                 processor_type=processor_type,
-                                 processors=self._processors,
-                                 in_queue=in_queue,
-                                 waiters_by_type=self._waiters_by_type)
+                waiter = _Waiter(
+                    self._send_and_process_result,
+                    processor_type=processor_type,
+                    processors=self._processors,
+                    in_queue=in_queue,
+                    waiters_by_type=self._waiters_by_type)
                 self._waiters_by_type[processor_type] = waiter
                 self._waiting_threadpool.submit(waiter.run_in_threadpool)
             else:
@@ -319,10 +323,11 @@ class TransactionExecutorThread(object):
             self._send_and_process_result(content, connection_id, signature)
 
     def _send_and_process_result(self, content, connection_id, signature):
-        fut = self._service.send(validator_pb2.Message.TP_PROCESS_REQUEST,
-                                 content,
-                                 connection_id=connection_id,
-                                 callback=self._future_done_callback)
+        fut = self._service.send(
+            validator_pb2.Message.TP_PROCESS_REQUEST,
+            content,
+            connection_id=connection_id,
+            callback=self._future_done_callback)
         if connection_id in self._open_futures:
             self._open_futures[connection_id].update(
                 {signature: fut})
@@ -335,8 +340,10 @@ class TransactionExecutorThread(object):
             # Connection has already been removed.
             return
         self._processors.remove(connection_id)
-        futures_to_set = [self._open_futures[connection_id][key]
-                          for key in self._open_futures[connection_id]]
+        futures_to_set = [
+            self._open_futures[connection_id][key]
+            for key in self._open_futures[connection_id]
+        ]
 
         response = processor_pb2.TpProcessResponse(
             status=processor_pb2.TpProcessResponse.INTERNAL_ERROR)
@@ -358,7 +365,6 @@ class TransactionExecutorThread(object):
 
 
 class TransactionExecutor(object):
-
     def __init__(self,
                  service,
                  context_manager,
@@ -404,13 +410,15 @@ class TransactionExecutor(object):
                          first_state_root,
                          always_persist=False):
         if self._scheduler_type == "serial":
-            return SerialScheduler(squash_handler=squash_handler,
-                                   first_state_hash=first_state_root,
-                                   always_persist=always_persist)
+            return SerialScheduler(
+                squash_handler=squash_handler,
+                first_state_hash=first_state_root,
+                always_persist=always_persist)
         elif self._scheduler_type == "parallel":
-            return ParallelScheduler(squash_handler=squash_handler,
-                                     first_state_hash=first_state_root,
-                                     always_persist=always_persist)
+            return ParallelScheduler(
+                squash_handler=squash_handler,
+                first_state_hash=first_state_root,
+                always_persist=always_persist)
 
         else:
             raise AssertionError(
@@ -484,6 +492,7 @@ class InvalidTransactionObserver(metaclass=abc.ABCMeta):
     """An interface class for components wishing to be notified when a
     Transaction Processor finds a Transaction is invalid.
     """
+
     @abc.abstractmethod
     def notify_txn_invalid(self, txn_id, message=None, extended_data=None):
         """This method will be called when a Transaction Processor sends back
@@ -530,10 +539,11 @@ class _Waiter(object):
             LOGGER.exception("Unhandled exception while waiting")
 
     def _wait_for_processors(self):
-        LOGGER.info('Waiting for transaction processor (%s, %s)',
-                    self._processor_type.name,
-                    self._processor_type.version,
-                    )
+        LOGGER.info(
+            'Waiting for transaction processor (%s, %s)',
+            self._processor_type.name,
+            self._processor_type.version,
+        )
         # Wait for the processor type to be registered
         self._processors.cancellable_wait(
             processor_type=self._processor_type,
@@ -563,6 +573,7 @@ class _WaitersByType(object):
     pairs. It needs to be threadsafe so it can be accessed from each of the
     _Waiter threads after processing all of the queued transactions.
     """
+
     def __init__(self):
         self._waiters = {}
         self._lock = threading.RLock()

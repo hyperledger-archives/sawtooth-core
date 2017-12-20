@@ -141,3 +141,6 @@ transaction, the scheduler inspects the list of unscheduled transactions; the
 first in the list for which all predecessors have finished executed will be be
 returned.  If none are found, the scheduler will block and re-check after
 a transaction has finished being executed. 
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

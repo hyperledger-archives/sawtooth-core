@@ -41,26 +41,30 @@ class TestDispatcherIdentityMessageMatch(unittest.TestCase):
 
         self._message_ids = [str(i) for i in range(10)]
         self._identities = [str(i) for i in range(10)]
-        self._connections = { chr(int(x)+65):x for x in self._identities}
+        self._connections = {chr(int(x) + 65): x for x in self._identities}
 
         self.mock_send_message = MockSendMessage(self._connections)
         self._dispatcher.add_send_message(self._connection,
                                           self.mock_send_message.send_message)
 
-
-        self._messages = [validator_pb2.Message(
-            content=validator_pb2.Message(correlation_id=m_id).SerializeToString(),
-            message_type=validator_pb2.Message.DEFAULT)
-            for m_id in self._message_ids]
+        self._messages = [
+            validator_pb2.Message(
+                content=validator_pb2.Message(
+                    correlation_id=m_id).SerializeToString(),
+                message_type=validator_pb2.Message.DEFAULT)
+            for m_id in self._message_ids
+        ]
 
     def test_correct_identity(self):
         """Tests that if a message is dispatched with a particular identity --
-        having dispatcher.dispatch(connection, message, connection_id) called --
-        that identity will be sent back to the zmq interface with the message.
+        having dispatcher.dispatch(connection, message, connection_id)
+        called -- that identity will be sent back to the zmq interface
+        with the message.
 
         Each message gets an id 0-9 along with an identity 0-9. These will
         be returned to send_message together no matter the ordering of the
         returns of the handlers.
+
         """
         self._dispatcher.start()
         for connection_id, message in zip(self._connections, self._messages):

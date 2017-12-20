@@ -257,3 +257,6 @@ network.consensus
 In the future, other sub-roles can be added to further restrict access to
 specific functions of the role. For example network.gossip could control who is
 allowed to send gossip messages.
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

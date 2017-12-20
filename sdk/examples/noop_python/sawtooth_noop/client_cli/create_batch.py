@@ -15,15 +15,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import argparse
 import hashlib
-import os
 import logging
 import binascii
 import random
-import string
 import time
-import cbor
 
 import sawtooth_sdk.protobuf.batch_pb2 as batch_pb2
 import sawtooth_sdk.protobuf.transaction_pb2 as transaction_pb2
@@ -34,7 +30,8 @@ LOGGER = logging.getLogger(__name__)
 
 class NoopPayload(object):
     def __init__(self):
-        self.nonce = binascii.b2a_hex(random.getrandbits(8*8).to_bytes(8,hbyteorder='little'))
+        self.nonce = binascii.b2a_hex(random.getrandbits(
+            8 * 8).to_bytes(8, hbyteorder='little'))
         self._sha512 = None
 
     def sha512(self):

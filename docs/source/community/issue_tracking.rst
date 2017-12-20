@@ -18,12 +18,12 @@ Issues should be created in JIRA under the Hyperledger Sawtooth project
 
 When reporting an issue, please provide as much detail as possible about how
 to reproduce it.  If possible, provide instructions for how to reproduce the
-issue within the vagrant development environment.
+issue.
 
 Details are key. Please include the following:
 
 * OS version
-* Distributed Ledger version
+* Sawtooth version
 * Environment details (virtual, physical, etc.)
 * Steps to reproduce
 * Actual results
@@ -48,3 +48,6 @@ To report issues, you will need to log into Hyperledger Sawtooth JIRA, which req
 `Linux Foundation Account <https://identity.linuxfoundation.org/>`_
 
 
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

@@ -24,7 +24,7 @@ class Scheduler(object, metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def add_batch(self, batch, state_hash=None):
+    def add_batch(self, batch, state_hash=None, required=False):
         """Adds a batch to the scheduler.
 
         The batch, and thus its associated transactions, will be added to the
@@ -34,6 +34,9 @@ class Scheduler(object, metaclass=ABCMeta):
             batch: A batch_pb2.Batch instance.
             state_hash: The expected resulting state_hash after the
                 transactions have been applied.
+            required: The given batch must be included in the completed
+                schedule.  That is, it will not be removed when a call to
+                `unschedule_incomplete_batches` is made.  Defaults to `False`.
         """
         raise NotImplementedError()
 
@@ -103,6 +106,12 @@ class Scheduler(object, metaclass=ABCMeta):
             can be processed.  A value of None does not necessarily indicate
             there are no more transactions, only that there are no
             transactions which have had their dependencies met.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def unschedule_incomplete_batches(self):
+        """Remove any incomplete batches from the schedule.
         """
         raise NotImplementedError()
 
@@ -194,6 +203,7 @@ class SchedulerIterator(object):
         self._condition = condition
         self._next_index = start_index
 
+    # pylint: disable=inconsistent-return-statements
     def __next__(self):
         with self._condition:
             # Catch-up.  This will return transactions that have already been
@@ -233,6 +243,7 @@ class BatchExecutionResult(object):
             in the BatchExecutionResult for batches that were added to
             add_batch with a state hash.
     """
+
     def __init__(self, is_valid, state_hash):
         self.is_valid = is_valid
         self.state_hash = state_hash
@@ -258,6 +269,7 @@ class TxnExecutionResult:
         error_data (bytes): Error data that was returned while executing this
             transaction.
     """
+
     def __init__(self, signature, is_valid, context_id=None, state_hash=None,
                  state_changes=None, events=None, data=None, error_message="",
                  error_data=b""):
@@ -291,6 +303,7 @@ class TxnInformation(object):
         state_hash (str): the state hash that
                                  this txn should be applied against
     """
+
     def __init__(self, txn, state_hash, base_context_ids):
         self.txn = txn
         self.state_hash = state_hash

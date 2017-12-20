@@ -22,6 +22,7 @@ class _TpResponseError(Exception):
         extended_data (bytes, optional): Byte-encoded data to be parsed later
             by the app developer. Opaque to the validator and Sawtooth.
     """
+
     def __init__(self, message, extended_data=None):
         super().__init__(message)
 

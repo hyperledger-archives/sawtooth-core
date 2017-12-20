@@ -23,6 +23,7 @@ class Workload(object, metaclass=abc.ABCMeta):
        define the interface that the workload generator expects and
        hold onto one property for derived classes.
     """
+
     @abc.abstractmethod
     def __init__(self, delegate, args):
         """

@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable = attribute-defined-outside-init
+
 import unittest
 import logging
 import operator  # used by verifier
@@ -36,7 +38,6 @@ INTKEY_PREFIX = '1cf126'
 
 
 class TestIntkeySmoke(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         wait_for_rest_apis(['rest-api:8008'])
@@ -94,10 +95,10 @@ class TestIntkeySmoke(unittest.TestCase):
         self.verify_state_after_n_updates(how_many_updates)
 
     def verify_state_after_n_updates(self, num):
-        LOGGER.debug('Verifying state after {} updates'.format(num))
+        LOGGER.debug('Verifying state after %s updates', num)
         expected_state = self.verifier.state_after_n_updates(num)
         actual_state = _get_data()
-        LOGGER.info('Current state: {}'.format(actual_state))
+        LOGGER.info('Current state: %s', actual_state)
         self.assertEqual(
             expected_state,
             actual_state,
@@ -142,7 +143,9 @@ def _get_state():
     return response['data']
 
 
-def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
+def _query_rest_api(suffix='', data=None, headers=None, expected_code=200):
+    if headers is None:
+        headers = {}
     url = 'http://rest-api:8008' + suffix
     return _submit_request(urllib.request.Request(url, data, headers),
                            expected_code=expected_code)
@@ -150,7 +153,7 @@ def _query_rest_api(suffix='', data=None, headers={}, expected_code=200):
 
 def _submit_request(request, expected_code=200):
     conn = urllib.request.urlopen(request)
-    assert(expected_code == conn.getcode())
+    assert expected_code == conn.getcode()
 
     response = conn.read().decode('utf-8')
     return json.loads(response)

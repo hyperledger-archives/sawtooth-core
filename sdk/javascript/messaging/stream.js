@@ -21,19 +21,31 @@ const crypto = require('crypto')
 const uuid = require('uuid/v4')
 const zmq = require('zeromq')
 
-const util = require('util')
 const assert = require('assert')
 
-const {Message} = require('../protobuf')
+const { Message } = require('../protobuf')
 const Deferred = require('./deferred')
-const {ValidatorConnectionError} = require('../processor/exceptions')
+const { ValidatorConnectionError } = require('../processor/exceptions')
 
 const _encodeMessage = (messageType, correlationId, content) => {
-  assert(util.isNumber(messageType), `messageType must be a number; was ${messageType}`)
-  assert(util.isString(correlationId), `correlationId must be a string; was ${correlationId}`)
-  assert(content !== undefined || content !== null, 'content must not be null or undefined')
-  assert(Buffer.isBuffer(content),
-         `content must be a buffer; was ${content.constructor ? content.constructor.name : typeof content}`)
+  assert(
+    typeof messageType === 'number',
+    `messageType must be a number; was ${messageType}`
+  )
+  assert(
+    typeof correlationId === 'string',
+    `correlationId must be a string; was ${correlationId}`
+  )
+  assert(
+    content !== undefined || content !== null,
+    'content must not be null or undefined'
+  )
+  assert(
+    Buffer.isBuffer(content),
+    `content must be a buffer; was ${
+      content.constructor ? content.constructor.name : typeof content
+    }`
+  )
 
   return Message.encode({
     messageType,
@@ -87,7 +99,8 @@ class Stream {
     this.close()
     Object.keys(this._futures).forEach((correlationId) => {
       this._futures[correlationId].reject(
-        new ValidatorConnectionError('The connection to the validator was lost'))
+        new ValidatorConnectionError('The connection to the validator was lost')
+      )
     })
 
     this.connect(this._onConnectCb)
@@ -120,7 +133,9 @@ class Stream {
       if (this._initial_connection) {
         err = new Error('Must call `connect` before calling `send`')
       } else {
-        err = new ValidatorConnectionError('The connection to the validator was lost')
+        err = new ValidatorConnectionError(
+          'The connection to the validator was lost'
+        )
       }
 
       return Promise.reject(err)
@@ -145,4 +160,4 @@ class Stream {
   }
 }
 
-module.exports = {Stream}
+module.exports = { Stream }

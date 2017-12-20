@@ -14,11 +14,14 @@
 # ------------------------------------------------------------------------------
 
 import json
+
 from aiohttp.test_utils import unittest_run_loop
-from components import Mocks, BaseApiTest
+
+from components import BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_receipt_pb2
-from sawtooth_rest_api.protobuf.transaction_receipt_pb2 import TransactionReceipt
+from sawtooth_rest_api.protobuf.transaction_receipt_pb2 import  \
+    TransactionReceipt
 
 
 ID_A = 'a' * 128
@@ -28,7 +31,6 @@ ID_D = 'd' * 128
 
 
 class ReceiptGetRequestTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_RECEIPT_GET_REQUEST,
@@ -91,7 +93,8 @@ class ReceiptGetRequestTests(BaseApiTest):
             receipts=receipts,
             status=self.status.NO_RESOURCE)
 
-        response = await self.get_assert_status('/receipts?id={}'.format(ID_D), 404)
+        response = await self.get_assert_status('/receipts?id={}'.format(ID_D),
+                                                404)
         self.connection.assert_valid_request_sent(transaction_ids=[ID_D])
 
         self.assert_has_valid_error(response, 80)
@@ -110,7 +113,8 @@ class ReceiptGetRequestTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - link property ending in '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D)
+            - link property ending in
+                '/receipts?id={},{},{}' .format(ID_B, ID_C, ID_D)
             - a data property matching the batch statuses received
         """
         receipts = [
@@ -145,7 +149,8 @@ class ReceiptGetRequestTests(BaseApiTest):
 
         It should send back a JSON response with:
             - a response status of 200
-            - link property ending in '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D)
+            - link property ending in
+                '/receipts?id={},{},{}'.format(ID_B, ID_C, ID_D)
             - a data property matching the batch statuses received
         """
         receipts = [

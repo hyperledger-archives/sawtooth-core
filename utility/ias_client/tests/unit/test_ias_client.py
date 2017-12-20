@@ -25,7 +25,6 @@ URL = "http://127.0.0.1:8008"
 
 
 class TestIasClient(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.mock_server = mock_ias_server.create(URL)

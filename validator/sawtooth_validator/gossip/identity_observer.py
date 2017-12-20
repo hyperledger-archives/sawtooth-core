@@ -29,6 +29,7 @@ class IdentityObserver(ChainObserver):
     The Identity Observer is used to update the local permission verifier's
     caches of identity data when an Identity transaction is committed.
     """
+
     def __init__(self, to_update, forked):
         # function to notify the permission verifier to update the caches
         self.to_update = to_update

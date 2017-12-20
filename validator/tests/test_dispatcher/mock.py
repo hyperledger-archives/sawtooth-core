@@ -21,7 +21,6 @@ from sawtooth_validator.protobuf import validator_pb2
 
 
 class MockHandler1(dispatch.Handler):
-
     def __init__(self):
         self._time_to_sleep = 2.0
 
@@ -34,7 +33,6 @@ class MockHandler1(dispatch.Handler):
 
 
 class MockHandler2(dispatch.Handler):
-
     def handle(self, connection_id, message_content):
         request = validator_pb2.Message()
         request.ParseFromString(message_content)
@@ -47,7 +45,6 @@ class MockHandler2(dispatch.Handler):
 
 
 class MockSendMessage(object):
-
     def __init__(self, connections):
         self.message_ids = []
         self.identities = []

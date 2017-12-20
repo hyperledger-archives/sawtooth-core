@@ -80,14 +80,13 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
 
         values = {}
         key_hashes = {
-            key: _hash(key) for key in
-            (_random_string(10) for _ in range(1000))
+            key: _hash(key)
+            for key in (_random_string(10) for _ in range(1000))
         }
 
         for key, hashed in key_hashes.items():
             value = {key: _random_string(512)}
-            new_root = self.set(
-                hashed, value, ishash=True)
+            new_root = self.set(hashed, value, ishash=True)
             values[hashed] = value
             self.set_merkle_root(new_root)
 
@@ -98,13 +97,15 @@ class TestSawtoothMerkleTrie(unittest.TestCase):
                 address, value, ishash=True)
 
         set_items = {
-            hashed: {key: 5.0} for key, hashed in
-            random.sample(key_hashes.items(), 50)
+            hashed: {
+                key: 5.0
+            }
+            for key, hashed in random.sample(key_hashes.items(), 50)
         }
         values.update(set_items)
         delete_items = {
-            hashed for hashed in
-            random.sample(list(key_hashes.values()), 50)
+            hashed
+            for hashed in random.sample(list(key_hashes.values()), 50)
         }
 
         # make sure there are no sets and deletes of the same key

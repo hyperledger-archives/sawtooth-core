@@ -167,3 +167,6 @@ taking a space:
         self.validator_responds_to_set_request(set_message, 'game000')
 
         self.validator_expects_tp_response('OK')
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

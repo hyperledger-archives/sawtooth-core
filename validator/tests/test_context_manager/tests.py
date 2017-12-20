@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=too-many-lines,broad-except
+
 import unittest
 
 from collections import namedtuple
@@ -22,7 +24,6 @@ import time
 from sawtooth_validator.database import dict_database
 from sawtooth_validator.execution import context_manager
 from sawtooth_validator.state.merkle import MerkleDatabase
-from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.events_pb2 import Event
 
 
@@ -31,7 +32,6 @@ TestAddresses = namedtuple('TestAddresses',
 
 
 class TestContextManager(unittest.TestCase):
-
     def setUp(self):
         self.database_of_record = dict_database.DictDatabase()
         self.context_manager = context_manager.ContextManager(
@@ -112,10 +112,14 @@ class TestContextManager(unittest.TestCase):
         context_id = self.context_manager.create_context(
             state_hash=self.first_state_hash,
             base_contexts=[context_id_1, context_id_2, context_id_3],
-            inputs=[self._create_address(a)
-                    for a in ['llaa', 'yyyy', 'tttt', 'zzoo']],
-            outputs=[self._create_address(a)
-                     for a in ['llaa', 'yyyy', 'tttt', 'zzoo', 'aeio']])
+            inputs=[
+                self._create_address(a)
+                for a in ['llaa', 'yyyy', 'tttt', 'zzoo']
+            ],
+            outputs=[
+                self._create_address(a)
+                for a in ['llaa', 'yyyy', 'tttt', 'zzoo', 'aeio']
+            ])
         return context_id
 
     def _create_txn_inputs_outputs(self, start=None):
@@ -158,28 +162,40 @@ class TestContextManager(unittest.TestCase):
         """
         if start is None:
             start = 0
-        iorw = [self._create_address(str(i)) for i in range(start,
-                                                            start + 10)]
-        i_r_ = [self._create_address(str(i)) for i in range(start + 10,
-                                                            start + 20)]
-        ior_ = [self._create_address(str(i)) for i in range(start + 20,
-                                                            start + 30)]
-        io__ = [self._create_address(str(i)) for i in range(start + 30,
-                                                            start + 40)]
-        io_w = [self._create_address(str(i)) for i in range(start + 40,
-                                                            start + 50)]
-        _o_w = [self._create_address(str(i)) for i in range(start + 50,
-                                                            start + 60)]
-        _o__ = [self._create_address(str(i)) for i in range(start + 60,
-                                                            start + 70)]
-        i___ = [self._create_address(str(i)) for i in range(start + 70,
-                                                            start + 80)]
+        iorw = [self._create_address(str(i)) for i in range(start, start + 10)]
+        i_r_ = [
+            self._create_address(str(i))
+            for i in range(start + 10, start + 20)
+        ]
+        ior_ = [
+            self._create_address(str(i))
+            for i in range(start + 20, start + 30)
+        ]
+        io__ = [
+            self._create_address(str(i))
+            for i in range(start + 30, start + 40)
+        ]
+        io_w = [
+            self._create_address(str(i))
+            for i in range(start + 40, start + 50)
+        ]
+        _o_w = [
+            self._create_address(str(i))
+            for i in range(start + 50, start + 60)
+        ]
+        _o__ = [
+            self._create_address(str(i))
+            for i in range(start + 60, start + 70)
+        ]
+        i___ = [
+            self._create_address(str(i))
+            for i in range(start + 70, start + 80)
+        ]
         addresses = TestAddresses(
             inputs=iorw + ior_ + io__ + io_w + i___,
             outputs=ior_ + io__ + io_w + _o__ + _o_w,
             reads=i_r_ + ior_,
-            writes=io_w + _o_w
-        )
+            writes=io_w + _o_w)
         return addresses
 
     def test_execution_results(self):
@@ -193,10 +209,12 @@ class TestContextManager(unittest.TestCase):
             outputs=[addr1, addr2])
 
         sets = {addr1: b'1'}
-        events = [Event(
-            event_type=teststr,
-            attributes=[Event.Attribute(key=teststr, value=teststr)],
-            data=teststr.encode()) for teststr in ("test1", "test2")]
+        events = [
+            Event(
+                event_type=teststr,
+                attributes=[Event.Attribute(key=teststr, value=teststr)],
+                data=teststr.encode()) for teststr in ("test1", "test2")
+        ]
         deletes = {addr2: None}
         data = [(teststr.encode()) for teststr in ("test1", "test2")]
 
@@ -208,7 +226,6 @@ class TestContextManager(unittest.TestCase):
         for datum in data:
             self.context_manager.add_execution_data(
                 context_id, datum)
-
 
         results = self.context_manager.get_execution_results(context_id)
         self.assertEqual(sets, results[0])
@@ -416,7 +433,7 @@ class TestContextManager(unittest.TestCase):
             base_contexts=[],
             inputs=[self._create_address('a')[:10]],
             outputs=[self._create_address('c')])
-        self.assertEquals(
+        self.assertEqual(
             self.context_manager.get(
                 context_id=ctx_1a,
                 address_list=[self._create_address('a')]),
@@ -427,7 +444,7 @@ class TestContextManager(unittest.TestCase):
             base_contexts=[],
             inputs=[self._create_address('b')[:6]],
             outputs=[self._create_address('z')])
-        self.assertEquals(
+        self.assertEqual(
             self.context_manager.get(
                 context_id=ctx_1b,
                 address_list=[self._create_address('b')]),
@@ -446,12 +463,14 @@ class TestContextManager(unittest.TestCase):
         ctx_2 = self.context_manager.create_context(
             state_hash=state_hash_1,
             base_contexts=[ctx_1a, ctx_1b],
-            inputs=[self._create_address('z')[:10],
-                    self._create_address('c')[:10],
-                    self._create_address('b')[:10]],
+            inputs=[
+                self._create_address('z')[:10],
+                self._create_address('c')[:10],
+                self._create_address('b')[:10]
+            ],
             outputs=[self._create_address('w')])
 
-        self.assertEquals(
+        self.assertEqual(
             self.context_manager.get(
                 context_id=ctx_2,
                 address_list=[self._create_address('z'),
@@ -482,9 +501,9 @@ class TestContextManager(unittest.TestCase):
              ['llaa', 'yyyy', 'tttt', 'zzoo']]),
             [(self._create_address(a), v) for a, v in
              [('llaa', b'1'),
-             ('yyyy', b'11'),
-             ('tttt', b'12'),
-             ('zzoo', b'27')]])
+              ('yyyy', b'11'),
+              ('tttt', b'12'),
+              ('zzoo', b'27')]])
 
     def test_squash(self):
         """Tests that squashing a context based on state from other
@@ -558,7 +577,7 @@ class TestContextManager(unittest.TestCase):
                                       persist=True, clean_up=True)
         # 2
         self.assertIsNotNone(resulting_state_hash)
-        self.assertEquals(resulting_state_hash, self.first_state_hash)
+        self.assertEqual(resulting_state_hash, self.first_state_hash)
 
     def test_squash_deletes_no_update(self):
         """Tests that squashing a context that has no state updates,
@@ -598,7 +617,7 @@ class TestContextManager(unittest.TestCase):
                                       persist=True, clean_up=True)
         # 3)
         self.assertIsNotNone(resulting_state_hash)
-        self.assertEquals(resulting_state_hash, self.first_state_hash)
+        self.assertEqual(resulting_state_hash, self.first_state_hash)
 
     def test_reads_from_context_w_several_writes(self):
         """Tests that those context values that have been written to the
@@ -639,6 +658,7 @@ class TestContextManager(unittest.TestCase):
 
         squash = self.context_manager.get_squash_handler()
         test_addresses = self._create_txn_inputs_outputs()
+
         # 1)
         context_id1 = self.context_manager.create_context(
             state_hash=self.first_state_hash,
@@ -655,6 +675,7 @@ class TestContextManager(unittest.TestCase):
             context_ids=[context_id1],
             persist=True,
             clean_up=True)
+
         # 2)
         context_a = self.context_manager.create_context(
             state_hash=sh1,
@@ -664,13 +685,13 @@ class TestContextManager(unittest.TestCase):
         )
 
         address_values = self.context_manager.get(
-                context_a,
-                list(test_addresses.writes)
-            )
-        self.assertEquals(
+            context_a,
+            list(test_addresses.writes)
+        )
+        self.assertEqual(
             address_values,
             [(a, v) for a, v in zip(test_addresses.writes, values1)]
-            )
+        )
 
         # 3)
         values2 = [bytes(v.encode()) for v in test_addresses.outputs]
@@ -686,12 +707,13 @@ class TestContextManager(unittest.TestCase):
             outputs=test_addresses.outputs,
             base_contexts=[context_a]
         )
+
         # 5)
         c_ida1_address_values = self.context_manager.get(
             context_id=context_id_a1,
             address_list=list(test_addresses.outputs)
         )
-        self.assertEquals(
+        self.assertEqual(
             c_ida1_address_values,
             [(a, v) for a, v in zip(test_addresses.outputs, values2)]
         )
@@ -710,6 +732,7 @@ class TestContextManager(unittest.TestCase):
             address_value_list=[{a: v} for
                                 a, v in zip(test_addresses2.writes, values3)],
         )
+
         # 7)
         context_id_b = self.context_manager.create_context(
             state_hash=sh1,
@@ -719,7 +742,7 @@ class TestContextManager(unittest.TestCase):
         )
 
         # 8)
-        self.assertEquals(
+        self.assertEqual(
             self.context_manager.get(
                 context_id_b,
                 list(test_addresses2.writes + test_addresses.outputs)
@@ -787,21 +810,20 @@ class TestContextManager(unittest.TestCase):
             state_hash=sh1,
             base_contexts=[],
             inputs=[self._create_address('abcd')],
-            outputs=[self._create_address('aaaa')]
-        )
+            outputs=[self._create_address('aaaa')])
         context_2 = self.context_manager.create_context(
             state_hash=sh1,
             base_contexts=[],
             inputs=[self._create_address('bacd')],
-            outputs=[self._create_address('bbbb')]
-        )
+            outputs=[self._create_address('bbbb')])
         context_3 = self.context_manager.create_context(
             state_hash=sh1,
             base_contexts=[],
             inputs=[self._create_address('abcd')],
-            outputs=[self._create_address('cccc'),
-                     self._create_address('dddd')]
-        )
+            outputs=[
+                self._create_address('cccc'),
+                self._create_address('dddd')
+            ])
 
         # 3)
         self.context_manager.set(
@@ -821,16 +843,22 @@ class TestContextManager(unittest.TestCase):
         context_n = self.context_manager.create_context(
             state_hash=sh1,
             base_contexts=[context_1, context_2, context_3],
-            inputs=[self._create_address('bbbb'), self._create_address('aaaa')],
-            outputs=[self._create_address('cccc'), self._create_address('llll')]
-        )
+            inputs=[
+                self._create_address('bbbb'),
+                self._create_address('aaaa')
+            ],
+            outputs=[
+                self._create_address('cccc'),
+                self._create_address('llll')
+            ])
 
         # 5)
         self.context_manager.set(
             context_id=context_n,
-            address_value_list=[{self._create_address('cccc'): b'4',
-                                 self._create_address('llll'): b'8'}]
-        )
+            address_value_list=[{
+                self._create_address('cccc'): b'4',
+                self._create_address('llll'): b'8'
+            }])
 
         # 6)
         cm_state_root = squash(
@@ -840,11 +868,13 @@ class TestContextManager(unittest.TestCase):
             clean_up=True)
 
         tree = MerkleDatabase(self.database_results)
-        calc_state_root = tree.update({self._create_address('aaaa'): b'1',
-                                       self._create_address('bbbb'): b'2',
-                                       self._create_address('cccc'): b'4',
-                                       self._create_address('llll'): b'8'})
-        self.assertEquals(calc_state_root, cm_state_root)
+        calc_state_root = tree.update({
+            self._create_address('aaaa'): b'1',
+            self._create_address('bbbb'): b'2',
+            self._create_address('cccc'): b'4',
+            self._create_address('llll'): b'8'
+        })
+        self.assertEqual(calc_state_root, cm_state_root)
 
     def test_complex_basecontext_squash(self):
         """Tests complex context basing and squashing.
@@ -936,39 +966,52 @@ class TestContextManager(unittest.TestCase):
         )
 
         # 3)
-        inputs_3_2a_1 = [self._create_address('qq'),
-                         self._create_address('dd')]
-        outputs_3_2a_1 = [self._create_address('dd'),
-                          self._create_address('pp')]
+        inputs_3_2a_1 = [
+            self._create_address('qq'),
+            self._create_address('dd')
+        ]
+        outputs_3_2a_1 = [
+            self._create_address('dd'),
+            self._create_address('pp')
+        ]
         context_3_2a_1 = self.context_manager.create_context(
             state_hash=sh1,
             base_contexts=[context_2a],
             inputs=inputs_3_2a_1,
-            outputs=outputs_3_2a_1
-        )
+            outputs=outputs_3_2a_1)
         inputs_3_2a_2 = [self._create_address('aa')]
-        outputs_3_2a_2 = [self._create_address('aa'),
-                          self._create_address('ll')]
+        outputs_3_2a_2 = [
+            self._create_address('aa'),
+            self._create_address('ll')
+        ]
         context_3_2a_2 = self.context_manager.create_context(
             state_hash=sh1,
             base_contexts=[context_2a],
             inputs=inputs_3_2a_2,
             outputs=outputs_3_2a_2)
 
-        inputs_3_2b_1 = [self._create_address('nn'),
-                         self._create_address('ab')]
-        outputs_3_2b_1 = [self._create_address('mm'),
-                          self._create_address('ba')]
+        inputs_3_2b_1 = [
+            self._create_address('nn'),
+            self._create_address('ab')
+        ]
+        outputs_3_2b_1 = [
+            self._create_address('mm'),
+            self._create_address('ba')
+        ]
         context_3_2b_1 = self.context_manager.create_context(
             state_hash=sh1,
             base_contexts=[context_2b],
             inputs=inputs_3_2b_1,
             outputs=outputs_3_2b_1)
 
-        inputs_3_2b_2 = [self._create_address('nn'),
-                         self._create_address('oo')]
-        outputs_3_2b_2 = [self._create_address('ab'),
-                          self._create_address('oo')]
+        inputs_3_2b_2 = [
+            self._create_address('nn'),
+            self._create_address('oo')
+        ]
+        outputs_3_2b_2 = [
+            self._create_address('ab'),
+            self._create_address('oo')
+        ]
         context_3_2b_2 = self.context_manager.create_context(
             state_hash=sh1,
             base_contexts=[context_2b],
@@ -1007,28 +1050,32 @@ class TestContextManager(unittest.TestCase):
         tree = MerkleDatabase(self.database_results)
         state_hash_from_1 = tree.update(
             set_items={a: v for a, v in zip(outputs_1,
-                                        [bytes(i)
-                                         for i in range(len(outputs_1))])},
-                                        virtual=False)
-        self.assertEquals(state_hash_from_1, sh1,
-                          "The manually calculated state hash from the first "
-                          "context and the one calculated by squashing that "
-                          "state hash should be the same")
-        tree.set_merkle_root(state_hash_from_1)
-        test_sh2 = tree.update(set_items={self._create_address('aa'): bytes(0),
-                                          self._create_address('ab'): bytes(0),
-                                          self._create_address('ba'): bytes(1),
-                                          self._create_address('dd'): bytes(0),
-                                          self._create_address('ll'): bytes(1),
-                                          self._create_address('mm'): bytes(0),
-                                          self._create_address('oo'): bytes(1),
-                                          self._create_address('pp'): bytes(1),
-                                          self._create_address('nn'): bytes(0),
-                                          self._create_address('cc'): bytes(0)})
+                                            [bytes(i)
+                                             for i in range(len(outputs_1))])},
+            virtual=False)
 
-        self.assertEquals(sh2, test_sh2, "Manually calculated and context "
-                                         "manager calculated merkle hashes "
-                                         "are the same")
+        self.assertEqual(state_hash_from_1, sh1,
+                         "The manually calculated state hash from the first "
+                         "context and the one calculated by squashing that "
+                         "state hash should be the same")
+        tree.set_merkle_root(state_hash_from_1)
+
+        test_sh2 = tree.update(
+            set_items={
+                self._create_address('aa'): bytes(0),
+                self._create_address('ab'): bytes(0),
+                self._create_address('ba'): bytes(1),
+                self._create_address('dd'): bytes(0),
+                self._create_address('ll'): bytes(1),
+                self._create_address('mm'): bytes(0),
+                self._create_address('oo'): bytes(1),
+                self._create_address('pp'): bytes(1),
+                self._create_address('nn'): bytes(0),
+                self._create_address('cc'): bytes(0)})
+
+        self.assertEqual(sh2, test_sh2, "Manually calculated and context "
+                         "manager calculated merkle hashes "
+                         "are the same")
 
     def test_wildcarded_inputs_outputs(self):
         """Tests the context manager with wildcarded inputs and outputs.
@@ -1036,10 +1083,11 @@ class TestContextManager(unittest.TestCase):
         Notes:
             1. Create a context with a wildcarded input and output and
                another non-wildcarded input and output.
-            2. Get an address under the wildcard and set to both the non-wildcarded
-               address and an address under the wildcard.
-            3. Squash the context and compare to a manually generated state
-               hash.
+            2. Get an address under the wildcard and set to both the
+               non-wildcarded address and an address under the
+               wildcard.
+            3. Squash the context and compare to a manually generated
+               state hash.
         """
 
         # 1
@@ -1061,8 +1109,10 @@ class TestContextManager(unittest.TestCase):
 
         self.context_manager.set(
             context_id=ctx_1,
-            address_value_list=[{self._create_address('a'): b'1',
-                                 self._create_address('b'): b'2'}])
+            address_value_list=[{
+                self._create_address('a'): b'1',
+                self._create_address('b'): b'2'
+            }])
 
         # 3
         squash = self.context_manager.get_squash_handler()
@@ -1074,10 +1124,11 @@ class TestContextManager(unittest.TestCase):
             set_items={self._create_address('a'): b'1',
                        self._create_address('b'): b'2'})
 
-        state_root = squash(state_root=self.first_state_hash,
-                            context_ids=[ctx_1],
-                            persist=True,
-                            clean_up=True)
+        state_root = squash(
+            state_root=self.first_state_hash,
+            context_ids=[ctx_1],
+            persist=True,
+            clean_up=True)
 
         self.assertEqual(state_root, calculated_state_root)
 
@@ -1166,15 +1217,15 @@ class TestContextManager(unittest.TestCase):
             state_hash=sh0,
             base_contexts=[],
             inputs=inputs_2,
-            outputs=outputs_2
-        )
+            outputs=outputs_2)
         self.context_manager.set(
             context_id=ctx_2,
-            address_value_list=[{self._create_address('b'): b'2'}]
-        )
+            address_value_list=[{
+                self._create_address('b'): b'2'
+            }])
 
         try:
-            sh1 = squash(
+            squash(
                 state_root=sh0,
                 context_ids=[ctx_1, ctx_2],
                 persist=True,
@@ -1275,9 +1326,11 @@ class TestContextManager(unittest.TestCase):
         ctx_4 = self.context_manager.create_context(
             state_hash=sh0,
             base_contexts=[ctx_3],
-            inputs=[self._create_address('a'),
-                    self._create_address('b'),
-                    self._create_address('c')],
+            inputs=[
+                self._create_address('a'),
+                self._create_address('b'),
+                self._create_address('c')
+            ],
             outputs=[self._create_address('c')])
 
         self.assertEqual(self.context_manager.get(
@@ -1301,8 +1354,10 @@ class TestContextManager(unittest.TestCase):
 
         tree = MerkleDatabase(self.database_results)
 
-        sh1_assertion = tree.update({self._create_address('a'): b'1',
-                                     self._create_address('c'): b'4' })
+        sh1_assertion = tree.update({
+            self._create_address('a'): b'1',
+            self._create_address('c'): b'4'
+        })
 
         self.assertEqual(sh1, sh1_assertion,
                          "The context manager must "
@@ -1360,10 +1415,11 @@ class TestContextManager(unittest.TestCase):
 
         self.context_manager.set(ctx_1c, [{self._create_address('d'): b'3'}])
 
-        sh1 = squash(state_root=sh0,
-                     context_ids=[ctx_1c, ctx_1b, ctx_1a],
-                     persist=True,
-                     clean_up=True)
+        sh1 = squash(
+            state_root=sh0,
+            context_ids=[ctx_1c, ctx_1b, ctx_1a],
+            persist=True,
+            clean_up=True)
 
         ctx_2 = self.context_manager.create_context(
             state_hash=sh1,
@@ -1403,9 +1459,9 @@ class TestContextManager(unittest.TestCase):
             outputs=[""])
 
         self.assertEqual(
-            self.context_manager.get(ctx_4,[self._create_address('b'),
-                                            self._create_address('c'),
-                                            self._create_address('d')]),
+            self.context_manager.get(ctx_4, [self._create_address('b'),
+                                             self._create_address('c'),
+                                             self._create_address('d')]),
             [(self._create_address('b'), None),
              (self._create_address('c'), None),
              (self._create_address('d'), None)],
@@ -1419,10 +1475,13 @@ class TestContextManager(unittest.TestCase):
 
         tree = MerkleDatabase(self.database_results)
 
-        sh1_assertion = tree.update({self._create_address('b'): b'1',
-                                     self._create_address('c'): b'2',
-                                     self._create_address('d'): b'3'},
-                                    virtual=False)
+        sh1_assertion = tree.update(
+            {
+                self._create_address('b'): b'1',
+                self._create_address('c'): b'2',
+                self._create_address('d'): b'3'
+            },
+            virtual=False)
 
         self.assertEqual(sh1, sh1_assertion,
                          "The middle state hash must be correct.")
@@ -1430,10 +1489,14 @@ class TestContextManager(unittest.TestCase):
         tree.set_merkle_root(sh1)
 
         sh2_assertion = tree.update(
-            {self._create_address('e'): b'2'},
-            delete_items=[self._create_address('b'),
-                          self._create_address('c'),
-                          self._create_address('d')],
+            {
+                self._create_address('e'): b'2'
+            },
+            delete_items=[
+                self._create_address('b'),
+                self._create_address('c'),
+                self._create_address('d')
+            ],
             virtual=False)
         self.assertEqual(sh2, sh2_assertion,
                          "The final state hash must be correct")

@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the Sawtooth Lake Rest API package installed from
-#   the Sawtooth Lake Package Repository.
+#   Builds an image with the Sawtooth Rest API package installed from
+#   the Sawtooth Package Repository.
 #
 # Build:
 #   $ cd sawtooth-core/docker

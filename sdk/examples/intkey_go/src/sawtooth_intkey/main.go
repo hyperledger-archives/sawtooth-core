@@ -30,6 +30,8 @@ import (
 type Opts struct {
 	Verbose []bool `short:"v" long:"verbose" description:"Increase verbosity"`
 	Connect string `short:"C" long:"connect" description:"Validator component endpoint to connect to" default:"tcp://localhost:4004"`
+	Queue   uint   `long:"max-queue-size" description:"Set the maximum queue size before rejecting process requests" default:"100"`
+	Threads uint   `long:"worker-thread-count" description:"Set the number of worker threads to use for processing requests in parallel" default:"0"`
 }
 
 func main() {
@@ -67,6 +69,10 @@ func main() {
 	prefix := intkey.Hexdigest("intkey")[:6]
 	handler := intkey.NewIntkeyHandler(prefix)
 	processor := processor.NewTransactionProcessor(endpoint)
+	processor.SetMaxQueueSize(opts.Queue)
+	if opts.Threads > 0 {
+		processor.SetThreadCount(opts.Threads)
+	}
 	processor.AddHandler(handler)
 	processor.ShutdownOnSignal(syscall.SIGINT, syscall.SIGTERM)
 	err = processor.Start()

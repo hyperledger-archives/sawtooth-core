@@ -402,3 +402,6 @@ clean up your validator, create a new genesis block and restart the
 
   $ sudo rm /var/lib/sawtooth/config-genesis.batch
   $ sudo systemctl restart sawtooth-setup.service
+
+.. Licensed under Creative Commons Attribution 4.0 International License
+.. https://creativecommons.org/licenses/by/4.0/

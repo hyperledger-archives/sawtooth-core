@@ -169,6 +169,7 @@ class Cursor(metaclass=ABCMeta):
     manner.  Depending on underlying database implementation, the items may
     be consistent within the context of a database transaction.
     """
+
     def __enter__(self):
         """Context Manager: Enter"""
         self.open()

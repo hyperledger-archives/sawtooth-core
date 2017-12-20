@@ -77,8 +77,7 @@ class ConnectHandler(Handler):
         """
         message = ConnectionRequest()
         message.ParseFromString(message_content)
-        LOGGER.debug("got connect message from %s. sending ack",
-                     connection_id)
+        LOGGER.debug("got connect message from %s. sending ack", connection_id)
 
         # Need to use join here to get the string "0.0.0.0". Otherwise,
         # bandit thinks we are binding to all interfaces and returns a
@@ -99,8 +98,7 @@ class ConnectHandler(Handler):
                     message_type=validator_pb2.Message.
                     AUTHORIZATION_CONNECTION_RESPONSE)
 
-        LOGGER.debug("Endpoint of connecting node is %s",
-                     message.endpoint)
+        LOGGER.debug("Endpoint of connecting node is %s", message.endpoint)
         self._network.update_connection_endpoint(connection_id,
                                                  message.endpoint)
 
@@ -137,8 +135,7 @@ class ConnectHandler(Handler):
 
         if not is_outbound_connection:
             if self._network.allow_inbound_connection():
-                LOGGER.debug("Allowing incoming connection: %s",
-                             connection_id)
+                LOGGER.debug("Allowing incoming connection: %s", connection_id)
                 connection_response.status = connection_response.OK
             else:
                 connection_response.status = connection_response.ERROR
@@ -236,7 +233,6 @@ class PingHandler(Handler):
 
 
 class AuthorizationTrustRequestHandler(Handler):
-
     def __init__(self, network, permission_verifier, gossip):
         self._network = network
         self._permission_verifier = permission_verifier
@@ -453,7 +449,7 @@ class AuthorizationChallengeSubmitHandler(Handler):
                         auth_challenge_submit.public_key)
                 if not permitted:
                     return AuthorizationChallengeSubmitHandler \
-                            ._network_violation_result()
+                        ._network_violation_result()
 
         self._network.update_connection_public_key(
             connection_id,

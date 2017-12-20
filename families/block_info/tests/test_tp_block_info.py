@@ -32,19 +32,24 @@ from sawtooth_block_info.common import DEFAULT_TARGET_COUNT
 from sawtooth_block_info.common import create_block_address
 
 
-def create_block_info(block_num, signer_public_key="2" * 66,
-                      header_signature="1" * 128, timestamp=None,
+def create_block_info(block_num,
+                      signer_public_key="2" * 66,
+                      header_signature="1" * 128,
+                      timestamp=None,
                       previous_block_id="0" * 128):
     if timestamp is None:
         timestamp = int(time.time())
 
     return BlockInfo(
-        block_num=block_num, signer_public_key=signer_public_key,
-        header_signature=header_signature, timestamp=timestamp,
+        block_num=block_num,
+        signer_public_key=signer_public_key,
+        header_signature=header_signature,
+        timestamp=timestamp,
         previous_block_id=previous_block_id)
 
 
-def create_config(latest_block, oldest_block=None,
+def create_config(latest_block,
+                  oldest_block=None,
                   target_count=DEFAULT_TARGET_COUNT,
                   sync_tolerance=DEFAULT_SYNC_TOLERANCE):
     if oldest_block is None:
@@ -57,7 +62,6 @@ def create_config(latest_block, oldest_block=None,
 
 
 class TestBlockInfo(TransactionProcessorTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -67,19 +71,22 @@ class TestBlockInfo(TransactionProcessorTestCase):
             namespace=NAMESPACE,
         )
 
-    def _send_request(self, block,
-                      sync_tolerance=None, target_count=None):
+    def _send_request(self, block, sync_tolerance=None, target_count=None):
         block_info_txn = BlockInfoTxn(
-            block=block, sync_tolerance=sync_tolerance,
+            block=block,
+            sync_tolerance=sync_tolerance,
             target_count=target_count)
 
-        self.validator.send(self.factory.create_tp_process_request(
-            payload=block_info_txn.SerializeToString(),
-            inputs=None, outputs=None, deps=None))
+        self.validator.send(
+            self.factory.create_tp_process_request(
+                payload=block_info_txn.SerializeToString(),
+                inputs=None,
+                outputs=None,
+                deps=None))
 
     def _expect_config_get(self, config=None):
-        received = self.validator.expect(self.factory.create_get_request(
-            addresses=[CONFIG_ADDRESS]))
+        received = self.validator.expect(
+            self.factory.create_get_request(addresses=[CONFIG_ADDRESS]))
 
         response = {} if config is None \
             else {CONFIG_ADDRESS: config.SerializeToString()}
@@ -87,27 +94,30 @@ class TestBlockInfo(TransactionProcessorTestCase):
             self.factory.create_get_response(response), received)
 
     def _expect_block_get(self, block):
-        received = self.validator.expect(self.factory.create_get_request(
-            addresses=[create_block_address(block.block_num)]))
+        received = self.validator.expect(
+            self.factory.create_get_request(
+                addresses=[create_block_address(block.block_num)]))
 
-        self.validator.respond(self.factory.create_get_response({
-            create_block_address(block.block_num): block.SerializeToString()
-        }), received)
+        self.validator.respond(
+            self.factory.create_get_response({
+                create_block_address(block.block_num):
+                block.SerializeToString()
+            }), received)
 
     def _expect_set(self, sets):
-        received = self.validator.expect(self.factory.create_set_request({
-            k: v.SerializeToString() for k, v in sets.items()
-        }))
-        self.validator.respond(self.factory.create_set_response(
-            addresses=sets.keys()), received)
+        received = self.validator.expect(
+            self.factory.create_set_request(
+                {k: v.SerializeToString()
+                 for k, v in sets.items()}))
+        self.validator.respond(
+            self.factory.create_set_response(addresses=sets.keys()), received)
 
     def _expect_delete(self, deletes):
-        received = self.validator.expect(self.factory.create_delete_request(
-            addresses=deletes
-        ))
+        received = self.validator.expect(
+            self.factory.create_delete_request(addresses=deletes))
 
-        self.validator.respond(self.factory.create_delete_response(
-            addresses=deletes), received)
+        self.validator.respond(
+            self.factory.create_delete_response(addresses=deletes), received)
 
     def _expect_response(self, status):
         self.validator.expect(self.factory.create_tp_response(status))

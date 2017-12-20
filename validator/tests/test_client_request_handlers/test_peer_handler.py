@@ -26,7 +26,7 @@ class TestPeerRequests(ClientHandlerTestCase):
             handlers.PeersGetRequest(gossip),
             client_peers_pb2.ClientPeersGetRequest,
             client_peers_pb2.ClientPeersGetResponse,
-            )
+        )
 
     def test_peer_request(self):
         """Verifies requests for peers work properly.

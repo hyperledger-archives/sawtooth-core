@@ -250,8 +250,7 @@ def _do_identity_policy_create(args):
     """
     signer = _read_signer(args.key)
 
-    txns = [_create_policy_txn(signer, args.name,
-            args.rule)]
+    txns = [_create_policy_txn(signer, args.name, args.rule)]
 
     batch = _create_batch(signer, txns)
 
@@ -332,8 +331,8 @@ def _do_identity_policy_list(args):
             for policy in printable_policies:
                 output = [policy.name]
                 for entry in policy.entries:
-                    output.append(Policy.Type.Name(entry.type) + " " +
-                                  entry.key)
+                    output.append(
+                        Policy.Type.Name(entry.type) + " " + entry.key)
                 writer.writerow(output)
         except csv.Error:
             raise CliException('Error writing CSV')
@@ -367,7 +366,7 @@ def _do_identity_role_create(args):
     """
     signer = _read_signer(args.key)
     txns = [_create_role_txn(signer, args.name,
-            args.policy)]
+                             args.policy)]
 
     batch = _create_batch(signer, txns)
 
@@ -591,8 +590,7 @@ def _create_batch(signer, transactions):
     return Batch(
         header=batch_header,
         header_signature=signer.sign(batch_header),
-        transactions=transactions
-    )
+        transactions=transactions)
 
 
 def _to_hash(value):
