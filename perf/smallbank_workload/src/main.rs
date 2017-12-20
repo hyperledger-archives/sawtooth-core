@@ -127,9 +127,7 @@ fn run_batch_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     try!(key_file.read_to_string(&mut buf));
     buf.pop(); // remove the new line
 
-    let private_key = try!(
-        Secp256k1PrivateKey::from_hex(&buf).or(
-            Secp256k1PrivateKey::from_wif(&buf)));
+    let private_key = try!(Secp256k1PrivateKey::from_hex(&buf).or_else(|_| Secp256k1PrivateKey::from_wif(&buf)));
     let context = try!(signing::create_context("secp256k1"));
 
     if let Err(err) = generate_signed_batches(&mut in_file, &mut out_file,
@@ -334,9 +332,7 @@ fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     buf.pop(); // remove the new line
 
     let context = try!(signing::create_context("secp256k1"));
-    let private_key = try!(
-        Secp256k1PrivateKey::from_hex(&buf).or(
-            Secp256k1PrivateKey::from_wif(&buf)));
+    let private_key = try!(Secp256k1PrivateKey::from_hex(&buf).or_else(|_| Secp256k1PrivateKey::from_wif(&buf)));
 
     try!(process_smallbank_playlist(&mut output_writer, &mut in_file,
                                     context.as_ref(), &private_key));
