@@ -33,10 +33,7 @@ def _get_config_dir():
     return '/etc/sawtooth'
 
 
-def _get_dir(toml_config_setting,
-             sawtooth_home_dir,
-             windows_dir,
-             default_dir):
+def _get_dir(toml_config_setting, sawtooth_home_dir, windows_dir, default_dir):
     """Determines the directory path based on configuration.
 
     Arguments:

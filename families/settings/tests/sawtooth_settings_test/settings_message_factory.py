@@ -24,14 +24,12 @@ _ADDRESS_PART_SIZE = 16
 
 
 class SettingsMessageFactory(object):
-
     def __init__(self, signer=None):
         self._factory = MessageFactory(
             family_name="sawtooth_settings",
             family_version="1.0",
             namespace="000000",
-            signer=signer
-        )
+            signer=signer)
 
     @property
     def public_key(self):

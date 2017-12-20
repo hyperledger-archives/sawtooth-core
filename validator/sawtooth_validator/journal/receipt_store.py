@@ -66,8 +66,7 @@ class TransactionReceiptStore(ChainObserver):
             KeyError: if the transaction id is unknown.
         """
         if txn_id not in self._receipt_db:
-            raise KeyError(
-                'Unknown transaction id {}'.format(txn_id))
+            raise KeyError('Unknown transaction id {}'.format(txn_id))
 
         txn_receipt_bytes = self._receipt_db[txn_id]
         txn_receipt = TransactionReceipt()

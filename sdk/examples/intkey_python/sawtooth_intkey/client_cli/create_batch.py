@@ -142,7 +142,7 @@ def generate_word_list(count):
         return {generate_word(): None for _ in range(0, count)}
 
 
-def do_populate(args, batches, keys):
+def do_populate(batches, keys):
     context = create_context('secp256k1')
     private_key = context.new_random_private_key()
     crypto_factory = CryptoFactory(context)
@@ -224,7 +224,7 @@ def write_batch_file(args, batches):
 def do_create_batch(args):
     batches = []
     keys = generate_word_list(args.key_count)
-    do_populate(args, batches, keys)
+    do_populate(batches, keys)
     do_generate(args, batches, keys)
     write_batch_file(args, batches)
 

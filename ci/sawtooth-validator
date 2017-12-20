@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with the Sawtooth Lake Validator and CLI packages installed
-#   from the Sawtooth Lake Package Repository.
+#   Builds an image with the Sawtooth Validator and CLI packages installed
+#   from the Sawtooth Package Repository.
 #
 # Build:
 #   $ cd sawtooth-core/docker

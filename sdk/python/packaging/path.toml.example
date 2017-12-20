@@ -1,5 +1,21 @@
 #
-# Sawtooth Lake -- Path Configuration
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+#
+# Sawtooth -- Path Configuration
 #
 
 
@@ -50,7 +66,7 @@
 #   data_dir = base_dir\data\
 #   log_dir  = base_dir\logs\
 #
-# For example, if Sawtooth Lake is installed in C:\sawtooth\, the validator
+# For example, if Sawtooth is installed in C:\sawtooth\, the validator
 # executable would be C:\sawtooth\bin\validator.exe and the data directory
 # would be C:\sawtooth\data\.
 

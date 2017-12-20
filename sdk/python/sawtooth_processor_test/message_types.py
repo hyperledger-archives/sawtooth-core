@@ -59,8 +59,7 @@ def to_protobuf_class(message_type):
         return _TYPE_TO_PROTO[message_type]
     else:
         raise UnknownMessageTypeException(
-            "Unknown message type: {}".format(message_type)
-        )
+            "Unknown message type: {}".format(message_type))
 
 
 def to_message_type(proto):
@@ -70,5 +69,4 @@ def to_message_type(proto):
         return _PROTO_TO_TYPE[proto_class]
     else:
         raise UnknownMessageTypeException(
-            "Unknown protobuf class: {}".format(proto_class)
-        )
+            "Unknown protobuf class: {}".format(proto_class))

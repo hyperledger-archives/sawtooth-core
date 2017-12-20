@@ -13,9 +13,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=too-many-lines,invalid-name
+
 import unittest
-from unittest.mock import Mock
-from collections import deque
 import hashlib
 import threading
 import time
@@ -45,7 +45,6 @@ def _get_address_from_txn(txn_info):
 
 
 class TestSchedulers(unittest.TestCase):
-
     def setUp(self):
         self._context_manager = ContextManager(dict_database.DictDatabase())
 
@@ -237,7 +236,7 @@ class TestSchedulers(unittest.TestCase):
         invalid batch due to a prior transaction being invalid, won't run.
         """
 
-        context_manager, scheduler = self._setup_serial_scheduler()
+        _, scheduler = self._setup_serial_scheduler()
         self._fail_fast(scheduler)
 
     def _fail_fast(self, scheduler):
@@ -327,13 +326,12 @@ class TestSchedulers(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(scheduler_iter2)
 
-
     def test_serial_completion_on_finalize(self):
         """Tests that iteration will stop when finalized is called on an
         otherwise complete serial scheduler.
         """
 
-        context_manager, scheduler = self._setup_serial_scheduler()
+        _, scheduler = self._setup_serial_scheduler()
         self._completion_on_finalize(scheduler)
 
     def test_parallel_completion_on_finalize(self):
@@ -341,7 +339,7 @@ class TestSchedulers(unittest.TestCase):
         otherwise complete parallel scheduler.
         """
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
+        _, scheduler = self._setup_parallel_scheduler()
         self._completion_on_finalize(scheduler)
 
     def _completion_on_finalize(self, scheduler):
@@ -349,16 +347,18 @@ class TestSchedulers(unittest.TestCase):
         otherwise complete scheduler.
 
         Notes:
-            Adds one batch and transaction, then verifies the iterable returns
-            that transaction.  Sets the execution result and then calls finalize.
-            Since the the scheduler is complete (all transactions have had
-            results set, and it's been finalized), we should get a StopIteration.
-            This check is useful in making sure the finalize() can occur after
-            all set_transaction_execution_result()s have been performed, because
-            in a normal situation, finalize will probably occur prior to those
-            calls.
+            Adds one batch and transaction, then verifies the iterable
+            returns that transaction. Sets the execution result and
+            then calls finalize. Since the the scheduler is complete
+            (all transactions have had results set, and it's been
+            finalized), we should get a StopIteration. This check is
+            useful in making sure the finalize() can occur after all
+            set_transaction_execution_result()s have been performed,
+            because in a normal situation, finalize will probably
+            occur prior to those calls.
 
         This test should work for both a serial and parallel scheduler.
+
         """
 
         private_key = self._context.new_random_private_key()
@@ -392,7 +392,7 @@ class TestSchedulers(unittest.TestCase):
         has had finalize called and all txns have execution result set.
         """
 
-        context_manager, scheduler = self._setup_serial_scheduler()
+        _, scheduler = self._setup_serial_scheduler()
         self._completion_on_finalize_only_when_done(scheduler)
 
     def test_parallel_completion_on_finalize_only_when_done(self):
@@ -400,7 +400,7 @@ class TestSchedulers(unittest.TestCase):
         has had finalize called and all txns have execution result set.
         """
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
+        _, scheduler = self._setup_parallel_scheduler()
         self._completion_on_finalize_only_when_done(scheduler)
 
     def _completion_on_finalize_only_when_done(self, scheduler):
@@ -412,12 +412,14 @@ class TestSchedulers(unittest.TestCase):
             that transaction.  Finalizes then sets the execution result. The
             schedule should not be marked as complete until after the
             execution result is set.
-            This check is useful in making sure the finalize() can occur after
-            all set_transaction_execution_result()s have been performed, because
-            in a normal situation, finalize will probably occur prior to those
-            calls.
+
+            This check is useful in making sure the finalize() can
+            occur after all set_transaction_execution_result()s have
+            been performed, because in a normal situation, finalize
+            will probably occur prior to those calls.
 
         This test should work for both a serial and parallel scheduler.
+
         """
         private_key = self._context.new_random_private_key()
         signer = self._crypto_factory.new_signer(private_key)
@@ -451,7 +453,7 @@ class TestSchedulers(unittest.TestCase):
         as result of add_batch().
         """
 
-        context_manager, scheduler = self._setup_serial_scheduler()
+        _, scheduler = self._setup_serial_scheduler()
         self._add_batch_after_empty_iteration(scheduler)
 
     def test_parallel_add_batch_after_empty_iteration(self):
@@ -459,7 +461,7 @@ class TestSchedulers(unittest.TestCase):
         as result of add_batch().
         """
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
+        _, scheduler = self._setup_parallel_scheduler()
         self._add_batch_after_empty_iteration(scheduler)
 
     def _add_batch_after_empty_iteration(self, scheduler):
@@ -569,7 +571,6 @@ class TestSchedulers(unittest.TestCase):
         self._add_valid_batch_invalid_batch(scheduler, context_manager)
 
     def _add_valid_batch_invalid_batch(self, scheduler, context_manager):
-
         """Tests the squash function. That the correct state hash is found
         at the end of valid and invalid batches, similar to block publishing.
 
@@ -638,7 +639,7 @@ class TestSchedulers(unittest.TestCase):
         txn_info_b = next(sched2)
         address_b = _get_address_from_txn(txn_info_b)
 
-        txn_infoInvalid = next(sched2)
+        next(sched2)
 
         txn_info_d = next(sched2)
         address_d = _get_address_from_txn(txn_info_d)
@@ -962,6 +963,54 @@ class TestSerialScheduler(unittest.TestCase):
         self.assertIsNotNone(scheduled_txn_info)
         self.assertEqual('b', scheduled_txn_info.txn.payload.decode())
 
+    def test_unschedule_incomplete_transactions(self):
+        """Tests that unschedule_incomplete_batches will remove
+        batches above the mimimum.
+
+        Given a schedule with two batches, ensure that a call to
+        unschedule_incomplete_batches will leave one batch in the schedule.
+        """
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
+
+        txn_a, _ = create_transaction(
+            payload='A'.encode(),
+            signer=signer)
+
+        txn_b, _ = create_transaction(
+            payload='B'.encode(),
+            signer=signer)
+
+        batch_1 = create_batch(transactions=[txn_a],
+                               signer=signer)
+        batch_2 = create_batch(transactions=[txn_b],
+                               signer=signer)
+
+        self.scheduler.add_batch(batch_1)
+        self.scheduler.add_batch(batch_2)
+
+        self.scheduler.unschedule_incomplete_batches()
+        self.scheduler.finalize()
+        self.assertFalse(self.scheduler.complete(block=False))
+
+        scheduled_txn_info = self.scheduler.next_transaction()
+        self.assertIsNotNone(scheduled_txn_info)
+        self.assertEqual('A', scheduled_txn_info.txn.payload.decode())
+
+        c_id = self.context_manager.create_context(
+            self.first_state_root,
+            base_contexts=scheduled_txn_info.base_context_ids,
+            inputs=[],
+            outputs=[])
+
+        self.scheduler.set_transaction_execution_result(
+            scheduled_txn_info.txn.header_signature,
+            is_valid=True,
+            context_id=c_id)
+
+        with self.assertRaises(StopIteration):
+            scheduled_txn_info = self.scheduler.next_transaction()
+
 
 class TestParallelScheduler(unittest.TestCase):
     def setUp(self):
@@ -1198,6 +1247,55 @@ class TestParallelScheduler(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(iterable)
 
-        result = self.scheduler.get_batch_execution_result(batch.header_signature)
+        result = self.scheduler.get_batch_execution_result(
+            batch.header_signature)
         self.assertIsNotNone(result)
         self.assertTrue(result.is_valid)
+
+    def test_unschedule_incomplete_transactions(self):
+        """Tests that unschedule_incomplete_batches will remove
+        batches above the mimimum.
+
+        Given a schedule with two batches, ensure that a call to
+        unschedule_incomplete_batches will leave one batch in the schedule.
+        """
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
+
+        txn_a, _ = create_transaction(
+            payload='A'.encode(),
+            signer=signer)
+
+        txn_b, _ = create_transaction(
+            payload='B'.encode(),
+            signer=signer)
+
+        batch_1 = create_batch(transactions=[txn_a],
+                               signer=signer)
+        batch_2 = create_batch(transactions=[txn_b],
+                               signer=signer)
+
+        self.scheduler.add_batch(batch_1)
+        self.scheduler.add_batch(batch_2)
+
+        self.scheduler.unschedule_incomplete_batches()
+        self.scheduler.finalize()
+        self.assertFalse(self.scheduler.complete(block=False))
+
+        scheduled_txn_info = self.scheduler.next_transaction()
+        self.assertIsNotNone(scheduled_txn_info)
+        self.assertEqual('A', scheduled_txn_info.txn.payload.decode())
+
+        c_id = self.context_manager.create_context(
+            self.first_state_root,
+            base_contexts=scheduled_txn_info.base_context_ids,
+            inputs=[],
+            outputs=[])
+
+        self.scheduler.set_transaction_execution_result(
+            scheduled_txn_info.txn.header_signature,
+            is_valid=True,
+            context_id=c_id)
+
+        scheduled_txn_info = self.scheduler.next_transaction()
+        self.assertIsNone(scheduled_txn_info)

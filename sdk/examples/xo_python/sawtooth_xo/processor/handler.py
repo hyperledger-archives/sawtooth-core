@@ -125,8 +125,7 @@ def _validate_transaction(name, action, space):
 def _validate_game_data(action, space, signer, board, state, player1, player2):
     if action == 'create':
         if board is not None:
-            raise InvalidTransaction(
-                'Invalid action: Game already exists.')
+            raise InvalidTransaction('Invalid action: Game already exists.')
 
     elif action == 'take':
         if board is None:
@@ -134,8 +133,7 @@ def _validate_game_data(action, space, signer, board, state, player1, player2):
                 'Invalid action: Take requires an existing game.')
 
         if state in ('P1-WIN', 'P2-WIN', 'TIE'):
-            raise InvalidTransaction(
-                'Invalid Action: Game has ended.')
+            raise InvalidTransaction('Invalid Action: Game has ended.')
 
         if ((player1 and state == 'P1-NEXT' and player1 != signer)
                 or (player2 and state == 'P2-NEXT' and player2 != signer)):
@@ -148,8 +146,7 @@ def _validate_game_data(action, space, signer, board, state, player1, player2):
 
     elif action == 'delete':
         if board is None:
-            raise InvalidTransaction(
-                'Invalid action: game does not exist')
+            raise InvalidTransaction('Invalid action: game does not exist')
 
 
 def _make_xo_address(namespace_prefix, name):
@@ -223,8 +220,7 @@ def _play_xo(action, space, signer, board, state, player1, player2):
         return '---------', 'P1-NEXT', '', ''
 
     elif action == 'take':
-        upd_player1, upd_player2 = _update_players(
-            player1, player2, signer)
+        upd_player1, upd_player2 = _update_players(player1, player2, signer)
 
         upd_board = _update_board(board, space, state)
 
@@ -258,8 +254,10 @@ def _update_board(board, space, state):
     index = space - 1
 
     # replace the index-th space with mark, leave everything else the same
-    return ''.join([current if square != index else mark
-                    for square, current in enumerate(board)])
+    return ''.join([
+        current if square != index else mark
+        for square, current in enumerate(board)
+    ])
 
 
 def _update_state(state, board):
@@ -267,8 +265,7 @@ def _update_state(state, board):
     o_wins = _is_win(board, 'O')
 
     if x_wins and o_wins:
-        raise InternalError(
-            'Two winners (there can be only one)')
+        raise InternalError('Two winners (there can be only one)')
 
     elif x_wins:
         return 'P1-WIN'
@@ -289,8 +286,7 @@ def _update_state(state, board):
         return state
 
     else:
-        raise InternalError(
-            'Unhandled state: {}'.format(state))
+        raise InternalError('Unhandled state: {}'.format(state))
 
 
 def _is_win(board, letter):
@@ -332,6 +328,7 @@ def _display(msg):
         length = len(msg)
         msg = [msg]
 
+    # pylint: disable=logging-not-lazy
     LOGGER.debug("+" + (length + 2) * "-" + "+")
     for line in msg:
         LOGGER.debug("+ " + line.center(length) + " +")

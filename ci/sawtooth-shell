@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 
 # Description:
-#   Builds an image with all the python3 Sawtooth Lake packages installed from
-#   the Sawtooth Lake Package Repository.
+#   Builds an image with all the python3 Sawtooth packages installed from
+#   the Sawtooth Package Repository.
 #
 # Build:
 #   $ cd sawtooth-core/docker

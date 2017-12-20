@@ -19,9 +19,7 @@
 
 const assert = require('assert')
 
-const {
-  Message
-} = require('../../protobuf')
+const { Message } = require('../../protobuf')
 
 describe('ProtoBuf', () => {
   describe('Message', () => {
@@ -34,8 +32,10 @@ describe('ProtoBuf', () => {
 
       let decMessage = Message.decode(encMessage)
 
-      assert.equal(Message.MessageType.CLIENT_STATE_GET_REQUEST,
-                   decMessage.messageType)
+      assert.equal(
+        Message.MessageType.CLIENT_STATE_GET_REQUEST,
+        decMessage.messageType
+      )
       assert.equal('corr_id', decMessage.correlationId)
       assert.equal('Hello', decMessage.content.toString('utf8'))
     })
@@ -48,8 +48,10 @@ describe('ProtoBuf', () => {
 
       let decMessage = Message.decode(encMessage)
 
-      assert.equal(Message.MessageType.CLIENT_STATE_GET_RESPONSE,
-                   decMessage.messageType)
+      assert.equal(
+        Message.MessageType.CLIENT_STATE_GET_RESPONSE,
+        decMessage.messageType
+      )
       assert.equal('Hello', decMessage.content.toString('utf8'))
       assert.ok(!decMessage.correlationId)
     })

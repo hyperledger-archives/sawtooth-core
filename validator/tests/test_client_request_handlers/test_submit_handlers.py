@@ -78,9 +78,18 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         """Verifies requests for status of a batch in the block store work.
 
         Queries the default mock block store with three blocks/batches:
-            {header: {batch_ids: ['aaa...2'] ...}, header_signature: 'bbb...2' ...},
-            {header: {batch_ids: ['aaa...1'] ...}, header_signature: 'bbb...1' ...},
-            {header: {batch_ids: ['aaa...0'] ...}, header_signature: 'bbb...0' ...}
+            {
+                header: {batch_ids: ['aaa...2'] ...},
+                 header_signature: 'bbb...2' ...}
+            ,
+            {
+                header: {batch_ids: ['aaa...1'] ...},
+                 header_signature: 'bbb...1' ...}
+            ,
+            {
+                header: {batch_ids: ['aaa...0'] ...},
+                 header_signature: 'bbb...0' ...
+            }
 
         Expects to find:
             - a response status of OK
@@ -189,9 +198,18 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         """Verifies requests for status of many batches work properly.
 
         Queries the default mock block store with three blocks/batches:
-            {header: {batch_ids: ['aaa...2'] ...}, header_signature: 'bbb...2' ...},
-            {header: {batch_ids: ['aaa...1'] ...}, header_signature: 'bbb...1' ...},
-            {header: {batch_ids: ['aaa...0'] ...}, header_signature: 'bbb...0' ...}
+            {
+                header: {batch_ids: ['aaa...2'] ...},
+                 header_signature: 'bbb...2' ...}
+            ,
+            {
+                header: {batch_ids: ['aaa...1'] ...},
+                 header_signature: 'bbb...1' ...}
+            ,
+            {
+                header: {batch_ids: ['aaa...0'] ...},
+                 header_signature: 'bbb...0' ...
+            }
 
         ...and the default mock batch tracker with pending batch ids of:
             - 'aaa...d'
@@ -235,6 +253,7 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
             sleep(1)
             self._store.add_block('e')
             self._tracker.chain_update(None, [])
+
         Thread(target=delayed_add).start()
 
         response = self.make_request(

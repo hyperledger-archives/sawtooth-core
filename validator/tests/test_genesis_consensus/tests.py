@@ -27,10 +27,6 @@ from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 
 
 class TestGenesisBlockPublisher(unittest.TestCase):
-
-    def __init__(self, test_name):
-        super().__init__(test_name)
-
     def test_initialize_block(self):
         """
         Create a block header and initialize it using the genesis consensus
@@ -177,10 +173,6 @@ class TestGenesisBlockPublisher(unittest.TestCase):
 
 
 class TestGenesisBlockVerifier(unittest.TestCase):
-
-    def __init__(self, test_name):
-        super().__init__(test_name)
-
     def test_verify_genesis_block(self):
         """This test should verify that a block with the NULL_BLOCK_IDENTIFIER
         should be considered a valid block using this consensus module.

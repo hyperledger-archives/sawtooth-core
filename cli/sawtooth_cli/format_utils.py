@@ -34,6 +34,7 @@ def format_terminal_row(headers, example_row):
     Returns
         string: A format string with a size for each column
     """
+
     def format_column(col):
         if isinstance(col, str):
             return '{{:{w}.{w}}}'

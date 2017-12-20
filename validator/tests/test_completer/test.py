@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+# pylint: disable=protected-access
+
 import unittest
 import random
 import hashlib
+
 import cbor
 
 from sawtooth_signing import create_context
@@ -38,6 +42,8 @@ class TestCompleter(unittest.TestCase):
         self.completer = Completer(self.block_store, self.gossip)
         self.completer._on_block_received = self._on_block_received
         self.completer._on_batch_received = self._on_batch_received
+        self.completer._has_block = self._has_block
+        self._has_block_value = True
 
         context = create_context('secp256k1')
         private_key = context.new_random_private_key()
@@ -53,13 +59,18 @@ class TestCompleter(unittest.TestCase):
     def _on_batch_received(self, batch):
         return self.batches.append(batch.header_signature)
 
+    def _has_block(self, batch):
+        return self._has_block_value
+
     def _create_transactions(self, count, missing_dep=False):
         txn_list = []
 
-        for i in range(count):
-            payload = {'Verb': 'set',
-                       'Name': 'name' + str(random.randint(0, 100)),
-                       'Value': random.randint(0, 100)}
+        for _ in range(count):
+            payload = {
+                'Verb': 'set',
+                'Name': 'name' + str(random.randint(0, 100)),
+                'Value': random.randint(0, 100)
+            }
             intkey_prefix = \
                 hashlib.sha512('intkey'.encode('utf-8')).hexdigest()[0:6]
 
@@ -99,7 +110,7 @@ class TestCompleter(unittest.TestCase):
 
         batch_list = []
 
-        for i in range(batch_count):
+        for _ in range(batch_count):
             txn_list = self._create_transactions(txn_count,
                                                  missing_dep=missing_dep)
             txn_sig_list = [txn.header_signature for txn in txn_list]
@@ -112,19 +123,23 @@ class TestCompleter(unittest.TestCase):
 
             signature = self.signer.sign(header_bytes)
 
-            batch = Batch(header=header_bytes,
-                          transactions=txn_list,
-                          header_signature=signature)
+            batch = Batch(
+                header=header_bytes,
+                transactions=txn_list,
+                header_signature=signature)
 
             batch_list.append(batch)
 
         return batch_list
 
-    def _create_blocks(self, block_count, batch_count,
-                       missing_predecessor=False, missing_batch=False,
+    def _create_blocks(self,
+                       block_count,
+                       batch_count,
+                       missing_predecessor=False,
+                       missing_batch=False,
                        find_batch=True):
         block_list = []
-        pred = 0
+
         for i in range(0, block_count):
             batch_list = self._create_batches(batch_count, 2)
             batch_ids = [batch.header_signature for batch in batch_list]
@@ -132,7 +147,7 @@ class TestCompleter(unittest.TestCase):
             if missing_predecessor:
                 predecessor = "Missing"
             else:
-                predecessor = (block_list[i-1].header_signature if i > 0 else
+                predecessor = (block_list[i - 1].header_signature if i > 0 else
                                NULL_BLOCK_IDENTIFIER)
 
             block_header = BlockHeader(
@@ -150,9 +165,10 @@ class TestCompleter(unittest.TestCase):
                     self.completer.add_batch(batch_list[-1])
                 batch_list = batch_list[:-1]
 
-            block = Block(header=header_bytes,
-                          batches=batch_list,
-                          header_signature=signature)
+            block = Block(
+                header=header_bytes,
+                batches=batch_list,
+                header_signature=signature)
 
             block_list.append(block)
 
@@ -163,7 +179,7 @@ class TestCompleter(unittest.TestCase):
         Add completed block to completer. Block should be passed to
         on_block_recieved.
         """
-        block = self._create_blocks(1,1)[0]
+        block = self._create_blocks(1, 1)[0]
         self.completer.add_block(block)
         self.assertIn(block.header_signature, self.blocks)
 
@@ -171,26 +187,28 @@ class TestCompleter(unittest.TestCase):
         """
         Submit same block twice.
         """
-        block = block = self._create_blocks(1, 1)[0]
+        block = self._create_blocks(1, 1)[0]
         self.completer.add_block(block)
         self.completer.add_block(block)
         self.assertIn(block.header_signature, self.blocks)
-        self.assertEquals(len(self.blocks), 1)
+        self.assertEqual(len(self.blocks), 1)
 
     def test_block_missing_predecessor(self):
         """
         The block is completed but the predecessor is missing.
         """
         block = self._create_blocks(1, 1, missing_predecessor=True)[0]
+        self._has_block_value = False
         self.completer.add_block(block)
-        self.assertEquals(len(self.blocks),0 )
+        self.assertEqual(len(self.blocks), 0)
         self.assertIn("Missing", self.gossip.requested_blocks)
         header = BlockHeader(previous_block_id=NULL_BLOCK_IDENTIFIER)
         missing_block = Block(header_signature="Missing",
                               header=header.SerializeToString())
+        self._has_block_value = True
         self.completer.add_block(missing_block)
         self.assertIn(block.header_signature, self.blocks)
-        self.assertEquals(
+        self.assertEqual(
             block,
             self.completer.get_block(block.header_signature).get_block())
 
@@ -202,7 +220,7 @@ class TestCompleter(unittest.TestCase):
         batches = self._create_batches(1, 1, True)
         block.batches.extend(batches)
         self.completer.add_block(block)
-        self.assertEquals(len(self.blocks), 0)
+        self.assertEqual(len(self.blocks), 0)
 
     def test_block_missing_batch(self):
         """
@@ -213,10 +231,9 @@ class TestCompleter(unittest.TestCase):
         block = self._create_blocks(1, 2, missing_batch=True)[0]
         self.completer.add_block(block)
         self.assertIn(block.header_signature, self.blocks)
-        self.assertEquals(
+        self.assertEqual(
             block,
             self.completer.get_block(block.header_signature).get_block())
-
 
     def test_block_missing_batch_not_in_cache(self):
         """
@@ -256,7 +273,7 @@ class TestCompleter(unittest.TestCase):
         batches[-1] = batch
         block.batches.extend(batches)
         self.completer.add_block(block)
-        self.assertEquals(len(self.blocks), 0)
+        self.assertEqual(len(self.blocks), 0)
 
     def test_good_batch(self):
         """
@@ -266,8 +283,8 @@ class TestCompleter(unittest.TestCase):
         batch = self._create_batches(1, 1)[0]
         self.completer.add_batch(batch)
         self.assertIn(batch.header_signature, self.batches)
-        self.assertEquals(batch,
-                          self.completer.get_batch(batch.header_signature))
+        self.assertEqual(batch,
+                         self.completer.get_batch(batch.header_signature))
 
     def test_batch_with_missing_dep(self):
         """
@@ -279,13 +296,13 @@ class TestCompleter(unittest.TestCase):
         batch = self._create_batches(1, 1, missing_dep=True)[0]
         self.completer.add_batch(batch)
         self.assertIn("Missing",
-                      self.gossip.requested_batches_by_transactin_id)
+                      self.gossip.requested_batches_by_txn_id)
 
         missing = Transaction(header_signature="Missing")
-        missing_batch= Batch(header_signature="Missing_batch",
-                             transactions=[missing])
+        missing_batch = Batch(header_signature="Missing_batch",
+                              transactions=[missing])
         self.completer.add_batch(missing_batch)
-        self.assertIn(missing_batch.header_signature, self.batches )
+        self.assertIn(missing_batch.header_signature, self.batches)
         self.assertIn(batch.header_signature, self.batches)
-        self.assertEquals(missing_batch,
-                          self.completer.get_batch_by_transaction("Missing"))
+        self.assertEqual(missing_batch,
+                         self.completer.get_batch_by_transaction("Missing"))

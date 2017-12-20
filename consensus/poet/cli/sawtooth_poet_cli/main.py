@@ -99,7 +99,7 @@ def create_parser(prog_name):
     subparsers.required = True
 
     add_registration_parser(subparsers, parent_parser)
-    add_enclave_parser(subparsers, parent_parser)
+    add_enclave_parser(subparsers)
 
     return parser
 

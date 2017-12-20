@@ -16,8 +16,7 @@
 import os
 import subprocess
 
-# from distutils.core import setup, Extension, find_packages
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, find_packages
 
 if os.name == 'nt':
     conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"
@@ -29,14 +28,17 @@ else:
     log_dir = "/var/log/sawtooth"
 
 data_files = [
-    (conf_dir, ['packaging/path.toml.example', 'packaging/log_config.toml.example', 'packaging/validator.toml.example']),
+    (conf_dir, ['packaging/path.toml.example',
+                'packaging/log_config.toml.example',
+                'packaging/validator.toml.example']),
     (os.path.join(conf_dir, "keys"), []),
     (data_dir, []),
     (log_dir, []),
 ]
 
 if os.path.exists("/etc/default"):
-    data_files.append(('/etc/default', ['packaging/systemd/sawtooth-validator']))
+    data_files.append(
+        ('/etc/default', ['packaging/systemd/sawtooth-validator']))
 
 if os.path.exists("/lib/systemd/system"):
     data_files.append(('/lib/systemd/system',

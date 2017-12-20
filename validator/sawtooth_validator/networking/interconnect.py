@@ -216,12 +216,15 @@ class _SendReceive(object):
                                 content=ping.SerializeToString(),
                                 message_type=validator_pb2.Message.PING_REQUEST
                             )
-                            fut = future.Future(message.correlation_id,
-                                                message.content,
-                                                )
+                            fut = future.Future(
+                                message.correlation_id,
+                                message.content,
+                            )
                             self._futures.put(fut)
-                            message_frame = [bytes(zmq_identity),
-                                             message.SerializeToString()]
+                            message_frame = [
+                                bytes(zmq_identity),
+                                message.SerializeToString()
+                            ]
                             yield from self._send_message_frame(message_frame)
                 elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
                     if self._last_message_time and \
@@ -273,7 +276,7 @@ class _SendReceive(object):
                 if queue_size > 10:
                     LOGGER.debug("Dispatch queue size: %s", queue_size)
 
-                zmq_identity, msg_bytes =\
+                zmq_identity, msg_bytes = \
                     yield from self._dispatcher_queue.get()
                 message = validator_pb2.Message()
                 message.ParseFromString(msg_bytes)
@@ -295,9 +298,10 @@ class _SendReceive(object):
                 try:
                     self._futures.set_result(
                         message.correlation_id,
-                        future.FutureResult(message_type=message.message_type,
-                                            content=message.content,
-                                            connection_id=connection_id))
+                        future.FutureResult(
+                            message_type=message.message_type,
+                            content=message.content,
+                            connection_id=connection_id))
                 except future.FutureCollectionKeyError:
                     self._dispatcher.dispatch(self._connection,
                                               message,
@@ -802,11 +806,13 @@ class Interconnect(object):
         self._add_connection(conn, uri)
 
         connect_message = ConnectionRequest(endpoint=self._public_endpoint)
-        conn.send(validator_pb2.Message.NETWORK_CONNECT,
-                  connect_message.SerializeToString(),
-                  callback=partial(self._connect_callback,
-                                   connection=conn,
-                                   ))
+        conn.send(
+            validator_pb2.Message.NETWORK_CONNECT,
+            connect_message.SerializeToString(),
+            callback=partial(
+                self._connect_callback,
+                connection=conn,
+            ))
 
         return conn
 
@@ -816,16 +822,15 @@ class Interconnect(object):
         the validator to be authorized by the incoming connection.
         """
         connect_message = ConnectionRequest(endpoint=self._public_endpoint)
-        self._safe_send(validator_pb2.Message.NETWORK_CONNECT,
-                        connect_message.SerializeToString(),
-                        connection_id,
-                        callback=partial(
-                            self._inbound_connection_request_callback,
-                            connection_id=connection_id
-                            ))
+        self._safe_send(
+            validator_pb2.Message.NETWORK_CONNECT,
+            connect_message.SerializeToString(),
+            connection_id,
+            callback=partial(
+                self._inbound_connection_request_callback,
+                connection_id=connection_id))
 
-    def _connect_callback(self, request, result,
-                          connection=None):
+    def _connect_callback(self, request, result, connection=None):
         connection_response = ConnectionResponse()
         connection_response.ParseFromString(result.content)
 
@@ -857,8 +862,7 @@ class Interconnect(object):
                         auth_trust_request.SerializeToString(),
                         callback=partial(
                             self._check_trust_success,
-                            connection_id=connection.connection_id)
-                        )
+                            connection_id=connection.connection_id))
 
                 if auth_type["challenge"]:
                     auth_challenge_request = AuthorizationChallengeRequest()
@@ -897,7 +901,7 @@ class Interconnect(object):
                 connection_id,
                 callback=partial(self._check_trust_success,
                                  connection_id=connection_id)
-                )
+            )
 
         if auth_type["challenge"]:
             auth_challenge_request = AuthorizationChallengeRequest()
@@ -908,7 +912,7 @@ class Interconnect(object):
                 callback=partial(
                     self._inbound_challenge_authorization_callback,
                     connection_id=connection_id)
-                )
+            )
 
     def _challenge_authorization_callback(self, request, result,
                                           connection=None,
@@ -928,7 +932,7 @@ class Interconnect(object):
             public_key=self._signer.get_public_key().as_hex(),
             signature=signature,
             roles=[RoleType.Value("NETWORK")]
-            )
+        )
 
         connection.send(
             validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
@@ -973,7 +977,8 @@ class Interconnect(object):
             LOGGER.debug("Unable to complete Challenge Authorization.")
             self.remove_connection(connection_id)
 
-    def send(self, message_type, data, connection_id, callback=None):
+    def send(self, message_type, data, connection_id, callback=None,
+             one_way=False):
         """
         Send a message of message_type
         :param connection_id: the identity for the connection to send to
@@ -982,8 +987,7 @@ class Interconnect(object):
         :return: future.Future
         """
         if connection_id not in self._connections:
-            raise ValueError("Unknown connection id: %s",
-                             connection_id)
+            raise ValueError("Unknown connection id: {}".format(connection_id))
         connection_info = self._connections.get(connection_id)
         if connection_info.connection_type == \
                 ConnectionType.ZMQ_IDENTITY:
@@ -994,10 +998,13 @@ class Interconnect(object):
 
             timer_tag = get_enum_name(message.message_type)
             timer_ctx = self._get_send_response_timer(timer_tag).time()
-            fut = future.Future(message.correlation_id, message.content,
-                                callback, timer_ctx=timer_ctx)
-
-            self._futures.put(fut)
+            fut = future.Future(
+                message.correlation_id,
+                message.content,
+                callback,
+                timer_ctx=timer_ctx)
+            if not one_way:
+                self._futures.put(fut)
 
             self._send_receive_thread.send_message(msg=message,
                                                    connection_id=connection_id)
@@ -1006,7 +1013,8 @@ class Interconnect(object):
         return connection_info.connection.send(
             message_type,
             data,
-            callback=callback)
+            callback=callback,
+            one_way=one_way)
 
     def start(self):
         complete_or_error_queue = queue.Queue()
@@ -1147,7 +1155,7 @@ class Interconnect(object):
                         connection_info.connection)
 
     def send_last_message(self, message_type, data,
-                          connection_id, callback=None):
+                          connection_id, callback=None, one_way=False):
         """
         Send a message of message_type and close the connection.
         :param connection_id: the identity for the connection to send to
@@ -1156,8 +1164,7 @@ class Interconnect(object):
         :return: future.Future
         """
         if connection_id not in self._connections:
-            raise ValueError("Unknown connection id: %s",
-                             connection_id)
+            raise ValueError("Unknown connection id: {}".format(connection_id))
         connection_info = self._connections.get(connection_id)
         if connection_info.connection_type == \
                 ConnectionType.ZMQ_IDENTITY:
@@ -1169,7 +1176,8 @@ class Interconnect(object):
             fut = future.Future(message.correlation_id, message.content,
                                 callback)
 
-            self._futures.put(fut)
+            if not one_way:
+                self._futures.put(fut)
 
             self._send_receive_thread.send_last_message(
                 msg=message,
@@ -1201,7 +1209,7 @@ class Interconnect(object):
                 message,
                 connection_id,
                 callback=callback
-                )
+            )
         except ValueError:
             LOGGER.debug("Connection disconnected: %s", connection_id)
 
@@ -1256,7 +1264,7 @@ class OutboundConnection(object):
 
         return self._connection_id
 
-    def send(self, message_type, data, callback=None):
+    def send(self, message_type, data, callback=None, one_way=False):
         """Sends a message of message_type
 
         Args:
@@ -1275,13 +1283,14 @@ class OutboundConnection(object):
 
         fut = future.Future(message.correlation_id, message.content,
                             callback)
-
-        self._futures.put(fut)
+        if not one_way:
+            self._futures.put(fut)
 
         self._send_receive_thread.send_message(message)
         return fut
 
-    def send_last_message(self, message_type, data, callback=None):
+    def send_last_message(self, message_type, data, callback=None,
+                          one_way=False):
         """Sends a message of message_type and then close the connection.
 
         Args:
@@ -1301,7 +1310,8 @@ class OutboundConnection(object):
         fut = future.Future(message.correlation_id, message.content,
                             callback)
 
-        self._futures.put(fut)
+        if not one_way:
+            self._futures.put(fut)
 
         self._send_receive_thread.send_last_message(message)
         return fut

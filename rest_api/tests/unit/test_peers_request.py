@@ -13,15 +13,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import json
 from aiohttp.test_utils import unittest_run_loop
-from components import Mocks, BaseApiTest
+
+from components import BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_peers_pb2
 
 
 class PeersGetRequestTests(BaseApiTest):
-
     async def get_application(self):
         self.set_status_and_connection(
             Message.CLIENT_PEERS_GET_REQUEST,
@@ -53,4 +52,4 @@ class PeersGetRequestTests(BaseApiTest):
         self.connection.assert_valid_request_sent()
 
         self.assert_has_valid_link(response, '/peers')
-        self.assertEquals(["Peer1", "Peer2"], response['data'])
+        self.assertEqual(["Peer1", "Peer2"], response['data'])

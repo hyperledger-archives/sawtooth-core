@@ -198,3 +198,22 @@ WaitCertificate* deserialize_wait_certificate(
             serialized_certificate,
             signature);
 } // deserialize_wait_certificate
+
+bool _verify_wait_certificate(
+    const std::string& serializedWaitCertificate,
+    const std::string& waitCertificateSignature,
+    const std::string& poetPublicKey
+    )
+{
+    PyLog(POET_LOG_INFO, "Verify SGX Wait Certificate");
+
+    poet_err_t ret =
+        Poet_VerifyWaitCertificate(
+            serializedWaitCertificate.c_str(),
+            waitCertificateSignature.c_str(),
+            poetPublicKey.c_str() );
+    ThrowPoetError(ret);
+
+    if(ret == POET_SUCCESS) return true;
+    return false;
+}

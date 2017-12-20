@@ -17,12 +17,13 @@ import unittest
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.batch_pb2 import Batch
+from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipMessageDuplicateHandler
+
 from test_duplicate_handler.mock import MockCompleter
 from test_duplicate_handler.mock import MockChainController
 from test_duplicate_handler.mock import MockPublisher
-from sawtooth_validator.networking.dispatch import HandlerStatus
 
 
 class TestDuplicateHandler(unittest.TestCase):
@@ -50,7 +51,7 @@ class TestDuplicateHandler(unittest.TestCase):
         Test that if the block does not exist yet in the completer or the
         chain controller, the gossip message is passed.
         """
-        batch= Batch(header_signature="Batch1")
+        batch = Batch(header_signature="Batch1")
         message = GossipMessage(content_type=GossipMessage.BATCH,
                                 content=batch.SerializeToString())
         handler_status = self.handler.handle(

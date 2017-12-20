@@ -38,7 +38,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class PermissionVerifier(object):
-
     def __init__(self, permissions, current_root_func, identity_cache):
         # Off-chain permissions to be enforced
         self._permissions = permissions
@@ -91,8 +90,8 @@ class PermissionVerifier(object):
 
         if allowed:
             return self.is_transaction_signer_authorized(
-                        batch.transactions,
-                        state_root)
+                batch.transactions,
+                state_root)
         LOGGER.debug("Batch Signer: %s is not permitted.",
                      header.signer_public_key)
         return False
@@ -274,9 +273,7 @@ class PermissionVerifier(object):
         policy = self._cache.get_policy(policy_name, state_root)
         if policy is not None:
             if not self._allowed(public_key, policy):
-                LOGGER.debug(
-                    "Node is not permitted: %s.",
-                    public_key)
+                LOGGER.debug("Node is not permitted: %s.", public_key)
                 return False
         return True
 
@@ -337,6 +334,7 @@ class BatchListPermissionVerifier(Handler):
                 status=HandlerStatus.RETURN,
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+
         try:
             request = client_batch_submit_pb2.ClientBatchSubmitRequest()
             request.ParseFromString(message_content)
@@ -344,12 +342,14 @@ class BatchListPermissionVerifier(Handler):
                 if batch.trace:
                     LOGGER.debug("TRACE %s: %s", batch.header_signature,
                                  self.__class__.__name__)
-            if not all(self._verifier.check_off_chain_batch_roles(batch)
-                       for batch in request.batches):
+            if not all(
+                    self._verifier.check_off_chain_batch_roles(batch)
+                    for batch in request.batches):
                 return make_response(response_proto.INVALID_BATCH)
 
-            if not all(self._verifier.is_batch_signer_authorized(batch)
-                       for batch in request.batches):
+            if not all(
+                    self._verifier.is_batch_signer_authorized(batch)
+                    for batch in request.batches):
                 return make_response(response_proto.INVALID_BATCH)
 
         except DecodeError:
@@ -435,10 +435,9 @@ class NetworkConsensusPermissionHandler(Handler):
 
 
 class IdentityCache():
-    def __init__(self, identity_view_factory, current_root_func):
+    def __init__(self, identity_view_factory):
         self._identity_view_factory = identity_view_factory
         self._identity_view = None
-        self._current_root_func = current_root_func
         self._cache = {}
 
     def __len__(self):

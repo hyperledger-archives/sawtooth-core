@@ -471,6 +471,7 @@ class _ContextReader(InstrumentedThread):
         _inflated_addresses (queue.Queue): each item is a tuple
                                           (context_id, [(address, value), ...
     """
+
     def __init__(self, database, address_queue, inflated_addresses):
         super(_ContextReader, self).__init__(name='_ContextReader')
         self._database = database

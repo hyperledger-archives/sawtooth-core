@@ -37,20 +37,20 @@ data_files = [
     (log_dir, []),
 ]
 
-
-setup(name='sawtooth-sdk',
-      version=subprocess.check_output(
-          ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Python SDK',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      data_files=data_files,
-      install_requires=[
-          "colorlog",
-          "sawtooth-signing",
-          "protobuf",
-          "pyzmq",
-          "toml",
-          "PyYAML",
-      ])
+setup(
+    name='sawtooth-sdk',
+    version=subprocess.check_output(
+        ['../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth Python SDK',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    data_files=data_files,
+    install_requires=[
+        "colorlog",
+        "sawtooth-signing",
+        "protobuf",
+        "pyzmq",
+        "toml",
+        "PyYAML",
+    ])

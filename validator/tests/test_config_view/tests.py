@@ -64,7 +64,7 @@ class TestSettingsView(unittest.TestCase):
         settings_view = self._settings_view_factory.create_settings_view(
             self._current_root_hash)
         self.assertEqual(10, settings_view.get_setting('my.setting',
-                                                     value_type=int))
+                                                       value_type=int))
 
     def test_get_setting_not_found(self):
         """Verifies the correct operation of get_setting() by using it to
@@ -84,7 +84,7 @@ class TestSettingsView(unittest.TestCase):
 
         self.assertEqual('default',
                          settings_view.get_setting('non-existant.setting',
-                                                 default_value='default'))
+                                                   default_value='default'))
 
     def test_get_setting_list(self):
         """Verifies the correct operation of get_setting_list() by using it to
@@ -120,7 +120,7 @@ class TestSettingsView(unittest.TestCase):
         self.assertEqual(
             [],
             settings_view.get_setting_list('non-existant.list',
-                                         default_value=[]))
+                                           default_value=[]))
 
     def test_get_setting_list_alternate_delimiter(self):
         """Verifies the correct operation of get_setting_list() by using it to
@@ -161,11 +161,11 @@ _MAX_KEY_PARTS = 4
 _ADDRESS_PART_SIZE = 16
 
 
-def _short_hash(s):
-    return hashlib.sha256(s.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
+def _short_hash(name):
+    return hashlib.sha256(name.encode()).hexdigest()[:_ADDRESS_PART_SIZE]
 
 
-def _key_to_address(k):
-    key_parts = k.split('.', maxsplit=_MAX_KEY_PARTS - 1)
+def _key_to_address(key):
+    key_parts = key.split('.', maxsplit=_MAX_KEY_PARTS - 1)
     key_parts.extend([''] * (_MAX_KEY_PARTS - len(key_parts)))
     return ''.join(_short_hash(x) for x in key_parts)

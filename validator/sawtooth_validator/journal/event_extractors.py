@@ -39,6 +39,8 @@ class BlockEventExtractor(EventExtractor):
                 if sub.event_type == "sawtooth/block-commit":
                     return [self._make_event()]
 
+        return None
+
 
 class ReceiptEventExtractor(EventExtractor):
     def __init__(self, receipts):
@@ -93,3 +95,6 @@ class ReceiptEventExtractor(EventExtractor):
         for subscription in subscriptions:
             if event in subscription:
                 return [event]
+
+        # Event not in subscriptions
+        return []

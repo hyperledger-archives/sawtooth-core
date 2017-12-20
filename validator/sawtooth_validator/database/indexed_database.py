@@ -70,14 +70,16 @@ class IndexedDatabase(database.Database):
         self._serializer = serializer
         self._deserializer = deserializer
 
-        self._lmdb = lmdb.Environment(path=filename,
-                                      map_size=_size,
-                                      map_async=True,
-                                      writemap=True,
-                                      subdir=False,
-                                      create=create,
-                                      max_dbs=len(indexes) + 1,
-                                      lock=True)
+        self._lmdb = lmdb.Environment(
+            path=filename,
+            map_size=_size,
+            map_async=True,
+            writemap=True,
+            readahead=False,
+            subdir=False,
+            create=create,
+            max_dbs=len(indexes) + 1,
+            lock=True)
 
         self._main_db = self._lmdb.open_db('main'.encode())
 
@@ -225,8 +227,10 @@ class IndexedDatabase(database.Database):
 
         db = self._indexes[index][0] if index else self._main_db
         with self._lmdb.begin(db=db) as txn:
-            return [key.decode()
-                    for key in txn.cursor().iternext(keys=True, values=False)]
+            return [
+                key.decode()
+                for key in txn.cursor().iternext(keys=True, values=False)
+            ]
 
 
 class ReferenceChainCursor(database.Cursor):
@@ -234,6 +238,7 @@ class ReferenceChainCursor(database.Cursor):
     reference_chain is key_1 -> key_2 mappings with the final entry in the
     chain being key_n -> value.
     """
+
     def __init__(self, lmdb_env, reference_chain, deserializer):
         self._lmdb_env = lmdb_env
         self._deserializer = deserializer
@@ -272,9 +277,9 @@ class ReferenceChainCursor(database.Cursor):
 
     def iter_rev(self):
         return ReferenceChainCursor._wrap_iterator(
-                self._lmdb_cursors[0].iterprev(keys=False),
-                self._lmdb_cursors[1:],
-                self._deserializer)
+            self._lmdb_cursors[0].iterprev(keys=False),
+            self._lmdb_cursors[1:],
+            self._deserializer)
 
     def first(self):
         return self._seek_curs().first()
@@ -327,7 +332,7 @@ def _read(initial_key, cursor_chain, deserializer):
         packed = curs.get(key)
         if not packed:
             raise IndexOutOfSyncError(
-               'Index is out of date for key {}'.format(key))
+                'Index is out of date for key {}'.format(key))
         key = packed
 
     return deserializer(packed)

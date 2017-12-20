@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=consider-using-enumerate
+
 import logging
 import random
 import string
@@ -166,6 +168,7 @@ class ShipPosition(object):
         column (int): First column on which the ship appears (starts at 0)
         orientation (str): Whether placed horizontal or vertical
     """
+
     def __init__(self, text, row, column, orientation):
         self.text = text
         self.row = row

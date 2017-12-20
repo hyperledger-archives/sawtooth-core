@@ -45,7 +45,6 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     inetutils-ping \
     libffi-dev \
     libssl-dev \
-    pep8 \
     python3-aiodns=1.1.1-1 \
     python3-aiohttp>=2.3.2-1 \
     python3-aiopg \
@@ -86,6 +85,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && rm -rf /var/lib/apt/lists/* \
  && pip3 install \
     pylint \
+    pycodestyle \
     bandit \
     coverage --upgrade
 

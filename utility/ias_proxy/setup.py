@@ -29,19 +29,20 @@ data_files = [
     (conf_dir, ['packaging/ias_proxy.toml.example']),
 ]
 
-setup(name='sawtooth-ias-proxy',
-      version=subprocess.check_output(
-          ['../../bin/get_version']).decode('utf-8').strip(),
-      description='Sawtooth Intel Attestation Service Proxy',
-      author='Hyperledger Sawtooth',
-      url='https://github.com/hyperledger/sawtooth-core',
-      packages=find_packages(),
-      install_requires=[
-          'colorlog',
-          'requests',
-          'sawtooth-ias-client',
-          'sawtooth-sdk',
-          'toml',
-          ],
-      data_files=data_files,
-      entry_points={})
+setup(
+    name='sawtooth-ias-proxy',
+    version=subprocess.check_output(
+        ['../../bin/get_version']).decode('utf-8').strip(),
+    description='Sawtooth Intel Attestation Service Proxy',
+    author='Hyperledger Sawtooth',
+    url='https://github.com/hyperledger/sawtooth-core',
+    packages=find_packages(),
+    install_requires=[
+        'colorlog',
+        'requests',
+        'sawtooth-ias-client',
+        'sawtooth-sdk',
+        'toml',
+    ],
+    data_files=data_files,
+    entry_points={})

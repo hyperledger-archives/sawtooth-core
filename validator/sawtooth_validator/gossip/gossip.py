@@ -53,6 +53,7 @@ class EndpointStatus(Enum):
     # Endpoint will be used to request peers
     TOPOLOGY = 2
 
+
 EndpointInfo = namedtuple('EndpointInfo',
                           ['status', 'time', "retry_threshold"])
 
@@ -65,16 +66,21 @@ MAXIMUM_RETRY_FREQUENCY = 300
 MAXIMUM_STATIC_RETRY_FREQUENCY = 3600
 MAXIMUM_STATIC_RETRIES = 24
 
+TIME_TO_LIVE = 3
+
 
 class Gossip(object):
     def __init__(self, network,
+                 settings_view_factory,
+                 current_root_func,
                  endpoint=None,
                  peering_mode='static',
                  initial_seed_endpoints=None,
                  initial_peer_endpoints=None,
                  minimum_peer_connectivity=3,
                  maximum_peer_connectivity=10,
-                 topology_check_frequency=1):
+                 topology_check_frequency=1
+                 ):
         """Constructor for the Gossip object. Gossip defines the
         overlay network above the lower level networking classes.
 
@@ -121,6 +127,8 @@ class Gossip(object):
         self._minimum_peer_connectivity = minimum_peer_connectivity
         self._maximum_peer_connectivity = maximum_peer_connectivity
         self._topology_check_frequency = topology_check_frequency
+        self._settings_view_factory = settings_view_factory
+        self._current_root_func = current_root_func
 
         self._topology = None
         self._peers = {}
@@ -141,10 +149,13 @@ class Gossip(object):
                 peer_endpoints.append(self._endpoint)
             peers_response = GetPeersResponse(peer_endpoints=peer_endpoints)
             try:
+                # Send a one_way message because the connection will be closed
+                # if this is a temp connection.
                 self._network.send(
                     validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
                     peers_response.SerializeToString(),
-                    connection_id)
+                    connection_id,
+                    one_way=True)
             except ValueError:
                 LOGGER.debug("Connection disconnected: %s", connection_id)
 
@@ -212,59 +223,78 @@ class Gossip(object):
                              "was not registered: %s",
                              connection_id)
 
+    def get_time_to_live(self):
+        settings_view = self._settings_view_factory.create_settings_view(
+            self._current_root_func())
+
+        time_to_live = \
+            settings_view.get_setting(
+                "sawtooth.gossip.time_to_live",
+                default_value=TIME_TO_LIVE
+            )
+        return int(time_to_live)
+
     def broadcast_block(self, block, exclude=None):
+        time_to_live = self.get_time_to_live()
         gossip_message = GossipMessage(
             content_type=GossipMessage.BLOCK,
-            content=block.SerializeToString())
+            content=block.SerializeToString(),
+            time_to_live=time_to_live)
 
         self.broadcast(
             gossip_message, validator_pb2.Message.GOSSIP_MESSAGE, exclude)
 
     def broadcast_block_request(self, block_id):
-        # Need to define node identity to be able to route directly back
+        time_to_live = self.get_time_to_live()
         block_request = GossipBlockRequest(
             block_id=block_id,
-            nonce=binascii.b2a_hex(os.urandom(16)))
+            nonce=binascii.b2a_hex(os.urandom(16)),
+            time_to_live=time_to_live)
         self.broadcast(block_request,
                        validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
 
     def send_block_request(self, block_id, connection_id):
+        time_to_live = self.get_time_to_live()
         block_request = GossipBlockRequest(
             block_id=block_id,
-            nonce=binascii.b2a_hex(os.urandom(16)))
+            nonce=binascii.b2a_hex(os.urandom(16)),
+            time_to_live=time_to_live)
         self.send(validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
                   block_request.SerializeToString(),
-                  connection_id)
+                  connection_id,
+                  one_way=True)
 
     def broadcast_batch(self, batch, exclude=None):
+        time_to_live = self.get_time_to_live()
         gossip_message = GossipMessage(
             content_type=GossipMessage.BATCH,
-            content=batch.SerializeToString())
+            content=batch.SerializeToString(),
+            time_to_live=time_to_live)
 
         self.broadcast(
             gossip_message, validator_pb2.Message.GOSSIP_MESSAGE, exclude)
 
     def broadcast_batch_by_transaction_id_request(self, transaction_ids):
-        # Need to define node identity to be able to route directly back
+        time_to_live = self.get_time_to_live()
         batch_request = GossipBatchByTransactionIdRequest(
             ids=transaction_ids,
-            nonce=binascii.b2a_hex(os.urandom(16))
-        )
+            nonce=binascii.b2a_hex(os.urandom(16)),
+            time_to_live=time_to_live)
         self.broadcast(
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_TRANSACTION_ID_REQUEST)
 
     def broadcast_batch_by_batch_id_request(self, batch_id):
-        # Need to define node identity to be able to route directly back
+        time_to_live = self.get_time_to_live()
         batch_request = GossipBatchByBatchIdRequest(
             id=batch_id,
-            nonce=binascii.b2a_hex(os.urandom(16))
-        )
+            nonce=binascii.b2a_hex(os.urandom(16)),
+            time_to_live=time_to_live)
         self.broadcast(
             batch_request,
             validator_pb2.Message.GOSSIP_BATCH_BY_BATCH_ID_REQUEST)
 
-    def send(self, message_type, message, connection_id):
+    def send(self, message_type, message, connection_id, one_way=False):
         """Sends a message via the network.
 
         Args:
@@ -273,7 +303,8 @@ class Gossip(object):
             connection_id (str): The connection to send it to.
         """
         try:
-            self._network.send(message_type, message, connection_id)
+            self._network.send(message_type, message, connection_id,
+                               one_way=one_way)
         except ValueError:
             LOGGER.debug("Connection %s is no longer valid. "
                          "Removing from list of peers.",
@@ -298,9 +329,11 @@ class Gossip(object):
                 exclude = []
             for connection_id in self._peers.copy():
                 if connection_id not in exclude:
-                    self.send(message_type,
-                              gossip_message.SerializeToString(),
-                              connection_id)
+                    self.send(
+                        message_type,
+                        gossip_message.SerializeToString(),
+                        connection_id,
+                        one_way=True)
 
     def connect_success(self, connection_id):
         """
@@ -443,10 +476,8 @@ class ConnectionManager(InstrumentedThread):
                                 set(peered_endpoints) -
                                 set([self._endpoint]))
 
-                        LOGGER.debug("Number of peers: %s",
-                                     len(peers))
-                        LOGGER.debug("Peers are: %s",
-                                     list(peers.values()))
+                        LOGGER.debug("Number of peers: %s", len(peers))
+                        LOGGER.debug("Peers are: %s", list(peers.values()))
                         LOGGER.debug("Unpeered candidates are: %s",
                                      unpeered_candidates)
 
@@ -700,9 +731,10 @@ class ConnectionManager(InstrumentedThread):
                 validator_pb2.Message.GOSSIP_REGISTER,
                 register_request.SerializeToString(),
                 connection_id,
-                callback=partial(self._peer_callback,
-                                 endpoint=endpoint,
-                                 connection_id=connection_id))
+                callback=partial(
+                    self._peer_callback,
+                    endpoint=endpoint,
+                    connection_id=connection_id))
         except KeyError:
             # if the connection uri wasn't found in the network's
             # connections, it raises a KeyError and we need to add
@@ -731,15 +763,19 @@ class ConnectionManager(InstrumentedThread):
                 LOGGER.debug("Peering request to %s was successful",
                              connection_id)
                 if endpoint:
-                    self._gossip.register_peer(connection_id, endpoint)
-                    self._connection_statuses[connection_id] = PeerStatus.PEER
+                    try:
+                        self._gossip.register_peer(connection_id, endpoint)
+                        self._connection_statuses[connection_id] = \
+                            PeerStatus.PEER
+                        self._gossip.send_block_request("HEAD", connection_id)
+                    except PeeringException:
+                        # Remove unsuccessful peer
+                        self._remove_temporary_connection(connection_id)
                 else:
                     LOGGER.debug("Cannot register peer with no endpoint for "
                                  "connection_id: %s",
                                  connection_id)
                     self._remove_temporary_connection(connection_id)
-
-                self._gossip.send_block_request("HEAD", connection_id)
 
     def _remove_temporary_connection(self, connection_id):
         status = self._connection_statuses.get(connection_id)
@@ -796,12 +832,14 @@ class ConnectionManager(InstrumentedThread):
             endpoint=self._endpoint)
         self._connection_statuses[connection_id] = PeerStatus.TEMP
         try:
-            self._network.send(validator_pb2.Message.GOSSIP_REGISTER,
-                               register_request.SerializeToString(),
-                               connection_id,
-                               callback=partial(self._peer_callback,
-                                                connection_id=connection_id,
-                                                endpoint=endpoint))
+            self._network.send(
+                validator_pb2.Message.GOSSIP_REGISTER,
+                register_request.SerializeToString(),
+                connection_id,
+                callback=partial(
+                    self._peer_callback,
+                    connection_id=connection_id,
+                    endpoint=endpoint))
         except ValueError:
             LOGGER.debug("Connection disconnected: %s", connection_id)
 
@@ -814,10 +852,12 @@ class ConnectionManager(InstrumentedThread):
         def callback(request, result):
             # request, result are ignored, but required by the callback
             self._remove_temporary_connection(connection_id)
+
         try:
-            self._network.send(validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
-                               get_peers_request.SerializeToString(),
-                               connection_id,
-                               callback=callback)
+            self._network.send(
+                validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+                get_peers_request.SerializeToString(),
+                connection_id,
+                callback=callback)
         except ValueError:
             LOGGER.debug("Connection disconnected: %s", connection_id)

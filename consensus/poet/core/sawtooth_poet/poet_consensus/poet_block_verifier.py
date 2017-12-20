@@ -38,6 +38,7 @@ class PoetBlockVerifier(BlockVerifierInterface):
     considered as part of the fork being evaluated. BlockVerifier must be
     independent of block publishing activities.
     """
+
     def __init__(self,
                  block_cache,
                  state_view_factory,

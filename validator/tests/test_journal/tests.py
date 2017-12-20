@@ -13,6 +13,11 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=too-many-lines
+# pylint: disable=pointless-statement
+# pylint: disable=protected-access
+# pylint: disable=unbalanced-tuple-unpacking
+
 import logging
 from threading import RLock
 import unittest
@@ -43,7 +48,6 @@ from sawtooth_validator.journal.batch_injector import \
     DefaultBatchInjectorFactory
 
 from sawtooth_validator.server.events.subscription import EventSubscription
-from sawtooth_validator.server.events.subscription import EventFilterType
 from sawtooth_validator.server.events.subscription import EventFilterFactory
 
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
@@ -56,12 +60,7 @@ from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChange
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
-from sawtooth_validator.protobuf.events_pb2 import EventList
-
-from sawtooth_validator.state.merkle import MerkleDatabase
-
-from sawtooth_validator.state.state_view import StateViewFactory
-from sawtooth_validator.state.settings_view import SettingsView
+from sawtooth_validator.protobuf.events_pb2 import EventFilter
 
 from test_journal.block_tree_manager import BlockTreeManager
 
@@ -87,12 +86,19 @@ class TestBlockCache(unittest.TestCase):
         """ Test that misses will load from the block store.
         """
         bs = {}
-        bs["test"] = "value"
-        bs["test2"] = "value"
+        block1 = Block(
+            header=BlockHeader(previous_block_id="000").SerializeToString(),
+            header_signature="test")
+        bs["test"] = BlockWrapper(block1)
+        block2 = Block(
+            header=BlockHeader(previous_block_id="000").SerializeToString(),
+            header_signature="test2")
+        blkw2 = BlockWrapper(block2)
+        bs["test2"] = blkw2
         bc = BlockCache(bs)
 
         self.assertTrue("test" in bc)
-        self.assertTrue(bc["test2"] == "value")
+        self.assertTrue(bc["test2"] == blkw2)
 
         with self.assertRaises(KeyError):
             bc["test-missing"]
@@ -361,7 +367,7 @@ class TestBlockPublisher(unittest.TestCase):
         self.batches = self.make_batches_with_duplicate_txn()
         self.receive_batches()
         self.publish_block()
-        self.assert_no_block_published() # block should be empty after batch
+        self.assert_no_block_published()  # block should be empty after batch
         # with duplicate transaction is dropped.
 
     def test_batch_injection_start_block(self):
@@ -563,7 +569,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where new block is from a different genesis
         """
         # create a new valid chain 5 long from the current root
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         self.block_tree_manager.set_chain_head(head)
@@ -654,7 +660,6 @@ class TestBlockValidator(unittest.TestCase):
 
         self.assert_invalid_block(new_block)
         self.assert_new_block_not_committed()
-
 
     def test_block_missing_batch_dependency(self):
         """
@@ -838,11 +843,9 @@ class TestBlockValidator(unittest.TestCase):
     class BlockValidationHandler(object):
         def __init__(self):
             self.block = None
-            pass
 
         def on_block_validated(self, block):
             self.block = block
-            pass
 
         def has_result(self):
             return self.block is not None
@@ -927,7 +930,7 @@ class TestChainController(unittest.TestCase):
     def test_alternate_genesis(self):
         '''Tests a fork extending an alternate genesis block
         '''
-        chain, head = self.generate_chain(None, 5)
+        chain, _ = self.generate_chain(None, 5)
 
         for block in chain:
             self.receive_and_process_blocks(block)
@@ -989,9 +992,9 @@ class TestChainController(unittest.TestCase):
     def test_fork_lengths(self):
         '''Tests competing forks of different lengths
         '''
-        chain_2, head_2 = self.generate_chain(self.init_head, 2)
+        chain_2, _ = self.generate_chain(self.init_head, 2)
         chain_7, head_7 = self.generate_chain(self.init_head, 7)
-        chain_5, head_5 = self.generate_chain(self.init_head, 5)
+        chain_5, _ = self.generate_chain(self.init_head, 5)
 
         self.receive_and_process_blocks(*(chain_2 + chain_7 + chain_5))
 
@@ -1015,7 +1018,7 @@ class TestChainController(unittest.TestCase):
         '''Tests a fork with a missing block
         '''
         # make new chain
-        new_chain, new_head = self.generate_chain(self.init_head, 5)
+        new_chain, _ = self.generate_chain(self.init_head, 5)
 
         # delete a block from the new chain
         for block in new_chain[:3] + new_chain[4:]:
@@ -1031,7 +1034,7 @@ class TestChainController(unittest.TestCase):
         '''
         # make two chains extending chain
         good_chain, good_head = self.generate_chain(self.init_head, 5)
-        bad_chain, bad_head = self.generate_chain(self.init_head, 5)
+        bad_chain, _ = self.generate_chain(self.init_head, 5)
 
         # invalidate block in the middle of bad_chain
         bad_chain[3].status = BlockStatus.Invalid
@@ -1144,9 +1147,9 @@ class TestChainController(unittest.TestCase):
         self.assert_is_chain_head(b_2)
 
         # extend every fork by 2
-        a_3_chain, a_3 = self.generate_chain(a_2, 8)
+        a_3_chain, _ = self.generate_chain(a_2, 8)
         b_3_chain, b_3 = self.generate_chain(b_2, 8)
-        c_3_chain, c_3 = self.generate_chain(c_2, 8)
+        c_3_chain, _ = self.generate_chain(c_2, 8)
 
         self.receive_and_process_blocks(*a_3_chain)
         self.receive_and_process_blocks(*b_3_chain)
@@ -1180,12 +1183,14 @@ class TestChainController(unittest.TestCase):
             block_sig[:8],
             'Not chain head')
 
-    def generate_chain(self, root_block, num_blocks,
-                       params={'add_to_cache': False, 'add_to_store': False}):
+    def generate_chain(self, root_block, num_blocks, params=None):
         '''Returns (chain, chain_head).
         Usually only the head is needed,
         but occasionally the chain itself is used.
         '''
+        if params is None:
+            params = {'add_to_cache': False, 'add_to_store': False}
+
         chain = self.block_tree_manager.generate_chain(
             root_block, num_blocks, params)
 
@@ -1474,21 +1479,21 @@ class TestChainCommitState(unittest.TestCase):
     - Dependencies found for transactions in fork
     """
 
-    def gen_block(self, id, prev_id, num, batches):
+    def gen_block(self, block_id, prev_id, num, batches):
         return BlockWrapper(
             Block(
-                header_signature=id,
+                header_signature=block_id,
                 batches=batches,
                 header=BlockHeader(
                     block_num=num,
                     previous_block_id=prev_id).SerializeToString()))
 
-    def gen_batch(self, id, transactions):
-        return Batch(header_signature=id, transactions=transactions)
+    def gen_batch(self, batch_id, transactions):
+        return Batch(header_signature=batch_id, transactions=transactions)
 
-    def gen_txn(self, id, deps=None):
+    def gen_txn(self, txn_id, deps=None):
         return Transaction(
-            header_signature=id,
+            header_signature=txn_id,
             header=TransactionHeader(dependencies=deps).SerializeToString())
 
     # Batches
@@ -1682,7 +1687,7 @@ class TestChainCommitState(unittest.TestCase):
         """Verifies that MissingDependency is raised when a dependency is not
         committed anywhere.
         """
-        transactions, _, committed_blocks, uncommitted_blocks =\
+        _, _, committed_blocks, uncommitted_blocks =\
             self.create_new_chain()
 
         commit_state = self.create_chain_commit_state(
@@ -1766,14 +1771,14 @@ class TestChainCommitState(unittest.TestCase):
         ]
         committed_blocks = [
             self.gen_block(
-                id='B0',
+                block_id='B0',
                 prev_id=NULL_BLOCK_IDENTIFIER,
                 num=0,
                 batches=[batches[0]])
         ]
         committed_blocks.extend([
             self.gen_block(
-                id='B' + format(i, 'x'),
+                block_id='B' + format(i, 'x'),
                 prev_id='B' + format(i - 1, 'x'),
                 num=i,
                 batches=[batches[i]])
@@ -1781,14 +1786,14 @@ class TestChainCommitState(unittest.TestCase):
         ])
         uncommitted_blocks = [
             self.gen_block(
-                id='B7',
+                block_id='B7',
                 prev_id='B3',
                 num=4,
                 batches=[batches[0]])
         ]
         uncommitted_blocks.extend([
             self.gen_block(
-                id='B' + format(i, 'x'),
+                block_id='B' + format(i, 'x'),
                 prev_id='B' + format(i - 1, 'x'),
                 num=5 + (i - 8),
                 batches=[batches[i]])
@@ -1833,13 +1838,14 @@ class TestBlockEventExtractor(unittest.TestCase):
             Event(
                 event_type="sawtooth/block-commit",
                 attributes=[
-                    Event.Attribute(key="block_id",value="abcdef1234567890"),
+                    Event.Attribute(key="block_id", value="abcdef1234567890"),
                     Event.Attribute(key="block_num", value="85"),
                     Event.Attribute(
                         key="state_root_hash", value="0987654321fedcba"),
                     Event.Attribute(
                         key="previous_block_id",
                         value="0000000000000000")])])
+
 
 class TestReceiptEventExtractor(unittest.TestCase):
     def test_tf_events(self):
@@ -1897,7 +1903,7 @@ class TestReceiptEventExtractor(unittest.TestCase):
             EventSubscription(
                 event_type="sawtooth/state-delta",
                 filters=[factory.create(
-                    "address", "[ce]", EventFilterType.regex_any)],
+                    "address", "[ce]", EventFilter.REGEX_ANY)],
             )
         ])
         self.assertEqual(events, [Event(

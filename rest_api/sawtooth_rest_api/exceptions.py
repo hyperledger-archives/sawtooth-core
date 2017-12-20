@@ -53,7 +53,8 @@ class _ApiError(HTTPError):
         error = {
             'code': self.api_code,
             'title': self.title,
-            'message': self.message + additional_info}
+            'message': self.message + additional_info
+        }
 
         super().__init__(
             content_type='application/json',

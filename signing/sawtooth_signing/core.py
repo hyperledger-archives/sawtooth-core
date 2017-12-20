@@ -41,6 +41,7 @@ class PrivateKey(metaclass=ABCMeta):
 
     The underlying content is dependent on implementation.
     """
+
     @abstractmethod
     def get_algorithm_name(self):
         """Returns the algorithm name used for this private key.
@@ -65,6 +66,7 @@ class PublicKey(metaclass=ABCMeta):
 
     The underlying content is dependent on implementation.
     """
+
     @abstractmethod
     def get_algorithm_name(self):
         """Returns the algorithm name used for this public key.
@@ -87,6 +89,7 @@ class PublicKey(metaclass=ABCMeta):
 class Context(metaclass=ABCMeta):
     """A context for a cryptographic signing algorithm.
     """
+
     @abstractmethod
     def get_algorithm_name(self):
         """Returns the algorithm name.

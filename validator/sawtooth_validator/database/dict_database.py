@@ -21,12 +21,15 @@ class DictDatabase(database.Database):
     tests. Provides all of the interface methods that
     the MerkleTree requires.
     """
+
     def __init__(self, data=None, indexes=None):
         super(DictDatabase, self).__init__()
 
         if indexes:
-            self._indexes = {name: ({}, key_fn)
-                             for name, key_fn in indexes.items()}
+            self._indexes = {
+                name: ({}, key_fn)
+                for name, key_fn in indexes.items()
+            }
         else:
             self._indexes = {}
 
@@ -155,7 +158,6 @@ class DictCursor(database.Cursor):
     @staticmethod
     def _wrap_iter(data, start, reverse=False):
         class _WrapperIter:
-
             def __init__(self, start_pos):
                 self._pos = start_pos
 
@@ -222,7 +224,6 @@ class DictIndexCursor(database.Cursor):
     @staticmethod
     def _wrap_iter(index, start, data, reverse=False):
         class _WrapperIter:
-
             def __init__(self):
                 self._pos = start
 

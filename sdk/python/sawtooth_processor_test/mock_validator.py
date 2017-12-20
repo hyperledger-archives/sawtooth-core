@@ -49,7 +49,6 @@ class UnexpectedMessageException(Exception):
 
 
 class MockValidator(object):
-
     def __init__(self):
         self._comparators = {}
 
@@ -84,8 +83,11 @@ class MockValidator(object):
 
         # User ROUTER socket, the TransactionProcessor uses DEALER
         self._socket = self._context.socket(zmq.ROUTER)
-        LOGGER.debug("Binding to " + self._url)
+
+        LOGGER.debug("Binding to %s", self._url)
+
         self._socket.set(zmq.LINGER, 0)
+
         try:
             self._socket.bind(self._url)
 
@@ -156,8 +158,7 @@ class MockValidator(object):
         )
 
         return self._loop.run_until_complete(
-            self._send(self._tp_ident, message)
-        )
+            self._send(self._tp_ident, message))
 
     async def _send(self, ident, message):
         """

@@ -25,7 +25,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TpStateGetHandler(Handler):
-
     def __init__(self, context_manager):
         self._context_manager = context_manager
 
@@ -47,8 +46,10 @@ class TpStateGetHandler(Handler):
 
         return_list = return_values if return_values is not None else []
         LOGGER.debug("GET: %s", return_list)
-        entry_list = [state_context_pb2.TpStateEntry(address=a, data=d)
-                      for a, d in return_list]
+        entry_list = [
+            state_context_pb2.TpStateEntry(address=a, data=d)
+            for a, d in return_list
+        ]
         response = state_context_pb2.TpStateGetResponse(
             status=state_context_pb2.TpStateGetResponse.OK)
         response.entries.extend(entry_list)

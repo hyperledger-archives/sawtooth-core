@@ -20,7 +20,7 @@ import logging
 from test_journal.mock import MockStateViewFactory
 from test_client_request_handlers.mocks import MockBlockStore
 from sawtooth_validator.journal.block_cache import BlockCache
-from sawtooth_validator.journal.consensus.dev_mode.dev_mode_consensus\
+from sawtooth_validator.journal.consensus.dev_mode.dev_mode_consensus \
     import BlockPublisher
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.state.settings_view import SettingsView
@@ -30,9 +30,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestCheckPublishBlock(unittest.TestCase):
-    def __init__(self, test_name):
-        super().__init__(test_name)
-
     def create_block_header(self, signer_public_key=None):
         return BlockHeader(signer_public_key=signer_public_key)
 

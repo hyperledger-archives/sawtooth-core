@@ -63,7 +63,9 @@ def post_batch(batch):
     return response
 
 
-def query_rest_api(suffix='', data=None, headers={}):
+def query_rest_api(suffix='', data=None, headers=None):
+    if headers is None:
+        headers = {}
     url = 'http://rest-api:8080' + suffix
     return submit_request(urllib.request.Request(url, data, headers))
 
@@ -77,6 +79,7 @@ def make_batches(keys):
     imf = IntkeyMessageFactory()
     return [imf.create_batch([('set', k, 0)]) for k in keys]
 
+
 class TestNamespacePermission(unittest.TestCase):
     def test_namespace_permission(self):
         """Tests that namespace permission onchain are letting block_info
@@ -86,19 +89,17 @@ class TestNamespacePermission(unittest.TestCase):
         batches = make_batches('abcd')
 
         # Assert all block info transactions are committed
-        for i in range(len(batches)):
-            post_batch(batches[i])
+        for i, batch in enumerate(batches):
+            post_batch(batch)
             time.sleep(1)
             block_info = get_block_info(i)
             self.assertEqual(block_info.block_num, i)
 
-
         # Assert block info batches are first in the block and
         # no other batch is included
         for block in get_blocks()[:-1]:
-            print(block['header']['block_num'])
+            LOGGER.debug(block['header']['block_num'])
             family_name = \
                 block['batches'][0]['transactions'][0]['header']['family_name']
             self.assertEqual(family_name, 'block_info')
             self.assertEqual(len(block['batches']), 1)
-

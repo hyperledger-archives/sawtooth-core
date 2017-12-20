@@ -159,11 +159,16 @@ class _SendReceiveThread(Thread):
         """
         if not self._ready_event.is_set():
             return
+
         with self._condition:
-            self._condition.wait_for(lambda: self._event_loop is not None
-                                     and self._send_queue is not None)
-        asyncio.run_coroutine_threadsafe(self._put_message(message),
-                                         self._event_loop)
+            self._condition.wait_for(
+                lambda: self._event_loop is not None
+                and self._send_queue is not None
+            )
+
+        asyncio.run_coroutine_threadsafe(
+            self._put_message(message),
+            self._event_loop)
 
     def get_message(self):
         """

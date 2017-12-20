@@ -56,6 +56,7 @@ def _config_short_hash(byte_str):
     # of an address part (see _config_key_to_address for information on
     return hashlib.sha256(byte_str).hexdigest()[:_CONFIG_ADDRESS_PART_SIZE]
 
+
 _CONFIG_ADDRESS_PADDING = _config_short_hash(byte_str=b'')
 
 

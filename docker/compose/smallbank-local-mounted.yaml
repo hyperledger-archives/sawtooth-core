@@ -42,10 +42,8 @@ services:
       - ../../:/project/sawtooth-core
     expose:
       - 4004
-      - 8800
     ports:
       - "4004:4004"
-      - "8800:8800"
     command: "bash -c \"\
         (telegraf &) && \
         sawadm keygen && \

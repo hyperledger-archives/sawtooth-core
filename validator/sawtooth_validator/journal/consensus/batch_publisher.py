@@ -21,6 +21,7 @@ class BatchPublisher(object):
     """ Utility class to help BlockPublisher provide transaction publishing
     services to the consensus implementations.
     """
+
     def __init__(self, identity_signer, batch_sender):
         """Initialize the BatchPublisher.
         :param identity_signer: the validator's cryptographic signer.

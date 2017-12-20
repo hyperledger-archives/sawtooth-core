@@ -34,7 +34,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class IdentityMessageFactory(object):
-
     def __init__(self, signer=None):
         self._factory = MessageFactory(
             family_name="sawtooth_identity",
@@ -56,8 +55,9 @@ class IdentityMessageFactory(object):
 
         # compute the short hash of each part
         addr_parts = [self._to_hash(key_parts[0])[:_FIRST_ADDRESS_PART_SIZE]]
-        addr_parts += [self._to_hash(x)[:_ADDRESS_PART_SIZE] for x in
-                       key_parts[1:]]
+        addr_parts += [
+            self._to_hash(x)[:_ADDRESS_PART_SIZE] for x in key_parts[1:]
+        ]
         # pad the parts with the empty hash, if needed
         addr_parts.extend([_EMPTY_PART] * (_MAX_KEY_PARTS - len(addr_parts)))
         return self._factory.namespace + _ROLE_PREFIX + ''.join(addr_parts)
@@ -78,8 +78,10 @@ class IdentityMessageFactory(object):
         if payload.type == IdentityPayload.ROLE:
             role = Role()
             role.ParseFromString(payload.data)
-            inputs = [self._role_to_address(role.name),
-                      self._policy_to_address(role.policy_name)]
+            inputs = [
+                self._role_to_address(role.name),
+                self._policy_to_address(role.policy_name)
+            ]
 
             outputs = [self._role_to_address(role.name)]
         else:

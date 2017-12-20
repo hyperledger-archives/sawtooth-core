@@ -13,6 +13,8 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=protected-access
+
 import unittest
 from unittest.mock import Mock
 from uuid import uuid4
@@ -37,7 +39,6 @@ from sawtooth_validator.server.events.handlers \
 
 from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterFactory
-from sawtooth_validator.server.events.subscription import EventFilterType
 
 from sawtooth_validator.execution.tp_state_handlers import TpEventAddHandler
 
@@ -58,15 +59,18 @@ from test_scheduler.yaml_scheduler_tester import create_transaction
 def create_block(block_num=85,
                  previous_block_id="0000000000000000",
                  block_id="abcdef1234567890",
-                 batches=[]):
+                 batches=None):
+    if batches is None:
+        batches = []
     block_header = block_pb2.BlockHeader(
         block_num=block_num,
         state_root_hash="0987654321fedcba",
         previous_block_id=previous_block_id)
-    block = BlockWrapper(block_pb2.Block(
-        header_signature=block_id,
-        header=block_header.SerializeToString(),
-        batches=batches))
+    block = BlockWrapper(
+        block_pb2.Block(
+            header_signature=block_id,
+            header=block_header.SerializeToString(),
+            batches=batches))
     return block
 
 
@@ -81,9 +85,14 @@ def create_chain(num=10):
     blocks = []
     while counter <= num:
         current_block_id = uuid4().hex
-        txns = [t[0] for t in [create_transaction(
-                payload=uuid4().hex.encode(),
-                signer=signer) for _ in range(20)]]
+        txns = [
+            t[0]
+            for t in [
+                create_transaction(
+                    payload=uuid4().hex.encode(), signer=signer)
+                for _ in range(20)
+            ]
+        ]
 
         txn_ids = [t.header_signature for t in txns]
         batch = create_batch(
@@ -132,8 +141,9 @@ class EventSubscriptionTest(unittest.TestCase):
             events_pb2.Event(attributes=[
                 events_pb2.Event.Attribute(
                     key="address", value="000000" + "f" * 64)]),
-            FILTER_FACTORY.create(key="address", match_string="000000.*",
-                filter_type=EventFilterType.regex_any))
+            FILTER_FACTORY.create(
+                key="address", match_string="000000.*",
+                filter_type=events_pb2.EventFilter.REGEX_ANY))
 
         self.assertIn(
             events_pb2.Event(attributes=[
@@ -143,11 +153,14 @@ class EventSubscriptionTest(unittest.TestCase):
     def test_subscription(self):
         """Test that an event correctly matches against a subscription."""
         self.assertIn(
-            events_pb2.Event(event_type="test", attributes=[
-                events_pb2.Event.Attribute(key="test", value="test")]),
+            events_pb2.Event(
+                event_type="test", attributes=[
+                    events_pb2.Event.Attribute(
+                        key="test", value="test")]),
             EventSubscription(
-                event_type="test",
-                filters=[FILTER_FACTORY.create(key="test", match_string="test")]))
+                event_type="test", filters=[
+                    FILTER_FACTORY.create(
+                        key="test", match_string="test")]))
 
 
 class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
@@ -162,11 +175,17 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
         handler = \
             ClientEventsSubscribeValidationHandler(mock_event_broadcaster)
         request = client_event_pb2.ClientEventsSubscribeRequest(
-            subscriptions=[events_pb2.EventSubscription(
-                event_type="test_event",
-                filters=[
-                    events_pb2.EventFilter(key="test", match_string="test")],
-            )],
+            subscriptions=[
+                events_pb2.EventSubscription(
+                    event_type="test_event",
+                    filters=[
+                        events_pb2.EventFilter(
+                            key="test",
+                            match_string="test",
+                            filter_type=events_pb2.EventFilter.SIMPLE_ANY)
+                    ],
+                )
+            ],
             last_known_block_ids=["0" * 128]).SerializeToString()
 
         response = handler.handle("test_conn_id", request)
@@ -190,12 +209,17 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
         handler = \
             ClientEventsSubscribeValidationHandler(mock_event_broadcaster)
         request = client_event_pb2.ClientEventsSubscribeRequest(
-            subscriptions=[events_pb2.EventSubscription(
-                event_type="test_event",
-                filters=[events_pb2.EventFilter(
-                    key="test", match_string="???",
-                    filter_type=events_pb2.EventFilter.REGEX_ANY)],
-            )],
+            subscriptions=[
+                events_pb2.EventSubscription(
+                    event_type="test_event",
+                    filters=[
+                        events_pb2.EventFilter(
+                            key="test",
+                            match_string="???",
+                            filter_type=events_pb2.EventFilter.REGEX_ANY)
+                    ],
+                )
+            ],
             last_known_block_ids=["0" * 128]).SerializeToString()
 
         response = handler.handle("test_conn_id", request)
@@ -204,11 +228,10 @@ class ClientEventsSubscribeValidationHandlerTest(unittest.TestCase):
         self.assertEqual(HandlerStatus.RETURN, response.status)
         self.assertEqual(
             client_event_pb2.ClientEventsSubscribeResponse.INVALID_FILTER,
-             response.message_out.status)
+            response.message_out.status)
 
 
 class ClientEventsSubscribeHandlersTest(unittest.TestCase):
-
     def test_subscribe(self):
         """Tests that the handler turns on the subscriber."""
         mock_event_broadcaster = Mock()
@@ -230,8 +253,10 @@ class ClientEventsUnsubscribeHandlerTest(unittest.TestCase):
         mock_event_broadcaster = Mock()
         handler = ClientEventsUnsubscribeHandler(mock_event_broadcaster)
 
-        request = \
-            client_event_pb2.ClientEventsUnsubscribeRequest().SerializeToString()
+        request = (
+            client_event_pb2.ClientEventsUnsubscribeRequest()
+            .SerializeToString()
+        )
 
         response = handler.handle('test_conn_id', request)
 
@@ -270,7 +295,7 @@ class ClientEventsGetRequestHandlerTest(unittest.TestCase):
             Mock(),
             block_store=self.block_store,
             receipt_store=self.receipt_store)
-        for block_id, txn_ids in self._txn_ids_by_block_id.items():
+        for block_id, _ in self._txn_ids_by_block_id.items():
             request = client_event_pb2.ClientEventsGetRequest()
             request.block_ids.extend([block_id])
             subscription = request.subscriptions.add()
@@ -314,10 +339,14 @@ class EventBroadcasterTest(unittest.TestCase):
         event_broadcaster = EventBroadcaster(mock_service,
                                              mock_block_store,
                                              mock_receipt_store)
-        subscriptions = [EventSubscription(
-            event_type="test_event",
-            filters=[FILTER_FACTORY.create(key="test", match_string="test")],
-        )]
+        subscriptions = [
+            EventSubscription(
+                event_type="test_event",
+                filters=[
+                    FILTER_FACTORY.create(key="test", match_string="test")
+                ],
+            )
+        ]
         event_broadcaster.add_subscriber("test_conn_id", subscriptions, [])
 
         self.assertTrue(
@@ -333,8 +362,9 @@ class EventBroadcasterTest(unittest.TestCase):
 
     def test_broadcast_events(self):
         """Test that broadcast_events works with a single subscriber to the
-        sawtooth/block-commit event type and that the subscriber does not receive events
-        until it is enabled.
+        sawtooth/block-commit event type and that the subscriber does
+        not receive events until it is enabled.
+
         """
         mock_service = Mock()
         mock_block_store = Mock()
@@ -361,7 +391,7 @@ class EventBroadcasterTest(unittest.TestCase):
                 [create_block_commit_subscription()])).SerializeToString()
         mock_service.send.assert_called_with(
             validator_pb2.Message.CLIENT_EVENTS,
-            event_list, connection_id="test_conn_id")
+            event_list, connection_id="test_conn_id", one_way=True)
 
 
 class TpEventAddHandlerTest(unittest.TestCase):
@@ -369,7 +399,8 @@ class TpEventAddHandlerTest(unittest.TestCase):
         event = events_pb2.Event(event_type="add_event")
         mock_context_manager = Mock()
         handler = TpEventAddHandler(mock_context_manager)
-        request = state_context_pb2.TpEventAddRequest(event=event).SerializeToString()
+        request = state_context_pb2.TpEventAddRequest(
+            event=event).SerializeToString()
 
         response = handler.handle("test_conn_id", request)
 

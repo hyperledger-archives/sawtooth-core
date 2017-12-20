@@ -15,7 +15,6 @@
 
 from __future__ import print_function
 
-import os
 import subprocess
 
 from setuptools import setup, find_packages
@@ -34,5 +33,5 @@ setup(name='sawtooth-poet-core',
           'sawtooth-poet-simulator',
           'sawtooth-signing',
           'sawtooth-validator',
-          ],
+      ],
       entry_points={})

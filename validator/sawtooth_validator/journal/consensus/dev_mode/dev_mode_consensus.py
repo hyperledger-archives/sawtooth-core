@@ -13,17 +13,19 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+# pylint: disable=inconsistent-return-statements
+
 import time
 import random
 import hashlib
 import logging
 
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.consensus.consensus\
+from sawtooth_validator.journal.consensus.consensus \
     import BlockPublisherInterface
-from sawtooth_validator.journal.consensus.consensus\
+from sawtooth_validator.journal.consensus.consensus \
     import BlockVerifierInterface
-from sawtooth_validator.journal.consensus.consensus\
+from sawtooth_validator.journal.consensus.consensus \
     import ForkResolverInterface
 
 from sawtooth_validator.state.settings_view import SettingsView
@@ -39,6 +41,7 @@ class BlockPublisher(BlockPublisherInterface):
      DevMode Consensus (BlockPublisher) will read these settings
      from the StateView when Constructed.
     """
+
     def __init__(self,
                  block_cache,
                  state_view_factory,
@@ -107,7 +110,7 @@ class BlockPublisher(BlockPublisherInterface):
         Returns:
             Boolean: True if the candidate block_header should be claimed.
         """
-        if self._valid_block_publishers\
+        if self._valid_block_publishers \
                 and block_header.signer_public_key \
                 not in self._valid_block_publishers:
             return False
@@ -140,7 +143,9 @@ class BlockPublisher(BlockPublisherInterface):
 class BlockVerifier(BlockVerifierInterface):
     """DevMode BlockVerifier implementation
     """
+
     # pylint: disable=useless-super-delegation
+
     def __init__(self,
                  block_cache,
                  state_view_factory,
@@ -162,7 +167,9 @@ class ForkResolver(ForkResolverInterface):
     """Provides the fork resolution interface for the BlockValidator to use
     when deciding between 2 forks.
     """
+
     # pylint: disable=useless-super-delegation
+
     def __init__(self,
                  block_cache,
                  state_view_factory,

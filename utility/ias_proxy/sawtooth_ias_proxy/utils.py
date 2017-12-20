@@ -21,6 +21,7 @@ class LruCache(object):
     """
     A simple thread-safe lru cache.
     """
+
     def __init__(self, max_size=100):
         self.max_size = max_size
         self.order = deque(maxlen=self.max_size)

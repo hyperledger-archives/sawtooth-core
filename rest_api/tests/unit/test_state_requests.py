@@ -13,9 +13,10 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from unittest import mock
 from base64 import b64decode
+
 from aiohttp.test_utils import unittest_run_loop
+
 from components import Mocks, BaseApiTest
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 from sawtooth_rest_api.protobuf import client_state_pb2
@@ -83,7 +84,8 @@ class StateListTests(BaseApiTest):
             state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/state?head={}&start=a&limit=100'.format(ID_C))
+        self.assert_has_valid_link(
+            response, '/state?head={}&start=a&limit=100'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
@@ -169,7 +171,8 @@ class StateListTests(BaseApiTest):
             state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, ID_B)
-        self.assert_has_valid_link(response, '/state?head={}&start=a&limit=100'.format(ID_B))
+        self.assert_has_valid_link(
+            response, '/state?head={}&start=a&limit=100'.format(ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_entries_match(entries, response['data'])
@@ -189,7 +192,8 @@ class StateListTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block())
-        response = await self.get_assert_status('/state?head={}'.format(ID_D), 404)
+        response = await self.get_assert_status('/state?head={}'.format(ID_D),
+                                                404)
 
         self.assert_has_valid_error(response, 50)
 
@@ -232,7 +236,9 @@ class StateListTests(BaseApiTest):
             state_root='beef', address='c', paging=controls)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/state?head={}&start=c&limit=100&address=c'.format(ID_C))
+        self.assert_has_valid_link(
+            response,
+            '/state?head={}&start=c&limit=100&address=c'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_entries_match(entries, response['data'])
@@ -248,7 +254,8 @@ class StateListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_C
-            - a link property that ends in '/state?head={}&start=c&limit=100address=bad'.format(ID_C)
+            - a link property that ends in
+                '/state?head={}&start=c&limit=100address=bad'.format(ID_C)
             - a paging property with only a total_count of 0
             - a data property that is an empty list
         """
@@ -266,7 +273,9 @@ class StateListTests(BaseApiTest):
         response = await self.get_assert_200('/state?address=bad')
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/state?head={}&start=c&limit=100&address=bad'.format(ID_C))
+        self.assert_has_valid_link(
+            response,
+            '/state?head={}&start=c&limit=100&address=bad'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 0)
 
@@ -304,14 +313,17 @@ class StateListTests(BaseApiTest):
                 header=block_pb2.BlockHeader(
                     state_root_hash='beef').SerializeToString()))
 
-        response = await self.get_assert_200('/state?address=a&head={}'.format(ID_B))
+        response = await self.get_assert_200(
+            '/state?address=a&head={}'.format(ID_B))
         self.connection.assert_valid_request_sent(
             state_root='beef',
             address='a',
             paging=Mocks.make_paging_controls())
 
         self.assert_has_valid_head(response, ID_B)
-        self.assert_has_valid_link(response, '/state?head={}&start=a&limit=100&address=a'.format(ID_B))
+        self.assert_has_valid_link(
+            response,
+            '/state?head={}&start=a&limit=100&address=a'.format(ID_B))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 1)
         self.assert_entries_match(entries, response['data'])
@@ -356,8 +368,8 @@ class StateListTests(BaseApiTest):
         self.assert_has_valid_head(response, ID_D)
         self.assert_has_valid_link(
             response, '/state?head={}&start=c&limit=1'.format(ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/state?head={}&start=b&limit=1'.format(ID_D))
+        self.assert_has_valid_paging(
+            response, paging, '/state?head={}&start=b&limit=1'.format(ID_D))
         self.assert_has_valid_data_list(response, 1)
         self.assert_entries_match(entries, response['data'])
 
@@ -430,9 +442,10 @@ class StateListTests(BaseApiTest):
             state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/state?head={}&start=d&limit=2'.format(ID_D))
-        self.assert_has_valid_paging(response, paging,
-                                     '/state?head={}&start=b&limit=2'.format(ID_D))
+        self.assert_has_valid_link(
+            response, '/state?head={}&start=d&limit=2'.format(ID_D))
+        self.assert_has_valid_paging(
+            response, paging, '/state?head={}&start=b&limit=2'.format(ID_D))
         self.assert_has_valid_data_list(response, 2)
         self.assert_entries_match(entries, response['data'])
 
@@ -474,7 +487,8 @@ class StateListTests(BaseApiTest):
             state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/state?head={}&start=b&limit=100'.format(ID_D))
+        self.assert_has_valid_link(
+            response, '/state?head={}&start=b&limit=100'.format(ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 2)
         self.assert_entries_match(entries, response['data'])
@@ -494,7 +508,8 @@ class StateListTests(BaseApiTest):
         It should send back a JSON response with:
             - a response status of 200
             - a head property of ID_D
-            - a link property that ends in '/state?head={}&start=c&limit=5'.format(ID_D, ID_C)
+            - a link property that ends in
+                '/state?head={}&start=c&limit=5'.format(ID_D, ID_C)
             - paging that matches the response, with a previous link
             - a data property that is a list of 3 dicts
             - and those dicts are entries that match those received
@@ -516,11 +531,11 @@ class StateListTests(BaseApiTest):
             state_root='beef', paging=controls)
 
         self.assert_has_valid_head(response, ID_D)
-        self.assert_has_valid_link(response, '/state?head={}&start=c&limit=5'.format(ID_D))
+        self.assert_has_valid_link(
+            response, '/state?head={}&start=c&limit=5'.format(ID_D))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
-
 
     @unittest_run_loop
     async def test_state_list_sorted_in_reverse(self):
@@ -567,7 +582,8 @@ class StateListTests(BaseApiTest):
             sorting=sorting)
 
         self.assert_has_valid_head(response, ID_C)
-        self.assert_has_valid_link(response, '/state?head={}&start=c&limit=100&reverse'.format(ID_C))
+        self.assert_has_valid_link(
+            response, '/state?head={}&start=c&limit=100&reverse'.format(ID_C))
         self.assert_has_valid_paging(response, paging)
         self.assert_has_valid_data_list(response, 3)
         self.assert_entries_match(entries, response['data'])
@@ -582,7 +598,8 @@ class StateGetTests(BaseApiTest):
             client_state_pb2.ClientStateGetResponse)
 
         handlers = self.build_handlers(self.loop, self.connection)
-        return self.build_app(self.loop, '/state/{address}', handlers.fetch_state)
+        return self.build_app(
+            self.loop, '/state/{address}', handlers.fetch_state)
 
     @unittest_run_loop
     async def test_state_get(self):
@@ -623,7 +640,8 @@ class StateGetTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_state_get_with_validator_error(self):
-        """Verifies a GET /state/{address} with a validator error breaks properly.
+        """Verifies a GET /state/{address} with a validator error breaks
+        properly.
 
         It will receive a Protobuf response with:
             - a status of INTERNAL_ERROR
@@ -642,7 +660,8 @@ class StateGetTests(BaseApiTest):
 
     @unittest_run_loop
     async def test_state_get_with_no_genesis(self):
-        """Verifies a GET /state/{address} with validator not ready breaks properly.
+        """Verifies a GET /state/{address} with validator not ready breaks
+        properly.
 
         It will receive a Protobuf response with:
             - a status of NOT_READY
@@ -731,6 +750,7 @@ class StateGetTests(BaseApiTest):
         self.connection.preset_response(
             proto=client_block_pb2.ClientBlockGetResponse,
             block=block_pb2.Block())
-        response = await self.get_assert_status('/state/b?head={}'.format(ID_D), 404)
+        response = await self.get_assert_status(
+            '/state/b?head={}'.format(ID_D), 404)
 
         self.assert_has_valid_error(response, 50)

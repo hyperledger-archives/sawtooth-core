@@ -30,8 +30,6 @@ services:
     image: sawtooth-xo-tp-python:latest
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 4004
     depends_on:
       - validator
     command: xo-tp-python -vv --connect tcp://validator:4004
@@ -41,8 +39,6 @@ services:
     image: sawtooth-xo-tp-javascript:latest
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 4004
     depends_on:
       - validator
     command: xo-tp-javascript tcp://validator:4004
@@ -52,8 +48,6 @@ services:
     image: sawtooth-xo-tp-java:latest
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 4004
     depends_on:
       - validator
     command: xo-tp-java tcp://validator:40000
@@ -63,8 +57,6 @@ services:
     image: sawtooth-xo-tp-go:latest
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 4004
     depends_on:
       - validator
     command: xo-tp-go -vv --connect tcp://validator:4004
@@ -76,7 +68,6 @@ services:
       - ../../:/project/sawtooth-core
     expose:
       - 4004
-      - 8800
     ports:
       - 4004
     command: "bash -c \"\
@@ -93,7 +84,6 @@ services:
     volumes:
       - ../../:/project/sawtooth-core
     expose:
-      - 4004
       - 8008
     ports:
       - 8008
@@ -107,8 +97,6 @@ services:
     image: sawtooth-dev-python:latest
     volumes:
       - ../../:/project/sawtooth-core
-    expose:
-      - 8008
     depends_on:
       - validator
       - rest-api
