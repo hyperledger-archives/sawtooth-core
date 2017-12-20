@@ -41,8 +41,6 @@ from sawtooth_validator.metrics.wrappers import GaugeWrapper
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
-from sawtooth_validator.state.settings_view import SettingsView
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -417,6 +415,7 @@ class BlockPublisher(object):
                  transaction_executor,
                  block_cache,
                  state_view_factory,
+                 settings_cache,
                  block_sender,
                  batch_sender,
                  squash_handler,
@@ -459,6 +458,7 @@ class BlockPublisher(object):
         # the next block in potential chain
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
+        self._settings_cache = settings_cache
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
         self._batch_publisher = BatchPublisher(identity_signer, batch_sender)
@@ -546,10 +546,11 @@ class BlockPublisher(object):
             chain_head.header_signature,
             state_view)
 
-        settings_view = SettingsView(state_view)
-        max_batches = settings_view.get_setting(
+        # using chain_head so so we can use the setting_cache
+        max_batches = int(self._settings_cache.get_setting(
             'sawtooth.publisher.max_batches_per_block',
-            default_value=0, value_type=int)
+            chain_head.state_root_hash,
+            default_value=0))
 
         public_key = self._identity_signer.get_public_key().as_hex()
         consensus = consensus_module.\

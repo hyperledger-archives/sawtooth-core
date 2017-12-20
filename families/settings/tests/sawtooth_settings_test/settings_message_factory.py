@@ -110,3 +110,11 @@ class SettingsMessageFactory(object):
     def create_set_response(self, setting):
         addresses = [self._key_to_address(setting)]
         return self._factory.create_set_response(addresses)
+
+    def create_add_event_request(self, key):
+        return self._factory.create_add_event_request(
+            "settings/update",
+            [("updated", key)])
+
+    def create_add_event_response(self):
+        return self._factory.create_add_event_response()

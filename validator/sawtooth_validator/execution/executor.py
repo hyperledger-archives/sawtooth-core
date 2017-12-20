@@ -178,6 +178,7 @@ class TransactionExecutorThread(object):
 
             config = self._settings_view_factory.create_settings_view(
                 txn_info.state_hash)
+
             transaction_families = config.get_setting(
                 key=self._tp_settings_key,
                 default_value="[]")
