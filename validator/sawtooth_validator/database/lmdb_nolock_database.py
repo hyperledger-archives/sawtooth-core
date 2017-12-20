@@ -49,11 +49,15 @@ class LMDBNoLockDatabase(database.Database):
         self._lmdb = lmdb.Environment(
             path=filename,
             map_size=1024**4,
-            map_async=True,
-            writemap=True,
+            metasync=False,
+            meminit=False,
+            map_async=False,
+            writemap=False,
             readahead=False,
             subdir=False,
             create=create,
+            max_readers=1024,
+            max_spare_txns=256,
             lock=True)
 
     # pylint: disable=no-value-for-parameter
@@ -87,7 +91,6 @@ class LMDBNoLockDatabase(database.Database):
             for k, v in puts:
                 packed = cbor.dumps(v)
                 txn.put(k.encode(), packed, overwrite=True)
-        self.sync()
 
     def delete(self, key):
         """Removes a key:value from the database
