@@ -45,6 +45,7 @@ RUN cd /debs \
 
 RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-validator \
+    python3-sawtooth-block-info \
     python3-sawtooth-poet-cli \
     python3-sawtooth-cli
 
