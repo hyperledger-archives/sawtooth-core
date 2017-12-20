@@ -1024,4 +1024,7 @@ class RouteHandler(object):
 
     @staticmethod
     def _get_status_name(proto, status_enum):
-        return proto.Status.Name(status_enum)
+        try:
+            return proto.Status.Name(status_enum)
+        except ValueError:
+            return 'Unknown ({})'.format(status_enum)
