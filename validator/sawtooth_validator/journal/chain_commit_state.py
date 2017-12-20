@@ -92,7 +92,7 @@ class ChainCommitState:
     @staticmethod
     def _check_for_duplicates_within(key_fn, items):
         for i, item_i in enumerate(items):
-            for item_j in items[i+1:]:
+            for item_j in items[i + 1:]:
                 if key_fn(item_i) == key_fn(item_j):
                     return key_fn(item_i)
         return None

@@ -62,7 +62,10 @@ def look_ahead(iterable):
     """
     # Get an iterator and pull the first value.
     it = iter(iterable)
-    last = next(it)
+    try:
+        last = next(it)
+    except StopIteration:
+        return
     # Run the iterator to exhaustion (starting from the second value).
     for val in it:
         # Report the *previous* value (more to come).

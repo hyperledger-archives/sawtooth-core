@@ -569,7 +569,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where new block is from a different genesis
         """
         # create a new valid chain 5 long from the current root
-        chain, head = self.generate_chain_with_head(
+        _, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_store': True})
 
         self.block_tree_manager.set_chain_head(head)
@@ -843,11 +843,9 @@ class TestBlockValidator(unittest.TestCase):
     class BlockValidationHandler(object):
         def __init__(self):
             self.block = None
-            pass
 
         def on_block_validated(self, block):
             self.block = block
-            pass
 
         def has_result(self):
             return self.block is not None
@@ -994,9 +992,9 @@ class TestChainController(unittest.TestCase):
     def test_fork_lengths(self):
         '''Tests competing forks of different lengths
         '''
-        chain_2, head_2 = self.generate_chain(self.init_head, 2)
+        chain_2, _ = self.generate_chain(self.init_head, 2)
         chain_7, head_7 = self.generate_chain(self.init_head, 7)
-        chain_5, head_5 = self.generate_chain(self.init_head, 5)
+        chain_5, _ = self.generate_chain(self.init_head, 5)
 
         self.receive_and_process_blocks(*(chain_2 + chain_7 + chain_5))
 
@@ -1020,7 +1018,7 @@ class TestChainController(unittest.TestCase):
         '''Tests a fork with a missing block
         '''
         # make new chain
-        new_chain, new_head = self.generate_chain(self.init_head, 5)
+        new_chain, _ = self.generate_chain(self.init_head, 5)
 
         # delete a block from the new chain
         for block in new_chain[:3] + new_chain[4:]:
@@ -1036,7 +1034,7 @@ class TestChainController(unittest.TestCase):
         '''
         # make two chains extending chain
         good_chain, good_head = self.generate_chain(self.init_head, 5)
-        bad_chain, bad_head = self.generate_chain(self.init_head, 5)
+        bad_chain, _ = self.generate_chain(self.init_head, 5)
 
         # invalidate block in the middle of bad_chain
         bad_chain[3].status = BlockStatus.Invalid
@@ -1149,9 +1147,9 @@ class TestChainController(unittest.TestCase):
         self.assert_is_chain_head(b_2)
 
         # extend every fork by 2
-        a_3_chain, a_3 = self.generate_chain(a_2, 8)
+        a_3_chain, _ = self.generate_chain(a_2, 8)
         b_3_chain, b_3 = self.generate_chain(b_2, 8)
-        c_3_chain, c_3 = self.generate_chain(c_2, 8)
+        c_3_chain, _ = self.generate_chain(c_2, 8)
 
         self.receive_and_process_blocks(*a_3_chain)
         self.receive_and_process_blocks(*b_3_chain)
@@ -1185,14 +1183,13 @@ class TestChainController(unittest.TestCase):
             block_sig[:8],
             'Not chain head')
 
-    def generate_chain(self, root_block, num_blocks,
-                       params={'add_to_cache': False, 'add_to_store': False}):
+    def generate_chain(self, root_block, num_blocks, params=None):
         '''Returns (chain, chain_head).
         Usually only the head is needed,
         but occasionally the chain itself is used.
         '''
         if params is None:
-            params = {'add_to_cache': True}
+            params = {'add_to_cache': False, 'add_to_store': False}
 
         chain = self.block_tree_manager.generate_chain(
             root_block, num_blocks, params)
@@ -1482,21 +1479,21 @@ class TestChainCommitState(unittest.TestCase):
     - Dependencies found for transactions in fork
     """
 
-    def gen_block(self, id, prev_id, num, batches):
+    def gen_block(self, block_id, prev_id, num, batches):
         return BlockWrapper(
             Block(
-                header_signature=id,
+                header_signature=block_id,
                 batches=batches,
                 header=BlockHeader(
                     block_num=num,
                     previous_block_id=prev_id).SerializeToString()))
 
-    def gen_batch(self, id, transactions):
-        return Batch(header_signature=id, transactions=transactions)
+    def gen_batch(self, batch_id, transactions):
+        return Batch(header_signature=batch_id, transactions=transactions)
 
-    def gen_txn(self, id, deps=None):
+    def gen_txn(self, txn_id, deps=None):
         return Transaction(
-            header_signature=id,
+            header_signature=txn_id,
             header=TransactionHeader(dependencies=deps).SerializeToString())
 
     # Batches
@@ -1690,7 +1687,7 @@ class TestChainCommitState(unittest.TestCase):
         """Verifies that MissingDependency is raised when a dependency is not
         committed anywhere.
         """
-        transactions, _, committed_blocks, uncommitted_blocks =\
+        _, _, committed_blocks, uncommitted_blocks =\
             self.create_new_chain()
 
         commit_state = self.create_chain_commit_state(
@@ -1774,14 +1771,14 @@ class TestChainCommitState(unittest.TestCase):
         ]
         committed_blocks = [
             self.gen_block(
-                id='B0',
+                block_id='B0',
                 prev_id=NULL_BLOCK_IDENTIFIER,
                 num=0,
                 batches=[batches[0]])
         ]
         committed_blocks.extend([
             self.gen_block(
-                id='B' + format(i, 'x'),
+                block_id='B' + format(i, 'x'),
                 prev_id='B' + format(i - 1, 'x'),
                 num=i,
                 batches=[batches[i]])
@@ -1789,14 +1786,14 @@ class TestChainCommitState(unittest.TestCase):
         ])
         uncommitted_blocks = [
             self.gen_block(
-                id='B7',
+                block_id='B7',
                 prev_id='B3',
                 num=4,
                 batches=[batches[0]])
         ]
         uncommitted_blocks.extend([
             self.gen_block(
-                id='B' + format(i, 'x'),
+                block_id='B' + format(i, 'x'),
                 prev_id='B' + format(i - 1, 'x'),
                 num=5 + (i - 8),
                 batches=[batches[i]])
@@ -1822,7 +1819,6 @@ class TestChainCommitState(unittest.TestCase):
             block_cache[block.header_signature] = block
 
         return ChainCommitState(head_id, block_cache, block_store)
-
 
 
 class TestBlockEventExtractor(unittest.TestCase):
