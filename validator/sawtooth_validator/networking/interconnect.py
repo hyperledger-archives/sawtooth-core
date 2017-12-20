@@ -151,7 +151,7 @@ class _SendReceive(object):
         # for inbound connections to our zmq.ROUTER socket.
         self._last_message_times = {}
 
-        self._connections = connections
+        self._connections = connections if connections is not None else {}
         self._identities_to_connection_ids = {}
         self._monitor = monitor
 
@@ -353,18 +353,17 @@ class _SendReceive(object):
         """
         zmq_identity = None
 
-        if self._connections is not None:
-            try:
-                connection_info = self._connections.get(connection_id)
-            except KeyError:
-                LOGGER.debug("Can't send to %s, not in self._connections",
-                             connection_id)
+        try:
+            connection_info = self._connections.get(connection_id)
+        except KeyError:
+            LOGGER.debug("Can't send to %s, not in self._connections",
+                         connection_id)
 
-            try:
-                if connection_info.connection_type == ConnectionType.ZMQ_IDENTITY:
-                    zmq_identity = connection_info.connection
-            except AttributeError:
-                pass
+        try:
+            if connection_info.connection_type == ConnectionType.ZMQ_IDENTITY:
+                zmq_identity = connection_info.connection
+        except AttributeError:
+            pass
 
         self._ready.wait()
 
@@ -411,19 +410,19 @@ class _SendReceive(object):
         :param msg: protobuf validator_pb2.Message
         """
         zmq_identity = None
-        if self._connections is not None:
-            try:
-                connection_info = self._connections.get(connection_id)
-            except KeyError:
-                LOGGER.debug("Can't send to %s, not in self._connections",
-                             connection_id)
-                return
 
-            try:
-                if connection_info.connection_type == ConnectionType.ZMQ_IDENTITY:
-                    zmq_identity = connection_info.connection
-            except AttributeError:
-                pass
+        try:
+            connection_info = self._connections.get(connection_id)
+        except KeyError:
+            LOGGER.debug("Can't send to %s, not in self._connections",
+                         connection_id)
+            return
+
+        try:
+            if connection_info.connection_type == ConnectionType.ZMQ_IDENTITY:
+                zmq_identity = connection_info.connection
+        except AttributeError:
+            pass
 
         del self._connections[connection_id]
 
