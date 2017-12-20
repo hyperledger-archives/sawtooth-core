@@ -31,11 +31,20 @@ class ClientBatchSubmitBackpressureHandler(Handler):
     able.  Otherwise it returns a QUEUE_FULL response.
     """
 
-    def __init__(self, can_accept_fn):
+    def __init__(self, can_accept_fn, queue_info_fn):
         self._can_accept = can_accept_fn
+        self._queue_info = queue_info_fn
+        self._applying_backpressure = False
 
     def handle(self, connection_id, message_content):
         if not self._can_accept():
+            if not self._applying_backpressure:
+                self._applying_backpressure = True
+                LOGGER.info(
+                    'Applying back pressure on client submitted batches: '
+                    'current depth: %s, limit: %s',
+                    *self._queue_info())
+
             response = ClientBatchSubmitResponse(
                 status=ClientBatchSubmitResponse.QUEUE_FULL)
             return HandlerResult(
@@ -43,4 +52,12 @@ class ClientBatchSubmitBackpressureHandler(Handler):
                 message_out=response,
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE
             )
+        else:
+            if self._applying_backpressure:
+                self._applying_backpressure = False
+                LOGGER.info(
+                    'Ending back pressure on client submitted batches: '
+                    'current depth: %s, limit: %s',
+                    *self._queue_info())
+
         return HandlerResult(status=HandlerStatus.PASS)

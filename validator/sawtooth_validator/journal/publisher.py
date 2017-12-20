@@ -507,10 +507,18 @@ class BlockPublisher(object):
             observer.notify_batch_pending(batch)
 
     def can_accept_batch(self):
+        return len(self._pending_batches) < self._get_current_queue_limit()
+
+    def _get_current_queue_limit(self):
         # Limit the number of batches to 2 times the publishing average.  This
         # allows the queue to grow geometrically, if the queue is drained.
-        return len(self._pending_batches) < \
-            (2 * self._publish_count_average.value)
+        return 2 * self._publish_count_average.value
+
+    def get_current_queue_info(self):
+        """Returns a tuple of the current size of the pending batch queue
+        and the current queue limit.
+        """
+        return (len(self._pending_batches), self._get_current_queue_limit())
 
     @property
     def chain_head_lock(self):
