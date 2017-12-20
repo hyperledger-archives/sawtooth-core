@@ -73,11 +73,15 @@ class IndexedDatabase(database.Database):
         self._lmdb = lmdb.Environment(
             path=filename,
             map_size=_size,
+            metasync=False,
+            meminit=False,
             map_async=False,
             writemap=False,
             readahead=False,
             subdir=False,
             create=create,
+            max_readers=1024,
+            max_spare_txns=256,
             max_dbs=len(indexes) + 1,
             lock=True)
 
@@ -206,8 +210,6 @@ class IndexedDatabase(database.Database):
                     index_cursor = txn.cursor(index_db)
                     for idx_key in index_keys:
                         index_cursor.put(idx_key, key.encode())
-
-        self.sync()
 
     def sync(self):
         """Ensures that pending writes are flushed to disk
