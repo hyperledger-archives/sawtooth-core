@@ -71,7 +71,7 @@ TIME_TO_LIVE = 3
 
 class Gossip(object):
     def __init__(self, network,
-                 settings_view_factory,
+                 settings_cache,
                  current_root_func,
                  endpoint=None,
                  peering_mode='static',
@@ -127,7 +127,7 @@ class Gossip(object):
         self._minimum_peer_connectivity = minimum_peer_connectivity
         self._maximum_peer_connectivity = maximum_peer_connectivity
         self._topology_check_frequency = topology_check_frequency
-        self._settings_view_factory = settings_view_factory
+        self._settings_cache = settings_cache
         self._current_root_func = current_root_func
 
         self._topology = None
@@ -224,12 +224,10 @@ class Gossip(object):
                              connection_id)
 
     def get_time_to_live(self):
-        settings_view = self._settings_view_factory.create_settings_view(
-            self._current_root_func())
-
         time_to_live = \
-            settings_view.get_setting(
+            self._settings_cache.get_setting(
                 "sawtooth.gossip.time_to_live",
+                self._current_root_func(),
                 default_value=TIME_TO_LIVE
             )
         return int(time_to_live)

@@ -55,6 +55,9 @@ from sawtooth_validator.protobuf.transaction_receipt_pb2 import StateChangeList
 from sawtooth_validator.protobuf.events_pb2 import Event
 from sawtooth_validator.protobuf.events_pb2 import EventFilter
 
+from sawtooth_validator.state.settings_view import SettingsViewFactory
+from sawtooth_validator.state.settings_cache import SettingsCache
+
 from test_journal.block_tree_manager import BlockTreeManager
 
 from test_journal.mock import MockChainIdManager
@@ -130,6 +133,10 @@ class TestBlockPublisher(unittest.TestCase):
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.block_tree_manager.state_view_factory),
+            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             squash_handler=None,
@@ -286,6 +293,10 @@ class TestBlockPublisher(unittest.TestCase):
                 batch_execution_result=False),
             block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.block_tree_manager.state_view_factory),
+            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             squash_handler=None,
@@ -318,6 +329,10 @@ class TestBlockPublisher(unittest.TestCase):
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.state_view_factory),
+            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             squash_handler=None,
@@ -371,6 +386,10 @@ class TestBlockPublisher(unittest.TestCase):
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_tree_manager.block_cache,
             state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.block_tree_manager.state_view_factory),
+            ),
             block_sender=self.block_sender,
             batch_sender=self.batch_sender,
             squash_handler=None,
@@ -1242,6 +1261,10 @@ class TestJournal(unittest.TestCase):
                 transaction_executor=self.txn_executor,
                 block_cache=btm.block_cache,
                 state_view_factory=MockStateViewFactory(btm.state_db),
+                settings_cache=SettingsCache(
+                    SettingsViewFactory(
+                        btm.state_view_factory),
+                ),
                 block_sender=self.block_sender,
                 batch_sender=self.batch_sender,
                 squash_handler=None,
