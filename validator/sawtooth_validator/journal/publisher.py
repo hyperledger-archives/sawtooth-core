@@ -634,7 +634,14 @@ class BlockPublisher(object):
 
         num_committed_batches = len(committed_batches)
         if num_committed_batches > 0:
-            self._publish_count_average.update(num_committed_batches)
+            # Only update the average if either:
+            # a. Not drained below the current average
+            # b. Drained the queue, but the queue was not bigger than the
+            #    current running average
+            remainder = len(self._pending_batches) - num_committed_batches
+            if remainder > self._publish_count_average.value or \
+                    num_committed_batches > self._publish_count_average.value:
+                self._publish_count_average.update(num_committed_batches)
 
         # Uncommitted and pending disjoint sets
         # since batches can only be committed to a chain once.
