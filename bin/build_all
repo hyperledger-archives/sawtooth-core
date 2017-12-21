@@ -28,6 +28,7 @@ ALL_TARGETS="
         go
         java
         javascript
+        poet_sgx
         python
         rust
 "
@@ -159,6 +160,9 @@ main() {
                 javascript)
                     build_javascript
                     ;;
+                poet_sgx)
+                    build_poet_sgx
+                    ;;
                 python)
                     build_python
                     ;;
@@ -240,7 +244,6 @@ build_external() {
         sawtooth-stats-influxdb
 }
 
-
 build_debs() {
     build_dir=/tmp/build-docker$ISOLATION_ID
     rm -rf $build_dir
@@ -251,6 +254,11 @@ build_debs() {
     docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
     docker_run sawtooth-build-debs
     exit 0
+}
+
+build_poet_sgx() {
+    docker_build docker/sawtooth-dev-poet-sgx docker/ sawtooth-dev-poet-sgx
+    docker_run sawtooth-dev-poet-sgx
 }
 
 if [[ $BUILD_MODE == $MOUNTED ]]
@@ -357,7 +365,6 @@ then
         docker_build docker/sawtooth-dev-javascript docker/ sawtooth-xo-tp-javascript
         docker_run sawtooth-dev-javascript
     }
-
     build_python() {
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir
