@@ -212,19 +212,24 @@ class Dispatcher(InstrumentedThread):
             connection, connection_id, \
                 original_message, _ = self._message_information[message_id]
 
-            message = validator_pb2.Message(
-                content=res.message_out.SerializeToString(),
-                correlation_id=original_message.correlation_id,
-                message_type=res.message_type)
-            try:
-                self._send_message[connection](msg=message,
-                                               connection_id=connection_id)
-            except KeyError:
-                LOGGER.info("Can't send message %s back to "
-                            "%s because connection %s not in dispatcher",
-                            get_enum_name(message.message_type), connection_id,
-                            connection)
-            self._process(message_id)
+            if res.message_out and res.message_type:
+                message = validator_pb2.Message(
+                    content=res.message_out.SerializeToString(),
+                    correlation_id=original_message.correlation_id,
+                    message_type=res.message_type)
+                try:
+                    self._send_message[connection](msg=message,
+                                                   connection_id=connection_id)
+                except KeyError:
+                    LOGGER.info("Can't send message %s back to "
+                                "%s because connection %s not in dispatcher",
+                                get_enum_name(message.message_type),
+                                connection_id,
+                                connection)
+                self._process(message_id)
+            else:
+                LOGGER.error("HandlerResult with status of RETURN_AND_PASS "
+                             "is missing message_out or message_type")
 
         elif res.status == HandlerStatus.RETURN:
             connection, connection_id,  \
@@ -232,18 +237,23 @@ class Dispatcher(InstrumentedThread):
 
             del self._message_information[message_id]
 
-            message = validator_pb2.Message(
-                content=res.message_out.SerializeToString(),
-                correlation_id=original_message.correlation_id,
-                message_type=res.message_type)
-            try:
-                self._send_message[connection](msg=message,
-                                               connection_id=connection_id)
-            except KeyError:
-                LOGGER.info("Can't send message %s back to "
-                            "%s because connection %s not in dispatcher",
-                            get_enum_name(message.message_type), connection_id,
-                            connection)
+            if res.message_out and res.message_type:
+                message = validator_pb2.Message(
+                    content=res.message_out.SerializeToString(),
+                    correlation_id=original_message.correlation_id,
+                    message_type=res.message_type)
+                try:
+                    self._send_message[connection](msg=message,
+                                                   connection_id=connection_id)
+                except KeyError:
+                    LOGGER.info("Can't send message %s back to "
+                                "%s because connection %s not in dispatcher",
+                                get_enum_name(message.message_type),
+                                connection_id,
+                                connection)
+            else:
+                LOGGER.error("HandlerResult with status of RETURN "
+                             "is missing message_out or message_type")
 
         elif res.status == HandlerStatus.RETURN_AND_CLOSE:
             connection, connection_id,  \
@@ -251,19 +261,24 @@ class Dispatcher(InstrumentedThread):
 
             del self._message_information[message_id]
 
-            message = validator_pb2.Message(
-                content=res.message_out.SerializeToString(),
-                correlation_id=original_message.correlation_id,
-                message_type=res.message_type)
-            try:
-                self._send_last_message[connection](
-                    msg=message,
-                    connection_id=connection_id)
-            except KeyError:
-                LOGGER.info("Can't send last message %s back to "
-                            "%s because connection %s not in dispatcher",
-                            get_enum_name(message.message_type), connection_id,
-                            connection)
+            if res.message_out and res.message_type:
+                message = validator_pb2.Message(
+                    content=res.message_out.SerializeToString(),
+                    correlation_id=original_message.correlation_id,
+                    message_type=res.message_type)
+                try:
+                    self._send_last_message[connection](
+                        msg=message,
+                        connection_id=connection_id)
+                except KeyError:
+                    LOGGER.info("Can't send last message %s back to "
+                                "%s because connection %s not in dispatcher",
+                                get_enum_name(message.message_type),
+                                connection_id,
+                                connection)
+            else:
+                LOGGER.error("HandlerResult with status of RETURN_AND_CLOSE "
+                             "is missing message_out or message_type")
         with self._condition:
             if not self._message_information:
                 self._condition.notify()
