@@ -169,12 +169,16 @@ class GossipBlockResponseHandler(Handler):
 
         block_id = block.header_signature
 
-        if not self._has_open_requests(block_id) and self._has_block(block_id):
-            LOGGER.debug('Drop duplicate block: %s', block_id)
-            return HandlerResult(HandlerStatus.RETURN)
-
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
+
+        if not self._has_open_requests(block_id) and self._has_block(block_id):
+            LOGGER.debug('Drop duplicate block: %s', block_id)
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK
+            )
 
         return HandlerResult(
             HandlerStatus.RETURN_AND_PASS,
@@ -203,12 +207,16 @@ class GossipBatchResponseHandler(Handler):
 
         batch_id = batch.header_signature
 
-        if not self._has_open_requests(batch_id) and self._has_batch(batch_id):
-            LOGGER.debug('Drop duplicate batch: %s', batch_id)
-            return HandlerResult(HandlerStatus.RETURN)
-
         ack = NetworkAcknowledgement()
         ack.status = ack.OK
+
+        if not self._has_open_requests(batch_id) and self._has_batch(batch_id):
+            LOGGER.debug('Drop duplicate batch: %s', batch_id)
+            return HandlerResult(
+                HandlerStatus.RETURN,
+                message_out=ack,
+                message_type=validator_pb2.Message.NETWORK_ACK
+            )
 
         return HandlerResult(
             HandlerStatus.RETURN_AND_PASS,
