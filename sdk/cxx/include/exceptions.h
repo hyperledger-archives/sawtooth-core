@@ -21,8 +21,7 @@ namespace sawtooth {
 class InvalidTransaction: public std::runtime_error {
  public:
     explicit InvalidTransaction(std::string const& error)
-        : std::runtime_error(error)
-    {}
+        : std::runtime_error(error) {}
 };
 
 }

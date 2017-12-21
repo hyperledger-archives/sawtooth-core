@@ -58,7 +58,7 @@ class MessageDispatcher {
     static const Message::MessageType SERVER_DISCONNECT_EVENT =
         static_cast<Message::MessageType>(0xFFFF);
  protected:
-    friend class TransactionProcessor;
+    friend class TransactionProcessorImpl;
     MessageDispatcher();
 
  private:

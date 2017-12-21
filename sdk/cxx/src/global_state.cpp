@@ -22,7 +22,7 @@
 #include "proto/state_context.pb.h"
 
 #include "sawtooth/global_state.h"
-#include "sawtooth/exceptions.h"
+#include "exceptions.h"
 
 namespace sawtooth {
 
@@ -30,11 +30,11 @@ static log4cxx::LoggerPtr  logger(log4cxx::Logger::getLogger
     ("sawtooth.GlobalState"));
 
 
-GlobalState::GlobalState(
+GlobalStateImpl::GlobalStateImpl(
     const MessageStreamPtr& message_stream, const std::string& context_id):
     message_stream(message_stream), context_id(context_id) {}
 
-bool GlobalState::GetState(std::string* out_value, const std::string& address) const {
+bool GlobalStateImpl::GetState(std::string* out_value, const std::string& address) const {
     std::unordered_map<std::string, std::string> out;
     std::vector<std::string> addresses = { address };
 
@@ -47,7 +47,7 @@ bool GlobalState::GetState(std::string* out_value, const std::string& address) c
     return false;
 }
 
-void GlobalState::GetState(
+void GlobalStateImpl::GetState(
         std::unordered_map<std::string, std::string>* out_values,
         const std::vector<std::string>& addresses) const {
     if (!out_values) {
@@ -82,12 +82,12 @@ void GlobalState::GetState(
     }
 }
 
-void GlobalState::SetState(const std::string& address, const std::string& value) const {
+void GlobalStateImpl::SetState(const std::string& address, const std::string& value) const {
     std::vector<KeyValue> kv_pairs = { make_pair(address, value) };
     this->SetState(kv_pairs);
 }
 
-void GlobalState::SetState(const std::vector<KeyValue>& kv_pairs) const {
+void GlobalStateImpl::SetState(const std::vector<KeyValue>& kv_pairs) const {
     TpStateSetRequest request;
     TpStateSetResponse response;
     request.set_context_id(this->context_id);
@@ -110,13 +110,13 @@ void GlobalState::SetState(const std::vector<KeyValue>& kv_pairs) const {
 }
 
 
-void GlobalState::DeleteState(
+void GlobalStateImpl::DeleteState(
         const std::string& address) const {
     std::vector<std::string> addrs = { address };
     this->DeleteState(addrs);
 }
 
-void GlobalState::DeleteState(const std::vector<std::string>& addresses) const {
+void GlobalStateImpl::DeleteState(const std::vector<std::string>& addresses) const {
     TpStateDeleteRequest request;
     TpStateDeleteResponse response;
     request.set_context_id(this->context_id);
