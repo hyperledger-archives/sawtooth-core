@@ -60,7 +60,6 @@ services:
   rest-api:
     image: hyperledger/sawtooth-rest-api:1.0
     container_name: sawtooth-rest-api-default
-      - 8008
     ports:
       - "8008:8008"
     depends_on:
