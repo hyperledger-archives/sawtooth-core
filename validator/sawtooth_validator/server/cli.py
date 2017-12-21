@@ -97,15 +97,19 @@ def parse_args(args):
                              'validator network.')
     parser.add_argument('--opentsdb-url',
                         help='specify host and port for Open TSDB database \
-                        used for metrics')
+                        used for metrics',
+                        type=str)
     parser.add_argument('--opentsdb-db',
                         help='specify name of database used for storing \
-                        metrics')
+                        metrics',
+                        type=str)
     parser.add_argument('--minimum-peer-connectivity',
                         help='set the minimum number of peers required before \
-                        stopping peer search')
+                        stopping peer search',
+                        type=int)
     parser.add_argument('--maximum-peer-connectivity',
-                        help='set the maximum number of peers to accept')
+                        help='set the maximum number of peers to accept',
+                        type=int)
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
