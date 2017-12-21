@@ -62,9 +62,10 @@ class GetPeersResponseHandler(Handler):
         response = GetPeersResponse()
         response.ParseFromString(message_content)
 
-        LOGGER.debug("Got peers response message from %s", connection_id)
-
-        LOGGER.debug("PEERS RESPONSE ENDPOINTS: %s", response.peer_endpoints)
+        LOGGER.debug(
+            "Got peers response message from %s. Endpoints: %s",
+            connection_id,
+            response.peer_endpoints)
 
         self._gossip.add_candidate_peer_endpoints(response.peer_endpoints)
 

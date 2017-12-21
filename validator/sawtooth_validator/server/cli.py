@@ -265,8 +265,13 @@ def main(args=None):
             log_configuration(log_dir=path_config.log_dir,
                               name="validator")
 
-    for line in path_config.to_toml_string():
-        LOGGER.info("config [path]: %s", line)
+    if LOGGER.isEnabledFor(logging.INFO):
+        LOGGER.info(
+            '; '.join([
+                'config [path]: {}'.format(line)
+                for line in path_config.to_toml_string()
+            ])
+        )
 
     if not check_directory(path=path_config.data_dir,
                            human_readable_name='Data'):
