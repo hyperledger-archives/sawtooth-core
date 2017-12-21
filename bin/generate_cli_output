@@ -81,6 +81,8 @@ save_usage sawadm genesis
 save_usage sawadm keygen
 
 save_usage sawnet
+save_usage sawnet peers
+save_usage sawnet peers list
 save_usage sawnet compare-chains
 
 save_usage sawtooth-validator
