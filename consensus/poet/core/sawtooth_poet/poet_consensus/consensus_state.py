@@ -389,7 +389,8 @@ class ConsensusState(object):
 
         return population_estimate_list
 
-    def _compute_population_estimate(self, poet_settings_view):
+    def _compute_population_estimate(self, poet_settings_view,
+                                     population_limit=None):
         """Estimates the size of the validator population by computing the
         average wait time and the average local mean used by the winning
         validator.
@@ -401,6 +402,9 @@ class ConsensusState(object):
         the population size from the ratio of local mean to global mean. A
         longer list of certificates will provide a better estimator only if the
         population of validators is relatively stable.
+
+        Optionally a population limit can be provided, e.g. length of the
+        validator registry.
 
         Note:
 
@@ -427,9 +431,17 @@ class ConsensusState(object):
             sum_waits += population_sample.duration - minimum_wait_time
             sum_means += population_sample.local_mean
 
-        return sum_means / sum_waits
+        estimate = sum_means / sum_waits
+        if population_limit:
+            LOGGER.debug('Estimated population %s, limited at %s, set at %s',
+                         estimate,
+                         population_limit,
+                         min(estimate, population_limit))
+            estimate = min(estimate, population_limit)
 
-    def compute_local_mean(self, poet_settings_view):
+        return estimate
+
+    def compute_local_mean(self, poet_settings_view, population_limit):
         """Computes the local mean wait time based on either the ratio of
         target to initial wait times (if during the bootstrapping period) or
         the certificate history (once bootstrapping period has passed).
@@ -437,6 +449,7 @@ class ConsensusState(object):
         Args:
             poet_settings_view (PoetSettingsView): The current PoET settings
                 view
+            population_limit (int): An upper limit on the number of validators
 
         Returns:
             float: The computed local mean
@@ -465,10 +478,12 @@ class ConsensusState(object):
             # going to compute the local mean using the target wait time and an
             # estimate of the validator network population size.
             else:
+                population_estimate = self._compute_population_estimate(
+                    poet_settings_view=poet_settings_view,
+                    population_limit=population_limit)
+
                 self._local_mean = \
-                    poet_settings_view.target_wait_time * \
-                    self._compute_population_estimate(
-                        poet_settings_view=poet_settings_view)
+                    poet_settings_view.target_wait_time * population_estimate
 
         return self._local_mean
 

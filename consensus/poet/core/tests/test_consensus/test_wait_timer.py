@@ -32,6 +32,8 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from test_consensus.utils import create_random_public_key_hash
 
+_POPULATION_LIMIT = 100
+
 
 class TestWaitTimer(TestCase):
     @classmethod
@@ -71,7 +73,8 @@ class TestWaitTimer(TestCase):
                 validator_address='1060 W Addison Street',
                 previous_certificate_id=NULL_BLOCK_IDENTIFIER,
                 consensus_state=self.consensus_state,
-                poet_settings_view=self.mock_poet_settings_view)
+                poet_settings_view=self.mock_poet_settings_view,
+                population_limit=_POPULATION_LIMIT)
 
     def test_create(self):
         # Need to create signup information first
@@ -106,7 +109,8 @@ class TestWaitTimer(TestCase):
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
-            poet_settings_view=self.mock_poet_settings_view)
+            poet_settings_view=self.mock_poet_settings_view,
+            population_limit=_POPULATION_LIMIT)
 
         self.assertIsNotNone(wt)
         self.assertEqual(
@@ -135,7 +139,8 @@ class TestWaitTimer(TestCase):
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
-            poet_settings_view=self.mock_poet_settings_view)
+            poet_settings_view=self.mock_poet_settings_view,
+            population_limit=_POPULATION_LIMIT)
 
         self.assertIsNotNone(wt)
         self.assertEqual(
@@ -178,7 +183,8 @@ class TestWaitTimer(TestCase):
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
-            poet_settings_view=self.mock_poet_settings_view)
+            poet_settings_view=self.mock_poet_settings_view,
+            population_limit=_POPULATION_LIMIT)
         self.assertFalse(wt.has_expired(wt.request_time - 1))
 
         # Create a timer and when it has expired, verify that the duration is
@@ -189,7 +195,8 @@ class TestWaitTimer(TestCase):
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
-            poet_settings_view=self.mock_poet_settings_view)
+            poet_settings_view=self.mock_poet_settings_view,
+            population_limit=_POPULATION_LIMIT)
 
         self.assertTrue(wt.has_expired(wt.request_time + wt.duration + 1.0))
 
@@ -200,7 +207,8 @@ class TestWaitTimer(TestCase):
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
-            poet_settings_view=self.mock_poet_settings_view)
+            poet_settings_view=self.mock_poet_settings_view,
+            population_limit=_POPULATION_LIMIT)
 
         assigned_duration = wt.duration
         wt.duration = 0
@@ -216,7 +224,8 @@ class TestWaitTimer(TestCase):
             validator_address='1060 W Addison Street',
             previous_certificate_id=NULL_BLOCK_IDENTIFIER,
             consensus_state=self.consensus_state,
-            poet_settings_view=self.mock_poet_settings_view)
+            poet_settings_view=self.mock_poet_settings_view,
+            population_limit=_POPULATION_LIMIT)
         assigned_request_time = wt.request_time
         wt.request_time -= wt.duration
 

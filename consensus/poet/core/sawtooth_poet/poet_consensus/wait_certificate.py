@@ -176,7 +176,8 @@ class WaitCertificate(object):
                     previous_certificate_id,
                     poet_public_key,
                     consensus_state,
-                    poet_settings_view):
+                    poet_settings_view,
+                    validator_registry_view):
         """Determines whether the wait certificate is valid.
 
         Args:
@@ -191,14 +192,18 @@ class WaitCertificate(object):
                 certificate is associated.
             consensus_state (ConsensusState): The current PoET consensus state
             poet_settings_view (PoetSettingsView): The current PoET config view
+            validator_registry_view (ValidatorRegistryView): The state of the
+                validator registry.
         Returns:
             True if the wait certificate is valid, False otherwise.
         """
         enclave_certificate = \
             self._enclave_wait_certificate(poet_enclave_module)
+        population_limit = validator_registry_view.get_registry_count()
         expected_mean = \
             consensus_state.compute_local_mean(
-                poet_settings_view=poet_settings_view)
+                poet_settings_view=poet_settings_view,
+                population_limit=population_limit)
 
         if enclave_certificate.duration < poet_settings_view.minimum_wait_time:
             raise \

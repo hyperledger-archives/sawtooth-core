@@ -170,7 +170,8 @@ class PoetBlockVerifier(BlockVerifierInterface):
                 previous_certificate_id=previous_certificate_id,
                 poet_public_key=validator_info.signup_info.poet_public_key,
                 consensus_state=consensus_state,
-                poet_settings_view=poet_settings_view)
+                poet_settings_view=poet_settings_view,
+                validator_registry_view=validator_registry_view)
         except ValueError as error:
             LOGGER.error(
                 'Block %s rejected: Wait certificate check failed - %s',
