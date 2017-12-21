@@ -34,6 +34,7 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.publisher import BlockPublisher
+from sawtooth_validator.journal.publishing_limiter import PublishingLimiter
 
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
@@ -130,6 +131,7 @@ class BlockTreeManager(object):
             data_dir=None,
             config_dir=None,
             permission_verifier=MockPermissionVerifier(),
+            publishing_limiter=PublishingLimiter(),
             check_publish_block_frequency=0.1,
             batch_observers=[])
 

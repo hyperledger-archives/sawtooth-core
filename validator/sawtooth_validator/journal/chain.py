@@ -637,6 +637,10 @@ class ChainController(object):
         self._blocks_pending = {}  # set of blocks that the previous block
         # is being processed. Once that completes this block will be
         # scheduled for validation.
+
+        # All blocks currently in process
+        self._wip_blocks = []
+
         self._chain_id_manager = chain_id_manager
 
         self._chain_head = None
@@ -751,6 +755,7 @@ class ChainController(object):
 
                 # remove from the processing list
                 del self._blocks_processing[new_block.identifier]
+                self._wip_blocks.remove(new_block)
 
                 # Remove this block from the pending queue, obtaining any
                 # immediate descendants of this block in the process.
@@ -890,6 +895,7 @@ class ChainController(object):
 
                 self._block_cache[block.identifier] = block
                 self._blocks_pending[block.identifier] = []
+                self._wip_blocks.append(block)
                 LOGGER.debug("Block received: %s", block)
                 if (block.previous_block_id in self._blocks_processing
                         or block.previous_block_id in self._blocks_pending):
@@ -927,6 +933,9 @@ class ChainController(object):
                 return True
 
             return False
+
+    def get_wip_blocks(self):
+        return self._wip_blocks
 
     def _set_genesis(self, block):
         # This is used by a non-genesis journal when it has received the

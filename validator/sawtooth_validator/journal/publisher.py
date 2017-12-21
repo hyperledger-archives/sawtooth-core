@@ -423,6 +423,7 @@ class BlockPublisher(object):
                  config_dir,
                  permission_verifier,
                  check_publish_block_frequency,
+                 publishing_limiter,
                  batch_observers,
                  batch_injector_factory=None,
                  metrics_registry=None):
@@ -446,6 +447,9 @@ class BlockPublisher(object):
                 consensus module can be stored.
             config_dir (str): path to location where configuration can be
                 found.
+            publishing_limiter (:obj:`PublishingLimiter`): An implementation
+                of PublishingLimiter, used to reduce the number of attempts
+                to publish blocks.
             batch_injector_factory (:obj:`BatchInjectorFatctory`): A factory
                 for creating BatchInjectors.
             metrics_registry (MetricsRegistry): Metrics registry used to
@@ -481,6 +485,7 @@ class BlockPublisher(object):
         self._batch_queue = queue.Queue()
         self._queued_batch_ids = []
         self._batch_observers = batch_observers
+        self._limiter = publishing_limiter
         self._check_publish_block_frequency = check_publish_block_frequency
         self._publisher_thread = None
 
@@ -703,10 +708,10 @@ class BlockPublisher(object):
         """
         try:
             with self._lock:
-                if (self._chain_head is not None
-                        and self._candidate_block is None
-                        and self._pending_batches):
-                    self._build_candidate_block(self._chain_head)
+                if self._chain_head is not None:
+                    if self._candidate_block is None:
+                        if self._limiter.check_build_candidate_block():
+                            self._build_candidate_block(self._chain_head)
 
                 if self._candidate_block and (
                     force or
