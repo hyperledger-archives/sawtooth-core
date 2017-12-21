@@ -74,25 +74,29 @@ class _PublisherThread(InstrumentedThread):
             check_publish_block_frequency
         self._exit = False
 
+    @staticmethod
+    def _receive_for(recv_queue, duration):
+        now = time.time()
+        start_time = now
+        stop_time = start_time + duration
+        items = []
+        while now < stop_time:
+            try:
+                item = recv_queue.get(timeout=stop_time - now)
+                items.append(item)
+                now = time.time()
+            except queue.Empty:
+                return items
+
+        return items
+
     def run(self):
         try:
-            # make sure we don't check to publish the block
-            # to frequently.
-            next_check_publish_block_time = time.time() + \
-                self._check_publish_block_frequency
             while True:
-                try:
-                    batch = self._batch_queue.get(
-                        timeout=self._check_publish_block_frequency)
-                    self._block_publisher.on_batch_received(batch)
-                except queue.Empty:
-                    # If getting a batch times out, just try again.
-                    pass
-
-                if next_check_publish_block_time < time.time():
-                    self._block_publisher.on_check_publish_block()
-                    next_check_publish_block_time = time.time() + \
-                        self._check_publish_block_frequency
+                batches = self._receive_for(
+                    self._batch_queue, self._check_publish_block_frequency)
+                self._block_publisher.on_batches_received(batches)
+                self._block_publisher.on_check_publish_block()
                 if self._exit:
                     return
         # pylint: disable=broad-except
@@ -591,26 +595,30 @@ class BlockPublisher(object):
             else:
                 break
 
-    def on_batch_received(self, batch):
+    def on_batches_received(self, batches):
+        with self._lock:
+            for batch in batches:
+                self._on_batch_received(batch)
+
+    def _on_batch_received(self, batch):
         """
         A new batch is received, send it for validation
         :param batch: the new pending batch
         :return: None
         """
-        with self._lock:
-            self._queued_batch_ids = self._queued_batch_ids[:1]
-            if self._permission_verifier.is_batch_signer_authorized(batch):
-                self._pending_batches.append(batch)
-                self._pending_batch_ids.append(batch.header_signature)
-                self._set_gauge(len(self._pending_batches))
-                # if we are building a block then send schedule it for
-                # execution.
-                if self._candidate_block and \
-                        self._candidate_block.can_add_batch:
-                    self._candidate_block.add_batch(batch)
-            else:
-                LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
-                             batch.header_signature)
+        self._queued_batch_ids = self._queued_batch_ids[:1]
+        if self._permission_verifier.is_batch_signer_authorized(batch):
+            self._pending_batches.append(batch)
+            self._pending_batch_ids.append(batch.header_signature)
+            self._set_gauge(len(self._pending_batches))
+            # if we are building a block then send schedule it for
+            # execution.
+            if self._candidate_block and \
+                    self._candidate_block.can_add_batch:
+                self._candidate_block.add_batch(batch)
+        else:
+            LOGGER.debug("Batch has an unauthorized signer. Batch: %s",
+                         batch.header_signature)
 
     def _rebuild_pending_batches(self, committed_batches, uncommitted_batches):
         """When the chain head is changed. This recomputes the list of pending

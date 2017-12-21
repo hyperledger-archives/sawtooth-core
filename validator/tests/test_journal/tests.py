@@ -437,7 +437,7 @@ class TestBlockPublisher(unittest.TestCase):
     # publisher functions
 
     def receive_batch(self, batch):
-        self.publisher.on_batch_received(batch)
+        self.publisher.on_batches_received([batch])
 
     def receive_batches(self, batches=None):
         if batches is None:
