@@ -66,12 +66,12 @@ class PendingBatchObserver(metaclass=abc.ABCMeta):
 
 class _PublisherThread(InstrumentedThread):
     def __init__(self, block_publisher, batch_queue,
-                 check_publish_block_frequency):
+                 check_publish_block_interval):
         super().__init__(name='_PublisherThread')
         self._block_publisher = block_publisher
         self._batch_queue = batch_queue
-        self._check_publish_block_frequency = \
-            check_publish_block_frequency
+        self._check_publish_block_interval = \
+            check_publish_block_interval
         self._exit = False
 
     @staticmethod
@@ -94,7 +94,7 @@ class _PublisherThread(InstrumentedThread):
         try:
             while True:
                 batches = self._receive_for(
-                    self._batch_queue, self._check_publish_block_frequency)
+                    self._batch_queue, self._check_publish_block_interval)
                 self._block_publisher.on_batches_received(batches)
                 self._block_publisher.on_check_publish_block()
                 if self._exit:
@@ -426,7 +426,7 @@ class BlockPublisher(object):
                  data_dir,
                  config_dir,
                  permission_verifier,
-                 check_publish_block_frequency,
+                 check_publish_block_interval,
                  batch_observers,
                  batch_injector_factory=None,
                  metrics_registry=None):
@@ -485,14 +485,14 @@ class BlockPublisher(object):
         self._batch_queue = queue.Queue()
         self._queued_batch_ids = []
         self._batch_observers = batch_observers
-        self._check_publish_block_frequency = check_publish_block_frequency
+        self._check_publish_block_interval = check_publish_block_interval
         self._publisher_thread = None
 
     def start(self):
         self._publisher_thread = _PublisherThread(
             block_publisher=self,
             batch_queue=self._batch_queue,
-            check_publish_block_frequency=self._check_publish_block_frequency)
+            check_publish_block_interval=self._check_publish_block_interval)
         self._publisher_thread.start()
 
     def stop(self):
