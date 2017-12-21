@@ -21,6 +21,8 @@ from sawtooth_cli.network_command.parent_parsers import make_rest_apis
 from sawtooth_cli.network_command.fork_graph import ForkGraph
 from sawtooth_cli.network_command.fork_graph import SimpleBlock
 
+from sawtooth_cli.exceptions import CliException
+
 
 def add_compare_chains_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the compare command.
@@ -77,31 +79,63 @@ def do_compare_chains(args):
     urls = split_comma_append_args(args.urls)
     users = split_comma_append_args(args.users)
     clients = make_rest_apis(urls, users)
-    chains = get_chain_generators(clients)
+    chains, unreporting = get_chain_generators(clients)
+    for node in unreporting:
+        print("Error connecting to node %d: %s" % (node, urls[node]))
+    if not chains:
+        print("No nodes reporting")
+        return
+
+    node_id_map = get_node_id_map(unreporting, len(clients))
 
     tails = get_tails(chains)
     graph = build_fork_graph(chains, tails)
 
     if args.table:
-        print_table(graph, tails)
+        print_table(graph, tails, node_id_map)
 
     elif args.tree:
-        print_tree(graph, tails)
+        print_tree(graph, tails, node_id_map)
 
     else:
-        print_summary(graph, tails)
+        print_summary(graph, tails, node_id_map)
 
 
 def get_chain_generators(clients):
     # Convert the block dictionaries to simpler python data structures to
     # conserve memory and simplify interactions.
+    good_clients = []
+    bad_clients = []
+    for i, client in enumerate(clients):
+        try:
+            next(client.list_blocks(limit=1))
+            good_clients.append(client)
+        except CliException:
+            bad_clients.append(i)
+
+    if not heads:
+        return [], bad_clients
+
+    # Convert the block dictionaries to simpler python data structures to
+    # conserve memory and simplify interactions.
     return [
         map(SimpleBlock.from_block_dict, c.list_blocks(limit=3))
-        for c in clients
-    ]
+        for c in good_clients
+    ], bad_clients
 
 
-def print_summary(graph, tails):
+def get_node_id_map(unreporting, total):
+    node_id_map = {}
+    offset = 0
+    for i in range(total):
+        if i not in unreporting:
+            node_id_map[i - offset] = i
+        else:
+            offset += 1
+    return node_id_map
+
+
+def print_summary(graph, tails, node_id_map):
     """Print out summary and per-node comparison data."""
     # Get comparison data
     heads = get_heads(tails)
@@ -130,7 +164,9 @@ def print_summary(graph, tails):
     col_n = 8
     format_str = \
         '{:<' + str(col_1) + '} ' + ('{:<' + str(col_n) + '} ') * len(tails)
-    header = format_str.format("NODE", *list(range(len(tails))))
+
+    header = format_str.format("NODE",
+        *list(map(lambda node_id: node_id_map[node_id], range(len(tails)))))
     print(header)
     print('-' * len(header))
 
@@ -141,7 +177,7 @@ def print_summary(graph, tails):
     print()
 
 
-def print_table(graph, tails):
+def print_table(graph, tails, node_id_map):
     """Print out a table of nodes and the blocks they have at each block height
     starting with the common ancestor."""
     node_count = len(tails)
@@ -160,7 +196,7 @@ def print_table(graph, tails):
     for _ in range(node_count):
         format_str += '{:<' + str(node_col_width) + '} '
 
-    nodes_header = ["NODE " + str(i) for i in range(node_count)]
+    nodes_header = ["NODE " + str(node_id_map[i]) for i in range(node_count)]
     header = format_str.format("NUM", *nodes_header)
     print(header)
     print('-' * len(header))
@@ -185,7 +221,7 @@ def print_table(graph, tails):
     print(format_str.format(prev_block_num, *node_list))
 
 
-def print_tree(graph, tails):
+def print_tree(graph, tails, node_id_map):
     """Print out a tree of blocks starting from the common ancestor."""
     # Example:
     # |
@@ -259,7 +295,7 @@ def print_tree(graph, tails):
             # Do one last iteration after we've consumed the entire graph
             done = True
 
-        print_cliques(prev_cliques, cliques)
+        print_cliques(prev_cliques, cliques, node_id_map)
 
         print_block_num_row(block_num, prev_cliques, cliques)
 
@@ -269,7 +305,7 @@ def print_tree(graph, tails):
 
         prev_cliques = build_ordered_cliques(prev_cliques, cliques)
 
-    print_cliques(prev_cliques, [])
+    print_cliques(prev_cliques, [], node_id_map)
 
 
 def build_ordered_cliques(cliques, next_cliques):
@@ -356,7 +392,7 @@ def print_block_num_row(block_num, cliques, next_cliques):
         print(format_str.format(' '.join(branches), end))
 
 
-def print_cliques(cliques, next_cliques):
+def print_cliques(cliques, next_cliques, node_id_map):
     """Print a '*' on each branch with its block id and the ids of the nodes
     that have the block."""
     n_cliques = len(cliques)
@@ -397,8 +433,8 @@ def print_split(column_to_split, total_columns):
     print(out)
 
 
-def format_siblings(nodes):
-    return "{" + ", ".join(str(n) for n in nodes) + "}"
+def format_siblings(nodes, node_id_map):
+    return "{" + ", ".join(str(node_id_map[n]) for n in nodes) + "}"
 
 
 def get_heads(tails):
