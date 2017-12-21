@@ -14,9 +14,7 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import queue
 
-from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 
@@ -29,7 +27,8 @@ from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
 from sawtooth_validator.journal.chain_commit_state import DuplicateBatch
 from sawtooth_validator.journal.chain_commit_state import MissingDependency
-from sawtooth_validator.journal.block_scheduler import BlockValidationScheduler
+from sawtooth_validator.journal.block_pipeline import BlockPipelineStage
+from sawtooth_validator.journal.block_pipeline import SimpleReceiverThread
 from sawtooth_validator.journal.validation_rule_enforcer import \
     ValidationRuleEnforcer
 from sawtooth_validator.state.settings_view import SettingsViewFactory
@@ -75,44 +74,12 @@ def look_ahead(iterable):
     yield last, False
 
 
-class _BlockReceiveThread(InstrumentedThread):
-    """This thread's job is to pull blocks off of the queue and to submit them
-    for validation."""
-    def __init__(
-        self, block_queue, submit_function, callback_function,
-        exit_poll_interval=1
-    ):
-        super().__init__(name='_BlockReceiveThread')
-        self._block_queue = block_queue
-        self._submit_function = submit_function
-        self._callback_function = callback_function
-        self._exit_poll_interval = exit_poll_interval
-        self._exit = False
-
-    def run(self):
-        while True:
-            try:
-                # Set timeout so we can check if the thread has been stopped
-                block = self._block_queue.get(timeout=self._exit_poll_interval)
-                self._submit_function(block, self._callback_function)
-
-            except queue.Empty:
-                pass
-
-            if self._exit:
-                return
-
-    def stop(self):
-        self._exit = True
-
-
-class BlockValidator(object):
+class BlockValidator(BlockPipelineStage):
 
     def __init__(self,
                  block_cache,
                  state_view_factory,
                  transaction_executor,
-                 on_block_validated,
                  squash_handler,
                  identity_public_key,
                  data_dir,
@@ -122,7 +89,6 @@ class BlockValidator(object):
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
         self._transaction_executor = transaction_executor
-        self._on_block_validated = on_block_validated
         self._squash_handler = squash_handler
         self._identity_public_key = identity_public_key
         self._data_dir = data_dir
@@ -136,60 +102,26 @@ class BlockValidator(object):
         self._block_receive_thread = None
 
         # Blocks waiting to be scheduled
-        self._incoming_blocks = queue.Queue()
+        self._incoming = None
         # Blocks waiting to be processed
-        self._ready_blocks = queue.Queue()
+        self._outgoing = None
 
-        # The scheduler reads blocks off of the incoming queue and puts blocks
-        # on the ready queue when they are ready to be validated. This
-        # allows us to make some guarantees about blocks before they are
-        # validated and enable validating a single block at a time.
-        self._block_scheduler = BlockValidationScheduler(
-            self._incoming_blocks, self._ready_blocks, block_cache)
-
-    def start(self):
-        self._block_receive_thread = _BlockReceiveThread(
-            block_queue=self._ready_blocks,
-            submit_function=self._on_scheduled_block_received,
-            callback_function=self.on_block_validated)
+    def start(self, receiver, sender):
+        self._outgoing = sender
+        self._block_receive_thread = SimpleReceiverThread(
+            receiver=receiver,
+            executor=self._thread_pool,
+            task=self.submit_block_for_validation)
         self._block_receive_thread.start()
-        self._block_scheduler.start()
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)
         if self._block_receive_thread is not None:
             self._block_receive_thread.stop()
             self._block_receive_thread = None
-        self._block_scheduler.stop()
-
-    def queue_block(self, block):
-        """
-        New block has been received, queue it with the block validation
-        scheduler for processing.
-        """
-        self._incoming_blocks.put(block)
-
-    def on_block_validated(self, block):
-        self._block_scheduler.on_block_validated(block.header_signature)
-        self._on_block_validated(block)
-
-    def _on_scheduled_block_received(self, block, callback):
-        self.submit_blocks_for_validation([block], callback)
 
     def has_block(self, block_id):
-        # I am not convinced that any of these checks are necessary, since the
-        # block cache is checked in the completer and in_process and in_pending
-        # are checked in submit_blocks_for_validation.
-        if block_id in self._block_cache:
-            return True
-
-        if self._block_scheduler.is_processing(block_id):
-            return True
-
-        if self._block_scheduler.is_pending(block_id):
-            return True
-
-        return False
+        return block_id in self._block_cache
 
     def _get_previous_block(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -377,16 +309,14 @@ class BlockValidator(object):
                     self._state_view_factory))
         return ConsensusFactory.get_consensus_module('genesis')
 
-    def submit_blocks_for_validation(self, blocks, callback):
-        for block in blocks:
-            LOGGER.debug(
-                "Adding block %s for processing", block.identifier[:6])
+    def submit_block_for_validation(self, block):
+        LOGGER.debug(
+            "Adding block %s for processing", block.identifier[:6])
 
-            # Schedule the block for processing
-            self._thread_pool.submit(
-                self.process_block_validation, block, callback)
+        # Schedule the block for processing
+        self._thread_pool.submit(self.process_block_validation, block)
 
-    def process_block_validation(self, block, callback):
+    def process_block_validation(self, block):
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
@@ -403,7 +333,7 @@ class BlockValidator(object):
             if self.validate_block(block):
                 # Only pass the block onto the chain controller if it is valid
                 LOGGER.info("Finished block validation of: %s", block)
-                callback(block)
+                self._outgoing.send(block)
 
             else:
                 LOGGER.info("Block validation failed: %s", block)
