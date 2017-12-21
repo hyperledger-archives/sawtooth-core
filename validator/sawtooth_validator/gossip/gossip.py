@@ -450,8 +450,12 @@ class ConnectionManager(InstrumentedThread):
                     peers = self._gossip.get_peers()
                     peer_count = len(peers)
                     if peer_count < self._min_peers:
-                        LOGGER.debug("Below minimum peer threshold. "
-                                     "Doing topology search.")
+                        LOGGER.debug(
+                            "Number of peers (%s) below "
+                            "minimum peer threshold (%s). "
+                            "Doing topology search.",
+                            peer_count,
+                            self._min_peers)
 
                         self._reset_candidate_peer_endpoints()
                         self._refresh_peer_list(peers)
@@ -477,10 +481,11 @@ class ConnectionManager(InstrumentedThread):
                                 set(peered_endpoints) -
                                 set([self._endpoint]))
 
-                        LOGGER.debug("Number of peers: %s", peer_count)
-                        LOGGER.debug("Peers are: %s", peered_endpoints)
-                        LOGGER.debug("Unpeered candidates are: %s",
-                                     unpeered_candidates)
+                        LOGGER.debug(
+                            "Peers are: %s. "
+                            "Unpeered candidates are: %s",
+                            peered_endpoints,
+                            unpeered_candidates)
 
                         if unpeered_candidates:
                             self._attempt_to_peer_with_endpoint(

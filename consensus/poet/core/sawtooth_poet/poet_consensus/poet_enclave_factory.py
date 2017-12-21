@@ -61,18 +61,16 @@ class PoetEnclaveFactory(object):
                 poet_settings_view = PoetSettingsView(state_view)
                 module_name = poet_settings_view.enclave_module_name
 
-                LOGGER.info('Load PoET enclave module: %s', module_name)
                 LOGGER.info(
-                    'Target wait time: %f',
-                    poet_settings_view.target_wait_time)
-                LOGGER.info(
-                    'Initial wait time: %f',
-                    poet_settings_view.initial_wait_time)
-                LOGGER.info(
-                    'Population estimate sample size: %d',
-                    poet_settings_view.population_estimate_sample_size)
-                LOGGER.info(
+                    'Load PoET enclave module: %s; '
+                    'Target wait time: %f; '
+                    'Initial wait time: %f; '
+                    'Population estimate sample size: %d; '
                     'Minimum wait time: %f',
+                    module_name,
+                    poet_settings_view.target_wait_time,
+                    poet_settings_view.initial_wait_time,
+                    poet_settings_view.population_estimate_sample_size,
                     poet_settings_view.minimum_wait_time)
 
                 # Load and initialize the module
