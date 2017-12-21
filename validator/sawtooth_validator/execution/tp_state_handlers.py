@@ -45,7 +45,7 @@ class TpStateGetHandler(Handler):
                 validator_pb2.Message.TP_STATE_GET_RESPONSE)
 
         return_list = return_values if return_values is not None else []
-        LOGGER.debug("GET: %s", return_list)
+
         entry_list = [
             state_context_pb2.TpStateEntry(address=a, data=d)
             for a, d in return_list
@@ -90,7 +90,6 @@ class TpStateSetHandler(Handler):
             status=state_context_pb2.TpStateSetResponse.OK)
         if return_value is True:
             address_list = [e.address for e in set_request.entries]
-            LOGGER.debug("SET: %s", address_list)
             response.addresses.extend(address_list)
         else:
             LOGGER.debug("SET: No Values Set")
@@ -116,8 +115,9 @@ class TpStateDeleteHandler(Handler):
         delete_request = state_context_pb2.TpStateDeleteRequest()
         delete_request.ParseFromString(message_content)
         try:
-            return_values = self._context_manager.delete(
-                delete_request.context_id, list(delete_request.addresses))
+            self._context_manager.delete(
+                delete_request.context_id,
+                list(delete_request.addresses))
         except AuthorizationException:
             response = \
                 state_context_pb2.TpStateDeleteResponse(
@@ -128,7 +128,6 @@ class TpStateDeleteHandler(Handler):
                 response,
                 validator_pb2.Message.TP_STATE_DELETE_RESPONSE)
 
-        LOGGER.debug("DELETE: %s", return_values)
         response = state_context_pb2.TpStateDeleteResponse(
             addresses=delete_request.addresses,
             status=state_context_pb2.TpStateDeleteResponse.OK)
