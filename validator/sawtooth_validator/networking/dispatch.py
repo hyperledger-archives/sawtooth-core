@@ -21,6 +21,8 @@ import uuid
 import functools
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
+from sawtooth_validator.concurrent.threadpool import \
+    InstrumentedThreadPoolExecutor
 from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.metrics.wrappers import TimerWrapper
@@ -51,6 +53,8 @@ class Dispatcher(InstrumentedThread):
         self._metrics_registry = metrics_registry
         self._dispatch_timers = {}
         self._priority = {}
+        self._dispatch_executor = InstrumentedThreadPoolExecutor(
+            name='dispatch_pool')
 
     def _get_dispatch_timer(self, tag):
         if tag not in self._dispatch_timers:
@@ -180,11 +184,9 @@ class Dispatcher(InstrumentedThread):
 
             def do_next(timer_ctx, future):
                 timer_ctx.stop()
-                try:
-                    self._determine_next(message_id, future)
-                except Exception:  # pylint: disable=broad-except
-                    LOGGER.exception(
-                        "Unhandled exception while determining next")
+
+                self._dispatch_executor.submit(
+                    self._determine_next, message_id, future)
 
             future.add_done_callback(functools.partial(do_next, timer_ctx))
         except IndexError:
@@ -290,7 +292,7 @@ class Dispatcher(InstrumentedThread):
                 _, msg_id = self._in_queue.get()
                 if msg_id == -1:
                     break
-                self._process(msg_id)
+                self._dispatch_executor.submit(self._process, msg_id)
             except Exception:  # pylint: disable=broad-except
                 LOGGER.exception("Unhandled exception while dispatching")
 
