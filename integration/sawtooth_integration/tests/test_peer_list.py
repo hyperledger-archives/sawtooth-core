@@ -100,6 +100,10 @@ class TestPeerList(unittest.TestCase):
             sawnet_peers_output,
             expected_network)
 
+        # run `sawnet peers graph`, but don't verify output
+        subprocess.run(shlex.split(
+            'sawnet peers graph {}'.format(http_addresses)))
+
 
 def _get_peers(node_number, fmt='json'):
     cmd_output = _run_peer_command(
