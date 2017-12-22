@@ -59,7 +59,7 @@ def do_peer(args):
 
 def do_peer_list(args):
     rest_client = RestClient(base_url=args.url)
-    peers = rest_client.list_peers()
+    peers = sorted(rest_client.list_peers())
 
     if args.format == 'csv' or args.format == 'default':
         print(','.join(peers))
