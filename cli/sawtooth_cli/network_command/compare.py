@@ -24,6 +24,9 @@ from sawtooth_cli.network_command.fork_graph import SimpleBlock
 from sawtooth_cli.exceptions import CliException
 
 
+MAX_BLOCK_LIMIT = 1000
+
+
 def add_compare_chains_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the compare command.
     """
@@ -102,13 +105,16 @@ def do_compare_chains(args):
 
 
 def get_chain_generators(clients):
-    # Convert the block dictionaries to simpler python data structures to
-    # conserve memory and simplify interactions.
+    # Send one request to each client to determine if it is responsive or not.
+    # Use the heights of all the responding clients' heads to set the paging
+    # size for future requests, so that the number of requests is minimized.
+    heads = []
     good_clients = []
     bad_clients = []
     for i, client in enumerate(clients):
         try:
-            next(client.list_blocks(limit=1))
+            block = next(client.list_blocks(limit=1))
+            heads.append(SimpleBlock.from_block_dict(block))
             good_clients.append(client)
         except CliException:
             bad_clients.append(i)
@@ -116,10 +122,14 @@ def get_chain_generators(clients):
     if not heads:
         return [], bad_clients
 
+    max_height = max(block.num for block in heads)
+    min_height = min(block.num for block in heads)
+    limit = max(3, min(max_height - min_height, MAX_BLOCK_LIMIT))
+
     # Convert the block dictionaries to simpler python data structures to
     # conserve memory and simplify interactions.
     return [
-        map(SimpleBlock.from_block_dict, c.list_blocks(limit=3))
+        map(SimpleBlock.from_block_dict, c.list_blocks(limit=limit))
         for c in good_clients
     ], bad_clients
 
