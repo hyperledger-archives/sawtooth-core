@@ -18,6 +18,7 @@ import json
 import logging
 import threading
 import queue
+from collections import namedtuple
 
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import network_pb2
@@ -37,6 +38,9 @@ from sawtooth_validator.networking.future import FutureTimeoutError
 from sawtooth_validator.metrics.wrappers import CounterWrapper
 
 LOGGER = logging.getLogger(__name__)
+
+TransactionFamilies = namedtuple('TransactionFamilies',
+                                 ['state_hash', 'setting'])
 
 
 class TransactionExecutorThread(object):
@@ -85,6 +89,9 @@ class TransactionExecutorThread(object):
         self._invalid_observers = invalid_observers
         self._open_futures = {}
         self._metrics_registry = metrics_registry
+        # A tuple used to store a state_root_hash and the value of a
+        # tp_settings_key at that state_hash.
+        self._transaction_families = TransactionFamilies(None, None)
 
         if metrics_registry:
             self._transaction_execution_count = CounterWrapper(
@@ -176,11 +183,20 @@ class TransactionExecutorThread(object):
                 header.family_name,
                 header.family_version)
 
-            config = self._settings_view_factory.create_settings_view(
-                txn_info.state_hash)
-            transaction_families = config.get_setting(
-                key=self._tp_settings_key,
-                default_value="[]")
+            if txn_info.state_hash != self._transaction_families.state_hash:
+                config = self._settings_view_factory.create_settings_view(
+                    txn_info.state_hash)
+
+                transaction_families = config.get_setting(
+                    key=self._tp_settings_key,
+                    default_value="[]")
+
+                self._transaction_families = TransactionFamilies(
+                    state_hash=txn_info.state_hash,
+                    setting=transaction_families)
+
+            else:
+                transaction_families = self._transaction_families.setting
 
             # After reading the transaction families required in configuration
             # try to json.loads them into a python object
