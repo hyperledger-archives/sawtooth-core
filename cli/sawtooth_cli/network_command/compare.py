@@ -160,21 +160,39 @@ def print_summary(graph, tails, node_id_map):
     print()
 
     # Print per-node data
-    col_1 = 6
-    col_n = 8
-    format_str = \
-        '{:<' + str(col_1) + '} ' + ('{:<' + str(col_n) + '} ') * len(tails)
+    node_col_width = get_col_width_for_num(len(tails), len("NODE"))
+    num_col_width = get_col_width_for_num(max_height, len("HEIGHT"))
+    lag_col_width = get_col_width_for_num(max(lags), len("LAG"))
+    diverg_col_width = get_col_width_for_num(max(divergences), len("DIVERG"))
 
-    header = format_str.format("NODE",
-        *list(map(lambda node_id: node_id_map[node_id], range(len(tails)))))
+    format_str = (
+        '{:<' + str(node_col_width) + '} '
+        '{:<8} '
+        '{:<' + str(num_col_width) + '} '
+        '{:<' + str(lag_col_width) + '} '
+        '{:<' + str(diverg_col_width) + '}'
+    )
+
+    header = format_str.format("NODE", "HEAD", "HEIGHT", "LAG", "DIVERG")
     print(header)
     print('-' * len(header))
 
-    print(format_str.format("HEAD", *heads))
-    print(format_str.format("HEIGHT", *heights))
-    print(format_str.format("LAG", *lags))
-    print(format_str.format("DIVERG", *divergences))
+    for i, _ in enumerate(tails):
+        print(format_str.format(
+            node_id_map[i],
+            heads[i],
+            heights[i],
+            lags[i],
+            divergences[i],
+        ))
     print()
+
+
+def get_col_width_for_num(num, min_width):
+    assert num >= 0
+    if num == 0:
+        num = 1
+    return max(floor(log(num)) + 1, min_width)
 
 
 def print_table(graph, tails, node_id_map):
