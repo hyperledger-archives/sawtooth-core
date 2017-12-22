@@ -146,10 +146,10 @@ sawtooth block list
 ===================
 
 The ``sawtooth block list`` subcommand queries the Sawtooth REST API
-(default: ``http://localhost:8008``) for a list of all blocks in the
-current chain. It returns the id and number of each block, the public
-key of each signer, and the number of transactions and batches in
-each.
+(default: ``http://localhost:8008``) for a list of blocks in the
+current chain. Using the ``--limit`` option, the number of blocks returned can
+be configured. It returns the id and number of each block, the public key of
+each signer, and the number of transactions and batches in each.
 
 By default, this information is displayed as a white-space delimited
 table intended for display, but other plain-text formats (CSV, JSON,

@@ -114,10 +114,16 @@ class RestClient(object):
 
     def _get_data(self, path, **queries):
         url = self._base_url + path
+        params = self._format_queries(queries)
+
+        limit = None
+        if "limit" in params:
+            limit = params["limit"]
+
         while url:
             code, json_result = self._submit_request(
                 url,
-                params=self._format_queries(queries),
+                params=params,
             )
 
             if code == 404:
@@ -130,6 +136,11 @@ class RestClient(object):
 
             for item in json_result.get('data', []):
                 yield item
+
+            if limit:
+                limit = limit - len(json_result.get('data', []))
+                if limit <= 0:
+                    break
 
             url = json_result['paging'].get('next', None)
 
