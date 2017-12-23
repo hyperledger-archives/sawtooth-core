@@ -73,7 +73,6 @@ services:
     container_name: sawtooth-rest-api-local
     volumes:
       - ../../:/project/sawtooth-core
-      - 8008
     ports:
       - "8008:8008"
     depends_on:
