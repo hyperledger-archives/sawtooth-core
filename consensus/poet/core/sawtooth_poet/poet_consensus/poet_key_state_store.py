@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 PoetKeyState = \
     namedtuple(
         'PoetKeyState',
-        ['sealed_signup_data', 'has_been_refreshed'])
+        ['sealed_signup_data', 'has_been_refreshed', 'signup_nonce'])
 """ Instead of creating a full-fledged class, let's use a named tuple for
 the PoET key state.  The PoET key state represents the state for a
 validator's key that is stored in the PoET key state store.  A PoET key state
@@ -43,6 +43,8 @@ sealed_signup_data (str): The sealed signup data associated with the
 has_been_refreshed (bool): If this PoET has been used to create the key
     block claim limit number of blocks and a new key pair has been created
     to replace it.
+signup_nonce (str): Block ID used at signup time. Used as a time indicator
+    to check if this registration attempt has been timed out.
 """
 
 
@@ -127,6 +129,9 @@ class PoetKeyStateStore(MutableMapping):
 
             if not isinstance(poet_key_state.has_been_refreshed, bool):
                 raise ValueError('has_been_refreshed must be a bool')
+            if not isinstance(poet_key_state.signup_nonce, str):
+                raise ValueError('signup_nonce {} must be a string'.format(
+                    poet_key_state.signup_nonce))
         except (AttributeError, binascii.Error) as error:
             raise ValueError('poet_key_state is invalid: {}'.format(error))
 
@@ -228,11 +233,12 @@ class PoetKeyStateStore(MutableMapping):
         for poet_public_key in self:
             poet_key_state = self[poet_public_key]
             out.append(
-                '{}...{}: {{SSD: {}...{}, Refreshed: {}}}'.format(
+                '{}...{}: {{SSD: {}...{}, Refreshed: {} nonce:{}}}'.format(
                     poet_public_key[:8],
                     poet_public_key[-8:],
                     poet_key_state.sealed_signup_data[:8],
                     poet_key_state.sealed_signup_data[-8:],
-                    poet_key_state.has_been_refreshed))
+                    poet_key_state.has_been_refreshed,
+                    poet_key_state.signup_nonce))
 
         return ', '.join(out)
