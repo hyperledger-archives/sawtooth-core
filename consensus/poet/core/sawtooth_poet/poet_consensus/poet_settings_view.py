@@ -34,6 +34,7 @@ class PoetSettingsView(object):
     _KEY_BLOCK_CLAIM_LIMIT_ = 250
     # pylint: disable=invalid-name
     _POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50
+    _REGISTRATION_RETRY_DELAY_ = 10
     _SIGNUP_COMMIT_MAXIMUM_DELAY_ = 10
     _TARGET_WAIT_TIME_ = 20.0
     _ZTEST_MAXIMUM_WIN_DEVIATION_ = 3.075
@@ -56,8 +57,9 @@ class PoetSettingsView(object):
         self._initial_wait_time = None
         self._key_block_claim_limit = None
         self._population_estimate_sample_size = None
-        self._target_wait_time = None
+        self._registration_retry_delay = None
         self._signup_commit_maximum_delay = None
+        self._target_wait_time = None
         self._ztest_maximum_win_deviation = None
         self._ztest_minimum_win_count = None
 
@@ -207,6 +209,22 @@ class PoetSettingsView(object):
                     validate_function=lambda value: value > 0)
 
         return self._population_estimate_sample_size
+
+    @property
+    def registration_retry_delay(self):
+        """The number of blocks to wait before assuming a registration
+        transaction failed.
+        """
+        if self._registration_retry_delay is None:
+            self._registration_retry_delay = \
+                self._get_config_setting(
+                    name='sawtooth.poet._registration_retry_delay',
+                    value_type=int,
+                    default_value=PoetSettingsView.
+                    _REGISTRATION_RETRY_DELAY_,
+                    validate_function=lambda value: value > 1)
+
+        return self._registration_retry_delay
 
     @property
     def signup_commit_maximum_delay(self):
