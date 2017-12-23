@@ -577,6 +577,38 @@ class ConsensusState(object):
                 poet_public_key=validator_info.signup_info.poet_public_key,
                 total_block_claim_count=total_block_claim_count)
 
+    def signup_attempt_timed_out(self,
+                                 signup_nonce,
+                                 poet_settings_view,
+                                 block_cache):
+        """Checks whether too many blocks have elapsed since
+        since the registration attempt.
+
+        Args:
+            signup_nonce (string): nonce (~ block id) used in signup
+            poet_settings_view (PoetSettingsView): The current Poet config view
+            block_cache (BlockCache): The block store cache
+
+        Returns:
+            bool: True if too many blocks have elapsed; False if you just need
+            to chill out a little while longer.
+        """
+        # It's tempting to set this timeout as the lesser of retry_delay
+        # and signup_commit_maximum_delay, but then we can't individually
+        # control this timeout behavior. Consider behavior as a new node joins
+        # an old network.
+        depth = poet_settings_view.registration_retry_delay
+
+        i = 0
+        for block in block_cache.block_store.get_block_iter(reverse=True):
+            if i > depth:
+                return True
+            block_id = block.identifier
+            if signup_nonce == SignupInfo.block_id_to_nonce(block_id):
+                return False
+            i += 1
+        return False
+
     def validator_signup_was_committed_too_late(self,
                                                 validator_info,
                                                 poet_settings_view,

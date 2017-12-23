@@ -208,8 +208,35 @@ class PoetBlockPublisher(BlockPublisherInterface):
         self._poet_key_state_store[signup_info.poet_public_key] = \
             PoetKeyState(
                 sealed_signup_data=signup_info.sealed_signup_data,
-                has_been_refreshed=False)
+                has_been_refreshed=False,
+                signup_nonce=nonce)
         self._poet_key_state_store.active_key = signup_info.poet_public_key
+
+    def _handle_registration_timeout(self, block_header, poet_enclave_module,
+                                     state_view, signup_nonce,
+                                     poet_public_key):
+        # See if a registration attempt has timed out. Assumes the caller has
+        # checked for a committed registration and did not find it.
+        # If it has timed out then this method will re-register.
+        consensus_state = \
+            ConsensusState.consensus_state_for_block_id(
+                block_id=block_header.previous_block_id,
+                block_cache=self._block_cache,
+                state_view_factory=self._state_view_factory,
+                consensus_state_store=self._consensus_state_store,
+                poet_enclave_module=poet_enclave_module)
+        poet_settings_view = PoetSettingsView(state_view)
+
+        if consensus_state.signup_attempt_timed_out(
+                signup_nonce, poet_settings_view, self._block_cache):
+            LOGGER.error('My poet registration using PPK %s has not '
+                         'committed by block %s. Create new registration',
+                         poet_public_key,
+                         block_header.previous_block_id)
+            del self._poet_key_state_store[poet_public_key]
+            self._register_signup_information(
+                block_header=block_header,
+                poet_enclave_module=poet_enclave_module)
 
     def initialize_block(self, block_header):
         """Do initialization necessary for the consensus to claim a block,
@@ -271,7 +298,15 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 self._register_signup_information(
                     block_header=block_header,
                     poet_enclave_module=poet_enclave_module)
-
+            else:  # Check if we need to give up on this registration attempt
+                self._handle_registration_timeout(
+                    block_header=block_header,
+                    poet_enclave_module=poet_enclave_module,
+                    state_view=state_view,
+                    signup_nonce=self._poet_key_state_store[
+                        active_poet_public_key].signup_nonce,
+                    poet_public_key=active_poet_public_key
+                )
             return False
 
         # Retrieve the key state corresponding to the PoET public key in our
@@ -308,7 +343,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 validator_info.signup_info.poet_public_key] = \
                 PoetKeyState(
                     sealed_signup_data=dummy_data,
-                    has_been_refreshed=True)
+                    has_been_refreshed=True,
+                    signup_nonce='unknown')
 
             return False
 
@@ -321,6 +357,15 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 'key to show up in validator registry.',
                 validator_info.signup_info.poet_public_key[:8],
                 validator_info.signup_info.poet_public_key[-8:])
+
+            # Check if we need to give up on this registration attempt
+            self._handle_registration_timeout(
+                block_header=block_header,
+                poet_enclave_module=poet_enclave_module,
+                state_view=state_view,
+                signup_nonce=poet_key_state.signup_nonce,
+                poet_public_key=poet_key_state.poet_public_key
+            )
             return False
 
         # If the PoET public key in the validator registry is not the active
@@ -404,10 +449,12 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     active_poet_public_key[-8:])
 
                 sealed_signup_data = poet_key_state.sealed_signup_data
+                signup_nonce = poet_key_state.signup_nonce
                 self._poet_key_state_store[active_poet_public_key] = \
                     PoetKeyState(
                         sealed_signup_data=sealed_signup_data,
-                        has_been_refreshed=True)
+                        has_been_refreshed=True,
+                        signup_nonce=signup_nonce)
 
                 # Release enclave resources for this identity
                 # This signup will be invalid on all forks that use it,

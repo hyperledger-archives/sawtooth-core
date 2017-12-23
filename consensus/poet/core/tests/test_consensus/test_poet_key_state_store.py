@@ -90,7 +90,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
             'ppk_1':
                 poet_key_state_store.PoetKeyState(
                     sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
-                    has_been_refreshed=False)
+                    has_been_refreshed=False,
+                    signup_nonce='single-use-only')
         }
 
         store = \
@@ -110,7 +111,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
             'ppk_1':
                 poet_key_state_store.PoetKeyState(
                     sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
-                    has_been_refreshed=False)
+                    has_been_refreshed=False,
+                    signup_nonce='single-use-only')
         }
 
         store = \
@@ -134,7 +136,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
             'ppk_1':
                 poet_key_state_store.PoetKeyState(
                     sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
-                    has_been_refreshed=False)
+                    has_been_refreshed=False,
+                    signup_nonce='single-use-only')
         }
 
         store = \
@@ -184,12 +187,14 @@ class TestPoetKeyStateStore(unittest.TestCase):
         store['ppk_1'] = \
             poet_key_state_store.PoetKeyState(
                 sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
-                has_been_refreshed=False)
+                has_been_refreshed=False,
+                signup_nonce='single-use-only')
         self.assertEqual(len(store), 1)
         store['ppk_2'] =  \
             poet_key_state_store.PoetKeyState(
                 sealed_signup_data=base64.b64encode(b'sealed_2').decode(),
-                has_been_refreshed=False)
+                has_been_refreshed=False,
+                signup_nonce='single-use-only')
         self.assertEqual(len(store), 2)
 
         # Delete values and verify that the length reflects it
@@ -220,11 +225,13 @@ class TestPoetKeyStateStore(unittest.TestCase):
         store['ppk_1'] = \
             poet_key_state_store.PoetKeyState(
                 sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
-                has_been_refreshed=False)
+                has_been_refreshed=False,
+                signup_nonce='single-use-only')
         store['ppk_2'] =  \
             poet_key_state_store.PoetKeyState(
                 sealed_signup_data=base64.b64encode(b'sealed_2').decode(),
-                has_been_refreshed=False)
+                has_been_refreshed=False,
+                signup_nonce='single-use-only')
 
         del store['ppk_1']
         self.assertFalse('ppk_1' in store)
@@ -258,12 +265,14 @@ class TestPoetKeyStateStore(unittest.TestCase):
         store['ppk_1'] = \
             poet_key_state_store.PoetKeyState(
                 sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
-                has_been_refreshed=False)
+                has_been_refreshed=False,
+                signup_nonce='single-use-only')
         self.assertTrue('ppk_1' in store)
         store['ppk_2'] =  \
             poet_key_state_store.PoetKeyState(
                 sealed_signup_data=base64.b64encode(b'sealed_2').decode(),
-                has_been_refreshed=False)
+                has_been_refreshed=False,
+                signup_nonce='single-use-only')
         self.assertTrue('ppk_1' in store)
         self.assertTrue('ppk_2' in store)
 
@@ -303,7 +312,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
                 poet_key_state_store.PoetKeyState(
                     sealed_signup_data=base64.b64encode(
                         'sealed for {}'.format(ppk).encode()).decode(),
-                    has_been_refreshed=False)
+                    has_been_refreshed=False,
+                    signup_nonce='single-use-only')
 
         iterated_ppks = []
         for ppk in store:
@@ -360,7 +370,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
                 poet_key_state_store.PoetKeyState(
                     sealed_signup_data=base64.b64encode(
                         'sealed for {}'.format(ppk).encode()).decode(),
-                    has_been_refreshed=False)
+                    has_been_refreshed=False,
+                    signup_nonce='single-use-only')
 
         self.assertEqual(len(store.poet_public_keys), len(ppks))
         self.assertEqual(sorted(ppks), sorted(store.poet_public_keys))
@@ -400,7 +411,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
         store['ppk_1'] = \
             poet_key_state_store.PoetKeyState(
                 sealed_signup_data=base64.b64encode(b'sealed_1').decode(),
-                has_been_refreshed=False)
+                has_been_refreshed=False,
+                signup_nonce='single-use-only')
         poet_key_state = store['ppk_1']
         self.assertEqual(
             poet_key_state.sealed_signup_data,
@@ -411,7 +423,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
         store['ppk_2'] =  \
             poet_key_state_store.PoetKeyState(
                 sealed_signup_data=base64.b64encode(b'sealed_2').decode(),
-                has_been_refreshed=True)
+                has_been_refreshed=True,
+                signup_nonce='single-use-only')
 
         poet_key_state = store['ppk_2']
         self.assertEqual(
@@ -458,7 +471,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
                 store['ppk_1'] = \
                     poet_key_state_store.PoetKeyState(
                         sealed_signup_data=sealed_signup_data,
-                        has_been_refreshed=False)
+                        has_been_refreshed=False,
+                        signup_nonce='single-use-only')
 
         # Store corrupted base64 sealed signup data
         with self.assertRaises(ValueError):
@@ -466,7 +480,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
                 poet_key_state_store.PoetKeyState(
                     sealed_signup_data=base64.b64encode(
                         b'sealed_1').decode()[1:],
-                    has_been_refreshed=False)
+                    has_been_refreshed=False,
+                    signup_nonce='single-use-only')
 
         # Store non-bool has_been_refreshed field
         sealed_signup_data = base64.b64encode(b'sealed').decode()
@@ -475,7 +490,8 @@ class TestPoetKeyStateStore(unittest.TestCase):
                 store['ppk_1'] = \
                     poet_key_state_store.PoetKeyState(
                         sealed_signup_data=sealed_signup_data,
-                        has_been_refreshed=has_been_refreshed)
+                        has_been_refreshed=has_been_refreshed,
+                        signup_nonce='single-use-only')
 
     @patch('sawtooth_poet.poet_consensus.poet_key_state_store.'
            'LMDBNoLockDatabase')
