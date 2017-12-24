@@ -7,4 +7,4 @@ services:
     container_name: run-lint
     volumes:
       - ../../:/project/sawtooth-core
-    entrypoint: run_lint
+    entrypoint: run_lint -s master
