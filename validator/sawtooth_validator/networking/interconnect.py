@@ -19,7 +19,6 @@ from functools import partial
 import hashlib
 import logging
 import queue
-import sys
 from threading import Event
 from threading import Lock
 import time
@@ -280,10 +279,6 @@ class _SendReceive(object):
                     yield from self._dispatcher_queue.get()
                 message = validator_pb2.Message()
                 message.ParseFromString(msg_bytes)
-                LOGGER.debug("%s receiving %s message: %s bytes",
-                             self._connection,
-                             get_enum_name(message.message_type),
-                             sys.getsizeof(msg_bytes))
 
                 tag = get_enum_name(message.message_type)
                 self._get_received_message_counter(tag).inc()
@@ -308,13 +303,7 @@ class _SendReceive(object):
                                               connection_id)
                 else:
                     my_future = self._futures.get(message.correlation_id)
-
-                    LOGGER.debug("message round "
-                                 "trip: %s %s",
-                                 get_enum_name(message.message_type),
-                                 my_future.get_duration())
                     my_future.timer_stop()
-
                     self._futures.remove(message.correlation_id)
 
             except CancelledError:
@@ -373,11 +362,6 @@ class _SendReceive(object):
                              connection_id)
 
         self._ready.wait()
-
-        LOGGER.debug("%s sending %s to %s",
-                     self._connection,
-                     get_enum_name(msg.message_type),
-                     zmq_identity if zmq_identity else self._address)
 
         if zmq_identity is None:
             message_bundle = [msg.SerializeToString()]
