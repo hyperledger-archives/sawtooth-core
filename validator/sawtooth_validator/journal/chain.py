@@ -260,9 +260,10 @@ class BlockValidator(object):
             try:
                 state_root = self._get_previous_block_root_state_hash(blkw)
             except KeyError:
-                LOGGER.debug(
-                    "Block rejected due to missing" + " predecessor: %s", blkw)
+                LOGGER.info(
+                    "Block rejected due to missing predecessor: %s", blkw)
                 return False
+
             for batch in blkw.batches:
                 if not self._permission_verifier.is_batch_signer_authorized(
                         batch, state_root):
@@ -355,13 +356,12 @@ class BlockValidator(object):
                     new_blkw.previous_block_id != NULL_BLOCK_IDENTIFIER:
                 new_chain.append(new_blkw)
                 try:
-                    new_blkw = \
-                        self._block_cache[
-                            new_blkw.previous_block_id]
+                    new_blkw = self._block_cache[new_blkw.previous_block_id]
                 except KeyError:
-                    LOGGER.debug(
-                        "Block rejected due to missing" + " predecessor: %s",
-                        new_blkw)
+                    LOGGER.info(
+                        "Block %s rejected due to missing predecessor %s",
+                        new_blkw,
+                        new_blkw.previous_block_id)
                     for b in new_chain:
                         b.status = BlockStatus.Invalid
                     raise BlockValidationAborted()
@@ -392,9 +392,10 @@ class BlockValidator(object):
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
-                LOGGER.debug(
-                    "Block rejected due to missing" + " predecessor: %s",
-                    new_blkw)
+                LOGGER.info(
+                    "Block %s rejected due to missing predecessor %s",
+                    new_blkw,
+                    new_blkw.previous_block_id)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
                 raise BlockValidationAborted()
@@ -474,7 +475,7 @@ class BlockValidator(object):
                     self._result["num_transactions"] += block.num_transactions
                 else:
                     LOGGER.info(
-                        "Block marked invalid(invalid predecessor): " + "%s",
+                        "Block marked invalid (invalid predecessor): %s",
                         block)
                     block.status = BlockStatus.Invalid
 
@@ -747,7 +748,6 @@ class ChainController(object):
         try:
             with self._lock:
                 new_block = result["new_block"]
-                LOGGER.info("on_block_validated: %s", new_block)
 
                 # remove from the processing list
                 del self._blocks_processing[new_block.identifier]
