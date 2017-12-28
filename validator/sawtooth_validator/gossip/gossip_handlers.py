@@ -135,8 +135,6 @@ class GossipMessageDuplicateHandler(Handler):
                 has_block = True
 
             if has_block:
-                LOGGER.debug("Drop duplicate block: %s",
-                             block.header_signature)
                 return HandlerResult(HandlerStatus.DROP)
 
         if gossip_message.content_type == gossip_message.BATCH:
@@ -150,8 +148,6 @@ class GossipMessageDuplicateHandler(Handler):
                 has_batch = True
 
             if has_batch:
-                LOGGER.debug("Drop duplicate batch: %s",
-                             batch.header_signature)
                 return HandlerResult(HandlerStatus.DROP)
 
         return HandlerResult(HandlerStatus.PASS)
@@ -175,7 +171,6 @@ class GossipBlockResponseHandler(Handler):
         ack.status = ack.OK
 
         if not self._has_open_requests(block_id) and self._has_block(block_id):
-            LOGGER.debug('Drop duplicate block: %s', block_id)
             return HandlerResult(
                 HandlerStatus.RETURN,
                 message_out=ack,
@@ -213,7 +208,6 @@ class GossipBatchResponseHandler(Handler):
         ack.status = ack.OK
 
         if not self._has_open_requests(batch_id) and self._has_batch(batch_id):
-            LOGGER.debug('Drop duplicate batch: %s', batch_id)
             return HandlerResult(
                 HandlerStatus.RETURN,
                 message_out=ack,
