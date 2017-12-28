@@ -13,6 +13,7 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
 import time
 from urllib.parse import urlparse, parse_qs
 
@@ -20,6 +21,8 @@ from sawtooth_cli.rest_client import RestClient
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.exceptions import RestClientException
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+
+LOGGER = logging.getLogger(__name__)
 
 
 class IntkeyClient(RestClient):
@@ -41,7 +44,7 @@ class IntkeyClient(RestClient):
                 return parse_qs(id_query)['id'][0]
             except CliException:
                 if attempts < 8:
-                    print('responding to back-pressure, retrying...')
+                    LOGGER.info('responding to back-pressure, retrying...')
                     attempts += 1
                     time.sleep(0.2 * (2 ** attempts))
                 else:
