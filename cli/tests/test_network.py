@@ -15,6 +15,7 @@
 import unittest
 
 from sawtooth_cli.network_command.compare import build_fork_graph
+from sawtooth_cli.network_command.compare import get_node_id_map
 from sawtooth_cli.network_command.compare import get_tails
 from sawtooth_cli.network_command.compare import print_table
 from sawtooth_cli.network_command.compare import print_tree
@@ -96,9 +97,13 @@ class TestNetworkCompare(unittest.TestCase):
 
         self.assertEqual(len(checks), expected_checks)
 
-        print_table(graph, tails)
+        node_id_map = get_node_id_map([], len(tails))
+
+        print_table(graph, tails, node_id_map)
         print()
-        print_tree(graph, tails)
+
+        print_tree(graph, tails, node_id_map)
+        print()
 
     def test_simple_graph(self):
         """Test that building the fork graph works correctly for a simple
