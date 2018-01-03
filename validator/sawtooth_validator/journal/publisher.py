@@ -36,6 +36,7 @@ from sawtooth_validator.journal.chain_commit_state import \
     TransactionCommitCache
 
 from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator.metrics.wrappers import GaugeWrapper
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -476,14 +477,14 @@ class BlockPublisher(object):
         self._batch_injector_factory = batch_injector_factory
 
         # For metric gathering
-        self._pending_batch_gauge = \
-            metrics_registry.gauge('pending_batch_gauge') \
-            if metrics_registry else None
         if metrics_registry:
+            self._pending_batch_gauge = GaugeWrapper(
+                metrics_registry.gauge('pending_batch_gauge'))
             self._blocks_published_count = CounterWrapper(
                 metrics_registry.counter('blocks_published_count'))
         else:
             self._blocks_published_count = CounterWrapper()
+            self._pending_batch_gauge = GaugeWrapper()
 
         self._batch_queue = queue.Queue()
         self._queued_batch_ids = []
@@ -609,7 +610,7 @@ class BlockPublisher(object):
             if self._permission_verifier.is_batch_signer_authorized(batch):
                 self._pending_batches.append(batch)
                 self._pending_batch_ids.append(batch.header_signature)
-                self._set_gauge(len(self._pending_batches))
+                self._pending_batch_gauge.set_value(len(self._pending_batches))
                 # if we are building a block then send schedule it for
                 # execution.
                 if self._candidate_block and \
@@ -695,7 +696,8 @@ class BlockPublisher(object):
                                                   uncommitted_batches)
                     self._build_candidate_block(chain_head)
 
-                    self._set_gauge(len(self._pending_batches))
+                    self._pending_batch_gauge.set_value(
+                        len(self._pending_batches))
 
         # pylint: disable=broad-except
         except Exception as exc:
@@ -734,7 +736,8 @@ class BlockPublisher(object):
                         self._pending_batches[last_batch_index + 1:]
                     self._pending_batches = pending_batches + unsent_batches
 
-                    self._set_gauge(len(self._pending_batches))
+                    self._pending_batch_gauge.set_value(
+                        len(self._pending_batches))
 
                     if block:
                         blkw = BlockWrapper(block)
@@ -753,10 +756,6 @@ class BlockPublisher(object):
         except Exception as exc:
             LOGGER.critical("on_check_publish_block exception.")
             LOGGER.exception(exc)
-
-    def _set_gauge(self, value):
-        if self._pending_batch_gauge:
-            self._pending_batch_gauge.set_value(value)
 
     def has_batch(self, batch_id):
         with self._lock:
