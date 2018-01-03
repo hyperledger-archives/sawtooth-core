@@ -100,7 +100,8 @@ class BlockValidator(object):
                  identity_signer,
                  data_dir,
                  config_dir,
-                 permission_verifier):
+                 permission_verifier,
+                 metrics_registry=None):
         """Initialize the BlockValidator
         Args:
              consensus_module: The consensus module that contains
@@ -152,6 +153,12 @@ class BlockValidator(object):
 
         self._validation_rule_enforcer = \
             ValidationRuleEnforcer(SettingsViewFactory(state_view_factory))
+
+        if metrics_registry:
+            self._moved_to_fork_count = CounterWrapper(
+                metrics_registry.counter('chain_head_moved_to_fork_count'))
+        else:
+            self._moved_to_fork_count = CounterWrapper()
 
     def _get_previous_block_root_state_hash(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -508,6 +515,10 @@ class BlockValidator(object):
                  self._result["uncommitted_batches"]) = \
                     self._compute_batch_change(new_chain, cur_chain)
 
+                if new_chain[0].previous_block_id != \
+                        self._chain_head.identifier:
+                    self._moved_to_fork_count.inc()
+
             # 6) Tell the journal we are done.
             self._done_cb(commit_new_chain, self._result)
 
@@ -644,6 +655,7 @@ class ChainController(object):
 
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
+        self._metrics_registry = metrics_registry
 
         if metrics_registry:
             self._chain_head_gauge = GaugeWrapper(
@@ -734,7 +746,8 @@ class ChainController(object):
                 identity_signer=self._identity_signer,
                 data_dir=self._data_dir,
                 config_dir=self._config_dir,
-                permission_verifier=self._permission_verifier)
+                permission_verifier=self._permission_verifier,
+                metrics_registry=self._metrics_registry)
             self._blocks_processing[blkw.block.header_signature] = validator
             self._thread_pool.submit(validator.run)
 
@@ -959,7 +972,8 @@ class ChainController(object):
                     identity_signer=self._identity_signer,
                     data_dir=self._data_dir,
                     config_dir=self._config_dir,
-                    permission_verifier=self._permission_verifier)
+                    permission_verifier=self._permission_verifier,
+                    metrics_registry=self._metrics_registry)
 
                 valid = validator.validate_block(block)
                 if valid:
