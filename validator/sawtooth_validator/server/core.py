@@ -307,7 +307,7 @@ class Validator(object):
             block_store, batch_tracker, global_state_db,
             self.get_chain_head_state_root_hash, receipt_store,
             event_broadcaster, permission_verifier, component_thread_pool,
-            sig_pool, block_publisher)
+            sig_pool, block_publisher, metrics_registry)
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher

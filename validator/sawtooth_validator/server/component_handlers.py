@@ -62,7 +62,8 @@ def add(
         permission_verifier,
         thread_pool,
         sig_pool,
-        block_publisher
+        block_publisher,
+        metrics_registry=None
 ):
 
     # -- Transaction Processor -- #
@@ -114,7 +115,8 @@ def add(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
         ClientBatchSubmitBackpressureHandler(
             block_publisher.can_accept_batch,
-            block_publisher.get_current_queue_info
+            block_publisher.get_current_queue_info,
+            metrics_registry=metrics_registry
         ),
         thread_pool)
 

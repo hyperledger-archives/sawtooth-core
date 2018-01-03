@@ -55,6 +55,11 @@ class GaugeWrapper():
         if self._gauge:
             self._gauge.set_value(val)
 
+    def get_value(self):
+        if self._gauge:
+            return self._gauge.get_value()
+        return 0
+
 
 class NoopTimerContext():
     def __enter__(self):
