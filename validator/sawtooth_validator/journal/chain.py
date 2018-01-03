@@ -652,10 +652,13 @@ class ChainController(object):
                 metrics_registry.counter('committed_transactions_count'))
             self._block_num_gauge = GaugeWrapper(
                 metrics_registry.gauge('block_num'))
+            self._blocks_considered_count = CounterWrapper(
+                metrics_registry.counter('blocks_considered_count'))
         else:
             self._chain_head_gauge = GaugeWrapper()
             self._committed_transactions_count = CounterWrapper()
             self._block_num_gauge = GaugeWrapper()
+            self._blocks_considered_count = CounterWrapper()
 
         self._block_queue = queue.Queue()
         self._thread_pool = (
@@ -747,6 +750,7 @@ class ChainController(object):
         """
         try:
             with self._lock:
+                self._blocks_considered_count.inc()
                 new_block = result["new_block"]
 
                 # remove from the processing list
