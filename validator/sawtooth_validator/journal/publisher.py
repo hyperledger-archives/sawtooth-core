@@ -35,6 +35,8 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
 from sawtooth_validator.journal.chain_commit_state import \
     TransactionCommitCache
 
+from sawtooth_validator.metrics.wrappers import CounterWrapper
+
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
@@ -477,6 +479,11 @@ class BlockPublisher(object):
         self._pending_batch_gauge = \
             metrics_registry.gauge('pending_batch_gauge') \
             if metrics_registry else None
+        if metrics_registry:
+            self._blocks_published_count = CounterWrapper(
+                metrics_registry.counter('blocks_published_count'))
+        else:
+            self._blocks_published_count = CounterWrapper()
 
         self._batch_queue = queue.Queue()
         self._queued_batch_ids = []
@@ -733,6 +740,7 @@ class BlockPublisher(object):
                         blkw = BlockWrapper(block)
                         LOGGER.info("Claimed Block: %s", blkw)
                         self._block_sender.send(blkw.block)
+                        self._blocks_published_count.inc()
 
                         # We built our candidate, disable processing until
                         # the chain head is updated. Only set this if
