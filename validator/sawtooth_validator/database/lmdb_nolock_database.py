@@ -63,7 +63,7 @@ class LMDBNoLockDatabase(database.Database):
 
     def contains_key(self, key, index=None):
         with self._lmdb.begin() as txn:
-            return bool(txn.get(key.encode()) is not None)
+            return txn.get(key.encode()) is not None
 
     def get_multi(self, keys, index=None):
         with self._lmdb.begin() as txn:
