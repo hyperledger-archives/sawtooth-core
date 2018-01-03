@@ -82,17 +82,47 @@ def do_compare_chains(args):
     urls = split_comma_append_args(args.urls)
     users = split_comma_append_args(args.users)
     clients = make_rest_apis(urls, users)
-    chains, unreporting = get_chain_generators(clients)
-    for node in unreporting:
+
+    broken = []
+
+    chains, errors = get_chain_generators(clients)
+    broken.extend(errors)
+    for node in errors:
         print("Error connecting to node %d: %s" % (node, urls[node]))
     if not chains:
         print("No nodes reporting")
         return
 
-    node_id_map = get_node_id_map(unreporting, len(clients))
+    tails, errors = get_tails(chains)
+    broken.extend(errors)
+    for node in errors:
+        del chains[node]
+    for node in errors:
+        print("Failed to reach common height with node %d: %s" % (
+            node, urls[node]))
+    if not chains:
+        print("Failed to get common height")
+        return
 
-    tails = get_tails(chains)
-    graph = build_fork_graph(chains, tails)
+    graph, errors = build_fork_graph(chains, tails)
+    broken.extend(errors)
+    for node in errors:
+        print("Failed to reach common ancestor with node %d: %s" % (
+            node, urls[node]))
+    if not graph:
+        print("Failed to build fork graph")
+        return
+
+    # Transform tails and errors into the format expected by the print
+    # functions. Because errors can occur while building the graph, we need to
+    # remove the tails for those clients.
+    broken.sort()
+    node_id_map = get_node_id_map(broken, len(clients))
+    tails = list(map(
+        lambda item: item[1],
+        filter(
+            lambda item: item[0] not in broken,
+            sorted(tails.items()))))
 
     if args.table:
         print_table(graph, tails, node_id_map)
@@ -120,7 +150,7 @@ def get_chain_generators(clients):
             bad_clients.append(i)
 
     if not heads:
-        return [], bad_clients
+        return {}, bad_clients
 
     max_height = max(block.num for block in heads)
     min_height = min(block.num for block in heads)
@@ -128,10 +158,18 @@ def get_chain_generators(clients):
 
     # Convert the block dictionaries to simpler python data structures to
     # conserve memory and simplify interactions.
-    return [
-        map(SimpleBlock.from_block_dict, c.list_blocks(limit=limit))
-        for c in good_clients
-    ], bad_clients
+    return {
+        i: map(SimpleBlock.from_block_dict, c.list_blocks(limit=limit))
+        for i, c in enumerate(good_clients)
+    }, bad_clients
+
+
+def prune_unreporting_peers(graph, unreporting):
+    for _, _, siblings in graph.walk():
+        for _, peers in siblings.items():
+            for bad_peer in unreporting:
+                if bad_peer in peers:
+                    peers.remove(bad_peer)
 
 
 def get_node_id_map(unreporting, total):
@@ -491,29 +529,45 @@ def get_tails(chains):
     Args:
         An ordered collection of block generators.
 
-    Returns a list of blocks for all chains where:
-        1. The first block in all the lists has the same block number
-        2. Each list has all blocks from the common block to the current block
-           in increasing order
+    Returns
+        A dictionary of lists of blocks for all chains where:
+            1. The first block in all the lists has the same block number
+            2. Each list has all blocks from the common block to the current
+               block in increasing order
+            3. The dictionary key is the index of the chain in `chains` that
+               the list was generated from
+        A list of indexes of the chains that had communication problems.
     """
 
     def get_num_of_oldest(blocks):
         return blocks[0].num
 
     # Get the first block from every chain
-    tails = [[next(chain)] for chain in chains]
+    tails = {}
+    bad_chains = []
+    for i, chain in chains.items():
+        try:
+            tails[i] = [next(chain)]
+        except StopIteration:
+            bad_chains.append(i)
 
     # Find the minimum block number between all chains
-    min_block_num = min(map(get_num_of_oldest, tails))
+    min_block_num = min(map(get_num_of_oldest, tails.values()))
 
     # Walk all chains back to the minimum block number, adding blocks to the
     # chain lists as we go
-    for i, chain in enumerate(chains):
-        tail = tails[i]
-        while get_num_of_oldest(tail) > min_block_num:
-            tail.insert(0, next(chain))
+    for i, chain in chains.items():
+        if i not in bad_chains:
+            tail = tails[i]
+            while get_num_of_oldest(tail) > min_block_num:
+                try:
+                    block = next(chain)
+                except StopIteration:
+                    bad_chains.append(i)
+                    break
+                tail.insert(0, block)
 
-    return tails
+    return tails, bad_chains
 
 
 def _compare_across(collections, key):
@@ -532,28 +586,41 @@ def build_fork_graph(chains, tails):
         the point where they are all at the same block height and the tails of
         the chains from that block height (in the same order).
 
-    Returns a ForkGraph.
+    Returns:
+        A ForkGraph
+        A list of indexes of the chains that had communication problems.
     """
     graph = ForkGraph()
+    bad_chains = []
 
     # Add tails to the graph first
-    for i, tail in enumerate(tails):
+    for i, tail in tails.items():
         for block in reversed(tail):
             graph.add_block(i, block)
 
     # If we are already at the common ancestor, stop
     if _compare_across(
-        [tail[0] for tail in tails], key=lambda block: block.ident
+        [tail[0] for tail in tails.values()], key=lambda block: block.ident
     ):
-        return graph
+        return graph, bad_chains
 
     # Chains should now all be at the same height, so we can walk back
     # to common ancestor
     while True:
-        heads = [next(chain) for chain in chains]
-        for i, block in enumerate(heads):
+        heads = []
+        for i, chain in chains.items():
+            if i not in bad_chains:
+                try:
+                    head = next(chain)
+                except StopIteration:
+                    bad_chains.append(i)
+                heads.append((i, head))
+
+        for i, block in heads:
             graph.add_block(i, block)
-        if _compare_across(heads, key=lambda block: block.ident):
+        if _compare_across(heads, key=lambda head: head[1].ident):
             break
 
-    return graph
+    prune_unreporting_peers(graph, bad_chains)
+
+    return graph, bad_chains
