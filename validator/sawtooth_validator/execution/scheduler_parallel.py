@@ -37,9 +37,9 @@ _AnnotatedBatch = namedtuple('ScheduledBatch',
 
 
 class PredecessorTreeNode:
-    def __init__(self, children=None, readers=None, writer=None):
-        self.children = children if children is not None else {}
-        self.readers = readers if readers is not None else []
+    def __init__(self, children, readers, writer=None):
+        self.children = children
+        self.readers = readers
         self.writer = writer
 
     def __repr__(self):
@@ -59,7 +59,7 @@ class PredecessorTreeNode:
 class PredecessorTree:
     def __init__(self, token_size=2):
         self._token_size = token_size
-        self._root = PredecessorTreeNode()
+        self._root = PredecessorTreeNode(children={}, readers=[])
 
     def __repr__(self):
         return repr(self._root)
@@ -80,7 +80,7 @@ class PredecessorTree:
             else:
                 if not create:
                     return None
-                child = PredecessorTreeNode()
+                child = PredecessorTreeNode(children={}, readers=[])
                 node.children[token] = child
                 node = child
 
