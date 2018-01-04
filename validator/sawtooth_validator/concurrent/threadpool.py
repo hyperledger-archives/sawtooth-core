@@ -80,11 +80,11 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
                 LOGGER.debug(
                     '(%s) Executing task %s', self._name, task_details)
 
-            return_value = None
             try:
                 return_value = fn(*args, **kwargs)
             # pylint: disable=broad-except
             except Exception:
+                return_value = None
                 LOGGER.exception(
                     '(%s) Unhandled exception during execution of task %s',
                     self._name,
