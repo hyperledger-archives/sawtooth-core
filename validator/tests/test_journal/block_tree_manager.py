@@ -130,7 +130,7 @@ class BlockTreeManager(object):
             data_dir=None,
             config_dir=None,
             permission_verifier=MockPermissionVerifier(),
-            check_publish_block_frequency=0.1,
+            check_publish_block_interval=0.1,
             batch_observers=[])
 
     @property

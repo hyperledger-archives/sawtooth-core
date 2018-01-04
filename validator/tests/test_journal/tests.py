@@ -137,7 +137,7 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
-            check_publish_block_frequency=0.1,
+            check_publish_block_interval=0.1,
             batch_observers=[],
             permission_verifier=self.permission_verifier)
 
@@ -293,7 +293,7 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
-            check_publish_block_frequency=0.1,
+            check_publish_block_interval=0.1,
             batch_observers=[],
             permission_verifier=self.permission_verifier)
 
@@ -325,7 +325,7 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
-            check_publish_block_frequency=0.1,
+            check_publish_block_interval=0.1,
             batch_observers=[],
             permission_verifier=self.permission_verifier)
 
@@ -379,7 +379,7 @@ class TestBlockPublisher(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
-            check_publish_block_frequency=0.1,
+            check_publish_block_interval=0.1,
             batch_observers=[],
             batch_injector_factory=MockBatchInjectorFactory(injected_batch))
 
@@ -437,7 +437,7 @@ class TestBlockPublisher(unittest.TestCase):
     # publisher functions
 
     def receive_batch(self, batch):
-        self.publisher.on_batch_received(batch)
+        self.publisher.on_batches_received([batch])
 
     def receive_batches(self, batches=None):
         if batches is None:
@@ -1250,7 +1250,7 @@ class TestJournal(unittest.TestCase):
                 data_dir=None,
                 config_dir=None,
                 permission_verifier=self.permission_verifier,
-                check_publish_block_frequency=0.1,
+                check_publish_block_interval=0.1,
                 batch_observers=[],
                 batch_injector_factory=DefaultBatchInjectorFactory(
                     block_store=btm.block_store,

@@ -251,7 +251,7 @@ class Validator(object):
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier,
-            check_publish_block_frequency=0.1,
+            check_publish_block_interval=0.5,
             batch_observers=[batch_tracker],
             batch_injector_factory=batch_injector_factory,
             metrics_registry=metrics_registry)
