@@ -272,10 +272,6 @@ class _SendReceive(object):
     def _dispatch_message(self):
         while True:
             try:
-                queue_size = self._dispatcher_queue.qsize()
-                if queue_size > 10:
-                    LOGGER.debug("Dispatch queue size: %s", queue_size)
-
                 zmq_identity, msg_bytes = \
                     yield from self._dispatcher_queue.get()
                 message = validator_pb2.Message()
