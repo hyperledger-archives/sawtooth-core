@@ -20,7 +20,7 @@ class MockGossip():
         self.requested_batches = []
         self.requested_batches_by_txn_id = []
 
-    def broadcast_block_request(self, block_id):
+    def broadcast_block_request(self, block_id, and_n_parents=0):
         self.requested_blocks.append(block_id)
 
     def broadcast_batch_by_batch_id_request(self, batch_id):

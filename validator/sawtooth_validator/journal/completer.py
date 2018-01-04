@@ -118,10 +118,21 @@ class Completer(object):
                 if block.previous_block_id in self._requested:
                     return None
 
+                # If we are way behind, request multiple blocks
+                try:
+                    chain_head_num = self._block_Store.chain_head.block_num
+                except AttributeError:
+                    chain_head_num = block.block_num
+                and_n_parents = 0
+                lag = max(block.block_num - chain_head_num, 0)
+                if lag > 10:
+                    and_n_parents = lag
                 LOGGER.debug("Request missing predecessor: %s",
                              block.previous_block_id)
+
                 self._requested[block.previous_block_id] = None
-                self.gossip.broadcast_block_request(block.previous_block_id)
+                self.gossip.broadcast_block_request(
+                    block.previous_block_id, and_n_parents)
                 return None
 
         # Check for same number of batch_ids and batches
@@ -321,6 +332,19 @@ class Completer(object):
             if block_id in self.block_cache:
                 return self.block_cache[block_id]
             return None
+
+    def get_chain(self, head, length):
+        """Returns a list of block ids in decreasing order of block height."""
+        chain = []
+        current = head
+        with self.lock:
+            for _ in range(length + 1):
+                chain.append(current.header_signature)
+                try:
+                    current = self.block_cache[current.previous_block_id]
+                except KeyError:
+                    return None
+        return chain
 
     def get_batch(self, batch_id):
         with self.lock:
