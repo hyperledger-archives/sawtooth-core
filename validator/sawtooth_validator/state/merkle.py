@@ -112,9 +112,9 @@ class MerkleDatabase(object):
         return hashlib.sha512(stuff).hexdigest()[:64]
 
     def _get_by_hash(self, key_hash):
-        if key_hash in self._database:
+        try:
             return _decode(self._database.get(key_hash))
-        else:
+        except ValueError:   # value returned from database was None
             raise KeyError("hash {} not found in database".format(key_hash))
 
     def __getitem__(self, address):
@@ -144,12 +144,12 @@ class MerkleDatabase(object):
         node = self._root_node
 
         for token in tokens:
-            if token in node['c']:
+            try:
                 node = self._get_by_hash(node['c'][token])
-            else:
-                raise KeyError("invalid address {} "
-                               "from root {}".format(address,
-                                                     self._root_hash))
+            except KeyError:
+                raise KeyError(
+                    "invalid address {} from root {}".format(
+                        address, self._root_hash))
         return node
 
     def _get_path_by_addr(self, address, return_empty=False):
