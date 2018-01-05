@@ -133,10 +133,10 @@ class MerkleDatabase(object):
         return self._set_by_addr(address, value)
 
     def _tokenize_address(self, address):
-        return [
+        return (
             address[i:i + TOKEN_SIZE]
             for i in range(0, len(address), TOKEN_SIZE)
-        ]
+        )
 
     def _get_by_addr(self, address):
         tokens = self._tokenize_address(address)
@@ -264,10 +264,12 @@ class MerkleDatabase(object):
         return key_hash
 
     def _set_by_addr(self, address, value):
-        tokens = self._tokenize_address(address)
-        path_addresses = [''.join(tokens[0:i]) for i in range(len(tokens),
-                                                              0,
-                                                              -1)]
+        tokens = list(self._tokenize_address(address))
+
+        path_addresses = [
+            ''.join(tokens[0:i])
+            for i in range(len(tokens), 0, -1)
+        ]
 
         path_map = self._get_path_by_addr(address, return_empty=True)
 
