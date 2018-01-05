@@ -159,7 +159,7 @@ class MockBlockSender(BlockSender):
     def __init__(self):
         self.new_block = None
 
-    def send(self, block):
+    def send(self, block, keep_batches=None):
         self.new_block = block
 
 
