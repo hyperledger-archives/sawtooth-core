@@ -772,8 +772,12 @@ class ConnectionManager(InstrumentedThread):
                         self._connection_statuses[connection_id] = \
                             PeerStatus.PEER
                         self._gossip.send_block_request("HEAD", connection_id)
-                    except PeeringException:
+                    except PeeringException as e:
                         # Remove unsuccessful peer
+                        LOGGER.warning('Unable to successfully peer with '
+                                       'connection_id: %s, due to %s',
+                                       connection_id, str(e))
+
                         self._remove_temporary_connection(connection_id)
                 else:
                     LOGGER.debug("Cannot register peer with no endpoint for "
