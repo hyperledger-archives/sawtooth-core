@@ -15,6 +15,8 @@
 
 import abc
 
+from sawtooth_validator.protobuf.block_pb2 import Block
+
 
 class BlockSender(object, metaclass=abc.ABCMeta):
     """Implementations should take classes like completer,
@@ -23,7 +25,7 @@ class BlockSender(object, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def send(self, block):
+    def send(self, block, keep_batches=None):
         """Sends the block to the completer and also to the
            gossip network.
         :param block:
@@ -37,6 +39,22 @@ class BroadcastBlockSender(BlockSender):
         self._completer = completer
         self._gossip = gossip
 
-    def send(self, block):
-        self._gossip.broadcast_block(block)
+    def send(self, block, keep_batches=None):
+        self._gossip.broadcast_block(
+            self._remove_batches(block, keep_batches)
+            if keep_batches is not None else block)
         self._completer.add_block(block)
+
+    def _remove_batches(self, block, keep_batches):
+        """Returns a copy of the block without the non-injected
+        batches, which other validators are likely to already
+        have. This reduces the size of the broadcasted block.
+        """
+        clone = Block()
+        clone.header = block.header
+        clone.header_signature = block.header_signature
+        clone.batches.extend([
+            batch for batch in block.batches
+            if batch.header_signature in keep_batches
+        ])
+        return clone

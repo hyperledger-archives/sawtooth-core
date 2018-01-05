@@ -141,6 +141,10 @@ class _CandidateBlock(object):
             self._scheduler.cancel()
 
     @property
+    def injected_batch_ids(self):
+        return self._injected_batch_ids
+
+    @property
     def previous_block_id(self):
         return self._block_builder.previous_block_id
 
@@ -725,6 +729,8 @@ class BlockPublisher(object):
 
                     pending_batches = []  # will receive the list of batches
                     # that were not added to the block
+                    injected_batch_ids = \
+                        self._candidate_block.injected_batch_ids
                     last_batch = self._candidate_block.last_batch
                     block = self._candidate_block.finalize_block(
                         self._identity_signer,
@@ -743,7 +749,8 @@ class BlockPublisher(object):
                     if block:
                         blkw = BlockWrapper(block)
                         LOGGER.info("Claimed Block: %s", blkw)
-                        self._block_sender.send(blkw.block)
+                        self._block_sender.send(
+                            blkw.block, keep_batches=injected_batch_ids)
                         self._blocks_published_count.inc()
 
                         # We built our candidate, disable processing until
