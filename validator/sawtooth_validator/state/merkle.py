@@ -152,29 +152,25 @@ class MerkleDatabase(object):
                         address, self._root_hash))
         return node
 
-    def _get_path_by_addr(self, address, return_empty=False):
+    def _get_path_by_addr(self, address):
         tokens = self._tokenize_address(address)
         node = copy.deepcopy(self._root_node)
         path = ''
-        nodes = {}
+        nodes = {path: node}
 
-        nodes[path] = node
         new_branch = False
 
         for token in tokens:
-            if token in node['c'] and not new_branch:
-                path = path + token
-                node = self._get_by_hash(node['c'][token])
+            path += token
+            node_token = node['c'].get(token)
+
+            if node_token is not None and not new_branch:
+                node = self._get_by_hash(node_token)
                 nodes[path] = node
             else:
-                if return_empty:
-                    path = path + token
-                    nodes[path] = {"v": None, "c": {}}
-                    new_branch = True
-                else:
-                    raise KeyError("invalid address {} "
-                                   "from root {}".format(address,
-                                                         self._root_hash))
+                nodes[path] = {"v": None, "c": {}}
+                new_branch = True
+
         return nodes
 
     def delete(self, address):
@@ -220,8 +216,7 @@ class MerkleDatabase(object):
         for set_address in set_items:
             # the set items are added to the Path map second,
             # since they may add children to paths
-            path_map.update(self._get_path_by_addr(set_address,
-                                                   return_empty=True))
+            path_map.update(self._get_path_by_addr(set_address))
             path_map[set_address]["v"] = _encode(set_items[set_address])
 
         if delete_items is not None:
@@ -271,7 +266,7 @@ class MerkleDatabase(object):
             for i in range(len(tokens), 0, -1)
         ]
 
-        path_map = self._get_path_by_addr(address, return_empty=True)
+        path_map = self._get_path_by_addr(address)
 
         # Set the value in the leaf node
         path_map[path_addresses[0]]["v"] = _encode(value)
