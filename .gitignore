@@ -35,6 +35,9 @@
 /consensus/poet/sgx/sawtooth_poet_sgx/libpoet_enclave/cmake_install.cmake
 
 # Everything else
+/adm/Cargo.lock
+/adm/target/
+
 /build/
 
 /cli/build/
