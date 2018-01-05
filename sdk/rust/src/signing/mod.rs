@@ -120,6 +120,10 @@ impl<'a> Signer<'a> {
     pub fn sign(&self, message: &[u8]) -> Result<String, Error> {
         self.context.sign(message, self.key)
     }
+
+    pub fn get_public_key(&self) -> Result<Box<PublicKey>, Error> {
+        self.context.get_public_key(self.key)
+    }
 }
 
 #[cfg(test)]
