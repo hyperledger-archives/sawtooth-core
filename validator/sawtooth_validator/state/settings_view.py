@@ -47,6 +47,7 @@ class SettingsView(object):
         """
         self._state_view = state_view
 
+    @lru_cache(maxsize=128)
     def get_setting(self, key, default_value=None, value_type=str):
         """Get the setting stored at the given key.
 
@@ -107,7 +108,6 @@ class SettingsView(object):
         return setting_list
 
     @staticmethod
-    @lru_cache(maxsize=128)
     def setting_address(key):
         """Computes the radix address for the given setting key.
 
