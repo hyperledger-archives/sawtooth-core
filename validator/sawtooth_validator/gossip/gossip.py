@@ -197,11 +197,11 @@ class Gossip(object):
                              "connected identities are now %s",
                              connection_id, endpoint, self._peers)
             else:
-                LOGGER.debug("At maximum configured number of peers: %s "
-                             "Rejecting peering request from %s.",
-                             self._maximum_peer_connectivity,
-                             endpoint)
-                raise PeeringException()
+                raise PeeringException(
+                    "At maximum configured number of peers: {} "
+                    "Rejecting peering request from {}.".format(
+                        self._maximum_peer_connectivity,
+                        endpoint))
 
     def unregister_peer(self, connection_id):
         """Removes a connection_id from the registry.
