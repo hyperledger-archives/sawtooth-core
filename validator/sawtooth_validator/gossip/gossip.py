@@ -242,12 +242,13 @@ class Gossip(object):
         self.broadcast(
             gossip_message, validator_pb2.Message.GOSSIP_MESSAGE, exclude)
 
-    def broadcast_block_request(self, block_id):
+    def broadcast_block_request(self, block_id, and_n_parents=0):
         time_to_live = self.get_time_to_live()
         block_request = GossipBlockRequest(
             block_id=block_id,
             nonce=binascii.b2a_hex(os.urandom(16)),
-            time_to_live=time_to_live)
+            time_to_live=time_to_live,
+            and_n_parents=and_n_parents)
         self.broadcast(block_request,
                        validator_pb2.Message.GOSSIP_BLOCK_REQUEST)
 

@@ -76,6 +76,9 @@ message GossipBlockRequest {
     string nonce = 2;
     uint32 time_to_live = 3;
 
+    // TODO: Better name
+    uint64 and_n_parents = 4;
+
 }
 
 message GossipBlockResponse {

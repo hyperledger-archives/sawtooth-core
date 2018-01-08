@@ -56,6 +56,9 @@ class Responder(object):
         batch = self.completer.get_batch_by_transaction(transaction_id)
         return batch
 
+    def check_for_chain(self, head, length):
+        return self.completer.get_chain(head, length)
+
     def already_requested(self, requested_id):
         with self._lock:
             if requested_id in self.pending_requests:
@@ -127,14 +130,29 @@ class BlockResponderHandler(Handler):
             LOGGER.debug("Responding to block requests: %s",
                          block.get_block().header_signature)
 
-            block_response = network_pb2.GossipBlockResponse(
-                content=block.get_block().SerializeToString())
+            if block_request_message.and_n_parents > 0:
+                # Get a list of block ids in decreasing height from the chain
+                # head and send them out in increasing height, one at a time
+                chain = self._responder.get_chain(
+                    block.header_signature,
+                    block_request_message.and_n_parents)
+                if chain is not None:
+                    for blk_id in reversed(chain):
+                        blk = self._responder.check_for_block(blk_id)
+                        if blk is not None:
+                            self._send_block(blk, connection_id)
 
-            self._gossip.send(validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
-                              block_response.SerializeToString(),
-                              connection_id)
+            self._send_block(block, connection_id)
 
         return HandlerResult(HandlerStatus.PASS)
+
+    def _send_block(self, block, connection_id):
+        block_response = network_pb2.GossipBlockResponse(
+            content=block.get_block().SerializeToString())
+
+        self._gossip.send(validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+                          block_response.SerializeToString(),
+                          connection_id)
 
 
 class ResponderBlockResponseHandler(Handler):
