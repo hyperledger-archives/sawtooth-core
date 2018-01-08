@@ -38,7 +38,6 @@ from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.metrics.wrappers import MetricsRegistryWrapper
 
-
 LOGGER = logging.getLogger(__name__)
 DISTRIBUTION_NAME = 'sawtooth-validator'
 
@@ -337,6 +336,12 @@ def main(args=None):
             username=validator_config.opentsdb_username,
             password=validator_config.opentsdb_password)
         metrics_reporter.start()
+
+    try:
+        from dowser.utils import launch_memory_usage_server
+        launch_memory_usage_server(port=8002)
+    except ImportError:
+        LOGGER.warning("Unable to import Dowser")
 
     validator = Validator(
         bind_network,
