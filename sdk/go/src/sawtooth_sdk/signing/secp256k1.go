@@ -35,6 +35,11 @@ type Secp256k1PrivateKey struct {
 	private_key []byte
 }
 
+// Creates a PrivateKey instance from private key bytes.
+func NewSecp256k1PrivateKey(private_key []byte) PrivateKey {
+	return &Secp256k1PrivateKey{private_key}
+}
+
 // WifToSecp256k1PrivateKey converts a WIF string to a private key.
 func WifToSecp256k1PrivateKey(wif string) (*Secp256k1PrivateKey, error) {
 	priv, err := wifToPriv(wif)
