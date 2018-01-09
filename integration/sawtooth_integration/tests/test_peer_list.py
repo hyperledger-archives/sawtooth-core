@@ -26,20 +26,22 @@ LOGGER.setLevel(logging.DEBUG)
 
 
 EXPECTED = {
-    0: [1],
-    1: [0, 2, 3],
-    2: [1, 4],
-    3: [1, 4],
-    4: [2, 3],
+    0: {1},
+    1: {0, 2, 3},
+    2: {1, 4},
+    3: {1, 4},
+    4: {2, 3},
 }
 
 
 class TestPeerList(unittest.TestCase):
     def test_peer_list(self):
-        '''
-        Five validators are started, peered as described in EXPECTED (see
-        the test's associated yaml file for details). `sawtooth peer
-        list` is run against each of them and the output is verified.
+        '''Five validators are started, peered as described in EXPECTED (see
+        the test's associated yaml file for details). First `sawtooth
+        peer list` is run against each of them and the output is
+        verified, then `sawnet peers list` is run against the whole
+        network and the output is verified.
+
         '''
 
         # It would be preferable to use, as is normally done in
@@ -52,11 +54,12 @@ class TestPeerList(unittest.TestCase):
         # genesis node won't have any blocks.
         time.sleep(10)
 
+        # test `sawtooth peer list`
         for node_number, peer_numbers in EXPECTED.items():
             actual_peers = _get_peers(node_number)
 
             expected_peers = {
-                'tcp://validator-{}:8800'.format(peer_number)
+                _make_tcp_address(peer_number)
                 for peer_number in peer_numbers
             }
 
@@ -69,15 +72,44 @@ class TestPeerList(unittest.TestCase):
                 actual_peers,
                 expected_peers)
 
+        # test `sawnet peers list`
+        expected_network = {
+            _make_http_address(node_number): [
+                _make_tcp_address(peer_number)
+                for peer_number in peers
+            ]
+            for node_number, peers in EXPECTED.items()
+        }
+
+        http_addresses = ','.join([
+            _make_http_address(node_number)
+            for node_number in EXPECTED
+        ])
+
+        # make sure pretty-print option works
+        subprocess.run(shlex.split(
+            'sawnet peers list {} --pretty'.format(http_addresses)))
+
+        sawnet_peers_output = json.loads(
+            _run_peer_command(
+                'sawnet peers list {}'.format(http_addresses)
+            )
+        )
+
+        self.assertEqual(
+            sawnet_peers_output,
+            expected_network)
+
+        # run `sawnet peers graph`, but don't verify output
+        subprocess.run(shlex.split(
+            'sawnet peers graph {}'.format(http_addresses)))
+
 
 def _get_peers(node_number, fmt='json'):
-    cmd_output = subprocess.check_output(
-        shlex.split(
-            'sawtooth peer list --url {} --format {}'.format(
-                'http://rest-api-{}:8008'.format(node_number),
-                fmt)
-        )
-    ).decode().replace("'", '"')
+    cmd_output = _run_peer_command(
+        'sawtooth peer list --url {} --format {}'.format(
+            _make_http_address(node_number),
+            fmt))
 
     LOGGER.debug('peer list output: %s', cmd_output)
 
@@ -88,3 +120,17 @@ def _get_peers(node_number, fmt='json'):
         parsed = cmd_output.split(',')
 
     return set(parsed)
+
+
+def _run_peer_command(command):
+    return subprocess.check_output(
+        shlex.split(command)
+    ).decode().strip().replace("'", '"')
+
+
+def _make_http_address(node_number):
+    return 'http://rest-api-{}:8008'.format(node_number)
+
+
+def _make_tcp_address(node_number):
+    return 'tcp://validator-{}:8800'.format(node_number)
