@@ -444,52 +444,8 @@ class ConnectionManager(InstrumentedThread):
         while not self._stopped:
             try:
                 if self._peering_mode == 'dynamic':
-                    self._refresh_peer_list(self._gossip.get_peers())
-                    peers = self._gossip.get_peers()
-                    peer_count = len(peers)
-                    if peer_count < self._min_peers:
-                        LOGGER.debug(
-                            "Number of peers (%s) below "
-                            "minimum peer threshold (%s). "
-                            "Doing topology search.",
-                            peer_count,
-                            self._min_peers)
-
-                        self._reset_candidate_peer_endpoints()
-                        self._refresh_peer_list(peers)
-                        # Cleans out any old connections that have disconnected
-                        self._refresh_connection_list()
-                        self._check_temp_endpoints()
-
-                        peers = self._gossip.get_peers()
-
-                        self._get_peers_of_peers(peers)
-                        self._get_peers_of_endpoints(
-                            peers,
-                            self._initial_seed_endpoints)
-
-                        # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
-                        time.sleep(self._response_duration)
-
-                        peered_endpoints = list(peers.values())
-
-                        with self._lock:
-                            unpeered_candidates = list(
-                                set(self._candidate_peer_endpoints) -
-                                set(peered_endpoints) -
-                                set([self._endpoint]))
-
-                        LOGGER.debug(
-                            "Peers are: %s. "
-                            "Unpeered candidates are: %s",
-                            peered_endpoints,
-                            unpeered_candidates)
-
-                        if unpeered_candidates:
-                            self._attempt_to_peer_with_endpoint(
-                                random.choice(unpeered_candidates))
-
-                if self._peering_mode == 'static':
+                    self.retry_dynamic_peering()
+                elif self._peering_mode == 'static':
                     self.retry_static_peering()
 
                 time.sleep(self._check_frequency)
@@ -513,6 +469,52 @@ class ConnectionManager(InstrumentedThread):
             except ValueError:
                 # Connection has already been disconnected.
                 pass
+
+    def retry_dynamic_peering(self):
+        self._refresh_peer_list(self._gossip.get_peers())
+        peers = self._gossip.get_peers()
+        peer_count = len(peers)
+        if peer_count < self._min_peers:
+            LOGGER.debug(
+                "Number of peers (%s) below "
+                "minimum peer threshold (%s). "
+                "Doing topology search.",
+                peer_count,
+                self._min_peers)
+
+            self._reset_candidate_peer_endpoints()
+            self._refresh_peer_list(peers)
+            # Cleans out any old connections that have disconnected
+            self._refresh_connection_list()
+            self._check_temp_endpoints()
+
+            peers = self._gossip.get_peers()
+
+            self._get_peers_of_peers(peers)
+            self._get_peers_of_endpoints(
+                peers,
+                self._initial_seed_endpoints)
+
+            # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
+            time.sleep(self._response_duration)
+
+            peered_endpoints = list(peers.values())
+
+            with self._lock:
+                unpeered_candidates = list(
+                    set(self._candidate_peer_endpoints) -
+                    set(peered_endpoints) -
+                    set([self._endpoint]))
+
+            LOGGER.debug(
+                "Peers are: %s. "
+                "Unpeered candidates are: %s",
+                peered_endpoints,
+                unpeered_candidates)
+
+            if unpeered_candidates:
+                self._attempt_to_peer_with_endpoint(
+                    random.choice(unpeered_candidates))
 
     def retry_static_peering(self):
         with self._lock:
