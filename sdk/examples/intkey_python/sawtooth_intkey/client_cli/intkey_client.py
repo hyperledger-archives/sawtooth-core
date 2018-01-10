@@ -53,12 +53,9 @@ class IntkeyClient:
 
             try:
                 private_key = Secp256k1PrivateKey.from_hex(private_key_str)
-            except ParseError:
-                try:
-                    private_key = Secp256k1PrivateKey.from_wif(private_key_str)
-                except ParseError as e:
-                    raise IntkeyClientException(
-                        'Unable to load private key: {}'.format(str(e)))
+            except ParseError as e:
+                raise IntkeyClientException(
+                    'Unable to load private key: {}'.format(str(e)))
 
             self._signer = CryptoFactory(
                 create_context('secp256k1')).new_signer(private_key)
