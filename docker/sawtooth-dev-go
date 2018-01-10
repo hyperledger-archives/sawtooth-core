@@ -54,7 +54,6 @@ RUN go get -u \
     github.com/brianolson/cbor_go \
     github.com/satori/go.uuid \
     github.com/btcsuite/btcd/btcec \
-    github.com/btcsuite/btcutil/base58 \
     github.com/jessevdk/go-flags \
     github.com/pelletier/go-toml \
     github.com/golang/mock/gomock \

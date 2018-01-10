@@ -30,7 +30,7 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 
-PRIVATE = '5HsjpyQzpeoGAAvNeG5PzQsn1Ght18GgSmDaEUCd1c1HpA2avzc'
+PRIVATE = '2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088'
 
 
 class TestValidatorRegistry(TransactionProcessorTestCase):
@@ -39,7 +39,7 @@ class TestValidatorRegistry(TransactionProcessorTestCase):
     def setUpClass(cls):
         super().setUpClass()
         context = create_context('secp256k1')
-        private_key = Secp256k1PrivateKey.from_wif(PRIVATE)
+        private_key = Secp256k1PrivateKey.from_hex(PRIVATE)
         signer = CryptoFactory(context).new_signer(private_key)
 
         cls.factory = ValidatorRegistryMessageFactory(

@@ -36,7 +36,7 @@ services:
       - 4004
       - 8800
     command: "bash -c \"\
-        echo 5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv > test.priv && \
+        echo 2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088 > test.priv && \
         sawadm keygen && \
         sawset genesis -k test.priv -o config-genesis.batch && \
         sawadm genesis config-genesis.batch  && \

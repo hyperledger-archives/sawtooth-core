@@ -17,13 +17,9 @@
 
 extern crate secp256k1;
 extern crate crypto;
-extern crate rust_base58;
 
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
-
-use self::rust_base58::FromBase58;
-use self::rust_base58::base58::FromBase58Error;
 
 use super::PrivateKey;
 use super::PublicKey;
@@ -37,12 +33,6 @@ impl From<secp256k1::Error> for Error {
     }
 }
 
-impl From<FromBase58Error> for Error {
-    fn from(_: FromBase58Error) -> Self {
-        Error::ParseError(String::from("Base58 decoding failed"))
-    }
-}
-
 pub struct Secp256k1PrivateKey {
     private: Vec<u8>
 }
@@ -50,19 +40,6 @@ pub struct Secp256k1PrivateKey {
 impl Secp256k1PrivateKey {
     pub fn from_hex(s: &str) -> Result<Self, Error> {
         hex_str_to_bytes(s).map(|key_bytes| Secp256k1PrivateKey{ private: key_bytes })
-    }
-
-    pub fn from_wif(s: &str) -> Result<Self, Error> {
-        let mut b = s.from_base58()?;
-        let len = b.len();
-        b.remove(len - 1);
-        b.remove(len - 2);
-        b.remove(len - 3);
-        b.remove(len - 4);
-        b.remove(0);
-        Ok(Secp256k1PrivateKey{
-            private: b
-        })
     }
 
     pub fn from_pem(s: &str) -> Result<Self, Error> {
@@ -209,11 +186,9 @@ mod secp256k1_test {
     use super::super::PublicKey;
     use super::super::create_context;
 
-    static KEY1_PRIV_WIF: &'static str = "5JB3B6o5cbtYfgabgNKDwyYjs58jgUwCLDopNuS5QQdaGv1EHt2";
     static KEY1_PRIV_HEX: &'static str = "2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088";
     static KEY1_PUB_HEX: &'static str = "026a2c795a9776f75464aa3bda3534c3154a6e91b357b1181d3f515110f84b67c5";
 
-    static KEY2_PRIV_WIF: &'static str = "5JSH1DMki8kDYeApoXYDJ6DcAyf9JpZhoQQVMBbNw9zpSEqM1QB";
     static KEY2_PRIV_HEX: &'static str = "51b845c2cdde22fe646148f0b51eaf5feec8c82ee921d5e0cbe7619f3bb9c62d";
     static KEY2_PUB_HEX: &'static str = "039c20a66b4ec7995391dbec1d8bb0e2c6e6fd63cd259ed5b877cb4ea98858cf6d";
 
@@ -233,18 +208,6 @@ mod secp256k1_test {
         assert_eq!(pub_key.get_algorithm_name(), "secp256k1");
         assert_eq!(pub_key.as_hex(), KEY1_PUB_HEX);
     }
-
-    #[test]
-    fn wif_key() {
-        let priv_key1 = Secp256k1PrivateKey::from_wif(KEY1_PRIV_WIF).unwrap();
-        assert_eq!(priv_key1.get_algorithm_name(), "secp256k1");
-        assert_eq!(priv_key1.as_hex(), KEY1_PRIV_HEX);
-
-        let priv_key2 = Secp256k1PrivateKey::from_wif(KEY2_PRIV_WIF).unwrap();
-        assert_eq!(priv_key2.get_algorithm_name(), "secp256k1");
-        assert_eq!(priv_key2.as_hex(), KEY2_PRIV_HEX);
-    }
-
 
     #[test]
     fn priv_to_public_key() {
