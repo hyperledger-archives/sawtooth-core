@@ -51,12 +51,14 @@ fn main() {
             .subcommand(create_batch_subcommand_args())
             .subcommand(create_submit_subcommand_args())
             .subcommand(create_playlist_subcommand_args())
+            .subcommand(create_load_subcommand_args())
             .get_matches();
 
     let result = match arg_matches.subcommand() {
         ("batch", Some(args)) => run_batch_command(args),
         ("submit", Some(args)) => run_submit_command(args),
         ("playlist", Some(args)) => run_playlist_command(args),
+        ("load", Some(args)) => run_load_command(args),
         _ => panic!("Should have processed a subcommand or exited before here")
     };
 
@@ -72,6 +74,62 @@ fn main() {
 #[inline]
 fn arg_error (msg: &str) -> Result<(), Box<Error>> {
     Err(Box::new(CliError::ArgumentError(String::from(msg))))
+}
+
+fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name("load")
+        .about("Submit smallbank workload at a continuous rate")
+        .arg(Arg::with_name("key")
+              .short("k")
+              .long("key")
+              .value_name("KEY_FILE")
+              .required(true)
+              .help("The signing key for both batches and transactions."))
+        .arg(Arg::with_name("max-batch-size")
+              .short("n")
+              .long("max-batch-size")
+              .value_name("NUMBER")
+              .help("The number of transaction in a batch. Defaults to 100."))
+        .arg(Arg::with_name("num-accounts")
+              .short("a")
+              .long("accounts")
+              .value_name("ACCOUNTS")
+              .help("The number of Smallbank accounts to make. Defaults to 100."))
+        .arg(Arg::with_name("rate")
+              .short("r")
+              .long("rate")
+              .value_name("RATE")
+              .help("The number of batches per second. Defaults to 2."))
+        .arg(Arg::with_name("target")
+              .short("t")
+              .long("target")
+              .value_name("TARGET")
+              .help("The Sawtooth REST Api endpoint."))
+        .arg(Arg::with_name("seed")
+              .short("s")
+              .long("seed")
+              .value_name("SEED")
+              .help("An integer to use as a seed to make the workload reproduceable."))
+        .arg(Arg::with_name("update")
+             .short("u")
+             .long("update-length")
+             .value_name("UPDATE_LENGTH")
+             .help("The time in seconds between updates from this utility."))
+}
+
+fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+    let max_txns: usize = match args.value_of("max-batch-size")
+        .unwrap_or("100")
+        .parse() {
+            Ok(n) => n,
+            Err(_) => 0,
+        };
+    if max_txns == 0 {
+        return arg_error("max-batch-size must be a number greater than 0");
+    }
+
+    Ok(())
+
 }
 
 fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
