@@ -24,7 +24,8 @@ from sawtooth_cli.protobuf.batch_pb2 import BatchHeader
 from sawtooth_cli.protobuf.batch_pb2 import BatchList
 
 
-TEST_WIF = '5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv'
+PRIV_HEX = \
+    '2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088'
 
 
 class TestConfigBatchlist(unittest.TestCase):
@@ -35,10 +36,10 @@ class TestConfigBatchlist(unittest.TestCase):
     def setUp(self):
         self._temp_dir = tempfile.mkdtemp()
 
-        # create a wif key for signing
-        self._wif_file = os.path.join(self._temp_dir, 'test.priv')
-        with open(self._wif_file, 'wb') as wif:
-            wif.write(TEST_WIF.encode())
+        # create a hex key for signing
+        self._priv_file = os.path.join(self._temp_dir, 'test.priv')
+        with open(self._priv_file, 'wb') as priv:
+            priv.write(PRIV_HEX.encode())
 
     def tearDown(self):
         shutil.rmtree(self._temp_dir)
@@ -54,7 +55,7 @@ class TestConfigBatchlist(unittest.TestCase):
     def test_set_value_creates_batch_list(self):
         subprocess.run(shlex.split(
             'sawset proposal create -k {} -o {} x=1 y=1'.format(
-                self._wif_file,
+                self._priv_file,
                 os.path.join(self._temp_dir, 'myconfig.batch'))))
 
         batch_list = self._read_target_file_as(BatchList)

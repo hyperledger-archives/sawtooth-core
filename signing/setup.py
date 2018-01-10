@@ -27,7 +27,6 @@ setup(
     url='https://github.com/hyperledger/sawtooth-core',
     packages=find_packages(),
     install_requires=[
-        "bitcoin",
         "secp256k1",
     ],
     data_files=[],

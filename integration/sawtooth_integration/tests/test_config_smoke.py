@@ -29,9 +29,10 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.StreamHandler())
 LOGGER.setLevel(logging.DEBUG)
 
-TEST_WIF = '5Jq6nhPbVjgi9vTUuK7e2W81VT5dpQR7qPweYJZPVJKNzSornyv'
+TEST_PRIVKEY = \
+    '2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088'
 TEST_PUBKEY = \
-    '033775c26a68a3872f03314ccd080b8d8ec828572469737c7d3aa467f853a069d5'
+    '026a2c795a9776f75464aa3bda3534c3154a6e91b357b1181d3f515110f84b67c5'
 
 
 class TestConfigSmoke(unittest.TestCase):
@@ -44,10 +45,10 @@ class TestConfigSmoke(unittest.TestCase):
         self._data_dir = os.path.join(self._temp_dir, 'data')
         os.makedirs(self._data_dir)
 
-        # create a wif key for signing
-        self._wif_file = os.path.join(self._temp_dir, 'test.priv')
-        with open(self._wif_file, 'wb') as wif:
-            wif.write(TEST_WIF.encode())
+        # create a private key for signing
+        self._priv_file = os.path.join(self._temp_dir, 'test.priv')
+        with open(self._priv_file, 'wb') as priv:
+            priv.write(TEST_PRIVKEY.encode())
 
     def _run(self, args):
         try:
@@ -85,7 +86,7 @@ class TestConfigSmoke(unittest.TestCase):
             '''
         # Submit transaction, then list it using subprocess
         cmds = [
-            ['sawset', 'proposal', 'create', '-k', self._wif_file,
+            ['sawset', 'proposal', 'create', '-k', self._priv_file,
              '--url', 'http://rest-api:8008', 'x=1', 'y=1'],
             ['sawtooth', 'settings', 'list', '--url',
              'http://rest-api:8008']

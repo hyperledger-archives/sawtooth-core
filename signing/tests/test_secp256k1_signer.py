@@ -22,13 +22,11 @@ from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 
 
-KEY1_PRIV_WIF = "5JB3B6o5cbtYfgabgNKDwyYjs58jgUwCLDopNuS5QQdaGv1EHt2"
 KEY1_PRIV_HEX = \
     "2f1e7b7a130d7ba9da0068b3bb0ba1d79e7e77110302c9f746c3c2a63fe40088"
 KEY1_PUB_HEX = \
     "026a2c795a9776f75464aa3bda3534c3154a6e91b357b1181d3f515110f84b67c5"
 
-KEY2_PRIV_WIF = "5JSH1DMki8kDYeApoXYDJ6DcAyf9JpZhoQQVMBbNw9zpSEqM1QB"
 KEY2_PRIV_HEX = \
     "51b845c2cdde22fe646148f0b51eaf5feec8c82ee921d5e0cbe7619f3bb9c62d"
 KEY2_PUB_HEX = \
@@ -54,15 +52,6 @@ class Secp256k1SigningTest(unittest.TestCase):
         pub_key = Secp256k1PublicKey.from_hex(KEY1_PUB_HEX)
         self.assertEqual(pub_key.get_algorithm_name(), "secp256k1")
         self.assertEqual(pub_key.as_hex(), KEY1_PUB_HEX)
-
-    def test_wif_key(self):
-        priv_key1 = Secp256k1PrivateKey.from_wif(KEY1_PRIV_WIF)
-        self.assertEqual(priv_key1.get_algorithm_name(), "secp256k1")
-        self.assertEqual(priv_key1.as_hex(), KEY1_PRIV_HEX)
-
-        priv_key2 = Secp256k1PrivateKey.from_wif(KEY2_PRIV_WIF)
-        self.assertEqual(priv_key2.get_algorithm_name(), "secp256k1")
-        self.assertEqual(priv_key2.as_hex(), KEY2_PRIV_HEX)
 
     def test_priv_to_public_key(self):
         context = create_context("secp256k1")

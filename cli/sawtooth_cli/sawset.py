@@ -259,7 +259,7 @@ def _get_proposals(rest_client):
 
 
 def _read_signer(key_filename):
-    """Reads the given file as a hex, or (as a fallback) a WIF formatted key.
+    """Reads the given file as a hex key.
 
     Args:
         key_filename: The filename where the key is stored. If None,
@@ -286,11 +286,8 @@ def _read_signer(key_filename):
 
     try:
         private_key = Secp256k1PrivateKey.from_hex(signing_key)
-    except ParseError:
-        try:
-            private_key = Secp256k1PrivateKey.from_wif(signing_key)
-        except ParseError as e:
-            raise CliException('Unable to read key in file: {}'.format(str(e)))
+    except ParseError as e:
+        raise CliException('Unable to read key in file: {}'.format(str(e)))
 
     context = create_context('secp256k1')
     crypto_factory = CryptoFactory(context)
