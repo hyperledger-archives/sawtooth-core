@@ -487,15 +487,25 @@ sophisticated, `BSON <http://bsonspec.org/>`_.
 Implementing Game Play
 ======================
 
+Next, describe how to play tic-tac-toe. The details here are fairly
+straightforward, and the functionality could certainly be implemented in
+different ways.
 
-All that's left to do is describe how to play tic-tac-toe. The details here are fairly
-straightforward, and the {% if language == 'JavaScript' %}
-``_playXO``{% elif language == 'Java' %}``playXo``{% else %}``_play_xo``{% endif %}
-function could certainly be implemented in different ways. To see our implementation, go
-to ``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}``. We choose to represent
-the board as a string of length 9, with each character in the string representing a space
-taken by X, a space taken by O, or a free space. Updating the board configuration and the
-current state of the game proceeds straightforwardly.
+For our implementation, see
+{% if language == 'JavaScript' %}
+`sawtooth-core/sdk/examples/xo_javascript/xo_handler.js
+<https://github.com/hyperledger/sawtooth-core/blob/master/sdk/examples/xo_javascript/xo_handler.js>`_.
+{% elif language == 'Java' %}
+the ``playXo`` function in
+`sawtooth-core/sdk/examples/xo_java/XoHandler.java
+<https://github.com/hyperledger/sawtooth-core/blob/master/sdk/examples/xo_java/XoHandler.java>`_.
+{% else %}
+the ``_play_xo`` function in
+`sawtooth-core/sdk/examples/xo_python/sawtooth_xo/processor/handler.py
+<https://github.com/hyperledger/sawtooth-core/blob/master/sdk/examples/xo_python/sawtooth_xo/processor/handler.py>`_.
+{% endif %}
+We choose to represent the board as a string of length 9, with each character in
+the string representing a space taken by X, a space taken by O, or a free space.
 
 
 The {% if language == 'JavaScript' %}``XOHandler``{% elif language == 'Java' %}
@@ -504,7 +514,7 @@ The {% if language == 'JavaScript' %}``XOHandler``{% elif language == 'Java' %}
 
 {% if language == 'JavaScript' %}
 
-And that's all there is to ``apply``! All that's left to do is set up the
+All that's left to do is set up the
 ``XOHandler`` class and its metadata. The metadata is used to
 *register* the transaction processor with a validator by sending it information
 about what kinds of transactions it can handle.
@@ -524,7 +534,7 @@ JavaScript SDK.
 
 {% elif language == 'Java' %}
 
-And that's all there is to ``apply``! All that's left to do is set up the
+All that's left to do is set up the
 ``XoHandler`` class and its metadata. The metadata is used to
 *register* the transaction processor with a validator by sending it information
 about what kinds of transactions it can handle.
@@ -565,7 +575,7 @@ about what kinds of transactions it can handle.
 
 {% else %}
 
-And that's all there is to ``apply``! All that's left to do is set up the
+All that's left to do is set up the
 ``XoTransactionHandler`` class and its metadata. The metadata is used to
 *register* the transaction processor with a validator by sending it information
 about what kinds of transactions it can handle.
