@@ -21,9 +21,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
-	"fmt"
 	ellcurv "github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcutil/base58"
 	"math/big"
 )
 
@@ -38,16 +36,6 @@ type Secp256k1PrivateKey struct {
 // Creates a PrivateKey instance from private key bytes.
 func NewSecp256k1PrivateKey(private_key []byte) PrivateKey {
 	return &Secp256k1PrivateKey{private_key}
-}
-
-// WifToSecp256k1PrivateKey converts a WIF string to a private key.
-func WifToSecp256k1PrivateKey(wif string) (*Secp256k1PrivateKey, error) {
-	priv, err := wifToPriv(wif)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Secp256k1PrivateKey{priv}, nil
 }
 
 // PemToSecp256k1PrivateKey converts a PEM string to a private key.
@@ -73,14 +61,6 @@ func (self *Secp256k1PrivateKey) AsHex() string {
 // Returns the bytes of the private key.
 func (self *Secp256k1PrivateKey) AsBytes() []byte {
 	return self.private_key
-}
-
-// Returns the private key as a WIF-encoded string.
-func (self *Secp256k1PrivateKey) AsWif() string {
-	extended := append([]byte{0x80}, self.AsBytes()...)
-	checksum := doSHA256(doSHA256(extended))[:4]
-	extcheck := append(extended, checksum...)
-	return base58.Encode(extcheck)
 }
 
 // -- Public Key --
@@ -190,18 +170,6 @@ func doSHA256(input []byte) []byte {
 	hash := sha256.New()
 	hash.Write(input)
 	return hash.Sum(nil)
-}
-
-// -- WIF --
-
-func wifToPriv(wif string) (key []byte, err error) {
-	defer func() {
-		if recover() != nil {
-			err = fmt.Errorf("Failed to load WIF key")
-		}
-	}()
-	extcheck := base58.Decode(wif)
-	return extcheck[1 : len(extcheck)-4], nil
 }
 
 func pemToPriv(pem string, password string) ([]byte, error) {

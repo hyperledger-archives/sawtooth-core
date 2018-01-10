@@ -17,7 +17,6 @@ import binascii
 import warnings
 
 import secp256k1
-import bitcoin as pybitcointools
 
 from sawtooth_signing.core import SigningError
 from sawtooth_signing.core import ParseError
@@ -47,18 +46,6 @@ class Secp256k1PrivateKey(PrivateKey):
     @property
     def secp256k1_private_key(self):
         return self._private_key
-
-    @staticmethod
-    def from_wif(wif):
-        """Decodes a PrivateKey from a wif-encoded string
-        """
-        try:
-            priv = pybitcointools.encode_privkey(wif, 'hex')
-            priv = binascii.unhexlify(priv)
-            return Secp256k1PrivateKey(
-                secp256k1.PrivateKey(priv, ctx=__CTX__))
-        except Exception as e:
-            raise ParseError('Unable to parse wif key: {}'.format(e))
 
     @staticmethod
     def from_hex(hex_str):
