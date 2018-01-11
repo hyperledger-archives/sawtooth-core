@@ -46,10 +46,8 @@ pub fn generate_signed_batches<'a>(reader: &'a mut Read,
 {
     let crypto_factory = signing::CryptoFactory::new(signing_context);
     let signer = crypto_factory.new_signer(signing_key);
-    let pub_key = try!(signing_context.get_public_key(signing_key).map_err(BatchingError::SigningError));
-    let public_key_str = pub_key.as_hex();
 
-    let mut producer = SignedBatchProducer::new(reader, max_batch_size, &signer, public_key_str);
+    let mut producer = SignedBatchProducer::new(reader, max_batch_size, &signer);
     loop {
         match producer.next_batch() {
             Ok(Some(batch)) => {
@@ -72,6 +70,13 @@ type TransactionSource<'a> = LengthDelimitedMessageSource<'a, Transaction>;
 pub enum BatchingError {
     MessageError(protobuf::ProtobufError),
     SigningError(signing::Error),
+}
+
+impl From<signing::Error> for BatchingError {
+
+    fn from(err: signing::Error) -> Self {
+        BatchingError::SigningError(err)
+    }
 }
 
 impl fmt::Display for BatchingError {
@@ -106,7 +111,6 @@ pub struct SignedBatchProducer<'a> {
     transaction_source: TransactionSource<'a>,
     max_batch_size: usize,
     signer: &'a signing::Signer<'a>,
-    public_key: String,
 }
 
 /// Resulting batch or error.
@@ -116,7 +120,7 @@ impl<'a> SignedBatchProducer<'a> {
 
     /// Creates a new `SignedBatchProducer` with a given Transaction source and
     /// a max number of transactions per batch.
-    pub fn new(source: &'a mut Read, max_batch_size: usize, signer: &'a signing::Signer, public_key: String)
+    pub fn new(source: &'a mut Read, max_batch_size: usize, signer: &'a signing::Signer)
         -> Self
     {
         let transaction_source = LengthDelimitedMessageSource::new(source);
@@ -124,7 +128,6 @@ impl<'a> SignedBatchProducer<'a> {
             transaction_source,
             max_batch_size,
             signer: signer,
-            public_key: public_key,
         }
     }
 
@@ -145,7 +148,7 @@ impl<'a> SignedBatchProducer<'a> {
         // set signer_public_key
         let txn_ids = txns.iter().cloned().map(|mut txn| txn.take_header_signature()).collect();
         batch_header.set_transaction_ids(protobuf::RepeatedField::from_vec(txn_ids));
-        batch_header.set_signer_public_key(self.public_key.clone());
+        batch_header.set_signer_public_key(self.signer.get_public_key()?.as_hex());
 
         let header_bytes = batch_header.write_to_bytes().unwrap();
         let signature = try!(self.signer.sign(&header_bytes).map_err(BatchingError::SigningError));
@@ -214,9 +217,8 @@ mod tests {
         let crypto_factory = signing::CryptoFactory::new(&context);
         let private_key = MockPrivateKey;
         let signer = crypto_factory.new_signer(&private_key);
-        let public_key = String::from("MyPubKey");
 
-        let mut producer = SignedBatchProducer::new(&mut source, 2, &signer, public_key);
+        let mut producer = SignedBatchProducer::new(&mut source, 2, &signer);
         let batch_result = producer.next_batch().unwrap();
 
         assert_eq!(batch_result, None);
@@ -233,9 +235,8 @@ mod tests {
         let crypto_factory = signing::CryptoFactory::new(&context);
         let private_key = MockPrivateKey;
         let signer = crypto_factory.new_signer(&private_key);
-        let public_key = String::from("MyPubKey");
 
-        let mut producer = SignedBatchProducer::new(&mut source, 2, &signer, public_key);
+        let mut producer = SignedBatchProducer::new(&mut source, 2, &signer);
         let mut batch_result = producer.next_batch().unwrap();
         assert!(batch_result.is_some());
 
@@ -264,9 +265,8 @@ mod tests {
         let crypto_factory = signing::CryptoFactory::new(&context);
         let private_key = MockPrivateKey;
         let signer = crypto_factory.new_signer(&private_key);
-        let public_key = String::from("MyPubKey");
 
-        let mut producer = SignedBatchProducer::new(&mut source, 2, &signer, public_key);
+        let mut producer = SignedBatchProducer::new(&mut source, 2, &signer);
         let mut batch_result = producer.next_batch().unwrap();
         assert!(batch_result.is_some());
 
