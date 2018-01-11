@@ -39,7 +39,8 @@ class WaitTimer(object):
                           validator_address,
                           previous_certificate_id,
                           consensus_state,
-                          poet_settings_view):
+                          poet_settings_view,
+                          population_limit):
         """Creates a wait timer in the enclave and then constructs
         a WaitTimer object.
 
@@ -67,7 +68,8 @@ class WaitTimer(object):
                 validator_address,
                 previous_certificate_id,
                 consensus_state.compute_local_mean(
-                    poet_settings_view=poet_settings_view),
+                    poet_settings_view=poet_settings_view,
+                    population_limit=population_limit),
                 poet_settings_view.minimum_wait_time)
 
         return cls(enclave_timer)

@@ -453,6 +453,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 block_header=block_header,
                 block_cache=self._block_cache,
                 poet_enclave_module=poet_enclave_module)
+        population_limit = validator_registry_view.get_registry_count()
         wait_timer = \
             WaitTimer.create_wait_timer(
                 poet_enclave_module=poet_enclave_module,
@@ -460,7 +461,8 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 validator_address=block_header.signer_public_key,
                 previous_certificate_id=previous_certificate_id,
                 consensus_state=consensus_state,
-                poet_settings_view=poet_settings_view)
+                poet_settings_view=poet_settings_view,
+                population_limit=population_limit)
 
         # NOTE - we do the zTest after we create the wait timer because we
         # need its population estimate to see if this block would be accepted

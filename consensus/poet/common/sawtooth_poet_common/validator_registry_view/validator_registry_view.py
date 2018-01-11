@@ -15,7 +15,7 @@
 import hashlib
 
 from sawtooth_poet_common.protobuf.validator_registry_pb2 import ValidatorInfo
-
+from sawtooth_poet_common.protobuf.validator_registry_pb2 import ValidatorMap
 
 _NAMESPACE = hashlib.sha256('validator_registry'.encode()).hexdigest()[0:6]
 
@@ -38,6 +38,20 @@ class ValidatorRegistryView(object):
                 current snapshot of chain state.
         """
         self._state_view = state_view
+
+    def get_registry_count(self):
+        """Gets the number of validators listed in the registry. Note this
+        is not a guarantee of active population but the sum total of all
+        registrations.
+
+        Returns:
+            int: Validator registry count
+        """
+        validator_map_addr = ValidatorRegistryView._to_address('validator_map')
+        data = self._state_view.get(validator_map_addr)
+        validator_map = ValidatorMap()
+        validator_map.ParseFromString(data)
+        return len(validator_map.entries)
 
     def get_validators(self):
         """Gets a dict of validator infos for all validators known to the

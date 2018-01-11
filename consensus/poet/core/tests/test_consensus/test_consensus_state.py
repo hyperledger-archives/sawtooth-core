@@ -27,6 +27,8 @@ from sawtooth_poet_common.protobuf.validator_registry_pb2 \
 from sawtooth_poet_common.protobuf.validator_registry_pb2 \
     import SignUpInfo
 
+_POPULATION_LIMIT = 2
+
 
 class TestConsensusState(TestCase):
     def test_get_missing_validator_state(self):
@@ -48,6 +50,8 @@ class TestConsensusState(TestCase):
         self.assertEqual(validator_state.key_block_claim_count, 0)
         self.assertEqual(validator_state.poet_public_key, 'key_001')
         self.assertEqual(validator_state.total_block_claim_count, 0)
+
+        TestCase.longMessage = True
 
     def test_validator_did_claim_block(self):
         """Verify that trying to update consensus and validator state with
@@ -406,9 +410,11 @@ class TestConsensusState(TestCase):
             doppelganger_state.aggregate_local_mean)
         self.assertAlmostEqual(
             first=state.compute_local_mean(
-                poet_settings_view=mock_poet_settings_view),
+                poet_settings_view=mock_poet_settings_view,
+                population_limit=_POPULATION_LIMIT),
             second=doppelganger_state.compute_local_mean(
-                poet_settings_view=mock_poet_settings_view),
+                poet_settings_view=mock_poet_settings_view,
+                population_limit=_POPULATION_LIMIT),
             places=4)
         self.assertEqual(
             state.total_block_claim_count,
@@ -487,7 +493,7 @@ class TestConsensusState(TestCase):
         wait_certificates = []
         state = consensus_state.ConsensusState()
         sample_size = mock_poet_settings_view.population_estimate_sample_size
-        for _ in range(sample_size):
+        for i in range(sample_size):
             # Compute a wait certificate with a fixed local mean, add it to
             # our samples, verify that its local mean equals the one computed
             # by the consensus state, and then update the consensus state as if
@@ -501,10 +507,14 @@ class TestConsensusState(TestCase):
                 _compute_fixed_local_mean(len(wait_certificates))
             wait_certificates.append(mock_wait_certificate)
 
+            TestCase.longMessage = True
             self.assertAlmostEqual(
                 first=mock_wait_certificate.local_mean,
-                second=state.compute_local_mean(mock_poet_settings_view),
-                places=4)
+                second=state.compute_local_mean(
+                    mock_poet_settings_view,
+                    population_limit=_POPULATION_LIMIT),
+                places=4,
+                msg='in {}th block'.format(i))
 
             state.validator_did_claim_block(
                 validator_info=validator_info,
@@ -527,13 +537,17 @@ class TestConsensusState(TestCase):
             for wc in wcs:
                 sw += wc.duration - mock_poet_settings_view.minimum_wait_time
                 sm += wc.local_mean
-
-            return mock_poet_settings_view.target_wait_time * (sm / sw)
+            population_estimate = sm / sw
+            if population_estimate > _POPULATION_LIMIT:
+                population_estimate = _POPULATION_LIMIT
+            local_mean = \
+                mock_poet_settings_view.target_wait_time * population_estimate
+            return local_mean
 
         # Let's run through another population estimate sample size blocks
         # and verify that we get the local means expected
         sample_size = mock_poet_settings_view.population_estimate_sample_size
-        for _ in range(sample_size):
+        for i in range(sample_size):
             # Compute a wait certificate with a historical local mean, add it
             # to our samples, evict the oldest sample, verify that its local
             # mean equals the one computed by the consensus state, and then
@@ -551,8 +565,11 @@ class TestConsensusState(TestCase):
 
             self.assertAlmostEqual(
                 first=mock_wait_certificate.local_mean,
-                second=state.compute_local_mean(mock_poet_settings_view),
-                places=4)
+                second=state.compute_local_mean(
+                    mock_poet_settings_view,
+                    population_limit=_POPULATION_LIMIT),
+                places=4,
+                msg='in {}th block'.format(i))
 
             state.validator_did_claim_block(
                 validator_info=validator_info,
