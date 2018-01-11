@@ -87,6 +87,10 @@ class Gossip(object):
         Args:
             network (networking.Interconnect): Provides inbound and
                 outbound network connections.
+            settings_cache (state.SettingsCache): A cache for on chain
+                settings.
+            current_root_func (function): returns the current state root hash
+                for the current chain root.
             endpoint (str): The publically accessible zmq-style uri
                 endpoint for this validator.
             peering_mode (str): The type of peering approach. Either 'static'
