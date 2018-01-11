@@ -37,9 +37,9 @@ _AnnotatedBatch = namedtuple('ScheduledBatch',
 
 
 class PredecessorTreeNode:
-    def __init__(self, children=None, readers=None, writer=None):
-        self.children = children if children is not None else {}
-        self.readers = readers if readers is not None else []
+    def __init__(self, children, readers, writer=None):
+        self.children = children
+        self.readers = readers
         self.writer = writer
 
     def __repr__(self):
@@ -59,7 +59,7 @@ class PredecessorTreeNode:
 class PredecessorTree:
     def __init__(self, token_size=2):
         self._token_size = token_size
-        self._root = PredecessorTreeNode()
+        self._root = PredecessorTreeNode(children={}, readers=[])
 
     def __repr__(self):
         return repr(self._root)
@@ -70,7 +70,7 @@ class PredecessorTree:
             for i in range(0, len(address), self._token_size)
         ]
 
-    def _get(self, address, create=False):
+    def _get_creating(self, address):
         tokens = self._tokenize_address(address)
 
         node = self._root
@@ -78,23 +78,30 @@ class PredecessorTree:
             if token in node.children:
                 node = node.children[token]
             else:
-                if not create:
-                    return None
-                child = PredecessorTreeNode()
+                child = PredecessorTreeNode(children={}, readers=[])
                 node.children[token] = child
                 node = child
 
         return node
 
     def get(self, address):
-        return self._get(address)
+        tokens = self._tokenize_address(address)
+
+        node = self._root
+        for token in tokens:
+            if token in node.children:
+                node = node.children[token]
+            else:
+                return None
+
+        return node
 
     def add_reader(self, address, reader):
-        node = self._get(address, create=True)
+        node = self._get_creating(address)
         node.readers.append(reader)
 
     def set_writer(self, address, writer):
-        node = self._get(address, create=True)
+        node = self._get_creating(address)
         node.readers = []
         node.writer = writer
         node.children = {}
