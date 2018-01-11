@@ -27,7 +27,7 @@ node ('master') {
             checkout scm
         }
 
-        if (!(env.BRANCH_NAME == 'master' && env.JOB_BASE_NAME == 'master')) {
+        if (!(env.BRANCH_NAME == '1-0' && env.JOB_BASE_NAME == '1-0')) {
             stage("Check Whitelist") {
                 readTrusted 'bin/whitelist'
                 readTrusted 'COMMITTERS'
