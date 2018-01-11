@@ -377,7 +377,7 @@ class ParallelScheduler(Scheduler):
 
                 txn_id = txn.header_signature
                 # Update our internal state with the computed predecessors.
-                self._txn_predecessors[txn_id] = list(set(predecessors))
+                self._txn_predecessors[txn_id] = set(predecessors)
 
                 # Update the predecessor tree.
                 #
