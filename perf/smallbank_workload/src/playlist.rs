@@ -148,7 +148,7 @@ pub fn process_smallbank_playlist(output: &mut Write,
     Ok(())
 }
 
-fn make_addresses(payload: &SmallbankTransactionPayload) -> Vec<String> {
+pub fn make_addresses(payload: &SmallbankTransactionPayload) -> Vec<String> {
     match payload.get_payload_type() {
         SBPayloadType::CREATE_ACCOUNT =>
             vec![customer_id_address(payload.get_create_account().get_customer_id())],
@@ -230,13 +230,26 @@ fn load_yaml_array<'a>(yaml_str: Cow<'a, str>) -> Result<Cow<'a, Vec<Yaml>>, Pla
 }
 
 
-struct SmallbankGeneratingIter {
+pub struct SmallbankGeneratingIter {
     num_accounts: usize,
     current_account: usize,
     num_transactions: usize,
     current_transaction: usize,
     rng: StdRng,
 }
+
+impl SmallbankGeneratingIter {
+    pub fn new(num_accounts: usize, num_transactions: usize, seed: &[usize]) -> Self {
+        SmallbankGeneratingIter {
+            num_accounts: num_accounts,
+            current_account: 0,
+            num_transactions: num_transactions,
+            current_transaction: 0,
+            rng: SeedableRng::from_seed(seed),
+        }
+    }
+}
+
 
 impl Iterator for SmallbankGeneratingIter {
     type Item = SmallbankTransactionPayload;
@@ -577,7 +590,7 @@ impl<'a> fmt::Write for FmtWriter<'a> {
     }
 }
 
-fn bytes_to_hex_str(b: &[u8]) -> String {
+pub fn bytes_to_hex_str(b: &[u8]) -> String {
     b.iter()
      .map(|b| format!("{:02x}", b))
      .collect::<Vec<_>>()

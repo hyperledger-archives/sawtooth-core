@@ -15,6 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 extern crate clap;
+extern crate crypto;
+extern crate rand;
 extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
 extern crate protobuf;
@@ -27,18 +29,32 @@ use std::io;
 use std::io::Write;
 use std::io::Read;
 use std::error::Error;
+use std::time::Instant;
 
 use batch_gen::generate_signed_batches;
+use batch_gen::SignedBatchIterator;
+use batch_submit::InfiniteBatchListIterator;
 use batch_submit::submit_signed_batches;
+use batch_submit::run_workload;
+use clap::{App, ArgMatches, AppSettings, Arg, SubCommand};
+use crypto::sha2::Sha512;
+use crypto::digest::Digest;
 use playlist::generate_smallbank_playlist;
 use playlist::process_smallbank_playlist;
-use clap::{App, ArgMatches, AppSettings, Arg, SubCommand};
+use playlist::bytes_to_hex_str;
+use playlist::make_addresses;
+use protobuf::Message;
+use rand::Rng;
+use smallbank::SmallbankTransactionPayload;
 
 use sawtooth_perf::batch_gen;
 use sawtooth_perf::batch_submit;
 
+use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
 use sawtooth_sdk::signing;
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
+
+use playlist::SmallbankGeneratingIter;
 
 const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -127,9 +143,70 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     if max_txns == 0 {
         return arg_error("max-batch-size must be a number greater than 0");
     }
+    let accounts: usize = match args.value_of("num-accounts")
+        .unwrap_or("100")
+        .parse() {
+            Ok(n) => n,
+            Err(_) => 100,
+        };
+    if accounts <= 0 {
+        return arg_error("The number of accounts must be greater than 0.")
+    }
 
-    Ok(())
+    let target: String = match args.value_of("target")
+        .unwrap_or("http://localhost:8008")
+        .parse() {
+            Ok(s) => s,
+            Err(_) => return arg_error("The target is the Sawtooth REST api endpoint with the scheme.")
+        };
+    let update: u32 = match args.value_of("update")
+        .unwrap_or("30")
+        .parse() {
+            Ok(n) => n,
+            Err(_) => return arg_error("The update is the time between logging in seconds.")
+        };
 
+    let rate: usize = match args.value_of("rate")
+        .unwrap_or("2")
+        .parse() {
+            Ok(r) => r,
+            Err(_) => return arg_error("The rate is the number of batches per second."),
+        };
+    let seed: Vec<usize> = match args.value_of("seed")
+        .unwrap_or({
+            let mut rng = rand::thread_rng();
+            rng.gen::<usize>().to_string().as_ref()
+        }).parse() {
+            Ok(s) => vec!(s),
+            Err(_) => return arg_error("The seed is a number to seed the random number generator.")
+        };
+    let mut key_file = File::open(args.value_of("key").unwrap())?;
+
+    let mut buf = String::new();
+    key_file.read_to_string(&mut buf)?;
+    buf.pop(); // remove the new line
+
+    let private_key = 
+        Secp256k1PrivateKey::from_hex(&buf).or(
+            Secp256k1PrivateKey::from_wif(&buf))?;
+    let context = signing::create_context("secp256k1")?;
+    let signer = signing::Signer::new(context.as_ref(), &private_key);
+
+    let transformer = SBPayloadTransformer::new(&signer);
+
+    let mut transaction_iterator = SmallbankGeneratingIter::new(accounts, usize::max_value(), seed.as_slice())
+        .map(|payload| {transformer.payload_to_transaction(payload)}).map(|item| item.unwrap());
+
+    let mut batch_iter = SignedBatchIterator::new(&mut transaction_iterator, max_txns, &signer);
+    let mut batchlist_iter = InfiniteBatchListIterator::new(&mut batch_iter);
+
+    let time_to_wait: u32 = 1_000_000_000 / rate as u32;
+
+    match run_workload(&mut batchlist_iter, time_to_wait, update, target) {
+
+        Ok(_) => Ok(()),
+        Err(err) => {println!("{}", err.description()); Err(Box::new(err))},
+    }
 }
 
 fn create_batch_subcommand_args<'a, 'b>() -> App<'a, 'b> {
@@ -398,6 +475,58 @@ fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<Error>> {
                                     context.as_ref(), &private_key));
 
     Ok(())
+}
+
+/// Transforms SmallbankTransactionPayloads into Sawtooth Transactions.
+pub struct SBPayloadTransformer<'a> {
+    signer: &'a signing::Signer<'a>
+}
+
+impl<'a> SBPayloadTransformer<'a> {
+    pub fn new(signer: &'a signing::Signer) -> Self {
+        SBPayloadTransformer {
+            signer: signer,
+        }
+    }
+
+    pub fn payload_to_transaction(&self, payload: SmallbankTransactionPayload)
+        -> Result<Transaction, Box<Error>>
+    {
+        let mut txn = Transaction::new();
+        let mut txn_header = TransactionHeader::new();
+
+        txn_header.set_family_name(String::from("smallbank"));
+        txn_header.set_family_version(String::from("1.0"));
+
+        let elapsed = Instant::now().elapsed();
+        txn_header.set_nonce(format!("{}{}", elapsed.as_secs(), elapsed.subsec_nanos()));
+
+        let addresses = protobuf::RepeatedField::from_vec(make_addresses(&payload));
+
+        txn_header.set_inputs(addresses.clone());
+        txn_header.set_outputs(addresses.clone());
+
+        let payload_bytes = payload.write_to_bytes()?;
+
+        let mut sha = Sha512::new();
+        sha.input(&payload_bytes);
+        let hash: &mut [u8] = & mut [0; 64];
+        sha.result(hash);
+
+        txn_header.set_payload_sha512(bytes_to_hex_str(hash));
+        txn_header.set_signer_public_key(self.signer.get_public_key()?.as_hex());
+        txn_header.set_batcher_public_key(self.signer.get_public_key()?.as_hex());
+
+        let header_bytes = txn_header.write_to_bytes()?;
+
+        let signature = self.signer.sign(&header_bytes.to_vec())?;
+
+        txn.set_header(header_bytes);
+        txn.set_header_signature(signature);
+        txn.set_payload(payload_bytes);
+
+        Ok(txn)
+    }
 }
 
 #[derive(Debug)]
