@@ -83,20 +83,20 @@ static void CheckIfValidNamespace(const std::string& addr) {
     }
 }
 
-AddressMapper::AddressMapper(const std::string& namespace_) :
+AddressMapperImpl::AddressMapperImpl(const std::string& namespace_) :
     namespace_initialized(false), namespace_(namespace_) {}
 
-std::string AddressMapper::MapKey(const std::string& key) const {
+std::string AddressMapperImpl::MapKey(const std::string& key) const {
     return SHA512(key).substr(64, 127);
 }
 
-std::string AddressMapper::MapNamespace(const std::string& namespace_) const {
+std::string AddressMapperImpl::MapNamespace(const std::string& namespace_) const {
     std::string ns = SHA512(namespace_);
     return ns.substr(0, 6);
 }
 
 
-std::string AddressMapper::GetNamespacePrefix() {
+std::string AddressMapperImpl::GetNamespacePrefix() {
     if (!this->namespace_initialized) {
         this->namespace_prefix = this->MapNamespace(namespace_);
         CheckIfValidNamespace(this->namespace_prefix);
@@ -105,12 +105,18 @@ std::string AddressMapper::GetNamespacePrefix() {
     return namespace_prefix;
 }
 
-std::string AddressMapper::MakeAddress(const std::string& key) {
+std::string AddressMapperImpl::MakeAddress(const std::string& key) {
     std::string key_part = this->MapKey(key);
     std::string addr = this->GetNamespacePrefix() + key_part;
     CheckIfValidAddr(addr);
     return addr;
 }
+
+
+AddressMapper* AddressMapper::Create(const std::string& namespace_) {
+    return new AddressMapperImpl(namespace_);
+}
+
 
 }  // namespace sawtooth
 

@@ -25,7 +25,7 @@
 #include "proto/processor.pb.h"
 #include "proto/transaction.pb.h"
 
-#include "sawtooth/exceptions.h"
+#include "exceptions.h"
 #include "sawtooth/transaction_processor.h"
 
 namespace sawtooth {
@@ -33,14 +33,14 @@ namespace sawtooth {
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger
     ("sawtooth.TransactionProcessor"));
 
-TransactionProcessor::TransactionProcessor(
+TransactionProcessorImpl::TransactionProcessorImpl(
         const std::string& connection_string):
         connection_string(connection_string), run(true) {
 }
 
-TransactionProcessor::~TransactionProcessor() {}
+TransactionProcessorImpl::~TransactionProcessorImpl() {}
 
-void TransactionProcessor::RegisterHandler(TransactionHandlerUPtr handler) {
+void TransactionProcessorImpl::RegisterHandler(TransactionHandlerUPtr handler) {
     LOG4CXX_DEBUG(logger, "TransactionProcessor::RegisterHandler");
 
     TransactionHandlerPtr sptr(std::move(handler));
@@ -48,7 +48,7 @@ void TransactionProcessor::RegisterHandler(TransactionHandlerUPtr handler) {
     this->handlers[name] = sptr;
 }
 
-void TransactionProcessor::Register() {
+void TransactionProcessorImpl::Register() {
     for (auto handler : this->handlers) {
         LOG4CXX_DEBUG(logger, "TransactionProcessor::Register: "
             << handler.first);
@@ -79,7 +79,7 @@ void TransactionProcessor::Register() {
     }
 }
 
-void TransactionProcessor::HandleProcessingRequest(const void* msg,
+void TransactionProcessorImpl::HandleProcessingRequest(const void* msg,
         size_t msg_size,
         const std::string& correlation_id) {
     TpProcessRequest request;
@@ -87,23 +87,23 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
     try {
         request.ParseFromArray(msg, msg_size);
 
-        TransactionHeader* txn_header(request.release_header());
+        ::TransactionHeader* txn_header(request.release_header());
+        const std::string& family = txn_header->family_name();
+        TransactionHeaderPtr txnHeaderPtr(new TransactionHeaderImpl(txn_header));
 
         StringPtr payload_data(request.release_payload());
         StringPtr signature_data(request.release_signature());
 
-        TransactionUPtr txn(new Transaction( txn_header,
+        TransactionUPtr txn(new Transaction(txnHeaderPtr,
             payload_data,
             signature_data));
-
-        const std::string& family = txn_header->family_name();
 
         auto iter = this->handlers.find(family);
         if (iter != this->handlers.end()) {
             // TBD match version
             try {
                 GlobalStateUPtr global_state(
-                    new GlobalState(
+                    new GlobalStateImpl(
                         this->message_dispatcher.CreateStream(),
                         request.context_id()));
 
@@ -146,7 +146,7 @@ void TransactionProcessor::HandleProcessingRequest(const void* msg,
         Message_MessageType_TP_PROCESS_RESPONSE, response, correlation_id);
 }
 
-void TransactionProcessor::Run() {
+void TransactionProcessorImpl::Run() {
     try {
         this->response_stream = this->message_dispatcher.CreateStream();
         zmqpp::socket socket(this->message_dispatcher.context(), zmqpp::socket_type::dealer);
@@ -215,6 +215,11 @@ void TransactionProcessor::Run() {
     } catch(std::exception& e) {
         LOG4CXX_ERROR(logger, "TransactionProcessor::Run ERROR: " << e.what());
     }
+}
+
+
+TransactionProcessor* TransactionProcessor::Create(const std::string& connection_string) {
+    return new TransactionProcessorImpl(connection_string);
 }
 
 }  // namespace sawtooth
