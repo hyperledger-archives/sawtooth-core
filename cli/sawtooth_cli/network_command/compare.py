@@ -24,9 +24,6 @@ from sawtooth_cli.network_command.fork_graph import SimpleBlock
 from sawtooth_cli.exceptions import CliException
 
 
-MAX_BLOCK_LIMIT = 1000
-
-
 def add_compare_chains_parser(subparsers, parent_parser):
     """Creates the arg parsers needed for the compare command.
     """
@@ -67,6 +64,14 @@ DIVERG
         parents=[parent_parser, base_multinode_parser()])
 
     parser.add_argument(
+        '-l',
+        '--limit',
+        default=25,
+        type=int,
+        help='the number of blocks to request at a time',
+    )
+
+    parser.add_argument(
         '--table',
         action='store_true',
         help='Print out a fork table for all nodes since the common ancestor.')
@@ -85,7 +90,7 @@ def do_compare_chains(args):
 
     broken = []
 
-    chains, errors = get_chain_generators(clients)
+    chains, errors = get_chain_generators(clients, args.limit)
     broken.extend(errors)
     for node in errors:
         print("Error connecting to node %d: %s" % (node, urls[node]))
@@ -134,7 +139,7 @@ def do_compare_chains(args):
         print_summary(graph, tails, node_id_map)
 
 
-def get_chain_generators(clients):
+def get_chain_generators(clients, limit):
     # Send one request to each client to determine if it is responsive or not.
     # Use the heights of all the responding clients' heads to set the paging
     # size for future requests, so that the number of requests is minimized.
@@ -151,10 +156,6 @@ def get_chain_generators(clients):
 
     if not heads:
         return {}, bad_clients
-
-    max_height = max(block.num for block in heads)
-    min_height = min(block.num for block in heads)
-    limit = max(3, min(max_height - min_height, MAX_BLOCK_LIMIT))
 
     # Convert the block dictionaries to simpler python data structures to
     # conserve memory and simplify interactions.

@@ -35,6 +35,11 @@ class RestClient(object):
             self._auth_header = None
 
     def list_blocks(self, limit=None):
+        """Return a block generator.
+
+        Args:
+            limit (int): The page size of requests
+        """
         return self._get_data('/blocks', limit=limit)
 
     def get_block(self, block_id):
@@ -116,10 +121,6 @@ class RestClient(object):
         url = self._base_url + path
         params = self._format_queries(queries)
 
-        limit = None
-        if "limit" in params:
-            limit = params["limit"]
-
         while url:
             code, json_result = self._submit_request(
                 url,
@@ -136,11 +137,6 @@ class RestClient(object):
 
             for item in json_result.get('data', []):
                 yield item
-
-            if limit:
-                limit = limit - len(json_result.get('data', []))
-                if limit <= 0:
-                    break
 
             url = json_result['paging'].get('next', None)
 

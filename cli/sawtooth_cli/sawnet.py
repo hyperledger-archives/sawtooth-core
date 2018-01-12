@@ -25,6 +25,8 @@ from colorlog import ColoredFormatter
 from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.network_command.compare import add_compare_chains_parser
 from sawtooth_cli.network_command.compare import do_compare_chains
+from sawtooth_cli.network_command.list_blocks import add_list_blocks_parser
+from sawtooth_cli.network_command.list_blocks import do_list_blocks
 
 
 DISTRIBUTION_NAME = 'sawnet'
@@ -41,6 +43,7 @@ def create_parser(prog_name):
     subparsers.required = True
 
     add_compare_chains_parser(subparsers, parent_parser)
+    add_list_blocks_parser(subparsers, parent_parser)
 
     return parser
 
@@ -61,6 +64,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
 
     if args.subcommand == 'compare-chains':
         do_compare_chains(args)
+    elif args.subcommand == 'list-blocks':
+        do_list_blocks(args)
     else:
         raise CliException('Invalid command: {}'.format(args.subcommand))
 

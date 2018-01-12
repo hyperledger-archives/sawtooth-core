@@ -54,7 +54,9 @@ def add_block_parser(subparsers, parent_parser):
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     list_parser.add_argument(
-        '--limit',
+        '-n',
+        '--count',
+        default=100,
         type=int,
         help='the number of blocks to list',
     )
@@ -84,7 +86,15 @@ def do_block(args):
     rest_client = RestClient(args.url, args.user)
 
     if args.subcommand == 'list':
-        blocks = rest_client.list_blocks(limit=args.limit)
+        block_generator = rest_client.list_blocks()
+        blocks = []
+        left = args.count
+        for block in block_generator:
+            blocks.append(block)
+            left -= 1
+            if left <= 0:
+                break
+
         keys = ('num', 'block_id', 'batches', 'txns', 'signer')
         headers = tuple(k.upper() if k != 'batches' else 'BATS' for k in keys)
 
