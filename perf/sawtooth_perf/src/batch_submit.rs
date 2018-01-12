@@ -42,6 +42,7 @@ use sawtooth_sdk::messages::batch::Batch;
 use sawtooth_sdk::messages::batch::BatchList;
 use self::protobuf::Message;
 
+use batch_gen::{BatchResult, BatchingError};
 use source::LengthDelimitedMessageSource;
 
 /// Populates a channel from a stream of length-delimited batches.
