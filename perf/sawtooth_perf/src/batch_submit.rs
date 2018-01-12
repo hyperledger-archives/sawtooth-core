@@ -191,35 +191,68 @@ pub struct BatchListFeeder<'a> {
 }
 
 /// Resulting BatchList or error.
-pub type BatchListResult = Result<Option<BatchList>, BatchReadingError>;
+pub type BatchListResult = Result<BatchList, BatchReadingError>;
 
 impl<'a> BatchListFeeder<'a> {
 
     /// Creates a new `BatchListFeeder` with a given Batch source
-    /// TODO put channel here?
     pub fn new(source: &'a mut Read) -> Self {
         let batch_source = LengthDelimitedMessageSource::new(source);
         BatchListFeeder {
             batch_source,
         }
     }
+}
+
+impl<'a> Iterator for BatchListFeeder<'a> {
+
+    type Item = BatchListResult;
 
     /// Gets the next Batch.
     /// `Ok(None)` indicates that the underlying source has been consumed.
-    pub fn next_batch_list(&mut self) -> BatchListResult {
+    fn next(&mut self) -> Option<Self::Item> {
         let batches = match self.batch_source.next(1) {
             Ok(batches) => batches,
-            Err(err) => return Err(BatchReadingError::MessageError(err)),
+            Err(err) => return Some(Err(BatchReadingError::MessageError(err))),
         };
 
         if batches.len() == 0 {
-            return Ok(None);
+            return None;
         }
 
         /// Construct a BatchList out of the read batches
         let mut batch_list = BatchList::new();
         batch_list.set_batches(protobuf::RepeatedField::from_vec(batches));
 
-        Ok(Some(batch_list))
+        Some(Ok(batch_list))
+    }
+}
+
+pub struct InfiniteBatchListIterator<'a> {
+    batches : &'a mut Iterator<Item = BatchResult>,
+}
+
+impl<'a> InfiniteBatchListIterator<'a> {
+    pub fn new(batches: &'a mut Iterator<Item = BatchResult>) -> Self {
+        InfiniteBatchListIterator {
+            batches: batches,
+        }
+    }
+}
+
+impl<'a> Iterator for InfiniteBatchListIterator<'a> {
+    type Item = BatchListResult;
+
+    fn next(&mut self) -> Option<BatchListResult> {
+        let batch = match self.batches.next() {
+            Some(Ok(batch)) => batch,
+            Some(Err(err)) => return Some(Err(BatchReadingError::BatchingError(err))),
+            None => return None,
+        };
+
+        let batches = vec!(batch);
+        let mut batch_list = BatchList::new();
+        batch_list.set_batches(protobuf::RepeatedField::from_vec(batches));
+        Some(Ok(batch_list))
     }
 }
