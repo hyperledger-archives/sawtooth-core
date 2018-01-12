@@ -49,14 +49,14 @@ pub fn generate_signed_batches<'a>(reader: &'a mut Read,
 
     let mut producer = SignedBatchProducer::new(reader, max_batch_size, &signer);
     loop {
-        match producer.next_batch() {
-            Ok(Some(batch)) => {
+        match producer.next() {
+            Some(Ok(batch)) => {
                 if let Err(err) = batch.write_length_delimited_to_writer(writer) {
                     return Err(BatchingError::MessageError(err));
                 }
             },
-            Ok(None) => break,
-            Err(err) => return Err(err),
+            None => break,
+            Some(Err(err)) => return Err(err),
         }
     }
 
@@ -76,6 +76,12 @@ impl From<signing::Error> for BatchingError {
 
     fn from(err: signing::Error) -> Self {
         BatchingError::SigningError(err)
+    }
+}
+
+impl From<protobuf::ProtobufError> for BatchingError {
+    fn from(err: protobuf::ProtobufError) -> Self {
+        BatchingError::MessageError(err)
     }
 }
 
@@ -114,7 +120,7 @@ pub struct SignedBatchProducer<'a> {
 }
 
 /// Resulting batch or error.
-pub type BatchResult = Result<Option<Batch>, BatchingError>;
+pub type BatchResult = Result<Batch, BatchingError>;
 
 impl<'a> SignedBatchProducer<'a> {
 
@@ -130,36 +136,82 @@ impl<'a> SignedBatchProducer<'a> {
             signer: signer,
         }
     }
+}
+
+impl<'a> Iterator for SignedBatchProducer<'a> {
+
+    type Item = BatchResult;
 
     /// Gets the next BatchResult.
     /// `Ok(None)` indicates that the underlying source has been consumed.
-    pub fn next_batch(&mut self) -> BatchResult {
+    fn next(&mut self) -> Option<BatchResult> {
         let txns = match self.transaction_source.next(self.max_batch_size) {
             Ok(txns) => txns,
-            Err(err) => return Err(BatchingError::MessageError(err)),
+            Err(err) => return Some(Err(BatchingError::MessageError(err))),
         };
-
         if txns.len() == 0 {
-            return Ok(None);
+            None
+        } else {
+            Some(batch_transactions(txns, self.signer))
         }
+    }
+}
 
-        let mut batch_header = BatchHeader::new();
+fn batch_transactions(txns: Vec<Transaction>, signer: &signing::Signer) -> BatchResult {
 
-        // set signer_public_key
-        let txn_ids = txns.iter().cloned().map(|mut txn| txn.take_header_signature()).collect();
-        batch_header.set_transaction_ids(protobuf::RepeatedField::from_vec(txn_ids));
-        batch_header.set_signer_public_key(self.signer.get_public_key()?.as_hex());
+    let mut batch_header = BatchHeader::new();
 
-        let header_bytes = batch_header.write_to_bytes().unwrap();
-        let signature = try!(self.signer.sign(&header_bytes).map_err(BatchingError::SigningError));
-
-        let mut batch = Batch::new();
-        batch.set_header_signature(signature);
-        batch.set_header(header_bytes);
-        batch.set_transactions(protobuf::RepeatedField::from_vec(txns));
+    // set signer_public_key
+    let pk = match signer.get_public_key() {
+        Ok(pk) => pk,
+        Err(err) => return Err(BatchingError::SigningError(err)),
+    };
+    let public_key = pk.as_hex();
 
 
-        Ok(Some(batch))
+    let txn_ids = txns.iter().map(|txn| String::from(txn.get_header_signature())).collect();
+    batch_header.set_transaction_ids(protobuf::RepeatedField::from_vec(txn_ids));
+    batch_header.set_signer_public_key(public_key);
+
+    let header_bytes = batch_header.write_to_bytes()?;
+    let signature = signer.sign(&header_bytes).map_err(BatchingError::SigningError);
+    match signature {
+        Ok(signature) => {
+            let mut batch = Batch::new();
+            batch.set_header_signature(signature);
+            batch.set_header(header_bytes);
+            batch.set_transactions(protobuf::RepeatedField::from_vec(txns));
+
+            Ok(batch)
+        },
+        Err(err) => Err(err),
+    }
+}
+
+pub struct SignedBatchIterator<'a> {
+    transaction_iterator: &'a mut Iterator<Item = Transaction>,
+    max_batch_size: usize,
+    signer: &'a signing::Signer<'a>,
+}
+
+impl<'a> SignedBatchIterator<'a> {
+    pub fn new(iterator: &'a mut Iterator<Item = Transaction>, max_batch_size: usize, signer: &'a signing::Signer) -> Self {
+        SignedBatchIterator {
+            transaction_iterator: iterator,
+            max_batch_size: max_batch_size,
+            signer: signer,
+        }
+    }
+}
+
+impl<'a> Iterator for SignedBatchIterator<'a>
+{
+    type Item = BatchResult;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let txns = self.transaction_iterator.take(self.max_batch_size).collect();
+
+        Some(batch_transactions(txns, self.signer))
     }
 }
 
@@ -219,9 +271,9 @@ mod tests {
         let signer = crypto_factory.new_signer(&private_key);
 
         let mut producer = SignedBatchProducer::new(&mut source, 2, &signer);
-        let batch_result = producer.next_batch().unwrap();
+        let batch_result = producer.next();
 
-        assert_eq!(batch_result, None);
+        assert!(batch_result.is_none());
     }
 
     #[test]
@@ -237,18 +289,18 @@ mod tests {
         let signer = crypto_factory.new_signer(&private_key);
 
         let mut producer = SignedBatchProducer::new(&mut source, 2, &signer);
-        let mut batch_result = producer.next_batch().unwrap();
+        let mut batch_result = producer.next();
         assert!(batch_result.is_some());
 
-        let batch = batch_result.unwrap();
+        let batch = batch_result.unwrap().unwrap();
 
         let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 1);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
 
         // test exhaustion
-        batch_result = producer.next_batch().unwrap();
-        assert_eq!(batch_result, None);
+        batch_result = producer.next();
+        assert!(batch_result.is_none());
     }
 
     #[test]
@@ -267,10 +319,10 @@ mod tests {
         let signer = crypto_factory.new_signer(&private_key);
 
         let mut producer = SignedBatchProducer::new(&mut source, 2, &signer);
-        let mut batch_result = producer.next_batch().unwrap();
+        let mut batch_result = producer.next();
         assert!(batch_result.is_some());
 
-        let batch = batch_result.unwrap();
+        let batch = batch_result.unwrap().unwrap();
 
         let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 2);
@@ -280,18 +332,18 @@ mod tests {
                    String::from("signed by mock_algorithm"));
 
         // pull the next batch
-        batch_result = producer.next_batch().unwrap();
+        batch_result = producer.next();
         assert!(batch_result.is_some());
 
-        let batch = batch_result.unwrap();
+        let batch = batch_result.unwrap().unwrap();
 
         let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
         assert_eq!(batch_header.transaction_ids.len(), 1);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig3"));
 
         // test exhaustion
-        batch_result = producer.next_batch().unwrap();
-        assert_eq!(batch_result, None);
+        batch_result = producer.next();
+        assert!(batch_result.is_none());
     }
 
     #[test]
