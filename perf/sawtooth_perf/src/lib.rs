@@ -15,6 +15,9 @@
  * ------------------------------------------------------------------------------
  */
 extern crate sawtooth_sdk;
+#[macro_use]
+extern crate serde_derive;
+
 pub mod batch_gen;
 pub mod batch_submit;
 pub mod source;
