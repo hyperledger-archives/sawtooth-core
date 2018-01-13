@@ -17,6 +17,8 @@
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
+use rand::Rng;
+use rand::os::OsRng;
 use secp256k1;
 
 use signing::PrivateKey;
@@ -148,6 +150,13 @@ impl Context for Secp256k1Context {
             Err(err) => Err(err),
             Ok(pk) => Ok(Box::new(pk))
         }
+    }
+
+    fn new_random_private_key(&self) -> Result<Box<PrivateKey>, Error> {
+        let mut rng = OsRng::new().map_err(|err| Error::KeyGenError(format!("{}", err)))?;
+        let mut key = [0u8; secp256k1::constants::SECRET_KEY_SIZE];
+        rng.fill_bytes(&mut key);
+        Ok(Box::new(Secp256k1PrivateKey { private: Vec::from(&key[..]) }))
     }
 }
 

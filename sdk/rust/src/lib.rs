@@ -20,6 +20,7 @@ extern crate libc;
 #[macro_use]
 extern crate log;
 extern crate protobuf;
+extern crate rand;
 extern crate secp256k1;
 extern crate uuid;
 extern crate zmq;
