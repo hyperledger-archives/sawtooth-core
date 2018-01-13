@@ -14,7 +14,7 @@
  limitations under the License.
 ------------------------------------------------------------------------------
 */
-#include "sawtooth/address_mapper.h"
+#include "address_mapper.h"
 
 #include <exception>
 #include <iostream>
@@ -24,10 +24,6 @@
 #include "cryptopp/filters.h"
 #include "cryptopp/hex.h"
 #include "log4cxx/logger.h"
-
-#include "proto/state_context.pb.h"
-
-namespace sawtooth {
 
 const size_t MERKLE_ADDRESS_LENGTH = 70;
 const size_t NAMESPACE_PREFIX_LENGTH = 6;
@@ -83,20 +79,20 @@ static void CheckIfValidNamespace(const std::string& addr) {
     }
 }
 
-AddressMapperImpl::AddressMapperImpl(const std::string& namespace_) :
+AddressMapper::AddressMapper(const std::string& namespace_) :
     namespace_initialized(false), namespace_(namespace_) {}
 
-std::string AddressMapperImpl::MapKey(const std::string& key, std::size_t pos, std::size_t count) const {
+std::string AddressMapper::MapKey(const std::string& key, std::size_t pos, std::size_t count) const {
     return SHA512(key).substr(pos, count);
 }
 
-std::string AddressMapperImpl::MapNamespace(const std::string& namespace_) const {
+std::string AddressMapper::MapNamespace(const std::string& namespace_) const {
     std::string ns = SHA512(namespace_);
     return ns.substr(0, 6);
 }
 
 
-std::string AddressMapperImpl::GetNamespacePrefix() {
+std::string AddressMapper::GetNamespacePrefix() {
     if (!this->namespace_initialized) {
         this->namespace_prefix = this->MapNamespace(namespace_);
         CheckIfValidNamespace(this->namespace_prefix);
@@ -105,7 +101,7 @@ std::string AddressMapperImpl::GetNamespacePrefix() {
     return namespace_prefix;
 }
 
-std::string AddressMapperImpl::MakeAddress(const std::string& key, std::size_t pos, std::size_t count) {
+std::string AddressMapper::MakeAddress(const std::string& key, std::size_t pos, std::size_t count) {
     std::string key_part = this->MapKey(key, pos, count);
     std::string addr = this->GetNamespacePrefix() + key_part;
     CheckIfValidAddr(addr);
@@ -113,11 +109,4 @@ std::string AddressMapperImpl::MakeAddress(const std::string& key, std::size_t p
     return addr;
 }
 
-
-AddressMapper* AddressMapper::Create(const std::string& namespace_) {
-    return new AddressMapperImpl(namespace_);
-}
-
-
-}  // namespace sawtooth
 

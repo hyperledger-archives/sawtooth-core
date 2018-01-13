@@ -26,6 +26,7 @@
 #include "sawtooth_sdk.h"
 #include "exceptions.h"
 
+#include "address_mapper.h"
 #include "json.hpp"
 
 #define URL_PREFIX       "tcp://"
@@ -63,8 +64,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
     IntKeyApplicator(sawtooth::TransactionUPtr txn,
         sawtooth::GlobalStateUPtr state) :
         TransactionApplicator(std::move(txn), std::move(state)),
-            address_mapper
-        (sawtooth::AddressMapper::Create(INTKEY_NAMESPACE)) { };
+            address_mapper(new AddressMapper(INTKEY_NAMESPACE)) { };
 
 
     void CborToParams(std::string& verb, std::string& name, int& value) {
@@ -132,11 +132,11 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
 
 
  private:
-    sawtooth::AddressMapperUPtr address_mapper;
+    AddressMapperUPtr address_mapper;
 
  private:
     std::string MakeAddress(const std::string& name) {
-        return this->address_mapper->MakeAddress(name);
+        return this->address_mapper->MakeAddress(name, 64, std::string::npos);
     }
 
     // Handle an IntKey 'set' verb action. This sets a IntKey value to
@@ -252,8 +252,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
 class IntKeyHandler: public sawtooth::TransactionHandler {
 public:
     IntKeyHandler() {
-        sawtooth::AddressMapperUPtr
-            addr(sawtooth::AddressMapper::Create(INTKEY_NAMESPACE));
+        AddressMapperUPtr addr(new AddressMapper(INTKEY_NAMESPACE));
 
         namespacePrefix = addr->GetNamespacePrefix();
     }

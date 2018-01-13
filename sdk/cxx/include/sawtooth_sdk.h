@@ -179,62 +179,6 @@ typedef std::unique_ptr<TransactionHandler> TransactionHandlerUPtr;
 typedef std::shared_ptr<TransactionHandler> TransactionHandlerPtr;
 
 
-// Helper class to provide mappings from domain identifiers
-// to merkle trie addresses. This class is designed to be overloaded, such
-// that implementers of TransactionProcessors can define their own mappings
-// from their native object ids to merkle trie addresses.
-//
-// The default implementation uses a SHA512 hash to map both the key and the
-// namespace to the merkle trie address. Collisions in the key mappings should
-// be uncommon but still possible, data storage behind the keys.
-//
-// Each instance of the mapper holds a namespace that is mapped to a
-// namespace prefix when it is constructed. If your transaction processor
-// operates on multiple namespaces, it is recommended that you use an instance
-// for each namespace.
-class AddressMapper {
- public:
-
-    virtual ~AddressMapper() {}
-
-    // Maps an namespace string to an namespace address prefix.
-    // this provides a default implementation using SHA512.
-    // it is intended to be overridden by subclass implementations
-    // that can provide their own mapping of namespace strings to
-    // prefixes. The requirements are that the mapping needs to
-    // return a prefix that is 6 characters in length and consists
-    // of only lower case hexadecimal characters(0123456789abcdef).
-    virtual std::string MapNamespace(const std::string& key) const = 0;
-
-    // Maps an key string to a address, this provides a default
-    // implementation using SHA512.
-    // It is intended to be overridden by subclass implementations
-    // that can provide their own mappings. The requirements are that
-    // the mapping needs to return a string that is 128 characters
-    // in length and consists of only lower case hexadecimal characters.
-    virtual std::string MapKey(const std::string& key,
-                               std::size_t pos,
-                               std::size_t count) const = 0;
-
-    // returns the namespace prefix generated when the class was constructed.
-    virtual std::string GetNamespacePrefix() = 0;
-
-    // Maps the key passed to the function and concatenates it with the
-    // namespace prefix this object was initialized with and returns
-    // a fully qualified Merkle Trie address. These addresses are always
-    // 134 characters in length and consist entirely of lower case hexadecimal
-    // characters(0123456789abcdef).
-    virtual std::string MakeAddress(const std::string& key,
-                                    std::size_t pos = 64,
-                                    std::size_t count = std::string::npos) = 0;
-
-    static AddressMapper* Create(const std::string& namespace_);
-};
-
-typedef std::shared_ptr<AddressMapper> AddressMapperPtr;
-typedef std::unique_ptr<AddressMapper> AddressMapperUPtr;
-
-
 
 class TransactionProcessor {
 public:
