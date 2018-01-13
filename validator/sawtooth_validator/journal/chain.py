@@ -100,7 +100,8 @@ class BlockValidator(object):
                  identity_signer,
                  data_dir,
                  config_dir,
-                 permission_verifier):
+                 permission_verifier,
+                 metrics_registry=None):
         """Initialize the BlockValidator
         Args:
              consensus_module: The consensus module that contains
@@ -152,6 +153,12 @@ class BlockValidator(object):
 
         self._validation_rule_enforcer = \
             ValidationRuleEnforcer(SettingsViewFactory(state_view_factory))
+
+        if metrics_registry:
+            self._moved_to_fork_count = CounterWrapper(
+                metrics_registry.counter('chain_head_moved_to_fork_count'))
+        else:
+            self._moved_to_fork_count = CounterWrapper()
 
     def _get_previous_block_root_state_hash(self, blkw):
         if blkw.previous_block_id == NULL_BLOCK_IDENTIFIER:
@@ -260,9 +267,10 @@ class BlockValidator(object):
             try:
                 state_root = self._get_previous_block_root_state_hash(blkw)
             except KeyError:
-                LOGGER.debug(
-                    "Block rejected due to missing" + " predecessor: %s", blkw)
+                LOGGER.info(
+                    "Block rejected due to missing predecessor: %s", blkw)
                 return False
+
             for batch in blkw.batches:
                 if not self._permission_verifier.is_batch_signer_authorized(
                         batch, state_root):
@@ -355,13 +363,12 @@ class BlockValidator(object):
                     new_blkw.previous_block_id != NULL_BLOCK_IDENTIFIER:
                 new_chain.append(new_blkw)
                 try:
-                    new_blkw = \
-                        self._block_cache[
-                            new_blkw.previous_block_id]
+                    new_blkw = self._block_cache[new_blkw.previous_block_id]
                 except KeyError:
-                    LOGGER.debug(
-                        "Block rejected due to missing" + " predecessor: %s",
-                        new_blkw)
+                    LOGGER.info(
+                        "Block %s rejected due to missing predecessor %s",
+                        new_blkw,
+                        new_blkw.previous_block_id)
                     for b in new_chain:
                         b.status = BlockStatus.Invalid
                     raise BlockValidationAborted()
@@ -392,9 +399,10 @@ class BlockValidator(object):
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
-                LOGGER.debug(
-                    "Block rejected due to missing" + " predecessor: %s",
-                    new_blkw)
+                LOGGER.info(
+                    "Block %s rejected due to missing predecessor %s",
+                    new_blkw,
+                    new_blkw.previous_block_id)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
                 raise BlockValidationAborted()
@@ -474,7 +482,7 @@ class BlockValidator(object):
                     self._result["num_transactions"] += block.num_transactions
                 else:
                     LOGGER.info(
-                        "Block marked invalid(invalid predecessor): " + "%s",
+                        "Block marked invalid (invalid predecessor): %s",
                         block)
                     block.status = BlockStatus.Invalid
 
@@ -506,6 +514,10 @@ class BlockValidator(object):
                 (self._result["committed_batches"],
                  self._result["uncommitted_batches"]) = \
                     self._compute_batch_change(new_chain, cur_chain)
+
+                if new_chain[0].previous_block_id != \
+                        self._chain_head.identifier:
+                    self._moved_to_fork_count.inc()
 
             # 6) Tell the journal we are done.
             self._done_cb(commit_new_chain, self._result)
@@ -643,6 +655,7 @@ class ChainController(object):
 
         self._permission_verifier = permission_verifier
         self._chain_observers = chain_observers
+        self._metrics_registry = metrics_registry
 
         if metrics_registry:
             self._chain_head_gauge = GaugeWrapper(
@@ -651,10 +664,13 @@ class ChainController(object):
                 metrics_registry.counter('committed_transactions_count'))
             self._block_num_gauge = GaugeWrapper(
                 metrics_registry.gauge('block_num'))
+            self._blocks_considered_count = CounterWrapper(
+                metrics_registry.counter('blocks_considered_count'))
         else:
             self._chain_head_gauge = GaugeWrapper()
             self._committed_transactions_count = CounterWrapper()
             self._block_num_gauge = GaugeWrapper()
+            self._blocks_considered_count = CounterWrapper()
 
         self._block_queue = queue.Queue()
         self._thread_pool = (
@@ -730,7 +746,8 @@ class ChainController(object):
                 identity_signer=self._identity_signer,
                 data_dir=self._data_dir,
                 config_dir=self._config_dir,
-                permission_verifier=self._permission_verifier)
+                permission_verifier=self._permission_verifier,
+                metrics_registry=self._metrics_registry)
             self._blocks_processing[blkw.block.header_signature] = validator
             self._thread_pool.submit(validator.run)
 
@@ -746,8 +763,8 @@ class ChainController(object):
         """
         try:
             with self._lock:
+                self._blocks_considered_count.inc()
                 new_block = result["new_block"]
-                LOGGER.info("on_block_validated: %s", new_block)
 
                 # remove from the processing list
                 del self._blocks_processing[new_block.identifier]
@@ -955,7 +972,8 @@ class ChainController(object):
                     identity_signer=self._identity_signer,
                     data_dir=self._data_dir,
                     config_dir=self._config_dir,
-                    permission_verifier=self._permission_verifier)
+                    permission_verifier=self._permission_verifier,
+                    metrics_registry=self._metrics_registry)
 
                 valid = validator.validate_block(block)
                 if valid:

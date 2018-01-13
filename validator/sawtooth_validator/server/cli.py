@@ -97,15 +97,19 @@ def parse_args(args):
                              'validator network.')
     parser.add_argument('--opentsdb-url',
                         help='specify host and port for Open TSDB database \
-                        used for metrics')
+                        used for metrics',
+                        type=str)
     parser.add_argument('--opentsdb-db',
                         help='specify name of database used for storing \
-                        metrics')
+                        metrics',
+                        type=str)
     parser.add_argument('--minimum-peer-connectivity',
                         help='set the minimum number of peers required before \
-                        stopping peer search')
+                        stopping peer search',
+                        type=int)
     parser.add_argument('--maximum-peer-connectivity',
-                        help='set the maximum number of peers to accept')
+                        help='set the maximum number of peers to accept',
+                        type=int)
 
     try:
         version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
@@ -261,8 +265,13 @@ def main(args=None):
             log_configuration(log_dir=path_config.log_dir,
                               name="validator")
 
-    for line in path_config.to_toml_string():
-        LOGGER.info("config [path]: %s", line)
+    if LOGGER.isEnabledFor(logging.INFO):
+        LOGGER.info(
+            '; '.join([
+                'config [path]: {}'.format(line)
+                for line in path_config.to_toml_string()
+            ])
+        )
 
     if not check_directory(path=path_config.data_dir,
                            human_readable_name='Data'):

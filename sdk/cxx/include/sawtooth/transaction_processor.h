@@ -18,18 +18,19 @@
 #include <memory>
 #include <string>
 
+#include "sawtooth_sdk.h"
 #include "sawtooth/transaction_handler.h"
 #include "sawtooth/message_dispatcher.h"
 
 namespace sawtooth {
 
 // The main processing class for the Sawtooth SDK.
-class TransactionProcessor {
+class TransactionProcessorImpl: public TransactionProcessor {
  public:
     // Pass a valid ZMQ connection string for the Validator interconnect
     // address
-    explicit TransactionProcessor(const std::string& connection_string);
-    virtual ~TransactionProcessor();
+    explicit TransactionProcessorImpl(const std::string& connection_string);
+    virtual ~TransactionProcessorImpl();
     // Called to register the TransactionHandlers defined by your Transaction
     // Processor.  All the TransactionHandler objects must be registered
     // before run is called.

@@ -71,7 +71,7 @@ TIME_TO_LIVE = 3
 
 class Gossip(object):
     def __init__(self, network,
-                 settings_view_factory,
+                 settings_cache,
                  current_root_func,
                  endpoint=None,
                  peering_mode='static',
@@ -127,7 +127,7 @@ class Gossip(object):
         self._minimum_peer_connectivity = minimum_peer_connectivity
         self._maximum_peer_connectivity = maximum_peer_connectivity
         self._topology_check_frequency = topology_check_frequency
-        self._settings_view_factory = settings_view_factory
+        self._settings_cache = settings_cache
         self._current_root_func = current_root_func
 
         self._topology = None
@@ -197,11 +197,11 @@ class Gossip(object):
                              "connected identities are now %s",
                              connection_id, endpoint, self._peers)
             else:
-                LOGGER.debug("At maximum configured number of peers: %s "
-                             "Rejecting peering request from %s.",
-                             self._maximum_peer_connectivity,
-                             endpoint)
-                raise PeeringException()
+                raise PeeringException(
+                    "At maximum configured number of peers: {} "
+                    "Rejecting peering request from {}.".format(
+                        self._maximum_peer_connectivity,
+                        endpoint))
 
     def unregister_peer(self, connection_id):
         """Removes a connection_id from the registry.
@@ -224,12 +224,10 @@ class Gossip(object):
                              connection_id)
 
     def get_time_to_live(self):
-        settings_view = self._settings_view_factory.create_settings_view(
-            self._current_root_func())
-
         time_to_live = \
-            settings_view.get_setting(
+            self._settings_cache.get_setting(
                 "sawtooth.gossip.time_to_live",
+                self._current_root_func(),
                 default_value=TIME_TO_LIVE
             )
         return int(time_to_live)
@@ -448,9 +446,14 @@ class ConnectionManager(InstrumentedThread):
                 if self._peering_mode == 'dynamic':
                     self._refresh_peer_list(self._gossip.get_peers())
                     peers = self._gossip.get_peers()
-                    if len(peers) < self._min_peers:
-                        LOGGER.debug("Below minimum peer threshold. "
-                                     "Doing topology search.")
+                    peer_count = len(peers)
+                    if peer_count < self._min_peers:
+                        LOGGER.debug(
+                            "Number of peers (%s) below "
+                            "minimum peer threshold (%s). "
+                            "Doing topology search.",
+                            peer_count,
+                            self._min_peers)
 
                         self._reset_candidate_peer_endpoints()
                         self._refresh_peer_list(peers)
@@ -476,10 +479,11 @@ class ConnectionManager(InstrumentedThread):
                                 set(peered_endpoints) -
                                 set([self._endpoint]))
 
-                        LOGGER.debug("Number of peers: %s", len(peers))
-                        LOGGER.debug("Peers are: %s", list(peers.values()))
-                        LOGGER.debug("Unpeered candidates are: %s",
-                                     unpeered_candidates)
+                        LOGGER.debug(
+                            "Peers are: %s. "
+                            "Unpeered candidates are: %s",
+                            peered_endpoints,
+                            unpeered_candidates)
 
                         if unpeered_candidates:
                             self._attempt_to_peer_with_endpoint(
@@ -768,8 +772,12 @@ class ConnectionManager(InstrumentedThread):
                         self._connection_statuses[connection_id] = \
                             PeerStatus.PEER
                         self._gossip.send_block_request("HEAD", connection_id)
-                    except PeeringException:
+                    except PeeringException as e:
                         # Remove unsuccessful peer
+                        LOGGER.warning('Unable to successfully peer with '
+                                       'connection_id: %s, due to %s',
+                                       connection_id, str(e))
+
                         self._remove_temporary_connection(connection_id)
                 else:
                     LOGGER.debug("Cannot register peer with no endpoint for "

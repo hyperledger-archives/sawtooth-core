@@ -15,7 +15,9 @@
 import unittest
 
 from sawtooth_cli.network_command.compare import build_fork_graph
+from sawtooth_cli.network_command.compare import get_node_id_map
 from sawtooth_cli.network_command.compare import get_tails
+from sawtooth_cli.network_command.compare import print_summary
 from sawtooth_cli.network_command.compare import print_table
 from sawtooth_cli.network_command.compare import print_tree
 from sawtooth_cli.network_command.fork_graph import SimpleBlock
@@ -48,24 +50,13 @@ class TestNetworkCompare(unittest.TestCase):
             (4, ['0', '0', '0', '0', '0']),
         ]
 
-        # Build chain generators
-        chains = [[] for _ in chains_info[0][1]]
-        for i, num_ids in enumerate(chains_info[:-1]):
-            num, ids = num_ids
-            for j, ident in enumerate(ids):
-                if ident != '':
-                    next_chain_info = chains_info[i + 1]
-                    previous = next_chain_info[1][j]
-                    block = SimpleBlock(num, ident, previous)
-                    chains[j].append(block)
+        chains = make_chains(chains_info)
 
-        chains = [make_generator(chain) for chain in chains]
-
-        tails = get_tails(chains)
-        for tail in tails:
+        tails, _ = get_tails(chains)
+        for tail in tails.values():
             self.assertEqual(tail[0].num, 11)
 
-        graph = build_fork_graph(chains, tails)
+        graph, _ = build_fork_graph(chains, tails)
         self.assertEqual(graph.root.previous, '0')
         self.assertEqual(graph.root.ident, 'a')
 
@@ -96,22 +87,91 @@ class TestNetworkCompare(unittest.TestCase):
 
         self.assertEqual(len(checks), expected_checks)
 
-        print_table(graph, tails)
+        node_id_map = get_node_id_map([], len(tails))
+        tails = list(map(lambda item: item[1], sorted(tails.items())))
+
+        print_table(graph, tails, node_id_map)
         print()
-        print_tree(graph, tails)
+
+        print_tree(graph, tails, node_id_map)
+        print()
 
     def test_simple_graph(self):
         """Test that building the fork graph works correctly for a simple
         network state."""
 
-        chains = [make_generator(chain) for chain in (
-            [SimpleBlock(19, '19', '18')],
-            [SimpleBlock(19, '19', '18')],
-            [SimpleBlock(19, '19', '18')],
-        )]
+        chains = {
+            i: make_generator(chain)
+            for i, chain in enumerate((
+                [SimpleBlock(19, '19', '18')],
+                [SimpleBlock(19, '19', '18')],
+                [SimpleBlock(19, '19', '18')],
+            ))
+        }
 
-        tails = get_tails(chains)
-        graph = build_fork_graph(chains, tails)
+        tails, _ = get_tails(chains)
+        graph, _ = build_fork_graph(chains, tails)
 
         self.assertEqual(graph.root.previous, '18')
         self.assertEqual(graph.root.ident, '19')
+
+    def test_tails_communication_error(self):
+        #          -------PEER IDS------
+        #   NUM    0    1    2    3    4
+        chains_info = [
+            (15, ['z', '', '', '', '']),
+            (14, ['y', '', '', '', '']),
+            (13, ['w', '', 'x', '', '']),
+            (12, ['t', '', 'u', '', 'v']),
+            (11, ['g', '', 'l', '', 's']),
+        ]
+        chains = make_chains(chains_info)
+
+        tails, errors = get_tails(chains)
+        for _, tail in tails.items():
+            self.assertEqual(tail[0].num, 12)
+        self.assertEqual(errors, [1, 3])
+
+    def test_graph_communication_error(self):
+        #          -------PEER IDS------
+        #   NUM    0    1    2    3    4
+        good_chains_info = [
+            (8, ['d', 'd', 'i', 'i', 'p']),
+            (7, ['c', 'c', 'c', 'c', 'o']),
+        ]
+        bad_chains_info = [
+            (6, ['b', 'b', '', 'b', 'n']),
+            (5, ['a', 'a', '', 'a', '']),
+            (4, ['0', '0', '', '0', '']),
+        ]
+        good_chains = make_chains(good_chains_info)
+        bad_chains = make_chains(bad_chains_info)
+
+        tails, _ = get_tails(good_chains)
+        graph, errors = build_fork_graph(bad_chains, tails)
+        self.assertEqual(errors, [2, 4])
+
+        node_id_map = get_node_id_map(errors, len(good_chains))
+        tails = list(map(
+            lambda item: item[1],
+            filter(
+                lambda item: item[0] not in errors,
+                sorted(tails.items()))))
+        print_summary(graph, tails, node_id_map)
+
+
+def make_chains(chains_info):
+    chains = [[] for _ in chains_info[0][1]]
+    for i, num_ids in enumerate(chains_info[:-1]):
+        num, ids = num_ids
+        for j, ident in enumerate(ids):
+            if ident != '':
+                next_chain_info = chains_info[i + 1]
+                previous = next_chain_info[1][j]
+                block = SimpleBlock(num, ident, previous)
+                chains[j].append(block)
+    chains = {
+        i: make_generator(chain)
+        for i, chain in enumerate(chains)
+    }
+    return chains

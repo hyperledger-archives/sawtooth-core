@@ -83,7 +83,8 @@ disable=
     no-member,
     unused-argument,
     locally-disabled,
-    no-self-use
+    no-self-use,
+    too-many-lines
 
 [REPORTS]
 

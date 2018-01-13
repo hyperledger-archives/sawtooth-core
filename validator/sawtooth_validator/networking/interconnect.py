@@ -19,7 +19,6 @@ from functools import partial
 import hashlib
 import logging
 import queue
-import sys
 from threading import Event
 from threading import Lock
 import time
@@ -38,7 +37,6 @@ from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.networking import future
-from sawtooth_validator.protobuf.network_pb2 import PingRequest
 from sawtooth_validator.protobuf.authorization_pb2 import ConnectionRequest
 from sawtooth_validator.protobuf.authorization_pb2 import ConnectionResponse
 from sawtooth_validator.protobuf.authorization_pb2 import \
@@ -192,52 +190,12 @@ class _SendReceive(object):
 
     @asyncio.coroutine
     def _do_heartbeat(self):
-
-        ping = PingRequest()
-
         while True:
             try:
                 if self._socket.getsockopt(zmq.TYPE) == zmq.ROUTER:
-                    expired = \
-                        [ident for ident in self._last_message_times
-                         if time.time() - self._last_message_times[ident] >
-                         self._heartbeat_interval]
-                    for zmq_identity in expired:
-                        if self._is_connection_lost(
-                                self._last_message_times[zmq_identity]):
-                            LOGGER.debug("No response from %s in %s seconds"
-                                         " - removing connection.",
-                                         zmq_identity,
-                                         self._connection_timeout)
-                            self.remove_connected_identity(zmq_identity)
-                        else:
-                            message = validator_pb2.Message(
-                                correlation_id=_generate_id(),
-                                content=ping.SerializeToString(),
-                                message_type=validator_pb2.Message.PING_REQUEST
-                            )
-                            fut = future.Future(
-                                message.correlation_id,
-                                message.content,
-                            )
-                            self._futures.put(fut)
-                            message_frame = [
-                                bytes(zmq_identity),
-                                message.SerializeToString()
-                            ]
-                            yield from self._send_message_frame(message_frame)
+                    yield from self._do_router_heartbeat()
                 elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
-                    if self._last_message_time and \
-                            self._is_connection_lost(self._last_message_time):
-                        LOGGER.debug("No response from %s in %s seconds"
-                                     " - removing connection.",
-                                     self._connection,
-                                     self._connection_timeout)
-                        connection_id = hashlib.sha512(
-                            self.connection.encode()).hexdigest()
-                        if connection_id in self._connections:
-                            del self._connections[connection_id]
-                        yield from self._stop()
+                    yield from self._do_dealer_heartbeat()
                 yield from asyncio.sleep(self._heartbeat_interval)
             except CancelledError:
                 # The concurrent.futures.CancelledError is caught by asyncio
@@ -247,6 +205,65 @@ class _SendReceive(object):
             except Exception as e:  # pylint: disable=broad-except
                 LOGGER.exception(
                     "An error occurred while sending heartbeat: %s", e)
+
+    @asyncio.coroutine
+    def _do_router_heartbeat(self):
+        check_time = time.time()
+        expired = \
+            [(ident, check_time - timestamp)
+             for ident, timestamp
+             in self._last_message_times.items()
+             if check_time - timestamp > self._heartbeat_interval]
+        for zmq_identity, elapsed in expired:
+            if self._is_connection_lost(
+                    self._last_message_times[zmq_identity]):
+                LOGGER.info("No response from %s in %s seconds"
+                            " - removing connection.",
+                            self._identity_to_connection_id(
+                                zmq_identity),
+                            elapsed)
+                self.remove_connected_identity(zmq_identity)
+            else:
+                # This should only log the start of the heartbeat interval, so
+                # as to keep the message from  occurring
+                # _connection_timeout / _heartbeat_interval # times
+                if elapsed < 2 * self._heartbeat_interval:
+                    LOGGER.debug("No response from %s in %s seconds"
+                                 " - beginning heartbeat pings.",
+                                 self._identity_to_connection_id(
+                                     zmq_identity),
+                                 elapsed)
+                message = validator_pb2.Message(
+                    correlation_id=_generate_id(),
+                    # Ping request is an empty message, so an empty byte string
+                    # here is an optimization
+                    content=b'',
+                    message_type=validator_pb2.Message.PING_REQUEST
+                )
+                fut = future.Future(
+                    message.correlation_id,
+                    message.content,
+                )
+                self._futures.put(fut)
+                message_frame = [
+                    bytes(zmq_identity),
+                    message.SerializeToString()
+                ]
+                yield from self._send_message_frame(message_frame)
+
+    @asyncio.coroutine
+    def _do_dealer_heartbeat(self):
+        if self._last_message_time and \
+                self._is_connection_lost(self._last_message_time):
+            LOGGER.info("No response from %s in %s seconds"
+                        " - removing connection.",
+                        self._connection,
+                        self._last_message_time)
+            connection_id = hashlib.sha512(
+                self.connection.encode()).hexdigest()
+            if connection_id in self._connections:
+                del self._connections[connection_id]
+            yield from self._stop()
 
     def remove_connected_identity(self, zmq_identity):
         if zmq_identity in self._last_message_times:
@@ -280,10 +297,6 @@ class _SendReceive(object):
                     yield from self._dispatcher_queue.get()
                 message = validator_pb2.Message()
                 message.ParseFromString(msg_bytes)
-                LOGGER.debug("%s receiving %s message: %s bytes",
-                             self._connection,
-                             get_enum_name(message.message_type),
-                             sys.getsizeof(msg_bytes))
 
                 tag = get_enum_name(message.message_type)
                 self._get_received_message_counter(tag).inc()
@@ -308,13 +321,7 @@ class _SendReceive(object):
                                               connection_id)
                 else:
                     my_future = self._futures.get(message.correlation_id)
-
-                    LOGGER.debug("message round "
-                                 "trip: %s %s",
-                                 get_enum_name(message.message_type),
-                                 my_future.get_duration())
                     my_future.timer_stop()
-
                     self._futures.remove(message.correlation_id)
 
             except CancelledError:
@@ -373,11 +380,6 @@ class _SendReceive(object):
                              connection_id)
 
         self._ready.wait()
-
-        LOGGER.debug("%s sending %s to %s",
-                     self._connection,
-                     get_enum_name(msg.message_type),
-                     zmq_identity if zmq_identity else self._address)
 
         if zmq_identity is None:
             message_bundle = [msg.SerializeToString()]

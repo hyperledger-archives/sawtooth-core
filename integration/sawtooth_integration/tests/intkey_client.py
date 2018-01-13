@@ -13,12 +13,16 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
+import logging
 import time
 from urllib.parse import urlparse, parse_qs
 
 from sawtooth_cli.rest_client import RestClient
+from sawtooth_cli.exceptions import CliException
 from sawtooth_cli.exceptions import RestClientException
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
+
+LOGGER = logging.getLogger(__name__)
 
 
 class IntkeyClient(RestClient):
@@ -31,9 +35,20 @@ class IntkeyClient(RestClient):
     def send_txns(self, txns):
         batch = self.factory.create_batch(txns)
 
-        response = self.send_batches(batch)
-        id_query = urlparse(response['link']).query
-        return parse_qs(id_query)['id'][0]
+        attempts = 0
+        response = None
+        while True:
+            try:
+                response = self.send_batches(batch)
+                id_query = urlparse(response['link']).query
+                return parse_qs(id_query)['id'][0]
+            except CliException:
+                if attempts < 8:
+                    LOGGER.info('responding to back-pressure, retrying...')
+                    attempts += 1
+                    time.sleep(0.2 * (2 ** attempts))
+                else:
+                    raise
 
     def recent_block_signatures(self, tolerance):
         return self.list_block_signatures()[:tolerance]

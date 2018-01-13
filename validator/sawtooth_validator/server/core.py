@@ -41,6 +41,8 @@ from sawtooth_validator.journal.chain_id_manager import ChainIdManager
 from sawtooth_validator.execution.executor import TransactionExecutor
 from sawtooth_validator.state.batch_tracker import BatchTracker
 from sawtooth_validator.state.settings_view import SettingsViewFactory
+from sawtooth_validator.state.settings_cache import SettingsObserver
+from sawtooth_validator.state.settings_cache import SettingsCache
 from sawtooth_validator.state.identity_view import IdentityViewFactory
 from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
@@ -185,6 +187,10 @@ class Validator(object):
 
         batch_tracker = BatchTracker(block_store)
 
+        settings_cache = SettingsCache(
+            SettingsViewFactory(state_view_factory),
+        )
+
         executor = TransactionExecutor(
             service=component_service,
             context_manager=context_manager,
@@ -201,7 +207,7 @@ class Validator(object):
         # -- Setup P2P Networking -- #
         gossip = Gossip(
             network_service,
-            SettingsViewFactory(state_view_factory),
+            settings_cache,
             block_store.chain_head_state_root,
             endpoint=endpoint,
             peering_mode=peering,
@@ -233,6 +239,10 @@ class Validator(object):
             to_update=id_cache.invalidate,
             forked=id_cache.forked)
 
+        settings_observer = SettingsObserver(
+            to_update=settings_cache.invalidate,
+            forked=settings_cache.forked)
+
         # -- Setup Journal -- #
         batch_injector_factory = DefaultBatchInjectorFactory(
             block_store=block_store,
@@ -243,6 +253,7 @@ class Validator(object):
             transaction_executor=executor,
             block_cache=block_cache,
             state_view_factory=state_view_factory,
+            settings_cache=settings_cache,
             block_sender=block_sender,
             batch_sender=batch_sender,
             squash_handler=context_manager.get_squash_handler(),
@@ -273,7 +284,8 @@ class Validator(object):
                 event_broadcaster,
                 receipt_store,
                 batch_tracker,
-                identity_observer
+                identity_observer,
+                settings_observer
             ],
             metrics_registry=metrics_registry)
 
@@ -300,14 +312,14 @@ class Validator(object):
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
             chain_controller.has_block, block_publisher.has_batch,
-            permission_verifier)
+            permission_verifier, block_publisher)
 
         component_handlers.add(
             component_dispatcher, gossip, context_manager, executor, completer,
             block_store, batch_tracker, global_state_db,
             self.get_chain_head_state_root_hash, receipt_store,
             event_broadcaster, permission_verifier, component_thread_pool,
-            sig_pool)
+            sig_pool, block_publisher, metrics_registry)
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher

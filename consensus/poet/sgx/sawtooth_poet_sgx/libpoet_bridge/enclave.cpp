@@ -811,6 +811,7 @@ namespace sawtooth {
                 if (SGX_ERROR_ENCLAVE_LOST == ret) {
                     // Enclave lost, potentially due to power state change
                     // reload the enclave and try again
+                    this->Unload();
                     this->LoadEnclave();
                 } else if (SGX_ERROR_DEVICE_BUSY == ret) {
                     // Device is busy... wait and try again.

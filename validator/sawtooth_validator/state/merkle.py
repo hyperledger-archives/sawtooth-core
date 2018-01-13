@@ -31,6 +31,28 @@ NODE_PROTO = {
 TOKEN_SIZE = 2
 
 
+def _decode(encoded):
+    return cbor.loads(encoded)
+
+
+def _encode(value):
+    return cbor.dumps(value, sort_keys=True)
+
+
+def _hash(stuff):
+    return hashlib.sha512(stuff).hexdigest()[:64]
+
+
+def _encode_and_hash(value):
+    packed = _encode(value)
+    return _hash(packed), packed
+
+
+NODE_PROTO_PACKED = _encode(NODE_PROTO)
+
+NODE_PROTO_HASHED = _hash(NODE_PROTO_PACKED)
+
+
 class MerkleDatabase(object):
     def __init__(self, database, merkle_root=INIT_ROOT_KEY):
         self._database = database
@@ -51,7 +73,7 @@ class MerkleDatabase(object):
             node = self._get_by_hash(hash_key)
 
         if node["v"] is not None:
-            yield (path, self._decode(node["v"]))
+            yield (path, _decode(node["v"]))
 
         for child in node["c"]:
             for value in self._yield_iter(path + child, node["c"][child]):
@@ -79,7 +101,7 @@ class MerkleDatabase(object):
 
     def set_merkle_root(self, merkle_root):
         if merkle_root == INIT_ROOT_KEY:
-            self._root_hash = self._set_kv(NODE_PROTO)
+            self._root_hash = self._set_kv()
             self._root_node = self._get_by_hash(self._root_hash)
         else:
             self._root_node = self._get_by_hash(merkle_root)
@@ -90,16 +112,16 @@ class MerkleDatabase(object):
         return hashlib.sha512(stuff).hexdigest()[:64]
 
     def _get_by_hash(self, key_hash):
-        if key_hash in self._database:
-            return self._decode(self._database.get(key_hash))
-        else:
+        try:
+            return _decode(self._database.get(key_hash))
+        except ValueError:   # value returned from database was None
             raise KeyError("hash {} not found in database".format(key_hash))
 
     def __getitem__(self, address):
         return self.get(address)
 
     def get(self, address):
-        return self._decode(self.get_node(address).get('v'))
+        return _decode(self.get_node(address).get('v'))
 
     def get_node(self, address):
         return self._get_by_addr(address)
@@ -111,10 +133,10 @@ class MerkleDatabase(object):
         return self._set_by_addr(address, value)
 
     def _tokenize_address(self, address):
-        return [
+        return (
             address[i:i + TOKEN_SIZE]
             for i in range(0, len(address), TOKEN_SIZE)
-        ]
+        )
 
     def _get_by_addr(self, address):
         tokens = self._tokenize_address(address)
@@ -122,48 +144,34 @@ class MerkleDatabase(object):
         node = self._root_node
 
         for token in tokens:
-            if token in node['c']:
+            try:
                 node = self._get_by_hash(node['c'][token])
-            else:
-                raise KeyError("invalid address {} "
-                               "from root {}".format(address,
-                                                     self._root_hash))
+            except KeyError:
+                raise KeyError(
+                    "invalid address {} from root {}".format(
+                        address, self._root_hash))
         return node
 
-    def _get_path_by_addr(self, address, return_empty=False):
+    def _get_path_by_addr(self, address):
         tokens = self._tokenize_address(address)
         node = copy.deepcopy(self._root_node)
         path = ''
-        nodes = {}
+        nodes = {path: node}
 
-        nodes[path] = node
         new_branch = False
 
         for token in tokens:
-            if token in node['c'] and not new_branch:
-                path = path + token
-                node = self._get_by_hash(node['c'][token])
+            path += token
+            node_token = node['c'].get(token)
+
+            if node_token is not None and not new_branch:
+                node = self._get_by_hash(node_token)
                 nodes[path] = node
             else:
-                if return_empty:
-                    path = path + token
-                    nodes[path] = {"v": None, "c": {}}
-                    new_branch = True
-                else:
-                    raise KeyError("invalid address {} "
-                                   "from root {}".format(address,
-                                                         self._root_hash))
+                nodes[path] = {"v": None, "c": {}}
+                new_branch = True
+
         return nodes
-
-    def _decode(self, encoded):
-        return cbor.loads(encoded)
-
-    def _encode(self, value):
-        return cbor.dumps(value, sort_keys=True)
-
-    def _encode_and_hash(self, value):
-        packed = self._encode(value)
-        return (MerkleDatabase.hash(packed), packed)
 
     def delete(self, address):
         path_map = self._get_path_by_addr(address)
@@ -178,7 +186,7 @@ class MerkleDatabase(object):
                 leaf_branch = False
 
             if not leaf_branch:
-                (hash_key, packed) = self._encode_and_hash(path_map[path])
+                (hash_key, packed) = _encode_and_hash(path_map[path])
                 batch.append((hash_key, packed))
                 if path != '':
                     path_map[parent_address]['c'][path_branch] = hash_key
@@ -208,9 +216,8 @@ class MerkleDatabase(object):
         for set_address in set_items:
             # the set items are added to the Path map second,
             # since they may add children to paths
-            path_map.update(self._get_path_by_addr(set_address,
-                                                   return_empty=True))
-            path_map[set_address]["v"] = self._encode(set_items[set_address])
+            path_map.update(self._get_path_by_addr(set_address))
+            path_map[set_address]["v"] = _encode(set_items[set_address])
 
         if delete_items is not None:
             for del_address in delete_items:
@@ -239,7 +246,7 @@ class MerkleDatabase(object):
 
         # Rebuild the hashes to the new root
         for path in sorted(path_map, key=len, reverse=True):
-            (key_hash, packed) = self._encode_and_hash(path_map[path])
+            (key_hash, packed) = _encode_and_hash(path_map[path])
             update_batch.append((key_hash, packed))
             if path != '':
                 parent_address = path[:-TOKEN_SIZE]
@@ -252,21 +259,23 @@ class MerkleDatabase(object):
         return key_hash
 
     def _set_by_addr(self, address, value):
-        tokens = self._tokenize_address(address)
-        path_addresses = [''.join(tokens[0:i]) for i in range(len(tokens),
-                                                              0,
-                                                              -1)]
+        tokens = list(self._tokenize_address(address))
 
-        path_map = self._get_path_by_addr(address, return_empty=True)
+        path_addresses = [
+            ''.join(tokens[0:i])
+            for i in range(len(tokens), 0, -1)
+        ]
+
+        path_map = self._get_path_by_addr(address)
 
         # Set the value in the leaf node
-        path_map[path_addresses[0]]["v"] = self._encode(value)
+        path_map[path_addresses[0]]["v"] = _encode(value)
 
         child = path_map[path_addresses[0]]
 
         batch = []
         for path_address in path_addresses:
-            (key_hash, packed) = self._encode_and_hash(child)
+            (key_hash, packed) = _encode_and_hash(child)
             parent_address = path_address[:-TOKEN_SIZE]
             path_branch = path_address[-TOKEN_SIZE:]
             path_map[parent_address]["c"][path_branch] = key_hash
@@ -276,7 +285,7 @@ class MerkleDatabase(object):
         # Update the child of the root node to the prior hash
         root_node = copy.deepcopy(self._root_node)
         root_node["c"][tokens[0]] = key_hash
-        (root_hash, packed) = self._encode_and_hash(root_node)
+        (root_hash, packed) = _encode_and_hash(root_node)
 
         batch.append((root_hash, packed))
 
@@ -284,15 +293,12 @@ class MerkleDatabase(object):
 
         return root_hash
 
-    def _get_kv(self, key):
-        packed = self._database.get(key)
-        return self._decode(packed) if packed is not None else None
+    def _set_kv(self):
+        self._database.set(
+            NODE_PROTO_HASHED,
+            NODE_PROTO_PACKED)
 
-    def _set_kv(self, value):
-        packed = self._encode(value)
-        hashed_key = MerkleDatabase.hash(packed)
-        self._database.set(hashed_key, packed)
-        return hashed_key
+        return NODE_PROTO_HASHED
 
     def addresses(self):
         addresses = []

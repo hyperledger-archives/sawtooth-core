@@ -46,12 +46,20 @@ def add_block_parser(subparsers, parent_parser):
         'blockchain, including the block id and number, public keys all '
         'of allsigners, and number of transactions and batches.')
 
-    grand_parsers.add_parser(
+    list_parser = grand_parsers.add_parser(
         'list',
         help='Displays information for all blocks on the current blockchain',
         description=description,
         parents=[base_http_parser(), base_list_parser()],
         formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    list_parser.add_argument(
+        '-n',
+        '--count',
+        default=100,
+        type=int,
+        help='the number of blocks to list',
+    )
 
     description = (
         'Displays information about the specified block on '
@@ -78,7 +86,15 @@ def do_block(args):
     rest_client = RestClient(args.url, args.user)
 
     if args.subcommand == 'list':
-        blocks = rest_client.list_blocks()
+        block_generator = rest_client.list_blocks()
+        blocks = []
+        left = args.count
+        for block in block_generator:
+            blocks.append(block)
+            left -= 1
+            if left <= 0:
+                break
+
         keys = ('num', 'block_id', 'batches', 'txns', 'signer')
         headers = tuple(k.upper() if k != 'batches' else 'BATS' for k in keys)
 

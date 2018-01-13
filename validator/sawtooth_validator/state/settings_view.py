@@ -47,7 +47,13 @@ class SettingsView(object):
         """
         self._state_view = state_view
 
-    def get_setting(self, key, default_value=None, value_type=str):
+        # The public method for get_settings should have its results memoized
+        # via an lru_cache.  Typical use of the decorator results in the
+        # cache being global, which can cause views to return incorrect
+        # values across state root hash boundaries.
+        self.get_setting = lru_cache(maxsize=128)(self._get_setting)
+
+    def _get_setting(self, key, default_value=None, value_type=str):
         """Get the setting stored at the given key.
 
         Args:

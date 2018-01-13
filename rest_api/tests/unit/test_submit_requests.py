@@ -166,6 +166,26 @@ class PostBatchTests(BaseApiTest):
         response = await request.json()
         self.assert_has_valid_error(response, 34)
 
+    @unittest_run_loop
+    async def test_post_rejected_due_to_full_queue(self):
+        """Verifies a POST /batches when the validator reports QUEUE_FULL
+        breaks properly.
+
+        It will receive a Protobuf response with:
+            - a status of QUEUE_FULL
+
+        It should send back a JSON response with:
+            - a response status of 429
+            - an error property with a code of 31
+        """
+        batches = Mocks.make_batches(ID_A)
+        self.connection.preset_response(self.status.QUEUE_FULL)
+
+        request = await self.post_batches(batches)
+        self.assertEqual(429, request.status)
+        response = await request.json()
+        self.assert_has_valid_error(response, 31)
+
 
 class ClientBatchStatusTests(BaseApiTest):
 

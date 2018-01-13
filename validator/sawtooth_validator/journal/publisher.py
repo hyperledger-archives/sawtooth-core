@@ -16,6 +16,7 @@
 # pylint: disable=inconsistent-return-statements
 
 import abc
+from collections import deque
 import logging
 import queue
 from threading import RLock
@@ -34,12 +35,17 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
 from sawtooth_validator.journal.chain_commit_state import \
     TransactionCommitCache
 
+from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator.metrics.wrappers import GaugeWrapper
+
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 
-from sawtooth_validator.state.settings_view import SettingsView
-
 LOGGER = logging.getLogger(__name__)
+
+
+NUM_PUBLISH_COUNT_SAMPLES = 5
+INITIAL_PUBLISH_COUNT = 30
 
 
 class PendingBatchObserver(metaclass=abc.ABCMeta):
@@ -409,6 +415,7 @@ class BlockPublisher(object):
                  transaction_executor,
                  block_cache,
                  state_view_factory,
+                 settings_cache,
                  block_sender,
                  batch_sender,
                  squash_handler,
@@ -451,12 +458,15 @@ class BlockPublisher(object):
         # the next block in potential chain
         self._block_cache = block_cache
         self._state_view_factory = state_view_factory
+        self._settings_cache = settings_cache
         self._transaction_executor = transaction_executor
         self._block_sender = block_sender
         self._batch_publisher = BatchPublisher(identity_signer, batch_sender)
         self._pending_batches = []  # batches we are waiting for validation,
         # arranged in the order of batches received.
         self._pending_batch_ids = []
+        self._publish_count_average = _RollingAverage(
+            NUM_PUBLISH_COUNT_SAMPLES, INITIAL_PUBLISH_COUNT)
 
         self._chain_head = chain_head  # block (BlockWrapper)
         self._squash_handler = squash_handler
@@ -467,9 +477,14 @@ class BlockPublisher(object):
         self._batch_injector_factory = batch_injector_factory
 
         # For metric gathering
-        self._pending_batch_gauge = \
-            metrics_registry.gauge('pending_batch_gauge') \
-            if metrics_registry else None
+        if metrics_registry:
+            self._pending_batch_gauge = GaugeWrapper(
+                metrics_registry.gauge('pending_batch_gauge'))
+            self._blocks_published_count = CounterWrapper(
+                metrics_registry.counter('blocks_published_count'))
+        else:
+            self._blocks_published_count = CounterWrapper()
+            self._pending_batch_gauge = GaugeWrapper()
 
         self._batch_queue = queue.Queue()
         self._queued_batch_ids = []
@@ -499,6 +514,20 @@ class BlockPublisher(object):
         for observer in self._batch_observers:
             observer.notify_batch_pending(batch)
 
+    def can_accept_batch(self):
+        return len(self._pending_batches) < self._get_current_queue_limit()
+
+    def _get_current_queue_limit(self):
+        # Limit the number of batches to 2 times the publishing average.  This
+        # allows the queue to grow geometrically, if the queue is drained.
+        return 2 * self._publish_count_average.value
+
+    def get_current_queue_info(self):
+        """Returns a tuple of the current size of the pending batch queue
+        and the current queue limit.
+        """
+        return (len(self._pending_batches), self._get_current_queue_limit())
+
     @property
     def chain_head_lock(self):
         return self._lock
@@ -517,10 +546,11 @@ class BlockPublisher(object):
             chain_head.header_signature,
             state_view)
 
-        settings_view = SettingsView(state_view)
-        max_batches = settings_view.get_setting(
+        # using chain_head so so we can use the setting_cache
+        max_batches = int(self._settings_cache.get_setting(
             'sawtooth.publisher.max_batches_per_block',
-            default_value=0, value_type=int)
+            chain_head.state_root_hash,
+            default_value=0))
 
         public_key = self._identity_signer.get_public_key().as_hex()
         consensus = consensus_module.\
@@ -581,7 +611,7 @@ class BlockPublisher(object):
             if self._permission_verifier.is_batch_signer_authorized(batch):
                 self._pending_batches.append(batch)
                 self._pending_batch_ids.append(batch.header_signature)
-                self._set_gauge(len(self._pending_batches))
+                self._pending_batch_gauge.set_value(len(self._pending_batches))
                 # if we are building a block then send schedule it for
                 # execution.
                 if self._candidate_block and \
@@ -607,8 +637,20 @@ class BlockPublisher(object):
         committed_set = set([x.header_signature for x in committed_batches])
 
         pending_batches = self._pending_batches
+
         self._pending_batches = []
         self._pending_batch_ids = []
+
+        num_committed_batches = len(committed_batches)
+        if num_committed_batches > 0:
+            # Only update the average if either:
+            # a. Not drained below the current average
+            # b. Drained the queue, but the queue was not bigger than the
+            #    current running average
+            remainder = len(self._pending_batches) - num_committed_batches
+            if remainder > self._publish_count_average.value or \
+                    num_committed_batches > self._publish_count_average.value:
+                self._publish_count_average.update(num_committed_batches)
 
         # Uncommitted and pending disjoint sets
         # since batches can only be committed to a chain once.
@@ -655,7 +697,8 @@ class BlockPublisher(object):
                                                   uncommitted_batches)
                     self._build_candidate_block(chain_head)
 
-                    self._set_gauge(len(self._pending_batches))
+                    self._pending_batch_gauge.set_value(
+                        len(self._pending_batches))
 
         # pylint: disable=broad-except
         except Exception as exc:
@@ -694,12 +737,14 @@ class BlockPublisher(object):
                         self._pending_batches[last_batch_index + 1:]
                     self._pending_batches = pending_batches + unsent_batches
 
-                    self._set_gauge(len(self._pending_batches))
+                    self._pending_batch_gauge.set_value(
+                        len(self._pending_batches))
 
                     if block:
                         blkw = BlockWrapper(block)
                         LOGGER.info("Claimed Block: %s", blkw)
                         self._block_sender.send(blkw.block)
+                        self._blocks_published_count.inc()
 
                         # We built our candidate, disable processing until
                         # the chain head is updated. Only set this if
@@ -713,10 +758,6 @@ class BlockPublisher(object):
             LOGGER.critical("on_check_publish_block exception.")
             LOGGER.exception(exc)
 
-    def _set_gauge(self, value):
-        if self._pending_batch_gauge:
-            self._pending_batch_gauge.set_value(value)
-
     def has_batch(self, batch_id):
         with self._lock:
             if batch_id in self._pending_batch_ids:
@@ -725,3 +766,25 @@ class BlockPublisher(object):
                 return True
 
         return False
+
+
+class _RollingAverage(object):
+
+    def __init__(self, sample_size, initial_value):
+        self._samples = deque(maxlen=sample_size)
+
+        self._samples.append(initial_value)
+        self._current_average = initial_value
+
+    @property
+    def value(self):
+        return self._current_average
+
+    def update(self, sample):
+        """Add the sample and return the updated average.
+        """
+        self._samples.append(sample)
+
+        self._current_average = sum(self._samples) / len(self._samples)
+
+        return self._current_average

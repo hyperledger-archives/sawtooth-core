@@ -43,6 +43,8 @@ from sawtooth_validator.protobuf.setting_pb2 import Setting
 from sawtooth_validator.protobuf.transaction_pb2 import Transaction
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.state.settings_view import SettingsView
+from sawtooth_validator.state.settings_view import SettingsViewFactory
+from sawtooth_validator.state.settings_cache import SettingsCache
 
 from test_journal import mock_consensus
 
@@ -122,6 +124,9 @@ class BlockTreeManager(object):
             transaction_executor=MockTransactionExecutor(),
             block_cache=self.block_cache,
             state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(self.state_view_factory),
+            ),
             block_sender=self.block_sender,
             batch_sender=self.block_sender,
             squash_handler=None,

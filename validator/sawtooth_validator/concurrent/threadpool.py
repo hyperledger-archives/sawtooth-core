@@ -57,8 +57,7 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
             task_name = str(fn)
 
         if self._trace:
-            task_details = \
-                str(fn) + '[' + str(args) + ',' + str(kwargs) + ']'
+            task_details = '{}[{},{}]'.format(fn, args, kwargs)
         else:
             task_details = task_name
 

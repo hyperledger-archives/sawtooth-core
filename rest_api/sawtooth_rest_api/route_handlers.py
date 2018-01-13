@@ -156,7 +156,8 @@ class RouteHandler(object):
             raise errors.BadProtobufSubmitted()
 
         # Query validator
-        error_traps = [error_handlers.BatchInvalidTrap]
+        error_traps = [error_handlers.BatchInvalidTrap,
+                       error_handlers.BatchQueueFullTrap]
         validator_query = client_batch_submit_pb2.ClientBatchSubmitRequest(
             batches=batch_list.batches)
 
@@ -1023,4 +1024,7 @@ class RouteHandler(object):
 
     @staticmethod
     def _get_status_name(proto, status_enum):
-        return proto.Status.Name(status_enum)
+        try:
+            return proto.Status.Name(status_enum)
+        except ValueError:
+            return 'Unknown ({})'.format(status_enum)

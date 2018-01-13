@@ -140,8 +140,6 @@ class GossipMessageSignatureVerifier(Handler):
                              block.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            LOGGER.debug("block passes signature verification %s",
-                         block.header_signature)
             self._seen_cache[block.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
@@ -158,8 +156,6 @@ class GossipMessageSignatureVerifier(Handler):
                              batch.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            LOGGER.debug("batch passes signature verification %s",
-                         batch.header_signature)
             self._seen_cache[batch.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
@@ -186,8 +182,6 @@ class GossipBlockResponseSignatureVerifier(Handler):
                          block.header_signature)
             return HandlerResult(status=HandlerStatus.DROP)
 
-        LOGGER.debug("requested block passes signature verification %s",
-                     block.header_signature)
         self._seen_cache = TimedCache()
         return HandlerResult(status=HandlerStatus.PASS)
 
@@ -212,8 +206,6 @@ class GossipBatchResponseSignatureVerifier(Handler):
                          batch.header_signature)
             return HandlerResult(status=HandlerStatus.DROP)
 
-        LOGGER.debug("requested batch passes signature verification %s",
-                     batch.header_signature)
         self._seen_cache[batch.header_signature] = None
         return HandlerResult(status=HandlerStatus.PASS)
 

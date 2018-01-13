@@ -276,6 +276,9 @@ def _set_setting_value(context, key, value):
     if setting != 'sawtooth.settings.vote.proposals':
         LOGGER.info('Setting setting %s changed from %s to %s',
                     key, old_value, value)
+    context.add_event(
+        event_type="settings/update",
+        attributes=[("updated", key)])
 
 
 def _get_setting_entry(context, address):

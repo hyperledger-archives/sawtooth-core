@@ -95,8 +95,6 @@ class GossipHandlerStructureVerifier(Handler):
                              block.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            LOGGER.debug("block passes batch structure verification %s",
-                         block.header_signature)
             return HandlerResult(status=HandlerStatus.PASS)
         elif gossip_message.content_type == network_pb2.GossipMessage.BATCH:
             batch = Batch()
@@ -106,8 +104,6 @@ class GossipHandlerStructureVerifier(Handler):
                              batch.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            LOGGER.debug("batch passes structure verification %s",
-                         batch.header_signature)
             return HandlerResult(status=HandlerStatus.PASS)
 
         return HandlerResult(status=HandlerStatus.PASS)
@@ -125,8 +121,6 @@ class GossipBlockResponseStructureVerifier(Handler):
                          block.header_signature)
             return HandlerResult(status=HandlerStatus.DROP)
 
-        LOGGER.debug("requested block passes batch structure "
-                     "verification %s", block.header_signature)
         return HandlerResult(status=HandlerStatus.PASS)
 
 
@@ -142,8 +136,6 @@ class GossipBatchResponseStructureVerifier(Handler):
                          batch.header_signature)
             return HandlerResult(status=HandlerStatus.DROP)
 
-        LOGGER.debug("requested batch passes structure verification %s",
-                     batch.header_signature)
         return HandlerResult(status=HandlerStatus.PASS)
 
 

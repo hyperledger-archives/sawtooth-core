@@ -53,10 +53,11 @@ class Database(metaclass=ABCMeta):
             key (str): The key to retrieve
         """
         records = self.get_multi([key], index=index)
-        if records:
-            return records[0][1]  # return the value from the key/value tuple
 
-        return None
+        try:
+            return records[0][1]  # return the value from the key/value tuple
+        except IndexError:
+            return None
 
     @abstractmethod
     def get_multi(self, keys, index=None):

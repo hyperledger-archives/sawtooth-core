@@ -8,28 +8,27 @@ The easiest way to install Hyperledger Sawtooth is with apt-get.
 
   These instructions have been tested on Ubuntu 16.04 only.
 
-Add the signing key:
+Stable Builds:
+
+To add the stable repository, run these commands in a terminal window on your
+host system:
 
 .. code-block:: console
 
   $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-
-Stable Builds:
-
-.. code-block:: console
-
-  $ sudo echo "deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe" >> /etc/apt/sources.list
+  $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
 
 Nightly Builds:
 
-If you'd like the latest and greatest version of Sawtooth, we also
-provide a repository of nightly builds. These builds may incorporate
-undocumented features and should be used for testing purposes only.
+If you'd like the latest version of Sawtooth, we also provide a repository of
+nightly builds. These builds may incorporate undocumented features and should
+be used for testing purposes only. To use the nightly repository, run the
+following commands in a terminal window on your host system:
 
 .. code-block:: console
 
   $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
-  $ sudo echo "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe" >> /etc/apt/sources.list
+  $ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
 
 Update your package lists and install Sawtooth:
 

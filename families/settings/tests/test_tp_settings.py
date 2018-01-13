@@ -56,6 +56,14 @@ class TestSettings(TransactionProcessorTestCase):
         self.validator.respond(
             self.factory.create_set_response(key), received)
 
+    def _expect_add_event(self, key):
+        received = self.validator.expect(
+            self.factory.create_add_event_request(key))
+
+        self.validator.respond(
+            self.factory.create_add_event_response(),
+            received)
+
     def _expect_ok(self):
         self.validator.expect(self.factory.create_tp_response("OK"))
 
@@ -132,6 +140,8 @@ class TestSettings(TransactionProcessorTestCase):
         self._expect_set('sawtooth.settings.vote.authorized_keys',
                          self._public_key)
 
+        self._expect_add_event('sawtooth.settings.vote.authorized_keys')
+
         self._expect_ok()
 
     def test_reject_settings_when_auth_keys_is_empty(self):
@@ -189,6 +199,8 @@ class TestSettings(TransactionProcessorTestCase):
         self._expect_set('sawtooth.settings.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
 
+        self._expect_add_event('sawtooth.settings.vote.proposals')
+
         self._expect_ok()
 
     def test_vote_approved(self):
@@ -223,11 +235,15 @@ class TestSettings(TransactionProcessorTestCase):
         self._expect_get('my.config.setting')
         self._expect_set('my.config.setting', 'myvalue')
 
+        self._expect_add_event("my.config.setting")
+
         # expect to update the proposals
         self._expect_get('sawtooth.settings.vote.proposals',
                          base64.b64encode(candidates.SerializeToString()))
         self._expect_set('sawtooth.settings.vote.proposals',
                          base64.b64encode(EMPTY_CANDIDATES))
+
+        self._expect_add_event('sawtooth.settings.vote.proposals')
 
         self._expect_ok()
 
@@ -280,6 +296,8 @@ class TestSettings(TransactionProcessorTestCase):
             'sawtooth.settings.vote.proposals',
             base64.b64encode(updated_candidates.SerializeToString()))
 
+        self._expect_add_event('sawtooth.settings.vote.proposals')
+
         self._expect_ok()
 
     def test_vote_rejected(self):
@@ -321,6 +339,8 @@ class TestSettings(TransactionProcessorTestCase):
         self._expect_set('sawtooth.settings.vote.proposals',
                          base64.b64encode(EMPTY_CANDIDATES))
 
+        self._expect_add_event('sawtooth.settings.vote.proposals')
+
         self._expect_ok()
 
     def test_vote_rejects_a_tie(self):
@@ -359,6 +379,8 @@ class TestSettings(TransactionProcessorTestCase):
         self._expect_set('sawtooth.settings.vote.proposals',
                          base64.b64encode(EMPTY_CANDIDATES))
 
+        self._expect_add_event('sawtooth.settings.vote.proposals')
+
         self._expect_ok()
 
     def test_authorized_keys_accept_no_approval_threshhold(self):
@@ -374,6 +396,8 @@ class TestSettings(TransactionProcessorTestCase):
         # check the old value and set the new one
         self._expect_get('foo.bar.count')
         self._expect_set('foo.bar.count', '1')
+
+        self._expect_add_event('foo.bar.count')
 
         self._expect_ok()
 

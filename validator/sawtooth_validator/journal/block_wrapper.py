@@ -159,6 +159,9 @@ class BlockWrapper(object):
                    self.state_root_hash, self.previous_block_id)
 
     def __str__(self):
-        return "{}({}, S:{}, P:{})". \
-            format(self.identifier[:8], self.block_num,
-                   self.state_root_hash[:8], self.previous_block_id[:8])
+        return "{} (block_num:{}, state:{}, previous_block_id:{})".format(
+            self.identifier,
+            self.block_num,
+            self.state_root_hash,
+            self.previous_block_id,
+        )

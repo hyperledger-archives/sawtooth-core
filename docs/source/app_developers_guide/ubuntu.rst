@@ -200,37 +200,6 @@ transaction families.
 Transaction processors can be started either before or after the validator is
 started.
 
-Supported Transaction Families
-------------------------------
-
-Sawtooth supports multiple languages for transaction processor development and
-includes additional transaction processors written in several languages.
-Sawtooth includes following transaction processors:
-
-* settings-tp - A Settings family transaction processor written in Python
-
-* intkey-tp-go - An IntegerKey transaction processor written in Go
-
-* intkey-tp-java - An IntegerKey transaction processor written in Java
-
-* intkey-tp-javascript - An IntegerKey transaction processor written in
-  JavaScript (requires node.js)
-
-* intkey-tp-python - An IntegerKey transaction processor written in Python
-
-* poet-validator-registry-tp - A transaction family used by the PoET consensus
-  algorithm implementation to keep track of other validators
-
-* xo-tp-javascript - An XO transaction processor written in JavaScript
-  (requires node.js)
-
-* xo-tp-python - An XO transaction processor written in Python
-
-.. note::
-
-  In a production environment, you should always run a transaction processor
-  that supports the Settings transaction family.
-
 Starting the IntegerKey Transaction Processor
 ---------------------------------------------
 The IntegerKey transaction processor is provided as a simple example of a
@@ -258,7 +227,6 @@ The transaction processor produces the following output:
 .. code-block:: console
 
   [23:07:57 INFO    core] register attempt: OK
-
 
 Starting the Settings Family Transaction Processor
 --------------------------------------------------

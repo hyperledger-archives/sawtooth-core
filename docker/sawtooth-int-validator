@@ -40,11 +40,12 @@ RUN cd /debs \
  && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz \
  && echo "deb file:/debs ./" >> /etc/apt/sources.list \
  && echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
- && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8AA7AF1F1091A5FD \
+ && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update
 
 RUN apt-get install -y -q --allow-unauthenticated \
     python3-sawtooth-validator \
+    python3-sawtooth-block-info \
     python3-sawtooth-poet-cli \
     python3-sawtooth-cli
 
