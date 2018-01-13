@@ -15,9 +15,14 @@
  * ------------------------------------------------------------------------------
  */
 
-extern crate protobuf;
+extern crate crypto;
+extern crate libc;
 #[macro_use]
 extern crate log;
+extern crate protobuf;
+extern crate secp256k1;
+extern crate uuid;
+extern crate zmq;
 
 pub mod messages;
 pub mod messaging;

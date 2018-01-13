@@ -14,18 +14,16 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 
-extern crate secp256k1;
-extern crate crypto;
+use secp256k1;
 
-use self::crypto::digest::Digest;
-use self::crypto::sha2::Sha256;
-
-use super::PrivateKey;
-use super::PublicKey;
-use super::Context;
-use super::Error;
-use super::pem_loader::load_pem_key;
+use signing::PrivateKey;
+use signing::PublicKey;
+use signing::Context;
+use signing::Error;
+use signing::pem_loader::load_pem_key;
 
 impl From<secp256k1::Error> for Error {
     fn from(e: secp256k1::Error) -> Self {

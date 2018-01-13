@@ -14,9 +14,8 @@
  * limitations under the License.
  * -----------------------------------------------------------------------------
  */
-
-extern crate zmq;
-extern crate uuid;
+use uuid;
+use zmq;
 
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{Receiver, SyncSender, Sender,
@@ -30,7 +29,7 @@ use protobuf;
 use messages::validator::Message;
 use messages::validator::Message_MessageType;
 
-use super::stream::*;
+use messaging::stream::*;
 
 /// A MessageConnection over ZMQ sockets
 pub struct ZmqMessageConnection {
