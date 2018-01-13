@@ -36,16 +36,18 @@ ALL_TARGETS="
 MOUNTED="mounted"
 INSTALLED="installed"
 DEBS="debs"
+WSL_D4W=false
 
 usage() {
     echo "Usage:"
-    echo "  $0 [-l Language] [-x Language] {$MOUNTED,$INSTALLED,$DEBS}"
+    echo "  $0 [-w] [-l Language] [-x Language] {$MOUNTED,$INSTALLED,$DEBS}"
     echo
     echo "Options:"
     echo "  -h                 print usage and exit"
     echo "  -l Language        only build the specified language(s)"
     echo "  -t Target          only build the specified target(s)"
     echo "  -x Language/Target exclude the specified language(s)/target(s) "
+    echo "  -w Windows Subsystem for Linux (WSL) client and Docker for Windows (D4W) server build environment"
     echo ""
     echo "Language/Target options are: $ALL_TARGETS"
     echo "Build type options: {$MOUNTED,$INSTALLED,$DEBS}"
@@ -64,12 +66,15 @@ warn() {
     echo -e "\033[0;31m\n[--- $1 ---]\n\033[0m"
 }
 
-while getopts :x:t:l:h opt
+while getopts :x:t:l:wh opt
 do
     case $opt in
         h)
             usage
             exit 0
+            ;;
+        w)
+            WSL_D4W=true
             ;;
         l)
             TARGETS="$TARGETS $OPTARG"
@@ -80,7 +85,6 @@ do
         x)
             EXCLUDE="$EXCLUDE $OPTARG"
             ;;
-
         \?)
             echo "Invalid option: -$OPTARG" >&2
             usage
@@ -180,6 +184,7 @@ main() {
 docker_run() {
     image=$1
     arg=$2
+    vol_dir=$top_dir
 
     if [ -z $ISOLATION_ID ]; then
         tag=$image
@@ -193,10 +198,14 @@ docker_run() {
       cargo_registry_flag="-v $CARGO_REGISTRY:/root/.cargo/registry"
     fi
 
+    if [ "$WSL_D4W" = true ]; then
+      vol_dir=${vol_dir:4}
+    fi
+
     info "Running $image"
     if [ -z $BUILD_TAG ]
     then
-        docker run -t --rm -v $top_dir:/project/sawtooth-core \
+        docker run -t --rm -v $vol_dir:/project/sawtooth-core \
             $cargo_registry_flag \
             --env https_proxy=$https_proxy \
             --env http_proxy=$http_proxy \
@@ -204,7 +213,7 @@ docker_run() {
             --env HTTP_PROXY=$HTTP_PROXY \
             $tag $arg
     else
-        docker run --rm -v $top_dir:/project/sawtooth-core \
+        docker run --rm -v $vol_dir:/project/sawtooth-core \
             $cargo_registry_flag \
             --env https_proxy=$https_proxy \
             --env http_proxy=$http_proxy \

@@ -45,6 +45,31 @@ Install the latest version of
 On Windows, Docker Compose is installed automatically when you
 install Docker Engine.
 
+The Docker of Windows (D4W) engine can be used with the Docker for Linux client
+running in the Windows Subsystem for Linux (WSL) Bash shell. 
+
+Perform the following steps with the WSL shell.
+
+.. code-block:: console
+
+cd
+wget https://download.docker.com/linux/static/stable/x86_64/docker-17.09.0-ce.tgz
+tar -xzvf docker-*.tgz
+mkdir ~/bin
+mv ~/docker/docker ~/bin
+sudo mkdir /c
+sudo mount --bind /mnt/c /c
+
+Add the following to .bashrc
+
+.. code-block:: console
+
+export DOCKER_HOST=tcp://0.0.0.0:2375
+export PATH=$PATH:~/bin
+
+Use the -w flag when executing the build_all script in the bin directory. 
+The path C:\dir is mapped as /mnt/c/dir on WSL and as /c/dir/ on D4W. The -w
+flag removes the /mnt text when mapping WSL paths for D4W volumes.
 
 macOS
 -----
