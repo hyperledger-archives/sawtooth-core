@@ -16,3 +16,5 @@
  */
 
 pub mod blockstore;
+pub mod keygen;
+pub mod genesis;

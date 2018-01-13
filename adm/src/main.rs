@@ -17,6 +17,7 @@
 
 #[macro_use]
 extern crate clap;
+extern crate libc;
 extern crate lmdb_zero;
 extern crate protobuf;
 extern crate sawtooth_sdk;
@@ -77,6 +78,15 @@ fn parse_args<'a>() -> ArgMatches<'a> {
             (@subcommand import =>
                 (about: "add a block to the blockstore; new block's parent must be the current chain head")
                 (@arg blockfile: +required "a protobuf file containing the block to add")))
+        (@subcommand keygen =>
+            (about: "generates keys for the validator to use when signing blocks")
+            (@arg key_name: +takes_value "name of the key to create")
+            (@arg force: --force "overwrite files if they exist")
+            (@arg quiet: -q --quiet "do not display output"))
+        (@subcommand genesis =>
+            (about: "creates the genesis.batch file for initializing the validator")
+            (@arg input_file: +takes_value ... "file or files containing batches to add to the resulting")
+            (@arg output: -o --output "choose the output file for GenesisData"))
         (@arg verbose: -v... "increase the logging level.")
     );
     app.get_matches()
