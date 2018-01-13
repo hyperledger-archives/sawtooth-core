@@ -212,8 +212,9 @@ class AddressMapper {
     // that can provide their own mappings. The requirements are that
     // the mapping needs to return a string that is 128 characters
     // in length and consists of only lower case hexadecimal characters.
-    virtual std::string MapKey(const std::string& key) const = 0;
-
+    virtual std::string MapKey(const std::string& key,
+                               std::size_t pos,
+                               std::size_t count) const = 0;
 
     // returns the namespace prefix generated when the class was constructed.
     virtual std::string GetNamespacePrefix() = 0;
@@ -223,8 +224,9 @@ class AddressMapper {
     // a fully qualified Merkle Trie address. These addresses are always
     // 134 characters in length and consist entirely of lower case hexadecimal
     // characters(0123456789abcdef).
-    virtual std::string MakeAddress(const std::string& key) = 0;
-
+    virtual std::string MakeAddress(const std::string& key,
+                                    std::size_t pos = 64,
+                                    std::size_t count = std::string::npos) = 0;
 
     static AddressMapper* Create(const std::string& namespace_);
 };

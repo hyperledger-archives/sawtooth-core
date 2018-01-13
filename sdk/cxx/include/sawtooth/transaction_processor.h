@@ -42,6 +42,7 @@ class TransactionProcessorImpl: public TransactionProcessor {
 
  private:
     void Register();
+    void UnRegister();
     void HandleProcessingRequest(const void* msg,
         size_t msg_size,
         const std::string& correlation_id);
