@@ -339,9 +339,6 @@ class BlockValidator(object):
                     block_store.chain_head.identifier):
                 raise ChainHeadUpdated()
 
-            blkw.status = \
-                BlockStatus.Valid if valid else BlockStatus.Invalid
-
             return valid
         except Exception:
             LOGGER.exception(
@@ -484,8 +481,10 @@ class BlockValidator(object):
             for block in reversed(new_chain):
                 if valid:
                     if not self.validate_block(block):
+                        block.status = BlockStatus.Invalid
                         LOGGER.info("Block validation failed: %s", block)
                         valid = False
+                    block.status = BlockStatus.Valid
                     self._result["num_transactions"] += block.num_transactions
                 else:
                     LOGGER.info(
@@ -990,9 +989,12 @@ class ChainController(object):
         valid = validator.validate_block(block)
 
         if not valid:
+            block.status = BlockStatus.Invalid
             LOGGER.warning("The genesis block is not valid. Cannot "
                            "set chain head: %s", block)
             return
+
+        block.status = BlockStatus.Valid
 
         if chain_id is None:
             self._chain_id_manager.save_block_chain_id(block.identifier)
