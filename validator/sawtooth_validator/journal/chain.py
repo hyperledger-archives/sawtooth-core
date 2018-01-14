@@ -201,59 +201,62 @@ class BlockValidator(object):
             self._chain_commit_state.add_txn(txn.header_signature)
 
     def _verify_block_batches(self, blkw):
-        if blkw.block.batches:
-            prev_state = self._get_previous_block_root_state_hash(blkw)
-            scheduler = self._executor.create_scheduler(
-                self._squash_handler, prev_state)
-            self._executor.execute(scheduler)
-            try:
-                for batch, has_more in look_ahead(blkw.block.batches):
-                    if self._chain_commit_state.has_batch(
-                            batch.header_signature):
-                        LOGGER.debug("Block(%s) rejected due to duplicate "
-                                     "batch, batch: %s", blkw,
-                                     batch.header_signature[:8])
-                        raise InvalidBatch()
+        if not blkw.block.batches:
+            return True
 
-                    self._verify_batch_transactions(batch)
-                    self._chain_commit_state.add_batch(
-                        batch, add_transactions=False)
-                    if has_more:
-                        scheduler.add_batch(batch)
-                    else:
-                        scheduler.add_batch(batch, blkw.state_root_hash)
-            except InvalidBatch:
-                LOGGER.debug("Invalid batch %s encountered during "
-                             "verification of block %s",
-                             batch.header_signature[:8],
-                             blkw)
-                scheduler.cancel()
-                return False
-            except Exception:
-                scheduler.cancel()
-                raise
+        prev_state = self._get_previous_block_root_state_hash(blkw)
+        scheduler = self._executor.create_scheduler(
+            self._squash_handler, prev_state)
+        self._executor.execute(scheduler)
+        try:
+            for batch, has_more in look_ahead(blkw.block.batches):
+                if self._chain_commit_state.has_batch(
+                        batch.header_signature):
+                    LOGGER.debug("Block(%s) rejected due to duplicate "
+                                 "batch, batch: %s", blkw,
+                                 batch.header_signature[:8])
+                    raise InvalidBatch()
 
-            scheduler.finalize()
-            scheduler.complete(block=True)
-            state_hash = None
-
-            for batch in blkw.batches:
-                batch_result = scheduler.get_batch_execution_result(
-                    batch.header_signature)
-                if batch_result is not None and batch_result.is_valid:
-                    txn_results = \
-                        scheduler.get_transaction_execution_results(
-                            batch.header_signature)
-                    blkw.execution_results.extend(txn_results)
-                    state_hash = batch_result.state_hash
-                    blkw.num_transactions += len(batch.transactions)
+                self._verify_batch_transactions(batch)
+                self._chain_commit_state.add_batch(
+                    batch, add_transactions=False)
+                if has_more:
+                    scheduler.add_batch(batch)
                 else:
-                    return False
-            if blkw.state_root_hash != state_hash:
-                LOGGER.debug("Block(%s) rejected due to state root hash "
-                             "mismatch: %s != %s", blkw, blkw.state_root_hash,
-                             state_hash)
+                    scheduler.add_batch(batch, blkw.state_root_hash)
+        except InvalidBatch:
+            LOGGER.debug("Invalid batch %s encountered during "
+                         "verification of block %s",
+                         batch.header_signature[:8],
+                         blkw)
+            scheduler.cancel()
+            return False
+        except Exception:
+            scheduler.cancel()
+            raise
+
+        scheduler.finalize()
+        scheduler.complete(block=True)
+        state_hash = None
+
+        for batch in blkw.batches:
+            batch_result = scheduler.get_batch_execution_result(
+                batch.header_signature)
+            if batch_result is not None and batch_result.is_valid:
+                txn_results = \
+                    scheduler.get_transaction_execution_results(
+                        batch.header_signature)
+                blkw.execution_results.extend(txn_results)
+                state_hash = batch_result.state_hash
+                blkw.num_transactions += len(batch.transactions)
+            else:
                 return False
+        if blkw.state_root_hash != state_hash:
+            LOGGER.debug("Block(%s) rejected due to state root hash "
+                         "mismatch: %s != %s", blkw, blkw.state_root_hash,
+                         state_hash)
+            return False
+
         return True
 
     def _validate_permissions(self, blkw):
@@ -263,18 +266,21 @@ class BlockValidator(object):
         roles stored in state as of the previous block. If a transactor is
         found to not be permitted, the block is invalid.
         """
-        if blkw.block_num != 0:
-            try:
-                state_root = self._get_previous_block_root_state_hash(blkw)
-            except KeyError:
-                LOGGER.info(
-                    "Block rejected due to missing predecessor: %s", blkw)
+        if blkw.block_num == 0:
+            return True
+
+        try:
+            state_root = self._get_previous_block_root_state_hash(blkw)
+        except KeyError:
+            LOGGER.info(
+                "Block rejected due to missing predecessor: %s", blkw)
+            return False
+
+        for batch in blkw.batches:
+            if not self._permission_verifier.is_batch_signer_authorized(
+                    batch, state_root):
                 return False
 
-            for batch in blkw.batches:
-                if not self._permission_verifier.is_batch_signer_authorized(
-                        batch, state_root):
-                    return False
         return True
 
     def _validate_on_chain_rules(self, blkw):
@@ -283,59 +289,60 @@ class BlockValidator(object):
         state. If the block breaks any of the stored rules, the block is
         invalid.
         """
-        if blkw.block_num != 0:
-            try:
-                state_root = self._get_previous_block_root_state_hash(blkw)
-            except KeyError:
-                LOGGER.debug(
-                    "Block rejected due to missing" + " predecessor: %s", blkw)
-                return False
-            return self._validation_rule_enforcer.validate(blkw, state_root)
-        return True
+        if blkw.block_num == 0:
+            return True
+
+        try:
+            state_root = self._get_previous_block_root_state_hash(blkw)
+        except KeyError:
+            LOGGER.debug(
+                "Block rejected due to missing" + " predecessor: %s", blkw)
+            return False
+
+        return self._validation_rule_enforcer.validate(blkw, state_root)
 
     def validate_block(self, blkw):
         # pylint: disable=broad-except
         try:
             if blkw.status == BlockStatus.Valid:
                 return True
-            elif blkw.status == BlockStatus.Invalid:
+
+            if blkw.status == BlockStatus.Invalid:
                 return False
-            else:
-                valid = True
 
-                valid = self._validate_permissions(blkw)
+            valid = True
 
-                if valid:
-                    public_key = \
-                        self._identity_signer.get_public_key().as_hex()
-                    consensus = self._consensus_module.BlockVerifier(
-                        block_cache=self._block_cache,
-                        state_view_factory=self._state_view_factory,
-                        data_dir=self._data_dir,
-                        config_dir=self._config_dir,
-                        validator_id=public_key)
-                    valid = consensus.verify_block(blkw)
+            valid = self._validate_permissions(blkw)
 
-                if valid:
-                    valid = self._validate_on_chain_rules(blkw)
+            if valid:
+                public_key = \
+                    self._identity_signer.get_public_key().as_hex()
+                consensus = self._consensus_module.BlockVerifier(
+                    block_cache=self._block_cache,
+                    state_view_factory=self._state_view_factory,
+                    data_dir=self._data_dir,
+                    config_dir=self._config_dir,
+                    validator_id=public_key)
+                valid = consensus.verify_block(blkw)
 
-                if valid:
-                    valid = self._verify_block_batches(blkw)
+            if valid:
+                valid = self._validate_on_chain_rules(blkw)
 
-                # since changes to the chain-head can change the state of the
-                # blocks in BlockStore we have to revalidate this block.
-                block_store = self._block_cache.block_store
-                if (self._chain_head is not None
-                        and self._chain_head.identifier !=
-                        block_store.chain_head.identifier):
-                    raise ChainHeadUpdated()
+            if valid:
+                valid = self._verify_block_batches(blkw)
 
-                blkw.status = \
-                    BlockStatus.Valid if valid else BlockStatus.Invalid
+            # since changes to the chain-head can change the state of the
+            # blocks in BlockStore we have to revalidate this block.
+            block_store = self._block_cache.block_store
+            if (self._chain_head is not None
+                    and self._chain_head.identifier !=
+                    block_store.chain_head.identifier):
+                raise ChainHeadUpdated()
 
-                return valid
-        except ChainHeadUpdated as chu:
-            raise chu
+            blkw.status = \
+                BlockStatus.Valid if valid else BlockStatus.Invalid
+
+            return valid
         except Exception:
             LOGGER.exception(
                 "Unhandled exception BlockPublisher.validate_block()")
@@ -948,48 +955,51 @@ class ChainController(object):
     def _set_genesis(self, block):
         # This is used by a non-genesis journal when it has received the
         # genesis block from the genesis validator
-        if block.previous_block_id == NULL_BLOCK_IDENTIFIER:
-            chain_id = self._chain_id_manager.get_block_chain_id()
-            if chain_id is not None and chain_id != block.identifier:
-                LOGGER.warning("Block id does not match block chain id %s. "
-                               "Cannot set initial chain head.: %s",
-                               chain_id[:8], block.identifier[:8])
-            else:
-                state_view = self._state_view_factory.create_view()
-                consensus_module = \
-                    ConsensusFactory.get_configured_consensus_module(
-                        NULL_BLOCK_IDENTIFIER,
-                        state_view)
-
-                validator = BlockValidator(
-                    consensus_module=consensus_module,
-                    new_block=block,
-                    block_cache=self._block_cache,
-                    state_view_factory=self._state_view_factory,
-                    done_cb=self.on_block_validated,
-                    executor=self._transaction_executor,
-                    squash_handler=self._squash_handler,
-                    identity_signer=self._identity_signer,
-                    data_dir=self._data_dir,
-                    config_dir=self._config_dir,
-                    permission_verifier=self._permission_verifier,
-                    metrics_registry=self._metrics_registry)
-
-                valid = validator.validate_block(block)
-                if valid:
-                    if chain_id is None:
-                        self._chain_id_manager.save_block_chain_id(
-                            block.identifier)
-                    self._block_store.update_chain([block])
-                    self._chain_head = block
-                    self._notify_on_chain_updated(self._chain_head)
-                else:
-                    LOGGER.warning("The genesis block is not valid. Cannot "
-                                   "set chain head: %s", block)
-
-        else:
+        if block.previous_block_id != NULL_BLOCK_IDENTIFIER:
             LOGGER.warning("Cannot set initial chain head, this is not a "
                            "genesis block: %s", block)
+            return
+
+        chain_id = self._chain_id_manager.get_block_chain_id()
+        if chain_id is not None and chain_id != block.identifier:
+            LOGGER.warning("Block id does not match block chain id %s. "
+                           "Cannot set initial chain head.: %s",
+                           chain_id[:8], block.identifier[:8])
+            return
+
+        state_view = self._state_view_factory.create_view()
+        consensus_module = \
+            ConsensusFactory.get_configured_consensus_module(
+                NULL_BLOCK_IDENTIFIER,
+                state_view)
+
+        validator = BlockValidator(
+            consensus_module=consensus_module,
+            new_block=block,
+            block_cache=self._block_cache,
+            state_view_factory=self._state_view_factory,
+            done_cb=self.on_block_validated,
+            executor=self._transaction_executor,
+            squash_handler=self._squash_handler,
+            identity_signer=self._identity_signer,
+            data_dir=self._data_dir,
+            config_dir=self._config_dir,
+            permission_verifier=self._permission_verifier,
+            metrics_registry=self._metrics_registry)
+
+        valid = validator.validate_block(block)
+
+        if not valid:
+            LOGGER.warning("The genesis block is not valid. Cannot "
+                           "set chain head: %s", block)
+            return
+
+        if chain_id is None:
+            self._chain_id_manager.save_block_chain_id(block.identifier)
+
+        self._block_store.update_chain([block])
+        self._chain_head = block
+        self._notify_on_chain_updated(self._chain_head)
 
     def _make_receipts(self, results):
         receipts = []
