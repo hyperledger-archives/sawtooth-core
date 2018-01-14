@@ -276,7 +276,7 @@ class BlockValidator(object):
 
             for batch in blkw.batches:
                 if not self._permission_verifier.is_batch_signer_authorized(
-                        batch, state_root):
+                        batch, state_root, from_state=True):
                     raise BlockValidationAborted(
                         'Signer for batch {} not authorized'.format(
                             batch.header_signature))
