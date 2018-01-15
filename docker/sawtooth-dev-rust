@@ -41,8 +41,13 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
     openssl \
     pkg-config \
     python3-grpcio-tools=1.1.3-1 \
+    unzip \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+RUN curl -OLsS https://github.com/google/protobuf/releases/download/v3.5.1/protoc-3.5.1-linux-x86_64.zip \
+ && unzip protoc-3.5.1-linux-x86_64.zip -d protoc3 \
+ && rm protoc-3.5.1-linux-x86_64.zip
 
 RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
  && chmod +x /usr/bin/rustup-init \
@@ -50,7 +55,7 @@ RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
 
 EXPOSE 4004/tcp
 
-ENV PATH=$PATH:/project/sawtooth-core/bin:/root/.cargo/bin
+ENV PATH=$PATH:/protoc3/bin:/project/sawtooth-core/bin:/root/.cargo/bin
 
 RUN cargo install protobuf
 
