@@ -200,11 +200,10 @@ class BlockValidator(object):
                     raise InvalidBatch()
             self._chain_commit_state.add_txn(txn.header_signature)
 
-    def _verify_block_batches(self, blkw):
+    def _verify_block_batches(self, blkw, prev_state):
         if not blkw.block.batches:
             return True
 
-        prev_state = self._get_previous_block_root_state_hash(blkw)
         scheduler = self._executor.create_scheduler(
             self._squash_handler, prev_state)
         self._executor.execute(scheduler)
@@ -259,20 +258,13 @@ class BlockValidator(object):
 
         return True
 
-    def _validate_permissions(self, blkw):
+    def _validate_permissions(self, blkw, state_root):
         """
         Validate that all of the batch signers and transaction signer for the
         batches in the block are permitted by the transactor permissioning
         roles stored in state as of the previous block. If a transactor is
         found to not be permitted, the block is invalid.
         """
-        try:
-            state_root = self._get_previous_block_root_state_hash(blkw)
-        except KeyError:
-            LOGGER.info(
-                "Block rejected due to missing predecessor: %s", blkw)
-            return False
-
         for batch in blkw.batches:
             if not self._permission_verifier.is_batch_signer_authorized(
                     batch, state_root):
@@ -280,19 +272,12 @@ class BlockValidator(object):
 
         return True
 
-    def _validate_on_chain_rules(self, blkw):
+    def _validate_on_chain_rules(self, blkw, state_root):
         """
         Validate that the block conforms to all validation rules stored in
         state. If the block breaks any of the stored rules, the block is
         invalid.
         """
-        try:
-            state_root = self._get_previous_block_root_state_hash(blkw)
-        except KeyError:
-            LOGGER.debug(
-                "Block rejected due to missing" + " predecessor: %s", blkw)
-            return False
-
         return self._validation_rule_enforcer.validate(blkw, state_root)
 
     def validate_block(self, blkw):
@@ -304,11 +289,18 @@ class BlockValidator(object):
             if blkw.status == BlockStatus.Invalid:
                 return False
 
+            try:
+                state_root = self._get_previous_block_root_state_hash(blkw)
+            except KeyError:
+                LOGGER.debug(
+                    "Block rejected due to missing predecessor: %s", blkw)
+                return False
+
             if blkw.block_num != 0:
-                if not self._validate_permissions(blkw):
+                if not self._validate_permissions(blkw, state_root):
                     return False
 
-                if not self._validate_on_chain_rules(blkw):
+                if not self._validate_on_chain_rules(blkw, state_root):
                     return False
 
             public_key = \
@@ -322,7 +314,7 @@ class BlockValidator(object):
             if not consensus.verify_block(blkw):
                 return False
 
-            if not self._verify_block_batches(blkw):
+            if not self._verify_block_batches(blkw, state_root):
                 return False
 
             # since changes to the chain-head can change the state of the
