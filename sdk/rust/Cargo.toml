@@ -32,3 +32,5 @@ env_logger = "0.3"
 
 [build-dependencies]
 cc = "1.0"
+protoc-rust = "1.4"
+glob = "0.2"
