@@ -53,17 +53,7 @@ RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
  && chmod +x /usr/bin/rustup-init \
  && rustup-init -y
 
-EXPOSE 4004/tcp
-
 ENV PATH=$PATH:/protoc3/bin:/project/sawtooth-core/bin:/root/.cargo/bin
-
-RUN cargo install protobuf
-
-RUN mkdir -p /project/sawtooth-core/ \
- && mkdir -p /var/log/sawtooth \
- && mkdir -p /var/lib/sawtooth \
- && mkdir -p /etc/sawtooth \
- && mkdir -p /etc/sawtooth/keys
 
 WORKDIR /
 
