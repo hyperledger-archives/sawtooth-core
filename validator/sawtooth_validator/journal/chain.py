@@ -266,9 +266,6 @@ class BlockValidator(object):
         roles stored in state as of the previous block. If a transactor is
         found to not be permitted, the block is invalid.
         """
-        if blkw.block_num == 0:
-            return True
-
         try:
             state_root = self._get_previous_block_root_state_hash(blkw)
         except KeyError:
@@ -289,9 +286,6 @@ class BlockValidator(object):
         state. If the block breaks any of the stored rules, the block is
         invalid.
         """
-        if blkw.block_num == 0:
-            return True
-
         try:
             state_root = self._get_previous_block_root_state_hash(blkw)
         except KeyError:
@@ -310,8 +304,12 @@ class BlockValidator(object):
             if blkw.status == BlockStatus.Invalid:
                 return False
 
-            if not self._validate_permissions(blkw):
-                return False
+            if blkw.block_num != 0:
+                if not self._validate_permissions(blkw):
+                    return False
+
+                if not self._validate_on_chain_rules(blkw):
+                    return False
 
             public_key = \
                 self._identity_signer.get_public_key().as_hex()
@@ -322,9 +320,6 @@ class BlockValidator(object):
                 config_dir=self._config_dir,
                 validator_id=public_key)
             if not consensus.verify_block(blkw):
-                return False
-
-            if not self._validate_on_chain_rules(blkw):
                 return False
 
             if not self._verify_block_batches(blkw):
