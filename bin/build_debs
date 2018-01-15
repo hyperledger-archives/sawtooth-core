@@ -53,10 +53,15 @@ main() {
             echo "Building go packages"
             build_go
             ;;
+        rust)
+            echo "Building rust packages"
+            build_rust
+            ;;
         *)
-            echo "Building python and go packages"
+            echo "Building all packages"
             build_python
             build_go
+            build_rust
             ;;
     esac
 
@@ -195,6 +200,23 @@ build_go() {
 
 }
 
+build_rust() {
+
+    output_dir=$top_dir/build/debs/rust
+    mkdir -p $output_dir
+    rm -f $output_dir/*.deb
+
+    info "sawadm"
+    build_rust_pkg sawadm $top_dir/adm $output_dir
+
+    for pkg in $output_dir/*.deb
+    do
+        echo
+        info "Package $pkg"
+        dpkg -I $pkg
+    done
+}
+
 build_go_pkg(){
 
     pkg_dir=$top_dir/build/debs/go
@@ -244,6 +266,49 @@ build_go_pkg(){
     mv debian.deb $pkg_dir/"${PACKAGENAME}_${PACKAGEVERSION}_${PACKAGEARCH}.deb"
 }
 
+build_rust_pkg(){
+    pkg=$1
+    pkg_dir=$2
+    output_dir=$3
+
+    # GO_TP_DASH=$(echo $pkg | sed s/_/-/)
+    CHANGELOG_DIR="debian/usr/share/doc/sawadm"
+    ST_VERSION=$($top_dir/bin/get_version)
+
+    cd $pkg_dir
+
+    if [ -d "debian" ]
+    then
+        rm -rf debian
+    fi
+
+    mkdir -p debian/DEBIAN
+
+    mkdir -p $CHANGELOG_DIR
+    cp packaging/ubuntu/* debian
+    sed -i -e"s/@VERSION@/$ST_VERSION/" debian/control
+    sed -i -e"s/@VERSION@/$ST_VERSION/" debian/changelog
+    cp debian/changelog $CHANGELOG_DIR
+    mv debian/changelog $CHANGELOG_DIR/changelog.Debian
+    gzip --best $CHANGELOG_DIR/changelog
+    gzip --best $CHANGELOG_DIR/changelog.Debian
+    mv debian/control debian/DEBIAN
+    mv debian/postinst debian/DEBIAN
+
+    PACKAGENAME=$(awk '/^Package:/ { print $2 }' debian/DEBIAN/control)
+    PACKAGEVERSION=$(dpkg-parsechangelog -S version -l $CHANGELOG_DIR/changelog.gz)
+    PACKAGEARCH=$(dpkg-architecture -qDEB_BUILD_ARCH)
+
+    mkdir debian/usr/bin
+    cp -R bin/ debian/usr/
+    cp -R packaging/systemd/* debian/
+
+    fakeroot dpkg-deb --build debian
+    echo --
+    echo "${PACKAGENAME}_${PACKAGEVERSION}_${PACKAGEARCH}.deb"
+    echo --
+    mv debian.deb $output_dir/"${PACKAGENAME}_${PACKAGEVERSION}_${PACKAGEARCH}.deb"
+}
 
 build_python_pkg() {
     pkg=$1
