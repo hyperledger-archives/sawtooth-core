@@ -51,6 +51,10 @@ class BlockValidationAborted(Exception):
     pass
 
 
+class BlockValidationError(Exception):
+    pass
+
+
 class ChainHeadUpdated(Exception):
     """ Raised when a chain head changed event is detected and we need to abort
     processing and restart processing with the new chain head.
@@ -281,27 +285,32 @@ class BlockValidator(object):
         return self._validation_rule_enforcer.validate(blkw, state_root)
 
     def validate_block(self, blkw):
+        '''Verifies that blkw has certain properties, raising
+        BlockValidationError if any of the checks fail.
+        '''
         # pylint: disable=broad-except
         try:
             if blkw.status == BlockStatus.Valid:
-                return True
+                return
 
             if blkw.status == BlockStatus.Invalid:
-                return False
+                raise BlockValidationError(
+                    'Block is already invalid')
 
             try:
                 state_root = self._get_previous_block_root_state_hash(blkw)
             except KeyError:
-                LOGGER.debug(
-                    "Block rejected due to missing predecessor: %s", blkw)
-                return False
+                raise BlockValidationError(
+                    'Block has missing predecessor')
 
             if blkw.block_num != 0:
                 if not self._validate_permissions(blkw, state_root):
-                    return False
+                    raise BlockValidationError(
+                        'Failed permissions')
 
                 if not self._validate_on_chain_rules(blkw, state_root):
-                    return False
+                    raise BlockValidationError(
+                        'Failed on-chain validation rules')
 
             public_key = \
                 self._identity_signer.get_public_key().as_hex()
@@ -312,10 +321,13 @@ class BlockValidator(object):
                 config_dir=self._config_dir,
                 validator_id=public_key)
             if not consensus.verify_block(blkw):
-                return False
+                raise BlockValidationError(
+                    'Failed {} consensus verification'.format(
+                        self._consensus_module))
 
             if not self._verify_block_batches(blkw, state_root):
-                return False
+                raise BlockValidationError(
+                    'Failed batch verification')
 
             # since changes to the chain-head can change the state of the
             # blocks in BlockStore we have to revalidate this block.
@@ -325,12 +337,10 @@ class BlockValidator(object):
                     block_store.chain_head.identifier):
                 raise ChainHeadUpdated()
 
-            return True
-
-        except Exception:
-            LOGGER.exception(
-                "Unhandled exception BlockPublisher")
-            return False
+        except Exception as exp:
+            raise BlockValidationError(
+                'Unhandled block validation error: {}'.format(
+                    exp))
 
     def _find_common_height(self, new_chain, cur_chain):
         """
@@ -467,9 +477,14 @@ class BlockValidator(object):
             valid = True
             for block in reversed(new_chain):
                 if valid:
-                    if not self.validate_block(block):
+                    try:
+                        self.validate_block(block)
+                    except BlockValidationError as err:
                         block.status = BlockStatus.Invalid
-                        LOGGER.info("Block validation failed: %s", block)
+                        LOGGER.warning(
+                            'Block %s failed validation: %s',
+                            block,
+                            err)
                         valid = False
                     block.status = BlockStatus.Valid
                     self._result["num_transactions"] += block.num_transactions
@@ -973,12 +988,14 @@ class ChainController(object):
             permission_verifier=self._permission_verifier,
             metrics_registry=self._metrics_registry)
 
-        valid = validator.validate_block(block)
-
-        if not valid:
+        try:
+            validator.validate_block(block)
+        except BlockValidationError as err:
             block.status = BlockStatus.Invalid
-            LOGGER.warning("The genesis block is not valid. Cannot "
-                           "set chain head: %s", block)
+            LOGGER.warning(
+                'Cannot set chain head; genesis block %s is not valid: %s',
+                block,
+                err)
             return
 
         block.status = BlockStatus.Valid
