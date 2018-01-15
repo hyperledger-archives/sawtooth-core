@@ -189,9 +189,8 @@ class BlockValidator(object):
             txn_hdr = self._txn_header(txn)
             if self._chain_commit_state.has_transaction(txn.header_signature):
                 LOGGER.debug(
-                    "Block rejected due to duplicate"
-                    " transaction, transaction: %s",
-                    txn.header_signature[:8])
+                    'Block rejected due to duplicate transaction: %s',
+                    txn.header_signature)
                 raise InvalidBatch()
             for dep in txn_hdr.dependencies:
                 if not self._chain_commit_state.has_transaction(dep):
@@ -199,8 +198,8 @@ class BlockValidator(object):
                         "Block rejected due to missing "
                         "transaction dependency, transaction %s "
                         "depends on %s",
-                        txn.header_signature[:8],
-                        dep[:8])
+                        txn.header_signature,
+                        dep)
                     raise InvalidBatch()
             self._chain_commit_state.add_txn(txn.header_signature)
 
@@ -215,9 +214,10 @@ class BlockValidator(object):
             for batch, has_more in look_ahead(blkw.block.batches):
                 if self._chain_commit_state.has_batch(
                         batch.header_signature):
-                    LOGGER.debug("Block(%s) rejected due to duplicate "
-                                 "batch, batch: %s", blkw,
-                                 batch.header_signature[:8])
+                    LOGGER.debug(
+                        'Block %s rejected due to duplicate batch: %s',
+                        blkw,
+                        batch.header_signature)
                     raise InvalidBatch()
 
                 self._verify_batch_transactions(batch)
@@ -228,10 +228,10 @@ class BlockValidator(object):
                 else:
                     scheduler.add_batch(batch, blkw.state_root_hash)
         except InvalidBatch:
-            LOGGER.debug("Invalid batch %s encountered during "
-                         "verification of block %s",
-                         batch.header_signature[:8],
-                         blkw)
+            LOGGER.debug(
+                'Invalid batch %s encountered during verification of block %s',
+                batch.header_signature,
+                blkw)
             scheduler.cancel()
             return False
         except Exception:
@@ -965,7 +965,7 @@ class ChainController(object):
         if chain_id is not None and chain_id != block.identifier:
             LOGGER.warning("Block id does not match block chain id %s. "
                            "Cannot set initial chain head.: %s",
-                           chain_id[:8], block.identifier[:8])
+                           chain_id, block.identifier)
             return
 
         state_view = self._state_view_factory.create_view()
