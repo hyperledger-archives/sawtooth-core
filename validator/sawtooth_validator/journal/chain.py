@@ -310,26 +310,25 @@ class BlockValidator(object):
             if blkw.status == BlockStatus.Invalid:
                 return False
 
-            valid = True
+            if not self._validate_permissions(blkw):
+                return False
 
-            valid = self._validate_permissions(blkw)
+            public_key = \
+                self._identity_signer.get_public_key().as_hex()
+            consensus = self._consensus_module.BlockVerifier(
+                block_cache=self._block_cache,
+                state_view_factory=self._state_view_factory,
+                data_dir=self._data_dir,
+                config_dir=self._config_dir,
+                validator_id=public_key)
+            if not consensus.verify_block(blkw):
+                return False
 
-            if valid:
-                public_key = \
-                    self._identity_signer.get_public_key().as_hex()
-                consensus = self._consensus_module.BlockVerifier(
-                    block_cache=self._block_cache,
-                    state_view_factory=self._state_view_factory,
-                    data_dir=self._data_dir,
-                    config_dir=self._config_dir,
-                    validator_id=public_key)
-                valid = consensus.verify_block(blkw)
+            if not self._validate_on_chain_rules(blkw):
+                return False
 
-            if valid:
-                valid = self._validate_on_chain_rules(blkw)
-
-            if valid:
-                valid = self._verify_block_batches(blkw)
+            if not self._verify_block_batches(blkw):
+                return False
 
             # since changes to the chain-head can change the state of the
             # blocks in BlockStore we have to revalidate this block.
@@ -339,7 +338,8 @@ class BlockValidator(object):
                     block_store.chain_head.identifier):
                 raise ChainHeadUpdated()
 
-            return valid
+            return True
+
         except Exception:
             LOGGER.exception(
                 "Unhandled exception BlockPublisher")
