@@ -72,6 +72,7 @@ TIME_TO_LIVE = 3
 class Gossip(object):
     def __init__(self, network,
                  settings_cache,
+                 current_chain_head_func,
                  current_root_func,
                  endpoint=None,
                  peering_mode='static',
@@ -87,6 +88,11 @@ class Gossip(object):
         Args:
             network (networking.Interconnect): Provides inbound and
                 outbound network connections.
+            settings_cache (state.SettingsCache): A cache for on chain
+                settings.
+            current_chain_head_func (function): returns the current chain head.
+            current_root_func (function): returns the current state root hash
+                for the current chain root.
             endpoint (str): The publically accessible zmq-style uri
                 endpoint for this validator.
             peering_mode (str): The type of peering approach. Either 'static'
@@ -128,6 +134,8 @@ class Gossip(object):
         self._maximum_peer_connectivity = maximum_peer_connectivity
         self._topology_check_frequency = topology_check_frequency
         self._settings_cache = settings_cache
+
+        self._current_chain_head_func = current_chain_head_func
         self._current_root_func = current_root_func
 
         self._topology = None
@@ -360,6 +368,7 @@ class Gossip(object):
             gossip=self,
             network=self._network,
             endpoint=self._endpoint,
+            current_chain_head_func=self._current_chain_head_func,
             initial_peer_endpoints=self._initial_peer_endpoints,
             initial_seed_endpoints=self._initial_seed_endpoints,
             peering_mode=self._peering_mode,
@@ -384,6 +393,7 @@ class Gossip(object):
 
 class ConnectionManager(InstrumentedThread):
     def __init__(self, gossip, network, endpoint,
+                 current_chain_head_func,
                  initial_peer_endpoints, initial_seed_endpoints,
                  peering_mode, min_peers=3, max_peers=10,
                  check_frequency=1):
@@ -394,6 +404,7 @@ class ConnectionManager(InstrumentedThread):
             network (network.Interconnect): The underlying network.
             endpoint (str): A zmq-style endpoint uri representing
                 this validator's publically reachable endpoint.
+            current_chain_head_func (function): Returns the current chain head.
             initial_peer_endpoints ([str]): A list of static peers
                 to attempt to connect and peer with.
             initial_seed_endpoints ([str]): A list of endpoints to
@@ -415,6 +426,7 @@ class ConnectionManager(InstrumentedThread):
         self._gossip = gossip
         self._network = network
         self._endpoint = endpoint
+        self._current_chain_head_func = current_chain_head_func
         self._initial_peer_endpoints = initial_peer_endpoints
         self._initial_seed_endpoints = initial_seed_endpoints
         self._peering_mode = peering_mode
@@ -441,56 +453,29 @@ class ConnectionManager(InstrumentedThread):
         super().start()
 
     def run(self):
+        has_chain_head = self._current_chain_head_func() is not None
         while not self._stopped:
             try:
                 if self._peering_mode == 'dynamic':
-                    self._refresh_peer_list(self._gossip.get_peers())
-                    peers = self._gossip.get_peers()
-                    peer_count = len(peers)
-                    if peer_count < self._min_peers:
-                        LOGGER.debug(
-                            "Number of peers (%s) below "
-                            "minimum peer threshold (%s). "
-                            "Doing topology search.",
-                            peer_count,
-                            self._min_peers)
-
-                        self._reset_candidate_peer_endpoints()
-                        self._refresh_peer_list(peers)
-                        # Cleans out any old connections that have disconnected
-                        self._refresh_connection_list()
-                        self._check_temp_endpoints()
-
-                        peers = self._gossip.get_peers()
-
-                        self._get_peers_of_peers(peers)
-                        self._get_peers_of_endpoints(
-                            peers,
-                            self._initial_seed_endpoints)
-
-                        # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
-                        time.sleep(self._response_duration)
-
-                        peered_endpoints = list(peers.values())
-
-                        with self._lock:
-                            unpeered_candidates = list(
-                                set(self._candidate_peer_endpoints) -
-                                set(peered_endpoints) -
-                                set([self._endpoint]))
-
-                        LOGGER.debug(
-                            "Peers are: %s. "
-                            "Unpeered candidates are: %s",
-                            peered_endpoints,
-                            unpeered_candidates)
-
-                        if unpeered_candidates:
-                            self._attempt_to_peer_with_endpoint(
-                                random.choice(unpeered_candidates))
-
-                if self._peering_mode == 'static':
+                    self.retry_dynamic_peering()
+                elif self._peering_mode == 'static':
                     self.retry_static_peering()
+
+                # This tests for a degenerate case where the node is connected
+                # to peers, but at first connection no peer had a valid chain
+                # head. Keep querying connected peers until a valid chain head
+                # is received.
+                has_chain_head = has_chain_head or \
+                    self._current_chain_head_func() is not None
+                if not has_chain_head:
+                    peered_connections = self._get_peered_connections()
+                    if peered_connections:
+                        LOGGER.debug(
+                            'Have not received a chain head from peers. '
+                            'Requesting from %s',
+                            peered_connections)
+
+                        self._request_chain_head(peered_connections)
 
                 time.sleep(self._check_frequency)
             except Exception:  # pylint: disable=broad-except
@@ -513,6 +498,68 @@ class ConnectionManager(InstrumentedThread):
             except ValueError:
                 # Connection has already been disconnected.
                 pass
+
+    def _get_peered_connections(self):
+        peers = self._gossip.get_peers()
+
+        return [conn_id for conn_id in peers
+                if self._connection_statuses[conn_id] == PeerStatus.PEER]
+
+    def _request_chain_head(self, peered_connections):
+        """Request chain head from the given peer ids.
+
+        Args:
+            peered_connecions (:list:str): a list of peer connection ids where
+                the requests will be sent.
+        """
+        for conn_id in peered_connections:
+            self._gossip.send_block_request("HEAD", conn_id)
+
+    def retry_dynamic_peering(self):
+        self._refresh_peer_list(self._gossip.get_peers())
+        peers = self._gossip.get_peers()
+        peer_count = len(peers)
+        if peer_count < self._min_peers:
+            LOGGER.debug(
+                "Number of peers (%s) below "
+                "minimum peer threshold (%s). "
+                "Doing topology search.",
+                peer_count,
+                self._min_peers)
+
+            self._reset_candidate_peer_endpoints()
+            self._refresh_peer_list(peers)
+            # Cleans out any old connections that have disconnected
+            self._refresh_connection_list()
+            self._check_temp_endpoints()
+
+            peers = self._gossip.get_peers()
+
+            self._get_peers_of_peers(peers)
+            self._get_peers_of_endpoints(
+                peers,
+                self._initial_seed_endpoints)
+
+            # Wait for GOSSIP_GET_PEER_RESPONSE messages to arrive
+            time.sleep(self._response_duration)
+
+            peered_endpoints = list(peers.values())
+
+            with self._lock:
+                unpeered_candidates = list(
+                    set(self._candidate_peer_endpoints) -
+                    set(peered_endpoints) -
+                    set([self._endpoint]))
+
+            LOGGER.debug(
+                "Peers are: %s. "
+                "Unpeered candidates are: %s",
+                peered_endpoints,
+                unpeered_candidates)
+
+            if unpeered_candidates:
+                self._attempt_to_peer_with_endpoint(
+                    random.choice(unpeered_candidates))
 
     def retry_static_peering(self):
         with self._lock:

@@ -14,12 +14,12 @@
 # ------------------------------------------------------------------------------
 
 import json
-import time
 import shlex
 import logging
 import unittest
 import subprocess
 
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -35,22 +35,18 @@ EXPECTED = {
 
 
 class TestPeerList(unittest.TestCase):
+    def setUp(self):
+        endpoints = ['rest-api-{}:8008'.format(i)
+                     for i in range(len(EXPECTED))]
+
+        wait_for_rest_apis(endpoints, tries=10)
+
     def test_peer_list(self):
         '''
         Five validators are started, peered as described in EXPECTED (see
         the test's associated yaml file for details). `sawtooth peer
         list` is run against each of them and the output is verified.
         '''
-
-        # It would be preferable to use, as is normally done in
-        # integration tests, `integration_tools.wait_for_rest_apis`
-        # instead of a sleep. However, `wait_for_rest_apis` relies on
-        # a call to `/blocks`, so if a validator doesn't have any
-        # blocks, it won't respond even if it is ready. As of 12/7/17,
-        # a network with no additional transactions won't properly
-        # pass around the genesis block, so nodes not peering with the
-        # genesis node won't have any blocks.
-        time.sleep(10)
 
         for node_number, peer_numbers in EXPECTED.items():
             actual_peers = _get_peers(node_number)
