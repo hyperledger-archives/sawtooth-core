@@ -193,13 +193,14 @@ pub fn create_smallbank_playlist(num_accounts: usize,
         },
         None => StdRng::new().unwrap()
     };
-    Box::new(SmallbankGeneratingIter {
+
+    let iter = SmallbankGeneratingIter {
         num_accounts: num_accounts,
         current_account: 0,
-        num_transactions: num_transactions,
-        current_transaction: 0,
         rng: rng
-    })
+    };
+
+    Box::new(iter.take(num_transactions))
 }
 
 pub fn read_smallbank_playlist<'a>(input: &'a mut Read)
@@ -233,18 +234,14 @@ fn load_yaml_array<'a>(yaml_str: Cow<'a, str>) -> Result<Cow<'a, Vec<Yaml>>, Pla
 pub struct SmallbankGeneratingIter {
     num_accounts: usize,
     current_account: usize,
-    num_transactions: usize,
-    current_transaction: usize,
     rng: StdRng,
 }
 
 impl SmallbankGeneratingIter {
-    pub fn new(num_accounts: usize, num_transactions: usize, seed: &[usize]) -> Self {
+    pub fn new(num_accounts: usize, seed: &[usize]) -> Self {
         SmallbankGeneratingIter {
             num_accounts: num_accounts,
             current_account: 0,
-            num_transactions: num_transactions,
-            current_transaction: 0,
             rng: SeedableRng::from_seed(seed),
         }
     }
@@ -270,7 +267,7 @@ impl Iterator for SmallbankGeneratingIter {
             self.current_account += 1;
 
             Some(payload)
-        } else if self.current_transaction < self.num_transactions {
+        } else {
             let mut payload =  SmallbankTransactionPayload::new();
 
             let payload_type = match self.rng.gen_range(2, 7) {
@@ -308,11 +305,7 @@ impl Iterator for SmallbankGeneratingIter {
                 _ => panic!("Should not have generated outside of [2, 7)")
             };
 
-            self.current_transaction += 1;
-
             Some(payload)
-        } else {
-            None
         }
     }
 }
