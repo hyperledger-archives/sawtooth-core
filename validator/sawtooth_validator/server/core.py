@@ -313,7 +313,7 @@ class Validator(object):
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
             chain_controller.has_block, block_publisher.has_batch,
-            permission_verifier, block_publisher)
+            permission_verifier, block_publisher, metrics_registry)
 
         component_handlers.add(
             component_dispatcher, gossip, context_manager, executor, completer,

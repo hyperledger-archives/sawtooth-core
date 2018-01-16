@@ -31,6 +31,7 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
+from sawtooth_validator.metrics.wrappers import CounterWrapper
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
@@ -119,8 +120,18 @@ def is_valid_transaction(txn):
 
 
 class GossipMessageSignatureVerifier(Handler):
-    def __init__(self):
+    def __init__(self, metrics_registry=None):
         self._seen_cache = TimedCache()
+        if metrics_registry:
+            self._batch_dropped_count = CounterWrapper(
+                metrics_registry.counter(
+                    'already_validated_batch_dropped_count'))
+            self._block_dropped_count = CounterWrapper(
+                metrics_registry.counter(
+                    'already_validated_block_dropped_count'))
+        else:
+            self._batch_dropped_count = CounterWrapper()
+            self._block_dropped_count = CounterWrapper()
 
     def handle(self, connection_id, message_content):
         gossip_message = GossipMessage()
@@ -129,10 +140,8 @@ class GossipMessageSignatureVerifier(Handler):
         if gossip_message.content_type == GossipMessage.BLOCK:
             block = Block()
             block.ParseFromString(gossip_message.content)
-
             if block.header_signature in self._seen_cache:
-                LOGGER.debug("Drop already validated block: %s",
-                             block.header_signature)
+                self._block_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)
 
             if not is_valid_block(block):
@@ -147,8 +156,7 @@ class GossipMessageSignatureVerifier(Handler):
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
             if batch.header_signature in self._seen_cache:
-                LOGGER.debug("Drop already validated batch: %s",
-                             batch.header_signature)
+                self._batch_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)
 
             if not is_valid_batch(batch):
@@ -164,8 +172,14 @@ class GossipMessageSignatureVerifier(Handler):
 
 
 class GossipBlockResponseSignatureVerifier(Handler):
-    def __init__(self):
+    def __init__(self, metrics_registry=None):
         self._seen_cache = TimedCache()
+        if metrics_registry:
+            self._block_dropped_count = CounterWrapper(
+                metrics_registry.counter(
+                    'already_validated_block_dropped_count'))
+        else:
+            self._block_dropped_count = CounterWrapper()
 
     def handle(self, connection_id, message_content):
         block_response_message = GossipBlockResponse()
@@ -173,8 +187,7 @@ class GossipBlockResponseSignatureVerifier(Handler):
         block = Block()
         block.ParseFromString(block_response_message.content)
         if block.header_signature in self._seen_cache:
-            LOGGER.debug("Drop already validated block: %s",
-                         block.header_signature)
+            self.block_dropped_count.inc()
             return HandlerResult(status=HandlerStatus.DROP)
 
         if not is_valid_block(block):
@@ -187,8 +200,14 @@ class GossipBlockResponseSignatureVerifier(Handler):
 
 
 class GossipBatchResponseSignatureVerifier(Handler):
-    def __init__(self):
+    def __init__(self, metrics_registry=None):
         self._seen_cache = TimedCache()
+        if metrics_registry:
+            self._batch_dropped_count = CounterWrapper(
+                metrics_registry.counter(
+                    'already_validated_batch_dropped_count'))
+        else:
+            self._batch_dropped_count = CounterWrapper()
 
     def handle(self, connection_id, message_content):
         batch_response_message = GossipBatchResponse()
@@ -197,8 +216,7 @@ class GossipBatchResponseSignatureVerifier(Handler):
         batch = Batch()
         batch.ParseFromString(batch_response_message.content)
         if batch.header_signature in self._seen_cache:
-            LOGGER.debug("Drop already validated batch: %s",
-                         batch.header_signature)
+            self._batch_dropped_count.inc()
             return HandlerResult(status=HandlerStatus.DROP)
 
         if not is_valid_batch(batch):

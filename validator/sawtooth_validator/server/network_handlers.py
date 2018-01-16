@@ -74,7 +74,8 @@ def add(
         has_block,
         has_batch,
         permission_verifier,
-        block_publisher
+        block_publisher,
+        metrics_registry=None
 ):
 
     # -- Basic Networking -- #
@@ -192,7 +193,8 @@ def add(
     # GOSSIP_MESSAGE ) Verifies signature
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
-        signature_verifier.GossipMessageSignatureVerifier(),
+        signature_verifier.GossipMessageSignatureVerifier(
+            metrics_registry=metrics_registry),
         sig_pool)
 
     # GOSSIP_MESSAGE ) Verifies batch structure
@@ -265,7 +267,8 @@ def add(
     # GOSSIP_BLOCK_RESPONSE 3) Verifies signature
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
-        signature_verifier.GossipBlockResponseSignatureVerifier(),
+        signature_verifier.GossipBlockResponseSignatureVerifier(
+            metrics_registry=metrics_registry),
         sig_pool)
 
     # GOSSIP_BLOCK_RESPONSE 4) Check batch structure
@@ -332,7 +335,8 @@ def add(
     # GOSSIP_BATCH_RESPONSE 2) Verifies signature
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
-        signature_verifier.GossipBatchResponseSignatureVerifier(),
+        signature_verifier.GossipBatchResponseSignatureVerifier(
+            metrics_registry=metrics_registry),
         sig_pool)
 
     # GOSSIP_BATCH_RESPONSE 3) Check batch structure
