@@ -30,6 +30,8 @@ from sawtooth_validator.journal.consensus.consensus_factory import \
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.validation_rule_enforcer import \
     ValidationRuleEnforcer
+from sawtooth_validator.journal.validation_rule_enforcer import \
+    ValidationRuleError
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
@@ -186,54 +188,52 @@ class BlockValidator(object):
         are unique.
         """
         for txn in batch.transactions:
-            txn_hdr = self._txn_header(txn)
             if self._chain_commit_state.has_transaction(txn.header_signature):
-                LOGGER.debug(
-                    'Block rejected due to duplicate transaction: %s',
-                    txn.header_signature)
-                raise InvalidBatch()
+                raise InvalidBatch(
+                    'Duplicate transaction {}'.format(
+                        txn.header_signature))
+
+            txn_hdr = self._txn_header(txn)
+
             for dep in txn_hdr.dependencies:
                 if not self._chain_commit_state.has_transaction(dep):
-                    LOGGER.debug(
-                        "Block rejected due to missing "
-                        "transaction dependency, transaction %s "
-                        "depends on %s",
-                        txn.header_signature,
-                        dep)
-                    raise InvalidBatch()
+                    raise InvalidBatch(
+                        'Transaction {} missing dependency {}'.format(
+                            txn.header_signature,
+                            dep))
+
             self._chain_commit_state.add_txn(txn.header_signature)
 
     def _verify_block_batches(self, blkw, prev_state):
         if not blkw.block.batches:
-            return True
+            return
 
         scheduler = self._executor.create_scheduler(
             self._squash_handler, prev_state)
+
         self._executor.execute(scheduler)
+
         try:
             for batch, has_more in look_ahead(blkw.block.batches):
                 if self._chain_commit_state.has_batch(
                         batch.header_signature):
-                    LOGGER.debug(
-                        'Block %s rejected due to duplicate batch: %s',
-                        blkw,
-                        batch.header_signature)
-                    raise InvalidBatch()
+                    raise InvalidBatch(
+                        'Duplicate batch {}'.format(
+                            batch.header_signature))
 
                 self._verify_batch_transactions(batch)
+
                 self._chain_commit_state.add_batch(
                     batch, add_transactions=False)
+
                 if has_more:
                     scheduler.add_batch(batch)
                 else:
                     scheduler.add_batch(batch, blkw.state_root_hash)
-        except InvalidBatch:
-            LOGGER.debug(
-                'Invalid batch %s encountered during verification of block %s',
-                batch.header_signature,
-                blkw)
+
+        except InvalidBatch as err:
             scheduler.cancel()
-            return False
+            raise err
         except Exception:
             scheduler.cancel()
             raise
@@ -245,22 +245,29 @@ class BlockValidator(object):
         for batch in blkw.batches:
             batch_result = scheduler.get_batch_execution_result(
                 batch.header_signature)
-            if batch_result is not None and batch_result.is_valid:
-                txn_results = \
-                    scheduler.get_transaction_execution_results(
-                        batch.header_signature)
-                blkw.execution_results.extend(txn_results)
-                state_hash = batch_result.state_hash
-                blkw.num_transactions += len(batch.transactions)
-            else:
-                return False
-        if blkw.state_root_hash != state_hash:
-            LOGGER.debug("Block(%s) rejected due to state root hash "
-                         "mismatch: %s != %s", blkw, blkw.state_root_hash,
-                         state_hash)
-            return False
 
-        return True
+            try:
+                if not batch_result.is_valid:
+                    raise BlockValidationError(
+                        'Invalid execution result for batch {}'.format(
+                            batch.header_signature))
+            except AttributeError:
+                raise BlockValidationError(
+                    'Invalid execution result for batch {}'.format(
+                        batch.header_signature))
+
+            txn_results = \
+                scheduler.get_transaction_execution_results(
+                    batch.header_signature)
+            blkw.execution_results.extend(txn_results)
+            state_hash = batch_result.state_hash
+            blkw.num_transactions += len(batch.transactions)
+
+        if not blkw.state_root_hash == state_hash:
+            raise BlockValidationError(
+                'State root hash mismatch: {} != {}'.format(
+                    blkw.state_root_hash,
+                    state_hash))
 
     def _validate_permissions(self, blkw, state_root):
         """
@@ -272,9 +279,9 @@ class BlockValidator(object):
         for batch in blkw.batches:
             if not self._permission_verifier.is_batch_signer_authorized(
                     batch, state_root):
-                return False
-
-        return True
+                raise BlockValidationError(
+                    'Signer for batch {} is not authorized'.format(
+                        batch.header_signature))
 
     def _validate_on_chain_rules(self, blkw, state_root):
         """
@@ -282,7 +289,10 @@ class BlockValidator(object):
         state. If the block breaks any of the stored rules, the block is
         invalid.
         """
-        return self._validation_rule_enforcer.validate(blkw, state_root)
+        try:
+            self._validation_rule_enforcer.validate(blkw, state_root)
+        except ValidationRuleError as err:
+            raise BlockValidationError(str(err))
 
     def validate_block(self, blkw):
         '''Verifies that blkw has certain properties, raising
@@ -304,13 +314,8 @@ class BlockValidator(object):
                     'Block has missing predecessor')
 
             if blkw.block_num != 0:
-                if not self._validate_permissions(blkw, state_root):
-                    raise BlockValidationError(
-                        'Failed permissions')
-
-                if not self._validate_on_chain_rules(blkw, state_root):
-                    raise BlockValidationError(
-                        'Failed on-chain validation rules')
+                self._validate_permissions(blkw, state_root)
+                self._validate_on_chain_rules(blkw, state_root)
 
             public_key = \
                 self._identity_signer.get_public_key().as_hex()
@@ -325,17 +330,15 @@ class BlockValidator(object):
                     'Failed {} consensus verification'.format(
                         self._consensus_module))
 
-            if not self._verify_block_batches(blkw, state_root):
-                raise BlockValidationError(
-                    'Failed batch verification')
+            self._verify_block_batches(blkw, state_root)
 
             # since changes to the chain-head can change the state of the
             # blocks in BlockStore we have to revalidate this block.
-            block_store = self._block_cache.block_store
-            if (self._chain_head is not None
-                    and self._chain_head.identifier !=
-                    block_store.chain_head.identifier):
-                raise ChainHeadUpdated()
+            if self._chain_head is not None:
+                chain_head = self._block_cache.block_store.chain_head
+
+                if not self._chain_head.identifier == chain_head.identifier:
+                    raise ChainHeadUpdated()
 
         except Exception as exp:
             raise BlockValidationError(
