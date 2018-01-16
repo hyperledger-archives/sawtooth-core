@@ -46,6 +46,9 @@ pub struct TransactionProcessor<'a> {
 }
 
 impl<'a> TransactionProcessor<'a> {
+    /// TransactionProcessor is for communicating with a
+    /// validator and routing transaction processing requests to a registered
+    /// handler. It uses ZMQ and channels to handle requests concurrently.
     pub fn new(endpoint: &str) -> TransactionProcessor {
         TransactionProcessor {
             endpoint: String::from(endpoint),
@@ -54,10 +57,18 @@ impl<'a> TransactionProcessor<'a> {
         }
     }
 
+    /// Adds a transaction family handler
+    ///
+    /// # Arguments
+    ///
+    /// * handler - the handler to be added
     pub fn add_handler(&mut self, handler: &'a TransactionHandler) {
         self.handlers.push(handler);
     }
 
+    /// Connects the transaction processor to a validator and starts
+    /// listening for requests and routing them to an appropriate
+    /// transaction handler.
     pub fn start(&mut self) {
         info!("connecting to endpoint: {}", self.endpoint);
 

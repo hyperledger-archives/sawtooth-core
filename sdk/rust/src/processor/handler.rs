@@ -45,7 +45,9 @@ use messaging::zmq_stream::ZmqMessageSender;
 
 #[derive(Debug)]
 pub enum ApplyError {
+    /// Raised for an Invalid Transaction.
     InvalidTransaction(String),
+    /// Raised when an internal error occurs during transaction processing.
     InternalError(String)
 }
 
@@ -82,9 +84,9 @@ pub enum ContextError {
     AuthorizationError(String),
     /// Raised when an Unknown error occurs
     UnknownError(String),
-    /// Raised for a ProtobufError is returned when serialized.
+    /// Raised when a ProtobufError is returned during serializing
     SerializationError(Box<StdError>),
-    /// Raise when an error is return when sending a message
+    /// Raised when an error is returned when sending a message
     SendError(Box<StdError>),
     /// Raise when an error is return when sending a message
     ReceiveError(Box<StdError>),
@@ -159,6 +161,14 @@ pub struct TransactionContext {
 }
 
 impl TransactionContext {
+    /// Context provides an interface for getting, setting, and deleting
+    /// validator state. All validator interactions by a handler should be
+    /// through a Context instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `sender` - for client grpc communication
+    /// * `context_id` - the context_id passed in from the validator
     pub fn new(context_id: &str, sender: ZmqMessageSender) -> TransactionContext {
         TransactionContext{
             context_id: String::from(context_id),
@@ -166,6 +176,14 @@ impl TransactionContext {
         }
     }
 
+    /// get_state queries the validator state for data at each of the
+    /// addresses in the given list. The addresses that have been set
+    /// are returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `addresses` - the addresses to fetch
+    /// * `timeout` - optional timeout, in seconds
     pub fn get_state(&mut self, address: &str) -> Result<Option<Vec<u8>>, ContextError> {
         let mut request = TpStateGetRequest::new();
         request.set_context_id(self.context_id.clone());
@@ -203,6 +221,13 @@ impl TransactionContext {
         }
     }
 
+    /// set_state requests that each address in the provided dictionary be
+    /// set in validator state to its corresponding value.
+    ///
+    /// # Arguments
+    ///
+    /// * `entries` - dictionary where addresses are the keys and data is the value.
+    /// * `timeout` - optional timeout, in seconds
     pub fn set_state(&mut self, address: &str, payload: &[u8]) -> Result<(), ContextError> {
         let mut entry = TpStateEntry::new();
         entry.set_address(String::from(address));
@@ -236,8 +261,26 @@ impl TransactionContext {
 }
 
 pub trait TransactionHandler {
+    /// TransactionHandler that defines the business logic for a new transaction family.
+    /// The family_name, family_versions, and namespaces functions are
+    /// used by the processor to route processing requests to the handler.
+
+    /// family_name should return the name of the transaction family that this
+    /// handler can process, e.g. "intkey"
     fn family_name(&self) -> String;
+
+    /// family_versions should return a list of versions this transaction
+    /// family handler can process, e.g. ["1.0"]
     fn family_versions(&self) -> Vec<String>;
+
+    /// namespaces should return a list containing all the handler's
+    /// namespaces, e.g. ["abcdef"]
     fn namespaces(&self) -> Vec<String>;
+
+    /// Apply is the single method where all the business logic for a
+    /// transaction family is defined. The method will be called by the
+    /// transaction processor upon receiving a TpProcessRequest that the
+    /// handler understands and will pass in the TpProcessRequest and an
+    /// initialized instance of the Context type.
     fn apply(&self, request: &TpProcessRequest, context: &mut TransactionContext) -> Result<(), ApplyError>;
 }
