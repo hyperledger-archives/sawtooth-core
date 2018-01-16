@@ -18,6 +18,10 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 LOGGER = logging.getLogger(__name__)
 
 
+class ValidationRuleError(Exception):
+    pass
+
+
 class ValidationRuleEnforcer(object):
     def __init__(self, setting_view_factory):
         self._settings_view_factory = setting_view_factory
@@ -39,8 +43,9 @@ class ValidationRuleEnforcer(object):
             state_root)
         rules = settings_view.get_setting(
             "sawtooth.validator.block_validation_rules")
+
         if rules is None:
-            return True
+            return
 
         transactions = []
         for batch in block.batches:
@@ -49,7 +54,7 @@ class ValidationRuleEnforcer(object):
         expected_signer = block.header.signer_public_key
 
         rules = rules.split(";")
-        valid = True
+
         for rule in rules:
             try:
                 rule_type, arguments = rule.split(":")
@@ -62,21 +67,22 @@ class ValidationRuleEnforcer(object):
             rule_type = rule_type.strip()
             # NofX: Only N of transaction type X may be included in a block.
             if rule_type == "NofX":
-                valid = self._do_nofx(transactions, arguments)
+                if not self._do_nofx(transactions, arguments):
+                    raise ValidationRuleError(
+                        'Failed NofX validation rule')
 
             # XatY: A transaction of type X must be in the block at position Y.
             elif rule_type == "XatY":
-                valid = self._do_xaty(transactions, arguments)
+                if not self._do_xaty(transactions, arguments):
+                    raise ValidationRuleError(
+                        'Failed XatY validation rule')
 
             # local: A transaction must be signed by the same key as the block.
             elif rule_type == "local":
-                valid = self._do_local(
-                    transactions, expected_signer, arguments)
-
-            if not valid:
-                return False
-
-        return valid
+                if not self._do_local(
+                        transactions, expected_signer, arguments):
+                    raise ValidationRuleError(
+                        'Failed local validation rule')
 
     def _do_nofx(self, transactions, arguments):
         """
