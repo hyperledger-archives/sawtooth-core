@@ -45,16 +45,10 @@ from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 LOGGER = logging.getLogger(__name__)
 
 
-class BlockValidationAborted(Exception):
-    """
-    Indication that the validation of this fork has terminated for an
-    expected(handled) case and that the processing should exit.
-    """
-    pass
-
-
 class BlockValidationError(Exception):
-    pass
+    """
+    Indication that some step in the block validation process has failed.
+    """
 
 
 class ChainHeadUpdated(Exception):
@@ -371,7 +365,7 @@ class BlockValidator(object):
                 except KeyError:
                     for b in new_chain:
                         b.status = BlockStatus.Invalid
-                    raise BlockValidationAborted(
+                    raise BlockValidationError(
                         'Block {} missing predecessor {}'.format(
                             new_blkw,
                             new_blkw.previous_block_id))
@@ -396,7 +390,7 @@ class BlockValidator(object):
                 # We are at a genesis block and the blocks are not the same
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationAborted(
+                raise BlockValidationError(
                     'Block {} has wrong genesis: {}'.format(
                         cur_blkw,
                         new_blkw))
@@ -408,7 +402,7 @@ class BlockValidator(object):
             except KeyError:
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationAborted(
+                raise BlockValidationError(
                     'Block {} missing predecessor {}'.format(
                         new_blkw,
                         new_blkw.previous_block_id))
@@ -476,7 +470,7 @@ class BlockValidator(object):
                     new_blkw, cur_blkw,
                     new_chain, cur_chain)
 
-            except BlockValidationAborted as err:
+            except BlockValidationError as err:
                 LOGGER.warning('Could not find common ancestor: %s', err)
                 self._done_cb(False, self._result)
                 return
