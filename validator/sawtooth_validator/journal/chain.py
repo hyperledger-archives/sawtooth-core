@@ -369,13 +369,13 @@ class BlockValidator(object):
                 try:
                     new_blkw = self._block_cache[new_blkw.previous_block_id]
                 except KeyError:
-                    LOGGER.info(
-                        "Block %s rejected due to missing predecessor %s",
-                        new_blkw,
-                        new_blkw.previous_block_id)
                     for b in new_chain:
                         b.status = BlockStatus.Invalid
-                    raise BlockValidationAborted()
+                    raise BlockValidationAborted(
+                        'Block {} missing predecessor {}'.format(
+                            new_blkw,
+                            new_blkw.previous_block_id))
+
         elif new_blkw.block_num < cur_blkw.block_num:
             # current chain is longer
             # walk the current chain back until we find the block that is the
@@ -393,23 +393,24 @@ class BlockValidator(object):
             if (cur_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER
                     or new_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER):
                 # We are at a genesis block and the blocks are not the same
-                LOGGER.info(
-                    "Block rejected due to wrong genesis: %s %s",
-                    cur_blkw, new_blkw)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
+                raise BlockValidationAborted(
+                    'Block {} has wrong genesis: {}'.format(
+                        cur_blkw,
+                        new_blkw))
+
             new_chain.append(new_blkw)
+
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
-                LOGGER.info(
-                    "Block %s rejected due to missing predecessor %s",
-                    new_blkw,
-                    new_blkw.previous_block_id)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
+                raise BlockValidationAborted(
+                    'Block {} missing predecessor {}'.format(
+                        new_blkw,
+                        new_blkw.previous_block_id))
 
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
@@ -453,27 +454,35 @@ class BlockValidator(object):
         """
         try:
             LOGGER.info("Starting block validation of : %s", self._new_block)
-            cur_chain = self._result["cur_chain"]  # ordered list of the
-            # current chain blocks
-            new_chain = self._result["new_chain"]  # ordered list of the new
-            # chain blocks
+
+            # ordered list of the current chain blocks
+            cur_chain = self._result["cur_chain"]
+            # ordered list of the new chain blocks
+            new_chain = self._result["new_chain"]
 
             # get the current chain_head.
             self._chain_head = self._block_cache.block_store.chain_head
             self._result['chain_head'] = self._chain_head
 
-            # 1) Find the common ancestor block, the root of the fork.
-            # walk back till both chains are the same height
-            (new_blkw, cur_blkw) = self._find_common_height(new_chain,
-                                                            cur_chain)
+            try:
+                # 1) Find the common ancestor block, the root of the
+                # fork. Walk back till both chains are the same height.
+                new_blkw, cur_blkw = \
+                    self._find_common_height(new_chain, cur_chain)
 
-            # 2) Walk back until we find the common ancestor
-            self._find_common_ancestor(new_blkw, cur_blkw,
-                                       new_chain, cur_chain)
+                # 2) Walk back until we find the common ancestor.
+                self._find_common_ancestor(
+                    new_blkw, cur_blkw,
+                    new_chain, cur_chain)
 
-            # 3) Determine the validity of the new fork
-            # build the transaction cache to simulate the state of the
-            # chain at the common root.
+            except BlockValidationAborted as err:
+                LOGGER.warning('Could not find common ancestor: %s', err)
+                self._done_cb(False, self._result)
+                return
+
+            # 3) Determine the validity of the new fork build the
+            # transaction cache to simulate the state of the chain at
+            # the common root.
             self._chain_commit_state = ChainCommitState(
                 self._block_cache.block_store, cur_chain)
 
@@ -489,6 +498,13 @@ class BlockValidator(object):
                             block,
                             err)
                         valid = False
+                    except ChainHeadUpdated:
+                        LOGGER.warning(
+                            'Chain head updated during validation of %s',
+                            block)
+                        self._done_cb(False, self._result)
+                        return
+
                     block.status = BlockStatus.Valid
                     self._result["num_transactions"] += block.num_transactions
                 else:
@@ -534,18 +550,14 @@ class BlockValidator(object):
             self._done_cb(commit_new_chain, self._result)
 
             LOGGER.info(
-                "Finished block validation of: %s",
+                'Finished validation of block %s',
                 self._new_block)
-        except BlockValidationAborted:
-            self._done_cb(False, self._result)
-            return
-        except ChainHeadUpdated:
-            self._done_cb(False, self._result)
-            return
-        except Exception:  # pylint: disable=broad-except
+
+        except Exception as err:  # pylint: disable=broad-except
             LOGGER.exception(
-                "Block validation failed with unexpected error: %s",
-                self._new_block)
+                'Validation of block %s failed with unexpected error: %s',
+                self._new_block,
+                err)
             # callback to clean up the block out of the processing list.
             self._done_cb(False, self._result)
 
