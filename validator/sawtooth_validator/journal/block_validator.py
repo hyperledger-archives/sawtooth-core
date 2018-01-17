@@ -15,8 +15,6 @@
 
 import logging
 
-import sawtooth_signing as signing
-
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.journal.block_wrapper import BlockStatus
@@ -82,6 +80,9 @@ class BlockValidationResult:
         return out[:-1] + "}"
 
 
+# Need to disable this new pylint check until the function can be refactored
+# to return instead of raise StopIteration, which it does by calling next()
+# pylint: disable=stop-iteration-return
 def look_ahead(iterable):
     """Pass through all values from the given iterable, augmented by the
     information if there are more values to come after the current one
@@ -351,8 +352,8 @@ class BlockValidator(object):
             blkw.status = BlockStatus.Valid
             return True
 
-        except ChainHeadUpdated:
-            raise
+        except ChainHeadUpdated as e:
+            raise e
 
         except Exception:
             LOGGER.exception(
