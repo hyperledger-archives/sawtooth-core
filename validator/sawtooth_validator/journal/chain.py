@@ -184,20 +184,19 @@ class BlockValidator(object):
         for txn in batch.transactions:
             txn_hdr = self._txn_header(txn)
             if self._chain_commit_state.has_transaction(txn.header_signature):
-                LOGGER.debug(
+                raise InvalidBatch(
                     "Block rejected due to duplicate"
-                    " transaction, transaction: %s",
-                    txn.header_signature[:8])
-                raise InvalidBatch()
+                    " transaction, transaction: {}".format(
+                        txn.header_signature[:8]))
+
             for dep in txn_hdr.dependencies:
                 if not self._chain_commit_state.has_transaction(dep):
-                    LOGGER.debug(
+                    raise InvalidBatch(
                         "Block rejected due to missing "
-                        "transaction dependency, transaction %s "
-                        "depends on %s",
-                        txn.header_signature[:8],
-                        dep[:8])
-                    raise InvalidBatch()
+                        "transaction dependency, transaction {} "
+                        "depends on {}".format(
+                            txn.header_signature[:8],
+                            dep[:8]))
             self._chain_commit_state.add_txn(txn.header_signature)
 
     def _verify_block_batches(self, blkw):
@@ -210,10 +209,11 @@ class BlockValidator(object):
                 for batch, has_more in look_ahead(blkw.block.batches):
                     if self._chain_commit_state.has_batch(
                             batch.header_signature):
-                        LOGGER.debug("Block(%s) rejected due to duplicate "
-                                     "batch, batch: %s", blkw,
-                                     batch.header_signature[:8])
-                        raise InvalidBatch()
+                        raise InvalidBatch(
+                            "Block({}) rejected due to duplicate "
+                            "batch, batch: {}".format(
+                                blkw,
+                                batch.header_signature[:8]))
 
                     self._verify_batch_transactions(batch)
                     self._chain_commit_state.add_batch(
@@ -222,13 +222,14 @@ class BlockValidator(object):
                         scheduler.add_batch(batch)
                     else:
                         scheduler.add_batch(batch, blkw.state_root_hash)
-            except InvalidBatch:
-                LOGGER.debug("Invalid batch %s encountered during "
-                             "verification of block %s",
-                             batch.header_signature[:8],
-                             blkw)
+            except InvalidBatch as err:
                 scheduler.cancel()
-                return False
+                raise BlockValidationAborted(
+                    "Invalid batch {} encountered during "
+                    "verification of block {}: {}".format(
+                        batch.header_signature[:8],
+                        blkw,
+                        err))
             except Exception:
                 scheduler.cancel()
                 raise
@@ -248,13 +249,15 @@ class BlockValidator(object):
                     state_hash = batch_result.state_hash
                     blkw.num_transactions += len(batch.transactions)
                 else:
-                    return False
+                    raise BlockValidationAborted(
+                        'Batch {} has invalid execution result'.format(
+                            batch.header_signature))
             if blkw.state_root_hash != state_hash:
-                LOGGER.debug("Block(%s) rejected due to state root hash "
-                             "mismatch: %s != %s", blkw, blkw.state_root_hash,
-                             state_hash)
-                return False
-        return True
+                raise BlockValidationAborted(
+                    "Block({}) rejected due to state root hash "
+                    "mismatch: {} != {}".format(
+                        blkw, blkw.state_root_hash,
+                        state_hash))
 
     def _validate_permissions(self, blkw):
         """
@@ -267,15 +270,16 @@ class BlockValidator(object):
             try:
                 state_root = self._get_previous_block_root_state_hash(blkw)
             except KeyError:
-                LOGGER.info(
-                    "Block rejected due to missing predecessor: %s", blkw)
-                return False
+                raise BlockValidationAborted(
+                    "Block rejected due to missing predecessor: {}".format(
+                        blkw))
 
             for batch in blkw.batches:
                 if not self._permission_verifier.is_batch_signer_authorized(
                         batch, state_root):
-                    return False
-        return True
+                    raise BlockValidationAborted(
+                        'Signer for batch {} not authorized'.format(
+                            batch.header_signature))
 
     def _validate_on_chain_rules(self, blkw):
         """
@@ -287,40 +291,41 @@ class BlockValidator(object):
             try:
                 state_root = self._get_previous_block_root_state_hash(blkw)
             except KeyError:
-                LOGGER.debug(
-                    "Block rejected due to missing" + " predecessor: %s", blkw)
-                return False
-            return self._validation_rule_enforcer.validate(blkw, state_root)
-        return True
+                raise BlockValidationAborted(
+                    "Block rejected due to missing predecessor: {}".format(
+                        blkw))
+            if not self._validation_rule_enforcer.validate(blkw, state_root):
+                raise BlockValidationAborted(
+                    'Block {} failed on-chain validation rules'.format(blkw))
 
     def validate_block(self, blkw):
         # pylint: disable=broad-except
         try:
             if blkw.status == BlockStatus.Valid:
-                return True
+                return
             elif blkw.status == BlockStatus.Invalid:
-                return False
+                raise BlockValidationAborted(
+                    'Block {} already marked invalid'.format(blkw))
             else:
-                valid = True
+                self._validate_permissions(blkw)
 
-                valid = self._validate_permissions(blkw)
+                public_key = \
+                    self._identity_signer.get_public_key().as_hex()
+                consensus = self._consensus_module.BlockVerifier(
+                    block_cache=self._block_cache,
+                    state_view_factory=self._state_view_factory,
+                    data_dir=self._data_dir,
+                    config_dir=self._config_dir,
+                    validator_id=public_key)
+                valid = consensus.verify_block(blkw)
+                if not valid:
+                    raise BlockValidationAborted(
+                        'Block {} failed consensus {}'.format(
+                            blkw, self._consensus_module))
 
-                if valid:
-                    public_key = \
-                        self._identity_signer.get_public_key().as_hex()
-                    consensus = self._consensus_module.BlockVerifier(
-                        block_cache=self._block_cache,
-                        state_view_factory=self._state_view_factory,
-                        data_dir=self._data_dir,
-                        config_dir=self._config_dir,
-                        validator_id=public_key)
-                    valid = consensus.verify_block(blkw)
+                self._validate_on_chain_rules(blkw)
 
-                if valid:
-                    valid = self._validate_on_chain_rules(blkw)
-
-                if valid:
-                    valid = self._verify_block_batches(blkw)
+                self._verify_block_batches(blkw)
 
                 # since changes to the chain-head can change the state of the
                 # blocks in BlockStore we have to revalidate this block.
@@ -330,16 +335,17 @@ class BlockValidator(object):
                         block_store.chain_head.identifier):
                     raise ChainHeadUpdated()
 
-                blkw.status = \
-                    BlockStatus.Valid if valid else BlockStatus.Invalid
+                # block has passed all checks
+                blkw.status = BlockStatus.Valid
 
-                return valid
+        except BlockValidationAborted as err:
+            blkw.status = BlockStatus.Invalid
+            raise err
         except ChainHeadUpdated as chu:
             raise chu
         except Exception:
             LOGGER.exception(
                 "Unhandled exception BlockPublisher.validate_block()")
-            return False
 
     def _find_common_height(self, new_chain, cur_chain):
         """
@@ -365,13 +371,13 @@ class BlockValidator(object):
                 try:
                     new_blkw = self._block_cache[new_blkw.previous_block_id]
                 except KeyError:
-                    LOGGER.info(
-                        "Block %s rejected due to missing predecessor %s",
-                        new_blkw,
-                        new_blkw.previous_block_id)
                     for b in new_chain:
                         b.status = BlockStatus.Invalid
-                    raise BlockValidationAborted()
+                    raise BlockValidationAborted(
+                        "Block {} rejected due to missing "
+                        "predecessor {}".format(
+                            new_blkw,
+                            new_blkw.previous_block_id))
         elif new_blkw.block_num < cur_blkw.block_num:
             # current chain is longer
             # walk the current chain back until we find the block that is the
@@ -389,23 +395,22 @@ class BlockValidator(object):
             if (cur_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER
                     or new_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER):
                 # We are at a genesis block and the blocks are not the same
-                LOGGER.info(
-                    "Block rejected due to wrong genesis: %s %s",
-                    cur_blkw, new_blkw)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
+                raise BlockValidationAborted(
+                    "Block rejected due to wrong genesis: {} {}".format(
+                        cur_blkw, new_blkw))
             new_chain.append(new_blkw)
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
-                LOGGER.info(
-                    "Block %s rejected due to missing predecessor %s",
-                    new_blkw,
-                    new_blkw.previous_block_id)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
+                raise BlockValidationAborted(
+                    "Block {} rejected due to missing "
+                    "predecessor {}".format(
+                        new_blkw,
+                        new_blkw.previous_block_id))
 
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
@@ -476,8 +481,12 @@ class BlockValidator(object):
             valid = True
             for block in reversed(new_chain):
                 if valid:
-                    if not self.validate_block(block):
-                        LOGGER.info("Block validation failed: %s", block)
+                    try:
+                        self.validate_block(block)
+                    except BlockValidationAborted as err:
+                        LOGGER.info(
+                            "Block %s failed validation: %s",
+                            block, err)
                         valid = False
                     self._result["num_transactions"] += block.num_transactions
                 else:
@@ -525,7 +534,9 @@ class BlockValidator(object):
             LOGGER.info(
                 "Finished block validation of: %s",
                 self._new_block)
-        except BlockValidationAborted:
+        except BlockValidationAborted as err:
+            LOGGER.warning(
+                'Failed block validation: %s', err)
             self._done_cb(False, self._result)
             return
         except ChainHeadUpdated:
@@ -897,7 +908,10 @@ class ChainController(object):
                     return
 
                 if self.chain_head is None:
-                    self._set_genesis(block)
+                    try:
+                        self._set_genesis(block)
+                    except BlockValidationAborted as err:
+                        LOGGER.warning(err)
                     return
 
                 # If we are already currently processing this block, then
@@ -975,17 +989,18 @@ class ChainController(object):
                     permission_verifier=self._permission_verifier,
                     metrics_registry=self._metrics_registry)
 
-                valid = validator.validate_block(block)
-                if valid:
+                try:
+                    validator.validate_block(block)
                     if chain_id is None:
                         self._chain_id_manager.save_block_chain_id(
                             block.identifier)
                     self._block_store.update_chain([block])
                     self._chain_head = block
                     self._notify_on_chain_updated(self._chain_head)
-                else:
-                    LOGGER.warning("The genesis block is not valid. Cannot "
-                                   "set chain head: %s", block)
+                except BlockValidationAborted as err:
+                    raise BlockValidationAborted(
+                        "The genesis block {} is not valid: Cannot "
+                        "set chain head: {}".format(block, err))
 
         else:
             LOGGER.warning("Cannot set initial chain head, this is not a "

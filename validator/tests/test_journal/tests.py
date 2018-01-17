@@ -31,6 +31,7 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.chain import BlockValidator
+from sawtooth_validator.journal.chain import BlockValidationAborted
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.publisher import BlockPublisher
@@ -1230,7 +1231,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
 
         with patch.object(BlockValidator,
                           'validate_block',
-                          return_value=False):
+                          side_effect=BlockValidationAborted):
             self.chain_ctrl.on_block_received(my_genesis_block)
 
         self.assertIsNone(self.chain_ctrl.chain_head)
