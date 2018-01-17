@@ -43,7 +43,7 @@ static const std::string INTKEY_NAMESPACE = "intkey";
 
 
 // utility function to provide copy conversion from vector of bytes
-// to a stl string container.
+// to an stl string container.
 std::string ToString(const std::vector<std::uint8_t>& in) {
     const char* data = reinterpret_cast<const char*>(&(in[0]));
     std::string out(data, data+in.size());
@@ -57,7 +57,7 @@ std::vector<std::uint8_t> ToVector(const std::string& in) {
     return out;
 }
 
-// Handles the processing of a IntKey transactions.
+// Handles the processing of IntKey transactions.
 class IntKeyApplicator:  public sawtooth::TransactionApplicator {
  public:
     IntKeyApplicator(sawtooth::TransactionUPtr txn,
@@ -438,7 +438,7 @@ int main(int argc, char** argv) {
         std::cerr << e.what() << std::endl;
     } catch(...) {
         LOG4CXX_ERROR(logger, "Unexpected exception exiting: unknown type");
-        std::cerr << "Exiting do to uknown exception." << std::endl;
+        std::cerr << "Exiting due to unknown exception." << std::endl;
     }
     return -1;
 }
