@@ -159,6 +159,7 @@ Configure the Validator to Use SGX PoET
 ---------------------------------------
 
 After installing Sawtooth, add config settings so PoET will work properly.
+
 Create the file ``/etc/sawtooth/poet_enclave_sgx.toml``
 with your favorite editor (such as vi):
 
@@ -200,57 +201,36 @@ Create validator keys:
 
     $ sudo sawadm keygen
 
-Become the sawtooth user and change to ``/tmp``:
-
 .. note::  If you're configuring multiple validators, the steps below are
     required for the first validator only.  For additional validators, you
-    can skip to the `$ exit` command to log out of the sawtooth account,
-    then continue with :ref:`val-config`.
+    can skip the rest of this procedure. Continue with :ref:`val-config`.
+
+Become the sawtooth user and change to ``/tmp``.
+In the following commands, the prompt ``[sawtooth@system]`` shows the commands
+that must be executed as the sawtooth user.
 
 .. code-block:: console
 
     $ sudo -u sawtooth -s
-    $ cd /tmp
+    [sawtooth@system]$ cd /tmp
 
 Create a genesis batch:
 
 .. code-block:: console
 
-    $ sawset genesis --key /etc/sawtooth/keys/validator.priv -o config-genesis.batch
+    [sawtooth@system]$ sawset genesis --key /etc/sawtooth/keys/validator.priv -o config-genesis.batch
 
 Create and submit a proposal:
 
 .. code-block:: console
 
-    $ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
+    [sawtooth@system]$ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
     sawtooth.consensus.algorithm=poet \
     sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)" \
     sawtooth.poet.valid_enclave_measurements=$(poet enclave --enclave-module sgx measurement) \
     sawtooth.poet.valid_enclave_basenames=$(poet enclave --enclave-module sgx basename) \
     sawtooth.poet.enclave_module_name=sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave \
     -o config.batch
-
-There’s quite a bit going on in the previous command, so let’s take a closer look at what it accomplishes:
-
-``sawtooth.consensus.algorithm=poet``
-  Changes the consensus algorithm to PoET.
-
-``sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)"``
-  Adds the public key that the validator registry transaction processor uses
-  to verify attestation reports.
-
-``sawtooth.poet.valid_enclave_measurements=$(poet enclave --enclave-module sgx measurement)``
-  Adds the enclave measurement for your enclave to the blockchain for the
-  validator registry transaction processor to use to check signup information.
-
-``sawtooth.poet.valid_enclave_basenames=$(poet enclave --enclave-module sgx basename)``
-  Adds the enclave basename for your enclave to the blockchain for the
-  validator registry transaction processor to use to check signup information.
-
-``sawtooth.poet.enclave_module_name``
-  Specifies the name of the Python module that implements the PoET enclave.
-  In this case, ``sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave`` is the SGX version of
-  the enclave; it includes the Python code as well as the Python extension.
 
 When the ``sawset proposal`` command runs, you should see several
 lines of output showing that the SGX enclave has been initialized:
@@ -260,11 +240,37 @@ lines of output showing that the SGX enclave has been initialized:
     [12:03:58 WARNING poet_enclave] SGX PoET enclave initialized.
     [12:03:59 WARNING poet_enclave] SGX PoET enclave initialized.
 
+.. note::
+
+    There’s quite a bit going on in the previous ``sawset proposal`` command, so
+    let’s take a closer look at what it accomplishes:
+
+    ``sawtooth.consensus.algorithm=poet``
+      Changes the consensus algorithm to PoET.
+
+    ``sawtooth.poet.report_public_key_pem="$(cat /etc/sawtooth/ias_rk_pub.pem)"``
+      Adds the public key that the validator registry transaction processor uses
+      to verify attestation reports.
+
+    ``sawtooth.poet.valid_enclave_measurements=$(poet enclave --enclave-module sgx measurement)``
+      Adds the enclave measurement for your enclave to the blockchain for the
+      validator registry transaction processor to use to check signup information.
+
+    ``sawtooth.poet.valid_enclave_basenames=$(poet enclave --enclave-module sgx basename)``
+      Adds the enclave basename for your enclave to the blockchain for the
+      validator registry transaction processor to use to check signup information.
+
+    ``sawtooth.poet.enclave_module_name``
+      Specifies the name of the Python module that implements the PoET enclave.
+      In this case, ``sawtooth_poet_sgx.poet_enclave_sgx.poet_enclave`` is the
+      SGX version of the enclave; it includes the Python code as well as the
+      Python extension.
+
 Create a poet-genesis batch:
 
 .. code-block:: console
 
-    $ poet registration create -k /etc/sawtooth/keys/validator.priv \
+    [sawtooth@system]$ poet registration create -k /etc/sawtooth/keys/validator.priv \
       --enclave-module sgx -o poet_genesis.batch
     Writing key state for PoET public key: 0387a451...9932a998
     Generating poet_genesis.batch
@@ -273,7 +279,7 @@ Create a genesis block:
 
 .. code-block:: console
 
-    $ sawadm genesis config-genesis.batch config.batch poet_genesis.batch
+    [sawtooth@system]$ sawadm genesis config-genesis.batch config.batch poet_genesis.batch
 
 You’ll see some output indicating success:
 
@@ -288,7 +294,8 @@ Genesis configuration is complete! Log out of the sawtooth account:
 
 .. code-block:: console
 
-    $ exit
+    [sawtooth@system]$ exit
+    $
 
 
 .. _val-config:

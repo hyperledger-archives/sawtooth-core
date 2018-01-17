@@ -100,7 +100,7 @@ class TestKeygen(unittest.TestCase):
 
 
 def _read_signing_keys(key_filename):
-    """Reads the given file as a WIF formatted key.
+    """Reads the given file as a HEX formatted key.
 
     Args:
         key_filename: The filename where the key is stored.

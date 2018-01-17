@@ -377,7 +377,7 @@ class ParallelScheduler(Scheduler):
 
                 txn_id = txn.header_signature
                 # Update our internal state with the computed predecessors.
-                self._txn_predecessors[txn_id] = list(set(predecessors))
+                self._txn_predecessors[txn_id] = set(predecessors)
 
                 # Update the predecessor tree.
                 #
@@ -673,8 +673,8 @@ class ParallelScheduler(Scheduler):
 
         return self._txns_available.copy()
 
-    def _has_predecessors(self, txn):
-        for predecessor_id in self._txn_predecessors[txn.header_signature]:
+    def _has_predecessors(self, txn_id):
+        for predecessor_id in self._txn_predecessors[txn_id]:
             if predecessor_id not in self._txn_results:
                 return True
             # Since get_initial_state_for_transaction gets context ids not
@@ -687,8 +687,8 @@ class ParallelScheduler(Scheduler):
 
         return False
 
-    def _is_outstanding(self, txn):
-        return txn.header_signature in self._outstanding
+    def _is_outstanding(self, txn_id):
+        return txn_id in self._outstanding
 
     def _txn_result_is_invalid(self, sig):
         return sig in self._txn_results and \
@@ -785,28 +785,38 @@ class ParallelScheduler(Scheduler):
 
             next_txn = None
             for txn in self._unscheduled_transactions():
-                if not self._has_predecessors(txn) and \
-                        not self._is_outstanding(txn) and \
-                        not self._dependency_not_processed(txn):
-                    if self._txn_failed_by_dep(txn):
-                        self._txns_available.remove(txn)
-                        self._txn_results[txn.header_signature] = \
-                            TxnExecutionResult(
-                                signature=txn.header_signature,
-                                is_valid=False,
-                                context_id=None,
-                                state_hash=None)
-                        continue
-                    txn_id = txn.header_signature
-                    if not self._txn_is_in_valid_batch(txn_id) and \
-                            self._can_fail_fast(txn_id):
+                txn_id = txn.header_signature
 
-                        self._txn_results[txn.header_signature] = \
-                            TxnExecutionResult(False, None, None)
-                        self._txns_available.remove(txn)
-                        continue
-                    next_txn = txn
-                    break
+                if (self._has_predecessors(txn_id)
+                        or self._is_outstanding(txn_id)):
+                    continue
+
+                header = TransactionHeader()
+                header.ParseFromString(txn.header)
+                deps = tuple(header.dependencies)
+
+                if self._dependency_not_processed(deps):
+                    continue
+
+                if self._txn_failed_by_dep(deps):
+                    self._txns_available.remove(txn)
+                    self._txn_results[txn_id] = \
+                        TxnExecutionResult(
+                            signature=txn_id,
+                            is_valid=False,
+                            context_id=None,
+                            state_hash=None)
+                    continue
+
+                if not self._txn_is_in_valid_batch(txn_id) and \
+                        self._can_fail_fast(txn_id):
+                    self._txn_results[txn_id] = \
+                        TxnExecutionResult(False, None, None)
+                    self._txns_available.remove(txn)
+                    continue
+
+                next_txn = txn
+                break
 
             if next_txn is not None:
                 bases = self._get_initial_state_for_transaction(next_txn)
@@ -821,20 +831,16 @@ class ParallelScheduler(Scheduler):
                 return info
             return None
 
-    def _dependency_not_processed(self, txn):
-        header = TransactionHeader()
-        header.ParseFromString(txn.header)
+    def _dependency_not_processed(self, deps):
         if any(not self._all_in_batch_have_results(d)
-               for d in list(header.dependencies)
+               for d in deps
                if d in self._batches_by_txn_id):
             return True
         return False
 
-    def _txn_failed_by_dep(self, txn):
-        header = TransactionHeader()
-        header.ParseFromString(txn.header)
+    def _txn_failed_by_dep(self, deps):
         if any(self._any_in_batch_are_invalid(d)
-               for d in list(header.dependencies)
+               for d in deps
                if d in self._batches_by_txn_id):
             return True
         return False
@@ -857,7 +863,7 @@ class ParallelScheduler(Scheduler):
 
             count = 0
             for txn in self._unscheduled_transactions():
-                if not self._has_predecessors(txn):
+                if not self._has_predecessors(txn.header_signature):
                     count += 1
 
             return count

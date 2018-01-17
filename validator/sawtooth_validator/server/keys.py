@@ -54,12 +54,9 @@ def load_identity_signer(key_dir, key_name):
 
     try:
         private_key = Secp256k1PrivateKey.from_hex(private_key_str)
-    except signing.ParseError:
-        try:
-            private_key = Secp256k1PrivateKey.from_wif(private_key_str)
-        except signing.ParseError as e:
-            raise LocalConfigurationError(
-                "Invalid key in file {}: {}".format(key_path, str(e)))
+    except signing.ParseError as e:
+        raise LocalConfigurationError(
+            "Invalid key in file {}: {}".format(key_path, str(e)))
 
     context = signing.create_context('secp256k1')
     crypto_factory = CryptoFactory(context)

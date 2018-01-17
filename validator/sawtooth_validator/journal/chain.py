@@ -273,7 +273,7 @@ class BlockValidator(object):
 
             for batch in blkw.batches:
                 if not self._permission_verifier.is_batch_signer_authorized(
-                        batch, state_root):
+                        batch, state_root, from_state=True):
                     return False
         return True
 

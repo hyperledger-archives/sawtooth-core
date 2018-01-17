@@ -22,7 +22,6 @@ authors = ["sawtooth"]
 protobuf="1.4.1"
 secp256k1 = "0.7.1"
 rust-crypto = "0.2.36"
-rust-base58 = "0.0.4"
 zmq = "0.8"
 uuid = { version = "0.5", features = ["v4"] }
 log = "0.3"
@@ -33,3 +32,5 @@ env_logger = "0.3"
 
 [build-dependencies]
 cc = "1.0"
+protoc-rust = "1.4"
+glob = "0.2"

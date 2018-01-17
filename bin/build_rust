@@ -19,9 +19,6 @@ set -e
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
-echo -e "\033[0;32m--- Running protogen rust ---\n\033[0m"
-$top_dir/bin/protogen rust
-
 echo -e "\033[0;32m--- Building Rust SDK ---\n\033[0m"
 cd $top_dir/sdk/rust/
 cargo build
