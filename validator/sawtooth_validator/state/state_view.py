@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 from sawtooth_validator.state.merkle import MerkleDatabase
+from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 
 class StateViewFactory(object):
@@ -43,9 +44,11 @@ class StateViewFactory(object):
         """
         # Create a default Merkle database and if we have a state root hash,
         # update the Merkle database's root to that
-        merkle_db = MerkleDatabase(self._database)
-        if state_root_hash is not None:
-            merkle_db.set_merkle_root(state_root_hash)
+        if state_root_hash is None:
+            state_root_hash = INIT_ROOT_KEY
+
+        merkle_db = MerkleDatabase(self._database,
+                                   merkle_root=state_root_hash)
 
         return StateView(merkle_db)
 
