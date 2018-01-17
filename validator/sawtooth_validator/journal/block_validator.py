@@ -120,20 +120,27 @@ class BlockValidator(object):
                  thread_pool=None):
         """Initialize the BlockValidator
         Args:
-             implementation of the consensus algorithm to use for block
-             validation.
-             block_cache: The cache of all recent blocks and the processing
-             state associated with them.
-             state_view_factory: The factory object to create.
-             transaction_executor: The transaction executor used to
+            block_cache: The cache of all recent blocks and the processing
+                state associated with them.
+            state_view_factory: A factory that can be used to create read-
+                only views of state for a particular merkle root, in
+                particular the state as it existed when a particular block
+                was the chain head.
+            transaction_executor: The transaction executor used to
                 process transactions.
-             squash_handler: A parameter passed when creating transaction
-             schedulers.
-             identity_signer: A cryptographic signer for signing blocks.
-             data_dir: Path to location where persistent data for the
-             consensus module can be stored.
-             config_dir: Path to location where config data for the
-             consensus module can be found.
+            squash_handler: A parameter passed when creating transaction
+                schedulers.
+            identity_signer: A cryptographic signer for signing blocks.
+            data_dir: Path to location where persistent data for the
+                consensus module can be stored.
+            config_dir: Path to location where config data for the
+                consensus module can be found.
+            permission_verifier: The delegate for handling permission
+                validation on blocks.
+            metrics_registry: (Optional) Pyformance metrics registry handle for
+                creating new metrics.
+            thread_pool: (Optional) Executor pool used to submit block
+                validation jobs. If not specified, a default will be created.
         Returns:
             None
         """
