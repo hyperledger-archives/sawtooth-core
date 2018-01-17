@@ -17,6 +17,7 @@
 name = "sawtooth_sdk"
 version = "0.1.0"
 authors = ["sawtooth"]
+build = "build.rs"
 
 [dependencies]
 protobuf="1.4.1"
