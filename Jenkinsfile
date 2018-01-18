@@ -101,6 +101,7 @@ node ('master') {
 
         stage("Archive Build artifacts") {
             archiveArtifacts artifacts: '*.tgz, *.zip'
+            archiveArtifacts artifacts: 'build/debs/cxx/*.deb'
             archiveArtifacts artifacts: 'build/debs/go/*.deb'
             archiveArtifacts artifacts: 'build/debs/python/*.deb'
             archiveArtifacts artifacts: 'build/bandit.html'

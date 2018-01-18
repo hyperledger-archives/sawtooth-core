@@ -314,8 +314,17 @@ fi
 if [[ $BUILD_MODE == $INSTALLED ]]
 then
     build_cxx() {
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
         docker_build docker/sawtooth-dev-cxx docker/ sawtooth-dev-cxx
         docker_run sawtooth-dev-cxx
+
+        cp $top_dir/bin/install_packaging_deps $build_dir
+        cp $top_dir/ci/sawtooth-build-debs $build_dir
+        docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
+        docker_run sawtooth-build-debs cxx
     }
 
     build_go() {
