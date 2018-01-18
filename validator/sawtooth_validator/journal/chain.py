@@ -359,11 +359,9 @@ class BlockValidator(object):
         # 1) find the common ancestor of this block in the current chain
         # Walk back until we have both chains at the same length
 
-        # Walk back the new chain to find the block that is the
-        # same height as the current head.
         if new_blkw.block_num > cur_blkw.block_num:
             # new chain is longer
-            # walk the current chain back until we find the block that is the
+            # walk the new chain back until we find the block that is the
             # same height as the current chain.
             while new_blkw.block_num > cur_blkw.block_num and \
                     new_blkw.previous_block_id != NULL_BLOCK_IDENTIFIER:
@@ -383,7 +381,7 @@ class BlockValidator(object):
             # walk the current chain back until we find the block that is the
             # same height as the new chain.
             while (cur_blkw.block_num > new_blkw.block_num
-                   and new_blkw.previous_block_id != NULL_BLOCK_IDENTIFIER):
+                   and cur_blkw.previous_block_id != NULL_BLOCK_IDENTIFIER):
                 cur_chain.append(cur_blkw)
                 cur_blkw = self._block_cache[cur_blkw.previous_block_id]
         return (new_blkw, cur_blkw)
