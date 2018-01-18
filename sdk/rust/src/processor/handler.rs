@@ -82,8 +82,8 @@ impl std::fmt::Display for ApplyError {
 pub enum ContextError {
     /// Raised for an authorization error
     AuthorizationError(String),
-    /// Raised when an Unknown error occurs
-    UnknownError(String),
+    /// Raised when a error occurs due to missing info in a response
+    ResponseAttributeError(String),
     /// Raised when a ProtobufError is returned during serializing
     SerializationError(Box<StdError>),
     /// Raised when an error is returned when sending a message
@@ -96,7 +96,7 @@ impl std::error::Error for ContextError {
     fn description(&self) -> &str {
         match *self {
             ContextError::AuthorizationError(ref msg) => msg,
-            ContextError::UnknownError(ref msg) => msg,
+            ContextError::ResponseAttributeError(ref msg) => msg,
             ContextError::SerializationError(ref err) => err.description(),
             ContextError::SendError(ref err) => err.description(),
             ContextError::ReceiveError(ref err) => err.description(),
@@ -106,7 +106,7 @@ impl std::error::Error for ContextError {
     fn cause(&self) -> Option<&std::error::Error> {
         match *self {
             ContextError::AuthorizationError(_) => None,
-            ContextError::UnknownError(_) => None,
+            ContextError::ResponseAttributeError(_) => None,
             ContextError::SerializationError(ref err) => Some(err.borrow()),
             ContextError::SendError(ref err) => Some(err.borrow()),
             ContextError::ReceiveError(ref err) => Some(err.borrow()),
@@ -119,8 +119,8 @@ impl std::fmt::Display for ContextError {
         match *self {
             ContextError::AuthorizationError(ref s) =>
                 write!(f, "AuthorizationError: {}", s),
-            ContextError::UnknownError(ref s) =>
-                write!(f, "UnknownError: {}", s),
+            ContextError::ResponseAttributeError(ref s) =>
+                write!(f, "ResponseAttributeError: {}", s),
             ContextError::SerializationError(ref err) =>
                 write!(f, "SerializationError: {}", err.description()),
             ContextError::SendError(ref err) =>
@@ -201,13 +201,13 @@ impl TransactionContext {
             TpStateGetResponse_Status::OK => {
                 let entry = match response.get_entries().first(){
                     Some(x) => x,
-                    None => return Err(ContextError::UnknownError(String::from("TpStateGetResponse is missing entries.")))
+                    None => return Err(ContextError::ResponseAttributeError(String::from("TpStateGetResponse is missing entries.")))
                 };
                 match entry.get_data().len() {
                     0 => Ok(None),
                     _ => Ok(Some(Vec::from(match response.get_entries().first() {
                         Some(x) => x.get_data(),
-                        None => return Err(ContextError::UnknownError(String::from("No data returned from entry.")))
+                        None => return Err(ContextError::ResponseAttributeError(String::from("No data returned from entry.")))
                     })))
                 }
             },
@@ -215,7 +215,7 @@ impl TransactionContext {
                 Err(ContextError::AuthorizationError(format!("Tried to get unauthorized address: {}", address)))
             },
             TpStateGetResponse_Status::STATUS_UNSET => {
-                Err(ContextError::UnknownError(String::from("Status was not set for TpStateGetResponse")))
+                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpStateGetResponse")))
             }
         }
     }
@@ -252,7 +252,7 @@ impl TransactionContext {
                 Err(ContextError::AuthorizationError(format!("Tried to set unauthorized address: {}", address)))
             },
             TpStateSetResponse_Status::STATUS_UNSET => {
-                Err(ContextError::UnknownError(String::from("Status was not set for TpStateSetResponse")))
+                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpStateSetResponse")))
             }
         }
     }
