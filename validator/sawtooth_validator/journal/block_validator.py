@@ -294,56 +294,66 @@ class BlockValidator(object):
         return True
 
     def validate_block(self, blkw, consensus, chain_head=None, chain=None):
+        if blkw.status == BlockStatus.Valid:
+            return True
+        elif blkw.status == BlockStatus.Invalid:
+            return False
+
         # pylint: disable=broad-except
         try:
+            if chain_head is None:
+                # Try to get the chain head from the block store; note that the
+                # block store may also return None for the chain head if a
+                # genesis block hasn't been committed yet.
+                chain_head = self._block_cache.block_store.chain_head
+
             if chain is None:
                 chain = []
             chain_commit_state = ChainCommitState(
                 self._block_cache.block_store, chain)
 
-            if chain_head is None:
-                chain_head = self._block_cache.block_store.chain_head
-
-            if blkw.status == BlockStatus.Valid:
-                return True
-            elif blkw.status == BlockStatus.Invalid:
+            try:
+                prev_state_root = self._get_previous_block_state_root(blkw)
+            except KeyError:
+                LOGGER.debug(
+                    "Block rejected due to missing predecessor: %s", blkw)
                 return False
-            else:
-                valid = True
 
-                try:
-                    prev_state_root = self._get_previous_block_state_root(blkw)
-                except KeyError:
-                    LOGGER.debug(
-                        "Block rejected due to missing predecessor: %s", blkw)
-                    return False
+            if not self._validate_permissions(blkw, prev_state_root):
+                blkw.status = BlockStatus.Invalid
+                return False
 
-                valid = self._validate_permissions(blkw, prev_state_root)
+            public_key = \
+                self._identity_signer.get_public_key().as_hex()
+            consensus_block_verifier = consensus.BlockVerifier(
+                block_cache=self._block_cache,
+                state_view_factory=self._state_view_factory,
+                data_dir=self._data_dir,
+                config_dir=self._config_dir,
+                validator_id=public_key)
 
-                if valid:
-                    public_key = \
-                        self._identity_signer.get_public_key().as_hex()
-                    block_verifier = consensus.BlockVerifier(
-                        block_cache=self._block_cache,
-                        state_view_factory=self._state_view_factory,
-                        data_dir=self._data_dir,
-                        config_dir=self._config_dir,
-                        validator_id=public_key)
-                    valid = block_verifier.verify_block(blkw)
+            if not consensus_block_verifier.verify_block(blkw):
+                blkw.status = BlockStatus.Invalid
+                return False
 
-                if valid:
-                    valid = self._validate_on_chain_rules(blkw, prev_state_root)
+            if not self._validate_on_chain_rules(blkw, prev_state_root):
+                blkw.status = BlockStatus.Invalid
+                return False
 
-                if valid:
-                    valid = self._verify_block_batches(
-                        blkw, prev_state_root, chain_commit_state)
+            if not self._validate_batches_in_block(
+                blkw, prev_state_root, chain_commit_state
+            ):
+                blkw.status = BlockStatus.Invalid
+                return False
 
-                # since changes to the chain-head can change the state of the
-                # blocks in BlockStore we have to revalidate this block.
-                block_store = self._block_cache.block_store
-                if chain_head is not None and\
-                        chain_head.identifier !=\
-                        block_store.chain_head.identifier:
+            # since changes to the chain-head can change the state of the
+            # blocks in BlockStore we have to revalidate this block.
+            block_store = self._block_cache.block_store
+
+            # The chain_head is None when this is the genesis block or if the
+            # block store has no chain_head.
+            if chain_head is not None:
+                if chain_head.identifier != block_store.chain_head.identifier:
                     raise ChainHeadUpdated()
 
             blkw.status = BlockStatus.Valid
