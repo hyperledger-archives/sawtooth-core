@@ -195,6 +195,11 @@ def do_workload(args):
         generator = WorkloadGenerator(args)
         workload = IntKeyWorkload(generator, args)
         generator.set_workload(workload)
+        try:
+            from dowser.utils import launch_memory_usage_server
+            launch_memory_usage_server(port=8002)
+        except ImportError:
+            LOGGER.warning("Unable to import Dowser")
         generator.run()
     except KeyboardInterrupt:
         generator.stop()
