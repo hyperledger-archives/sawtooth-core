@@ -65,6 +65,9 @@ static const uint32_t       WAIT_CERTIFICATE_NONCE_LENGTH = 32;
 // This constant allows a 30-second window after expiration for
 // which a timer may be used to create a wait certificate.
 static const double         TIMER_TIMEOUT_PERIOD = 30.0;
+// Minimum wait time duration
+static const double         MINIMUM_WAIT_TIME = 1.0;
+
 #if defined(SGX_SIMULATOR)
     static const bool IS_SGX_SIMULATOR = true;
 #else
@@ -112,8 +115,7 @@ static void CreateSignupReportData(
 static double GenerateWaitTimerDuration(
     const std::string&          validatorAddress,
     const std::string&          previousCertificateId,
-    double                      localMean,
-    double                      minimumWaitTime
+    double                      localMean
     );
 
 static sgx_time_t GetCurrentTime(
@@ -598,7 +600,6 @@ poet_err_t ecall_CreateWaitTimer(
     const char* inPreviousCertificateId,
     double inRequestTime,
     double inLocalMean,
-    double inMinimumWaitTime,
     char* outSerializedTimer,
     size_t inSerializedTimerLength,
     sgx_ec256_signature_t* outTimerSignature
@@ -616,9 +617,6 @@ poet_err_t ecall_CreateWaitTimer(
         sp::ThrowIfNull(
             inPreviousCertificateId,
             "Previous certificate ID pointer is NULL");
-        sp::ThrowIf<sp::ValueError>(
-            inMinimumWaitTime < 0,
-            "Minimum wait time must be greater than or equal to zero");
         sp::ThrowIfNull(outSerializedTimer, "Serialized timer pointer is NULL");
         sp::ThrowIfNull(outTimerSignature, "Timer signature pointer is NULL");
 
@@ -651,8 +649,7 @@ poet_err_t ecall_CreateWaitTimer(
             GenerateWaitTimerDuration(
                 validatorAddress,
                 previousCertificateId,
-                inLocalMean,
-                inMinimumWaitTime);
+                inLocalMean);
 
         // Get the sequence ID (prevent replay) for this timer
         uint32_t sequenceId = 0;
@@ -1193,8 +1190,7 @@ void CreateSignupReportData(
 double GenerateWaitTimerDuration(
     const std::string&  validatorAddress,
     const std::string&  previousCertificateId,
-    double              localMean,
-    double              minimumWaitTime
+    double              localMean
     )
 {
     // Get the report key to use in the
@@ -1236,7 +1232,7 @@ double GenerateWaitTimerDuration(
         static_cast<double>(*(reinterpret_cast<uint64_t *>(&tag))) / ULLONG_MAX;
 
     // Wait duration computation with a minimum wait timer duration
-    return minimumWaitTime - localMean * log(hashAsDouble);
+    return MINIMUM_WAIT_TIME - localMean * log(hashAsDouble);
 } // GenerateWaitTimerDuration
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

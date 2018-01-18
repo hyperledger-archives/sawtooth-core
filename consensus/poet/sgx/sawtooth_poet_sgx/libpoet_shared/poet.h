@@ -276,8 +276,6 @@ extern "C" {
             has been most-recently added to the block chain).
         inRequestTime - The time wait timer was requested.
         inLocalMean - The local mean wait time that has been calculated.
-        inMinimumWaitTime - The minimum wait time, in seconds, for the wait
-            timer.
         outSerializedWaitTimer - A pointer to a buffer that upon return will
             contain the serialized wait timer.
         inSerializedWaitTimerLength - The size of the buffer pointed to by
@@ -297,7 +295,6 @@ extern "C" {
         const char* inPreviousCertificateId,
         double inRequestTime,
         double inLocalMean,
-        double inMinimumWaitTime,
         char* outSerializedWaitTimer,
         size_t inSerializedTimerLength,
         char* outWaitTimerSignature,

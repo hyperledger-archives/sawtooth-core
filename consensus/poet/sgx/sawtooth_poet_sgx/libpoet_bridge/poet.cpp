@@ -615,7 +615,6 @@ poet_err_t Poet_CreateWaitTimer(
     const char* inPreviousCertificateId,
     double inRequestTime,
     double inLocalMean,
-    double inMinimumWaitTime,
     char* outSerializedWaitTimer,
     size_t inSerializedTimerLength,
     char* outWaitTimerSignature,
@@ -650,10 +649,6 @@ poet_err_t Poet_CreateWaitTimer(
             "Invalid local mean time"
             );
         sp::ThrowIf<sp::ValueError>(
-            inMinimumWaitTime < 0.0,
-            "Invalid minimum duration"
-            );
-        sp::ThrowIf<sp::ValueError>(
             strlen(inPreviousCertificateId) != CERTIFICATE_ID_LENGTH,
             "Invalid Previous CertificateId"
             );
@@ -672,7 +667,6 @@ poet_err_t Poet_CreateWaitTimer(
             inPreviousCertificateId,
             inRequestTime,
             inLocalMean,
-            inMinimumWaitTime,
             outSerializedWaitTimer,
             inSerializedTimerLength,
             &waitTimerSignature);

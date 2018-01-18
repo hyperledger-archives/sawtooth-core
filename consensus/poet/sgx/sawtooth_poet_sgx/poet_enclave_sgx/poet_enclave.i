@@ -394,15 +394,14 @@ def create_signup_info(originator_public_key_hash, nonce):
 def create_wait_timer(sealed_signup_data,
                       validator_address,
                       previous_certificate_id,
-                      local_mean,
-                      minimum_wait_time=1.0):
+                      local_mean):
+                      
     return \
         _create_wait_timer(
             sealed_signup_data,
             validator_address,
             previous_certificate_id,
-            local_mean,
-            minimum_wait_time)
+            local_mean)
 
 
 def verify_wait_certificate(wait_certificate, poet_public_key):

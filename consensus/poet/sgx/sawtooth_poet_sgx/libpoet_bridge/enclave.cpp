@@ -579,7 +579,6 @@ namespace sawtooth {
             const std::string& inPreviousCertificateId,
             double requestTime,
             double localMean,
-            double minimumWaitTime,
             char* outSerializedTimer,
             size_t inSerializedTimerLength,
             sgx_ec256_signature_t* outTimerSignature
@@ -603,7 +602,6 @@ namespace sawtooth {
                      inPreviousCertificateId,
                      requestTime,
                      localMean,
-                     minimumWaitTime,
                      outSerializedTimer,
                      inSerializedTimerLength,
                      outTimerSignature] () {
@@ -617,7 +615,6 @@ namespace sawtooth {
                             inPreviousCertificateId.c_str(),
                             requestTime,
                             localMean,
-                            minimumWaitTime,
                             outSerializedTimer,
                             inSerializedTimerLength,
                             outTimerSignature);

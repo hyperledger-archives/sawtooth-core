@@ -58,7 +58,6 @@ class TestWaitCertificate(TestCase):
         self.mock_poet_settings_view = mock.Mock()
         self.mock_poet_settings_view.target_wait_time = 5.0
         self.mock_poet_settings_view.initial_wait_time = 0.0
-        self.mock_poet_settings_view.minimum_wait_time = 1.0
         self.mock_poet_settings_view.population_estimate_sample_size = 50
 
         self.mock_consensus_state = mock.Mock()

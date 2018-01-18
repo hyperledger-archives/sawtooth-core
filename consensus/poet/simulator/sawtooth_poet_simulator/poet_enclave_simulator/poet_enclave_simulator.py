@@ -118,6 +118,8 @@ class _PoetEnclaveSimulator(object):
     # the enclave is initialized
     _anti_sybil_id = None
 
+    MINIMUM_WAIT_TIME = 1.0
+
     @classmethod
     def initialize(cls, config_dir, data_dir):
         # See if our configuration file exists.  If so, then we are going to
@@ -315,8 +317,7 @@ class _PoetEnclaveSimulator(object):
                           sealed_signup_data,
                           validator_address,
                           previous_certificate_id,
-                          local_mean,
-                          minimum_wait_time):
+                          local_mean):
         with cls._lock:
             # Extract keys from the 'sealed' signup data
             signup_data = \
@@ -352,7 +353,9 @@ class _PoetEnclaveSimulator(object):
             tagd = float(struct.unpack('Q', tag[-8:])[0]) / (2**64 - 1)
 
             # Now compute the duration with a minimum wait time guaranteed
-            duration = minimum_wait_time - local_mean * math.log(tagd)
+            duration = \
+                _PoetEnclaveSimulator.MINIMUM_WAIT_TIME \
+                - local_mean * math.log(tagd)
 
             # Create and sign the wait timer
             wait_timer = \
@@ -555,15 +558,13 @@ def release_signup_data(sealed_signup_data):
 def create_wait_timer(sealed_signup_data,
                       validator_address,
                       previous_certificate_id,
-                      local_mean,
-                      minimum_wait_time=1.0):
+                      local_mean):
     return \
         _PoetEnclaveSimulator.create_wait_timer(
             sealed_signup_data=sealed_signup_data,
             validator_address=validator_address,
             previous_certificate_id=previous_certificate_id,
-            local_mean=local_mean,
-            minimum_wait_time=minimum_wait_time)
+            local_mean=local_mean)
 
 
 def deserialize_wait_timer(serialized_timer, signature):
