@@ -14,18 +14,18 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 
-extern crate secp256k1;
-extern crate crypto;
+use rand::Rng;
+use rand::os::OsRng;
+use secp256k1;
 
-use self::crypto::digest::Digest;
-use self::crypto::sha2::Sha256;
-
-use super::PrivateKey;
-use super::PublicKey;
-use super::Context;
-use super::Error;
-use super::pem_loader::load_pem_key;
+use signing::PrivateKey;
+use signing::PublicKey;
+use signing::Context;
+use signing::Error;
+use signing::pem_loader::load_pem_key;
 
 impl From<secp256k1::Error> for Error {
     fn from(e: secp256k1::Error) -> Self {
@@ -150,6 +150,13 @@ impl Context for Secp256k1Context {
             Err(err) => Err(err),
             Ok(pk) => Ok(Box::new(pk))
         }
+    }
+
+    fn new_random_private_key(&self) -> Result<Box<PrivateKey>, Error> {
+        let mut rng = OsRng::new().map_err(|err| Error::KeyGenError(format!("{}", err)))?;
+        let mut key = [0u8; secp256k1::constants::SECRET_KEY_SIZE];
+        rng.fill_bytes(&mut key);
+        Ok(Box::new(Secp256k1PrivateKey { private: Vec::from(&key[..]) }))
     }
 }
 

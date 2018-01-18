@@ -26,7 +26,8 @@ use std::borrow::Borrow;
 pub enum Error {
     NoSuchAlgorithm(String),
     ParseError(String),
-    SigningError(Box<StdError>)
+    SigningError(Box<StdError>),
+    KeyGenError(String),
 }
 
 impl StdError for Error {
@@ -34,7 +35,8 @@ impl StdError for Error {
         match *self {
             Error::NoSuchAlgorithm(ref msg) => msg,
             Error::ParseError(ref msg) => msg,
-            Error::SigningError(ref err) => err.description()
+            Error::SigningError(ref err) => err.description(),
+            Error::KeyGenError(ref msg) => msg,
         }
     }
 
@@ -42,7 +44,8 @@ impl StdError for Error {
         match *self {
             Error::NoSuchAlgorithm(_) => None,
             Error::ParseError(_) => None,
-            Error::SigningError(ref err) => Some(err.borrow())
+            Error::SigningError(ref err) => Some(err.borrow()),
+            Error::KeyGenError(_) => None,
         }
     }
 }
@@ -55,7 +58,9 @@ impl std::fmt::Display for Error {
             Error::ParseError(ref s) =>
                 write!(f, "ParseError: {}", s),
             Error::SigningError(ref err) =>
-                write!(f, "SigningError: {}", err.description())
+                write!(f, "SigningError: {}", err.description()),
+            Error::KeyGenError(ref s) =>
+                write!(f, "KeyGenError: {}", s),
         }
     }
 }
@@ -77,6 +82,7 @@ pub trait Context {
     fn sign(&self, message: &[u8], key: &PrivateKey) -> Result<String, Error>;
     fn verify(&self, signature: &str, message: &[u8], key: &PublicKey) -> Result<bool, Error>;
     fn get_public_key(&self, private_key: &PrivateKey) -> Result<Box<PublicKey>, Error>;
+    fn new_random_private_key(&self) -> Result<Box<PrivateKey>, Error>;
 }
 
 pub fn create_context(algorithm_name: &str) -> Result<Box<Context>, Error> {

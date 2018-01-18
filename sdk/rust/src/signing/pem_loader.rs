@@ -26,7 +26,6 @@ mod ffi {
     }
 
 }
-extern crate libc;
 use std::ffi::CString;
 use super::Error;
 

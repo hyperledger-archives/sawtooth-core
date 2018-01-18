@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Intel Corporation
+ * Copyright 2018 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,5 @@
  * ------------------------------------------------------------------------------
  */
 
-extern crate crypto;
-extern crate libc;
-#[macro_use]
-extern crate log;
-extern crate protobuf;
-extern crate rand;
-extern crate secp256k1;
-extern crate uuid;
-extern crate zmq;
-
-pub mod messages;
-pub mod messaging;
-pub mod signing;
+pub mod database;
+pub mod lmdb;

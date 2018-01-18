@@ -1,6 +1,6 @@
 #!/bin/bash
-#
-# Copyright 2017 Intel Corporation
+
+# Copyright 2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,18 +17,13 @@
 
 set -e
 
-top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+user="sawtooth"
+group="sawtooth"
 
-echo -e "\033[0;32m--- Building Rust SDK ---\n\033[0m"
-cd $top_dir/sdk/rust/
-cargo build
+if ! getent group $group > /dev/null; then
+    addgroup --quiet --system $group
+fi
 
-echo -e "\033[0;32m--- Building sawadm ---\n\033[0m"
-cd $top_dir/adm
-cargo build
-
-# echo -e "\033[0;32m--- Building intkey-tp-rust ---\n\033[0m"
-
-# echo -e "\033[0;32m--- Building xo-tp-rust ---\n\033[0m"
-
-# echo -e "\033[0;32m--- Building noop-tp-rust ---\n\033[0m"
+if ! getent passwd $user > /dev/null; then
+    adduser --quiet --system --ingroup $group $user
+fi

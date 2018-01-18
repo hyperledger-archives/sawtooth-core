@@ -22,6 +22,7 @@ build = "build.rs"
 [dependencies]
 protobuf="1.4.1"
 secp256k1 = "0.7.1"
+rand = "0.4.2"
 rust-crypto = "0.2.36"
 zmq = "0.8"
 uuid = { version = "0.5", features = ["v4"] }
