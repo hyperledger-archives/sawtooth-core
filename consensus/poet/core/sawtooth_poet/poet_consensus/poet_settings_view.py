@@ -32,7 +32,6 @@ class PoetSettingsView(object):
         'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
     _INITIAL_WAIT_TIME_ = 3000.0
     _KEY_BLOCK_CLAIM_LIMIT_ = 250
-    _MINIMUM_WAIT_TIME_ = 1.0
     # pylint: disable=invalid-name
     _POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50
     _SIGNUP_COMMIT_MAXIMUM_DELAY_ = 10
@@ -56,7 +55,6 @@ class PoetSettingsView(object):
         self._enclave_module_name = None
         self._initial_wait_time = None
         self._key_block_claim_limit = None
-        self._minimum_wait_time = None
         self._population_estimate_sample_size = None
         self._target_wait_time = None
         self._signup_commit_maximum_delay = None
@@ -182,25 +180,6 @@ class PoetSettingsView(object):
                     validate_function=lambda value: value > 0)
 
         return self._key_block_claim_limit
-
-    @property
-    def minimum_wait_time(self):
-        """Return the minimum wait time if config setting exists and is valid,
-        otherwise return the default.
-
-        The minimum wait time is used as a lower bound for the minimum amount
-        of time a validator must want before attempting to claim a block.
-        """
-        if self._minimum_wait_time is None:
-            self._minimum_wait_time = \
-                self._get_config_setting(
-                    name='sawtooth.poet.minimum_wait_time',
-                    value_type=float,
-                    default_value=PoetSettingsView._MINIMUM_WAIT_TIME_,
-                    validate_function=lambda value:
-                        math.isfinite(value) and value > 0)
-
-        return self._minimum_wait_time
 
     @property
     def population_estimate_sample_size(self):

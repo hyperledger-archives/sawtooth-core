@@ -24,11 +24,14 @@ from sawtooth_poet.poet_consensus import consensus_state
 
 from sawtooth_poet_common.protobuf.validator_registry_pb2 \
     import ValidatorInfo
+
 from sawtooth_poet_common.protobuf.validator_registry_pb2 \
     import SignUpInfo
 
 
 class TestConsensusState(TestCase):
+    MINIMUM_WAIT_TIME = 1.0
+
     def test_get_missing_validator_state(self):
         """Verify that retrieving missing validator state returns appropriate
         default values.
@@ -376,7 +379,6 @@ class TestConsensusState(TestCase):
         mock_poet_settings_view = mock.Mock()
         mock_poet_settings_view.target_wait_time = 30.0
         mock_poet_settings_view.initial_wait_time = 3000.0
-        mock_poet_settings_view.minimum_wait_time = 1.0
         mock_poet_settings_view.population_estimate_sample_size = 50
 
         validator_info_1 = \
@@ -458,7 +460,6 @@ class TestConsensusState(TestCase):
         mock_poet_settings_view = mock.Mock()
         mock_poet_settings_view.target_wait_time = 30.0
         mock_poet_settings_view.initial_wait_time = 3000.0
-        mock_poet_settings_view.minimum_wait_time = 1.0
         mock_poet_settings_view.population_estimate_sample_size = 50
 
         # Test that during bootstrapping, the local means adhere to the
@@ -495,8 +496,8 @@ class TestConsensusState(TestCase):
             mock_wait_certificate = mock.Mock()
             mock_wait_certificate.duration = \
                 random.uniform(
-                    mock_poet_settings_view.minimum_wait_time,
-                    mock_poet_settings_view.minimum_wait_time + 10)
+                    TestConsensusState.MINIMUM_WAIT_TIME,
+                    TestConsensusState.MINIMUM_WAIT_TIME + 10)
             mock_wait_certificate.local_mean = \
                 _compute_fixed_local_mean(len(wait_certificates))
             wait_certificates.append(mock_wait_certificate)
@@ -525,7 +526,7 @@ class TestConsensusState(TestCase):
             sm = 0.0
 
             for wc in wcs:
-                sw += wc.duration - mock_poet_settings_view.minimum_wait_time
+                sw += wc.duration - TestConsensusState.MINIMUM_WAIT_TIME
                 sm += wc.local_mean
 
             return mock_poet_settings_view.target_wait_time * (sm / sw)
@@ -542,8 +543,8 @@ class TestConsensusState(TestCase):
             mock_wait_certificate = mock.Mock()
             mock_wait_certificate.duration = \
                 random.uniform(
-                    mock_poet_settings_view.minimum_wait_time,
-                    mock_poet_settings_view.minimum_wait_time + 10)
+                    TestConsensusState.MINIMUM_WAIT_TIME,
+                    TestConsensusState.MINIMUM_WAIT_TIME + 10)
             mock_wait_certificate.local_mean = \
                 _compute_historical_local_mean(wait_certificates)
             wait_certificates.append(mock_wait_certificate)

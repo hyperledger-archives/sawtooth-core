@@ -65,13 +65,11 @@ class PoetEnclaveFactory(object):
                     'Load PoET enclave module: %s; '
                     'Target wait time: %f; '
                     'Initial wait time: %f; '
-                    'Population estimate sample size: %d; '
-                    'Minimum wait time: %f',
+                    'Population estimate sample size: %d; ',
                     module_name,
                     poet_settings_view.target_wait_time,
                     poet_settings_view.initial_wait_time,
-                    poet_settings_view.population_estimate_sample_size,
-                    poet_settings_view.minimum_wait_time)
+                    poet_settings_view.population_estimate_sample_size)
 
                 # Load and initialize the module
                 module = importlib.import_module(module_name)

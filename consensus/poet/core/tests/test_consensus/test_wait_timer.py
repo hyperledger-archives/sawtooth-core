@@ -34,6 +34,8 @@ from test_consensus.utils import create_random_public_key_hash
 
 
 class TestWaitTimer(TestCase):
+    MINIMUM_WAIT_TIME = 1.0
+
     @classmethod
     def setUpClass(cls):
         # Reload the wait timer module to clear any changed global state
@@ -56,7 +58,6 @@ class TestWaitTimer(TestCase):
         self.mock_poet_settings_view = mock.Mock()
         self.mock_poet_settings_view.target_wait_time = 5.0
         self.mock_poet_settings_view.initial_wait_time = 0.0
-        self.mock_poet_settings_view.minimum_wait_time = 1.0
         self.mock_poet_settings_view.population_estimate_sample_size = 50
 
         self.consensus_state = ConsensusState()
@@ -117,7 +118,7 @@ class TestWaitTimer(TestCase):
         self.assertLessEqual(wt.request_time, time.time())
         self.assertGreaterEqual(
             wt.duration,
-            self.mock_poet_settings_view.minimum_wait_time)
+            TestWaitTimer.MINIMUM_WAIT_TIME)
         self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
         # Ensure that the enclave is set back to initial state
@@ -146,7 +147,7 @@ class TestWaitTimer(TestCase):
         self.assertLessEqual(wt.request_time, time.time())
         self.assertGreaterEqual(
             wt.duration,
-            self.mock_poet_settings_view.minimum_wait_time)
+            TestWaitTimer.MINIMUM_WAIT_TIME)
         self.assertEqual(wt.validator_address, '1060 W Addison Street')
 
     def test_has_expired(self):

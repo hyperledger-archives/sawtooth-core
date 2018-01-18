@@ -28,7 +28,6 @@ class TestPoetSettingsView(unittest.TestCase):
         'sawtooth_poet_simulator.poet_enclave_simulator.poet_enclave_simulator'
     _EXPECTED_DEFAULT_INITIAL_WAIT_TIME_ = 3000.0
     _EXPECTED_DEFAULT_KEY_BLOCK_CLAIM_LIMIT_ = 250
-    _EXPECTED_DEFAULT_MINIMUM_WAIT_TIME_ = 1.0
     _EXPECTED_DEFAULT_POPULATION_ESTIMATE_SAMPLE_SIZE_ = 50
     _EXPECTED_DEFAULT_SIGNUP_COMMIT_MAXIMUM_DELAY_ = 10
     _EXPECTED_DEFAULT_TARGET_WAIT_TIME_ = 20.0
@@ -193,46 +192,6 @@ class TestPoetSettingsView(unittest.TestCase):
         mock_settings_view.return_value.get_setting.return_value = 1
         poet_settings_view = PoetSettingsView(state_view=None)
         self.assertEqual(poet_settings_view.key_block_claim_limit, 1)
-
-    def test_minimum_wait_time(self, mock_settings_view):
-        """Verify that retrieving minimum wait time works for invalid cases
-        (missing, invalid format, invalid value) as well as valid case.
-        """
-
-        poet_settings_view = PoetSettingsView(state_view=None)
-
-        # Simulate an underlying error parsing value
-        mock_settings_view.return_value.get_setting.side_effect = \
-            ValueError('bad value')
-
-        self.assertEqual(
-            poet_settings_view.minimum_wait_time,
-            TestPoetSettingsView._EXPECTED_DEFAULT_MINIMUM_WAIT_TIME_)
-
-        _, kwargs = \
-            mock_settings_view.return_value.get_setting.call_args
-
-        self.assertEqual(kwargs['key'], 'sawtooth.poet.minimum_wait_time')
-        self.assertEqual(
-            kwargs['default_value'],
-            TestPoetSettingsView._EXPECTED_DEFAULT_MINIMUM_WAIT_TIME_)
-        self.assertEqual(kwargs['value_type'], float)
-
-        # Underlying config setting is not a valid value
-        mock_settings_view.return_value.get_setting.side_effect = None
-        for bad_value in \
-                [-100.0, -1.0, 0.0, float('nan'), float('inf'), float('-inf')]:
-            mock_settings_view.return_value.get_setting.return_value = \
-                bad_value
-            poet_settings_view = PoetSettingsView(state_view=None)
-            self.assertEqual(
-                poet_settings_view.minimum_wait_time,
-                TestPoetSettingsView._EXPECTED_DEFAULT_MINIMUM_WAIT_TIME_)
-
-        # Underlying config setting is a valid value
-        mock_settings_view.return_value.get_setting.return_value = 3.1415
-        poet_settings_view = PoetSettingsView(state_view=None)
-        self.assertEqual(poet_settings_view.minimum_wait_time, 3.1415)
 
     def test_population_estimate_sample_size(self, mock_settings_view):
         """Verify that retrieving population estimate sample size works for
