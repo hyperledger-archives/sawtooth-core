@@ -26,8 +26,7 @@ WaitTimer::WaitTimer(
     const std::string& sealedSignupData,
     const std::string& validatorAddress,
     const std::string& previousCertificateId,
-    double localMean,
-    double minimumWaitTime
+    double localMean
     )
 {
     StringBuffer serializedBuffer(Poet_GetWaitTimerSize());
@@ -40,7 +39,6 @@ WaitTimer::WaitTimer(
             previousCertificateId.c_str(),
             CurrentTime(),
             localMean,
-            minimumWaitTime,
             serializedBuffer.data(),
             serializedBuffer.length,
             &signatureBuffer[0],
@@ -68,8 +66,7 @@ WaitTimer* WaitTimer::_CreateWaitTimer(
     const std::string& sealedSignupData,
     const std::string& validatorAddress,
     const std::string& previousCertificateId,
-    double localMean,
-    double minimumWaitTime
+    double localMean
     )
 {
     return 
@@ -77,8 +74,7 @@ WaitTimer* WaitTimer::_CreateWaitTimer(
             sealedSignupData,
             validatorAddress,
             previousCertificateId,
-            localMean,
-            minimumWaitTime);
+            localMean);
 } // WaitTimer::_CreateWaitTimer
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -158,8 +154,7 @@ WaitTimer* _create_wait_timer(
     const std::string& sealed_signup_data,
     const std::string& validator_address,
     const std::string& previous_certificate_id,
-    double local_mean,
-    double minimum_wait_time
+    double local_mean
     )
 {
     return
@@ -167,8 +162,7 @@ WaitTimer* _create_wait_timer(
             sealed_signup_data,
             validator_address,
             previous_certificate_id,
-            local_mean,
-            minimum_wait_time);
+            local_mean);
 } // create_wait_timer
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

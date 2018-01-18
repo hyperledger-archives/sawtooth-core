@@ -67,8 +67,7 @@ class WaitTimer(object):
                 validator_address,
                 previous_certificate_id,
                 consensus_state.compute_local_mean(
-                    poet_settings_view=poet_settings_view),
-                poet_settings_view.minimum_wait_time)
+                    poet_settings_view=poet_settings_view))
 
         return cls(enclave_timer)
 

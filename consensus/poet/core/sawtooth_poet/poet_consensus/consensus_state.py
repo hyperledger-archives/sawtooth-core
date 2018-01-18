@@ -63,6 +63,10 @@ class ConsensusState(object):
             claimed by all validators
     """
 
+    # MINIMUM_WAIT_TIME should be same as the value
+    # at ecall_CreateWaitTimer
+    MINIMUM_WAIT_TIME = 1.0
+
     _BlockInfo = \
         collections.namedtuple(
             '_BlockInfo',
@@ -420,11 +424,12 @@ class ConsensusState(object):
             len(self._population_samples) == \
             poet_settings_view.population_estimate_sample_size
 
-        minimum_wait_time = poet_settings_view.minimum_wait_time
         sum_waits = 0
         sum_means = 0
         for population_sample in self._population_samples:
-            sum_waits += population_sample.duration - minimum_wait_time
+            sum_waits += \
+                population_sample.duration \
+                - ConsensusState.MINIMUM_WAIT_TIME
             sum_means += population_sample.local_mean
 
         return sum_means / sum_waits

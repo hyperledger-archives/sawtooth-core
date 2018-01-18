@@ -70,7 +70,6 @@ enclave {
             [in, string] const char* inPreviousCertificateId,
             double inRequestTime,
             double inLocalMean,
-            double inMinimumWaitTime,
             [out, size=inSerializedTimerLength] char* outSerializedTimer,
             size_t inSerializedTimerLength,
             [out] sgx_ec256_signature_t* outTimerSignature
