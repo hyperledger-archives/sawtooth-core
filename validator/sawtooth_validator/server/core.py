@@ -208,7 +208,6 @@ class Validator(object):
         gossip = Gossip(
             network_service,
             settings_cache,
-            lambda: block_store.chain_head,
             block_store.chain_head_state_root,
             endpoint=endpoint,
             peering_mode=peering,
