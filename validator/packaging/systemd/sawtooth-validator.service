@@ -23,6 +23,7 @@ Group=sawtooth
 EnvironmentFile=-/etc/default/sawtooth-validator
 ExecStart=/usr/bin/sawtooth-validator $SAWTOOTH_VALIDATOR_ARGS
 Restart=on-failure
+RestartSec=300
 
 [Install]
 WantedBy=multi-user.target
