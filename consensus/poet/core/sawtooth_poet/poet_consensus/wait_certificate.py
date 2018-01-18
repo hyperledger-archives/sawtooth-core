@@ -200,13 +200,6 @@ class WaitCertificate(object):
             consensus_state.compute_local_mean(
                 poet_settings_view=poet_settings_view)
 
-        if enclave_certificate.duration < poet_settings_view.minimum_wait_time:
-            raise \
-                ValueError(
-                    'Wait time less than minimum: {0} < {1}'.format(
-                        enclave_certificate.duration,
-                        poet_settings_view.minimum_wait_time))
-
         if not _is_close(
                 enclave_certificate.local_mean,
                 expected_mean,

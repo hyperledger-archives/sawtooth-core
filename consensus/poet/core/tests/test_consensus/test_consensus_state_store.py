@@ -105,7 +105,6 @@ class TestConsensusStateStore(unittest.TestCase):
         mock_poet_settings_view = mock.Mock()
         mock_poet_settings_view.target_wait_time = 30.0
         mock_poet_settings_view.initial_wait_time = 3000.0
-        mock_poet_settings_view.minimum_wait_time = 1.0
         mock_poet_settings_view.population_estimate_sample_size = 50
 
         store = \

@@ -112,8 +112,7 @@ public:
         const std::string& sealedSignupData,
         const std::string& validatorAddress,
         const std::string& previousCertificateId,
-        double localMean,
-        double minimumWaitTime
+        double localMean
         );
 
     static WaitTimer* _WaitTimerFromSerialized(
@@ -160,8 +159,7 @@ protected:
         const std::string& sealedSignupData,
         const std::string& validatorAddress,
         const std::string& previousCertificateId,
-        double localMean,
-        double minimumWaitTime
+        double localMean
         );
     WaitTimer(
         const std::string& serializedTimer,
@@ -173,8 +171,7 @@ WaitTimer* _create_wait_timer(
     const std::string& sealedSignupData,
     const std::string& validator_address,
     const std::string& previous_certificate_id,
-    double local_mean,
-    double minimum_wait_time
+    double local_mean
     );
 
 WaitTimer* deserialize_wait_timer(
