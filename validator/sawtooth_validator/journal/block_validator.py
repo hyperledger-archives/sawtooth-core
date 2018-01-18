@@ -167,7 +167,7 @@ class BlockValidator(object):
         return self._block_cache[blkw.previous_block_id].state_root_hash
 
     @staticmethod
-    def verify_batch_transactions(batch, chain_commit_state):
+    def _validate_transactions_in_batch(batch, chain_commit_state):
         """Verify that all transactions in this batch are unique and that all
         transaction dependencies in this batch have been satisfied.
 
@@ -195,7 +195,9 @@ class BlockValidator(object):
                     return False
         return True
 
-    def _verify_block_batches(self, blkw, prev_state_root, chain_commit_state):
+    def _validate_batches_in_block(
+        self, blkw, prev_state_root, chain_commit_state
+    ):
         if blkw.block.batches:
             scheduler = self._transaction_executor.create_scheduler(
                 self._squash_handler, prev_state_root)
@@ -210,7 +212,7 @@ class BlockValidator(object):
                         raise InvalidBatch()
 
                     # Verify dependencies and uniqueness
-                    if self.verify_batch_transactions(
+                    if self._validate_transactions_in_batch(
                         batch, chain_commit_state
                     ):
                         # Only add transactions to commit state if all
@@ -258,7 +260,7 @@ class BlockValidator(object):
                 return False
         return True
 
-    def validate_permissions(self, blkw, prev_state_root):
+    def _validate_permissions(self, blkw, prev_state_root):
         """
         Validate that all of the batch signers and transaction signer for the
         batches in the block are permitted by the transactor permissioning
@@ -272,7 +274,7 @@ class BlockValidator(object):
                     return False
         return True
 
-    def validate_on_chain_rules(self, blkw, prev_state_root):
+    def _validate_on_chain_rules(self, blkw, prev_state_root):
         """
         Validate that the block conforms to all validation rules stored in
         state. If the block breaks any of the stored rules, the block is
@@ -308,7 +310,7 @@ class BlockValidator(object):
                         "Block rejected due to missing predecessor: %s", blkw)
                     return False
 
-                valid = self.validate_permissions(blkw, prev_state_root)
+                valid = self._validate_permissions(blkw, prev_state_root)
 
                 if valid:
                     public_key = \
@@ -322,7 +324,7 @@ class BlockValidator(object):
                     valid = block_verifier.verify_block(blkw)
 
                 if valid:
-                    valid = self.validate_on_chain_rules(blkw, prev_state_root)
+                    valid = self._validate_on_chain_rules(blkw, prev_state_root)
 
                 if valid:
                     valid = self._verify_block_batches(
@@ -347,12 +349,12 @@ class BlockValidator(object):
             return False
 
     @staticmethod
-    def compare_chain_height(head_a, head_b):
-        """Returns True if head_a is taller, False if head_b is taller, and True
-        if the heights are the same."""
+    def _compare_chain_height(head_a, head_b):
+        """Returns True if head_a is taller, False if head_b is taller, and
+        True if the heights are the same."""
         return head_a.block_num - head_b.block_num >= 0
 
-    def build_fork_diff_to_common_height(self, head_long, head_short):
+    def _build_fork_diff_to_common_height(self, head_long, head_short):
         """Returns a list of blocks on the longer chain since the greatest
         common height between the two chains. Note that the chains may not
         have the same block id at the greatest common height.
@@ -394,7 +396,7 @@ class BlockValidator(object):
 
         return blk, fork_diff
 
-    def extend_fork_diff_to_common_ancestor(
+    def _extend_fork_diff_to_common_ancestor(
         self, new_blkw, cur_blkw, new_chain, cur_chain
     ):
         """ Finds a common ancestor of the two chains. new_blkw and cur_blkw
@@ -440,7 +442,7 @@ class BlockValidator(object):
         return fork_resolver.compare_forks(chain_head, new_block)
 
     @staticmethod
-    def get_batch_commit_changes(new_chain, cur_chain):
+    def _get_batch_commit_changes(new_chain, cur_chain):
         """
         Get all the batches that should be committed from the new chain and
         all the batches that should be uncommitted from the current chain.
@@ -487,18 +489,18 @@ class BlockValidator(object):
 
             # Get all the blocks since the greatest common height from the
             # longer chain.
-            if self.compare_chain_height(current_block, new_block):
+            if self._compare_chain_height(current_block, new_block):
                 current_block, result.current_chain =\
-                    self.build_fork_diff_to_common_height(
+                    self._build_fork_diff_to_common_height(
                         current_block, new_block)
             else:
                 new_block, result.new_chain =\
-                    self.build_fork_diff_to_common_height(
+                    self._build_fork_diff_to_common_height(
                         new_block, current_block)
 
             # Add blocks to the two chains until a common ancestor is found
             # or raise an exception if no common ancestor is found
-            self.extend_fork_diff_to_common_ancestor(
+            self._extend_fork_diff_to_common_ancestor(
                 new_block, current_block,
                 result.new_chain, result.current_chain)
 
@@ -548,7 +550,7 @@ class BlockValidator(object):
             # committed.
             if commit_new_chain:
                 commit, uncommit =\
-                    self.get_batch_commit_changes(
+                    self._get_batch_commit_changes(
                         result.new_chain, result.current_chain)
                 result.committed_batches = commit
                 result.uncommitted_batches = uncommit
