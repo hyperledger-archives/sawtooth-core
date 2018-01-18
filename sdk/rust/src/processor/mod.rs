@@ -39,6 +39,12 @@ use self::handler::TransactionContext;
 use self::handler::TransactionHandler;
 use self::handler::ApplyError;
 
+/// Generates a random correlation id for use in Message
+fn generate_correlation_id() -> String {
+    const LENGTH: usize = 16;
+    rand::thread_rng().gen_ascii_chars().take(LENGTH).collect()
+}
+
 pub struct TransactionProcessor<'a> {
     endpoint: String,
     conn: ZmqMessageConnection,
@@ -85,10 +91,9 @@ impl<'a> TransactionProcessor<'a> {
                 let serialized = request.write_to_bytes().unwrap();
                 let x : &[u8] = &serialized;
 
-                let correlation_id: String = rand::thread_rng().gen_ascii_chars().take(16).collect();
                 let mut future = sender.send(
                     Message_MessageType::TP_REGISTER_REQUEST,
-                    &correlation_id,
+                    &generate_correlation_id(),
                     x).unwrap();
 
                 // Absorb the TpRegisterResponse message

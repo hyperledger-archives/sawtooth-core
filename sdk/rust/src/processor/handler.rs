@@ -22,8 +22,6 @@ extern crate rand;
 use protobuf::Message as M;
 use protobuf::RepeatedField;
 
-use self::rand::Rng;
-
 use std::error::Error as StdError;
 use std;
 use std::borrow::Borrow;
@@ -42,6 +40,8 @@ use messaging::stream::MessageSender;
 use messaging::stream::SendError;
 use messaging::stream::ReceiveError;
 use messaging::zmq_stream::ZmqMessageSender;
+
+use super::generate_correlation_id;
 
 #[derive(Debug)]
 pub enum ApplyError {
@@ -191,10 +191,9 @@ impl TransactionContext {
         let serialized = request.write_to_bytes()?;
         let x : &[u8] = &serialized;
 
-        let correlation_id: String = rand::thread_rng().gen_ascii_chars().take(16).collect();
         let mut future = self.sender.send(
             Message_MessageType::TP_STATE_GET_REQUEST,
-            &correlation_id,
+            &generate_correlation_id(),
             x)?;
 
         let response: TpStateGetResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
@@ -239,10 +238,9 @@ impl TransactionContext {
         let serialized = request.write_to_bytes()?;
         let x : &[u8] = &serialized;
 
-        let correlation_id: String = rand::thread_rng().gen_ascii_chars().take(16).collect();
         let mut future = self.sender.send(
             Message_MessageType::TP_STATE_SET_REQUEST,
-            &correlation_id,
+            &generate_correlation_id(),
             x)?;
 
         let response: TpStateSetResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
