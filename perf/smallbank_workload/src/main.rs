@@ -132,6 +132,14 @@ fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
              .long("update-length")
              .value_name("UPDATE_LENGTH")
              .help("The time in seconds between updates from this utility."))
+        .arg(Arg::with_name("username")
+            .long("--auth-username")
+            .value_name("AUTH_USERNAME")
+            .help("The basic auth username to authenticate with the Sawtooth REST Api."))
+        .arg(Arg::with_name("password")
+            .long("--auth-password")
+            .value_name("AUTH_PASSWORD")
+            .help("The basic auth password to authenticate with the Sawtooth REST Api."))
 }
 
 fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
@@ -177,6 +185,23 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
             Ok(r) => r,
             Err(_) => return arg_error("The rate is the number of batches per second."),
         };
+    let username = args.value_of("username");
+    let password = args.value_of("password");
+
+    let basic_auth = {
+        match username {
+            Some(username) => {
+                match password {
+                    None => Some(String::from(username)),
+                    Some(password) => {
+                        Some([username, password].join(":"))
+                    },
+                }
+            },
+            None => None,
+        }
+    };
+
     let seed: Vec<usize> = match args.value_of("seed")
         .unwrap_or({
             let mut rng = rand::thread_rng();
@@ -205,7 +230,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
 
     let time_to_wait: u32 = 1_000_000_000 / rate as u32;
 
-    match run_workload(&mut batchlist_iter, time_to_wait, update, target) {
+    match run_workload(&mut batchlist_iter, time_to_wait, update, target, basic_auth) {
 
         Ok(_) => Ok(()),
         Err(err) => {println!("{}", err.description()); Err(Box::new(err))},
