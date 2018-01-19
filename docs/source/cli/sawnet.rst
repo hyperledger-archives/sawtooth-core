@@ -39,3 +39,30 @@ The ``sawnet compare-chains`` compares chains across the nodes given.
 .. literalinclude:: output/sawnet_compare-chains_usage.out
    :language: console
    :linenos:
+
+sawnet peers
+============
+
+.. literalinclude:: output/sawnet_peers_usage.out
+   :language: console
+   :linenos:
+
+sawnet peers list
+=================
+
+The ``sawnet peers list`` command displays the peers of the nodes
+given.
+
+.. literalinclude:: output/sawnet_peers_list_usage.out
+   :language: console
+   :linenos:
+
+sawnet peers graph
+==================
+
+The ``sawnet peers graph`` command outputs a file called ``peers.dot``
+describing the peering arrangement of the nodes given.
+
+.. literalinclude:: output/sawnet_peers_graph_usage.out
+   :language: console
+   :linenos:

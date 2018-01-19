@@ -27,6 +27,8 @@ from sawtooth_cli.network_command.compare import add_compare_chains_parser
 from sawtooth_cli.network_command.compare import do_compare_chains
 from sawtooth_cli.network_command.list_blocks import add_list_blocks_parser
 from sawtooth_cli.network_command.list_blocks import do_list_blocks
+from sawtooth_cli.network_command.peers import add_peers_parser
+from sawtooth_cli.network_command.peers import do_peers
 
 
 DISTRIBUTION_NAME = 'sawnet'
@@ -44,6 +46,7 @@ def create_parser(prog_name):
 
     add_compare_chains_parser(subparsers, parent_parser)
     add_list_blocks_parser(subparsers, parent_parser)
+    add_peers_parser(subparsers, parent_parser)
 
     return parser
 
@@ -66,6 +69,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         do_compare_chains(args)
     elif args.subcommand == 'list-blocks':
         do_list_blocks(args)
+    elif args.subcommand == 'peers':
+        do_peers(args)
     else:
         raise CliException('Invalid command: {}'.format(args.subcommand))
 
