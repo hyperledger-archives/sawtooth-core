@@ -215,7 +215,8 @@ class MessageFactory(object):
 
         # Create a GetResponse object
         return TpStateGetResponse(
-            entries=entries
+            entries=entries,
+            status=TpStateGetResponse.OK
         )
 
     def create_set_request(self, address_data_map):
@@ -234,7 +235,8 @@ class MessageFactory(object):
     def create_set_response(self, addresses):
         self._validate_addresses(addresses)
         return TpStateSetResponse(
-            addresses=addresses
+            addresses=addresses,
+            status=TpStateSetResponse.OK
         )
 
     def create_delete_request(self, addresses):
