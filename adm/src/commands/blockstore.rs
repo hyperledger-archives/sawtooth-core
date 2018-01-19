@@ -15,9 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::fs::File;
-use std::io::prelude::*;
 
 use clap::ArgMatches;
 use protobuf;
@@ -33,8 +32,12 @@ use err::{CliError};
 use config;
 use wrappers::Block as BlockWrapper;
 
+const NULL_BLOCK_IDENTIFIER: &'static str = "0000000000000000";
+
 pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     match args.subcommand() {
+        ("backup", Some(args)) => run_backup_command(args),
+        ("restore", Some(args)) => run_restore_command(args),
         ("list", Some(args)) => run_list_command(args),
         ("show", Some(args)) => run_show_command(args),
         ("prune", Some(args)) => run_prune_command(args),
@@ -42,6 +45,51 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         ("import", Some(args)) => run_import_command(args),
         _ => { println!("Invalid subcommand; Pass --help for usage."); Ok(()) },
     }
+}
+
+fn run_backup_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+    let ctx = create_context()?;
+    let blockstore = open_blockstore(&ctx)?;
+
+    let filepath = args.value_of("output").ok_or(
+        CliError::ArgumentError("No output file".into()))?;
+    let mut file = File::create(filepath).map_err(|err|
+        CliError::EnvironmentError(format!("Failed to create file: {}", err)))?;
+
+    let mut current = match args.value_of("start") {
+        None => blockstore.get_chain_head().map_err(|err|
+            CliError::EnvironmentError(format!("{}", err))),
+        Some(sig) => Ok(sig.into()),
+    }?;
+
+    while current != NULL_BLOCK_IDENTIFIER {
+        let block = blockstore.get(&current).map_err(|err|
+            CliError::EnvironmentError(format!(
+                "Block in chain missing from blockstore: {}", err)))?;
+        backup_block(&block, &mut file)?;
+        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header)
+            .map_err(|err| CliError::ParseError(format!("{}", err)))?;
+        current = block_header.previous_block_id
+    }
+    Ok(())
+}
+
+fn run_restore_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+    let ctx = create_context()?;
+    let blockstore = open_blockstore(&ctx)?;
+
+    let filepath = args.value_of("input").ok_or(
+        CliError::ArgumentError("No input file".into()))?;
+    let mut file = File::open(filepath).map_err(|err|
+        CliError::EnvironmentError(format!("Failed to open file: {}", err)))?;
+
+    let mut source = protobuf::CodedInputStream::new(&mut file);
+
+    while let Some(block) = restore_block(&mut source)? {
+        blockstore.put(block).map_err(|err|
+            CliError::EnvironmentError(format!("Failed to put block: {}", err)))?;
+    }
+    Ok(())
 }
 
 fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
@@ -61,7 +109,7 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let mut block_id = head_sig;
     print_block_store_list_header();
 
-    while block_id != "0000000000000000" && count > 0 {
+    while block_id != NULL_BLOCK_IDENTIFIER && count > 0 {
         let block = blockstore.get(&block_id).map_err(|err|
             CliError::EnvironmentError(format!("{}", err)))?;
         let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header)
@@ -150,14 +198,10 @@ fn run_export_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let block = blockstore.get(block_id).map_err(|_|
         CliError::ArgumentError(format!("Block not found: {}", block_id)))?;
 
-    let packed = block.write_to_bytes().map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
-
     let stdout = io::stdout();
     let mut handle = stdout.lock();
-    handle.write(&packed)
-        .map(|_| ())
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
+
+    backup_block(&block, &mut handle)
 }
 
 fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
@@ -212,4 +256,23 @@ fn open_blockstore<'a>(ctx: &'a lmdb::LmdbContext) -> Result<Blockstore<'a>, Cli
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
     Ok(Blockstore::new(blockstore_db))
+}
+
+fn backup_block<W: Write>(block: &Block, writer: &mut W) -> Result<(), CliError> {
+    block.write_length_delimited_to_writer(writer)
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
+}
+
+fn restore_block(source: &mut protobuf::CodedInputStream) -> Result<Option<Block>, CliError> {
+    let eof = source.eof().map_err(|err|
+        CliError::EnvironmentError(format!("Failed to check EOF: {}",err)))?;
+    if eof {
+        return Ok(None)
+    }
+
+    let block = protobuf::core::parse_length_delimited_from(source)
+        .map_err(|err|
+            CliError::EnvironmentError(format!("Failed to parse block: {}", err)))?;
+
+    Ok(Some(block))
 }

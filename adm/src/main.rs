@@ -62,6 +62,12 @@ fn parse_args<'a>() -> ArgMatches<'a> {
         (about: "Manage a local validator keys and data files")
         (@subcommand blockstore =>
             (about: "manage the blockstore database directly")
+            (@subcommand backup =>
+                (about: "backup the entire blockstore database to a file")
+                (@arg output: +required "the file to backup the blockstore to"))
+            (@subcommand restore =>
+                (about: "restore the entire blockstore database from a file")
+                (@arg input: +required "the file to restore the blockstore from"))
             (@subcommand list =>
                 (about: "list blocks from the block store")
                 (@arg count: --count +takes_value "the number of blocks to list")
