@@ -45,10 +45,7 @@ class TestPeerList(unittest.TestCase):
         '''Test various CLI commands for reporting peers.
 
         Five validators are started, peered as described in EXPECTED
-        (see the test's associated yaml file for details). First
-        `sawtooth peer list` is run against each of them and the
-        output is verified, then `sawnet peers list` is run against
-        the whole network and the output is verified.
+        (see the test's associated yaml file for details).
         '''
 
         LOGGER.info('Testing `sawtooth peer list`')
@@ -99,14 +96,47 @@ class TestPeerList(unittest.TestCase):
                 {status['endpoint']: status['peers']},
             )
 
+        ###
+
+        LOGGER.info('Testing `sawnet peers list`')
+
+        peers_list_expected = {
+            _make_tcp_address(node_number): [
+                _make_tcp_address(peer_number)
+                for peer_number in peers
+            ]
+            for node_number, peers in EXPECTED.items()
+        }
+
+        http_addresses = ','.join([
+            _make_http_address(node_number)
+            for node_number in EXPECTED
+        ])
+
+        # make sure pretty-print option works
+        subprocess.run(shlex.split(
+            'sawnet peers list {} --pretty'.format(http_addresses)))
+
+        sawnet_peers_output = json.loads(
+            _run_peer_command(
+                'sawnet peers list {}'.format(http_addresses)
+            )
+        )
+
+        self.assertEqual(
+            sawnet_peers_output,
+            peers_list_expected)
+
+        # run `sawnet peers graph`, but don't verify output
+        subprocess.run(shlex.split(
+            'sawnet peers graph {}'.format(http_addresses)))
+
 
 def _get_peers(node_number, fmt='json'):
     cmd_output = _run_peer_command(
         'sawtooth peer list --url {} --format {}'.format(
             _make_http_address(node_number),
             fmt))
-
-    # LOGGER.debug('peer list output: %s', cmd_output)
 
     if fmt == 'json':
         parsed = json.loads(cmd_output)
