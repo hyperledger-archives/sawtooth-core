@@ -46,28 +46,29 @@ main() {
 
     case "$1" in
         python)
-            echo "Building python packages"
             build_python
             ;;
         go)
-            echo "Building go packages"
             build_go
             ;;
         rust)
-            echo "Building rust packages"
             build_rust
+            ;;
+        cxx)
+            build_cxx
             ;;
         *)
             echo "Building all packages"
             build_python
             build_go
             build_rust
+            build_cxx
             ;;
     esac
-
 }
 
 build_python() {
+    echo "Building python packages"
 
     pkg_dir=$top_dir/build/debs/python
     mkdir -p $pkg_dir
@@ -177,6 +178,7 @@ info() {
 }
 
 build_go() {
+    echo "Building go packages"
 
     pkg_dir=$top_dir/build/debs/go
     mkdir -p $pkg_dir
@@ -201,6 +203,7 @@ build_go() {
 }
 
 build_rust() {
+    echo "Building rust packages"
 
     output_dir=$top_dir/build/debs/rust
     mkdir -p $output_dir
@@ -344,6 +347,25 @@ build_python_pkg() {
     dpkg -i *.deb
 
     unset PYTHONPATH
+}
+
+
+build_cxx() {
+    echo "Building cxx packages"
+
+    pkg_dir=$top_dir/build/debs/cxx
+    mkdir -p $pkg_dir
+    rm -f $pkg_dir/*.deb
+
+    cp $top_dir/sdk/cxx/build/*.deb $pkg_dir
+
+    for pkg in $pkg_dir/*.deb
+    do
+        echo
+        info "Package $pkg"
+        dpkg -I $pkg
+    done
+
 }
 
 main "$@"

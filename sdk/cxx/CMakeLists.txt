@@ -58,7 +58,7 @@ FILE(GLOB inc_sdk "include/*.h")
 INSTALL(FILES ${inc_sdk} DESTINATION include/sawtooth_sdk)
 INSTALL(FILES ../../LICENSE DESTINATION include/sawtooth_sdk)
 
-SET(CPACK_PACKAGE_NAME "Sawtooth-CXX-SDK")
+SET(CPACK_PACKAGE_NAME "sawtooth-cxx-sdk")
 SET(CPACK_PACKAGE_VENDOR "Hyperledger: https://hyperledger.org")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Hyperledger Sawtooth C++ SDK, https://sawtooth.hyperledger.org")
 SET(CPACK_PACKAGE_VERSION "$ENV{sawtooth_version}")
