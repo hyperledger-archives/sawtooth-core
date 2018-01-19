@@ -21,6 +21,7 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha512;
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::io::Cursor;
 use std::fmt;
 
@@ -33,6 +34,9 @@ use sawtooth_sdk::processor::handler::ApplyError;
 use sawtooth_sdk::processor::handler::TransactionContext;
 use sawtooth_sdk::processor::handler::TransactionHandler;
 use sawtooth_sdk::messages::processor::TpProcessRequest;
+
+const MAX_VALUE: u32 = 4294967295;
+const MAX_NAME_LEN: usize = 20;
 
 #[derive(Copy, Clone)]
 enum Verb {
@@ -64,32 +68,54 @@ struct IntkeyPayload {
 }
 
 impl IntkeyPayload {
-    pub fn new(payload_data: &[u8]) -> IntkeyPayload {
+    pub fn new(payload_data: &[u8]) -> Result<Option<IntkeyPayload>, ApplyError> {
         let input = Cursor::new(payload_data);
-        let mut decoder = cbor::GenericDecoder::new(cbor::Config::default(), input);
-        let value = decoder.value().unwrap();
-        let c = cbor::value::Cursor::new(&value);
 
-        let verb_raw: &str = &c.field("Verb").text_plain().unwrap().clone();
-        let verb = match verb_raw {
+        let mut decoder = cbor::GenericDecoder::new(cbor::Config::default(), input);
+        let decoder_value = decoder.value().map_err(|err|ApplyError::InternalError(format!("{}", err)))?;
+
+        let c = cbor::value::Cursor::new(&decoder_value);
+
+        let verb_raw: String = match &c.field("Verb").text_plain() {
+            &None => return Err(ApplyError::InvalidTransaction(String::from("Verb must be 'set', 'inc', or 'dec'"))),
+            &Some(verb_raw) => verb_raw.clone()
+        };
+
+        let verb = match verb_raw.as_str() {
             "set" => Verb::Set,
             "inc" => Verb::Increment,
             "dec" => Verb::Decrement,
-            _ => panic!("invalid")
+            _ => return Err(ApplyError::InvalidTransaction(String::from("Verb must be 'set', 'inc', or 'dec'")))
         };
 
-        let value: u32 = match c.field("Value").value().unwrap() {
+        let value_raw = c.field("Value");
+        let value_raw = match value_raw.value() {
+            Some(x) => x,
+            None => return Err(ApplyError::InvalidTransaction(String::from("Must have a value")))
+        };
+
+        let value: u32 = match value_raw {
             &cbor::value::Value::U8(x) => x as u32,
             &cbor::value::Value::U16(x) => x as u32,
             &cbor::value::Value::U32(x) => x,
-            _ => panic!("invalid Value")
+            _ => return Err(ApplyError::InvalidTransaction(String::from("Value must be an integer")))
         };
 
-        IntkeyPayload {
-            verb: verb,
-            name: c.field("Name").text_plain().unwrap().clone(),
-            value: value
+        let name_raw: String = match &c.field("Name").text_plain() {
+            &None => return Err(ApplyError::InvalidTransaction(String::from("Name must be a string"))),
+            &Some(name_raw) => name_raw.clone()
+        };
+
+        if name_raw.len() > MAX_NAME_LEN {
+             return Err(ApplyError::InvalidTransaction(String::from("Name must be equal to or less than 20 characters")))
         }
+
+        let intkey_payload = IntkeyPayload {
+            verb: verb,
+            name: name_raw,
+            value: value
+        };
+        Ok(Some(intkey_payload))
     }
 
     pub fn get_verb(&self) -> Verb {
@@ -106,13 +132,15 @@ impl IntkeyPayload {
 }
 
 pub struct IntkeyState<'a> {
-    context: &'a mut TransactionContext
+    context: &'a mut TransactionContext,
+    get_cache: HashMap<String, BTreeMap<Key, Value>>
 }
 
 impl<'a> IntkeyState<'a> {
     pub fn new(context: &'a mut TransactionContext) -> IntkeyState {
         IntkeyState {
-            context: context
+            context: context,
+            get_cache: HashMap::new()
         }
     }
 
@@ -123,54 +151,47 @@ impl<'a> IntkeyState<'a> {
     }
 
     pub fn get(&mut self, name: &str) -> Result<Option<u32>, ApplyError> {
-        let d = self.context.get_state(&IntkeyState::calculate_address(name))?;
+        let address = &IntkeyState::calculate_address(name);
+        let d = self.context.get_state(address)?;
         match d {
             Some(packed) => {
                 let input = Cursor::new(packed);
                 let mut decoder = cbor::GenericDecoder::new(cbor::Config::default(), input);
-
-                let map = match decoder.value().unwrap() {
+                let map_value = decoder.value().map_err(|err|ApplyError::InternalError(format!("{}", err)))?;
+                let mut map = match map_value {
                     Value::Map(m) => m,
-                    _ => return Err(ApplyError::InternalError(String::from("error unhandled")))
+                    _ => return Err(ApplyError::InternalError(String::from("No map returned from state")))
                 };
 
-                match map.get(&Key::Text(Text::Text(String::from(name)))) {
+                let status = match map.get(&Key::Text(Text::Text(String::from(name)))) {
                     Some(v) => match v {
                         &Value::U32(x) => Ok(Some(x)),
                         &Value::U16(x) => Ok(Some(x as u32)),
                         &Value::U8(x) => Ok(Some(x as u32)),
-                        _ => Err(ApplyError::InternalError(String::from("error unhandled")))
+                        _ => Err(ApplyError::InternalError(String::from("Value returned from state is the wrong type.")))
                     },
                     None => Ok(None)
-                }
+                };
+                self.get_cache.insert(address.clone(), map.clone());
+                status
             }
             None => Ok(None)
         }
     }
 
     pub fn set(&mut self, name: &str, value: u32) -> Result<(), ApplyError> {
-        let d = self.context.get_state(&IntkeyState::calculate_address(name))?;
-        let mut map = match d {
-            Some(packed) => {
-                let input = Cursor::new(packed);
-                let mut decoder = cbor::GenericDecoder::new(cbor::Config::default(), input);
-
-                match decoder.value().unwrap() {
-                    Value::Map(m) => m,
-                    _ => return Err(ApplyError::InternalError(String::from("error unhandled")))
-                }
-            }
+        let mut map: BTreeMap<Key, Value> = match self.get_cache.get_mut(&IntkeyState::calculate_address(name)) {
+            Some(m) => m.clone(),
             None => BTreeMap::new()
         };
-
         map.insert(Key::Text(Text::Text(String::from(name))), Value::U32(value));
 
         let mut e = GenericEncoder::new(Cursor::new(Vec::new()));
-        e.value(&Value::Map(map)).unwrap();
+        e.value(&Value::Map(map)).map_err(|err|ApplyError::InternalError(format!("{}", err)))?;
 
         let packed = e.into_inner().into_writer().into_inner();
-
-        self.context.set_state(&IntkeyState::calculate_address(name), &packed)?;
+        self.context.set_state(&IntkeyState::calculate_address(name), &packed)
+            .map_err(|err|ApplyError::InternalError(format!("{}", err)))?;
 
         Ok(())
     }
@@ -207,6 +228,15 @@ impl TransactionHandler for IntkeyTransactionHandler {
 
     fn apply(&self, request: &TpProcessRequest, context: &mut TransactionContext) -> Result<(), ApplyError> {
         let payload = IntkeyPayload::new(request.get_payload());
+        let payload = match payload {
+            Err(e) => return Err(e),
+            Ok(payload) => payload
+        };
+        let payload = match payload {
+            Some(x) => x,
+            None => return Err(ApplyError::InvalidTransaction(String::from("Request must contain a payload")))
+        };
+
         let mut state = IntkeyState::new(context);
 
         info!("payload: {} {} {} {} {}",
@@ -218,7 +248,13 @@ impl TransactionHandler for IntkeyTransactionHandler {
 
         match payload.get_verb() {
             Verb::Set => {
+                match state.get(payload.get_name()) {
+                    Ok(Some(_)) => return Err(ApplyError::InvalidTransaction(format!("{} already set", payload.get_name()))),
+                    Ok(None) => (),
+                    Err(err) => return Err(err)
+                };
                 state.set(&payload.get_name(), payload.get_value())
+
             },
             Verb::Increment => {
                 let orig_value: u32 = match state.get(payload.get_name()) {
@@ -226,6 +262,11 @@ impl TransactionHandler for IntkeyTransactionHandler {
                     Ok(None) => return Err(ApplyError::InvalidTransaction(String::from("inc requires a set value"))),
                     Err(err) => return Err(err)
                 };
+                let diff = MAX_VALUE - orig_value;
+                if diff < payload.get_value(){
+                    return Err(ApplyError::InvalidTransaction(String::from("Value is too large to inc")))
+                };
+
                 state.set(&payload.get_name(), orig_value + payload.get_value())
             },
             Verb::Decrement => {
@@ -233,6 +274,9 @@ impl TransactionHandler for IntkeyTransactionHandler {
                     Ok(Some(v)) => v,
                     Ok(None) => return Err(ApplyError::InvalidTransaction(String::from("dec requires a set value"))),
                     Err(err) => return Err(err)
+                };
+                if payload.get_value() > orig_value {
+                    return Err(ApplyError::InvalidTransaction(String::from("Value is too large to dec")))
                 };
                 state.set(&payload.get_name(), orig_value - payload.get_value())
             }

@@ -307,6 +307,7 @@ then
 
     build_rust() {
         docker_build docker/sawtooth-dev-rust docker/ sawtooth-dev-rust
+        docker_build $top_dir/docker/sawtooth-dev-rust docker/ sawtooth-intkey-tp-rust
         docker_run sawtooth-dev-rust
     }
 fi
@@ -416,6 +417,7 @@ then
 
         cp $top_dir/docker/sawtooth-dev-rust $build_dir
         docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-dev-rust
+        docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-intkey-tp-rust
         docker_run sawtooth-dev-rust
     }
 fi

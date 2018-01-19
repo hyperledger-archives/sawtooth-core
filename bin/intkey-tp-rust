@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2017 Intel Corporation
+# Copyright 2018 Bitwise IO, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,23 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
-
-set -e
+# -----------------------------------------------------------------------------
 
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-
-echo -e "\033[0;32m--- Building Rust SDK ---\n\033[0m"
-cd $top_dir/sdk/rust/
-RUST_BACKTRACE=1 cargo build
-
-echo -e "\033[0;32m--- Building sawadm ---\n\033[0m"
-cd $top_dir/adm
-cargo build
-
-echo -e "\033[0;32m--- Building intkey-tp-rust ---\n\033[0m"
 cd $top_dir/sdk/examples/intkey_rust
-cargo build
-# echo -e "\033[0;32m--- Building xo-tp-rust ---\n\033[0m"
 
-# echo -e "\033[0;32m--- Building noop-tp-rust ---\n\033[0m"
+exec cargo run --release -- $*
