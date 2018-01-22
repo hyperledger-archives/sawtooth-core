@@ -66,6 +66,9 @@ save_usage sawtooth state list
 save_usage sawtooth state show
 save_usage sawtooth transaction
 
+save_usage sawtooth status
+save_usage sawtooth status show
+
 save_usage sawtooth transaction list
 save_usage sawtooth transaction show
 

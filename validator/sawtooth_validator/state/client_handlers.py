@@ -1086,10 +1086,11 @@ class StatusGetRequest(_ClientRequestHandler):
 
     def _respond(self, request):
         peers = [
-            {'endpoint': endpoint}
+            self._response_proto.Peer(endpoint=endpoint)
+            # {'endpoint': endpoint}
             for endpoint in self._gossip.get_peers().values()
         ]
 
         return self._wrap_response(
             endpoint=self._gossip.endpoint,
-            peers=sorted(peers, key=lambda peer: peer['endpoint']))
+            peers=sorted(peers, key=lambda peer: peer.endpoint))
