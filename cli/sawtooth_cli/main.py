@@ -42,6 +42,8 @@ from sawtooth_cli.settings import add_settings_parser
 from sawtooth_cli.settings import do_settings
 from sawtooth_cli.peer import add_peer_parser
 from sawtooth_cli.peer import do_peer
+from sawtooth_cli.status import add_status_parser
+from sawtooth_cli.status import do_status
 
 from sawtooth_cli.cli_config import load_cli_config
 
@@ -120,6 +122,7 @@ def create_parser(prog_name):
     add_identity_parser(subparsers, parent_parser)
     add_keygen_parser(subparsers, parent_parser)
     add_peer_parser(subparsers, parent_parser)
+    add_status_parser(subparsers, parent_parser)
     add_settings_parser(subparsers, parent_parser)
     add_state_parser(subparsers, parent_parser)
     add_transaction_parser(subparsers, parent_parser)
@@ -159,6 +162,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None,
         do_settings(args)
     elif args.command == 'peer':
         do_peer(args)
+    elif args.command == 'status':
+        do_status(args)
     else:
         raise CliException("invalid command: {}".format(args.command))
 

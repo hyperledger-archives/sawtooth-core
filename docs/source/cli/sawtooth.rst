@@ -394,6 +394,31 @@ into a file for further processing.
    :language: console
    :linenos:
 
+sawtooth status
+===============
+
+The ``sawtooth status`` subcommands display information related to a
+validator's status.
+
+.. literalinclude:: output/sawtooth_status_usage.out
+   :language: console
+   :linenos:
+
+sawtooth status show
+====================
+
+The ``sawtooth status`` subcommand displays information related to a
+validator's current status, including its public network endpoint and
+its peers.
+
+This subcommand requires the URL of the REST API (default:
+``http://localhost:8008``), and can specify a `username`:`password`
+combination when the REST API is behind a Basic Auth proxy.
+
+.. literalinclude:: output/sawtooth_status_show_usage.out
+   :language: console
+   :linenos:
+
 sawtooth transaction
 ====================
 
