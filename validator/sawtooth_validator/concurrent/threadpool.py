@@ -21,6 +21,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 
 from sawtooth_validator.concurrent import atomic
+from sawtooth_validator.concurrent.heartbeat import Heartbeat
 
 
 LOGGER = logging.getLogger(__name__)
@@ -46,9 +47,13 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
             # This is the same default as ThreadPoolExecutor, but we want to
             # know how many workers there are for logging
             self._max_workers = multiprocessing.cpu_count() * 5
+
+        self._heartbeat = Heartbeat(
+            message=self._name + " threadpool heartbeat")
         super().__init__(max_workers)
 
     def submit(self, fn, *args, **kwargs):
+        self._heartbeat.beat()
         submitted_time = time.time()
 
         try:
