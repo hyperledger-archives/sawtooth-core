@@ -228,7 +228,16 @@ def add(
         ClientEventsGetRequestHandler(event_broadcaster),
         thread_pool)
 
+    # Peers
+
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_PEERS_GET_REQUEST,
         client_handlers.PeersGetRequest(gossip),
+        thread_pool)
+
+    # Status
+
+    dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_STATUS_GET_REQUEST,
+        client_handlers.StatusGetRequest(gossip),
         thread_pool)

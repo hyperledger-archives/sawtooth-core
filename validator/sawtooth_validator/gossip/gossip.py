@@ -187,6 +187,12 @@ class Gossip(object):
         with self._lock:
             return copy.copy(self._peers)
 
+    @property
+    def endpoint(self):
+        """Returns the validator's public endpoint.
+        """
+        return self._endpoint
+
     def register_peer(self, connection_id, endpoint):
         """Registers a connected connection_id.
 

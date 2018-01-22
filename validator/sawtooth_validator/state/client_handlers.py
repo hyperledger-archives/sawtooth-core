@@ -41,6 +41,7 @@ from sawtooth_validator.protobuf import client_transaction_pb2
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf import client_list_control_pb2
 from sawtooth_validator.protobuf import client_peers_pb2
+from sawtooth_validator.protobuf import client_status_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import validator_pb2
 
@@ -1072,3 +1073,23 @@ class PeersGetRequest(_ClientRequestHandler):
         peers = self._gossip.get_peers()
         endpoints = [peers[connection_id] for connection_id in peers]
         return self._wrap_response(peers=endpoints)
+
+
+class StatusGetRequest(_ClientRequestHandler):
+    def __init__(self, gossip):
+        super().__init__(
+            client_status_pb2.ClientStatusGetRequest,
+            client_status_pb2.ClientStatusGetResponse,
+            validator_pb2.Message.CLIENT_STATUS_GET_RESPONSE
+        )
+        self._gossip = gossip
+
+    def _respond(self, request):
+        peers = [
+            {'endpoint': endpoint}
+            for endpoint in self._gossip.get_peers().values()
+        ]
+
+        return self._wrap_response(
+            endpoint=self._gossip.endpoint,
+            peers=sorted(peers, key=lambda peer: peer['endpoint']))
