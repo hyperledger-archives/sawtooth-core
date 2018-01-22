@@ -31,7 +31,6 @@ message ClientStatusGetResponse {
     ERROR = 2;
   }
 
-  enum Peer {
   // Information about the validator's peers
   message Peer {
     // The peer's public network endpoint

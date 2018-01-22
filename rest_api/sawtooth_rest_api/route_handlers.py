@@ -38,6 +38,7 @@ from sawtooth_rest_api.protobuf import client_block_pb2
 from sawtooth_rest_api.protobuf import client_batch_pb2
 from sawtooth_rest_api.protobuf import client_receipt_pb2
 from sawtooth_rest_api.protobuf import client_peers_pb2
+from sawtooth_rest_api.protobuf import client_status_pb2
 from sawtooth_rest_api.protobuf.block_pb2 import BlockHeader
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchList
 from sawtooth_rest_api.protobuf.batch_pb2 import BatchHeader
@@ -574,6 +575,22 @@ class RouteHandler(object):
         return self._wrap_response(
             request,
             data=response['peers'],
+            metadata=self._get_metadata(request, response))
+
+    async def fetch_status(self, request):
+        '''Fetches information pertaining to the valiator's status.'''
+
+        response = await self._query_validator(
+            Message.CLIENT_STATUS_GET_REQUEST,
+            client_status_pb2.ClientStatusGetResponse,
+            client_status_pb2.ClientStatusGetRequest())
+
+        return self._wrap_response(
+            request,
+            data={
+                'peers': response['peers'],
+                'endpoint': response['endpoint']
+            },
             metadata=self._get_metadata(request, response))
 
     async def _query_validator(self, request_type, response_proto,

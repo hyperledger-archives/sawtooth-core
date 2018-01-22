@@ -122,6 +122,7 @@ def start_rest_api(host, port, connection, timeout, registry):
     app.router.add_post('/receipts', handler.list_receipts)
 
     app.router.add_get('/peers', handler.fetch_peers)
+    app.router.add_get('/status', handler.fetch_status)
 
     subscriber_handler = StateDeltaSubscriberHandler(connection)
     app.router.add_get('/subscriptions', subscriber_handler.subscriptions)
