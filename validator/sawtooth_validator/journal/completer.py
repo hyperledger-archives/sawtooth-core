@@ -106,6 +106,11 @@ class Completer(object):
             LOGGER.debug("Drop duplicate block: %s", block)
             return None
 
+        if block.header_signature in self._requested:
+            # We asked for the batch, and now we got it, so let's remove it
+            # from our our requested set
+            del self._requested[block.header_signature]
+
         if block.previous_block_id not in self.block_cache:
             if not self._has_block(block.previous_block_id):
                 if block.previous_block_id not in self._incomplete_blocks:
@@ -163,16 +168,12 @@ class Completer(object):
             del block.batches[:]
             # reset batches with full list batches
             block.batches.extend(batches)
-            if block.header_signature in self._requested:
-                del self._requested[block.header_signature]
             return block
 
         else:
             batch_id_list = [x.header_signature for x in block.batches]
             # Check to see if batchs are in the correct order.
             if batch_id_list == list(block.header.batch_ids):
-                if block.header_signature in self._requested:
-                    del self._requested[block.header_signature]
                 return block
             # Check to see if the block has all batch_ids and they can be put
             # in the correct order
@@ -185,9 +186,6 @@ class Completer(object):
                     block.batches.extend(batches)
                 else:
                     return None
-
-                if block.header_signature in self._requested:
-                    del self._requested[block.header_signature]
 
                 return block
             else:
