@@ -111,6 +111,10 @@ message Message {
         CLIENT_PEERS_GET_RESPONSE = 126;
         CLIENT_BLOCK_GET_BY_TRANSACTION_ID_REQUEST = 127;
         CLIENT_BLOCK_GET_BY_BATCH_ID_REQUEST = 128;
+        // A request for a validator's status
+        CLIENT_STATUS_GET_REQUEST = 129;
+        // A response with the validator's status
+        CLIENT_STATUS_GET_RESPONSE = 130;
 
         // Message types for events
         CLIENT_EVENTS_SUBSCRIBE_REQUEST = 500;
