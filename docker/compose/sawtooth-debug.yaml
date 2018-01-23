@@ -93,7 +93,7 @@ services:
       - SYS_PTRACE
     depends_on:
       - validator
-    command: settings-tp -vv -C tcp://validator:4004
+    command: intkey-tp-python -vv -C tcp://validator:4004
 
   rest-api:
     build:
