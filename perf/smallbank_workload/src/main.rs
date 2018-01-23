@@ -186,9 +186,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     key_file.read_to_string(&mut buf)?;
     buf.pop(); // remove the new line
 
-    let private_key = 
-        Secp256k1PrivateKey::from_hex(&buf).or(
-            Secp256k1PrivateKey::from_wif(&buf))?;
+    let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
     let context = signing::create_context("secp256k1")?;
     let signer = signing::Signer::new(context.as_ref(), &private_key);
 
