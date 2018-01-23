@@ -188,7 +188,7 @@ construct the complete Transaction.
     txn = Transaction(
         header=txn_header_bytes,
         header_signature=signature,
-        payload: payload_bytes
+        payload=payload_bytes
     )
 
 {% endif %}
