@@ -35,7 +35,7 @@ message TpRegisterRequest {
     string version = 2;
 
     // The namespaces this transaction processor expects to interact with
-    // when processing transations matching this specification; will be
+    // when processing transactions matching this specification; will be
     // enforced by the state API on the validator.
     repeated string namespaces = 4;
 }
