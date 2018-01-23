@@ -16,6 +16,7 @@
  */
 extern crate clap;
 extern crate crypto;
+extern crate env_logger;
 extern crate rand;
 extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
@@ -61,6 +62,8 @@ const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() {
+    env_logger::init();
+
     let arg_matches =
         App::new(APP_NAME)
             .version(VERSION)
