@@ -17,15 +17,6 @@
 
 //! Tools for submitting batch lists of signed batches to Sawtooth endpoints
 
-extern crate chrono;
-extern crate protobuf;
-extern crate hyper;
-extern crate serde;
-extern crate serde_json;
-extern crate tokio_core;
-extern crate tokio_timer;
-extern crate futures;
-
 use std::error;
 use std::fmt;
 use std::io::Read;
@@ -40,16 +31,14 @@ use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use self::tokio_core::reactor::{Core, Interval};
-use self::hyper::Chunk;
-use self::hyper::Error as HyperError;
-use self::hyper::error::UriError;
-use self::hyper::Method;
-use self::hyper::client::{HttpConnector, Client, Request};
-use self::hyper::header::{ContentType, ContentLength};
-use self::hyper::Uri;
-use self::futures::{Future, Stream};
-use self::futures::future;
+use hyper::client::{HttpConnector, Client, Request};
+use hyper::header::{ContentType, ContentLength};
+use hyper::Method;
+use futures::{Future, Stream};
+use protobuf;
+use protobuf::Message;
+use tokio_core::reactor::{Core, Interval};
+use tokio_timer;
 
 use sawtooth_sdk::messages::batch::Batch;
 use sawtooth_sdk::messages::batch::BatchList;
