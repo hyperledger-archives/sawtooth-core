@@ -14,8 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # -----------------------------------------------------------------------------
-
 top_dir=$(cd $(dirname $(dirname $0)) && pwd)
-cd $top_dir/sdk/examples/intkey_rust
+bin=$top_dir/sdk/examples/intkey_rust/bin/intkey_rust
 
-exec cargo run --release -- $*
+if [ -e $bin ]
+then
+    $bin $*
+else
+    echo "Please build intkey_rust first with 'build_all' or 'build_rust'"
+fi
