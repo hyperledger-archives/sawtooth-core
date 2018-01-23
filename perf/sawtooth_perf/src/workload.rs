@@ -34,7 +34,7 @@ use futures::stream::Collect;
 use hyper::Body;
 use hyper::client::{Client, Request, Response, HttpConnector};
 use hyper::Chunk;
-use hyper::header::{ContentType, ContentLength};
+use hyper::header::{Authorization, Basic, ContentType, ContentLength};
 use hyper::Method;
 use hyper::Error as HyperError;
 use hyper::error::UriError;
@@ -285,7 +285,8 @@ pub fn get_next_batchlist(batch_list_iter: &mut Iterator<Item = BatchListResult>
 
 /// Create the request from the next Target Url and the batchlist.
 pub fn form_request_from_batchlist(targets: &mut Cycle<IntoIter<String>>,
-                                   batch_list: Result<BatchList, WorkloadError>)
+                                   batch_list: Result<BatchList, WorkloadError>,
+                                   basic_auth: Option<String>)
     -> Result<Request, WorkloadError>
 {
     let mut batch_url = targets.next().unwrap();
@@ -298,6 +299,18 @@ pub fn form_request_from_batchlist(targets: &mut Cycle<IntoIter<String>>,
     req.set_body(bytes);
     req.headers_mut().set(ContentType::octet_stream());
     req.headers_mut().set(ContentLength(content_len));
+
+    match basic_auth {
+        Some(ref basic_auth) => {
+            req.headers_mut().set(
+                Authorization(
+                    Basic::from_str(&basic_auth)?
+                )
+            );
+        },
+        None => {},
+    }
+
     Ok(req)
 }
 
@@ -336,7 +349,8 @@ fn collect_future_bytes_to_string(chunks: Vec<Chunk>)
 pub fn make_request(client: Rc<Client<HttpConnector>>,
                 handle: Handle,
                 counter: Rc<HTTPRequestCounter>,
-                req: Result<Request, WorkloadError>) -> Result<(), WorkloadError>
+                req: Result<Request, WorkloadError>,
+                basic_auth: Option<String>) -> Result<(), WorkloadError>
 {
     let handle_clone = handle.clone();
     let counter_c = Rc::clone(&counter);
@@ -356,10 +370,13 @@ pub fn make_request(client: Rc<Client<HttpConnector>>,
                 .map(move |json_string: Result<String, WorkloadError>| {
                     let counter_clone = Rc::clone(&counter_c);
                     handle_future_post_response(counter_clone, json_string)
+                })
+                .map(|uri: Result<Uri, WorkloadError>| {
+                    form_request_from_batches_response(basic_auth, uri)
                 }).map_err(|_| ())
-                .and_then(move |uri: Result<Uri, WorkloadError>| {
+                .and_then(move |req: Result<Request, WorkloadError>| {
                     let counter_clone = Rc::clone(&counter);
-                    handle_getting_batch_status(client, handle, counter_clone, uri)
+                    handle_getting_batch_status(client, handle, counter_clone, req)
                 });
 
             Ok(handle_clone.spawn(response_future))
@@ -402,16 +419,45 @@ fn handle_future_post_response(counter: Rc<HTTPRequestCounter>,
     }
 }
 
+/// Form a request from the Uri produced from the POST /batches response.
+fn form_request_from_batches_response(basic_auth: Option<String>, uri: Result<Uri, WorkloadError>)
+    -> Result<Request, WorkloadError>
+{
+    match uri {
+        Ok(uri) => {
+            let mut req: Request<Body> = Request::new(Method::Get, uri);
+            match basic_auth {
+                Some(ref basic_auth) => {
+                    req.headers_mut().set(
+                        Authorization(
+                            Basic::from_str(&basic_auth)?
+                        )
+                    );
+                    Ok(req)
+                },
+                None => {
+                    Ok(req)
+                },
+            }
+        },
+        Err(err) => {
+            debug!("{}", err);
+            Err(WorkloadError::from(err))
+        }
+    }
+}
+
+
 /// Group the steps for the /batch_status GET together.
 fn handle_getting_batch_status(client: Rc<Client<HttpConnector>>,
                                handle: Handle,
                                counter: Rc<HTTPRequestCounter>,
-                               uri: Result<Uri, WorkloadError>)
+                               req: Result<Request, WorkloadError>)
     -> Result<(), ()>
 {
-    match uri {
-        Ok(uri) => {
-            let client_get = client.get(uri)
+    match req {
+        Ok(req) => {
+            let client_get = client.request(req)
                 .then(|response: Result<Response, HyperError>| {
                     handle_http_error(response)
                 })
@@ -430,7 +476,8 @@ fn handle_getting_batch_status(client: Rc<Client<HttpConnector>>,
             drop(client);
             Ok(handle.spawn(client_get.map_err(|_| ())))
         },
-        Err(_) => {
+        Err(err) => {
+            debug!("{}", err);
             Ok(())
         },
     }
