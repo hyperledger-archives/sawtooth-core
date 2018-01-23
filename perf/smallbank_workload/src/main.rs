@@ -29,6 +29,7 @@ use std::io;
 use std::io::Write;
 use std::io::Read;
 use std::error::Error;
+use std::str::{FromStr, Split};
 use std::time::Instant;
 
 use batch_gen::generate_signed_batches;
@@ -120,7 +121,7 @@ fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
               .short("t")
               .long("target")
               .value_name("TARGET")
-              .help("The Sawtooth REST Api endpoint."))
+              .help("A comma separated list of Sawtooth REST Api endpoints."))
         .arg(Arg::with_name("seed")
               .short("s")
               .long("seed")
@@ -153,10 +154,14 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         return arg_error("The number of accounts must be greater than 0.")
     }
 
-    let target: String = match args.value_of("target")
+    let target: Vec<String> = match args.value_of("target")
         .unwrap_or("http://localhost:8008")
         .parse() {
-            Ok(s) => s,
+            Ok(st) => {
+                let s: String = st;
+                let split: Split<&str> = s.split(",");
+                split.map(|s| std::string::String::from_str(s).unwrap()).collect()
+            },
             Err(_) => return arg_error("The target is the Sawtooth REST api endpoint with the scheme.")
         };
     let update: u32 = match args.value_of("update")
