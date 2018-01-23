@@ -223,6 +223,13 @@ def main(args=None):
 
     init_console_logging(verbose_level=verbose_level)
 
+    try:
+        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
+    except pkg_resources.DistributionNotFound:
+        version = 'UNKNOWN'
+    LOGGER.info(
+        '%s (Hyperledger Sawtooth) version %s', DISTRIBUTION_NAME, version)
+
     if opts.network_auth:
         opts.network_auth = {"network": opts.network_auth}
 
