@@ -34,6 +34,9 @@ use messages::state_context::TpStateGetResponse_Status;
 use messages::state_context::TpStateSetRequest;
 use messages::state_context::TpStateSetResponse;
 use messages::state_context::TpStateSetResponse_Status;
+use messages::state_context::TpStateDeleteRequest;
+use messages::state_context::TpStateDeleteResponse;
+use messages::state_context::TpStateDeleteResponse_Status;
 use messages::validator::Message_MessageType;
 
 use messaging::stream::MessageSender;
@@ -249,6 +252,41 @@ impl TransactionContext {
             },
             TpStateSetResponse_Status::STATUS_UNSET => {
                 Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpStateSetResponse")))
+            }
+        }
+    }
+
+
+    /// delete_state requests that each of the provided addresses be unset
+    /// in validator state. A list of successfully deleted addresses
+    //  is returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `addresses` - the addresses to fetch
+    pub fn delete_state(&mut self, addresses: Vec<String>) -> Result<Option<Vec<String>>, ContextError> {
+        let mut request = TpStateDeleteRequest::new();
+        request.set_context_id(self.context_id.clone());
+        request.set_addresses(RepeatedField::from_vec(addresses.clone()));
+
+        let serialized = request.write_to_bytes()?;
+        let x : &[u8] = &serialized;
+
+        let mut future = self.sender.send(
+            Message_MessageType::TP_STATE_DELETE_REQUEST,
+            &generate_correlation_id(),
+            x)?;
+
+        let response: TpStateDeleteResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
+        match response.get_status() {
+            TpStateDeleteResponse_Status::OK => {
+                Ok(Some(Vec::from(response.get_addresses())))
+            },
+            TpStateDeleteResponse_Status::AUTHORIZATION_ERROR => {
+                Err(ContextError::AuthorizationError(format!("Tried to delete unauthorized address: {:?}", addresses)))
+            },
+            TpStateDeleteResponse_Status::STATUS_UNSET => {
+                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpStateDeleteResponse")))
             }
         }
     }
