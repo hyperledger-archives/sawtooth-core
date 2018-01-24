@@ -205,10 +205,7 @@ impl TransactionContext {
                 };
                 match entry.get_data().len() {
                     0 => Ok(None),
-                    _ => Ok(Some(Vec::from(match response.get_entries().first() {
-                        Some(x) => x.get_data(),
-                        None => return Err(ContextError::ResponseAttributeError(String::from("No data returned from entry.")))
-                    })))
+                    _ => Ok(Some(Vec::from(entry.get_data())))
                 }
             },
             TpStateGetResponse_Status::AUTHORIZATION_ERROR => {
