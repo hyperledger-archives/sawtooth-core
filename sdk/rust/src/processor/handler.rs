@@ -183,7 +183,6 @@ impl TransactionContext {
     /// # Arguments
     ///
     /// * `addresses` - the addresses to fetch
-    /// * `timeout` - optional timeout, in seconds
     pub fn get_state(&mut self, address: &str) -> Result<Option<Vec<u8>>, ContextError> {
         let mut request = TpStateGetRequest::new();
         request.set_context_id(self.context_id.clone());
@@ -217,13 +216,13 @@ impl TransactionContext {
         }
     }
 
-    /// set_state requests that each address in the provided dictionary be
+    /// set_state requests that each address in the provided map be
     /// set in validator state to its corresponding value.
     ///
     /// # Arguments
     ///
-    /// * `entries` - dictionary where addresses are the keys and data is the value.
-    /// * `timeout` - optional timeout, in seconds
+    /// * `address` - address of where to store the data
+    /// * `paylaod` - payload is the data to store at the address
     pub fn set_state(&mut self, address: &str, payload: &[u8]) -> Result<(), ContextError> {
         let mut entry = TpStateEntry::new();
         entry.set_address(String::from(address));
