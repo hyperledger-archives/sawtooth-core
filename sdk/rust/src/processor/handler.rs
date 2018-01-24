@@ -27,20 +27,10 @@ use std;
 use std::borrow::Borrow;
 
 use messages::processor::TpProcessRequest;
-use messages::state_context::TpStateEntry;
-use messages::state_context::TpStateGetRequest;
-use messages::state_context::TpStateGetResponse;
-use messages::state_context::TpStateGetResponse_Status;
-use messages::state_context::TpStateSetRequest;
-use messages::state_context::TpStateSetResponse;
-use messages::state_context::TpStateSetResponse_Status;
-use messages::state_context::TpStateDeleteRequest;
-use messages::state_context::TpStateDeleteResponse;
-use messages::state_context::TpStateDeleteResponse_Status;
-use messages::state_context::TpReceiptAddDataRequest;
-use messages::state_context::TpReceiptAddDataResponse;
-use messages::state_context::TpReceiptAddDataResponse_Status;
+use messages::state_context::*;
 use messages::validator::Message_MessageType;
+use messages::events::Event;
+use messages::events::Event_Attribute;
 
 use messaging::stream::MessageSender;
 use messaging::stream::SendError;
@@ -332,6 +322,57 @@ impl TransactionContext {
             },
             TpReceiptAddDataResponse_Status::STATUS_UNSET => {
                 Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpReceiptAddDataResponse")))
+            }
+        }
+    }
+
+    /// add_event adds a new event to the execution result for this transaction.
+    ///
+    /// # Arguments
+    ///
+    /// * `event_type` -  This is used to subscribe to events. It should be globally unique and
+    ///         describe what, in general, has occured.
+    /// * `attributes` - Additional information about the event that is transparent to the
+    ///          validator. Attributes can be used by subscribers to filter the type of events
+    ///          they receive.
+    /// * `data` - Additional information about the event that is opaque to the validator.
+    pub fn add_event(&mut self, event_type: String, attributes: Vec<(String, String)>, data: &[u8])
+            -> Result<(), ContextError> {
+        let mut event = Event::new();
+        event.set_event_type(event_type);
+
+        let mut attributes_vec = Vec::new();
+        for (key, value) in attributes {
+            let mut attribute = Event_Attribute::new();
+            attribute.set_key(key);
+            attribute.set_value(value);
+            attributes_vec.push(attribute);
+        }
+        event.set_attributes(RepeatedField::from_vec(attributes_vec));
+        event.set_data(Vec::from(data));
+
+        let mut request = TpEventAddRequest::new();
+        request.set_context_id(self.context_id.clone());
+        request.set_event(event.clone());
+
+        let serialized = request.write_to_bytes()?;
+        let x : &[u8] = &serialized;
+
+        let mut future = self.sender.send(
+            Message_MessageType::TP_RECEIPT_ADD_DATA_REQUEST,
+            &generate_correlation_id(),
+            x)?;
+
+        let response: TpEventAddResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
+        match response.get_status() {
+            TpEventAddResponse_Status::OK => {
+                Ok(())
+            },
+            TpEventAddResponse_Status::ERROR => {
+                Err(ContextError::TransactionReceiptError(format!("Failed to add event {:?}", event)))
+            },
+            TpEventAddResponse_Status::STATUS_UNSET => {
+                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpEventAddRespons")))
             }
         }
 
