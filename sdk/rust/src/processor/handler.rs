@@ -91,7 +91,7 @@ pub enum ContextError {
     SerializationError(Box<StdError>),
     /// Raised when an error is returned when sending a message
     SendError(Box<StdError>),
-    /// Raise when an error is return when sending a message
+    /// Raised when an error is returned when sending a message
     ReceiveError(Box<StdError>),
 }
 
