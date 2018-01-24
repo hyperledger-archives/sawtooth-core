@@ -221,7 +221,10 @@ class Validator(object):
             topology_check_frequency=1
         )
 
-        completer = Completer(block_store, gossip)
+        completer = Completer(
+            block_store,
+            gossip,
+            metrics_registry=metrics_registry)
 
         block_sender = BroadcastBlockSender(completer, gossip)
         batch_sender = BroadcastBatchSender(completer, gossip)
