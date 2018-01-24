@@ -37,6 +37,9 @@ use messages::state_context::TpStateSetResponse_Status;
 use messages::state_context::TpStateDeleteRequest;
 use messages::state_context::TpStateDeleteResponse;
 use messages::state_context::TpStateDeleteResponse_Status;
+use messages::state_context::TpReceiptAddDataRequest;
+use messages::state_context::TpReceiptAddDataResponse;
+use messages::state_context::TpReceiptAddDataResponse_Status;
 use messages::validator::Message_MessageType;
 
 use messaging::stream::MessageSender;
@@ -299,6 +302,39 @@ impl TransactionContext {
                 Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpStateDeleteResponse")))
             }
         }
+    }
+
+    /// add_receipt_data adds a blob to the execution result for this transaction
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - the data to add
+    pub fn add_receipt_data(&mut self, data: &[u8]) ->  Result<(), ContextError> {
+        let mut request = TpReceiptAddDataRequest::new();
+        request.set_context_id(self.context_id.clone());
+        request.set_data(Vec::from(data));
+
+        let serialized = request.write_to_bytes()?;
+        let x : &[u8] = &serialized;
+
+        let mut future = self.sender.send(
+            Message_MessageType::TP_RECEIPT_ADD_DATA_REQUEST,
+            &generate_correlation_id(),
+            x)?;
+
+        let response: TpReceiptAddDataResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
+        match response.get_status() {
+            TpReceiptAddDataResponse_Status::OK => {
+                Ok(())
+            },
+            TpReceiptAddDataResponse_Status::ERROR => {
+                Err(ContextError::TransactionReceiptError(format!("Failed to add receipt data {:?}", data)))
+            },
+            TpReceiptAddDataResponse_Status::STATUS_UNSET => {
+                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpReceiptAddDataResponse")))
+            }
+        }
+
     }
 }
 
