@@ -31,6 +31,7 @@ from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator.metrics.wrappers import GaugeWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -93,8 +94,13 @@ class Completer(object):
             self._unsatisfied_dependency_count = CounterWrapper(
                 metrics_registry.counter(
                     'completer.unsatisfied_dependency_count'))
+            # Tracks the length of the completer's _seen_txns
+            self._seen_txns_length = GaugeWrapper(
+                metrics_registry.gauge(
+                    'completer.seen_txns_length'))
         else:
             self._unsatisfied_dependency_count = CounterWrapper()
+            self._seen_txns_length = GaugeWrapper()
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
@@ -254,6 +260,8 @@ class Completer(object):
     def _add_seen_txns(self, batch):
         for txn in batch.transactions:
             self._seen_txns[txn.header_signature] = batch.header_signature
+            self._seen_txns_length.set_value(
+                len(self._seen_txns))
 
     def _process_incomplete_batches(self, key):
         # Keys are transaction_id
