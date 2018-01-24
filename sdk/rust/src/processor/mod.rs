@@ -226,28 +226,8 @@ impl<'a> TransactionProcessor<'a> {
                                     };
                             },
                             _ => {
-                            let mut response = TpProcessResponse::new();
-                            response.set_status(TpProcessResponse_Status::INTERNAL_ERROR);
-                            response.set_message(String::from("not implemented..."));
-                            let serialized = response.write_to_bytes().unwrap();
-                            let x : &[u8] = &serialized;
-                            match sender.reply(
-                                Message_MessageType::TP_PROCESS_RESPONSE,
-                                message.get_correlation_id(),
-                                x){
-                                    Ok(_) => (),
-                                    Err(SendError::DisconnectedError) => {
-                                        error!("DisconnectedError");
-                                        break
-                                    },
-                                    Err(SendError::TimeoutError) =>
-                                        error!("TimeoutError"),
-                                    Err(SendError::UnknownError) => {
-                                        restart = false;
-                                        println!("UnknownError");
-                                        break
-                                    }
-                                };
+                                info!("Transaction Processor recieved invalid message type: {:?}",
+                                          message.get_message_type());
                             }
                         }
                     }
