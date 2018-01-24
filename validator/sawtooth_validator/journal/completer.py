@@ -98,9 +98,14 @@ class Completer(object):
             self._seen_txns_length = GaugeWrapper(
                 metrics_registry.gauge(
                     'completer.seen_txns_length'))
+            # Tracks the length of the completer's _incomplete_blocks
+            self._incomplete_blocks_length = GaugeWrapper(
+                metrics_registry.gauge(
+                    'completer.incomplete_blocks_length'))
         else:
             self._unsatisfied_dependency_count = CounterWrapper()
             self._seen_txns_length = GaugeWrapper()
+            self._incomplete_blocks_length = GaugeWrapper()
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
@@ -306,6 +311,8 @@ class Completer(object):
                 self.block_cache[block.header_signature] = blkw
                 self._on_block_received(blkw)
                 self._process_incomplete_blocks(block.header_signature)
+            self._incomplete_blocks_length.set_value(
+                len(self._incomplete_blocks))
 
     def add_batch(self, batch):
         with self.lock:
