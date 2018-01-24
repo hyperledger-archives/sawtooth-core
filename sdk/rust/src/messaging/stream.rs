@@ -94,6 +94,7 @@ impl std::fmt::Display for SendError {
 pub enum ReceiveError {
     TimeoutError,
     ChannelError(RecvError),
+    DisconnectedError
 }
 
 impl std::error::Error for ReceiveError {
@@ -101,6 +102,7 @@ impl std::error::Error for ReceiveError {
         match *self {
             ReceiveError::TimeoutError => "TimeoutError",
             ReceiveError::ChannelError(ref err) => err.description(),
+            ReceiveError::DisconnectedError=> "DisconnectedError"
         }
     }
 
@@ -108,6 +110,7 @@ impl std::error::Error for ReceiveError {
         match *self {
             ReceiveError::TimeoutError => None,
             ReceiveError::ChannelError(ref err) => Some(err),
+            ReceiveError::DisconnectedError => None,
         }
     }
 }
@@ -119,6 +122,8 @@ impl std::fmt::Display for ReceiveError {
                 write!(f,"TimeoutError"),
             ReceiveError::ChannelError(ref err) =>
                 write!(f, "ChannelError: {}", err.description()),
+            ReceiveError::DisconnectedError=>
+                write!(f, "DisconnectedError"),
         }
     }
 }
