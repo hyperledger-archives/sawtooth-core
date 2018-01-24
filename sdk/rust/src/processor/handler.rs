@@ -87,6 +87,8 @@ pub enum ContextError {
     AuthorizationError(String),
     /// Raised when a error occurs due to missing info in a response
     ResponseAttributeError(String),
+    /// Raised when there is an issues setting receipt data or events.
+    TransactionReceiptError(String),
     /// Raised when a ProtobufError is returned during serializing
     SerializationError(Box<StdError>),
     /// Raised when an error is returned when sending a message
@@ -100,6 +102,7 @@ impl std::error::Error for ContextError {
         match *self {
             ContextError::AuthorizationError(ref msg) => msg,
             ContextError::ResponseAttributeError(ref msg) => msg,
+            ContextError::TransactionReceiptError(ref msg) => msg,
             ContextError::SerializationError(ref err) => err.description(),
             ContextError::SendError(ref err) => err.description(),
             ContextError::ReceiveError(ref err) => err.description(),
@@ -110,6 +113,7 @@ impl std::error::Error for ContextError {
         match *self {
             ContextError::AuthorizationError(_) => None,
             ContextError::ResponseAttributeError(_) => None,
+            ContextError::TransactionReceiptError(_) => None,
             ContextError::SerializationError(ref err) => Some(err.borrow()),
             ContextError::SendError(ref err) => Some(err.borrow()),
             ContextError::ReceiveError(ref err) => Some(err.borrow()),
@@ -124,6 +128,8 @@ impl std::fmt::Display for ContextError {
                 write!(f, "AuthorizationError: {}", s),
             ContextError::ResponseAttributeError(ref s) =>
                 write!(f, "ResponseAttributeError: {}", s),
+            ContextError::TransactionReceiptError(ref s) =>
+                write!(f, "TransactionReceiptError: {}", s),
             ContextError::SerializationError(ref err) =>
                 write!(f, "SerializationError: {}", err.description()),
             ContextError::SendError(ref err) =>
@@ -136,7 +142,11 @@ impl std::fmt::Display for ContextError {
 
 impl From<ContextError> for ApplyError {
     fn from(context_error: ContextError) -> Self {
-        ApplyError::InvalidTransaction(format!("{}", context_error))
+        match context_error {
+            ContextError::TransactionReceiptError(..) =>
+                ApplyError::InternalError(format!("{}", context_error)),
+            _ => ApplyError::InvalidTransaction(format!("{}", context_error))
+        }
     }
 }
 
