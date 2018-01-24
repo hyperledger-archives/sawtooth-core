@@ -30,6 +30,7 @@ from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
+from sawtooth_validator.metrics.wrappers import CounterWrapper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +52,8 @@ class Completer(object):
                  gossip,
                  cache_keep_time=1200,
                  cache_purge_frequency=30,
-                 requested_keep_time=300):
+                 requested_keep_time=300,
+                 metrics_registry=None):
         """
         :param block_store (dictionary) The block store shared with the journal
         :param gossip (gossip.Gossip) Broadcasts block and batch request to
@@ -85,6 +87,14 @@ class Completer(object):
         self._on_batch_received = None
         self._has_block = None
         self.lock = RLock()
+
+        if metrics_registry:
+            # Tracks how many times an unsatisfied dependency is found
+            self._unsatisfied_dependency_count = CounterWrapper(
+                metrics_registry.counter(
+                    'completer.unsatisfied_dependency_count'))
+        else:
+            self._unsatisfied_dependency_count = CounterWrapper()
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
@@ -224,11 +234,7 @@ class Completer(object):
                 if dependency not in self._seen_txns and not \
                         self.block_cache.block_store.has_transaction(
                         dependency):
-                    LOGGER.debug("Transaction %s in batch %s has "
-                                 "unsatisfied dependency: %s",
-                                 txn.header_signature,
-                                 batch.header_signature,
-                                 dependency)
+                    self._unsatisfied_dependency_count.inc()
 
                     # Check to see if the dependency has already been requested
                     if dependency not in self._requested:
