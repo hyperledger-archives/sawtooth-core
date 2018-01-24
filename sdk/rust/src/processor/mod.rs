@@ -26,6 +26,7 @@ pub mod handler;
 use std::error::Error;
 
 use protobuf::Message as M;
+use protobuf::repeated::RepeatedField;
 use messages::validator::Message_MessageType;
 use messages::processor::TpRegisterRequest;
 use messages::processor::TpProcessRequest;
@@ -33,6 +34,9 @@ use messages::processor::TpProcessResponse;
 use messages::processor::TpProcessResponse_Status;
 use messaging::stream::MessageConnection;
 use messaging::stream::MessageSender;
+use messaging::zmq_stream::ZmqMessageSender;
+use messaging::stream::SendError;
+use messaging::stream::ReceiveError;
 use messaging::zmq_stream::ZmqMessageConnection;
 
 use self::handler::TransactionContext;
@@ -72,89 +76,187 @@ impl<'a> TransactionProcessor<'a> {
         self.handlers.push(handler);
     }
 
-    /// Connects the transaction processor to a validator and starts
-    /// listening for requests and routing them to an appropriate
-    /// transaction handler.
-    pub fn start(&mut self) {
-        info!("connecting to endpoint: {}", self.endpoint);
-
-        let (mut sender, receiver) = self.conn.create();
-
+    fn register(&mut self, mut sender: ZmqMessageSender) -> bool {
         for handler in &self.handlers {
             for version in handler.family_versions() {
                 let mut request = TpRegisterRequest::new();
                 request.set_family(handler.family_name().clone());
                 request.set_version(version.clone());
+                request.set_namespaces(RepeatedField::from_vec(handler.namespaces().clone()));
                 info!("sending TpRegisterRequest: {} {}",
                       &handler.family_name(),
                       &version);
-                let serialized = request.write_to_bytes().unwrap();
+                let serialized = match request.write_to_bytes() {
+                    Ok(serialized) => serialized,
+                    Err(err) => {
+                        error!("Serialization failed: {}", err.description());
+                        // try reconnect
+                        return false
+                    }
+                };
                 let x : &[u8] = &serialized;
 
-                let mut future = sender.send(
+                let mut future = match sender.send(
                     Message_MessageType::TP_REGISTER_REQUEST,
                     &generate_correlation_id(),
-                    x).unwrap();
+                    x) {
+                        Ok(fut) => fut,
+                        Err(err) => {
+                            error!("Registration failed: {}", err.description());
+                            // try reconnect
+                            return false
+                        }
+                    };
 
                 // Absorb the TpRegisterResponse message
-                let _ = future.get().unwrap();
+                let _ = match future.get(){
+                    Ok(_) => (),
+                    Err(err) => {
+                        error!("Registration failed: {}", err.description());
+                        // try reconnect
+                        return false
+                    }
+                };
             }
         }
+        true
+    }
 
-        loop {
-            match receiver.recv() {
-                Ok(r) => {
-                    let message = r.unwrap();
-                    info!("Message: {}", message.get_correlation_id());
+    /// Connects the transaction processor to a validator and starts
+    /// listening for requests and routing them to an appropriate
+    /// transaction handler.
+    pub fn start(&mut self) {
+        let mut first_time = true;
+        let mut restart = true;
+        while restart {
+            info!("connecting to endpoint: {}", self.endpoint);
+            if first_time {
+                first_time = false;
+            } else {
+                self.conn = ZmqMessageConnection::new(&self.endpoint);
+            }
+            let (mut sender, receiver) = self.conn.create();
+            // if registration is not succesful, retry
+            match self.register(sender.clone()) {
+                true => (),
+                false => continue
+            }
 
-                    match message.get_message_type() {
-                        Message_MessageType::TP_PROCESS_REQUEST => {
-                            let request: TpProcessRequest = protobuf::parse_from_bytes(&message.get_content()).unwrap();
-                            let mut context = TransactionContext::new(request.get_context_id(), sender.clone());
+            loop {
+                match receiver.recv() {
+                    Ok(r) => {
+                        // Check if we have a message
+                        let message = match r {
+                            Ok(message) => message,
+                            Err(ReceiveError::DisconnectedError)=> {
+                                info!("Trying to Reconnect");
+                                break;
+                            }
+                            Err(err) => {
+                                error!("Error: {}", err.description());
+                                continue;
+                            }
+                        };
 
-                            let mut response = TpProcessResponse::new();
-                            match self.handlers[0].apply(&request, &mut context) {
-                                Ok(()) => {
-                                    response.set_status(TpProcessResponse_Status::OK);
-                                    info!("TP_PROCESS_REQUEST sending TpProcessResponse: OK");
-                                },
-                                Err(ApplyError::InvalidTransaction(msg)) => {
-                                    response.set_status(TpProcessResponse_Status::INVALID_TRANSACTION);
-                                    response.set_message(msg.clone());
-                                    info!("TP_PROCESS_REQUEST sending TpProcessResponse: {}", msg);
-                                },
-                                Err(err) => {
-                                    response.set_status(TpProcessResponse_Status::INTERNAL_ERROR);
-                                    response.set_message(String::from(err.description()));
-                                    info!("TP_PROCESS_REQUEST sending TpProcessResponse: {}", err.description());
-                                }
-                            };
+                        info!("Message: {}", message.get_correlation_id());
 
-                            let serialized = response.write_to_bytes().unwrap();
-                            let x : &[u8] = &serialized;
-                            sender.reply(
-                                Message_MessageType::TP_PROCESS_RESPONSE,
-                                message.get_correlation_id(),
-                                x).unwrap();
-                        },
-                        _ => {
+                        match message.get_message_type() {
+                            Message_MessageType::TP_PROCESS_REQUEST => {
+                                let request: TpProcessRequest = match protobuf::parse_from_bytes(
+                                    &message.get_content()) {
+                                    Ok(request) => request,
+                                    Err(err) => {
+                                        error!("Cannot parse TpProcessRequest: {}",
+                                               err.description());
+                                        continue
+                                    }
+                                };
+
+                                let mut context = TransactionContext::new(
+                                    request.get_context_id(), sender.clone());
+
+                                let mut response = TpProcessResponse::new();
+                                match self.handlers[0].apply(&request, &mut context) {
+                                    Ok(()) => {
+                                        response.set_status(TpProcessResponse_Status::OK);
+                                        info!("TP_PROCESS_REQUEST sending TpProcessResponse: OK");
+                                    },
+                                    Err(ApplyError::InvalidTransaction(msg)) => {
+                                        response.set_status(
+                                            TpProcessResponse_Status::INVALID_TRANSACTION);
+                                        response.set_message(msg.clone());
+                                        info!("TP_PROCESS_REQUEST sending TpProcessResponse: {}",
+                                              msg);
+                                    },
+                                    Err(err) => {
+                                        response.set_status(
+                                            TpProcessResponse_Status::INTERNAL_ERROR);
+                                        response.set_message(String::from(err.description()));
+                                        info!("TP_PROCESS_REQUEST sending TpProcessResponse: {}",
+                                              err.description());
+                                    }
+                                };
+
+                                let serialized = match response.write_to_bytes()
+                                {
+                                    Ok(serialized) => serialized,
+                                    Err(err) => {
+                                        error!("Serialization failed: {}", err.description());
+                                        continue
+                                    }
+                                };
+
+                                let x : &[u8] = &serialized;
+                                match sender.reply(
+                                    Message_MessageType::TP_PROCESS_RESPONSE,
+                                    message.get_correlation_id(),
+                                    x) {
+                                        Ok(_) => (),
+                                        Err(SendError::DisconnectedError) => {
+                                            error!("DisconnectedError");
+                                            break
+                                        },
+                                        Err(SendError::TimeoutError) =>
+                                            error!("TimeoutError"),
+                                        Err(SendError::UnknownError) => {
+                                            restart = false;
+                                            println!("UnknownError");
+                                            break
+                                        }
+                                    };
+                            },
+                            _ => {
                             let mut response = TpProcessResponse::new();
                             response.set_status(TpProcessResponse_Status::INTERNAL_ERROR);
                             response.set_message(String::from("not implemented..."));
                             let serialized = response.write_to_bytes().unwrap();
                             let x : &[u8] = &serialized;
-                            sender.reply(
+                            match sender.reply(
                                 Message_MessageType::TP_PROCESS_RESPONSE,
                                 message.get_correlation_id(),
-                                x).unwrap();
+                                x){
+                                    Ok(_) => (),
+                                    Err(SendError::DisconnectedError) => {
+                                        error!("DisconnectedError");
+                                        break
+                                    },
+                                    Err(SendError::TimeoutError) =>
+                                        error!("TimeoutError"),
+                                    Err(SendError::UnknownError) => {
+                                        restart = false;
+                                        println!("UnknownError");
+                                        break
+                                    }
+                                };
+                            }
                         }
                     }
-                }
-                Err(err) => {
-                    error!("Error: {}", err.description());
+                    Err(err) => {
+                        error!("Error: {}", err.description());
+                    }
                 }
             }
-
+            sender.close();
         }
     }
 }
