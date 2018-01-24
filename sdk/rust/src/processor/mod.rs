@@ -28,6 +28,7 @@ use std::error::Error;
 use protobuf::Message as M;
 use protobuf::repeated::RepeatedField;
 use messages::validator::Message_MessageType;
+use messages::network::PingResponse;
 use messages::processor::TpRegisterRequest;
 use messages::processor::TpProcessRequest;
 use messages::processor::TpProcessResponse;
@@ -218,6 +219,34 @@ impl<'a> TransactionProcessor<'a> {
                                         },
                                         Err(SendError::TimeoutError) =>
                                             error!("TimeoutError"),
+                                        Err(SendError::UnknownError) => {
+                                            restart = false;
+                                            println!("UnknownError");
+                                            break
+                                        }
+                                    };
+                            },
+                            Message_MessageType::PING_REQUEST => {
+                                info!("sending PingResponse");
+                                let response = PingResponse::new();
+                                let serialized = match response.write_to_bytes() {
+                                    Ok(serialized) => serialized,
+                                    Err(err) => {
+                                        error!("Serialization failed: {}", err.description());
+                                        continue
+                                    }
+                                };
+                                let x : &[u8] = &serialized;
+                                match sender.reply(
+                                    Message_MessageType::TP_PROCESS_RESPONSE,
+                                    message.get_correlation_id(),
+                                    x){
+                                        Ok(_) => (),
+                                        Err(SendError::DisconnectedError) => {
+                                            error!("DisconnectedError");
+                                            break
+                                        },
+                                        Err(SendError::TimeoutError) => error!("TimeoutError"),
                                         Err(SendError::UnknownError) => {
                                             restart = false;
                                             println!("UnknownError");
