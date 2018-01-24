@@ -102,10 +102,15 @@ class Completer(object):
             self._incomplete_blocks_length = GaugeWrapper(
                 metrics_registry.gauge(
                     'completer.incomplete_blocks_length'))
+            # Tracks the length of the completer's _incomplete_batches
+            self._incomplete_batches_length = GaugeWrapper(
+                metrics_registry.gauge(
+                    'completer.incomplete_batches_length'))
         else:
             self._unsatisfied_dependency_count = CounterWrapper()
             self._seen_txns_length = GaugeWrapper()
             self._incomplete_blocks_length = GaugeWrapper()
+            self._incomplete_batches_length = GaugeWrapper()
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
@@ -332,6 +337,8 @@ class Completer(object):
                         if txn.header_signature in self._requested:
                             del self._requested[txn.header_signature]
                         self._process_incomplete_batches(txn.header_signature)
+            self._incomplete_batches_length.set_value(
+                len(self._incomplete_batches))
 
     def get_chain_head(self):
         """Returns the block which is the current head of the chain.
