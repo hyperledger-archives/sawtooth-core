@@ -44,6 +44,10 @@ def _get_address_from_txn(txn_info):
     return address_b
 
 
+def create_address(payload):
+    return hashlib.sha512(payload.encode()).hexdigest()[0:70]
+
+
 class TestSchedulers(unittest.TestCase):
     def setUp(self):
         self._context_manager = ContextManager(dict_database.DictDatabase())
@@ -325,6 +329,104 @@ class TestSchedulers(unittest.TestCase):
                          "txn {}".format(txn_info_from_2.txn.payload))
         with self.assertRaises(StopIteration):
             next(scheduler_iter2)
+
+    def test_serial_wildcarded_unschedule(self):
+        context_manager, scheduler = self._setup_serial_scheduler()
+
+        self._test_wildcarded_unschedule(
+            scheduler=scheduler,
+            context_manager=context_manager)
+
+    def test_parallel_wildcarded_unschedule(self):
+        context_manager, scheduler = self._setup_parallel_scheduler()
+
+        self._test_wildcarded_unschedule(
+            scheduler=scheduler,
+            context_manager=context_manager)
+
+    def _test_wildcarded_unschedule(self, scheduler, context_manager):
+        """Tests interaction of the context manager and scheduler when
+        addresses are wildcarded. The error condition is that this
+        will raise a KeyError.
+
+        Notes:
+            1) Add two batches, each with one transaction, with wildcarded
+               inputs and outputs.
+            2) Create a context.
+            3) Set the transaction result as valid.
+            4) Get the next transaction and create a context.
+            5) Unschedule the schedule.
+            6) Make a Get on the context manager.
+
+        """
+
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
+
+        txn1, _ = create_transaction(
+            payload='A'.encode(),
+            signer=signer,
+            inputs=[create_address('A')[0:40]],
+            outputs=[create_address('A')[0:40]])
+
+        batch_1 = create_batch(
+            [txn1],
+            signer=signer)
+
+        txn2, _ = create_transaction(
+            payload='A'.encode(),
+            signer=signer,
+            inputs=[create_address('A')[0:40]])
+
+        batch_2 = create_batch(
+            [txn2],
+            signer=signer)
+
+        # 1
+        scheduler.add_batch(batch=batch_1)
+        scheduler.add_batch(batch=batch_2)
+
+        # 2
+        txn_info = scheduler.next_transaction()
+
+        header = transaction_pb2.TransactionHeader()
+        header.ParseFromString(txn_info.txn.header)
+        inputs = list(header.inputs)
+        outputs = list(header.outputs)
+
+        ctx_id1 = context_manager.create_context(
+            state_hash=txn_info.state_hash,
+            base_contexts=txn_info.base_context_ids,
+            inputs=inputs,
+            outputs=outputs)
+
+        # 3
+        scheduler.set_transaction_execution_result(
+            txn_signature=txn_info.txn.header_signature,
+            is_valid=True,
+            context_id=ctx_id1)
+
+        # 4
+        txn_info_2 = scheduler.next_transaction()
+
+        header = transaction_pb2.TransactionHeader()
+        header.ParseFromString(txn_info_2.txn.header)
+        inputs = list(header.inputs)
+        outputs = list(header.outputs)
+
+        ctx_id2 = context_manager.create_context(
+            state_hash=txn_info_2.state_hash,
+            base_contexts=txn_info_2.base_context_ids,
+            inputs=inputs,
+            outputs=outputs)
+
+        # 5
+        scheduler.unschedule_incomplete_batches()
+        scheduler.finalize()
+        scheduler.complete(block=True)
+
+        # 6
+        context_manager.get(ctx_id2, address_list=[create_address('A')])
 
     def test_serial_completion_on_finalize(self):
         """Tests that iteration will stop when finalized is called on an
