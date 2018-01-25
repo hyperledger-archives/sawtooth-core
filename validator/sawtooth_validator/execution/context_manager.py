@@ -299,9 +299,15 @@ class ContextManager(object):
             # the context.
             for address in addresses_not_in_ctx:
                 context.validate_read(address)
-            address_values, reads = self._find_address_values_in_chain(
-                base_contexts=[context_id],
-                addresses_to_find=addresses_not_in_ctx)
+            try:
+                address_values, reads = self._find_address_values_in_chain(
+                    base_contexts=[context_id],
+                    addresses_to_find=addresses_not_in_ctx)
+            except KeyError:
+                # This is in the exceptional case when a txn is in flight
+                # and so the context may not exist but the tp is asking
+                # about it.
+                return []
 
             values_list.extend(address_values)
 
