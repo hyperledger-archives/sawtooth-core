@@ -63,8 +63,7 @@ class ConsensusState(object):
             claimed by all validators
     """
 
-    # MINIMUM_WAIT_TIME should be same as the value
-    # at ecall_CreateWaitTimer
+    # MINIMUM_WAIT_TIME must match the constants in the enclaves
     MINIMUM_WAIT_TIME = 1.0
 
     _BlockInfo = \
