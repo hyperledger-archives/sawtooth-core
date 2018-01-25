@@ -20,6 +20,7 @@ use messages::validator::Message_MessageType;
 use std::error::Error;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::RecvError;
+use std::time::Duration;
 
 /// A Message Sender
 ///
@@ -152,6 +153,20 @@ impl MessageFuture {
                 result
             }
             Err(err) => Err(ReceiveError::ChannelError(err))
+        }
+    }
+
+    pub fn get_timeout(&mut self, timeout: Duration) -> MessageResult {
+        if let Some(ref result) = self.result {
+            return result.clone();
+        }
+
+        match self.inner.recv_timeout(timeout) {
+            Ok(result) => {
+                self.result = Some(result.clone());
+                result
+            }
+            Err(_) => Err(ReceiveError::TimeoutError)
         }
     }
 }
