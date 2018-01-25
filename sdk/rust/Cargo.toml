@@ -28,6 +28,7 @@ zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
 uuid = { version = "0.5", features = ["v4"] }
 log = "0.3"
 libc = "0.2"
+ctrlc = { version = "3.0", features = ["termination"] }
 
 [dev-dependencies]
 env_logger = "0.3"
