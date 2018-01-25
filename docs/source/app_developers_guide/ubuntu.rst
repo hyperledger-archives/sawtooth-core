@@ -352,8 +352,8 @@ this output is shown below:
 Viewing Blocks and State
 ========================
 
-You can view the blocks stored in the blockchain and the nodes of the Merkle
-tree by using the ``sawtooth block`` command.
+You can view the blocks stored in the blockchain and the nodes of the
+Merkle-Radix tree (global state) by using the ``sawtooth block`` command.
 
 .. note::
 
@@ -429,7 +429,7 @@ shown):
 Viewing Global State
 --------------------
 
-Use the command ``sawtooth state list`` to list the nodes in the Merkle tree:
+Use the command ``sawtooth state list`` to list the nodes in state (in the Merkle-Radix tree):
 
 .. code-block:: console
 

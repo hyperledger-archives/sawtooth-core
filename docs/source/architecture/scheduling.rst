@@ -127,7 +127,7 @@ determined using these inputs/outputs declarations.
    implementations can enforce specific inputs/outputs requirements to
    provide an incentive for correct client behavior.
 
-The parallel scheduler calculates predecessors using a Radix trie with nodes
+The parallel scheduler calculates predecessors using a Merkle-Radix tree with nodes
 addressable by state addresses or namespaces. This tree is called the
 predecessor tree. Input declarations are considered reads, with output
 declarations considered writes.  By keeping track of readers and writers within

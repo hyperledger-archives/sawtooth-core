@@ -335,7 +335,7 @@ Sign-up Phase
 -------------
 
 A participant joins as a validator by downloading the PoET SGX enclave and a
-SPID certificate for the block chain. The client side of the validator runs the
+SPID certificate for the blockchain. The client side of the validator runs the
 following sign-up procedure:
 
 1. Start PoET SGX enclave: ENC.

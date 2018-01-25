@@ -207,10 +207,10 @@ The encoding field must be set to "application/protobuf".
 Execution
 =========
 
-Untrusted python code that is a part of the transaction processor will verify
+Untrusted Python code that is a part of the transaction processor will verify
 the attestation verification report for the signup information. It is important
-to note, that the IAS report public key will need to be on the block chain and
-it will need to be set on configuration. This will allow both the simulator
+to note that the IAS report public key will need to be on the blockchain, and
+that it will need to be set during configuration. This will allow both the simulator
 logic and real SGX logic to be the same.
 
 If the validator_name does not match syntactic requirements, the transaction is
