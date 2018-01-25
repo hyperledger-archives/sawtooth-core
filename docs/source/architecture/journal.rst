@@ -2,7 +2,7 @@
 Journal
 *******
 
-The Journal is responsible for maintaining and extending the BlockChain for the
+The Journal is responsible for maintaining and extending the blockchain for the
 validator. This responsibility involves validating candidate blocks, evaluating
 valid blocks to determine if they are the correct chain head, and generating
 new blocks to extend the chain.
@@ -36,7 +36,7 @@ responsibilities of a consensus algorithm.
 The BlockStore
 ==============
 
-The BlockStore contains all the blocks in the current block chain, that is the
+The BlockStore contains all the blocks in the current blockchain - that is, the
 list of blocks from the current chain head back to the Genesis blocks. Blocks
 from forks are not included in the BlockStore. The BlockStore also includes a
 reference to the head of the current chain. It is expected to be coherent at
@@ -60,7 +60,7 @@ The BlockStore maintains internal mappings of Transaction-to-Block and
 Batch-to-Block. These may be rebuilt if missing or corrupt. This rebuild should
 be done during startup, and not during the course of normal operation. These
 mappings should be stored in a format that is cached to disk, so they are not
-required to be held in memory at all times. As the block chain grows, these will
+required to be held in memory at all times. As the blockchain grows, these will
 become quite large.
 
 The BlockStore provides an atomic method for updating the current head of the
@@ -129,11 +129,12 @@ becoming the block head by the ChainController.
 The Consensus Interface
 =======================
 
-In the spirit of configurability, the Journal supports pluggable consensus
-algorithms that may be changed via the settings transaction family.  The
-initial selection of a  Consensus algorithm is set for the chain in the Genesis
-Block during Genesis (described below). This may be changed during the course of
-a Chain's lifetime. The Journal and its Consensus Interface support pluggable
+In the spirit of configurability, the Journal supports
+:term:`dynamic consensus algorithms<Dynamic consensus>`
+that can be changed via the Settings transaction family. The
+initial selection of a consensus algorithm is set for the chain in the genesis
+block during genesis (described below). This may be changed during the course of
+a chain's lifetime. The Journal and its consensus interface support dynamic
 consensus for probabilistic finality algorithms like Proof of Work, as well as
 algorithms with absolute finality like PBFT.
 
@@ -453,12 +454,12 @@ transactions.  Any failure of a transaction in genesis.batch will fail to
 produce the genesis block, and the validator will treat this as a fatal error.
 
 Second, it will use a genesis consensus, to determine block validity. At the
-start of the genesis block creation process, the Merkle state will be empty.
+start of the genesis block creation process, state (the Merkle-Radix tree) will be empty.
 Given that the consensus mechanism is specified by a configuration setting in
 the state, this will return None.  As a result, the genesis consensus mechanism
 will be used. This will produce a block with an empty consensus field.
 
-In addition to the genesis block, the block chain ID (that is, the signature of
+In addition to the genesis block, the blockchain ID (that is, the signature of
 the genesis block) is written to the file ``block-chain-id`` in the validator’s
 data directory.
 
@@ -470,7 +471,8 @@ possible, as long as they know how to read the consensus field of the previous
 block.
 
 To complete the process, all necessary transaction processors must be running.
-Minimally this includes the Sawtooth settings transaction processor.
+A minimum requirement is the Sawtooth Settings transaction processor,
+``settings-tp``.
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

@@ -149,8 +149,8 @@ with this command:
   $ sawtooth batch submit -f batches.intkey
 
 
-Viewing the Block Chain
------------------------
+Viewing the Blockchain
+----------------------
 
 You can view the blocks stored in the blockchain using the ``sawtooth block``
 command.
@@ -244,7 +244,7 @@ Viewing Global State
 Viewing List of Nodes (Addresses)
 +++++++++++++++++++++++++++++++++
 
-Use the command ``sawtooth state list`` to list the nodes in the Merkle tree:
+Use the command ``sawtooth state list`` to list the nodes in state (in the Merkle-Radix tree):
 
 .. code-block:: console
 

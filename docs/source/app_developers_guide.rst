@@ -4,11 +4,11 @@ Application Developer's Guide
 *****************************
 
 This guide covers development of applications which run on top of the
-Hyperledger Sawtooth platform, primarily through use of Sawtooth's provided
-SDKs and REST API.  Topics covered include development of transaction families
-and associated client programs. Transaction families codify business rules
-used to modify state, while client programs typically submit transactions and
-view state.
+Hyperledger Sawtooth :term:`core platform<Sawtooth core>`, primarily through
+the use of Sawtooth's provided SDKs and :term:`REST API`. Topics include
+development of :term:`transaction families<Transaction family>` and associated
+client programs. Transaction families codify business rules used to modify
+state, while client programs typically submit transactions and view state.
 
 SDKs are provided in several languages: C++, Go, Java, Javascript, and Python.
 

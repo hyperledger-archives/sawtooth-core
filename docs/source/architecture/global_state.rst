@@ -8,7 +8,7 @@ The ability to ensure a consistent copy of data amongst nodes in
 Byzantine consensus is one of the core strengths of blockchain technology.
 
 Sawtooth represents state for all transaction families in a single
-instance of a Radix Merkle Tree on each validator. The process of block
+instance of a Merkle-Radix tree on each validator. The process of block
 validation on each validator ensures that the same transactions result
 in the same state transitions and that the resulting data is the same
 for all participants in the network.
@@ -17,13 +17,15 @@ The state is split into namespaces which allow flexibility for
 transaction family authors to define, share, and reuse global state data
 between transaction processors.
 
-Radix Merkle Tree Overview
+.. _merkle-radix-overview-label:
+
+Merkle-Radix Tree Overview
 ==========================
 
 Merkle Hashes
 -------------
 
-Sawtooth uses an addressable Radix Merkle tree to store data for
+Sawtooth uses an addressable Merkle-Radix tree to store data for
 transaction families. Let's break that down: The tree is a Merkle tree because
 it is a copy-on-write data structure which stores successive node hashes
 from leaf-to-root upon any changes to the tree. For a given set of state

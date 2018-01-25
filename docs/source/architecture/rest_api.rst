@@ -230,7 +230,7 @@ resource identifier was specified (i.e., ``/resources`` vs
    * **/batches** - the batches stored on the blockchain, referenced by id
    * **/transactions** - the transactions stored on the blockchain, referenced
      by id
-   * **/state** - the ledger state, stored on the Merkle trie, referenced by
+   * **/state** - the ledger state, stored on the Merkle-Radix tree, referenced by
      leaf addresses
 
 

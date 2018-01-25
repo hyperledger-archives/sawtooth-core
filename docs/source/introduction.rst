@@ -62,16 +62,18 @@ blockchain. Sawtooth allows these design decisions to be made in the
 transaction-processing layer, which allows multiple types of applications to
 exist in the same instance of the blockchain network.
 
-Each application defines the custom transaction processors for its unique
-requirements. Sawtooth provides several example transaction
-families to serve as models for low-level functions, such as maintaining
-chain-wide settings and storing on-chain permissions, and for specific
-applications such as performance analysis and storing block information.
+Each application defines the custom
+:term:`transaction processors<Transaction processor>` for its unique
+requirements. Sawtooth provides several example
+:term:`transaction families<Transaction family>` to serve as models for
+low-level functions (such as maintaining chain-wide settings and storing
+on-chain permissions) and for specific applications like as performance
+analysis and storing block information.
 
 Transaction processor SDKs are available in multiple languages to streamline
 creation of new contract languages, including Python, JavaScript, Go, C++,
-Java, and Rust. A provided REST API simplifies client development by adapting
-validator communication to standard HTTP/JSON.
+Java, and Rust. A provided REST API simplifies client development by
+adapting :term:`validator<Validator>` communication to standard HTTP/JSON.
 
 Private networks with the Sawtooth permissioning features
 ---------------------------------------------------------
@@ -84,6 +86,8 @@ patterns or other confidential information.
 The blockchain stores the settings that specify the permissions, such as roles
 and identities, so that all participants in the network can access this
 information.
+
+.. _parallel-execution-label:
 
 Parallel transaction execution
 ------------------------------
@@ -123,8 +127,10 @@ The Sawtooth-Ethereum integration project, Seth, extends the interoperability
 of the Sawtooth platform to Ethereum. EVM (Ethereum Virtual Machine) smart
 contracts can be deployed to Sawtooth using the Seth transaction family.
 
-Pluggable consensus algorithms
-------------------------------
+.. _dynamic-consensus-label:
+
+Dynamic Consensus Algorithms
+----------------------------
 
 In a blockchain, consensus is the process of building agreement among a group
 of mutually distrusting participants. Algorithms for achieving consensus with
@@ -155,18 +161,20 @@ Sawtooth currently supports these consensus implementations:
     * Dev mode, a simplified random-leader algorithm that is useful for
       development and testing.
 
+.. _sample-transaction-families-label:
+
 Sample transaction families
 ---------------------------
 
 In Sawtooth, the data model and transaction language are implemented
-in a *transaction family*. While we expect users to build custom transaction
-families that reflect the unique requirements of their ledgers, we provide
-several core transaction families as models\:
+in a :term:`transaction family<Transaction family>`. While we expect users to
+build custom transaction families that reflect the unique requirements of their
+ledgers, we provide several core transaction families as models\:
 
     * IntegerKey - Used for testing deployed ledgers.
 
     * Settings - Provides a reference implementation for storing
-      on-chain configuration settings.
+      :term:`on-chain configuration settings<On-chain setting>`.
 
     * Identity - Handles on-chain permissioning for transactor
       and validator keys to streamline managing identities
@@ -228,11 +236,12 @@ Getting Started with Application Development
 Try Hyperledger Sawtooth
 ------------------------
 
-The Sawtooth documentation explains how to set up a local validator for
-demonstrating Sawtooth functionality and testing an application. Once
-running, you will be able to submit new transactions and fetch the resulting
-state and block data from the blockchain using HTTP and the Sawtooth REST API.
-These methods apply to the included example transaction families, as
+The Sawtooth documentation explains how to set up a local
+:term:`validator<Validator>` for demonstrating Sawtooth functionality and
+testing an application. Once running, you will be able to submit new
+transactions and fetch the resulting state and block data from the blockchain
+using HTTP and the Sawtooth :term:`REST API`. These methods apply to the
+included example :term:`transaction families<Transaction family>`, as
 well as to any transaction families you might write yourself.
 
 Sawtooth validators can be run from pre-built Docker containers, installed
@@ -263,9 +272,10 @@ Participating in Core Development
 Learn about Sawtooth Architecture
 ---------------------------------
 
-See :doc:`/architecture` for information on core Sawtooth features such as
-global state, transactions and batches (the atomic unit of state change in
-Sawtooth), permissioning, the validator network, the event system, and more.
+See :doc:`/architecture` for information on :term:`Sawtooth core` features such
+as :term:`global state<Global state>`, transactions and :term:`batches<Batch>`
+(the atomic unit of state change in Sawtooth), permissioning, the validator
+network, the event system, and more.
 
 Get the Sawtooth Software
 -------------------------

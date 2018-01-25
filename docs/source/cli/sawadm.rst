@@ -37,7 +37,7 @@ sawadm genesis
 
 The ``sawadm genesis`` subcommand produces a file for use during the
 initialization of a validator. A network requires an initial block (known as the
-`genesis block`) whose signature will determine the block chain id. This initial
+`genesis block`) whose signature will determine the blockchain ID. This initial
 block is produced from a list of batches, which will be applied at
 genesis time.
 

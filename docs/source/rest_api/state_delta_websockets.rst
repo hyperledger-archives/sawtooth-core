@@ -2,10 +2,10 @@
 State Delta Subscriptions via Web Sockets
 *****************************************
 
-As transactions are committed to the block chain, an app developer may be
+As transactions are committed to the blockchain, an app developer may be
 interested in receiving events related to the changes in state that result.
 These events, `StateDeltaEvents`, include information about the advance of the
-block chain, as well as state changes that can be limited to specific address
+blockchain, as well as state changes that can be limited to specific address
 spaces in the global state.
 
 An application can subscribe to receive these events via a web socket, provided
