@@ -1046,11 +1046,12 @@ class Interconnect(object):
             endpoint (str): A zmq-style uri which identifies a publically
                 reachable endpoint.
         """
-        for connection_id in self._connections:
-            connection_info = self._connections[connection_id]
-            if connection_info.uri == endpoint:
-                return connection_id
-        raise KeyError()
+        with self._connections_lock:
+            for connection_id in self._connections:
+                connection_info = self._connections[connection_id]
+                if connection_info.uri == endpoint:
+                    return connection_id
+            raise KeyError()
 
     def update_connection_endpoint(self, connection_id, endpoint):
         """Adds the endpoint to the connection definition. When the
