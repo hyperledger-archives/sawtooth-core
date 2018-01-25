@@ -18,18 +18,24 @@
 extern crate zmq;
 extern crate protobuf;
 extern crate rand;
+extern crate ctrlc;
+
+use std::sync::mpsc::RecvTimeoutError;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use std::error::Error;
 
 use self::rand::Rng;
 
 pub mod handler;
-
-use std::error::Error;
 
 use protobuf::Message as M;
 use protobuf::repeated::RepeatedField;
 use messages::validator::Message_MessageType;
 use messages::network::PingResponse;
 use messages::processor::TpRegisterRequest;
+use messages::processor::TpUnregisterRequest;
 use messages::processor::TpProcessRequest;
 use messages::processor::TpProcessResponse;
 use messages::processor::TpProcessResponse_Status;
@@ -77,7 +83,7 @@ impl<'a> TransactionProcessor<'a> {
         self.handlers.push(handler);
     }
 
-    fn register(&mut self, mut sender: ZmqMessageSender) -> bool {
+    fn register(&mut self, mut sender: ZmqMessageSender, unregister: Arc<AtomicBool>) -> bool {
         for handler in &self.handlers {
             for version in handler.family_versions() {
                 let mut request = TpRegisterRequest::new();
@@ -110,25 +116,67 @@ impl<'a> TransactionProcessor<'a> {
                     };
 
                 // Absorb the TpRegisterResponse message
-                let _ = match future.get(){
-                    Ok(_) => (),
-                    Err(err) => {
-                        error!("Registration failed: {}", err.description());
-                        // try reconnect
-                        return false
-                    }
-                };
+                loop{
+                    let _ = match future.get_timeout(Duration::from_millis(10000)) {
+                        Ok(_) => break,
+                        Err(_) => {
+                            if unregister.load(Ordering::SeqCst){
+                                return false
+                            }
+
+                        }
+                    };
+                }
             }
         }
         true
+    }
+
+    fn unregister(&mut self, mut sender: ZmqMessageSender) {
+        let request = TpUnregisterRequest::new();
+        info!("sending TpUnregisterRequest");
+        let serialized = match request.write_to_bytes() {
+            Ok(serialized) => serialized,
+            Err(err) => {
+                error!("Serialization failed: {}", err.description());
+                return
+            }
+        };
+        let x : &[u8] = &serialized;
+
+        let mut future = match sender.send(
+            Message_MessageType::TP_UNREGISTER_REQUEST,
+            &generate_correlation_id(),
+            x) {
+                Ok(fut) => fut,
+                Err(err) => {
+                    error!("Unregistration failed: {}", err.description());
+                    return
+                }
+            };
+        // Absorb the TpUnregisterResponse message, wait one second for response then continue
+        let _ = match future.get_timeout(Duration::from_millis(1000)){
+            Ok(_) => (),
+            Err(err) => {
+                info!("Unregistration failed: {}", err.description());
+            }
+        };
+
     }
 
     /// Connects the transaction processor to a validator and starts
     /// listening for requests and routing them to an appropriate
     /// transaction handler.
     pub fn start(&mut self) {
+        let unregister =  Arc::new(AtomicBool::new(false));
+        let r = unregister.clone();
+        ctrlc::set_handler(move || {
+            r.store(true, Ordering::SeqCst);
+        }).expect("Error setting Ctrl-C handler");
+
         let mut first_time = true;
         let mut restart = true;
+
         while restart {
             info!("connecting to endpoint: {}", self.endpoint);
             if first_time {
@@ -137,14 +185,26 @@ impl<'a> TransactionProcessor<'a> {
                 self.conn = ZmqMessageConnection::new(&self.endpoint);
             }
             let (mut sender, receiver) = self.conn.create();
+
+            if unregister.load(Ordering::SeqCst){
+                self.unregister(sender.clone());
+                restart = false;
+                continue;
+            }
+
             // if registration is not succesful, retry
-            match self.register(sender.clone()) {
+            match self.register(sender.clone(), unregister.clone()) {
                 true => (),
                 false => continue
             }
 
             loop {
-                match receiver.recv() {
+                if unregister.load(Ordering::SeqCst){
+                    self.unregister(sender.clone());
+                    restart = false;
+                    break;
+                }
+                match receiver.recv_timeout(Duration::from_millis(1000)) {
                     Ok(r) => {
                         // Check if we have a message
                         let message = match r {
@@ -259,7 +319,8 @@ impl<'a> TransactionProcessor<'a> {
                                           message.get_message_type());
                             }
                         }
-                    }
+                    },
+                    Err(RecvTimeoutError::Timeout) => (),
                     Err(err) => {
                         error!("Error: {}", err.description());
                     }
