@@ -871,6 +871,7 @@ class ParallelScheduler(Scheduler):
     def unschedule_incomplete_batches(self):
         incomplete_batches = set()
         with self._condition:
+            # These transactions have never been scheduled.
             for txn in self._unscheduled_transactions():
                 batch = self._batches_by_txn_id[txn.header_signature]
                 batch_id = batch.header_signature
@@ -879,7 +880,11 @@ class ParallelScheduler(Scheduler):
                 if not annotated_batch.preserve:
                     incomplete_batches.add(batch_id)
 
-            for txn_id in self._outstanding:
+            # These transactions were in flight.
+            in_flight = set(self._transactions.keys()).difference(
+                self._txn_results.keys())
+
+            for txn_id in in_flight:
                 batch = self._batches_by_txn_id[txn_id]
                 batch_id = batch.header_signature
 
