@@ -20,6 +20,7 @@ import queue
 from threading import RLock
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
+from sawtooth_validator.concurrent.heartbeat import Heartbeat
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
 from sawtooth_validator.journal.block_wrapper import BlockStatus
@@ -567,6 +568,7 @@ class _ChainThread(InstrumentedThread):
         self._block_queue = block_queue
         self._block_cache = block_cache
         self._exit = False
+        self._heartbeat = Heartbeat(message='_ChainThread heartbeat')
 
     def run(self):
         try:
@@ -580,6 +582,8 @@ class _ChainThread(InstrumentedThread):
 
                 if self._exit:
                     return
+
+                self._heartbeat.beat()
         # pylint: disable=broad-except
         except Exception:
             LOGGER.exception("ChainController thread exited with error.")
