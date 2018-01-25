@@ -425,7 +425,6 @@ and specifies the appropriate settings:
           sawtooth.consensus.algorithm=poet \
           sawtooth.poet.initial_wait_timer=x \
           sawtooth.poet.target_wait_time=x \
-          sawtooth.poet.minimum_wait_time=x \
           sawtooth.poet.population_estimate_sample_size=x \
 	  sawadm genesis \
           sawset.batch
