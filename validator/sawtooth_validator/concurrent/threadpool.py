@@ -22,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from sawtooth_validator.concurrent import atomic
 from sawtooth_validator.metrics.wrappers import GaugeWrapper
+from sawtooth_validator.metrics.wrappers import TimerWrapper
 
 
 LOGGER = logging.getLogger(__name__)
@@ -55,8 +56,13 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
             self._workers_already_in_use_gauge = GaugeWrapper(
                 metrics_registry.gauge(
                     '{}-threadpool.workers_already_in_use'.format(self._name)))
+            # Tracks how long tasks take to run
+            self._task_run_timer = TimerWrapper(
+                metrics_registry.timer(
+                    '{}-threadpool.task_run_time'.format(self._name)))
         else:
             self._workers_already_in_use_gauge = GaugeWrapper()
+            self._task_run_timer = TimerWrapper()
 
     def submit(self, fn, *args, **kwargs):
         submitted_time = time.time()
@@ -87,31 +93,23 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
                 LOGGER.debug(
                     '(%s) Executing task %s', self._name, task_details)
 
-            return_value = None
-            try:
-                return_value = fn(*args, **kwargs)
-            # pylint: disable=broad-except
-            except Exception:
-                LOGGER.exception(
-                    '(%s) Unhandled exception during execution of task %s',
-                    self._name,
-                    task_details)
+            with self._task_run_timer.time():
+                return_value = None
+                try:
+                    return_value = fn(*args, **kwargs)
+                # pylint: disable=broad-except
+                except Exception:
+                    LOGGER.exception(
+                        '(%s) Unhandled exception during execution of task %s',
+                        self._name,
+                        task_details)
 
-            end_time = time.time()
-            run_time = (end_time - start_time) * 1000.0
+                self._workers_in_use.dec()
 
-            self._workers_in_use.dec()
+                if self._trace:
+                    LOGGER.debug(
+                        '(%s) Finished task %s', self._name, task_details)
 
-            if self._trace:
-                LOGGER.debug(
-                    '(%s) Finished task %s', self._name, task_details)
-
-                LOGGER.debug(
-                    '(%s) Task \'%s\' took %0.3f ms',
-                    self._name,
-                    task_name,
-                    run_time)
-
-            return return_value
+                return return_value
 
         return super().submit(wrapper)
