@@ -90,7 +90,8 @@
 /sdk/go/bin/
 /sdk/examples/intkey_go/bin/
 /sdk/examples/intkey_rust/target/
-/sdk/examples/intkey_rust/Cargo.lock/
+/sdk/examples/intkey_rust/Cargo.lock
+/sdk/examples/intkey_rust/bin/
 /sdk/examples/xo_go/bin/
 /sdk/examples/noop_go/bin/
 /sdk/go/pkg/
