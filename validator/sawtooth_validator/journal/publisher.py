@@ -136,9 +136,10 @@ class _CandidateBlock(object):
         self._batch_injectors = batch_injectors
 
     def __del__(self):
-        # Cancel the scheduler if it is not complete
-        if not self._scheduler.complete(block=False):
-            self._scheduler.cancel()
+        self.cancel()
+
+    def cancel(self):
+        self._scheduler.cancel()
 
     @property
     def previous_block_id(self):
@@ -688,6 +689,9 @@ class BlockPublisher(object):
                                 'chain head arrives.')
 
                 self._chain_head = chain_head
+
+                if self._candidate_block:
+                    self._candidate_block.cancel()
 
                 self._candidate_block = None  # we need to make a new
                 # _CandidateBlock (if we can) since the block chain has updated
