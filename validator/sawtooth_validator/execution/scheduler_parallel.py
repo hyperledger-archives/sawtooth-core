@@ -774,8 +774,11 @@ class ParallelScheduler(Scheduler):
         for prior in self._batches[:index_of_batch_in_schedule]:
             number_of_txns_in_prior_batches += len(prior.transactions) - 1
 
-        txn_ids_in_order = [t.header_signature for t in batch.transactions]
-        txn_index = txn_ids_in_order.index(txn_id)
+        txn_index, _ = next(
+            (i, t)
+            for i, t in enumerate(batch.transactions)
+            if t.header_signature == txn_id)
+
         return number_of_txns_in_prior_batches + txn_index
 
     def _can_fail_fast(self, txn_id):
