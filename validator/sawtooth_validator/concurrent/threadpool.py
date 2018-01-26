@@ -15,7 +15,6 @@
 
 import logging
 import multiprocessing
-import time
 import os
 
 from concurrent.futures import ThreadPoolExecutor
@@ -60,12 +59,17 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
             self._task_run_timer = TimerWrapper(
                 metrics_registry.timer(
                     '{}-threadpool.task_run_time'.format(self._name)))
+            # Tracks how long tasks wait in the queue
+            self._task_time_in_queue_timer = TimerWrapper(
+                metrics_registry.timer(
+                    '{}-threadpool.task_time_in_queue'.format(self._name)))
         else:
             self._workers_already_in_use_gauge = GaugeWrapper()
             self._task_run_timer = TimerWrapper()
+            self._task_time_in_queue_timer = TimerWrapper()
 
     def submit(self, fn, *args, **kwargs):
-        submitted_time = time.time()
+        time_in_queue_ctx = self._task_time_in_queue_timer.time()
 
         try:
             task_name = fn.__qualname__
@@ -78,18 +82,12 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
             task_details = task_name
 
         def wrapper():
-            start_time = time.time()
-            time_in_queue = (start_time - submitted_time) * 1000.0
+            time_in_queue_ctx.stop()
 
             self._workers_already_in_use_gauge.set_value(
                 self._workers_in_use.get_and_inc())
 
             if self._trace:
-                LOGGER.debug(
-                    '(%s) Task \'%s\' in queue for %0.3f ms',
-                    self._name,
-                    task_name,
-                    time_in_queue)
                 LOGGER.debug(
                     '(%s) Executing task %s', self._name, task_details)
 
