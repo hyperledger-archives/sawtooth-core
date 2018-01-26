@@ -138,11 +138,17 @@ class Validator(object):
 
         # -- Setup Thread Pools -- #
         component_thread_pool = InstrumentedThreadPoolExecutor(
-            max_workers=10, name='Component')
+            max_workers=10,
+            name='Component',
+            metrics_registry=metrics_registry)
         network_thread_pool = InstrumentedThreadPoolExecutor(
-            max_workers=10, name='Network')
+            max_workers=10,
+            name='Network',
+            metrics_registry=metrics_registry)
         sig_pool = InstrumentedThreadPoolExecutor(
-            max_workers=3, name='Signature')
+            max_workers=3,
+            name='Signature',
+            metrics_registry=metrics_registry)
 
         # -- Setup Dispatchers -- #
         component_dispatcher = Dispatcher(metrics_registry=metrics_registry)

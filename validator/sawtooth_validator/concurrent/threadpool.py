@@ -21,13 +21,15 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 
 from sawtooth_validator.concurrent import atomic
+from sawtooth_validator.metrics.wrappers import GaugeWrapper
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
-    def __init__(self, max_workers=None, name='', trace=None):
+    def __init__(self, max_workers=None, name='',
+                 trace=None, metrics_registry=None):
         if trace is None:
             self._trace = 'SAWTOOTH_TRACE_LOGGING' in os.environ
         else:
@@ -48,6 +50,14 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
             self._max_workers = multiprocessing.cpu_count() * 5
         super().__init__(max_workers)
 
+        if metrics_registry:
+            # Tracks how many workers are already in use
+            self._workers_already_in_use_gauge = GaugeWrapper(
+                metrics_registry.gauge(
+                    '{}-threadpool.workers_already_in_use'.format(self._name)))
+        else:
+            self._workers_already_in_use_gauge = GaugeWrapper()
+
     def submit(self, fn, *args, **kwargs):
         submitted_time = time.time()
 
@@ -63,8 +73,10 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
 
         def wrapper():
             start_time = time.time()
-            workers_already_in_use = self._workers_in_use.get_and_inc()
             time_in_queue = (start_time - submitted_time) * 1000.0
+
+            self._workers_already_in_use_gauge.set_value(
+                self._workers_in_use.get_and_inc())
 
             if self._trace:
                 LOGGER.debug(
@@ -72,11 +84,6 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
                     self._name,
                     task_name,
                     time_in_queue)
-                LOGGER.debug(
-                    '(%s) Workers already in use %s/%s',
-                    self._name,
-                    workers_already_in_use,
-                    self._max_workers)
                 LOGGER.debug(
                     '(%s) Executing task %s', self._name, task_details)
 
