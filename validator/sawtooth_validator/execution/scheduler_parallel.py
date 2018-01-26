@@ -694,10 +694,6 @@ class ParallelScheduler(Scheduler):
     def _is_outstanding(self, txn_id):
         return txn_id in self._outstanding
 
-    def _txn_result_is_invalid(self, sig):
-        return sig in self._txn_results and \
-            not self._txn_results[sig].is_valid
-
     def _txn_is_in_valid_batch(self, txn_id):
         """Returns whether the transaction is in a valid batch.
 
@@ -709,10 +705,13 @@ class ParallelScheduler(Scheduler):
         """
 
         batch = self._batches_by_txn_id[txn_id]
-        for txn in batch.transactions:
-            if self._txn_result_is_invalid(sig=txn.header_signature):
-                return False
-        return True
+
+        # Return whether every transaction in the batch with a
+        # transaction result is valid
+        return all(
+            self._txn_results[sig].is_valid
+            for sig in set(self._txn_results).intersection(
+                (txn.header_signature for txn in batch.transactions)))
 
     def _predecessor_not_in_chain(self,
                                   prior_txn_id,
