@@ -49,9 +49,9 @@ class Completer(object):
     def __init__(self,
                  block_store,
                  gossip,
-                 cache_keep_time=300,
+                 cache_keep_time=1200,
                  cache_purge_frequency=30,
-                 requested_keep_time=1200):
+                 requested_keep_time=300):
         """
         :param block_store (dictionary) The block store shared with the journal
         :param gossip (gossip.Gossip) Broadcasts block and batch request to
@@ -60,6 +60,11 @@ class Completer(object):
             TimedCaches.
         :param cache_purge_frequency (float) Time between purging the
             TimedCaches.
+        :param requested_keep_time (float) Time in seconds to keep the ids
+            of requested objects. WARNING this time should always be less than
+            cache_keep_time or the validator can get into a state where it
+            fails to make progress because it thinks it has already requested
+            something that it is missing.
         """
         self.gossip = gossip
         self.batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
