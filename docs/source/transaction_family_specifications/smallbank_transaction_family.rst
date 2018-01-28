@@ -1,6 +1,6 @@
-******************************************
-Smallbank Transaction Family Specification
-******************************************
+****************************
+Smallbank Transaction Family
+****************************
 
 Overview
 ========
