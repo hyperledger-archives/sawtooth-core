@@ -1,7 +1,7 @@
 
-************
-Architecture
-************
+************************
+Architecture Description
+************************
 
 .. toctree::
    :maxdepth: 2
