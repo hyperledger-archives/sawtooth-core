@@ -1,6 +1,6 @@
-*****************************************
-Identity Transaction Family Specification
-*****************************************
+***************************
+Identity Transaction Family
+***************************
 
 Overview
 =========

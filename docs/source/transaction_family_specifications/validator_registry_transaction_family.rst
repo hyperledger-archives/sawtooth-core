@@ -1,6 +1,6 @@
-***************************************************
-Validator Registry Transaction Family Specification
-***************************************************
+*************************************
+Validator Registry Transaction Family
+*************************************
 
 Overview
 =========
