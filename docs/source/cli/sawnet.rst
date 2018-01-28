@@ -15,16 +15,12 @@
 
 .. _sawnet-reference-label:
 
-*****************************
-Sawtooth Network CLI (sawnet)
-*****************************
-
-The Sawtooth Network CLI, ``sawnet`` is used for interacting with an entire
-network of Sawtooth nodes.
-
+******
 sawnet
-======
+******
 
+The ``sawnet`` command is used to interact with an entire
+network of Sawtooth nodes.
 
 .. literalinclude:: output/sawnet_usage.out
    :language: console
@@ -34,7 +30,8 @@ sawnet
 sawnet compare-chains
 =====================
 
-The ``sawnet compare-chains`` compares chains across the nodes given.
+The ``sawnet compare-chains`` subcommand compares chains across the specified
+nodes.
 
 .. literalinclude:: output/sawnet_compare-chains_usage.out
    :language: console

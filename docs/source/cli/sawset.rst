@@ -15,14 +15,11 @@
 
 .. _sawset-reference-label:
 
-****************************
-Sawtooth Config CLI (sawset)
-****************************
-
-The Sawtooth Config CLI, ``sawset``, is used to work with settings proposals.
-
+******
 sawset
-======
+******
+
+The ``sawset`` command is used to work with settings proposals.
 
 Sawtooth supports storing settings on-chain. The ``sawset``
 subcommands can be used to view the current proposals, create

@@ -15,17 +15,14 @@
 
 .. _poet-cli-reference-label:
 
-********
-PoET CLI
-********
+****
+poet
+****
 
-The PoET CLI initializes the proof-of-elapsed-time consensus mechanism
-for Sawtooth by generating enclave setup information and creating a
+The ``poet`` command initializes the Proof of Elapsed Time (PoET) consensus
+mechanism for Sawtooth by generating enclave setup information and creating a
 Batch for the genesis block. For more information, see
 :doc:`/architecture/poet`.
-
-poet
-====
 
 The ``poet`` command provides subcommands for configuring a node to use
 Sawtooth with the PoET consensus method.
