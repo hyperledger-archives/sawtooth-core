@@ -15,14 +15,14 @@
 
 .. _sawtooth-cli-reference-label:
 
-************
-Sawtooth CLI
-************
+********
+sawtooth
+********
 
-The Sawtooth CLI is the usual way to interact with validators or
+The ``sawtooth`` command is the usual way to interact with validators or
 validator networks.
 
-This CLI has a multi-level structure. It starts with the base call to
+This command has a multi-level structure. It starts with the base call to
 ``sawtooth``. Next is a top-level subcommand such as ``block`` or ``state``.
 Each top-level subcommand has additional subcommands that specify the
 operation to perform, such as ``list`` or ``create``.  The subcommands have
@@ -31,12 +31,6 @@ options and arguments that control their behavior. For example:
 .. code-block:: console
 
   $ sawtooth state list --format csv
-
-sawtooth
-========
-
-The ``sawtooth`` command provides a set of subcommands that are used to
-configure, manage, and interact with the components of Sawtooth.
 
 .. literalinclude:: output/sawtooth_usage.out
    :language: console

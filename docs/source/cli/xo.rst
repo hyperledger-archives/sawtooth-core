@@ -15,13 +15,15 @@
 
 .. _xo-cli-reference-label:
 
-******
-XO CLI
-******
+**
+xo
+**
 
-The XO CLI demonstrates an example client that uses the XO transaction family
-to play a simple game of Tic-tac-toe (also known as Noughts and Crosses,
-or X's and O's). This CLI handles the construction and submission of
+The ``xo`` command starts the XO transaction processor.
+
+This command demonstrates an example client that uses the XO transaction
+family to play a simple game of Tic-tac-toe (also known as Noughts and Crosses,
+or X's and O's). This command handles the construction and submission of
 transactions to a running validator via the URL of the validator's REST API.
 
 Before playing a game, you must start a validator, the XO transaction processor,and the REST API. The XO client sends requests to update and query the
@@ -29,9 +31,6 @@ blockchain to the URL of the REST API (by default, ``http://127.0.0.1:8080``).
 
 For more information on requirements and game rules, see
 :doc:`../app_developers_guide/intro_xo_transaction_family`.
-
-xo
-==
 
 The ``xo`` command provides subcommands for playing XO on the command line.
 

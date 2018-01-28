@@ -15,15 +15,12 @@
 
 .. _intkey-cli-reference-label:
 
-***********************
-IntegerKey CLI (intkey)
-***********************
-
-The IntegerKey CLI, ``intkey``, provides functions that can be used to test
-deployed ledgers.
-
+******
 intkey
-======
+******
+
+The ``intkey`` command starts the IntegerKey transaction processor,
+which provides functions that can be used to test deployed ledgers.
 
 The ``intkey`` command provides subcommands to set, increment, and
 decrement the value of entries stored in a state dictionary.
