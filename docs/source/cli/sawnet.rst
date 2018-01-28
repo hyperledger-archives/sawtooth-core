@@ -15,16 +15,12 @@
 
 .. _sawnet-reference-label:
 
-*****************************
-Sawtooth Network CLI (sawnet)
-*****************************
-
-The Sawtooth Network CLI, ``sawnet`` is used for interacting with an entire
-network of Sawtooth nodes.
-
+******
 sawnet
-======
+******
 
+The ``sawnet`` command is used to interact with an entire
+network of Sawtooth nodes.
 
 .. literalinclude:: output/sawnet_usage.out
    :language: console
@@ -34,7 +30,8 @@ sawnet
 sawnet compare-chains
 =====================
 
-The ``sawnet compare-chains`` compares chains across the nodes given.
+The ``sawnet compare-chains`` subcommand compares chains across the specified
+nodes.
 
 .. literalinclude:: output/sawnet_compare-chains_usage.out
    :language: console
@@ -50,8 +47,7 @@ sawnet peers
 sawnet peers list
 =================
 
-The ``sawnet peers list`` command displays the peers of the nodes
-given.
+The ``sawnet peers list`` subcommand displays the peers of the specified nodes.
 
 .. literalinclude:: output/sawnet_peers_list_usage.out
    :language: console
@@ -60,8 +56,8 @@ given.
 sawnet peers graph
 ==================
 
-The ``sawnet peers graph`` command outputs a file called ``peers.dot``
-describing the peering arrangement of the nodes given.
+The ``sawnet peers graph`` subcommand displays a file called ``peers.dot``
+that describes the peering arrangement of the specified nodes.
 
 .. literalinclude:: output/sawnet_peers_graph_usage.out
    :language: console

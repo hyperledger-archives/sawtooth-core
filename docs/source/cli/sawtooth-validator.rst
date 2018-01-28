@@ -15,12 +15,11 @@
 
 .. _validator-cli-reference-label:
 
-**********************************
-Validator CLI (sawtooth-validator)
-**********************************
+******************
+sawtooth-validator
+******************
 
-The validator CLI, ``sawtooth-validator``, controls the
-behavior of the validator.
+The ``sawtooth-validator`` command controls the behavior of the validator.
 
 A validator is the component ultimately responsible for validating
 batches of transactions, combining them into blocks, maintaining
@@ -29,11 +28,7 @@ clients, other validators, and transaction processors. Much of the
 actual validation is delegated to other components, such as
 transaction processors and the active consensus module.
 
-sawtooth-validator
-==================
-
-The ``sawtooth-validator`` command starts the validator. Note the
-following options which provide several ways to configure the
+Note the following options, which provide several ways to configure the
 validator.
 
 - Use the ``--peering`` option to set the peering type to ``dynamic``
