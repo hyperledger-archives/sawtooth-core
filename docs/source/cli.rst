@@ -15,12 +15,12 @@
 
 .. _cli-reference-label:
 
-*************
-CLI Reference
-*************
+*********************
+CLI Command Reference
+*********************
 
-The Sawtooth command-line interface provides a set of commands to interact with
-Sawtooth services.
+The Sawtooth command-line interface (CLI) provides a set of commands to interact
+with Sawtooth services.
 
 This chapter shows the available options and arguments for each command and
 subcommand. The synopsis for each command shows its parameters and their usage.
