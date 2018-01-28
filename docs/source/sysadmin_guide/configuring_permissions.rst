@@ -1,6 +1,6 @@
-*************
-Permissioning
-*************
+***********************
+Configuring Permissions
+***********************
 
 Transactor Permissioning
 ========================

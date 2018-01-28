@@ -190,7 +190,8 @@ The ``validator.toml`` configuration file has the following options:
     The ``default`` role cannot be set in the configuration file. Use the
     ``sawtooth identity`` CLI to change this on-chain-only setting.
 
-  See :doc:`../permissioning` for more information on roles and permissions.
+  See :doc:`../configuring_permissions` for more information on roles and
+  permissions.
 
 - ``minimum_peer_connectivity`` = `min`
 
