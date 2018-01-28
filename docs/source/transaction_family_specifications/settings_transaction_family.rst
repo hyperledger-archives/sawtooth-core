@@ -1,6 +1,6 @@
-*****************************************
-Settings Transaction Family Specification
-*****************************************
+***************************
+Settings Transaction Family
+***************************
 
 Overview
 =========

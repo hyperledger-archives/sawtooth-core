@@ -1,6 +1,6 @@
-******************************************
-BlockInfo Transaction Family Specification
-******************************************
+****************************
+BlockInfo Transaction Family
+****************************
 
 Overview
 ========
