@@ -15,8 +15,11 @@
 
 import logging
 from threading import RLock
+import queue
 from collections import deque
+from enum import Enum
 
+from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
@@ -32,6 +35,40 @@ from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 LOGGER = logging.getLogger(__name__)
+
+
+class _ItemType(Enum):
+    BLOCK = 0
+    BATCH = 1
+
+
+class _CompleterThread(InstrumentedThread):
+    def __init__(self, completer, item_queue):
+        super().__init__(name='_ChainThread')
+        self._completer = completer
+        self._queue = item_queue
+        self._exit = False
+
+    def run(self):
+        try:
+            while True:
+                try:
+                    (item_type, item) = self._queue.get(timeout=1)
+                    if item_type == _ItemType.BLOCK:
+                        self._completer.add_block(item)
+                    elif item_type == _ItemType.BATCH:
+                        self._completer.add_batch(item)
+                except queue.Empty:
+                    pass
+
+                if self._exit:
+                    return
+        # pylint: disable=broad-except
+        except Exception:
+            LOGGER.exception("_CompleterThread exited with error")
+
+    def stop(self):
+        self._exit = True
 
 
 class Completer(object):
@@ -81,10 +118,25 @@ class Completer(object):
                                              cache_purge_frequency)
         self._requested = TimedCache(requested_keep_time,
                                      cache_purge_frequency)
+
+        self._completer_thread = None
+        self._queue = queue.Queue()
+
         self._on_block_received = None
         self._on_batch_received = None
         self._has_block = None
         self.lock = RLock()
+
+    def start(self):
+        self._completer_thread = _CompleterThread(
+            completer=self,
+            item_queue=self._queue)
+        self._completer_thread.start()
+
+    def stop(self):
+        if self._completer_thread is not None:
+            self._completer_thread.stop()
+            self._completer_thread = None
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to
@@ -284,6 +336,9 @@ class Completer(object):
     def set_chain_has_block(self, set_chain_has_block):
         self._has_block = set_chain_has_block
 
+    def queue_block(self, block):
+        self._queue.put((_ItemType.BLOCK, block))
+
     def add_block(self, block):
         with self.lock:
             blkw = BlockWrapper(block)
@@ -292,6 +347,9 @@ class Completer(object):
                 self.block_cache[block.header_signature] = blkw
                 self._on_block_received(blkw)
                 self._process_incomplete_blocks(block.header_signature)
+
+    def queue_batch(self, batch):
+        self._queue.put((_ItemType.BATCH, batch))
 
     def add_batch(self, batch):
         with self.lock:
@@ -365,7 +423,7 @@ class CompleterBatchListBroadcastHandler(Handler):
             if batch.trace:
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
-            self._completer.add_batch(batch)
+            self._completer.queue_batch(batch)
             self._gossip.broadcast_batch(batch)
         return HandlerResult(status=HandlerStatus.PASS)
 
@@ -380,11 +438,11 @@ class CompleterGossipHandler(Handler):
         if gossip_message.content_type == network_pb2.GossipMessage.BLOCK:
             block = Block()
             block.ParseFromString(gossip_message.content)
-            self._completer.add_block(block)
+            self._completer.queue_block(block)
         elif gossip_message.content_type == network_pb2.GossipMessage.BATCH:
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
-            self._completer.add_batch(batch)
+            self._completer.queue_batch(batch)
         return HandlerResult(status=HandlerStatus.PASS)
 
 
@@ -398,7 +456,7 @@ class CompleterGossipBlockResponseHandler(Handler):
 
         block = Block()
         block.ParseFromString(block_response_message.content)
-        self._completer.add_block(block)
+        self._completer.queue_block(block)
 
         return HandlerResult(status=HandlerStatus.PASS)
 
@@ -413,6 +471,6 @@ class CompleterGossipBatchResponseHandler(Handler):
 
         batch = Batch()
         batch.ParseFromString(batch_response_message.content)
-        self._completer.add_batch(batch)
+        self._completer.queue_batch(batch)
 
         return HandlerResult(status=HandlerStatus.PASS)

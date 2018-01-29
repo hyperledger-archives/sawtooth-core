@@ -338,6 +338,7 @@ class Validator(object):
         self._genesis_controller = genesis_controller
         self._gossip = gossip
 
+        self._completer = completer
         self._block_publisher = block_publisher
         self._chain_controller = chain_controller
 
@@ -354,6 +355,7 @@ class Validator(object):
         self._network_service.start()
 
         self._gossip.start()
+        self._completer.start()
         self._block_publisher.start()
         self._chain_controller.start()
 
@@ -383,6 +385,7 @@ class Validator(object):
 
         self._block_publisher.stop()
         self._chain_controller.stop()
+        self._completer.stop()
 
         threads = threading.enumerate()
 
