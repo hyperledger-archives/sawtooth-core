@@ -23,6 +23,7 @@ from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.block_validator import BlockValidationError
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
@@ -428,20 +429,22 @@ class ChainController(object):
                         NULL_BLOCK_IDENTIFIER,
                         state_view)
 
-                valid = self._block_validator.validate_block(
-                    block, consensus_module)
-                if valid:
-                    if chain_id is None:
-                        self._chain_id_manager.save_block_chain_id(
-                            block.identifier)
-                    self._block_store.update_chain([block])
-                    self._chain_head = block
-                    self._notify_on_chain_updated(self._chain_head)
-                else:
+                try:
+                    self._block_validator.validate_block(
+                        block, consensus_module)
+                except BlockValidationError as err:
                     LOGGER.warning(
-                        "The genesis block is not valid: Cannot "
-                        "set chain head: %s", block)
+                        'Cannot set chain head; '
+                        'genesis block %s is not valid: %s',
+                        block, err)
+                    return
 
+                if chain_id is None:
+                    self._chain_id_manager.save_block_chain_id(
+                        block.identifier)
+                self._block_store.update_chain([block])
+                self._chain_head = block
+                self._notify_on_chain_updated(self._chain_head)
         else:
             LOGGER.warning("Cannot set initial chain head, this is not a "
                            "genesis block: %s", block)
