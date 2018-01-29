@@ -104,6 +104,7 @@ node ('master') {
             archiveArtifacts artifacts: 'build/debs/cxx/*.deb'
             archiveArtifacts artifacts: 'build/debs/go/*.deb'
             archiveArtifacts artifacts: 'build/debs/python/*.deb'
+            archiveArtifacts artifacts: 'build/debs/rust/*.deb'
             archiveArtifacts artifacts: 'build/bandit.html'
             archiveArtifacts artifacts: 'coverage/html/*'
             archiveArtifacts artifacts: 'docs/build/html/**, docs/build/latex/*.pdf'
