@@ -43,7 +43,7 @@ bytes and getting the private key's associated public key.
 
     context = create_context('secp256k1')
     private_key = context.new_random_private_key()
-    signer = CryptoFactory(context).new_signer(private_key)
+    signer = new CryptoFactory(context).new_signer(private_key)
 
 
 {% endif %}
@@ -295,7 +295,7 @@ transactions that make up the batch.
         header: batchHeaderBytes,
         headerSignature: signature,
         transactions: transactions
-    }
+    })
 
 {% else %}
 
