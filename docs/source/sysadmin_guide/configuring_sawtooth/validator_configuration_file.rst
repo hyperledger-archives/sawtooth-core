@@ -188,7 +188,7 @@ The ``validator.toml`` configuration file has the following options:
   .. Note::
 
     The ``default`` role cannot be set in the configuration file. Use the
-    ``sawtooth identity`` CLI to change this on-chain-only setting.
+    ``sawtooth identity`` command to change this on-chain-only setting.
 
   See :doc:`../configuring_permissions` for more information on roles and
   permissions.
