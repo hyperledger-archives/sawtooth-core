@@ -1,22 +1,20 @@
-*******************
-Join the Discussion
-*******************
-
-.. _chat:
+**********************
+Joining the Discussion
+**********************
 
 Chat
 ====
 
-Hyperledger Sawtooth RocketChat is the place to go for real-time chat about everything from quick help to
-involved discussion.
+Hyperledger Sawtooth RocketChat is the place to go for real-time chat about
+everything from quick help to involved discussions.
 
-Hyperledger Sawtooth discussions are located at:
+For general Hyperledger Sawtooth discussions:
 
-	`#sawtooth <https://chat.hyperledger.org/channel/sawtooth>`_
+  `#sawtooth <https://chat.hyperledger.org/channel/sawtooth>`_
 
-Hyperledger Sawtooth Consensus discussions are located at:
-	
-	`#sawtooth-consensus <https://chat.hyperledger.org/channel/sawtooth-consensus>`_
+For Hyperledger Sawtooth Consensus discussions:
+
+  `#sawtooth-consensus <https://chat.hyperledger.org/channel/sawtooth-consensus>`_
 
 
 Mailing Lists
@@ -24,7 +22,7 @@ Mailing Lists
 
 The Hyperledger Sawtooth mailing list is hosted by the Hyperledger Project:
 
-   `hyperledger-stl Mailing List <http://lists.hyperledger.org/mailman/listinfo/hyperledger-stl>`_
+  `hyperledger-stl Mailing List <http://lists.hyperledger.org/mailman/listinfo/hyperledger-stl>`_
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License
