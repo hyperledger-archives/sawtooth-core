@@ -16,7 +16,7 @@ the following tasks:
 * Launching and connecting to an EC2 instance running Sawtooth
 * Starting a Sawtooth validator and related components
 * Submitting transactions to the REST API
-* Viewing blocks, transactions, and state with the sawtooth CLI tool
+* Viewing blocks, transactions, and state with Sawtooth commands
 
 Upon completion of this section, you will be prepared for subsequent sections
 that describe application development topics, such as implementing business
@@ -73,13 +73,13 @@ to log in to the instance you just launched. Use the username
 
 Once you've successfully logged in, continue to the next section.
 
-Using Sawtooth with the CLI Commands
-====================================
+Using Sawtooth Commands
+=======================
 
 Creating and Submitting Transactions with intkey
 ------------------------------------------------
 
-The ``intkey`` CLI command is provided to create sample transactions of the
+The ``intkey`` command is provided to create sample transactions of the
 intkey (IntegerKey) transaction type for testing purposes. Using it you will
 be able to prepare batches of intkey transactions that *set* a few keys to
 random values, then randomly *inc* (increment) and *dec* (decrement) those
@@ -157,8 +157,8 @@ command.
 
 .. note::
 
-  The sawtooth CLI provides help for all subcommands. For example, to get help
-  for the ``block`` subcommand, enter the command ``sawtooth block -h``.
+  The ``sawtooth`` command provides help for all subcommands. For example, to
+  get help for the ``block`` subcommand, enter the command ``sawtooth block -h``.
 
 Viewing the List of Blocks
 ++++++++++++++++++++++++++

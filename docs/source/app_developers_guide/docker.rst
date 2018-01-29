@@ -9,7 +9,7 @@ Sawtooth concepts necessary for application development, and walks through
 performing the following tasks:
 
 * Submit transactions to the REST API
-* View blocks, transactions, and state with the sawtooth CLI tool
+* View blocks, transactions, and state with Sawtooth commands
 * Start and stop validators and transaction processors
 
 
@@ -83,7 +83,7 @@ containers:
 * A single validator using dev-mode consensus
 * A REST API connected to the validator
 * The Settings, IntegerKey, and XO transaction processors
-* A client container for running the CLI commands
+* A client container for running Sawtooth commands
 
 The Docker Compose file also specifies the container images to download from
 Docker Hub and the network settings needed for all the containers to communicate
@@ -190,7 +190,7 @@ After shutdown has completed, run this command:
 Logging Into The Client Container
 =================================
 
-The client container is used to run sawtooth CLI commands, which is the usual
+The client container is used to run Sawtooth commands, which is the usual
 way to interact with validators or validator networks.
 
 Log into the client container by opening a new terminal window and
@@ -264,13 +264,13 @@ If the validator process or the validator container is not running, the ``curl``
 command will time out or return nothing.
 
 
-Using Sawtooth with CLI Commands
-================================
+Using Sawtooth Commands
+=======================
 
 Creating and Submitting Transactions with intkey
 ------------------------------------------------
 
-The ``intkey`` CLI command is provided to create sample transactions of the
+The ``intkey`` command is provided to create sample transactions of the
 intkey (IntegerKey) transaction type for testing purposes. This step uses
 ``intkey`` to prepare batches of intkey transactions which set a few keys
 to random values, then randomly increment and decrement those values. These
@@ -325,8 +325,8 @@ You can view the blocks stored in the blockchain using the
 
 .. note::
 
-  The sawtooth CLI provides help for all subcommands. For example, to get help
-  for the ``block`` subcommand, enter the command ``sawtooth block -h``.
+  The ``sawtooth`` command provides help for all subcommands. For example, to
+  get help for the ``block`` subcommand, enter the command ``sawtooth block -h``.
 
 Viewing the List of Blocks
 ++++++++++++++++++++++++++
@@ -482,7 +482,7 @@ The Client Container
 --------------------
 
 * Submits transactions
-* Runs ``sawtooth`` CLI commands
+* Runs Sawtooth commands
 * Container name: ``sawtooth-shell-default``
 
 No Sawtooth components are automatically started in this container.
@@ -664,7 +664,7 @@ commands.
   The config command needs to use a key generated in the validator container.
   Thus, you must open a terminal window running in the validator container,
   rather than the client container (for the following command only).
-  Run the following command from your host machine's CLI.
+  Run the following command on your host machine:
 
 .. code-block:: console
 

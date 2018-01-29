@@ -357,8 +357,8 @@ Merkle-Radix tree (global state) by using the ``sawtooth block`` command.
 
 .. note::
 
-  The ``sawtooth`` CLI provides help for all subcommands. For example, to get
-  help for the ``block`` subcommand, enter the command ``sawtooth block -h``.
+  The ``sawtooth`` command provides help for all subcommands. For example, to
+  get help for the ``block`` subcommand, enter the command ``sawtooth block -h``.
 
 Viewing the List of Blocks
 --------------------------
