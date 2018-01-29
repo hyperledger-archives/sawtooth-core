@@ -190,8 +190,8 @@ Real-world Application Examples
 
   * XO: Demonstrates how to construct basic transactions by playing
     `Tic-tac-toe <https://en.wikipedia.org/wiki/Tic-tac-toe>`_. The
-    XO transaction family includes create and take transactions, with an XO
-    command-line interface (CLI) that allows two participants to play the game.
+    XO transaction family includes create and take transactions, with an ``xo``
+    command that allows two participants to play the game.
     For more information, see
     :doc:`/app_developers_guide/intro_xo_transaction_family`.
 
