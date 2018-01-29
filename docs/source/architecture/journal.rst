@@ -420,12 +420,12 @@ and specifies the appropriate settings:
 .. code-block:: bash
 
         sawset proposal create \
-          -k <signing-key-file>
+          -k <signing-key-file> \
           -o sawset.batch \
           sawtooth.consensus.algorithm=poet \
           sawtooth.poet.initial_wait_timer=x \
           sawtooth.poet.target_wait_time=x \
-          sawtooth.poet.population_estimate_sample_size=x \
+          sawtooth.poet.population_estimate_sample_size=x
 	  sawadm genesis \
           sawset.batch
 
