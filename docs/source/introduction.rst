@@ -48,7 +48,7 @@ provide "adversarial trust" among all participants in a blockchain network.
 Distinctive Features of Sawtooth
 ================================
 
-Separation between the application level and the core system
+Separation Between the Application Level and the Core System
 ------------------------------------------------------------
 
 Sawtooth makes it easy to develop and deploy an application by providing a
@@ -73,7 +73,7 @@ creation of new contract languages, including Python, JavaScript, Go, C++,
 Java, and Rust. A provided REST API simplifies client development by adapting
 validator communication to standard HTTP/JSON.
 
-Private networks with the Sawtooth permissioning features
+Private Networks with the Sawtooth Permissioning Features
 ---------------------------------------------------------
 
 Sawtooth is built to solve the challenges of permissioned (private) networks.
@@ -85,7 +85,7 @@ The blockchain stores the settings that specify the permissions, such as roles
 and identities, so that all participants in the network can access this
 information.
 
-Parallel transaction execution
+Parallel Transaction Execution
 ------------------------------
 
 Most blockchains require serial transaction execution in order to guarantee
@@ -100,7 +100,7 @@ double-spending even with multiple modifications to the same state. Parallel
 scheduling provides a substantial potential increase in performance over
 serial execution.
 
-Event system
+Event System
 ------------
 
 Hyperledger Sawtooth supports creating and broadcasting events. This allows
@@ -116,7 +116,7 @@ applications to:
 
 Subscriptions are submitted and serviced over a ZMQ Socket.
 
-Ethereum contract compatibility with Seth
+Ethereum Contract Compatibility with Seth
 -----------------------------------------
 
 The Sawtooth-Ethereum integration project, Seth, extends the interoperability
@@ -155,7 +155,7 @@ Sawtooth currently supports these consensus implementations:
     * Dev mode, a simplified random-leader algorithm that is useful for
       development and testing.
 
-Sample transaction families
+Sample Transaction Families
 ---------------------------
 
 In Sawtooth, the data model and transaction language are implemented
