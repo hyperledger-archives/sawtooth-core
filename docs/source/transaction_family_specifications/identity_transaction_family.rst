@@ -29,8 +29,7 @@ could be referenced by multiple roles. This way if the policy is updated, all
 roles referencing the policy are updated as well. An example role might be named
 "transactor", and references the policy that controls who is allowed to submit
 batches and transactions on the network. This example is further described in
-:doc:`transactor permissioning
-<../sysadmin_guide/permissioning>`.
+:doc:`Transactor Permissioning <../sysadmin_guide/configuring_permissions>`.
 
 .. note::
   This transaction family will serve as a reference specification

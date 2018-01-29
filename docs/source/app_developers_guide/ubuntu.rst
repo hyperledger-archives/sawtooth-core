@@ -163,9 +163,9 @@ use `-v` or omit the flag.
 
 By default, the validator listens on the loopback interface for both network
 and component communications. To change the interface and port used, the
-`--bind` flag can be used. See :doc:`/cli/validator` for more information
-on the available flags.  The following command is equivalent to the default
-behavior::
+`--bind` flag can be used. See :doc:`/cli/sawtooth-validator` for more
+information on the available flags.  The following command is equivalent to the
+default behavior::
 
     sudo -u sawtooth sawtooth-validator -vv --bind network:tcp://127.0.0.1:8800 --bind component:tcp://127.0.0.1:4004
 
