@@ -487,7 +487,7 @@ sophisticated, `BSON <http://bsonspec.org/>`_.
 Implementing Game Play
 ======================
 
-Next, describe how to play tic-tac-toe. The details here are fairly
+This tutorial does not include example code for playing tic-tac-toe. The details are fairly
 straightforward, and the functionality could certainly be implemented in
 different ways.
 

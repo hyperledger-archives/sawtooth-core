@@ -5,7 +5,7 @@ Settings Transaction Family
 Overview
 =========
 
-The settings transaction family provides a methodology for storing on-chain
+The Settings transaction family provides a methodology for storing on-chain
 configuration settings.
 
 The settings stored in state as a result of this transaction family play a
@@ -40,7 +40,7 @@ State
 =====
 
 This section describes in detail how settings are stored and addressed using
-the settings transaction family.
+the Settings transaction family.
 
 The setting data consists of setting/value pairs. A setting is the name for the
 item of configuration data. The value is the data in the form of a string.
@@ -58,7 +58,7 @@ sawtooth.validator.max_transactions_per_block 1000
 ============================================= ============
 
 
-The settings transaction family uses the following settings for its own configuration:
+The Settings transaction family uses the following settings for its own configuration:
 
 +-------------------------------------------+------------------------------------------------------------------------------+
 | Setting (Settings)                        | Value Description                                                            |
