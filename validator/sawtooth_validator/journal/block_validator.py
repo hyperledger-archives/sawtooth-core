@@ -32,12 +32,10 @@ from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 LOGGER = logging.getLogger(__name__)
 
 
-class BlockValidationAborted(Exception):
+class BlockValidationError(Exception):
     """
-    Indication that the validation of this fork has terminated for an
-    expected(handled) case and that the processing should exit.
+    Indication that an error has occurred during block validation.
     """
-    pass
 
 
 class ChainHeadUpdated(Exception):
@@ -387,7 +385,7 @@ class BlockValidator(object):
             last block in the shorter chain. Ordered newest to oldest.
 
         Raises:
-            BlockValidationAborted
+            BlockValidationError
                 The block is missing a predecessor. Note that normally this
                 shouldn't happen because of the completer."""
         fork_diff = []
@@ -411,7 +409,7 @@ class BlockValidator(object):
                 # as invalid.
                 for blk in fork_diff:
                     blk.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
+                raise BlockValidationError()
 
         return blk, fork_diff
 
@@ -430,7 +428,7 @@ class BlockValidator(object):
                     cur_blkw, new_blkw)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
+                raise BlockValidationError()
 
             new_chain.append(new_blkw)
             try:
@@ -442,7 +440,7 @@ class BlockValidator(object):
                     new_blkw.previous_block_id)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationAborted()
+                raise BlockValidationError()
 
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
@@ -582,7 +580,7 @@ class BlockValidator(object):
             callback(commit_new_chain, result)
             LOGGER.info("Finished block validation of: %s", block)
 
-        except BlockValidationAborted:
+        except BlockValidationError:
             callback(False, result)
             return
         except ChainHeadUpdated:
