@@ -25,6 +25,9 @@ message DisconnectMessage {
 // The registration request from a peer to the validator
 message PeerRegisterRequest {
     string endpoint = 1;
+    // The current version of the network protocol that is being used by the
+    // sender.  This version is an increasing value.
+    uint32 protocol_version = 2;
 }
 
 // The unregistration request from a peer to the validator
