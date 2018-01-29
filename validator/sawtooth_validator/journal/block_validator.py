@@ -421,7 +421,9 @@ class BlockValidator(object):
                 # as invalid.
                 for blk in fork_diff:
                     blk.status = BlockStatus.Invalid
-                raise BlockValidationError()
+                raise BlockValidationError(
+                    'Failed to build fork diff: block {} missing predecessor'
+                    .format(blk))
 
         return blk, fork_diff
 
@@ -435,24 +437,21 @@ class BlockValidator(object):
             if (cur_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER
                     or new_blkw.previous_block_id == NULL_BLOCK_IDENTIFIER):
                 # We are at a genesis block and the blocks are not the same
-                LOGGER.info(
-                    "Block rejected due to wrong genesis: %s %s",
-                    cur_blkw, new_blkw)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationError()
+                raise BlockValidationError(
+                    'Block {} rejected due to wrong genesis {}'.format(
+                        cur_blkw, new_blkw))
 
             new_chain.append(new_blkw)
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
-                LOGGER.info(
-                    "Block %s rejected due to missing predecessor %s",
-                    new_blkw,
-                    new_blkw.previous_block_id)
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationError()
+                raise BlockValidationError(
+                    'Block {} rejected due to missing predecessor {}'.format(
+                        new_blkw, new_blkw.previous_block_id))
 
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
@@ -516,22 +515,27 @@ class BlockValidator(object):
             current_block = chain_head
             new_block = block
 
-            # Get all the blocks since the greatest common height from the
-            # longer chain.
-            if self._compare_chain_height(current_block, new_block):
-                current_block, result.current_chain =\
-                    self._build_fork_diff_to_common_height(
-                        current_block, new_block)
-            else:
-                new_block, result.new_chain =\
-                    self._build_fork_diff_to_common_height(
-                        new_block, current_block)
+            try:
+                # Get all the blocks since the greatest common height from the
+                # longer chain.
+                if self._compare_chain_height(current_block, new_block):
+                    current_block, result.current_chain =\
+                        self._build_fork_diff_to_common_height(
+                            current_block, new_block)
+                else:
+                    new_block, result.new_chain =\
+                        self._build_fork_diff_to_common_height(
+                            new_block, current_block)
 
-            # Add blocks to the two chains until a common ancestor is found
-            # or raise an exception if no common ancestor is found
-            self._extend_fork_diff_to_common_ancestor(
-                new_block, current_block,
-                result.new_chain, result.current_chain)
+                # Add blocks to the two chains until a common ancestor is found
+                # or raise an exception if no common ancestor is found
+                self._extend_fork_diff_to_common_ancestor(
+                    new_block, current_block,
+                    result.new_chain, result.current_chain)
+            except BlockValidationError as err:
+                LOGGER.warning('%s', err)
+                callback(False, result)
+                return
 
             valid = True
             for blk in reversed(result.new_chain):
@@ -594,9 +598,6 @@ class BlockValidator(object):
             callback(commit_new_chain, result)
             LOGGER.info("Finished block validation of: %s", block)
 
-        except BlockValidationError:
-            callback(False, result)
-            return
         except ChainHeadUpdated:
             callback(False, result)
             return
