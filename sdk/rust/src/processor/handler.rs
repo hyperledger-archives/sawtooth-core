@@ -41,9 +41,9 @@ use super::generate_correlation_id;
 
 #[derive(Debug)]
 pub enum ApplyError {
-    /// Raised for an Invalid Transaction.
+    /// Returned for an Invalid Transaction.
     InvalidTransaction(String),
-    /// Raised when an internal error occurs during transaction processing.
+    /// Returned when an internal error occurs during transaction processing.
     InternalError(String)
 }
 
@@ -76,17 +76,17 @@ impl std::fmt::Display for ApplyError {
 
 #[derive(Debug)]
 pub enum ContextError {
-    /// Raised for an authorization error
+    /// Returned for an authorization error
     AuthorizationError(String),
-    /// Raised when a error occurs due to missing info in a response
+    /// Returned when a error occurs due to missing info in a response
     ResponseAttributeError(String),
-    /// Raised when there is an issues setting receipt data or events.
+    /// Returned when there is an issues setting receipt data or events.
     TransactionReceiptError(String),
-    /// Raised when a ProtobufError is returned during serializing
+    /// Returned when a ProtobufError is returned during serializing
     SerializationError(Box<StdError>),
-    /// Raised when an error is returned when sending a message
+    /// Returned when an error is returned when sending a message
     SendError(Box<StdError>),
-    /// Raised when an error is returned when sending a message
+    /// Returned when an error is returned when sending a message
     ReceiveError(Box<StdError>),
 }
 
