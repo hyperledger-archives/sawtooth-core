@@ -26,11 +26,14 @@ from base64 import b64encode
 import requests
 from sawtooth_signing import create_context
 from sawtooth_signing import CryptoFactory
+from sawtooth_signing import ParseError
+from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 from sawtooth_intkey.client_cli.workload.workload_generator import \
     WorkloadGenerator
 from sawtooth_intkey.client_cli.workload.sawtooth_workload import Workload
 from sawtooth_intkey.client_cli.create_batch import create_intkey_transaction
 from sawtooth_intkey.client_cli.create_batch import create_batch
+from sawtooth_intkey.client_cli.exceptions import IntKeyCliException
 from sawtooth_sdk.protobuf import batch_pb2
 
 LOGGER = logging.getLogger(__name__)
@@ -42,7 +45,8 @@ def post_batches(url, batches, auth_info=None):
     data = batches.SerializeToString()
     headers = {'Content-Type': 'application/octet-stream'}
     headers['Content-Length'] = str(len(data))
-    headers['Authorization'] = 'Basic {}'.format(auth_info)
+    if auth_info:
+        headers['Authorization'] = 'Basic {}'.format(auth_info)
 
     try:
         result = requests.post(url + "/batches", data, headers=headers)
@@ -89,8 +93,22 @@ class IntKeyWorkload(Workload):
         self._delegate = delegate
         self._deps = {}
         context = create_context('secp256k1')
-        self._signer = CryptoFactory(context).new_signer(
-            context.new_random_private_key())
+        crypto_factory = CryptoFactory(context=context)
+        if args.key_file is not None:
+            try:
+                with open(args.key_file, 'r') as infile:
+                    signing_key = infile.read().strip()
+                private_key = Secp256k1PrivateKey.from_hex(signing_key)
+
+                self._signer = crypto_factory.new_signer(
+                    private_key=private_key)
+            except ParseError as pe:
+                raise IntKeyCliException(str(pe))
+            except IOError as ioe:
+                raise IntKeyCliException(str(ioe))
+        else:
+            self._signer = crypto_factory.new_signer(
+                context.new_random_private_key())
 
     def on_will_start(self):
         pass
@@ -240,3 +258,9 @@ def add_workload_parser(subparsers, parent_parser):
                         type=str,
                         help='password for authentication '
                              'if REST API is using Basic Auth')
+
+    parser.add_argument('--key-file',
+                        '-k',
+                        type=str,
+                        help="A file containing a private key "
+                             "to sign transactions and batches.")
