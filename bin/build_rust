@@ -25,7 +25,13 @@ RUST_BACKTRACE=1 cargo build
 
 echo -e "\033[0;32m--- Building sawadm ---\n\033[0m"
 cd $top_dir/adm
-cargo build
+mkdir -p $top_dir/adm/bin
+cargo build && cp ./target/debug/sawadm $top_dir/adm/bin/sawadm
+
+echo -e "\033[0;32m--- Building smallbank_workload ---\n\033[0m"
+cd $top_dir/perf/smallbank_workload
+mkdir -p $top_dir/perf/smallbank_workload/bin
+cargo build && cp ./target/debug/smallbank-workload $top_dir/perf/smallbank_workload/bin/smallbank-workload
 
 echo -e "\033[0;32m--- Building intkey-tp-rust ---\n\033[0m"
 rm -rf $top_dir/sdk/examples/intkey_rust/bin/

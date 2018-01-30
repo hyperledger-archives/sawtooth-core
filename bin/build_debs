@@ -210,7 +210,18 @@ build_rust() {
     rm -f $output_dir/*.deb
 
     info "sawadm"
+    rm -rf $top_dir/adm/bin
+    mkdir -p $top_dir/adm/bin
+    cd $top_dir/adm
+    cargo build && cp ./target/debug/sawadm $top_dir/adm/bin/sawadm
     build_rust_pkg sawadm $top_dir/adm $output_dir
+
+    info "smallbank-workload"
+    rm -rf $top_dir/perf/smallbank_workload/bin
+    mkdir -p $top_dir/perf/smallbank_workload/bin
+    cd $top_dir/perf/smallbank_workload
+    cargo build && cp ./target/debug/smallbank-workload $top_dir/perf/smallbank_workload/bin/smallbank-workload
+    build_rust_pkg smallbank-workload $top_dir/perf/smallbank_workload $output_dir
 
     for pkg in $output_dir/*.deb
     do
@@ -275,7 +286,7 @@ build_rust_pkg(){
     output_dir=$3
 
     # GO_TP_DASH=$(echo $pkg | sed s/_/-/)
-    CHANGELOG_DIR="debian/usr/share/doc/sawadm"
+    CHANGELOG_DIR="debian/usr/share/doc/$pkg"
     ST_VERSION=$($top_dir/bin/get_version)
 
     cd $pkg_dir
@@ -296,7 +307,9 @@ build_rust_pkg(){
     gzip --best $CHANGELOG_DIR/changelog
     gzip --best $CHANGELOG_DIR/changelog.Debian
     mv debian/control debian/DEBIAN
-    mv debian/postinst debian/DEBIAN
+    if [ -e debian/postinst ]; then
+        mv debian/postinst debian/DEBIAN
+    fi
 
     PACKAGENAME=$(awk '/^Package:/ { print $2 }' debian/DEBIAN/control)
     PACKAGEVERSION=$(dpkg-parsechangelog -S version -l $CHANGELOG_DIR/changelog.gz)
@@ -304,7 +317,6 @@ build_rust_pkg(){
 
     mkdir debian/usr/bin
     cp -R bin/ debian/usr/
-    cp -R packaging/systemd/* debian/
 
     fakeroot dpkg-deb --build debian
     echo --
