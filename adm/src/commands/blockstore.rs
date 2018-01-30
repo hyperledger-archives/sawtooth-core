@@ -143,10 +143,32 @@ fn run_show_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let block_id = args.value_of("block").ok_or(CliError::ArgumentError("No block id".into()))?;
+    let block = {
+        if args.is_present("block") {
+            let block = args.value_of("block").ok_or(
+                CliError::ArgumentError("No block".into()))?;
+            blockstore.get(block)
 
-    let block = blockstore.get(block_id).map_err(|_|
-        CliError::ArgumentError(format!("Block not found: {}", block_id)))?;
+        } else if args.is_present("batch") {
+            let batch = args.value_of("batch").ok_or(
+                CliError::ArgumentError("No batch".into()))?;
+            blockstore.get_by_batch(batch)
+
+        } else if args.is_present("transaction") {
+            let transaction = args.value_of("transaction").ok_or(
+                CliError::ArgumentError("No transaction".into()))?;
+            blockstore.get_by_transaction(transaction)
+
+        } else if args.is_present("blocknum") {
+            let blocknum = args.value_of("blocknum").ok_or(
+                CliError::ArgumentError("No block num".into()))?;
+            let height: u64 = blocknum.parse().map_err(|err|
+                CliError::ArgumentError(format!("Invalid block num: {}", err)))?;
+            blockstore.get_by_height(height)
+        } else {
+            return Err(CliError::ArgumentError("No identifier specified".into()));
+        }
+    }.map_err(|err| CliError::ArgumentError(format!("Error getting block: {}", err)))?;
 
     let block_wrapper = BlockWrapper::try_from(block).map_err(|err|
         CliError::EnvironmentError(format!("{}", err)))?;

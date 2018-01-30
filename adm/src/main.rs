@@ -74,7 +74,14 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                 (@arg start: --start +takes_value "the first block to list"))
             (@subcommand show =>
                 (about: "inspect a block in the blockstore")
-                (@arg block: +required "the block to show"))
+                (@arg block: -b --block +takes_value conflicts_with[batch transaction height]
+                    "show a block based on block id")
+                (@arg batch: -B --batch +takes_value conflicts_with[block transaction height]
+                    "show a block based on batch id")
+                (@arg transaction: -T --transaction +takes_value conflicts_with[block batch height]
+                    "show a block based on transaction id")
+                (@arg blocknum: -n --("block-num") +takes_value conflicts_with[block batch transaction]
+                    "show a block based on height"))
             (@subcommand prune =>
                 (about: "remove a block and all children blocks from the blockstore")
                 (@arg block: +required "the block to remove"))

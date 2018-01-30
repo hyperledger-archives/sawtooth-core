@@ -44,6 +44,52 @@ impl<'a> Blockstore<'a> {
         Ok(block)
     }
 
+    pub fn get_by_height(&self, height: u64) -> Result<Block, DatabaseError> {
+        let reader = self.db.reader()?;
+        let block_num = format!("0x{:0>16x}", height);
+        let block_id = reader.index_get("index_block_num", &block_num.as_bytes())
+            .and_then(|block_id|
+                block_id.ok_or(
+                    DatabaseError::NotFoundError(format!("Block not found: {}", height))))?;
+        let packed = reader.get(&block_id)
+            .ok_or(DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id)))?;
+        let block: Block = protobuf::parse_from_bytes(&packed)
+            .map_err(|err|
+                DatabaseError::CorruptionError(
+                    format!("Could not interpret stored data as a block: {}", err)))?;
+        Ok(block)
+    }
+
+    pub fn get_by_batch(&self, batch_id: &str) -> Result<Block, DatabaseError> {
+        let reader = self.db.reader()?;
+        let block_id = reader.index_get("index_batch", &batch_id.as_bytes())
+            .and_then(|block_id|
+                block_id.ok_or(
+                    DatabaseError::NotFoundError(format!("Batch not found: {}", batch_id))))?;
+        let packed = reader.get(&block_id)
+            .ok_or(DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id)))?;
+        let block: Block = protobuf::parse_from_bytes(&packed)
+            .map_err(|err|
+                DatabaseError::CorruptionError(
+                    format!("Could not interpret stored data as a block: {}", err)))?;
+        Ok(block)
+    }
+
+    pub fn get_by_transaction(&self, transaction_id: &str) -> Result<Block, DatabaseError> {
+        let reader = self.db.reader()?;
+        let block_id = reader.index_get("index_transaction", &transaction_id.as_bytes())
+            .and_then(|block_id|
+                block_id.ok_or(
+                    DatabaseError::NotFoundError(format!("Transaction not found: {}", transaction_id))))?;
+        let packed = reader.get(&block_id)
+            .ok_or(DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id)))?;
+        let block: Block = protobuf::parse_from_bytes(&packed)
+            .map_err(|err|
+                DatabaseError::CorruptionError(
+                    format!("Could not interpret stored data as a block: {}", err)))?;
+        Ok(block)
+    }
+
     pub fn put(&self, block: Block) -> Result<(), DatabaseError> {
         let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err|
             DatabaseError::CorruptionError(format!("Invalid block header: {}", err)))?;
