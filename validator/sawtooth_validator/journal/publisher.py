@@ -409,6 +409,14 @@ class _CandidateBlock(object):
         return builder.build_block()
 
 
+class _PublisherLoggingStates:
+    """Collects and tracks the changes in various states of the Publisher.  For
+    example it tracks 'consensus_not_ready', which denotes entering or exiting
+    of that state."""
+    def __init__(self, consensus_not_ready=False):
+        self.consensus_not_ready = False
+
+
 class BlockPublisher(object):
     """
     Responsible for generating new blocks and publishing them when the
@@ -496,6 +504,10 @@ class BlockPublisher(object):
         self._check_publish_block_frequency = check_publish_block_frequency
         self._publisher_thread = None
 
+        # A series of states that allow us to check for condition changes.
+        # These can be used to log only at the boundary of condition changes.
+        self._logging_states = _PublisherLoggingStates()
+
     def start(self):
         self._publisher_thread = _PublisherThread(
             block_publisher=self,
@@ -577,9 +589,16 @@ class BlockPublisher(object):
             previous_block_id=chain_head.header_signature,
             signer_public_key=public_key)
         block_builder = BlockBuilder(block_header)
+
         if not consensus.initialize_block(block_builder.block_header):
-            LOGGER.debug("Consensus not ready to build candidate block.")
+            if not self._logging_states.consensus_not_ready:
+                self._logging_states.consensus_not_ready = True
+                LOGGER.debug("Consensus not ready to build candidate block.")
             return None
+
+        if self._logging_states.consensus_not_ready:
+            self._logging_states.consensus_not_ready = False
+            LOGGER.debug("Consensus is ready to build candidate block.")
 
         # create a new scheduler
         scheduler = self._transaction_executor.create_scheduler(
