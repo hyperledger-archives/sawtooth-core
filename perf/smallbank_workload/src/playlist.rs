@@ -176,8 +176,8 @@ fn customer_id_address(customer_id: u32) -> String {
     sha.result(hash);
 
     let hex = bytes_to_hex_str(hash);
-    // Using the precomputed Sha512 hash of "supplychain"
-    return  String::from("332514") + &hex[0..32];
+    // Using the precomputed Sha512 hash of "smallbank"
+    return  String::from("332514") + &hex[0..64];
 }
 
 pub fn create_smallbank_playlist(num_accounts: usize,
@@ -258,7 +258,7 @@ impl Iterator for SmallbankGeneratingIter {
 
             let mut create_account = smallbank::SmallbankTransactionPayload_CreateAccountTransactionData::new();
             create_account.set_customer_id(self.current_account as u32);
-            create_account.set_customer_name(format!("customer_{:06}", self.current_account));
+            create_account.set_customer_name(self.rng.gen_iter::<char>().take(20).collect());
 
             create_account.set_initial_savings_balance(1000000);
             create_account.set_initial_checking_balance(1000000);
