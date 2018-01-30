@@ -428,6 +428,108 @@ class TestSchedulers(unittest.TestCase):
         # 6
         context_manager.get(ctx_id2, address_list=[create_address('A')])
 
+    def test_serial_unschedule(self):
+        context_manager, scheduler = self._setup_serial_scheduler()
+
+        self._test_unschedule(
+            scheduler=scheduler,
+            context_manager=context_manager)
+
+    def test_parallel_unschedule(self):
+        context_manager, scheduler = self._setup_parallel_scheduler()
+
+        self._test_unschedule(
+            scheduler=scheduler,
+            context_manager=context_manager)
+
+    def _test_unschedule(self, scheduler, context_manager):
+        """Tests that each of the top level methods on scheduler can be
+        called after unscheduling.
+
+        Notes:
+
+        - The test creates two batches, the first containing one txn,
+          the second containing two.
+        - The first batch's txn is completed, and therefore should be
+          included in the final result.
+        - The second batch's first txn is marked as "in-flight", and therefore
+          a response is expected.
+        - With a cancel before receiving the result, setting the txn result
+          should not cause any errors (it should be ignored).
+        """
+
+        private_key = self._context.new_random_private_key()
+        signer = self._crypto_factory.new_signer(private_key)
+
+        txn1a, _ = create_transaction(
+            payload='A'.encode(),
+            signer=signer,
+            inputs=[create_address('A')[0:40]],
+            outputs=[create_address('A')[0:40]])
+
+        batch_1 = create_batch(
+            [txn1a],
+            signer=signer)
+
+        txn2a, _ = create_transaction(
+            payload='A'.encode(),
+            signer=signer,
+            inputs=[create_address('A')[0:40]])
+
+        txn2B, _ = create_transaction(
+            payload='B'.encode(),
+            signer=signer,
+            inputs=[create_address('B')[0:40]])
+
+        batch_2 = create_batch(
+            [txn2a, txn2B],
+            signer=signer)
+
+        # 1
+        scheduler.add_batch(batch=batch_1)
+        scheduler.add_batch(batch=batch_2)
+
+        sched_iter = iter(scheduler)
+
+        # 2
+        txn_info1a = next(sched_iter)
+        header = transaction_pb2.TransactionHeader()
+        header.ParseFromString(txn_info1a.txn.header)
+        inputs = list(header.inputs)
+        outputs = list(header.outputs)
+
+        ctx_id1a = context_manager.create_context(
+            state_hash=txn_info1a.state_hash,
+            inputs=inputs,
+            outputs=outputs,
+            base_contexts=txn_info1a.base_context_ids)
+
+        # 3
+        scheduler.set_transaction_execution_result(
+            txn_info1a.txn.header_signature,
+            False,
+            ctx_id1a)
+
+        # 4
+        txn_info2a = next(sched_iter)
+        header = transaction_pb2.TransactionHeader()
+        header.ParseFromString(txn_info2a.txn.header)
+        inputs = list(header.inputs)
+        outputs = list(header.outputs)
+
+        ctx_id2a = context_manager.create_context(
+            state_hash=txn_info2a.state_hash,
+            inputs=inputs,
+            outputs=outputs,
+            base_contexts=txn_info2a.base_context_ids)
+
+        # 5
+        scheduler.unschedule_incomplete_batches()
+        scheduler.set_transaction_execution_result(
+            txn_info2a.txn.header_signature,
+            True,
+            ctx_id2a)
+
     def test_serial_completion_on_finalize(self):
         """Tests that iteration will stop when finalized is called on an
         otherwise complete serial scheduler.
