@@ -649,6 +649,10 @@ class ParallelScheduler(Scheduler):
             if txn_signature not in self._scheduled:
                 raise SchedulerError(
                     "transaction not scheduled: {}".format(txn_signature))
+
+            if txn_signature not in self._batches_by_txn_id:
+                return
+
             self._set_least_batch_id(txn_signature=txn_signature)
             if not is_valid:
                 self._remove_subsequent_result_because_of_batch_failure(
