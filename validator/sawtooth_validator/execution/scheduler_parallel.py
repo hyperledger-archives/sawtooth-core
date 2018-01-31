@@ -651,8 +651,6 @@ class ParallelScheduler(Scheduler):
                     "transaction not scheduled: {}".format(txn_signature))
 
             if txn_signature not in self._batches_by_txn_id:
-                LOGGER.debug('Received result for %s, but was unscheduled',
-                             txn_signature)
                 return
 
             self._set_least_batch_id(txn_signature=txn_signature)
