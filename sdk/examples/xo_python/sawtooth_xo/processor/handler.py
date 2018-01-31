@@ -1,4 +1,4 @@
-# Copyright 2016 Intel Corporation
+# Copyright 2016-2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,9 @@ from sawtooth_sdk.processor.handler import TransactionHandler
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
 from sawtooth_sdk.processor.exceptions import InternalError
 
+from sawtooth_xo.processor.xo_payload import XoPayload
+
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -42,84 +45,52 @@ class XoTransactionHandler(TransactionHandler):
 
     def apply(self, transaction, context):
 
-        # 1. Deserialize the transaction and verify it is valid
-        name, action, space, signer = _unpack_transaction(transaction)
+        header = transaction.header
+        signer = header.signer_public_key
+
+        xo_payload = XoPayload.from_bytes(transaction.payload)
 
         # 2. Retrieve the game data from state storage
         board, state, player1, player2, game_list = \
-            _get_state_data(context, self._namespace_prefix, name)
+            _get_state_data(context, self._namespace_prefix, xo_payload.name)
 
         # 3. Validate the game data
         _validate_game_data(
-            action, space, signer,
+            xo_payload.action, xo_payload.space, signer,
             board, state, player1, player2)
 
         # 4. Apply the transaction
-        if action == 'delete':
-            _delete_game(context, name, self._namespace_prefix)
+        if xo_payload.action == 'delete':
+            _delete_game(context, xo_payload.name, self._namespace_prefix)
             return
 
         upd_board, upd_state, upd_player1, upd_player2 = _play_xo(
-            action, space, signer,
+            xo_payload.action, xo_payload.space, signer,
             board, state,
             player1, player2)
 
         # 5. Log for tutorial usage
-        if action == "create":
+        if xo_payload.action == "create":
             _display("Player {} created a game.".format(signer[:6]))
 
-        elif action == "take":
+        elif xo_payload.action == "take":
             _display(
-                "Player {} takes space: {}\n\n".format(signer[:6], space) +
+                "Player {} takes space: {}\n\n".format(
+                    signer[:6],
+                    xo_payload.space) +
                 _game_data_to_str(
-                    upd_board, upd_state, upd_player1, upd_player2, name))
+                    upd_board,
+                    upd_state,
+                    upd_player1,
+                    upd_player2,
+                    xo_payload.name))
 
         # 6. Put the game data back in state storage
         _store_state_data(
             context, game_list,
-            self._namespace_prefix, name,
+            self._namespace_prefix, xo_payload.name,
             upd_board, upd_state,
             upd_player1, upd_player2)
-
-
-def _unpack_transaction(transaction):
-    header = transaction.header
-
-    # The transaction signer is the player
-    signer = header.signer_public_key
-
-    try:
-        # The payload is csv utf-8 encoded string
-        name, action, space = transaction.payload.decode().split(",")
-    except ValueError:
-        raise InvalidTransaction("Invalid payload serialization")
-
-    _validate_transaction(name, action, space)
-
-    if action == 'take':
-        space = int(space)
-
-    return name, action, space, signer
-
-
-def _validate_transaction(name, action, space):
-    if not name:
-        raise InvalidTransaction('Name is required')
-
-    if '|' in name:
-        raise InvalidTransaction('Name cannot contain "|"')
-
-    if not action:
-        raise InvalidTransaction('Action is required')
-
-    if action not in ('create', 'take', 'delete'):
-        raise InvalidTransaction('Invalid action: {}'.format(action))
-
-    if action == 'take':
-        try:
-            assert int(space) in range(1, 10)
-        except (ValueError, AssertionError):
-            raise InvalidTransaction('Space must be an integer from 1 to 9')
 
 
 def _validate_game_data(action, space, signer, board, state, player1, player2):
