@@ -48,6 +48,7 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
+from sawtooth_validator import metrics
 from sawtooth_validator.metrics.wrappers import TimerWrapper
 from sawtooth_validator.metrics.wrappers import CounterWrapper
 
@@ -161,6 +162,10 @@ class _SendReceive(object):
         self._metrics_registry = metrics_registry
         self._received_message_counters = {}
         self._dispatcher_queue = None
+
+        self._queue_size_gauge = metrics.make_gauge(
+            'interconnect.send_receive_queue_size',
+            metrics_registry=metrics_registry)
 
     @property
     def connection(self):
@@ -289,9 +294,8 @@ class _SendReceive(object):
     def _dispatch_message(self):
         while True:
             try:
-                queue_size = self._dispatcher_queue.qsize()
-                if queue_size > 10:
-                    LOGGER.debug("Dispatch queue size: %s", queue_size)
+                self._queue_size_gauge.set_value(
+                    self._dispatcher_queue.qsize())
 
                 zmq_identity, msg_bytes = \
                     yield from self._dispatcher_queue.get()
