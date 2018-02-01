@@ -70,5 +70,6 @@ RUN mkdir -p /project/sawtooth-core/ \
 
 ENV PATH=$PATH:/project/sawtooth-core/bin
 
+ENV VERSION=AUTO_STRICT
 WORKDIR /project/sawtooth-core
 CMD build_cxx
