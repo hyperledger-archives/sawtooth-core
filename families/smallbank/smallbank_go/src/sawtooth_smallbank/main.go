@@ -27,26 +27,24 @@ import (
 
 var opts struct {
 	Verbose []bool `short:"v" long:"verbose" description:"Increase verbosity"`
-	Args    struct {
-		Endpoint string
-	} `positional-args:"yes"`
+	Connect string `short:"C" long:"connect" description:"The validator component endpoint to" default:"tcp://localhost:4004"`
+	Queue   uint   `long:"max-queue-size" description:"Set the maximum queue size before rejecting process requests" default:"100"`
+	Threads uint   `long:"worker-thread-count" description:"Set the number of worker threads to use for processing requests in parallel" default:"0"`
 }
 
 func main() {
 	parser := flags.NewParser(&opts, flags.Default)
+
+	logger := logging.Get()
 
 	_, err := parser.Parse()
 	if err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)
 		} else {
+			logger.Error("Failed to parse args: ", err)
 			os.Exit(2)
 		}
-	}
-
-	endpoint := "tcp://localhost:4004"
-	if opts.Args.Endpoint != "" {
-		endpoint = opts.Args.Endpoint
 	}
 
 	var loggingLevel int
@@ -58,16 +56,18 @@ func main() {
 	default:
 		loggingLevel = logging.DEBUG
 	}
-
-	logger := logging.Get()
 	logger.SetLevel(loggingLevel)
 
 	logger.Debugf("command line arguments: %v", os.Args)
 	logger.Debugf("verbose = %v\n", len(opts.Verbose))
-	logger.Debugf("endpoint = %v\n", endpoint)
+	logger.Debugf("endpoint = %v\n", opts.Connect)
 
 	handler := &smallbank.SmallbankHandler{}
-	processor := processor.NewTransactionProcessor(endpoint)
+	processor := processor.NewTransactionProcessor(opts.Connect)
+	processor.SetMaxQueueSize(opts.Queue)
+	if opts.Threads > 0 {
+		processor.SetThreadCount(opts.Threads)
+	}
 	processor.AddHandler(handler)
 	processor.ShutdownOnSignal(syscall.SIGINT, syscall.SIGTERM)
 	err = processor.Start()

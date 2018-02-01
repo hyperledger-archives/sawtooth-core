@@ -33,7 +33,7 @@ services:
       - ../../:/project/sawtooth-core
     depends_on:
       - validator
-    command: smallbank-tp-go -vv tcp://validator:4004
+    command: smallbank-tp-go -vv -C tcp://validator:4004
 
   validator:
     image: sawtooth-validator-mounted:latest
