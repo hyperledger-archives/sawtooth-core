@@ -34,7 +34,7 @@ if [ ! -f "/var/lib/grafana/.init" ]; then
     done
 
     for dashboard in /etc/grafana/dashboards/*; do
-        post "$(cat $dashboard)" "/api/dashboards/db"
+        post "$(cat $dashboard)" "/api/dashboards/import"
     done
 
     touch "/var/lib/grafana/.init"
