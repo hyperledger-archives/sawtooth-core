@@ -46,6 +46,10 @@ class CounterWrapper():
         if self._counter:
             self._counter.inc(val)
 
+    def dec(self, val=1):
+        if self._counter:
+            self._counter.dec(val)
+
 
 class GaugeWrapper():
     def __init__(self, gauge=None):
