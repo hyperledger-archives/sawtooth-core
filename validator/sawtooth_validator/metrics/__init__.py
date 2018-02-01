@@ -12,3 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+
+from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator.metrics.wrappers import GaugeWrapper
+from sawtooth_validator.metrics.wrappers import TimerWrapper
+
+
+def make_counter(name, metrics_registry=None):
+    if metrics_registry is None:
+        return CounterWrapper()
+
+    return CounterWrapper(
+        metrics_registry.counter(name))
+
+
+def make_gauge(name, metrics_registry=None):
+    if metrics_registry is None:
+        return GaugeWrapper()
+
+    return GaugeWrapper(
+        metrics_registry.gauge(name))
+
+
+def make_timer(name, metrics_registry=None):
+    if metrics_registry is None:
+        return TimerWrapper()
+
+    return TimerWrapper(
+        metrics_registry.timer(name))
