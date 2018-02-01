@@ -17,17 +17,13 @@
 #include <memory>
 #include <string>
 
-#include "sawtooth_sdk.h"
-#include "sawtooth/message_stream.h"
-
-namespace sawtooth {
-
 // Raised if any of the addresses generated violate
 // the merkel trie address constraints.
 class AddressFormatError: public std::runtime_error {
  public:
     explicit AddressFormatError(std::string const& error)
-        : std::runtime_error(error) {}
+        : std::runtime_error(error)
+    {}
 };
 
 
@@ -44,18 +40,13 @@ class AddressFormatError: public std::runtime_error {
 // namespace prefix when it is constructed. If your transaction processor
 // operates on multiple namespaces, it is recommended that you use an instance
 // for each namespace.
-class AddressMapperImpl: public AddressMapper {
+class AddressMapper {
  public:
     // Constructor for an address mapping object, Takes the
     // unencoded namespace name, it will be mapping objects, to as a parameter.
     // The namespace argument passed will be mapped to a namespace_prefix
-
-    AddressMapperImpl(const std::string& namespace_);
-    virtual ~AddressMapperImpl() {}
-
-    AddressMapperImpl (const AddressMapperImpl&) = delete;
-    AddressMapperImpl (const AddressMapperImpl&&) = delete;
-    AddressMapperImpl& operator= (const AddressMapperImpl&) = delete;
+    AddressMapper(const std::string& namespace_);
+    virtual ~AddressMapper() {}
 
     // Maps an namespace string to an namespace address prefix.
     // this provides a default implementation using SHA512.
@@ -72,7 +63,7 @@ class AddressMapperImpl: public AddressMapper {
     // that can provide their own mappings. The requirements are that
     // the mapping needs to return a string that is 128 characters
     // in length and consists of only lower case hexadecimal characters.
-    virtual std::string MapKey(const std::string& key) const;
+    virtual std::string MapKey(const std::string& key, std::size_t pos, std::size_t count) const;
 
 
     // returns the namespace prefix generated when the class was constructed.
@@ -83,12 +74,13 @@ class AddressMapperImpl: public AddressMapper {
     // a fully qualified Merkle Trie address. These addresses are always
     // 134 characters in length and consist entirely of lower case hexadecimal
     // characters(0123456789abcdef).
-    std::string MakeAddress(const std::string& key);
+    std::string MakeAddress(const std::string& key, std::size_t pos, std::size_t count);
+
  private:
     bool namespace_initialized;
     std::string namespace_;
     std::string namespace_prefix;
 };
 
-
-}  // namespace sawtooth
+typedef std::shared_ptr<AddressMapper> AddressMapperPtr;
+typedef std::unique_ptr<AddressMapper> AddressMapperUPtr;

@@ -33,6 +33,31 @@ namespace sawtooth {
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger
     ("sawtooth.TransactionProcessor"));
 
+static int s_interrupted = 0;
+static bool s_interrupt_initialized = false;
+
+static void s_signal_handler (int signal_value) {
+    s_interrupted = 1;
+    LOG4CXX_ERROR(logger, "signal interrupt received");
+}
+
+static void s_catch_signals (void) {
+    if (!s_interrupt_initialized) {
+        struct sigaction action;
+        action.sa_handler = s_signal_handler;
+        action.sa_flags = 0;
+        sigemptyset (&action.sa_mask);
+        sigaction (SIGINT, &action, NULL);
+        sigaction (SIGTERM, &action, NULL);
+        s_interrupt_initialized = true;
+
+        LOG4CXX_ERROR(logger, "signal handler initialized");
+    } else {
+        LOG4CXX_ERROR(logger, "signal handler already initialized");
+    }
+}
+
+
 TransactionProcessorImpl::TransactionProcessorImpl(
         const std::string& connection_string):
         connection_string(connection_string), run(true) {
@@ -79,6 +104,24 @@ void TransactionProcessorImpl::Register() {
     }
 }
 
+void TransactionProcessorImpl::UnRegister() {
+    TpUnregisterRequest request;
+
+    FutureMessagePtr future = this->response_stream->SendMessage(
+          Message_MessageType_TP_UNREGISTER_REQUEST, request);
+
+    TpUnregisterResponse response;
+    future->GetMessage(Message_MessageType_TP_UNREGISTER_RESPONSE, &response);
+
+    if (response.status() != TpUnregisterResponse::OK) {
+        LOG4CXX_ERROR(logger, "Unregister failed, status code: "
+                    << response.status());
+    } else {
+        LOG4CXX_ERROR(logger, "Unregister ok: " << response.status());
+    }
+}
+
+
 void TransactionProcessorImpl::HandleProcessingRequest(const void* msg,
         size_t msg_size,
         const std::string& correlation_id) {
@@ -100,7 +143,6 @@ void TransactionProcessorImpl::HandleProcessingRequest(const void* msg,
 
         auto iter = this->handlers.find(family);
         if (iter != this->handlers.end()) {
-            // TBD match version
             try {
                 GlobalStateUPtr global_state(
                     new GlobalStateImpl(
@@ -131,7 +173,6 @@ void TransactionProcessorImpl::HandleProcessingRequest(const void* msg,
                 throw;
             }
         } else {
-            // no handler -- not sure if this is the right answer?
             response.set_status(TpProcessResponse::INVALID_TRANSACTION);
         }
     } catch (std::exception& e ) {
@@ -208,17 +249,21 @@ void TransactionProcessorImpl::Run() {
             }
         }
 
-        LOG4CXX_INFO(
-            logger,
-            "Close message dispatcher");
-        this->message_dispatcher.Close();
     } catch(std::exception& e) {
         LOG4CXX_ERROR(logger, "TransactionProcessor::Run ERROR: " << e.what());
     }
+
+    LOG4CXX_INFO(logger, "Unregister TP");
+    this->UnRegister();
+
+    LOG4CXX_INFO(logger, "Close message dispatcher");
+    this->message_dispatcher.Close();
 }
 
 
 TransactionProcessor* TransactionProcessor::Create(const std::string& connection_string) {
+    s_catch_signals();
+
     return new TransactionProcessorImpl(connection_string);
 }
 
