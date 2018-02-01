@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2017 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +14,9 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-FROM influxdb:alpine
+settings=""
+settings="$settings sawtooth.poet.target_wait_time=5"
+settings="$settings sawtooth.poet.initial_wait_time=25"
+settings="$settings sawtooth.publisher.max_batches_per_block=100"
 
-RUN apk add --update curl && \
-    rm -rf /var/cache/apk/*
-
-WORKDIR /app
-COPY influxdb/influxdb_entrypoint.sh ./
-RUN chmod u+x influxdb_entrypoint.sh
-
-ENTRYPOINT ["/app/influxdb_entrypoint.sh"]
+echo "$settings"
