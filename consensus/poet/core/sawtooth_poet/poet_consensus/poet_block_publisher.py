@@ -233,6 +233,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                          'committed by block %s. Create new registration',
                          poet_public_key,
                          block_header.previous_block_id)
+
             del self._poet_key_state_store[poet_public_key]
             self._register_signup_information(
                 block_header=block_header,
@@ -299,12 +300,21 @@ class PoetBlockPublisher(BlockPublisherInterface):
                     block_header=block_header,
                     poet_enclave_module=poet_enclave_module)
             else:  # Check if we need to give up on this registration attempt
+                try:
+                    nonce = self._poet_key_state_store[
+                        active_poet_public_key].signup_nonce
+                except (ValueError, AttributeError):
+                    self._poet_key_state_store.active_key = None
+                    LOGGER.warning('Poet Key State Store had inaccessible or '
+                                   'corrupt active key [%s] clearing '
+                                   'key.', active_poet_public_key)
+                    return False
+
                 self._handle_registration_timeout(
                     block_header=block_header,
                     poet_enclave_module=poet_enclave_module,
                     state_view=state_view,
-                    signup_nonce=self._poet_key_state_store[
-                        active_poet_public_key].signup_nonce,
+                    signup_nonce=nonce,
                     poet_public_key=active_poet_public_key
                 )
             return False
@@ -364,7 +374,7 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 poet_enclave_module=poet_enclave_module,
                 state_view=state_view,
                 signup_nonce=poet_key_state.signup_nonce,
-                poet_public_key=poet_key_state.poet_public_key
+                poet_public_key=active_poet_public_key
             )
             return False
 
