@@ -35,6 +35,8 @@ from sawtooth_validator.execution import processor_iterator
 from sawtooth_validator.networking.future import FutureResult
 from sawtooth_validator.networking.future import FutureTimeoutError
 from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator import metrics
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -92,11 +94,17 @@ class TransactionExecutorThread(object):
         else:
             self._transaction_execution_count = CounterWrapper()
 
+        self._in_process_transactions_count = metrics.make_counter(
+            'executor.in_process_transactions',
+            metrics_registry=metrics_registry)
+
     def _future_done_callback(self, request, result):
         """
         :param request (bytes):the serialized request
         :param result (FutureResult):
         """
+        self._in_process_transactions_count.dec()
+
         req = processor_pb2.TpProcessRequest()
         req.ParseFromString(request)
         response = processor_pb2.TpProcessResponse()
@@ -335,6 +343,8 @@ class TransactionExecutorThread(object):
         else:
             self._open_futures[connection_id] = \
                 {signature: fut}
+
+        self._in_process_transactions_count.inc()
 
     def remove_broken_connection(self, connection_id):
         if connection_id not in self._open_futures:
