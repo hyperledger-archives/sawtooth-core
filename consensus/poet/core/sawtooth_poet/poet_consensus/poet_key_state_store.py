@@ -168,13 +168,19 @@ class PoetKeyStateStore(MutableMapping):
         """
         # Get the PoET key state from the underlying LMDB.  The only catch is
         # that the data was stored using cbor.dumps().  When this happens, it
-        # gets stored as a tuple and so we lost the named part.  When
-        # re-creating the poet key state we are going to leverage the
-        # namedtuple's _make method.
+        # gets stored as a list not a namedtuple.  When re-creating the poet
+        # key state we are going to leverage the namedtuple's _make method.
         try:
             poet_key_state = \
                 PoetKeyState._make(self._store_db[poet_public_key])
-        except (AttributeError, ValueError, TypeError) as error:
+        except TypeError:  # handle keys persisted using sawtooth v1.0.1
+            try:
+                old_key_state = self._store_db[poet_public_key]
+                old_key_state.append('UNKNOWN_NONCE')
+                poet_key_state = PoetKeyState._make(old_key_state)
+            except (AttributeError, TypeError) as error:
+                raise ValueError('poet_key_state is invalid: {}'.format(error))
+        except (AttributeError, ValueError) as error:
             raise ValueError('poet_key_state is invalid: {}'.format(error))
 
         PoetKeyStateStore._check_poet_key_state(poet_key_state)
