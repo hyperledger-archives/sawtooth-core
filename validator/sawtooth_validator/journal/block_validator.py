@@ -316,7 +316,6 @@ class BlockValidator(object):
                         blkw))
 
             if not self._validate_permissions(blkw, prev_state_root):
-                blkw.status = BlockStatus.Invalid
                 raise BlockValidationError(
                     'Block {} failed permission validation'.format(blkw))
 
@@ -336,22 +335,16 @@ class BlockValidator(object):
                 validator_id=public_key)
 
             if not consensus_block_verifier.verify_block(blkw):
-                blkw.status = BlockStatus.Invalid
                 raise BlockValidationError(
                     'Block {} failed {} consensus validation'.format(
                         blkw, consensus))
 
             if not self._validate_on_chain_rules(blkw, prev_state_root):
-                blkw.status = BlockStatus.Invalid
                 raise BlockValidationError(
                     'Block {} failed on-chain validation rules'.format(
                         blkw))
 
-            try:
-                self._validate_batches_in_block(blkw, prev_state_root)
-            except BlockValidationError:
-                blkw.status = BlockStatus.Invalid
-                raise
+            self._validate_batches_in_block(blkw, prev_state_root)
 
             # since changes to the chain-head can change the state of the
             # blocks in BlockStore we have to revalidate this block.
@@ -366,6 +359,7 @@ class BlockValidator(object):
             blkw.status = BlockStatus.Valid
 
         except BlockValidationError as err:
+            blkw.status = BlockStatus.Invalid
             raise err
 
         except ChainHeadUpdated as e:
