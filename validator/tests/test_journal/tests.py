@@ -42,6 +42,7 @@ from sawtooth_validator.journal.event_extractors \
     import ReceiptEventExtractor
 from sawtooth_validator.journal.batch_injector import \
     DefaultBatchInjectorFactory
+from sawtooth_validator.journal.publishing_limiter import PublishingLimiter
 
 from sawtooth_validator.server.events.subscription import EventSubscription
 from sawtooth_validator.server.events.subscription import EventFilterFactory
@@ -145,6 +146,7 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
+            publishing_limiter=PublishingLimiter(),
             check_publish_block_frequency=0.1,
             batch_observers=[],
             permission_verifier=self.permission_verifier)
@@ -305,6 +307,7 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
+            publishing_limiter=PublishingLimiter(),
             check_publish_block_frequency=0.1,
             batch_observers=[],
             permission_verifier=self.permission_verifier)
@@ -341,6 +344,7 @@ class TestBlockPublisher(unittest.TestCase):
             identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
+            publishing_limiter=PublishingLimiter(),
             check_publish_block_frequency=0.1,
             batch_observers=[],
             permission_verifier=self.permission_verifier)
@@ -399,6 +403,7 @@ class TestBlockPublisher(unittest.TestCase):
             data_dir=None,
             config_dir=None,
             permission_verifier=self.permission_verifier,
+            publishing_limiter=PublishingLimiter(),
             check_publish_block_frequency=0.1,
             batch_observers=[],
             batch_injector_factory=MockBatchInjectorFactory(injected_batch))
@@ -1290,6 +1295,7 @@ class TestJournal(unittest.TestCase):
                 data_dir=None,
                 config_dir=None,
                 permission_verifier=self.permission_verifier,
+                publishing_limiter=PublishingLimiter(),
                 check_publish_block_frequency=0.1,
                 batch_observers=[],
                 batch_injector_factory=DefaultBatchInjectorFactory(

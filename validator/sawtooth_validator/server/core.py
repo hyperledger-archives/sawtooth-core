@@ -27,6 +27,7 @@ from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
 from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.publisher import BlockPublisher
+from sawtooth_validator.journal.publishing_limiter import PublishingLimiter
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.genesis import GenesisController
 from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
@@ -261,6 +262,8 @@ class Validator(object):
             state_view_factory=state_view_factory,
             signer=identity_signer)
 
+        publishing_limiter = PublishingLimiter()
+
         block_publisher = BlockPublisher(
             transaction_executor=transaction_executor,
             block_cache=block_cache,
@@ -275,6 +278,7 @@ class Validator(object):
             config_dir=config_dir,
             permission_verifier=permission_verifier,
             check_publish_block_frequency=0.1,
+            publishing_limiter=publishing_limiter,
             batch_observers=[batch_tracker],
             batch_injector_factory=batch_injector_factory,
             metrics_registry=metrics_registry)
@@ -307,6 +311,11 @@ class Validator(object):
                 settings_observer
             ],
             metrics_registry=metrics_registry)
+
+        publishing_limiter.set_wip_batches_info_getter(
+            block_publisher.get_current_queue_info)
+        publishing_limiter.set_wip_blocks_getter(
+            chain_controller.get_wip_blocks)
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
