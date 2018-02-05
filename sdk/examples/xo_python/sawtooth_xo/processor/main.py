@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import hashlib
 import sys
 import os
 import argparse
@@ -106,10 +105,8 @@ def main(args=None):
                 name="xo-" + str(processor.zmq_id)[2:-1])
 
         init_console_logging(verbose_level=opts.verbose)
-        # The prefix should eventually be looked up from the
-        # validator's namespace registry.
-        xo_prefix = hashlib.sha512('xo'.encode("utf-8")).hexdigest()[0:6]
-        handler = XoTransactionHandler(namespace_prefix=xo_prefix)
+
+        handler = XoTransactionHandler()
 
         processor.add_handler(handler)
 
