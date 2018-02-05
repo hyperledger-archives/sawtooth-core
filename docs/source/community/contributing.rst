@@ -14,8 +14,6 @@ Ways you can contribute:
 
 * Bugs or issues: Report problems or defects found when working with Sawtooth
 * Core features and enhancements: Provide expanded capabilities or optimizations
-* Arcade features: Add games that demonstrate Sawtooth; see the existing
-  games XO (tic-tac-toe) and Battleship
 * Documentation: Improve existing documentation or create new information
 * Tests for events and results: Add functional, performance, or scalability
   tests
@@ -38,7 +36,6 @@ pull requests. When contributing code, please follow these guidelines:
 * Ensure that the unit and integration tests run successfully. Run both
   of these tests with ``./bin/run_tests``
 * Check that the lint tests pass by running ``./bin/run_lint -s master``.
-  Note that this command does not produce output on success
 
 **Pull Request Guidelines**
 
@@ -72,6 +69,12 @@ These rules are well documented in `Chris Beam's blog post
 Each commit must include a "Signed-off-by" line in the commit message
 (``git commit -s``). This sign-off indicates that you agree the commit satisfies
 the `Developer Certificate of Origin (DCO) <http://developercertificate.org/>`_.
+
+**Commit Email Address**
+
+Your commit email address must match your GitHub email address. For more
+information, see
+https://help.github.com/articles/setting-your-commit-email-address-in-git/
 
 **Important GitHub Requirements**
 
