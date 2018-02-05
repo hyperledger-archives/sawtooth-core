@@ -396,8 +396,7 @@ fn handle_future_post_response(counter: Rc<HTTPRequestCounter>,
             let link = serde_json::from_str::<Link>(&s);
             match link {
                 Ok(link) => {
-                    let mut l = link.link;
-                    l.push_str("&wait=100");
+                    let l = link.link;
                     let uri = Uri::from_str(l.as_ref())?;
                     Ok(uri)
                 },
