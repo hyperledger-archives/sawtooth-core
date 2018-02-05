@@ -266,7 +266,7 @@ def CreateSetting(key, value):
     addr = SettingsView.setting_address(key)
 
     setting = Setting()
-    setting.entries.add(key=key, value=repr(value))
+    setting.entries.add(key=key, value=str(value))
     return addr, setting.SerializeToString()
 
 
