@@ -21,15 +21,17 @@ from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.validation_rule_enforcer import \
-    ValidationRuleEnforcer
+    enforce_validation_rules
 from test_validation_rule_enforcer.mock import MockSettingsViewFactory
 
 
 class ValidationRuleEnforcerTest(unittest.TestCase):
     def setUp(self):
         self._settings_view_factory = MockSettingsViewFactory()
-        self._validation_rule_enforcer = ValidationRuleEnforcer(
-            self._settings_view_factory)
+
+    def _settings_view(self):
+        return self._settings_view_factory.create_settings_view(
+            "state_root")
 
     def _make_block(self, txns_family, signer_public_key,
                     same_public_key=True):
@@ -55,7 +57,10 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
         """
         blkw = self._make_block(["intkey"], "pub_key")
         self.assertTrue(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
     def test_n_of_x(self):
         """
@@ -71,21 +76,30 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
             "NofX:1,intkey")
 
         self.assertTrue(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
         self._settings_view_factory.add_setting(
             "sawtooth.validator.block_validation_rules",
             "NofX:0,intkey")
 
         self.assertFalse(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
         self._settings_view_factory.add_setting(
             "sawtooth.validator.block_validation_rules",
             "NofX:0")
 
         self.assertTrue(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
     def test_x_at_y(self):
         """
@@ -101,21 +115,30 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
             "XatY:intkey,0")
 
         self.assertTrue(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
         self._settings_view_factory.add_setting(
             "sawtooth.validator.block_validation_rules",
             "XatY:blockinfo,0")
 
         self.assertFalse(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
         self._settings_view_factory.add_setting(
             "sawtooth.validator.block_validation_rules",
             "XatY:0")
 
         self.assertTrue(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
     def test_local(self):
         """
@@ -133,7 +156,10 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
             "local:0")
 
         self.assertTrue(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
         blkw = self._make_block(["intkey"], "pub_key", False)
         self._settings_view_factory.add_setting(
@@ -141,14 +167,20 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
             "local:0")
 
         self.assertFalse(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
         self._settings_view_factory.add_setting(
             "sawtooth.validator.block_validation_rules",
             "local:test")
 
         self.assertTrue(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
     def test_all_at_once(self):
         """
@@ -161,7 +193,10 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
             "XatY:intkey,0;XatY:intkey,0;local:0")
 
         self.assertTrue(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
     def test_all_at_once_bad_number_of_intkey(self):
         """
@@ -174,7 +209,10 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
             "NofX:0,intkey;XatY:intkey,0;local:0")
 
         self.assertFalse(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
     def test_all_at_once_bad_family_at_index(self):
         """
@@ -188,7 +226,10 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
             "XatY:intkey,0;XatY:blockinfo,0;local:0")
 
         self.assertFalse(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
 
     def test_all_at_once_signer_key(self):
         """
@@ -202,4 +243,7 @@ class ValidationRuleEnforcerTest(unittest.TestCase):
             "XatY:intkey,0;XatY:intkey,0;local:0")
 
         self.assertFalse(
-            self._validation_rule_enforcer.validate(blkw, "state_root"))
+            enforce_validation_rules(
+                self._settings_view(),
+                blkw.header.signer_public_key,
+                blkw.batches))
