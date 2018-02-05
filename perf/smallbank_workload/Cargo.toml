@@ -15,6 +15,7 @@
 [package]
 name = "smallbank_workload"
 version = "0.1.0"
+build = "build.rs"
 
 [dependencies]
 sawtooth_sdk = { path = "../../sdk/rust" }
@@ -29,3 +30,7 @@ env_logger = "0.5.3"
 [[bin]]
 name = "smallbank-workload"
 path = "./src/main.rs"
+
+[build-dependencies]
+protoc-rust = "1.4"
+glob = "0.2"
