@@ -21,7 +21,7 @@ from sawtooth_validator.journal.block_wrapper import BlockStatus
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.validation_rule_enforcer import \
-    ValidationRuleEnforcer
+    enforce_validation_rules
 from sawtooth_validator.state.settings_view import SettingsViewFactory
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.metrics.wrappers import CounterWrapper
@@ -153,8 +153,7 @@ class BlockValidator(object):
         self._config_dir = config_dir
         self._permission_verifier = permission_verifier
 
-        self._validation_rule_enforcer = ValidationRuleEnforcer(
-            SettingsViewFactory(state_view_factory))
+        self._settings_view_factory = SettingsViewFactory(state_view_factory)
 
         self._thread_pool = InstrumentedThreadPoolExecutor(1) \
             if thread_pool is None else thread_pool
@@ -289,8 +288,11 @@ class BlockValidator(object):
         invalid.
         """
         if blkw.block_num != 0:
-            return self._validation_rule_enforcer.validate(
-                blkw, prev_state_root)
+            return enforce_validation_rules(
+                self._settings_view_factory.create_settings_view(
+                    prev_state_root),
+                blkw.header.signer_public_key,
+                blkw.batches)
         return True
 
     def validate_block(self, blkw, consensus, chain_head=None, chain=None):
