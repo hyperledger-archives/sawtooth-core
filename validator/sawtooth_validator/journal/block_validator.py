@@ -201,71 +201,73 @@ class BlockValidator(object):
             DuplicateBatch:
                 Validation failed because of a duplicate batch.
         """
-        if blkw.block.batches:
-            try:
-                chain_commit_state = ChainCommitState(
-                    blkw.previous_block_id,
-                    self._block_cache,
-                    self._block_cache.block_store)
+        if not blkw.block.batches:
+            return
 
-                scheduler = self._transaction_executor.create_scheduler(
-                    self._squash_handler, prev_state_root)
-                self._transaction_executor.execute(scheduler)
+        try:
+            chain_commit_state = ChainCommitState(
+                blkw.previous_block_id,
+                self._block_cache,
+                self._block_cache.block_store)
 
-                chain_commit_state.check_for_duplicate_batches(
-                    blkw.block.batches)
+            scheduler = self._transaction_executor.create_scheduler(
+                self._squash_handler, prev_state_root)
+            self._transaction_executor.execute(scheduler)
 
-                transactions = []
-                for batch in blkw.block.batches:
-                    transactions.extend(batch.transactions)
+            chain_commit_state.check_for_duplicate_batches(
+                blkw.block.batches)
 
-                chain_commit_state.check_for_duplicate_transactions(
-                    transactions)
+            transactions = []
+            for batch in blkw.block.batches:
+                transactions.extend(batch.transactions)
 
-                chain_commit_state.check_for_transaction_dependencies(
-                    transactions)
+            chain_commit_state.check_for_duplicate_transactions(
+                transactions)
 
-                for batch, has_more in look_ahead(blkw.block.batches):
-                    if has_more:
-                        scheduler.add_batch(batch)
-                    else:
-                        scheduler.add_batch(batch, blkw.state_root_hash)
+            chain_commit_state.check_for_transaction_dependencies(
+                transactions)
 
-            except (DuplicateBatch,
-                    DuplicateTransaction,
-                    MissingDependency) as err:
-                scheduler.cancel()
-                raise BlockValidationError(
-                    "Block {} failed validation: {}".format(blkw, err))
-
-            except Exception:
-                scheduler.cancel()
-                raise
-
-            scheduler.finalize()
-            scheduler.complete(block=True)
-            state_hash = None
-
-            for batch in blkw.batches:
-                batch_result = scheduler.get_batch_execution_result(
-                    batch.header_signature)
-                if batch_result is not None and batch_result.is_valid:
-                    txn_results = \
-                        scheduler.get_transaction_execution_results(
-                            batch.header_signature)
-                    blkw.execution_results.extend(txn_results)
-                    state_hash = batch_result.state_hash
-                    blkw.num_transactions += len(batch.transactions)
+            for batch, has_more in look_ahead(blkw.block.batches):
+                if has_more:
+                    scheduler.add_batch(batch)
                 else:
-                    raise BlockValidationError(
-                        "Block {} failed validation: Invalid batch "
-                        "{}".format(blkw, batch))
+                    scheduler.add_batch(batch, blkw.state_root_hash)
 
-            if blkw.state_root_hash != state_hash:
+        except (DuplicateBatch,
+                DuplicateTransaction,
+                MissingDependency) as err:
+            scheduler.cancel()
+            raise BlockValidationError(
+                "Block {} failed validation: {}".format(blkw, err))
+
+        except Exception:
+            scheduler.cancel()
+            raise
+
+        scheduler.finalize()
+        scheduler.complete(block=True)
+        state_hash = None
+
+        for batch in blkw.batches:
+            batch_result = scheduler.get_batch_execution_result(
+                batch.header_signature)
+            if batch_result is not None and batch_result.is_valid:
+                txn_results = \
+                    scheduler.get_transaction_execution_results(
+                        batch.header_signature)
+                blkw.execution_results.extend(txn_results)
+                state_hash = batch_result.state_hash
+                blkw.num_transactions += len(batch.transactions)
+            else:
                 raise BlockValidationError(
-                    "Block {} failed state root hash validation. Expected {}"
-                    " but got {}".format(
-                        blkw, blkw.state_root_hash, state_hash))
+                    "Block {} failed validation: Invalid batch "
+                    "{}".format(blkw, batch))
+
+        if blkw.state_root_hash != state_hash:
+            raise BlockValidationError(
+                "Block {} failed state root hash validation. Expected {}"
+                " but got {}".format(
+                    blkw, blkw.state_root_hash, state_hash))
 
     def _validate_permissions(self, blkw, prev_state_root):
         """
