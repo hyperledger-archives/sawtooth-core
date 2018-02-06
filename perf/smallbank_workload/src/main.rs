@@ -109,7 +109,7 @@ fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
               .short("n")
               .long("max-batch-size")
               .value_name("NUMBER")
-              .help("The number of transaction in a batch. Defaults to 100."))
+              .help("The number of transaction in a batch. Defaults to 1."))
         .arg(Arg::with_name("num-accounts")
               .short("a")
               .long("accounts")
@@ -147,7 +147,7 @@ fn create_load_subcommand_args<'a, 'b>() -> App<'a, 'b> {
 
 fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let max_txns: usize = match args.value_of("max-batch-size")
-        .unwrap_or("100")
+        .unwrap_or("1")
         .parse() {
             Ok(n) => n,
             Err(_) => 0,
