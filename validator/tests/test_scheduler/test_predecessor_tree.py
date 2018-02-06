@@ -943,15 +943,16 @@ class TestPredecessorTree(unittest.TestCase):
 
             self.assertIsNotNone(node)
 
-            self.assertEqual(
-                readers,
-                node.readers,
-                error_msg.format('readers'))
+            if node.data is not None:
+                self.assertEqual(
+                    readers,
+                    node.data.readers,
+                    error_msg.format('readers'))
 
-            self.assertEqual(
-                writer,
-                node.writer,
-                error_msg.format('writer'))
+                self.assertEqual(
+                    writer,
+                    node.data.writer,
+                    error_msg.format('writer'))
 
             self.assertEqual(
                 set(children),
@@ -973,7 +974,10 @@ class TestPredecessorTree(unittest.TestCase):
         def count_readers(node=None):
             if node is None:
                 node = self.get_node('')  # root node
-            count = len(node.readers)
+            if node.data is not None:
+                count = len(node.data.readers)
+            else:
+                count = 0
             for child in node.children:
                 next_node = node.children[child]
                 count += count_readers(next_node)
@@ -982,7 +986,13 @@ class TestPredecessorTree(unittest.TestCase):
         def count_writers(node=None):
             if node is None:
                 node = self.get_node('')  # root node
-            count = 1 if node.writer is not None else 0
+            if node.data is not None:
+                if node.data.writer is not None:
+                    count = 1
+                else:
+                    count = 0
+            else:
+                count = 0
             for child in node.children:
                 next_node = node.children[child]
                 count += count_writers(next_node)
@@ -1050,7 +1060,7 @@ class TestPredecessorTree(unittest.TestCase):
         self.tree.set_writer(address, txn)
 
     def get_node(self, address):
-        return self.tree.get(address)
+        return self.tree._tree.get(address)
 
     # display
 
@@ -1061,19 +1071,20 @@ class TestPredecessorTree(unittest.TestCase):
 
 
 def tree_to_string(tree):
-    return node_to_string(tree._root)
+    return node_to_string(tree._tree._root)
 
 
 def node_to_string(node, indent=2):
     string = '\nROOT:' if indent == 2 else ''
 
-    writer = node.writer
-    if writer is not None:
-        string += ' Writer: {}'.format(writer)
+    if node.data is not None:
+        writer = node.data.writer
+        if writer is not None:
+            string += ' Writer: {}'.format(writer)
 
-    readers = node.readers
-    if readers:
-        string += ' Readers: {}'.format(readers)
+        readers = node.data.readers
+        if readers:
+            string += ' Readers: {}'.format(readers)
 
     for child_address in node.children:
         string += '\n' + ' ' * indent

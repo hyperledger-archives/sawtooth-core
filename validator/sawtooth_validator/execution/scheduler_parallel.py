@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from ast import literal_eval
 from itertools import filterfalse
 from threading import Condition
 import logging
@@ -36,30 +35,22 @@ _AnnotatedBatch = namedtuple('ScheduledBatch',
                              ['batch', 'required', 'preserve'])
 
 
-class PredecessorTreeNode:
-    def __init__(self, children=None, readers=None, writer=None):
-        self.children = children if children is not None else {}
-        self.readers = readers if readers is not None else []
-        self.writer = writer
+class Node:
+    def __init__(self, data=None):
+        self.data = data
+        self.children = {}
 
     def __repr__(self):
-        retval = {}
-
-        if self.readers:
-            retval['readers'] = self.readers
-        if self.writer is not None:
-            retval['writer'] = self.writer
-        if self.children:
-            retval['children'] = \
-                {k: literal_eval(repr(v)) for k, v in self.children.items()}
-
-        return repr(retval)
+        return repr({
+            'data': self.data,
+            'children': self.children
+        })
 
 
-class PredecessorTree:
-    def __init__(self, token_size=2):
+class Tree:
+    def __init__(self, token_size=2, data=None):
         self._token_size = token_size
-        self._root = PredecessorTreeNode()
+        self._root = Node(data=data)
 
     def __repr__(self):
         return repr(self._root)
@@ -70,7 +61,7 @@ class PredecessorTree:
             for i in range(0, len(address), self._token_size)
         )
 
-    def insert(self, address):
+    def insert(self, address, data=None):
         tokens = self._tokenize_address(address)
 
         node = self._root
@@ -78,9 +69,12 @@ class PredecessorTree:
             if token in node.children:
                 node = node.children[token]
             else:
-                child = PredecessorTreeNode()
+                child = Node()
                 node.children[token] = child
                 node = child
+
+        if data is not None:
+            node.data = data
 
         return node
 
@@ -111,14 +105,44 @@ class PredecessorTree:
             node = node.children[token]
             yield node
 
+
+class Predecessors:
+    def __init__(self):
+        self.readers = []
+        self.writer = None
+
+    def __repr__(self):
+        return repr({
+            'readers': self.readers,
+            'writer': self.writer,
+        })
+
+
+class PredecessorTree:
+    def __init__(self, token_size=2):
+        self._tree = Tree(token_size=token_size)
+
+    def __repr__(self):
+        return repr(self._tree)
+
+    def _insert(self, address):
+        node = self._tree.insert(address)
+
+        if node.data is None:
+            node.data = Predecessors()
+
+        return node
+
     def add_reader(self, address, reader):
-        node = self.insert(address)
-        node.readers.append(reader)
+        node = self._insert(address)
+
+        node.data.readers.append(reader)
 
     def set_writer(self, address, writer):
-        node = self.insert(address)
-        node.readers = []
-        node.writer = writer
+        node = self._insert(address)
+
+        node.data.readers = []
+        node.data.writer = writer
         node.children = {}
 
     def find_write_predecessors(self, address):
@@ -166,13 +190,14 @@ class PredecessorTree:
         # First, walk down from the root to the address, collecting all readers
         # and updating the enclosing_writer if needed.
         try:
-            for upper_node in self.get_ancestors(address):
+            for upper_node in self._tree.get_ancestors(address):
                 node = upper_node
 
-                if node.writer is not None:
-                    enclosing_writer = node.writer
+                if node.data is not None:
+                    if node.data.writer is not None:
+                        enclosing_writer = node.data.writer
 
-                predecessors.update(node.readers)
+                    predecessors.update(node.data.readers)
 
         except KeyError:
             # If the address isn't on the tree, then there aren't any
@@ -192,9 +217,10 @@ class PredecessorTree:
         to_process.extendleft(node.children.values())
         while to_process:
             node = to_process.pop()
-            predecessors.update(node.readers)
-            if node.writer is not None:
-                predecessors.add(node.writer)
+            if node.data is not None:
+                predecessors.update(node.data.readers)
+                if node.data.writer is not None:
+                    predecessors.add(node.data.writer)
             to_process.extendleft(node.children.values())
 
         return predecessors
@@ -238,11 +264,12 @@ class PredecessorTree:
         # First, walk down from the root to the address, updating the
         # enclosing_writer if needed.
         try:
-            for upper_node in self.get_ancestors(address):
+            for upper_node in self._tree.get_ancestors(address):
                 node = upper_node
 
-                if node.writer is not None:
-                    enclosing_writer = node.writer
+                if node.data is not None:
+                    if node.data.writer is not None:
+                        enclosing_writer = node.data.writer
 
         except KeyError:
             # If the address isn't on the tree, then there aren't any
@@ -262,8 +289,9 @@ class PredecessorTree:
         to_process.extendleft(node.children.values())
         while to_process:
             node = to_process.pop()
-            if node.writer is not None:
-                predecessors.add(node.writer)
+            if node.data is not None:
+                if node.data.writer is not None:
+                    predecessors.add(node.data.writer)
             to_process.extendleft(node.children.values())
 
         return predecessors
