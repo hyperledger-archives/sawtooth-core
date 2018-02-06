@@ -65,10 +65,10 @@ class PredecessorTree:
         return repr(self._root)
 
     def _tokenize_address(self, address):
-        return [
+        return (
             address[i:i + self._token_size]
             for i in range(0, len(address), self._token_size)
-        ]
+        )
 
     def insert(self, address):
         tokens = self._tokenize_address(address)
@@ -95,6 +95,21 @@ class PredecessorTree:
                 return None
 
         return node
+
+    def get_ancestors(self, address):
+        '''
+        Returns a stream of the ancestors of the node at address,
+        starting at the root and walking down.
+
+        Raises KeyError if there is no node at address.
+        '''
+        node = self._root
+
+        yield node
+
+        for token in self._tokenize_address(address):
+            node = node.children[token]
+            yield node
 
     def add_reader(self, address, reader):
         node = self.insert(address)
@@ -144,39 +159,31 @@ class PredecessorTree:
         # Children readers must be added, since their reads must happen prior
         # to the write.
 
-        tokens = self._tokenize_address(address)
-
         predecessors = set()
+        enclosing_writer = None
+        node = None
 
         # First, walk down from the root to the address, collecting all readers
         # and updating the enclosing_writer if needed.
+        try:
+            for upper_node in self.get_ancestors(address):
+                node = upper_node
 
-        node = self._root
-        enclosing_writer = node.writer  # possibly None
+                if node.writer is not None:
+                    enclosing_writer = node.writer
 
-        # the readers at the root node will always be added
-        predecessors.update(set(node.readers))
+                predecessors.update(node.readers)
 
-        for token in tokens:
+        except KeyError:
             # If the address isn't on the tree, then there aren't any
             # predecessors below the node to worry about (because
             # there isn't anything at all), so return the predecessors
             # that have already been collected.
-            if token not in node.children:
-                if enclosing_writer is not None:
-                    predecessors.add(enclosing_writer)
-                return predecessors
+            return predecessors
 
-            node = node.children[token]
-
-            # add enclosing readers directly to predecessors
-            predecessors.update(set(node.readers))
-
-            if node.writer is not None:
-                enclosing_writer = node.writer
-
-        if enclosing_writer is not None:
-            predecessors.add(enclosing_writer)
+        finally:
+            if enclosing_writer is not None:
+                predecessors.add(enclosing_writer)
 
         # Next, descend down the tree starting at the address node and find
         # all children writers and readers.  Uses breadth first search.
@@ -224,33 +231,29 @@ class PredecessorTree:
         # this reader will also not impact the readers already recorded in the
         # tree.
 
-        tokens = self._tokenize_address(address)
-
         predecessors = set()
+        enclosing_writer = None
+        node = None
 
         # First, walk down from the root to the address, updating the
         # enclosing_writer if needed.
+        try:
+            for upper_node in self.get_ancestors(address):
+                node = upper_node
 
-        node = self._root
-        enclosing_writer = node.writer  # possibly None
+                if node.writer is not None:
+                    enclosing_writer = node.writer
 
-        for token in tokens:
+        except KeyError:
             # If the address isn't on the tree, then there aren't any
             # predecessors below the node to worry about (because
             # there isn't anything at all), so return the predecessors
             # that have already been collected.
-            if token not in node.children:
-                if enclosing_writer is not None:
-                    predecessors.add(enclosing_writer)
-                return predecessors
+            return predecessors
 
-            node = node.children[token]
-
-            if node.writer is not None:
-                enclosing_writer = node.writer
-
-        if enclosing_writer is not None:
-            predecessors.add(enclosing_writer)
+        finally:
+            if enclosing_writer is not None:
+                predecessors.add(enclosing_writer)
 
         # Next, descend down the tree starting at the address node and find
         # all children writers.  Uses breadth first search.
