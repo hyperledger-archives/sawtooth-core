@@ -132,6 +132,13 @@ class TransactionExecutorThread(object):
                 data=data)
 
         elif response.status == processor_pb2.TpProcessResponse.INTERNAL_ERROR:
+            LOGGER.error(
+                "Transaction processor internal error: %s "
+                "(transaction: %s, name: %s, version: %s)",
+                response.message,
+                req.signature,
+                req.header.family_name,
+                req.header.family_version)
 
             processor_type = processor_iterator.ProcessorType(
                 req.header.family_name,
