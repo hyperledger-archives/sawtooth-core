@@ -161,6 +161,7 @@ impl From<ReceiveError> for ContextError {
     }
 }
 
+#[derive(Clone)]
 pub struct TransactionContext {
     context_id: String,
     sender: ZmqMessageSender
