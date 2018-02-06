@@ -17,13 +17,21 @@ import logging
 
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
+from sawtooth_validator.concurrent.atomic import ConcurrentSet
+from sawtooth_validator.concurrent.atomic import ConcurrentMultiMap
+
 from sawtooth_validator.journal.block_wrapper import BlockStatus
+from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
+from sawtooth_validator.journal.consensus.consensus_factory import \
+    ConsensusFactory
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
+from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
+from sawtooth_validator.journal.chain_commit_state import DuplicateBatch
+from sawtooth_validator.journal.chain_commit_state import MissingDependency
 from sawtooth_validator.journal.validation_rule_enforcer import \
     ValidationRuleEnforcer
 from sawtooth_validator.state.settings_view import SettingsViewFactory
-from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.metrics.wrappers import CounterWrapper
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
@@ -42,13 +50,6 @@ class ChainHeadUpdated(Exception):
     """ Raised when a chain head changed event is detected and we need to abort
     processing and restart processing with the new chain head.
     """
-
-
-class InvalidBatch(Exception):
-    """ Raised when a batch fails validation as a signal to reject the
-    block.
-    """
-    pass
 
 
 class BlockValidationResult:
@@ -163,6 +164,13 @@ class BlockValidator(object):
         else:
             self._moved_to_fork_count = CounterWrapper()
 
+        # Blocks that are currently being processed
+        self._blocks_processing = ConcurrentSet()
+
+        # Descendant blocks that are waiting for an in process block
+        # to complete
+        self._blocks_pending = ConcurrentMultiMap()
+
     def stop(self):
         self._thread_pool.shutdown(wait=True)
 
@@ -172,99 +180,95 @@ class BlockValidator(object):
 
         return self._block_cache[blkw.previous_block_id].state_root_hash
 
-    @staticmethod
-    def _validate_transactions_in_batch(batch, chain_commit_state):
-        """Verify that all transactions in this batch are unique and that all
-        transaction dependencies in this batch have been satisfied.
-
-        :param batch: the batch to verify
-        :param chain_commit_state: the current chain commit state to verify the
-            batch against
-        :return:
-        Boolean: True if all dependencies are present and all transactions
-        are unique.
+    def _validate_batches_in_block(self, blkw, prev_state_root):
         """
-        for txn in batch.transactions:
-            txn_hdr = TransactionHeader()
-            txn_hdr.ParseFromString(txn.header)
-            if chain_commit_state.has_transaction(txn.header_signature):
-                LOGGER.debug(
-                    "Batch invalid due to duplicate transaction: %s",
-                    txn.header_signature[:8])
-                return False
-            for dep in txn_hdr.dependencies:
-                if not chain_commit_state.has_transaction(dep):
-                    LOGGER.debug(
-                        "Batch invalid due to missing transaction dependency;"
-                        " transaction %s depends on %s",
-                        txn.header_signature[:8], dep[:8])
-                    return False
-        return True
+        Validate all batches in the block. This includes:
+            - Validating all transaction dependencies are met
+            - Validating there are no duplicate batches or transactions
+            - Validating execution of all batches in the block produces the
+              correct state root hash
 
-    def _validate_batches_in_block(
-        self, blkw, prev_state_root, chain_commit_state
-    ):
-        if blkw.block.batches:
+        Args:
+            blkw: the block of batches to validate
+            prev_state_root: the state root to execute transactions on top of
+
+        Raises:
+            BlockValidationError:
+                If validation fails, raises this error with the reason.
+            MissingDependency:
+                Validation failed because of a missing dependency.
+            DuplicateTransaction:
+                Validation failed because of a duplicate transaction.
+            DuplicateBatch:
+                Validation failed because of a duplicate batch.
+        """
+        if not blkw.block.batches:
+            return
+
+        try:
+            chain_commit_state = ChainCommitState(
+                blkw.previous_block_id,
+                self._block_cache,
+                self._block_cache.block_store)
+
             scheduler = self._transaction_executor.create_scheduler(
                 self._squash_handler, prev_state_root)
             self._transaction_executor.execute(scheduler)
-            try:
-                for batch, has_more in look_ahead(blkw.block.batches):
-                    if chain_commit_state.has_batch(
-                            batch.header_signature):
-                        LOGGER.debug("Block(%s) rejected due to duplicate "
-                                     "batch, batch: %s", blkw,
-                                     batch.header_signature[:8])
-                        raise InvalidBatch()
 
-                    # Verify dependencies and uniqueness
-                    if self._validate_transactions_in_batch(
-                        batch, chain_commit_state
-                    ):
-                        # Only add transactions to commit state if all
-                        # transactions in the batch are good.
-                        chain_commit_state.add_batch(
-                            batch, add_transactions=True)
-                    else:
-                        raise InvalidBatch()
+            chain_commit_state.check_for_duplicate_batches(
+                blkw.block.batches)
 
-                    if has_more:
-                        scheduler.add_batch(batch)
-                    else:
-                        scheduler.add_batch(batch, blkw.state_root_hash)
-            except InvalidBatch:
-                LOGGER.debug("Invalid batch %s encountered during "
-                             "verification of block %s",
-                             batch.header_signature[:8],
-                             blkw)
-                scheduler.cancel()
-                return False
-            except Exception:
-                scheduler.cancel()
-                raise
+            transactions = []
+            for batch in blkw.block.batches:
+                transactions.extend(batch.transactions)
 
-            scheduler.finalize()
-            scheduler.complete(block=True)
-            state_hash = None
+            chain_commit_state.check_for_duplicate_transactions(
+                transactions)
 
-            for batch in blkw.batches:
-                batch_result = scheduler.get_batch_execution_result(
-                    batch.header_signature)
-                if batch_result is not None and batch_result.is_valid:
-                    txn_results = \
-                        scheduler.get_transaction_execution_results(
-                            batch.header_signature)
-                    blkw.execution_results.extend(txn_results)
-                    state_hash = batch_result.state_hash
-                    blkw.num_transactions += len(batch.transactions)
+            chain_commit_state.check_for_transaction_dependencies(
+                transactions)
+
+            for batch, has_more in look_ahead(blkw.block.batches):
+                if has_more:
+                    scheduler.add_batch(batch)
                 else:
-                    return False
-            if blkw.state_root_hash != state_hash:
-                LOGGER.debug("Block(%s) rejected due to state root hash "
-                             "mismatch: %s != %s", blkw, blkw.state_root_hash,
-                             state_hash)
-                return False
-        return True
+                    scheduler.add_batch(batch, blkw.state_root_hash)
+
+        except (DuplicateBatch,
+                DuplicateTransaction,
+                MissingDependency) as err:
+            scheduler.cancel()
+            raise BlockValidationError(
+                "Block {} failed validation: {}".format(blkw, err))
+
+        except Exception:
+            scheduler.cancel()
+            raise
+
+        scheduler.finalize()
+        scheduler.complete(block=True)
+        state_hash = None
+
+        for batch in blkw.batches:
+            batch_result = scheduler.get_batch_execution_result(
+                batch.header_signature)
+            if batch_result is not None and batch_result.is_valid:
+                txn_results = \
+                    scheduler.get_transaction_execution_results(
+                        batch.header_signature)
+                blkw.execution_results.extend(txn_results)
+                state_hash = batch_result.state_hash
+                blkw.num_transactions += len(batch.transactions)
+            else:
+                raise BlockValidationError(
+                    "Block {} failed validation: Invalid batch "
+                    "{}".format(blkw, batch))
+
+        if blkw.state_root_hash != state_hash:
+            raise BlockValidationError(
+                "Block {} failed state root hash validation. Expected {}"
+                " but got {}".format(
+                    blkw, blkw.state_root_hash, state_hash))
 
     def _validate_permissions(self, blkw, prev_state_root):
         """
@@ -291,7 +295,7 @@ class BlockValidator(object):
                 blkw, prev_state_root)
         return True
 
-    def validate_block(self, blkw, consensus, chain_head=None, chain=None):
+    def validate_block(self, blkw, chain_head=None):
         if blkw.status == BlockStatus.Valid:
             return
         elif blkw.status == BlockStatus.Invalid:
@@ -306,11 +310,6 @@ class BlockValidator(object):
                 # genesis block hasn't been committed yet.
                 chain_head = self._block_cache.block_store.chain_head
 
-            if chain is None:
-                chain = []
-            chain_commit_state = ChainCommitState(
-                self._block_cache.block_store, chain)
-
             try:
                 prev_state_root = self._get_previous_block_state_root(blkw)
             except KeyError:
@@ -319,10 +318,15 @@ class BlockValidator(object):
                         blkw))
 
             if not self._validate_permissions(blkw, prev_state_root):
-                blkw.status = BlockStatus.Invalid
                 raise BlockValidationError(
                     'Block {} failed permission validation'.format(blkw))
 
+            try:
+                prev_block = self._block_cache[blkw.previous_block_id]
+            except KeyError:
+                prev_block = None
+
+            consensus = self._load_consensus(prev_block)
             public_key = \
                 self._identity_signer.get_public_key().as_hex()
             consensus_block_verifier = consensus.BlockVerifier(
@@ -333,24 +337,16 @@ class BlockValidator(object):
                 validator_id=public_key)
 
             if not consensus_block_verifier.verify_block(blkw):
-                blkw.status = BlockStatus.Invalid
                 raise BlockValidationError(
                     'Block {} failed {} consensus validation'.format(
                         blkw, consensus))
 
             if not self._validate_on_chain_rules(blkw, prev_state_root):
-                blkw.status = BlockStatus.Invalid
                 raise BlockValidationError(
                     'Block {} failed on-chain validation rules'.format(
                         blkw))
 
-            if not self._validate_batches_in_block(
-                blkw, prev_state_root, chain_commit_state
-            ):
-                blkw.status = BlockStatus.Invalid
-                raise BlockValidationError(
-                    'Block {} failed batch validation'.format(
-                        blkw))
+            self._validate_batches_in_block(blkw, prev_state_root)
 
             # since changes to the chain-head can change the state of the
             # blocks in BlockStore we have to revalidate this block.
@@ -365,6 +361,7 @@ class BlockValidator(object):
             blkw.status = BlockStatus.Valid
 
         except BlockValidationError as err:
+            blkw.status = BlockStatus.Invalid
             raise err
 
         except ChainHeadUpdated as e:
@@ -372,7 +369,7 @@ class BlockValidator(object):
 
         except Exception as e:
             LOGGER.exception(
-                "Unhandled exception BlockPublisher.validate_block()")
+                "Unhandled exception BlockValidator.validate_block()")
             raise e
 
     @staticmethod
@@ -454,10 +451,11 @@ class BlockValidator(object):
             cur_chain.append(cur_blkw)
             cur_blkw = self._block_cache[cur_blkw.previous_block_id]
 
-    def _compare_forks_consensus(self, consensus, chain_head, new_block):
+    def _compare_forks_consensus(self, chain_head, new_block):
         """Ask the consensus module which fork to choose.
         """
         public_key = self._identity_signer.get_public_key().as_hex()
+        consensus = self._load_consensus(chain_head)
         fork_resolver = consensus.ForkResolver(
             block_cache=self._block_cache,
             state_view_factory=self._state_view_factory,
@@ -466,6 +464,16 @@ class BlockValidator(object):
             validator_id=public_key)
 
         return fork_resolver.compare_forks(chain_head, new_block)
+
+    def _load_consensus(self, block):
+        """Load the consensus module using the state as of the given block."""
+        if block is not None:
+            return ConsensusFactory.get_configured_consensus_module(
+                block.header_signature,
+                BlockWrapper.state_view_for_block(
+                    block,
+                    self._state_view_factory))
+        return ConsensusFactory.get_consensus_module('genesis')
 
     @staticmethod
     def _get_batch_commit_changes(new_chain, cur_chain):
@@ -485,15 +493,92 @@ class BlockValidator(object):
 
         return (committed_batches, uncommitted_batches)
 
-    def submit_blocks_for_verification(
-        self, blocks, consensus, callback
-    ):
+    def submit_blocks_for_verification(self, blocks, callback):
         for block in blocks:
-            self._thread_pool.submit(
-                self.process_block_verification,
-                block, consensus, callback)
+            if self.in_process(block.header_signature):
+                LOGGER.debug("Block already in process: %s", block)
+                continue
 
-    def process_block_verification(self, block, consensus, callback):
+            if self.in_process(block.previous_block_id):
+                LOGGER.debug(
+                    "Previous block '%s' in process,"
+                    " adding '%s' pending",
+                    block.previous_block_id, block)
+                self._add_block_to_pending(block)
+                continue
+
+            if self.in_pending(block.previous_block_id):
+                LOGGER.debug(
+                    "Previous block '%s' is pending,"
+                    " adding '%s' pending",
+                    block.previous_block_id, block)
+                self._add_block_to_pending(block)
+                continue
+
+            LOGGER.debug(
+                "Adding block %s for processing", block.identifier)
+
+            # Add the block to the set of blocks being processed
+            self._blocks_processing.add(block.identifier)
+
+            # Schedule the block for processing
+            self._thread_pool.submit(
+                self.process_block_verification, block,
+                self._wrap_callback(block, callback))
+
+    def _wrap_callback(self, block, callback):
+        # Internal cleanup after verification
+        def wrapper(commit_new_block, result):
+            LOGGER.debug(
+                "Removing block from processing %s",
+                block.identifier[:6])
+            try:
+                self._blocks_processing.remove(block.identifier)
+            except KeyError:
+                LOGGER.warning(
+                    "Tried to remove block from in process but it"
+                    " wasn't in processes: %s",
+                    block.identifier)
+
+            # If the block is invalid, mark all descendant blocks as invalid
+            # and remove from pending.
+            if block.status == BlockStatus.Valid:
+                blocks_now_ready = self._blocks_pending.pop(
+                    block.identifier, [])
+                self.submit_blocks_for_verification(blocks_now_ready, callback)
+
+            else:
+                # Get all the pending blocks that can now be processed
+                blocks_now_invalid = self._blocks_pending.pop(
+                    block.identifier, [])
+
+                while blocks_now_invalid:
+                    invalid_block = blocks_now_invalid.pop()
+                    invalid_block.status = BlockStatus.Invalid
+
+                    LOGGER.debug(
+                        'Marking descendant block invalid: %s',
+                        invalid_block)
+
+                    # Get descendants of the descendant
+                    blocks_now_invalid.extend(
+                        self._blocks_pending.pop(invalid_block.identifier, []))
+
+            callback(commit_new_block, result)
+
+        return wrapper
+
+    def in_process(self, block_id):
+        return block_id in self._blocks_processing
+
+    def in_pending(self, block_id):
+        return block_id in self._blocks_pending
+
+    def _add_block_to_pending(self, block):
+        previous = block.previous_block_id
+        self._blocks_pending.append(previous, block)
+
+    def process_block_verification(self, block, callback):
         """
         Main entry for Block Validation, Take a given candidate block
         and decide if it is valid then if it is valid determine if it should
@@ -540,7 +625,7 @@ class BlockValidator(object):
                 if valid:
                     try:
                         self.validate_block(
-                            blk, consensus, chain_head, result.current_chain)
+                            blk, chain_head)
                     except BlockValidationError as err:
                         LOGGER.warning(
                             'Block %s failed validation: %s',
@@ -574,8 +659,7 @@ class BlockValidator(object):
                     "Fork comparison at height %s is between %s and %s",
                     num, cur, new)
 
-            commit_new_chain = self._compare_forks_consensus(
-                consensus, chain_head, block)
+            commit_new_chain = self._compare_forks_consensus(chain_head, block)
 
             # If committing the new chain, get the list of committed batches
             # from the current chain that need to be uncommitted and the list
