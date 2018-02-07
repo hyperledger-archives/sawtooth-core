@@ -50,7 +50,7 @@ seeds = ["tcp://validator-0:8800"]
 #peers = []
 
 # The type of scheduler to use. The choices are 'serial' or 'parallel'.
-scheduler = 'serial'
+scheduler = 'parallel'
 
 # A Curve ZMQ key pair are used to create a secured network based on side-band
 # sharing of a single network key pair to all participating nodes.
