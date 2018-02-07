@@ -345,6 +345,10 @@ def main(args=None):
             password=validator_config.opentsdb_password)
         metrics_reporter.start()
 
+    LOGGER.info(
+        'Starting validator with %s scheduler',
+        validator_config.scheduler)
+
     validator = Validator(
         bind_network,
         bind_component,
