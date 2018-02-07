@@ -141,7 +141,7 @@ echo "pycodestyle $(pycodestyle --version)"
 echo "$(pylint --version)"
 
 if [ "$DRY_RUN" = "1" ]; then
-    for dir in core signing validator sdk/python sdk/examples/intkey_python \
+    for dir in signing validator sdk/python sdk/examples/intkey_python \
         extensions/arcade consensus/poet/cli consensus/poet/common \
         consensus/poet/core consensus/poet/families consensus/poet/sgx \
         consensus/poet/simulator
