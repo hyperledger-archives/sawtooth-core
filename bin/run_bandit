@@ -31,7 +31,6 @@ directories="
     consensus/poet/families/tests
     consensus/poet/simulator/build
     consensus/poet/simulator/tests
-    core
     families/settings/tests
     integration
     rest_api/build
