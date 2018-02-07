@@ -31,6 +31,8 @@ from sawtooth_validator.journal.consensus.batch_publisher import \
     BatchPublisher
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
+from sawtooth_validator.journal.validation_rule_enforcer import \
+    enforce_validation_rules
 
 from sawtooth_validator.journal.chain_commit_state import \
     TransactionCommitCache
@@ -40,6 +42,8 @@ from sawtooth_validator.metrics.wrappers import GaugeWrapper
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
+
+from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
 
@@ -120,6 +124,8 @@ class _CandidateBlock(object):
                  block_builder,
                  max_batches,
                  batch_injectors,
+                 settings_view,
+                 signer_public_key,
                  ):
         self._pending_batches = []
         self._pending_batch_ids = set()
@@ -134,6 +140,9 @@ class _CandidateBlock(object):
         self._block_builder = block_builder
         self._max_batches = max_batches
         self._batch_injectors = batch_injectors
+
+        self._settings_view = settings_view
+        self._signer_public_key = signer_public_key
 
     def __del__(self):
         self.cancel()
@@ -268,6 +277,12 @@ class _CandidateBlock(object):
                     self._block_builder.previous_block_id), batches_to_add)
 
             batches_to_add.append(batch)
+
+            if not enforce_validation_rules(
+                    self._settings_view,
+                    self._signer_public_key,
+                    self._pending_batches + batches_to_add):
+                return
 
             for b in batches_to_add:
                 self._pending_batches.append(b)
@@ -616,7 +631,9 @@ class BlockPublisher(object):
             committed_txn_cache,
             block_builder,
             max_batches,
-            batch_injectors)
+            batch_injectors,
+            SettingsView(state_view),
+            public_key)
 
         for batch in self._pending_batches:
             if self._candidate_block.can_add_batch:

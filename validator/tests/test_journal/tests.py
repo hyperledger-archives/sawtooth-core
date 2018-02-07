@@ -415,6 +415,52 @@ class TestBlockPublisher(unittest.TestCase):
 
         self.assert_batch_in_block(injected_batch)
 
+    def test_validation_rules_reject_batches(self):
+        """Test that a batch is not added to the block if it will violate the
+        block validation rules.
+
+        It does the following:
+
+        - Sets the block_validation_rules to limit the number of 'test'
+          transactions to 1
+        - creates two batches, limited to 1 transaction each, and receives
+          them
+        - verifies that only the first batch was committed to the block
+        """
+        addr, value = CreateSetting(
+            'sawtooth.validator.block_validation_rules', 'NofX:1,test')
+        self.state_view_factory = MockStateViewFactory(
+            {addr: value})
+
+        batch1 = self.make_batch(txn_count=1)
+        batch2 = self.make_batch(txn_count=1)
+
+        self.publisher = BlockPublisher(
+            transaction_executor=MockTransactionExecutor(),
+            block_cache=self.block_tree_manager.block_cache,
+            state_view_factory=self.state_view_factory,
+            settings_cache=SettingsCache(
+                SettingsViewFactory(
+                    self.state_view_factory),
+            ),
+            block_sender=self.block_sender,
+            batch_sender=self.batch_sender,
+            squash_handler=None,
+            chain_head=self.block_tree_manager.chain_head,
+            identity_signer=self.block_tree_manager.identity_signer,
+            data_dir=None,
+            config_dir=None,
+            check_publish_block_frequency=0.1,
+            batch_observers=[],
+            permission_verifier=self.permission_verifier)
+
+        self.receive_batches(batches=[batch1, batch2])
+
+        self.publish_block()
+
+        self.assert_block_batch_count(1)
+        self.assert_batch_in_block(batch1)
+
     # assertions
     def assert_block_published(self):
         self.assertIsNotNone(
@@ -486,8 +532,9 @@ class TestBlockPublisher(unittest.TestCase):
             uncommitted_batches=uncommitted)
 
     # batches
-    def make_batch(self, missing_deps=False):
+    def make_batch(self, missing_deps=False, txn_count=2):
         return self.block_tree_manager.generate_batch(
+            txn_count=txn_count,
             missing_deps=missing_deps)
 
     def make_batches(self, batch_count=None, missing_deps=False):
