@@ -20,6 +20,7 @@ from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipMessageDropHandler
+from sawtooth_validator.gossip.token_pool import TokenPool
 
 from test_gossip_drop_handler.mock import MockCompleter
 from test_gossip_drop_handler.mock import MockChainController
@@ -32,7 +33,8 @@ class TestDropHandler(unittest.TestCase):
         self.chain = MockChainController()
         self.publisher = MockPublisher()
         self.handler = GossipMessageDropHandler(
-            self.completer, self.chain.has_block, self.publisher.has_batch)
+            self.completer, self.chain.has_block, self.publisher.has_batch,
+            TokenPool())
 
     def test_no_block(self):
         """
