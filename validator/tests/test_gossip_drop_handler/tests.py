@@ -19,19 +19,19 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.gossip.gossip_handlers import \
-    GossipMessageDuplicateHandler
+    GossipMessageDropHandler
 
-from test_duplicate_handler.mock import MockCompleter
-from test_duplicate_handler.mock import MockChainController
-from test_duplicate_handler.mock import MockPublisher
+from test_gossip_drop_handler.mock import MockCompleter
+from test_gossip_drop_handler.mock import MockChainController
+from test_gossip_drop_handler.mock import MockPublisher
 
 
-class TestDuplicateHandler(unittest.TestCase):
+class TestDropHandler(unittest.TestCase):
     def setUp(self):
         self.completer = MockCompleter()
         self.chain = MockChainController()
         self.publisher = MockPublisher()
-        self.handler = GossipMessageDuplicateHandler(
+        self.handler = GossipMessageDropHandler(
             self.completer, self.chain.has_block, self.publisher.has_batch)
 
     def test_no_block(self):

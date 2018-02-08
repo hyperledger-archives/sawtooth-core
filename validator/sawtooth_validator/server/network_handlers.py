@@ -39,7 +39,7 @@ from sawtooth_validator.gossip.permission_verifier import \
 
 from sawtooth_validator.gossip.gossip_handlers import GossipBroadcastHandler
 from sawtooth_validator.gossip.gossip_handlers import \
-    GossipMessageDuplicateHandler
+    GossipMessageDropHandler
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipBlockResponseHandler
 from sawtooth_validator.gossip.gossip_handlers import \
@@ -177,7 +177,7 @@ def add(
     # GOSSIP_MESSAGE ) Check if this is a block and if we already have it
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
-        GossipMessageDuplicateHandler(completer, has_block, has_batch),
+        GossipMessageDropHandler(completer, has_block, has_batch),
         thread_pool)
 
     # GOSSIP_MESSAGE ) Verify Network Permissions

@@ -116,7 +116,7 @@ class PeerUnregisterHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
 
-class GossipMessageDuplicateHandler(Handler):
+class GossipMessageDropHandler(Handler):
     def __init__(self, completer, has_block, has_batch):
         self._completer = completer
         self._has_block = has_block
