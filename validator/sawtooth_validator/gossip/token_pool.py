@@ -15,6 +15,9 @@
 
 from threading import Lock
 
+from sawtooth_validator.execution.executor import InvalidTransactionObserver
+from sawtooth_validator.journal.chain import ChainObserver
+from sawtooth_validator.journal.publisher import PendingBatchQueueObserver
 
 DEFAULT_POOL_SIZE = 60
 """The default number of tokens in a TokenPool.
@@ -92,3 +95,39 @@ class TokenPool:
         with self._lock:
             # Ignore any unknown token_bearers
             self._token_bearers.discard(token_bearer_id)
+
+
+class BatchTokenPoolUpdater(InvalidTransactionObserver,
+                            ChainObserver,
+                            PendingBatchQueueObserver):
+    """A series of observer interfaces that are wrapped around a token pool.
+
+    The observers will be used to track changes in the state of batches or
+    change the number of tokens available to a pool.
+    """
+
+    def __init__(self, token_pool):
+        """Wraps a given TokenPool and returns tokens to the pool or updates
+        its maximum available tokens, depending on events in the validator.
+        """
+        self._token_pool = token_pool
+
+    def notify_txn_invalid(self, txn_id, batch_id,
+                           message=None, extended_data=None):
+        """On a transaction being marked as invalid, immediately release the
+        token for the batch, such that more batches can be accepted.
+        """
+        self._token_pool.release_token(batch_id)
+
+    def notify_pending_batch_queue_limit(self, limit):
+        """On pending batch queue limit updates, the number of available
+        tokens will be adjusted.
+        """
+        self._token_pool.update_max_available_tokens(limit)
+
+    def chain_update(self, block, receipts):
+        """On a block update, this observer will release tokens from any
+        batches that were included in the given block.
+        """
+        for batch in block.batches:
+            self._token_pool.release_token(batch.header_signature)
