@@ -187,6 +187,17 @@ class Scheduler(object, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
+    def get_batch_id_for_transaction(self, transaction_id):
+        """Returns the batch id of tha batch which contains the transaction
+        with the given id.
+
+        Useful for correlating tranactions with their containing batches.
+
+        Returns:
+            str: the batch id, or None if not found
+        """
+        raise NotImplementedError()
+
     @abstractmethod
     def count(self):
         """The count of transactions which have been scheduled.

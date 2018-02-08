@@ -514,6 +514,14 @@ class ParallelScheduler(Scheduler):
 
             return BatchExecutionResult(is_valid=True, state_hash=state_hash)
 
+    def get_batch_id_for_transaction(self, transaction_id):
+        with self._condition:
+            batch = self._batches_by_txn_id.get(transaction_id)
+            if batch:
+                return batch.header_signature
+
+        return None
+
     def get_transaction_execution_results(self, batch_signature):
         with self._condition:
             annotated_batch = self._batches_by_id.get(batch_signature)
