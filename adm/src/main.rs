@@ -90,7 +90,10 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                 (@arg block: +required "the block to export"))
             (@subcommand import =>
                 (about: "add a block to the blockstore; new block's parent must be the current chain head")
-                (@arg blockfile: +required "a protobuf file containing the block to add")))
+                (@arg blockfile: +required "a protobuf file containing the block to add"))
+            (@subcommand stats =>
+                (about: "print out database stats")
+                (@arg extended: -x --extended "show extended stats about the blockstore")))
         (@subcommand keygen =>
             (about: "generates keys for the validator to use when signing blocks")
             (@arg key_name: +takes_value "name of the key to create")

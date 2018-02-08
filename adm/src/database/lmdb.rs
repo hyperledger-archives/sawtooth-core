@@ -142,6 +142,23 @@ impl<'a> LmdbDatabaseReader<'a> {
             cursor: cursor,
         })
     }
+
+
+    pub fn count(&self) -> Result<usize, DatabaseError> {
+        self.txn.db_stat(&self.db.main)
+            .map_err(|err|
+                DatabaseError::CorruptionError(format!("Failed to get database stats: {}", err)))
+            .map(|stat| stat.entries)
+    }
+
+    pub fn index_count(&self, index: &str) -> Result<usize, DatabaseError> {
+        let index = self.db.indexes.get(index).ok_or(
+            DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
+        self.txn.db_stat(index)
+            .map_err(|err|
+                DatabaseError::CorruptionError(format!("Failed to get database stats: {}", err)))
+            .map(|stat| stat.entries)
+    }
 }
 
 pub struct LmdbDatabaseReaderCursor<'a> {

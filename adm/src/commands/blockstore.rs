@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::collections::HashMap;
 use std::io::{self, Read, Write};
 use std::fs::File;
 
@@ -24,6 +25,7 @@ use protobuf::Message;
 use serde_yaml;
 
 use sawtooth_sdk::messages::block::{Block, BlockHeader};
+use sawtooth_sdk::messages::transaction::{TransactionHeader};
 
 use blockstore::Blockstore;
 use database::lmdb;
@@ -43,6 +45,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         ("prune", Some(args)) => run_prune_command(args),
         ("export", Some(args)) => run_export_command(args),
         ("import", Some(args)) => run_import_command(args),
+        ("stats", Some(args)) => run_stats_command(args),
         _ => { println!("Invalid subcommand; Pass --help for usage."); Ok(()) },
     }
 }
@@ -262,6 +265,58 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         CliError::ArgumentError(format!("Failed to put block into database: {}", err)))?;
 
     println!("Block {} added", block_id);
+    Ok(())
+}
+
+fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
+    let ctx = create_context()?;
+    let blockstore = open_blockstore(&ctx)?;
+
+    let block_count = blockstore.get_current_height()
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let batch_count = blockstore.get_batch_count()
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let txn_count = blockstore.get_transaction_count()
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+
+    if args.is_present("extended") {
+        let mut txn_family_counts = HashMap::new();
+        let chain_head = blockstore.get_chain_head()
+            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+        let mut block = blockstore.get(&chain_head)
+            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+
+        loop {
+            for batch in &block.batches {
+                for txn in &batch.transactions {
+                    let txn_header: TransactionHeader = protobuf::parse_from_bytes(&txn.header)
+                        .map_err(|err| CliError::ParseError(format!("{}", err)))?;
+                    let count = txn_family_counts.entry(txn_header.family_name).or_insert(0);
+                    *count += 1;
+                }
+            }
+            let header: BlockHeader = protobuf::parse_from_bytes(&block.header)
+                .map_err(|err| CliError::ParseError(format!("{}", err)))?;
+            if header.previous_block_id == NULL_BLOCK_IDENTIFIER {
+                break;
+            }
+            block = blockstore.get(&header.previous_block_id)
+                .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+        }
+
+        println!("Blocks:       {}", block_count);
+        println!("Batches:      {}", batch_count);
+        println!("Transactions: {}", txn_count);
+        for (family, count) in txn_family_counts.iter() {
+            println!("  {}: {}", family, count);
+        }
+
+    } else {
+        println!("Blocks:       {}", block_count);
+        println!("Batches:      {}", batch_count);
+        println!("Transactions: {}", txn_count);
+    }
+
     Ok(())
 }
 

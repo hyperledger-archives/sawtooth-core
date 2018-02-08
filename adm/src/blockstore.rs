@@ -159,4 +159,20 @@ impl<'a> Blockstore<'a> {
         String::from_utf8(val.into()).map_err(|err|
             DatabaseError::CorruptionError(format!("Chain head block id is corrupt: {}", err)))
     }
+
+    // Get the number of blocks
+    pub fn get_current_height(&self) -> Result<usize, DatabaseError> {
+        let reader = self.db.reader()?;
+        reader.count()
+    }
+
+    pub fn get_transaction_count(&self) -> Result<usize, DatabaseError> {
+        let reader = self.db.reader()?;
+        reader.index_count("index_transaction")
+    }
+
+    pub fn get_batch_count(&self) -> Result<usize, DatabaseError> {
+        let reader = self.db.reader()?;
+        reader.index_count("index_batch")
+    }
 }
