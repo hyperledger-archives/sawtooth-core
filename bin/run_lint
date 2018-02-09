@@ -142,9 +142,8 @@ echo "$(pylint --version)"
 
 if [ "$DRY_RUN" = "1" ]; then
     for dir in signing validator sdk/python sdk/examples/intkey_python \
-        extensions/arcade consensus/poet/cli consensus/poet/common \
-        consensus/poet/core consensus/poet/families consensus/poet/sgx \
-        consensus/poet/simulator
+        consensus/poet/cli consensus/poet/common consensus/poet/core \
+        consensus/poet/families consensus/poet/sgx consensus/poet/simulator
     do
         for package in $(find_packages "$dir" "$SINCE")
         do
