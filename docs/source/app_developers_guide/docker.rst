@@ -18,19 +18,20 @@ tutorials that guide you in performing app development tasks, such as
 implementing business logic with transaction families and writing clients
 which use Sawtooth's REST API.
 
-Overview of Sawtooth Components
-===============================
+About the Demo Sawtooth Environment
+===================================
 
-A running Sawtooth network consists of the following applications or processes:
+This tutorial describes how to use Docker to set up a single Sawtooth node
+with a validator, a REST API, and two transaction processors.
 
-.. image:: ../images/hyperledger_sawtooth_components.*
-   :width: 80%
+.. figure:: ../images/appdev-environment-one-node-2TPs.*
+   :width: 100%
    :align: center
-   :alt: Sawtooth components
+   :alt: Demo Sawtooth environment with Docker
 
-This diagram represents a simple network with just two validators and two
-transaction processors. The second validator's transaction processors are not
-depicted.
+This demo environment introduces basic Sawtooth functionality with the
+IntegerKey and Settings transaction processors for the business logic
+and the Sawtooth CLI as the client.
 
 
 Install Docker Engine and Docker Compose
