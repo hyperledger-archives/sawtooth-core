@@ -89,14 +89,18 @@ class TransactionExecutorThread(object):
         if metrics_registry:
             self._transaction_execution_count = CounterWrapper(
                 metrics_registry.counter('transaction_execution_count'))
+            self._in_process_transactions_count = CounterWrapper(
+                metrics_registry.counter('in_process_transactions_count'))
         else:
             self._transaction_execution_count = CounterWrapper()
+            self._in_process_transactions_count = CounterWrapper()
 
     def _future_done_callback(self, request, result):
         """
         :param request (bytes):the serialized request
         :param result (FutureResult):
         """
+        self._in_process_transactions_count.dec()
         req = processor_pb2.TpProcessRequest()
         req.ParseFromString(request)
         response = processor_pb2.TpProcessResponse()
@@ -336,6 +340,7 @@ class TransactionExecutorThread(object):
             content,
             connection_id=connection_id,
             callback=self._future_done_callback)
+        self._in_process_transactions_count.inc()
         if connection_id in self._open_futures:
             self._open_futures[connection_id].update(
                 {signature: fut})
