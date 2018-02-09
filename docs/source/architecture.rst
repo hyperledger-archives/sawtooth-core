@@ -3,6 +3,13 @@
 Architecture Description
 ************************
 
+The following diagram shows a high-level view of the Sawtooth architecture.
+
+.. figure:: images/arch-sawtooth-overview.*
+   :width: 100%
+   :align: center
+   :alt: Sawtooth core architecture
+
 .. toctree::
    :maxdepth: 2
 
