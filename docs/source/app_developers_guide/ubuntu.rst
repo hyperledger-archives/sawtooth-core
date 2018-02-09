@@ -25,14 +25,15 @@ About the Demo Sawtooth Environment
 This tutorial describes how to set up a single Sawtooth node
 with a validator, a REST API, and two transaction processors.
 
-.. figure:: ../images/appdev-environment-one-node-2TPs.*
+.. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%
    :align: center
    :alt: Demo Sawtooth environment with Ubuntu
 
 This demo environment introduces basic Sawtooth functionality with the
 IntegerKey and Settings transaction processors for the business logic
-and the Sawtooth CLI as the client.
+and the Sawtooth CLI as the client. It also includes the XO transaction
+processor, which is used in a later tutorial.
 
 
 Installing Sawtooth
