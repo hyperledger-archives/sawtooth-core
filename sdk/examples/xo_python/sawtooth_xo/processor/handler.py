@@ -82,10 +82,10 @@ class XoTransactionHandler(TransactionHandler):
 
             if game is None:
                 raise InvalidTransaction(
-                    'Invalid action: Take requires an existing game.')
+                    'Invalid action: Take requires an existing game')
 
             if game.state in ('P1-WIN', 'P2-WIN', 'TIE'):
-                raise InvalidTransaction('Invalid Action: Game has ended.')
+                raise InvalidTransaction('Invalid Action: Game has ended')
 
             if (game.player1 and game.state == 'P1-NEXT' and
                 game.player1 != signer) or \
