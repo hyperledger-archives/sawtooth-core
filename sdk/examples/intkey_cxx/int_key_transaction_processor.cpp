@@ -33,6 +33,9 @@
 #define URL_PREFIX_LEN   6
 #define URL_DEFAULT      "tcp://127.0.0.1:4004"
 
+#define MIN_VALUE        0x0
+#define MAX_VALUE        0xffffffff
+
 using namespace log4cxx;
 
 using namespace nlohmann;
@@ -67,7 +70,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
             address_mapper(new AddressMapper(INTKEY_NAMESPACE)) { };
 
 
-    void CborToParams(std::string& verb, std::string& name, int& value) {
+    void CborToParams(std::string& verb, std::string& name, uint32_t& value) {
         const std::string& raw_data = this->txn->payload();
         std::vector<uint8_t> data_vector = ToVector(raw_data);
         json intkey_cmd = json::from_cbor(data_vector);
@@ -105,14 +108,20 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
                 "Value is required");
         }
 
-        value = (*value_it).get<int>();
+        value = (*value_it).get<uint32_t>();
+        if(value < MIN_VALUE || value > MAX_VALUE){
+            std::stringstream error;
+            error << "Value (" << value << ") is out of range [" <<
+                MIN_VALUE << ", " << MAX_VALUE << "]";
+            throw sawtooth::InvalidTransaction(error.str());
+        }
     };
 
     void Apply() {
         LOG4CXX_DEBUG(logger, "IntKeyApplicator::Apply");
         std::string verb;
         std::string name;
-        int value;
+        uint32_t value;
 
         CborToParams(verb, name, value);
 
@@ -146,6 +155,7 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
         LOG4CXX_DEBUG(logger, "IntKeyApplicator::DoSet Name: " << name
             << " Value: " << value << " Address: " << address);
 
+        // Value is range checked earlier during cbor deserialization
         std::string state_value_rep;
         json state_value_map;
         if(this->state->GetState(&state_value_rep, address)) {
@@ -199,7 +209,15 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
         LOG4CXX_DEBUG(logger, "address received: " << address << "="
             << state_value_map[name]);
 
-        int state_value = state_value_map[name].get<int>();
+        uint32_t state_value = state_value_map[name].get<uint32_t>();
+        uint32_t remaining = MAX_VALUE - state_value;
+        if(value > remaining) {
+            std::stringstream error;
+            error << "Value (" << value << ") is too large to inc existing" <<
+                " (" << state_value << ") Max: " << MAX_VALUE;
+            throw sawtooth::InvalidTransaction(error.str());
+        }
+
         state_value += value;
         state_value_map[name] = state_value;
 
@@ -237,7 +255,14 @@ class IntKeyApplicator:  public sawtooth::TransactionApplicator {
         LOG4CXX_DEBUG(logger, "address received: " << address << "=" <<
             state_value_map[name]);
 
-        int state_value = state_value_map[name].get<int>();
+        uint32_t state_value = state_value_map[name].get<uint32_t>();
+        uint32_t remaining = state_value - MIN_VALUE;
+        if(value > remaining) {
+            std::stringstream error;
+            error << "Value (" << value << ") is too large to dec existing" <<
+                " (" << state_value << ") Min: " << MIN_VALUE;
+            throw sawtooth::InvalidTransaction(error.str());
+        }
         state_value -= value;
         state_value_map[name] = state_value;
 
