@@ -285,6 +285,30 @@ class TestSchedulersWithYaml(unittest.TestCase):
             context_manager=context_manager,
             name='complex_dependency_failures.yaml')
 
+    def test_long_chain_of_inputs_outputs(self):
+        """Tests the schedulers against the
+        test_scheduler/data/long_chain_of_inputs_outputs.yaml file.
+
+        Tests that transactions are sorted correctly in
+        _sort_txn_ids_in_reverse by making it very unlikely that they will be
+        sorted correctly by chance if the sorting is not working correctly. The
+        key part of this test is that inputs and outputs contain the addresses
+        alternating between one and two addresses and that there are many
+        transactions that set the same address.
+        """
+
+        context_manager, scheduler = self._setup_parallel_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='long_chain_of_inputs_outputs.yaml')
+
+        context_manager, scheduler = self._setup_serial_scheduler()
+        self._single_block_files_individually(
+            scheduler=scheduler,
+            context_manager=context_manager,
+            name='long_chain_of_inputs_outputs.yaml')
+
     def _single_block_files_individually_alt(self,
                                              scheduler,
                                              context_manager,
