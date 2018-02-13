@@ -48,6 +48,7 @@ from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.gossip.gossip_handlers import GetPeersRequestHandler
 from sawtooth_validator.gossip.gossip_handlers import GetPeersResponseHandler
+from sawtooth_validator.networking.dispatch import Priority
 from sawtooth_validator.networking.handlers import PingHandler
 from sawtooth_validator.networking.handlers import ConnectHandler
 from sawtooth_validator.networking.handlers import DisconnectHandler
@@ -82,7 +83,8 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.PING_REQUEST,
         PingHandler(network=interconnect),
-        thread_pool)
+        thread_pool,
+        priority=Priority.HIGH)
 
     dispatcher.add_handler(
         validator_pb2.Message.NETWORK_CONNECT,
@@ -95,6 +97,10 @@ def add(
         thread_pool)
 
     # -- Authorization -- #
+    dispatcher.set_message_priority(
+        validator_pb2.Message.AUTHORIZATION_CONNECTION_RESPONSE,
+        Priority.MEDIUM)
+
     dispatcher.add_handler(
         validator_pb2.Message.AUTHORIZATION_VIOLATION,
         AuthorizationViolationHandler(
@@ -108,14 +114,16 @@ def add(
             network=interconnect,
             permission_verifier=permission_verifier,
             gossip=gossip),
-        thread_pool)
+        thread_pool,
+        priority=Priority.MEDIUM)
 
     challenge_request_handler = AuthorizationChallengeRequestHandler(
         network=interconnect)
     dispatcher.add_handler(
         validator_pb2.Message.AUTHORIZATION_CHALLENGE_REQUEST,
         challenge_request_handler,
-        thread_pool)
+        thread_pool,
+        priority=Priority.MEDIUM)
 
     dispatcher.add_handler(
         validator_pb2.Message.AUTHORIZATION_CHALLENGE_SUBMIT,
@@ -124,7 +132,8 @@ def add(
             permission_verifier=permission_verifier,
             gossip=gossip,
             cache=challenge_request_handler.get_challenge_payload_cache()),
-        thread_pool)
+        thread_pool,
+        priority=Priority.MEDIUM)
 
     # -- Gossip -- #
     dispatcher.add_handler(
@@ -140,6 +149,10 @@ def add(
         validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
         GetPeersRequestHandler(gossip=gossip),
         thread_pool)
+
+    dispatcher.set_message_priority(
+        validator_pb2.Message.GOSSIP_GET_PEERS_REQUEST,
+        Priority.MEDIUM)
 
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_GET_PEERS_RESPONSE,
@@ -168,6 +181,10 @@ def add(
         validator_pb2.Message.GOSSIP_REGISTER,
         PeerRegisterHandler(gossip=gossip),
         thread_pool)
+
+    dispatcher.set_message_priority(
+        validator_pb2.Message.GOSSIP_REGISTER,
+        Priority.MEDIUM)
 
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_UNREGISTER,
