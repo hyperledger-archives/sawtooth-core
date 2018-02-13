@@ -20,6 +20,8 @@ import sawtooth_validator.state.client_handlers as handlers
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.client_batch_submit_pb2 \
     import ClientBatchStatus
+from sawtooth_validator.protobuf.transaction_receipt_pb2 \
+    import TransactionReceipt
 from test_client_request_handlers.base_case import ClientHandlerTestCase
 from test_client_request_handlers.mocks import make_mock_batch
 from test_client_request_handlers.mocks import make_store_and_tracker
@@ -246,13 +248,15 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
             - a response status of OK
             - a status of COMMITTED at key 'aaa...e' in batch_statuses
         """
-        self._tracker.notify_batch_pending(make_mock_batch('e'))
+        batch = make_mock_batch('e')
+        self._tracker.notify_batch_pending(batch)
         start_time = time()
 
         def delayed_add():
             sleep(1)
             self._store.add_block('e')
-            self._tracker.chain_update(None, [])
+            self._tracker.chain_update(
+                None, _transaction_receipts_for_batch(batch))
 
         Thread(target=delayed_add).start()
 
@@ -286,3 +290,8 @@ class TestBatchStatusRequests(ClientHandlerTestCase):
         self.assertEqual(self.status.OK, response.status)
         self.assertEqual(response.batch_statuses[0].status,
                          ClientBatchStatus.COMMITTED)
+
+
+def _transaction_receipts_for_batch(batch):
+    return [TransactionReceipt(transaction_id=txn.header_signature)
+            for txn in batch.transactions]

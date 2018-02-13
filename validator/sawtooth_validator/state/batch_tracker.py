@@ -52,7 +52,8 @@ class BatchTracker(ChainObserver,
         self._block_store = block_store
         self._batch_info = TimedCache(cache_keep_time, cache_purge_frequency)
         self._invalid = TimedCache(cache_keep_time, cache_purge_frequency)
-        self._pending = set()
+        self._pending = {}
+        self._pending_batches_by_txn_id = {}
 
         self._lock = RLock()
         self._observers = {}
@@ -61,12 +62,27 @@ class BatchTracker(ChainObserver,
         """Removes batches from the pending cache if found in the block store,
         and notifies any observers.
         """
+        to_be_notified = []
         with self._lock:
-            for batch_id in self._pending.copy():
-                if self._block_store.has_batch(batch_id):
-                    self._pending.remove(batch_id)
-                    self._update_observers(batch_id,
-                                           ClientBatchStatus.COMMITTED)
+            committed_txn_ids = [receipt.transaction_id
+                                 for receipt in receipts]
+
+            for txn_id in committed_txn_ids:
+                # Once a single transaction is committed, due to the atomic
+                # nature of batches, we can assume the batch is committed,
+                # and mark it as such.
+                if txn_id in self._pending_batches_by_txn_id:
+                    batch = self._pending_batches_by_txn_id[txn_id]
+                    self._remove_from_pending(batch)
+                    to_be_notified.append(batch.header_signature)
+
+        for batch_id in to_be_notified:
+            self._update_observers(batch_id, ClientBatchStatus.COMMITTED)
+
+    def _remove_from_pending(self, batch):
+        del self._pending[batch.header_signature]
+        for txn in batch.transactions:
+            del self._pending_batches_by_txn_id[txn.header_signature]
 
     def notify_txn_invalid(self, txn_id, message=None, extended_data=None):
         """Adds a batch id to the invalid cache along with the id of the
@@ -92,7 +108,7 @@ class BatchTracker(ChainObserver,
                         self._invalid[batch_id] = [invalid_txn_info]
                     else:
                         self._invalid[batch_id].append(invalid_txn_info)
-                    self._pending.discard(batch_id)
+                    self._remove_from_pending(self._pending[batch_id])
                     self._update_observers(batch_id, ClientBatchStatus.INVALID)
                     return
 
@@ -104,7 +120,10 @@ class BatchTracker(ChainObserver,
         """
         txn_ids = {t.header_signature for t in batch.transactions}
         with self._lock:
-            self._pending.add(batch.header_signature)
+            self._pending[batch.header_signature] = batch
+            for txn in batch.transactions:
+                self._pending_batches_by_txn_id[txn.header_signature] = batch
+
             self._batch_info[batch.header_signature] = txn_ids
             self._update_observers(batch.header_signature,
                                    ClientBatchStatus.PENDING)
