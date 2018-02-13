@@ -86,8 +86,9 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                 (about: "remove a block and all children blocks from the blockstore")
                 (@arg block: +required "the block to remove"))
             (@subcommand export =>
-                (about: "write a block's packed representation to stdout")
-                (@arg block: +required "the block to export"))
+                (about: "write a block's packed representation to file or stdout")
+                (@arg block: +required "the block to export")
+                (@arg output: -o --output +takes_value "the file to export the block to"))
             (@subcommand import =>
                 (about: "add a block to the blockstore; new block's parent must be the current chain head")
                 (@arg blockfile: +required "a protobuf file containing the block to add"))

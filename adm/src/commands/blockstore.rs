@@ -223,15 +223,20 @@ fn run_export_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let block = blockstore.get(block_id).map_err(|_|
         CliError::ArgumentError(format!("Block not found: {}", block_id)))?;
 
-    let packed = block.write_to_bytes().map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
-
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-
-    handle.write(&packed)
-        .map(|_| ())
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
+    match args.value_of("output") {
+        Some(filepath) => {
+            let mut file = File::create(filepath).map_err(|err|
+                CliError::EnvironmentError(format!("Failed to create file: {}", err)))?;
+            block.write_to_writer(&mut file)
+                .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
+        },
+        None => {
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            block.write_to_writer(&mut handle)
+                .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
+        }
+    }
 }
 
 fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
