@@ -1,5 +1,5 @@
 /**
- * Copyright 2017 Intel Corporation
+ * Copyright 2017-2018 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,12 @@ import (
 	"sawtooth_sdk/logging"
 	"sawtooth_sdk/processor"
 	"sawtooth_sdk/protobuf/processor_pb2"
-	"strconv"
+	"sawtooth_xo/xo_payload"
 	"strings"
 )
 
 var logger *logging.Logger = logging.Get()
 var namespace = hexdigest("xo")[:6]
-
-type XoPayload struct {
-	Name   string
-	Action string
-	Space  int
-}
 
 type XoHandler struct {
 }
@@ -71,7 +65,7 @@ func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *p
 	// The payload is sent to the transaction processor as bytes (just as it
 	// appears in the transaction constructed by the transactor).  We unpack
 	// the payload into an XoPayload struct so we can access its fields.
-	payload, err := unpackPayload(request.GetPayload())
+	payload, err := xo_payload.FromBytes(request.GetPayload())
 	if err != nil {
 		return err
 	}
@@ -186,45 +180,6 @@ func isWin(board string, letter byte) bool {
 		}
 	}
 	return false
-}
-
-func unpackPayload(payloadData []byte) (*XoPayload, error) {
-	if payloadData == nil {
-		return nil, &processor.InvalidTransactionError{Msg: "Must contain payload"}
-	}
-
-	parts := strings.Split(string(payloadData), ",")
-	if len(parts) != 3 {
-		return nil, &processor.InvalidTransactionError{Msg: "Payload is malformed"}
-	}
-
-	payload := XoPayload{}
-	payload.Name = parts[0]
-	payload.Action = parts[1]
-
-	if len(payload.Name) < 1 {
-		return nil, &processor.InvalidTransactionError{Msg: "Name is required"}
-	}
-
-	if len(payload.Action) < 1 {
-		return nil, &processor.InvalidTransactionError{Msg: "Action is required"}
-	}
-
-	if payload.Action == "take" {
-		space, err := strconv.Atoi(parts[2])
-		if err != nil {
-			return nil, &processor.InvalidTransactionError{
-				Msg: fmt.Sprintf("Invalid Space: '%v'", parts[2])}
-		}
-		payload.Space = space
-	}
-
-	if strings.Contains(payload.Name, "|") {
-		return nil, &processor.InvalidTransactionError{
-			Msg: fmt.Sprintf("Invalid Name (char '|' not allowed): '%v'", parts[2])}
-	}
-
-	return &payload, nil
 }
 
 func unpackGame(gameData []byte) (*Game, error) {
