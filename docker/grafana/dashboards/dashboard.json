@@ -1,4 +1,25 @@
 {
+  "__inputs": [],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "4.3.0-beta1"
+    },
+    {
+      "type": "panel",
+      "id": "graph",
+      "name": "Graph",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -16,7 +37,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "hideControls": false,
-  "id": 1,
+  "id": null,
   "links": [],
   "refresh": false,
   "rows": [
@@ -222,7 +243,7 @@
               "label": "blocks",
               "logBase": 1,
               "max": null,
-              "min": "0",
+              "min": null,
               "show": true
             },
             {
@@ -372,7 +393,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -485,7 +506,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -597,7 +618,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -647,7 +668,7 @@
                 [
                   {
                     "params": [
-                      "value"
+                      "count"
                     ],
                     "type": "field"
                   },
@@ -721,7 +742,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -833,7 +854,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -957,7 +978,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -1017,15 +1038,9 @@
                   },
                   {
                     "params": [
-                      "10s"
+                      "1s"
                     ],
                     "type": "non_negative_derivative"
-                  },
-                  {
-                    "params": [
-                      " / 10"
-                    ],
-                    "type": "math"
                   }
                 ]
               ],
@@ -1117,7 +1132,7 @@
                 },
                 {
                   "params": [
-                    "none"
+                    "previous"
                   ],
                   "type": "fill"
                 }
@@ -1193,7 +1208,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -1311,7 +1326,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -1377,7 +1392,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "REST API Validator Response Time",
+          "title": "REST API Validator Response Time (75th Percentile)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -1425,7 +1440,7 @@
             "max": false,
             "min": false,
             "rightSide": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -1482,7 +1497,7 @@
                   },
                   {
                     "params": [],
-                    "type": "mean"
+                    "type": "last"
                   },
                   {
                     "params": [
@@ -1779,7 +1794,7 @@
                   },
                   {
                     "params": [
-                      "10s"
+                      "1s"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -1904,7 +1919,7 @@
                   },
                   {
                     "params": [
-                      "10s"
+                      "1s"
                     ],
                     "type": "non_negative_derivative"
                   },
@@ -2042,11 +2057,13 @@
                   },
                   {
                     "params": [],
-                    "type": "mean"
+                    "type": "last"
                   },
                   {
-                    "params": [],
-                    "type": "difference"
+                    "params": [
+                      "1s"
+                    ],
+                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -2096,11 +2113,19 @@
                   },
                   {
                     "params": [],
-                    "type": "mean"
+                    "type": "last"
                   },
                   {
-                    "params": [],
-                    "type": "difference"
+                    "params": [
+                      "1s"
+                    ],
+                    "type": "non_negative_derivative"
+                  },
+                  {
+                    "params": [
+                      "* -1"
+                    ],
+                    "type": "math"
                   }
                 ]
               ],
@@ -2110,7 +2135,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Packets Per Second",
+          "title": "Packets Per Second (+Recv/-Sent)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2218,11 +2243,13 @@
                   },
                   {
                     "params": [],
-                    "type": "mean"
+                    "type": "last"
                   },
                   {
-                    "params": [],
-                    "type": "difference"
+                    "params": [
+                      "1s"
+                    ],
+                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -2272,11 +2299,19 @@
                   },
                   {
                     "params": [],
-                    "type": "mean"
+                    "type": "last"
                   },
                   {
-                    "params": [],
-                    "type": "difference"
+                    "params": [
+                      "1s"
+                    ],
+                    "type": "non_negative_derivative"
+                  },
+                  {
+                    "params": [
+                      "* -1"
+                    ],
+                    "type": "math"
                   }
                 ]
               ],
@@ -2286,7 +2321,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Bytes Sent/Received Per Second",
+          "title": "Bytes Per Second (+Recv/-Sent)",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -2412,17 +2447,13 @@
                   },
                   {
                     "params": [],
-                    "type": "mean"
-                  },
-                  {
-                    "params": [],
-                    "type": "difference"
+                    "type": "last"
                   },
                   {
                     "params": [
-                      " / 10"
+                      "1s"
                     ],
-                    "type": "math"
+                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -2478,17 +2509,13 @@
                   },
                   {
                     "params": [],
-                    "type": "mean"
-                  },
-                  {
-                    "params": [],
-                    "type": "difference"
+                    "type": "last"
                   },
                   {
                     "params": [
-                      " / 10"
+                      "1s"
                     ],
-                    "type": "math"
+                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -2558,7 +2585,7 @@
             "max": false,
             "min": false,
             "rightSide": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -2786,7 +2813,7 @@
                   },
                   {
                     "params": [
-                      "10s"
+                      "1s"
                     ],
                     "type": "derivative"
                   }
@@ -2894,7 +2921,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -3024,7 +3051,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -3136,7 +3163,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -3351,7 +3378,7 @@
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "decbytes",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -3452,7 +3479,7 @@
                   },
                   {
                     "params": [
-                      "10s"
+                      "1s"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -3504,7 +3531,7 @@
           "dashes": false,
           "datasource": "$DATASOURCE",
           "fill": 0,
-          "id": 21,
+          "id": 36,
           "legend": {
             "avg": false,
             "current": false,
@@ -3569,7 +3596,7 @@
                   },
                   {
                     "params": [
-                      "10s"
+                      "1s"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -3632,14 +3659,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
+          "fill": 0,
           "id": 26,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -3675,7 +3702,7 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "none"
                   ],
                   "type": "fill"
                 }
@@ -3683,25 +3710,21 @@
               "measurement": "sawtooth_validator.Network-threadpool.task_run_time",
               "orderByTime": "ASC",
               "policy": "default",
+              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Network-threadpool.task_run_time\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
                 [
                   {
                     "params": [
-                      "count"
+                      "99_percentile"
                     ],
                     "type": "field"
                   },
                   {
                     "params": [],
                     "type": "last"
-                  },
-                  {
-                    "params": [
-                      "1s"
-                    ],
-                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -3728,7 +3751,7 @@
           "yaxes": [
             {
               "format": "short",
-              "label": null,
+              "label": "seconds",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -3750,14 +3773,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
+          "fill": 0,
           "id": 27,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -3793,7 +3816,7 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "none"
                   ],
                   "type": "fill"
                 }
@@ -3803,7 +3826,7 @@
               "measurement": "sawtooth_validator.Network-threadpool.task_time_in_queue",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(last(\"count\"), 1s) FROM \"sawtooth_validator.Network-threadpool.task_time_in_queue\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(null)",
+              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Network-threadpool.task_time_in_queue\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
               "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
@@ -3811,19 +3834,13 @@
                 [
                   {
                     "params": [
-                      "count"
+                      "99_percentile"
                     ],
                     "type": "field"
                   },
                   {
                     "params": [],
                     "type": "last"
-                  },
-                  {
-                    "params": [
-                      "1s"
-                    ],
-                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -3850,7 +3867,7 @@
           "yaxes": [
             {
               "format": "short",
-              "label": null,
+              "label": "seconds",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -3872,14 +3889,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
-          "id": 28,
+          "fill": 0,
+          "id": 31,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -3915,12 +3932,12 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "0"
                   ],
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Network-threadpool.task_run_time",
+              "measurement": "sawtooth_validator.Network-threadpool.workers_already_in_use",
               "orderByTime": "ASC",
               "policy": "default",
               "query": "SELECT last(\"value\") FROM \"sawtooth_validator.Network-threadpool.workers_already_in_use\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
@@ -3931,19 +3948,13 @@
                 [
                   {
                     "params": [
-                      "count"
+                      "value"
                     ],
                     "type": "field"
                   },
                   {
                     "params": [],
                     "type": "last"
-                  },
-                  {
-                    "params": [
-                      "1s"
-                    ],
-                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -3970,7 +3981,7 @@
           "yaxes": [
             {
               "format": "short",
-              "label": null,
+              "label": "seconds",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -4004,14 +4015,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
+          "fill": 0,
           "id": 29,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -4047,15 +4058,16 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "none"
                   ],
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Network-threadpool.task_run_time",
+              "hide": false,
+              "measurement": "sawtooth_validator.Component-threadpool.task_run_time",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(last(\"count\"), 1s) FROM \"sawtooth_validator.Component-threadpool.task_run_time\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Component-threadpool.task_run_time\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -4063,19 +4075,13 @@
                 [
                   {
                     "params": [
-                      "count"
+                      "99_percentile"
                     ],
                     "type": "field"
                   },
                   {
                     "params": [],
                     "type": "last"
-                  },
-                  {
-                    "params": [
-                      "1s"
-                    ],
-                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -4102,7 +4108,7 @@
           "yaxes": [
             {
               "format": "short",
-              "label": null,
+              "label": "seconds",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -4124,14 +4130,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
+          "fill": 0,
           "id": 30,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -4167,35 +4173,29 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "none"
                   ],
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Network-threadpool.task_run_time",
+              "measurement": "sawtooth_validator.Component-threadpool.task_time_in_queue",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(last(\"count\"), 1s) FROM \"sawtooth_validator.Component-threadpool.task_time_in_queue\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
-              "rawQuery": true,
+              "query": "",
+              "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
                 [
                   {
                     "params": [
-                      "count"
+                      "99_percentile"
                     ],
                     "type": "field"
                   },
                   {
                     "params": [],
                     "type": "last"
-                  },
-                  {
-                    "params": [
-                      "1s"
-                    ],
-                    "type": "non_negative_derivative"
                   }
                 ]
               ],
@@ -4222,7 +4222,7 @@
           "yaxes": [
             {
               "format": "short",
-              "label": null,
+              "label": "seconds",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -4244,14 +4244,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
-          "id": 31,
+          "fill": 0,
+          "id": 37,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -4287,15 +4287,15 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "0"
                   ],
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Network-threadpool.task_run_time",
+              "measurement": "sawtooth_validator.Component-threadpool.workers_already_in_use",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"value\") FROM \"sawtooth_validator.Component-threadpool.workers_already_in_use\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "query": "SELECT last(\"value\") FROM \"sawtooth_validator.Component-threadpool.workers_already_in_use\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(0)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -4342,7 +4342,7 @@
           "yaxes": [
             {
               "format": "short",
-              "label": null,
+              "label": "seconds",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -4376,14 +4376,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
+          "fill": 0,
           "id": 32,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -4413,14 +4413,21 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "host"
+                  ],
+                  "type": "tag"
+                },
+                {
+                  "params": [
+                    "none"
                   ],
                   "type": "fill"
                 }
               ],
+              "measurement": "sawtooth_validator.Signature-threadpool.task_run_time",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(last(\"count\"), 1s) FROM \"sawtooth_validator.Signature-threadpool.task_run_time\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Signature-threadpool.task_run_time\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -4428,13 +4435,13 @@
                 [
                   {
                     "params": [
-                      "value"
+                      "99_percentile"
                     ],
                     "type": "field"
                   },
                   {
                     "params": [],
-                    "type": "mean"
+                    "type": "last"
                   }
                 ]
               ],
@@ -4461,7 +4468,7 @@
           "yaxes": [
             {
               "format": "short",
-              "label": null,
+              "label": "seconds",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -4483,14 +4490,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
+          "fill": 0,
           "id": 33,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -4520,28 +4527,35 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "host"
+                  ],
+                  "type": "tag"
+                },
+                {
+                  "params": [
+                    "none"
                   ],
                   "type": "fill"
                 }
               ],
+              "measurement": "sawtooth_validator.Signature-threadpool.task_time_in_queue",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(last(\"count\"), 1s) FROM \"sawtooth_validator.Signature-threadpool.task_time_in_queue\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
-              "rawQuery": true,
+              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Signature-threadpool.task_time_in_queue\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
                 [
                   {
                     "params": [
-                      "value"
+                      "99_percentile"
                     ],
                     "type": "field"
                   },
                   {
                     "params": [],
-                    "type": "mean"
+                    "type": "last"
                   }
                 ]
               ],
@@ -4568,7 +4582,7 @@
           "yaxes": [
             {
               "format": "short",
-              "label": null,
+              "label": "seconds",
               "logBase": 1,
               "max": null,
               "min": null,
@@ -4590,14 +4604,14 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
-          "fill": 1,
+          "fill": 0,
           "id": 34,
           "legend": {
             "avg": false,
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -4627,15 +4641,22 @@
                 },
                 {
                   "params": [
-                    "null"
+                    "host"
+                  ],
+                  "type": "tag"
+                },
+                {
+                  "params": [
+                    "0"
                   ],
                   "type": "fill"
                 }
               ],
+              "measurement": "sawtooth_validator.Signature-threadpool.workers_already_in_use",
               "orderByTime": "ASC",
               "policy": "default",
               "query": "SELECT last(\"value\") FROM \"sawtooth_validator.Signature-threadpool.workers_already_in_use\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
-              "rawQuery": true,
+              "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
@@ -4648,7 +4669,7 @@
                   },
                   {
                     "params": [],
-                    "type": "mean"
+                    "type": "last"
                   }
                 ]
               ],
@@ -4658,7 +4679,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Component Threadpool Workers Already in Use",
+          "title": "Signature Threadpool Workers Already in Use",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -4722,7 +4743,7 @@
     ]
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {
@@ -4752,5 +4773,5 @@
   },
   "timezone": "browser",
   "title": "dashboard",
-  "version": 1
+  "version": 15
 }
