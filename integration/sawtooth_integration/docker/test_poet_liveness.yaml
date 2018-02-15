@@ -43,7 +43,7 @@ services:
       - 8008
     command: "bash -c \"\
       while true; do curl -s http://rest-api-0:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
-      intkey workload --rate 2 --display-frequency 15 --urls http://rest-api-0:8008,http://rest-api-1:8008,http://rest-api-2:8008,http://rest-api-3:8008,http://rest-api-4:8008 \
+      intkey workload --rate 1 --display-frequency 15 --urls http://rest-api-0:8008,http://rest-api-1:8008,http://rest-api-2:8008,http://rest-api-3:8008,http://rest-api-4:8008 \
       \""
     stop_signal: SIGKILL
     environment:
@@ -52,6 +52,19 @@ services:
         /project/sawtooth-core/integration:\
         /project/sawtooth-core/signing:\
         /project/sawtooth-core/cli"
+
+  smallbank-workload:
+    image: sawtooth-dev-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 8008
+    command: "bash -c \"\
+      sawtooth keygen smallbank-key; \
+      while true; do curl -s http://rest-api-0:8008/state | grep -q head; if [ $$? -eq 0 ]; then break; fi; sleep 0.5; done; \
+      /project/sawtooth-core/perf/smallbank_workload/bin/smallbank-workload load --key /root/.sawtooth/keys/smallbank-key.priv --rate 1 --target http://rest-api-0:8008,http://rest-api-1:8008,http://rest-api-2:8008,http://rest-api-3:8008,http://rest-api-4:8008 \
+      \""
+    stop_signal: SIGKILL
 
   validator-0:
     image: sawtooth-validator:$ISOLATION_ID
@@ -262,6 +275,51 @@ services:
     expose:
       - 4004
     command: intkey-tp-python -C tcp://validator-4:4004
+    stop_signal: SIGKILL
+
+  smallbank-tp-0:
+    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-go -C tcp://validator-0:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  smallbank-tp-1:
+    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-go -C tcp://validator-1:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  smallbank-tp-2:
+    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-go -C tcp://validator-2:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  smallbank-tp-3:
+    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-go -C tcp://validator-3:4004 --max-queue-size 1024 --worker-thread-count 32
+    stop_signal: SIGKILL
+
+  smallbank-tp-4:
+    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: smallbank-tp-go -C tcp://validator-4:4004 --max-queue-size 1024 --worker-thread-count 32
     stop_signal: SIGKILL
 
   settings-tp-0:
