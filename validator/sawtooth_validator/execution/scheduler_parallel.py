@@ -70,6 +70,17 @@ class PredecessorTree:
             for i in range(0, len(address), self._token_size)
         ]
 
+    def prune(self, address):
+        '''
+        Remove all children (and descendants) below ADDRESS.
+
+        Arguments:
+            address (str): the address to be pruned
+        '''
+
+        node = self.get(address)
+        node.children.clear()
+
     def _get(self, address, create=False):
         tokens = self._tokenize_address(address)
 
@@ -97,7 +108,8 @@ class PredecessorTree:
         node = self._get(address, create=True)
         node.readers = []
         node.writer = writer
-        node.children = {}
+
+        self.prune(address)
 
     def find_write_predecessors(self, address):
         """Returns all predecessor transaction ids for a write of the provided
