@@ -1,5 +1,5 @@
 /**
- * Copyright 2017 Intel Corporation
+ * Copyright 2017-2018 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 
 'use strict'
 
+const XoPayload = require('./xo_payload')
+
 const { TransactionHandler } = require('sawtooth-sdk/processor/handler')
 const {
   InvalidTransaction,
@@ -30,21 +32,6 @@ const _hash = (x) =>
 
 const XO_FAMILY = 'xo'
 const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)
-
-const _decodeRequest = (payload) =>
-  new Promise((resolve, reject) => {
-    payload = payload.toString().split(',')
-    if (payload.length === 3) {
-      resolve({
-        name: payload[0],
-        action: payload[1],
-        space: payload[2]
-      })
-    } else {
-      let reason = new InvalidTransaction('Invalid payload serialization')
-      reject(reason)
-    }
-  })
 
 const _decodeStateData = (data, name) => {
   let stringData = data.toString()
@@ -302,7 +289,7 @@ class XOHandler extends TransactionHandler {
   }
 
   apply (transactionProcessRequest, context) {
-    return _decodeRequest(transactionProcessRequest.payload)
+    return new XoPayload().fromBytes(transactionProcessRequest.payload)
       .catch(_toInternalError)
       .then((update) => {
         let header = transactionProcessRequest.header
