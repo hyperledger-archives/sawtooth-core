@@ -141,6 +141,9 @@ class Validator(object):
             max_workers=10, name='Component')
         network_thread_pool = InstrumentedThreadPoolExecutor(
             max_workers=10, name='Network')
+        client_thread_pool = InstrumentedThreadPoolExecutor(
+            max_workers=5,
+            name='Client')
         sig_pool = InstrumentedThreadPoolExecutor(
             max_workers=3, name='Signature')
 
@@ -329,7 +332,8 @@ class Validator(object):
             transaction_executor, completer, block_store, batch_tracker,
             global_state_db, self.get_chain_head_state_root_hash,
             receipt_store, event_broadcaster, permission_verifier,
-            component_thread_pool, sig_pool, block_publisher,
+            component_thread_pool, client_thread_pool,
+            sig_pool, block_publisher,
             metrics_registry)
 
         # -- Store Object References -- #
@@ -341,6 +345,7 @@ class Validator(object):
         self._network_service = network_service
         self._network_thread_pool = network_thread_pool
 
+        self._client_thread_pool = client_thread_pool
         self._sig_pool = sig_pool
 
         self._context_manager = context_manager
@@ -387,6 +392,7 @@ class Validator(object):
 
         self._network_thread_pool.shutdown(wait=True)
         self._component_thread_pool.shutdown(wait=True)
+        self._client_thread_pool.shutdown(wait=True)
         self._sig_pool.shutdown(wait=True)
 
         self._transaction_executor.stop()
