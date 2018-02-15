@@ -36,8 +36,13 @@ _AnnotatedBatch = namedtuple('ScheduledBatch',
                              ['batch', 'required', 'preserve'])
 
 
+class AddressNotInTree(Exception):
+    pass
+
+
 class PredecessorTreeNode:
-    def __init__(self, children=None, readers=None, writer=None):
+    def __init__(self, address, children=None, readers=None, writer=None):
+        self.address = address
         self.children = children if children is not None else {}
         self.readers = readers if readers is not None else []
         self.writer = writer
@@ -52,6 +57,8 @@ class PredecessorTreeNode:
         if self.children:
             retval['children'] = \
                 {k: literal_eval(repr(v)) for k, v in self.children.items()}
+        if self.address:
+            retval['address'] = self.address
 
         return repr(retval)
 
@@ -59,7 +66,7 @@ class PredecessorTreeNode:
 class PredecessorTree:
     def __init__(self, token_size=2):
         self._token_size = token_size
-        self._root = PredecessorTreeNode()
+        self._root = PredecessorTreeNode('')
 
     def __repr__(self):
         return repr(self._root)
@@ -91,7 +98,7 @@ class PredecessorTree:
             else:
                 if not create:
                     return None
-                child = PredecessorTreeNode()
+                child = PredecessorTreeNode(node.address + token)
                 node.children[token] = child
                 node = child
 
