@@ -233,48 +233,48 @@ services:
     stop_signal: SIGKILL
 
   intkey-tp-0:
-    image: sawtooth-intkey-tp-python:$ISOLATION_ID
+    image: sawtooth-intkey-tp-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python -C tcp://validator-0:4004
+    command: intkey-tp-go -C tcp://validator-0:4004 --max-queue-size 1024 --worker-thread-count 32
     stop_signal: SIGKILL
 
   intkey-tp-1:
-    image: sawtooth-intkey-tp-python:$ISOLATION_ID
+    image: sawtooth-intkey-tp-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python -C tcp://validator-1:4004
+    command: intkey-tp-go -C tcp://validator-1:4004 --max-queue-size 1024 --worker-thread-count 32
     stop_signal: SIGKILL
 
   intkey-tp-2:
-    image: sawtooth-intkey-tp-python:$ISOLATION_ID
+    image: sawtooth-intkey-tp-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python -C tcp://validator-2:4004
+    command: intkey-tp-go -C tcp://validator-2:4004 --max-queue-size 1024 --worker-thread-count 32
     stop_signal: SIGKILL
 
   intkey-tp-3:
-    image: sawtooth-intkey-tp-python:$ISOLATION_ID
+    image: sawtooth-intkey-tp-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python -C tcp://validator-3:4004
+    command: intkey-tp-go -C tcp://validator-3:4004 --max-queue-size 1024 --worker-thread-count 32
     stop_signal: SIGKILL
 
   intkey-tp-4:
-    image: sawtooth-intkey-tp-python:$ISOLATION_ID
+    image: sawtooth-intkey-tp-go:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: intkey-tp-python -C tcp://validator-4:4004
+    command: intkey-tp-go -C tcp://validator-4:4004 --max-queue-size 1024 --worker-thread-count 32
     stop_signal: SIGKILL
 
   smallbank-tp-0:
