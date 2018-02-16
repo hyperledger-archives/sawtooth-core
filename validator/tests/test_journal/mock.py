@@ -121,6 +121,9 @@ class MockScheduler(Scheduler):
     def unschedule_incomplete_batches(self):
         pass
 
+    def is_transaction_in_schedule(self, txn_id):
+        raise NotImplementedError()
+
     def finalize(self):
         pass
 
