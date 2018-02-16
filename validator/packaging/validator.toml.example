@@ -60,6 +60,12 @@ scheduler = 'serial'
 network_public_key = 'wFMwoOt>yFqI/ek.G[tfMMILHWw#vXB[Sv}>l>i)'
 network_private_key = 'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*'
 
+# The minimum number of peers required before stopping peer search.
+minimum_peer_connectivity = 3
+
+# The maximum number of peers that will be accepted.
+maximum_peer_connectivity = 10
+
 # The host and port for Open TSDB database used for metrics
 # opentsdb_url = ""
 
@@ -73,19 +79,15 @@ network_private_key = 'r&oJ5aQDj4+V]p2:Lz70Eu0x#m%IwzBdP(}&hWM*'
 # The type of authorization that must be performed for the different type of
 # roles on the network. The different supported authorization types are "trust"
 # and "challenge". The default is "trust".
-[roles]
-network = "trust"
+
+# [roles]
+# network = "trust"
 
 # Any off-chain transactor permission roles. The roles should match the roles
 # stored in state for transactor permissioning. Due to the roles having . in the
 # key, the key must be wrapped in quotes so toml can process it. The value
 # should be the file name of a policy stored in the policy_dir.
-[permissions]
-transactor = "policy.example"
-"transactor.transaction_signer" = "policy.example"
 
-# The minimum number of peers required before stopping peer search.
-minimum_peer_connectivity = 3
-
-# The maximum number of peers that will be accepted.
-maximum_peer_connectivity = 10
+# [permissions]
+# transactor = "policy.example"
+# "transactor.transaction_signer" = "policy.example"
