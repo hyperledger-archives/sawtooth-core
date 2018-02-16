@@ -37,8 +37,7 @@ from sawtooth_validator.journal.validation_rule_enforcer import \
 from sawtooth_validator.journal.chain_commit_state import \
     TransactionCommitCache
 
-from sawtooth_validator.metrics.wrappers import CounterWrapper
-from sawtooth_validator.metrics.wrappers import GaugeWrapper
+from sawtooth_validator import metrics
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -46,6 +45,7 @@ from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 NUM_PUBLISH_COUNT_SAMPLES = 5
@@ -454,8 +454,7 @@ class BlockPublisher(object):
                  permission_verifier,
                  check_publish_block_frequency,
                  batch_observers,
-                 batch_injector_factory=None,
-                 metrics_registry=None):
+                 batch_injector_factory=None):
         """
         Initialize the BlockPublisher object
 
@@ -478,8 +477,6 @@ class BlockPublisher(object):
                 found.
             batch_injector_factory (:obj:`BatchInjectorFatctory`): A factory
                 for creating BatchInjectors.
-            metrics_registry (MetricsRegistry): Metrics registry used to
-                create pending batch gauge
         """
         self._lock = RLock()
         self._candidate_block = None  # _CandidateBlock helper,
@@ -505,14 +502,10 @@ class BlockPublisher(object):
         self._batch_injector_factory = batch_injector_factory
 
         # For metric gathering
-        if metrics_registry:
-            self._pending_batch_gauge = GaugeWrapper(
-                metrics_registry.gauge('pending_batch_gauge'))
-            self._blocks_published_count = CounterWrapper(
-                metrics_registry.counter('blocks_published_count'))
-        else:
-            self._blocks_published_count = CounterWrapper()
-            self._pending_batch_gauge = GaugeWrapper()
+        self._pending_batch_gauge = COLLECTOR.gauge(
+            'pending_batch_gauge', instance=self)
+        self._blocks_published_count = COLLECTOR.counter(
+            'blocks_published_count', instance=self)
 
         self._batch_queue = queue.Queue()
         self._queued_batch_ids = []

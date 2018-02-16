@@ -34,9 +34,10 @@ from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution import processor_iterator
 from sawtooth_validator.networking.future import FutureResult
 from sawtooth_validator.networking.future import FutureTimeoutError
-from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator import metrics
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class TransactionExecutorThread(object):
@@ -52,8 +53,7 @@ class TransactionExecutorThread(object):
                  processors,
                  waiting_threadpool,
                  settings_view_factory,
-                 invalid_observers,
-                 metrics_registry=None):
+                 invalid_observers):
         """
         Args:
             service (Interconnect): The zmq internal interface
@@ -84,16 +84,11 @@ class TransactionExecutorThread(object):
         self._done = False
         self._invalid_observers = invalid_observers
         self._open_futures = {}
-        self._metrics_registry = metrics_registry
 
-        if metrics_registry:
-            self._transaction_execution_count = CounterWrapper(
-                metrics_registry.counter('transaction_execution_count'))
-            self._in_process_transactions_count = CounterWrapper(
-                metrics_registry.counter('in_process_transactions_count'))
-        else:
-            self._transaction_execution_count = CounterWrapper()
-            self._in_process_transactions_count = CounterWrapper()
+        self._transaction_execution_count = COLLECTOR.counter(
+            'transaction_execution_count', instance=self)
+        self._in_process_transactions_count = COLLECTOR.counter(
+            'in_process_transactions_count', instance=self)
 
     def _future_done_callback(self, request, result):
         """
@@ -385,8 +380,7 @@ class TransactionExecutor(object):
                  context_manager,
                  settings_view_factory,
                  scheduler_type,
-                 invalid_observers=None,
-                 metrics_registry=None):
+                 invalid_observers=None):
         """
         Args:
             service (Interconnect): The zmq internal interface
@@ -418,7 +412,6 @@ class TransactionExecutor(object):
                                    else invalid_observers)
 
         self._scheduler_type = scheduler_type
-        self._metrics_registry = metrics_registry
 
     def create_scheduler(self,
                          squash_handler,
@@ -491,8 +484,7 @@ class TransactionExecutor(object):
             processors=self.processors,
             waiting_threadpool=self._waiting_threadpool,
             settings_view_factory=self._settings_view_factory,
-            invalid_observers=self._invalid_observers,
-            metrics_registry=self._metrics_registry)
+            invalid_observers=self._invalid_observers)
         self._executing_threadpool.submit(t.execute_thread)
         with self._lock:
             self._alive_threads.append(t)

@@ -927,8 +927,7 @@ class TestChainController(unittest.TestCase):
             chain_id_manager=self.chain_id_manager,
             data_dir=None,
             config_dir=None,
-            chain_observers=[],
-            metrics_registry=None)
+            chain_observers=[])
 
         init_root = self.chain_ctrl.chain_head
         self.assert_is_chain_head(init_root)
@@ -1249,8 +1248,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             chain_id_manager=self.chain_id_manager,
             data_dir=None,
             config_dir=None,
-            chain_observers=[],
-            metrics_registry=None)
+            chain_observers=[])
 
         self.assertIsNone(self.chain_ctrl.chain_head)
 

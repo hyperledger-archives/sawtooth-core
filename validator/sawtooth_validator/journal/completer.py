@@ -30,10 +30,10 @@ from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
-from sawtooth_validator.metrics.wrappers import CounterWrapper
-from sawtooth_validator.metrics.wrappers import GaugeWrapper
+from sawtooth_validator import metrics
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class Completer(object):
@@ -53,8 +53,7 @@ class Completer(object):
                  gossip,
                  cache_keep_time=1200,
                  cache_purge_frequency=30,
-                 requested_keep_time=300,
-                 metrics_registry=None):
+                 requested_keep_time=300):
         """
         :param block_store (dictionary) The block store shared with the journal
         :param gossip (gossip.Gossip) Broadcasts block and batch request to
@@ -89,28 +88,18 @@ class Completer(object):
         self._has_block = None
         self.lock = RLock()
 
-        if metrics_registry:
-            # Tracks how many times an unsatisfied dependency is found
-            self._unsatisfied_dependency_count = CounterWrapper(
-                metrics_registry.counter(
-                    'completer.unsatisfied_dependency_count'))
-            # Tracks the length of the completer's _seen_txns
-            self._seen_txns_length = GaugeWrapper(
-                metrics_registry.gauge(
-                    'completer.seen_txns_length'))
-            # Tracks the length of the completer's _incomplete_blocks
-            self._incomplete_blocks_length = GaugeWrapper(
-                metrics_registry.gauge(
-                    'completer.incomplete_blocks_length'))
-            # Tracks the length of the completer's _incomplete_batches
-            self._incomplete_batches_length = GaugeWrapper(
-                metrics_registry.gauge(
-                    'completer.incomplete_batches_length'))
-        else:
-            self._unsatisfied_dependency_count = CounterWrapper()
-            self._seen_txns_length = GaugeWrapper()
-            self._incomplete_blocks_length = GaugeWrapper()
-            self._incomplete_batches_length = GaugeWrapper()
+        # Tracks how many times an unsatisfied dependency is found
+        self._unsatisfied_dependency_count = COLLECTOR.counter(
+            'unsatisfied_dependency_count', instance=self)
+        # Tracks the length of the completer's _seen_txns
+        self._seen_txns_length = COLLECTOR.gauge(
+            'seen_txns_length', instance=self)
+        # Tracks the length of the completer's _incomplete_blocks
+        self._incomplete_blocks_length = COLLECTOR.gauge(
+            'incomplete_blocks_length', instance=self)
+        # Tracks the length of the completer's _incomplete_batches
+        self._incomplete_batches_length = COLLECTOR.gauge(
+            'incomplete_batches_length', instance=self)
 
     def _complete_block(self, block):
         """ Check the block to see if it is complete and if it can be passed to

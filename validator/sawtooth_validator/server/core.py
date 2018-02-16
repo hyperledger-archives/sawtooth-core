@@ -79,8 +79,7 @@ class Validator(object):
                  maximum_peer_connectivity,
                  network_public_key=None,
                  network_private_key=None,
-                 roles=None,
-                 metrics_registry=None):
+                 roles=None):
         """Constructs a validator instance.
 
         Args:
@@ -139,24 +138,20 @@ class Validator(object):
         # -- Setup Thread Pools -- #
         component_thread_pool = InstrumentedThreadPoolExecutor(
             max_workers=10,
-            name='Component',
-            metrics_registry=metrics_registry)
+            name='Component')
         network_thread_pool = InstrumentedThreadPoolExecutor(
             max_workers=10,
-            name='Network',
-            metrics_registry=metrics_registry)
+            name='Network')
         client_thread_pool = InstrumentedThreadPoolExecutor(
             max_workers=5,
-            name='Client',
-            metrics_registry=metrics_registry)
+            name='Client')
         sig_pool = InstrumentedThreadPoolExecutor(
             max_workers=3,
-            name='Signature',
-            metrics_registry=metrics_registry)
+            name='Signature')
 
         # -- Setup Dispatchers -- #
-        component_dispatcher = Dispatcher(metrics_registry=metrics_registry)
-        network_dispatcher = Dispatcher(metrics_registry=metrics_registry)
+        component_dispatcher = Dispatcher()
+        network_dispatcher = Dispatcher()
 
         # -- Setup Services -- #
         component_service = Interconnect(
@@ -166,8 +161,7 @@ class Validator(object):
             heartbeat=False,
             max_incoming_connections=20,
             monitor=True,
-            max_future_callback_workers=10,
-            metrics_registry=metrics_registry)
+            max_future_callback_workers=10)
 
         zmq_identity = hashlib.sha512(
             time.time().hex().encode()).hexdigest()[:23]
@@ -190,8 +184,7 @@ class Validator(object):
             max_future_callback_workers=10,
             authorize=True,
             signer=identity_signer,
-            roles=roles,
-            metrics_registry=metrics_registry)
+            roles=roles)
 
         # -- Setup Transaction Execution Platform -- #
         context_manager = ContextManager(global_state_db)
@@ -207,8 +200,7 @@ class Validator(object):
             context_manager=context_manager,
             settings_view_factory=SettingsViewFactory(state_view_factory),
             scheduler_type=scheduler_type,
-            invalid_observers=[batch_tracker],
-            metrics_registry=metrics_registry)
+            invalid_observers=[batch_tracker])
 
         component_service.set_check_connections(
             transaction_executor.check_connections)
@@ -233,8 +225,7 @@ class Validator(object):
 
         completer = Completer(
             block_store,
-            gossip,
-            metrics_registry=metrics_registry)
+            gossip)
 
         block_sender = BroadcastBlockSender(completer, gossip)
         batch_sender = BroadcastBatchSender(completer, gossip)
@@ -280,8 +271,7 @@ class Validator(object):
             permission_verifier=permission_verifier,
             check_publish_block_frequency=0.1,
             batch_observers=[batch_tracker],
-            batch_injector_factory=batch_injector_factory,
-            metrics_registry=metrics_registry)
+            batch_injector_factory=batch_injector_factory)
 
         block_validator = BlockValidator(
             block_cache=block_cache,
@@ -291,8 +281,7 @@ class Validator(object):
             identity_signer=identity_signer,
             data_dir=data_dir,
             config_dir=config_dir,
-            permission_verifier=permission_verifier,
-            metrics_registry=metrics_registry)
+            permission_verifier=permission_verifier)
 
         chain_controller = ChainController(
             block_cache=block_cache,
@@ -309,8 +298,7 @@ class Validator(object):
                 batch_tracker,
                 identity_observer,
                 settings_observer
-            ],
-            metrics_registry=metrics_registry)
+            ])
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
@@ -335,7 +323,7 @@ class Validator(object):
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
             chain_controller.has_block, block_publisher.has_batch,
-            permission_verifier, block_publisher, metrics_registry)
+            permission_verifier, block_publisher)
 
         component_handlers.add(
             component_dispatcher, gossip, context_manager,
@@ -343,8 +331,7 @@ class Validator(object):
             global_state_db, self.get_chain_head_state_root_hash,
             receipt_store, event_broadcaster, permission_verifier,
             component_thread_pool, client_thread_pool,
-            sig_pool, block_publisher,
-            metrics_registry)
+            sig_pool, block_publisher)
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher

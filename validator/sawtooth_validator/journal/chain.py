@@ -24,11 +24,11 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.block_validator import BlockValidationError
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
     TransactionReceipt
-from sawtooth_validator.metrics.wrappers import CounterWrapper
-from sawtooth_validator.metrics.wrappers import GaugeWrapper
+from sawtooth_validator import metrics
 
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class ChainObserver(object, metaclass=ABCMeta):
@@ -86,8 +86,7 @@ class ChainController(object):
                  chain_id_manager,
                  data_dir,
                  config_dir,
-                 chain_observers,
-                 metrics_registry=None):
+                 chain_observers):
         """Initialize the ChainController
         Args:
             block_cache: The cache of all recent blocks and the processing
@@ -113,8 +112,6 @@ class ChainController(object):
                 consensus module can be found.
             chain_observers (list of :obj:`ChainObserver`): A list of chain
                 observers.
-            metrics_registry: (Optional) Pyformance metrics registry handle for
-                creating new metrics.
         Returns:
             None
         """
@@ -132,22 +129,13 @@ class ChainController(object):
         self._chain_head = None
 
         self._chain_observers = chain_observers
-        self._metrics_registry = metrics_registry
 
-        if metrics_registry:
-            self._chain_head_gauge = GaugeWrapper(
-                metrics_registry.gauge('chain_head', default='no chain head'))
-            self._committed_transactions_count = CounterWrapper(
-                metrics_registry.counter('committed_transactions_count'))
-            self._block_num_gauge = GaugeWrapper(
-                metrics_registry.gauge('block_num'))
-            self._blocks_considered_count = CounterWrapper(
-                metrics_registry.counter('blocks_considered_count'))
-        else:
-            self._chain_head_gauge = GaugeWrapper()
-            self._committed_transactions_count = CounterWrapper()
-            self._block_num_gauge = GaugeWrapper()
-            self._blocks_considered_count = CounterWrapper()
+        self._chain_head_gauge = COLLECTOR.gauge('chain_head', instance=self)
+        self._committed_transactions_count = COLLECTOR.counter(
+            'committed_transactions_count', instance=self)
+        self._block_num_gauge = COLLECTOR.gauge('block_num', instance=self)
+        self._blocks_considered_count = COLLECTOR.counter(
+            'blocks_considered_count', instance=self)
 
         self._block_queue = queue.Queue()
         self._chain_thread = None

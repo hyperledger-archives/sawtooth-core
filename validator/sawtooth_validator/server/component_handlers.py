@@ -64,7 +64,6 @@ def add(
         client_thread_pool,
         sig_pool,
         block_publisher,
-        metrics_registry=None
 ):
 
     # -- Transaction Processor -- #
@@ -117,7 +116,6 @@ def add(
         ClientBatchSubmitBackpressureHandler(
             block_publisher.can_accept_batch,
             block_publisher.get_current_queue_info,
-            metrics_registry=metrics_registry
         ),
         client_thread_pool)
 

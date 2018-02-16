@@ -31,7 +31,7 @@ from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
 from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
-from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator import metrics
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.networking.dispatch import Handler
@@ -40,6 +40,7 @@ from sawtooth_validator.journal.timed_cache import TimedCache
 
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 def is_valid_block(block):
@@ -120,18 +121,12 @@ def is_valid_transaction(txn):
 
 
 class GossipMessageSignatureVerifier(Handler):
-    def __init__(self, metrics_registry=None):
+    def __init__(self):
         self._seen_cache = TimedCache()
-        if metrics_registry:
-            self._batch_dropped_count = CounterWrapper(
-                metrics_registry.counter(
-                    'already_validated_batch_dropped_count'))
-            self._block_dropped_count = CounterWrapper(
-                metrics_registry.counter(
-                    'already_validated_block_dropped_count'))
-        else:
-            self._batch_dropped_count = CounterWrapper()
-            self._block_dropped_count = CounterWrapper()
+        self._batch_dropped_count = COLLECTOR.counter(
+            'already_validated_batch_dropped_count', instance=self)
+        self._block_dropped_count = COLLECTOR.counter(
+            'already_validated_block_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
         gossip_message = GossipMessage()
@@ -172,14 +167,10 @@ class GossipMessageSignatureVerifier(Handler):
 
 
 class GossipBlockResponseSignatureVerifier(Handler):
-    def __init__(self, metrics_registry=None):
+    def __init__(self):
         self._seen_cache = TimedCache()
-        if metrics_registry:
-            self._block_dropped_count = CounterWrapper(
-                metrics_registry.counter(
-                    'already_validated_block_dropped_count'))
-        else:
-            self._block_dropped_count = CounterWrapper()
+        self._block_dropped_count = COLLECTOR.counter(
+            'already_validated_block_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
         block_response_message = GossipBlockResponse()
@@ -200,14 +191,10 @@ class GossipBlockResponseSignatureVerifier(Handler):
 
 
 class GossipBatchResponseSignatureVerifier(Handler):
-    def __init__(self, metrics_registry=None):
+    def __init__(self):
         self._seen_cache = TimedCache()
-        if metrics_registry:
-            self._batch_dropped_count = CounterWrapper(
-                metrics_registry.counter(
-                    'already_validated_batch_dropped_count'))
-        else:
-            self._batch_dropped_count = CounterWrapper()
+        self._batch_dropped_count = COLLECTOR.counter(
+            'already_validated_batch_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
         batch_response_message = GossipBatchResponse()
