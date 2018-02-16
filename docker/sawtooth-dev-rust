@@ -50,7 +50,8 @@ RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
 
 EXPOSE 4004/tcp
 
-ENV PATH=$PATH:/project/sawtooth-core/bin:/root/.cargo/bin
+ENV PATH=$PATH:/project/sawtooth-core/bin:/root/.cargo/bin\
+    CARGO_INCREMENTAL=0
 
 RUN cargo install protobuf
 
