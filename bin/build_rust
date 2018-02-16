@@ -21,7 +21,7 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 
 echo -e "\033[0;32m--- Building Rust SDK ---\n\033[0m"
 cd $top_dir/sdk/rust/
-RUST_BACKTRACE=1 cargo build
+cargo build
 
 echo -e "\033[0;32m--- Building sawadm ---\n\033[0m"
 cd $top_dir/adm
