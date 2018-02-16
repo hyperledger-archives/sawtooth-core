@@ -143,7 +143,7 @@ func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
 	// Register all handlers with the validator
 	for _, handler := range self.handlers {
 		for _, version := range handler.FamilyVersions() {
-			err := register(validator, handler, version, queue)
+			err := register(validator, handler, version, queue, uint32(self.maxQueue))
 			if err != nil {
 				return restart, fmt.Errorf(
 					"Error registering handler (%v, %v, %v): %v",
@@ -346,11 +346,12 @@ func receiveWorkers(ids map[string]string, validator, workers messaging.Connecti
 }
 
 // Register a handler with the validator
-func register(validator messaging.Connection, handler TransactionHandler, version string, queue chan *validator_pb2.Message) error {
+func register(validator messaging.Connection, handler TransactionHandler, version string, queue chan *validator_pb2.Message, maxOccupancy uint32) error {
 	regRequest := &processor_pb2.TpRegisterRequest{
-		Family:     handler.FamilyName(),
-		Version:    version,
-		Namespaces: handler.Namespaces(),
+		Family:       handler.FamilyName(),
+		Version:      version,
+		Namespaces:   handler.Namespaces(),
+		MaxOccupancy: maxOccupancy,
 	}
 
 	regRequestData, err := proto.Marshal(regRequest)
