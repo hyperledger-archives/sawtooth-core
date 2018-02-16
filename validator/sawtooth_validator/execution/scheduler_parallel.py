@@ -67,17 +67,29 @@ class Tree:
             for i in range(0, len(address), self._token_size)
         ]
 
-    def _get_child_and_remainder(self, node, address):
-        try:
-            child, addr = next(
-                (child, addr)
-                for addr, child in node.children.items()
-                if address.startswith(addr[:self._token_size])
-            )
-        except StopIteration:
-            raise AddressNotInTree()
+    def _get_child(self, node, address):
+        for child in node.children.values():
+            if address.startswith(child.address):
+                return child
 
-        return child, address[len(addr):]
+        raise AddressNotInTree()
+
+    def _walk_to_address(self, address):
+        node = self._root
+
+        yield node
+
+        # A node's address is always a proper prefix of the addresses
+        # of its children, so we only need to check the ordering. A
+        # more explicit but also more verbose and probably slower
+        # check would be:
+        #
+        # while address != node.address and address.startswith(node.address):
+        #
+        while node.address < address:
+            node = self._get_child(node, address)
+
+            yield node
 
     def update(self, address, updater):
         '''
@@ -88,7 +100,7 @@ class Tree:
             address (str): the address to be updated
         '''
 
-        node = self._get(address, create=True)
+        node = self._get(address)
 
         node.data = updater(node.data)
 
@@ -100,7 +112,12 @@ class Tree:
             address (str): the address to be pruned
         '''
 
-        node = self.get(address)
+        try:
+            for step in self._walk_to_address(address):
+                node = step
+        except AddressNotInTree:
+            return
+
         node.children.clear()
 
     def walk(self, address):
@@ -116,17 +133,8 @@ class Tree:
             address (str): the address to be walked
         '''
 
-        node = self._root
-
-        yield node.address, node.data
-
-        current_address = address
-
-        while current_address:
-            node, current_address = \
-                self._get_child_and_remainder(
-                    node, current_address)
-
+        for step in self._walk_to_address(address):
+            node = step
             yield node.address, node.data
 
         to_process = deque()
@@ -143,7 +151,7 @@ class Tree:
                 to_process.extendleft(
                     node.children.values())
 
-    def _get(self, address, create=False):
+    def _get(self, address):
         tokens = self._tokenize_address(address)
 
         node = self._root
@@ -151,16 +159,11 @@ class Tree:
             if token in node.children:
                 node = node.children[token]
             else:
-                if not create:
-                    return None
                 child = Node(node.address + token)
                 node.children[token] = child
                 node = child
 
         return node
-
-    def get(self, address):
-        return self._get(address)
 
 
 class Predecessors:
