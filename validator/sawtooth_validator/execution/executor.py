@@ -137,8 +137,10 @@ class TransactionExecutorThread(object):
                 req.header.family_name,
                 req.header.family_version)
 
-            self._execute_or_wait_for_processor_type(
-                processor_type, request, req.signature)
+            # Make sure that the transaction wasn't unscheduled in the interim
+            if self._scheduler.is_transaction_in_schedule(req.signature):
+                self._execute_or_wait_for_processor_type(
+                    processor_type, request, req.signature)
 
         else:
             self._context_manager.delete_contexts(
