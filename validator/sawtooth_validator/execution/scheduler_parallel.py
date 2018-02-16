@@ -79,6 +79,19 @@ class Tree:
 
         return child, address[len(addr):]
 
+    def update(self, address, updater):
+        '''
+        Walk to ADDRESS, creating nodes if necessary, and set the data
+        there to UPDATER(data).
+
+        Arguments:
+            address (str): the address to be updated
+        '''
+
+        node = self._get(address, create=True)
+
+        node.data = updater(node.data)
+
     def prune(self, address):
         '''
         Remove all children (and descendants) below ADDRESS.
@@ -144,9 +157,6 @@ class Tree:
                 node.children[token] = child
                 node = child
 
-        if node.data is None:
-            node.data = Predecessors(readers=[], writer=None)
-
         return node
 
     def get(self, address):
@@ -173,13 +183,27 @@ class PredecessorTree:
         return repr(self._tree)
 
     def add_reader(self, address, reader):
-        node = self._tree._get(address, create=True)
-        node.data.readers.append(reader)
+        def updater(data):
+            if data is None:
+                return Predecessors(readers=[reader], writer=None)
+
+            data.readers.append(reader)
+
+            return data
+
+        self._tree.update(address, updater)
 
     def set_writer(self, address, writer):
-        node = self._tree._get(address, create=True)
-        node.data.readers = []
-        node.data.writer = writer
+        def updater(data):
+            if data is None:
+                return Predecessors(readers=[], writer=writer)
+
+            data.writer = writer
+            data.readers.clear()
+
+            return data
+
+        self._tree.update(address, updater)
 
         self._tree.prune(address)
 
