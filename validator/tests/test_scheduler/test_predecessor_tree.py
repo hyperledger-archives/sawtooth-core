@@ -109,20 +109,6 @@ class TestPredecessorTree(unittest.TestCase):
         #           i:
         #             c: Readers: [5]
 
-        self.assert_rwc_at_addresses({
-            'r': ([], None, {'a', 'u'}),
-            'ra': ([], None, {'z', 'd'}),
-            'rad': ([], None, {'o', 'i'}),
-            'radi': ([], None, {'s', 'x'}),
-            'radix': ([1], None, {}),
-            'radish': ([2], None, {}),
-            'radon': ([3], None, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([], None, {'s'}),
-            'rust': ([], None, {'i'}),
-            'rustic': ([5], None, {}),
-        })
-
         self.assert_rw_count(5, 0)
 
         self.assert_rw_preds_at_addresses({
@@ -160,20 +146,6 @@ class TestPredecessorTree(unittest.TestCase):
         #           i:
         #             c: Readers: [5]
 
-        self.assert_rwc_at_addresses({
-            'r': ([], None, {'a', 'u'}),
-            'ra': ([], None, {'z', 'd'}),
-            'rad': ([6], None, {'o', 'i'}),
-            'radi': ([], None, {'s', 'x'}),
-            'radix': ([1], None, {}),
-            'radish': ([2], None, {}),
-            'radon': ([3], None, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([], None, {'s'}),
-            'rust': ([7], None, {'i'}),
-            'rustic': ([5], None, {}),
-        })
-
         self.assert_rw_count(7, 0)
 
         self.assert_rw_preds_at_addresses({
@@ -201,23 +173,6 @@ class TestPredecessorTree(unittest.TestCase):
         #         z:
         #           l:
         #             e: Readers: [4]
-
-        self.assert_no_nodes_at_addresses(
-            'radix',
-            'radish'
-        )
-
-        self.assert_rwc_at_addresses({
-            'r': ([], None, {'a', 'u'}),
-            'ra': ([], None, {'z', 'd'}),
-            'rad': ([6], None, {'o', 'i'}),
-            'radi': ([], 8, {}),
-            'radon': ([3], None, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([], None, {'s'}),
-            'rust': ([7], None, {'i'}),
-            'rustic': ([5], None, {}),
-        })
 
         self.assert_rw_count(5, 1)
 
@@ -255,19 +210,6 @@ class TestPredecessorTree(unittest.TestCase):
         #           l:
         #             e: Readers: [4]
 
-        self.assert_rwc_at_addresses({
-            'r': ([], None, {'a', 'u'}),
-            'ra': ([], None, {'z', 'd'}),
-            'rad': ([6, 9], None, {'o', 'i'}),
-            'radi': ([10], 8, {'o'}),
-            'radio': ([11], None, {}),
-            'radon': ([3, 12], None, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([], None, {'s'}),
-            'rust': ([7, 13], None, {'i'}),
-            'rustic': ([5], None, {}),
-        })
-
         self.assert_rw_count(10, 1)
 
         self.assert_rw_preds_at_addresses({
@@ -298,20 +240,6 @@ class TestPredecessorTree(unittest.TestCase):
         #           l:
         #             e: Readers: [4]
 
-        self.assert_rwc_at_addresses({
-            'r': ([], None, {'a', 'u'}),
-            'ra': ([], None, {'z', 'd'}),
-            'rad': ([6, 9], None, {'o', 'i'}),
-            'radi': ([10], 8, {'o', 'i'}),
-            'radii': ([], 14, {}),
-            'radio': ([11], None, {}),
-            'radon': ([3, 12], None, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([], None, {'s'}),
-            'rust': ([7, 13], None, {'i'}),
-            'rustic': ([5], None, {}),
-        })
-
         self.assert_rw_count(10, 2)
 
         self.assert_rw_preds_at_addresses({
@@ -338,23 +266,6 @@ class TestPredecessorTree(unittest.TestCase):
         #         z:
         #           l:
         #             e: Readers: [4]
-
-        self.assert_no_nodes_at_addresses(
-            'radi',
-            'radii',
-            'radio',
-            'radon',
-            'rustic'
-        )
-
-        self.assert_rwc_at_addresses({
-            'r': ([], None, {'a', 'u'}),
-            'ra': ([], None, {'z', 'd'}),
-            'rad': ([], 16, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([], None, {'s'}),
-            'rust': ([], 15, {}),
-        })
 
         self.assert_rw_count(1, 2)
 
@@ -385,15 +296,6 @@ class TestPredecessorTree(unittest.TestCase):
         #           l:
         #             e: Readers: [4]
 
-        self.assert_rwc_at_addresses({
-            'r': ([17], None, {'a', 'u'}),
-            'ra': ([18], None, {'z', 'd'}),
-            'rad': ([], 16, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([19], None, {'s'}),
-            'rust': ([], 15, {}),
-        })
-
         self.assert_rw_count(4, 2)
 
         self.assert_rw_preds_at_addresses({
@@ -419,16 +321,6 @@ class TestPredecessorTree(unittest.TestCase):
         #         z:
         #           l:
         #             e: Readers: [4]
-
-        self.assert_rwc_at_addresses({
-            '': ([], None, {'r'}),
-            'r': ([17], None, {'a', 'u'}),
-            'ra': ([18], None, {'z', 'd'}),
-            'rad': ([20], 16, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([19], None, {'s'}),
-            'rust': ([21], 15, {}),
-        })
 
         self.assert_rw_count(6, 2)
 
@@ -459,18 +351,6 @@ class TestPredecessorTree(unittest.TestCase):
         #           l:
         #             e: Readers: [4]
 
-        self.assert_rwc_at_addresses({
-            '': ([], None, {'r', 's', 't'}),
-            'r': ([17], None, {'a', 'u'}),
-            'ra': ([18], None, {'z', 'd'}),
-            'rad': ([20], 16, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([19], None, {'s'}),
-            'rust': ([21], 15, {}),
-            's': ([22], None, {}),
-            't': ([23], None, {}),
-        })
-
         self.assert_rw_count(8, 2)
 
         self.assert_rw_preds_at_addresses({
@@ -496,17 +376,6 @@ class TestPredecessorTree(unittest.TestCase):
         #         z:
         #           l:
         #             e: Readers: [4]
-
-        self.assert_rwc_at_addresses({
-            'r': ([17], None, {'a', 'u'}),
-            'ra': ([18], None, {'z', 'd'}),
-            'rad': ([20], 16, {}),
-            'razzle': ([4], None, {}),
-            'ru': ([19], None, {'s'}),
-            'rust': ([21], 15, {}),
-            's': ([], 24, {}),
-            't': ([23], None, {}),
-        })
 
         self.assert_rw_count(7, 3)
 
@@ -535,20 +404,6 @@ class TestPredecessorTree(unittest.TestCase):
         #     u: Writer: 28
         #     a: Writer: 27
 
-        self.assert_rwc_at_addresses({
-            'r': ([17], None, {'a', 'u'}),
-            'ra': ([], 27, {}),
-            'ru': ([], 28, {}),
-            's': ([], 24, {}),
-            't': ([23], None, {}),
-        })
-
-        self.assert_no_nodes_at_addresses(
-            'rad',
-            'razzle',
-            'rust',
-        )
-
         self.assert_rw_preds_at_addresses({
             'r': ({27, 28}, {17, 27, 28}),
             'ra': ({27}, {17, 27}),
@@ -565,18 +420,6 @@ class TestPredecessorTree(unittest.TestCase):
         #   s: Writer: 24
         #   r: Writer: 29 Readers: [30]
 
-        self.assert_rwc_at_addresses({
-            '': ([], None, {'r', 's', 't'}),
-            'r': ([30], 29, {}),
-            's': ([], 24, {}),
-            't': ([23], None, {}),
-        })
-
-        self.assert_no_nodes_at_addresses(
-            'ra',
-            'ru',
-        )
-
         self.assert_rw_count(2, 2)
 
         self.assert_rw_preds_at_addresses({
@@ -590,16 +433,6 @@ class TestPredecessorTree(unittest.TestCase):
         self.set_writer('', 0)
 
         # ROOT: Writer: 0
-
-        self.assert_rwc_at_addresses({
-            '': ([], 0, {})
-        })
-
-        self.assert_no_nodes_at_addresses(
-            'r',
-            's',
-            't'
-        )
 
         self.assert_rw_count(0, 1)
 
@@ -629,13 +462,6 @@ class TestPredecessorTree(unittest.TestCase):
         #     a: Writer: 2 Readers: [2]
         #       t: Writer: 3 Readers: [3]
 
-        self.assert_rwc_at_addresses({
-            '': ([], None, {'c'}),
-            'c': ([1], 1, {'a'}),
-            'ca': ([2], 2, {'t'}),
-            'cat': ([3], 3, {}),
-        })
-
         self.assert_rw_count(3, 3)
 
         # 'cath' isn't on the tree, so it should have
@@ -660,14 +486,6 @@ class TestPredecessorTree(unittest.TestCase):
         #       r:
         #         p: Writer: 4 Readers: [4]
         #       t: Writer: 3 Readers: [3]
-
-        self.assert_rwc_at_addresses({
-            '': ([], None, {'c'}),
-            'c': ([1], 1, {'a'}),
-            'ca': ([2], 2, {'t', 'r'}),
-            'cat': ([3], 3, {}),
-            'carp': ([4], 4, {}),
-        })
 
         self.assert_rw_count(4, 4)
 
@@ -694,15 +512,6 @@ class TestPredecessorTree(unittest.TestCase):
         #   d:
         #     o:
         #       g: Writer: 5 Readers: [5]
-
-        self.assert_rwc_at_addresses({
-            '': ([], None, {'c', 'd'}),
-            'c': ([1], 1, {'a'}),
-            'ca': ([2], 2, {'t', 'r'}),
-            'cat': ([3], 3, {}),
-            'carp': ([4], 4, {}),
-            'dog': ([5], 5, {}),
-        })
 
         self.assert_rw_count(5, 5)
 
@@ -737,15 +546,6 @@ class TestPredecessorTree(unittest.TestCase):
         #     o:
         #       g: Writer: 5 Readers: [5]
 
-        self.assert_rwc_at_addresses({
-            '': ([6, 7], None, {'c', 'd'}),
-            'c': ([1], 1, {'a'}),
-            'ca': ([2], 2, {'t', 'r'}),
-            'cat': ([3], 3, {}),
-            'carp': ([4], 4, {}),
-            'dog': ([5], 5, {}),
-        })
-
         self.assert_rw_count(7, 5)
 
         self.assert_rw_preds_at_addresses({
@@ -776,14 +576,6 @@ class TestPredecessorTree(unittest.TestCase):
             #       u:
             #         m: Writer: ,num
 
-            self.assert_rwc_at_addresses({
-                '': ([], None, {'p'}),
-                'p': ([], None, {'l'}),
-                'pl': ([], None, {'u'}),
-                'plu': ([], None, {'m'}),
-                'plum': ([], num, {}),
-            })
-
             self.assert_rw_count(0, 1)
 
             self.assert_rw_preds_at_addresses({
@@ -808,15 +600,6 @@ class TestPredecessorTree(unittest.TestCase):
         #     u: Writer: 0 Readers: [1, 2, 3]
         #       g: Writer: 0 Readers: [1, 2, 3]
 
-        self.assert_rwc_at_addresses({
-            '': ([], None, {'p'}),
-            'p': ([1, 2, 3], 0, {'u'}),
-            'pu': ([1, 2, 3], 0, {'g'}),
-            'pug': ([1, 2, 3], 0, {}),
-        })
-
-        self.assert_no_nodes_at_addresses('pugs')
-
         self.assert_rw_count(9, 3)
 
         self.assert_rw_preds_at_addresses({
@@ -834,14 +617,6 @@ class TestPredecessorTree(unittest.TestCase):
         # ROOT:
         #   p: Writer: 0 Readers: [1, 2, 3]
         #     u: Writer: 4
-
-        self.assert_rwc_at_addresses({
-            '': ([], None, {'p'}),
-            'p': ([1, 2, 3], 0, {'u'}),
-            'pu': ([], 4, {}),
-        })
-
-        self.assert_no_nodes_at_addresses('pug', 'pugs')
 
         self.assert_rw_count(3, 2)
 
@@ -867,11 +642,6 @@ class TestPredecessorTree(unittest.TestCase):
             address_b: 'txn2'
         })
 
-        self.assert_rwc_at_addresses({
-            address_a: (['txn1'], None, {}),
-            address_b: (['txn2'], None, {})
-        })
-
         # Set a writer for address_a.
         self.set_writer(address_a, 'txn1')
 
@@ -879,11 +649,6 @@ class TestPredecessorTree(unittest.TestCase):
         # readers set.
 
         # Verify address_b didn't change when address_a was modified.
-
-        self.assert_rwc_at_addresses({
-            address_a: ([], 'txn1', {}),
-            address_b: (['txn2'], None, {})
-        })
 
         # Set a writer for a prefix of address_b.
         address_c = address_b[0:4]
@@ -894,14 +659,7 @@ class TestPredecessorTree(unittest.TestCase):
         # no readers set and no children.
 
         # Verify address_a didn't change when address_c was modified.
-        self.assert_rwc_at_addresses({
-            address_a: ([], 'txn1', {}),
-            address_c: ([], 'txn3', {})
-        })
-
         # Verify address_b now returns None
-        self.assert_no_nodes_at_addresses(address_b)
-
         # Add readers for address_a, address_b
         self.add_readers({
             address_a: 'txn1',
@@ -910,12 +668,6 @@ class TestPredecessorTree(unittest.TestCase):
 
         # Verify address_c now contains txn3 as the writer, with
         # no readers set and 'e8' as a child.
-        self.assert_rwc_at_addresses({
-            address_a: (['txn1'], 'txn1', {}),
-            address_b: (['txn2'], None, {}),
-            address_c: ([], 'txn3', ['e8'])
-        })
-
         self.assert_rw_preds_at_addresses({
             address_a: ({'txn1'}, {'txn1'}),
             address_b: ({'txn3'}, {'txn3', 'txn2'}),
@@ -926,45 +678,6 @@ class TestPredecessorTree(unittest.TestCase):
 
     # assertions
 
-    def assert_rwc_at_addresses(self, expected_dict):
-        '''
-        Asserts the readers, writer, and children at an address
-
-        expected_dict = {address: (readers, writer, children)}
-        '''
-
-        self.show_tree()
-
-        for address, rwc in expected_dict.items():
-            error_msg = 'Address "{}": '.format(address) + 'incorrect {}'
-
-            readers, writer, children = rwc
-            node = self.get_node(address)
-
-            self.assertIsNotNone(node)
-
-            self.assertEqual(
-                readers,
-                node.readers,
-                error_msg.format('readers'))
-
-            self.assertEqual(
-                writer,
-                node.writer,
-                error_msg.format('writer'))
-
-            self.assertEqual(
-                set(children),
-                set(node.children.keys()),
-                error_msg.format('children'))
-
-    def assert_no_nodes_at_addresses(self, *addresses):
-        for address in addresses:
-            node = self.get_node(address)
-            self.assertIsNone(
-                node,
-                'Address "{}": unexpected node'.format(address))
-
     def assert_rw_count(self, reader_count, writer_count):
         '''
         Asserts the total number of readers and writers in the tree
@@ -972,11 +685,12 @@ class TestPredecessorTree(unittest.TestCase):
 
         readers, writers = 0, 0
 
-        for node, _ in self.tree.walk(''):
-            if node.writer is not None:
-                writers += 1
+        for _, node in self.tree._tree.walk(''):
+            if node is not None:
+                if node.writer is not None:
+                    writers += 1
 
-            readers += len(node.readers)
+                readers += len(node.readers)
 
         error_msg = 'Incorrect {} count'
 
@@ -1038,37 +752,3 @@ class TestPredecessorTree(unittest.TestCase):
 
     def set_writer(self, address, txn):
         self.tree.set_writer(address, txn)
-
-    def get_node(self, address):
-        return self.tree.get(address)
-
-    # display
-
-    def show_tree(self):
-        output = tree_to_string(self.tree).split('\n')
-        for line in output:
-            LOGGER.debug(line)
-
-
-def tree_to_string(tree):
-    return node_to_string(tree._root)
-
-
-def node_to_string(node, indent=2):
-    string = '\nROOT:' if indent == 2 else ''
-
-    writer = node.writer
-    if writer is not None:
-        string += ' Writer: {}'.format(writer)
-
-    readers = node.readers
-    if readers:
-        string += ' Readers: {}'.format(readers)
-
-    for child_address in node.children:
-        string += '\n' + ' ' * indent
-        string += '{}:'.format(child_address)
-        child_node = node.children[child_address]
-        string += node_to_string(child_node, indent + 2)
-
-    return string

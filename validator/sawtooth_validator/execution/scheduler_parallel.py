@@ -13,7 +13,6 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-from ast import literal_eval
 from itertools import filterfalse
 from threading import Condition
 import logging
@@ -40,33 +39,24 @@ class AddressNotInTree(Exception):
     pass
 
 
-class PredecessorTreeNode:
-    def __init__(self, address, children=None, readers=None, writer=None):
+class Node:
+    def __init__(self, address, data=None):
         self.address = address
-        self.children = children if children is not None else {}
-        self.readers = readers if readers is not None else []
-        self.writer = writer
+        self.children = {}
+        self.data = data
 
     def __repr__(self):
-        retval = {}
-
-        if self.readers:
-            retval['readers'] = self.readers
-        if self.writer is not None:
-            retval['writer'] = self.writer
-        if self.children:
-            retval['children'] = \
-                {k: literal_eval(repr(v)) for k, v in self.children.items()}
-        if self.address:
-            retval['address'] = self.address
-
-        return repr(retval)
+        return repr({
+            'address': self.address,
+            'children': self.children,
+            'data': self.data,
+        })
 
 
-class PredecessorTree:
-    def __init__(self, token_size=2):
+class Tree:
+    def __init__(self, token_size):
+        self._root = Node('')
         self._token_size = token_size
-        self._root = PredecessorTreeNode('')
 
     def __repr__(self):
         return repr(self._root)
@@ -101,9 +91,21 @@ class PredecessorTree:
         node.children.clear()
 
     def walk(self, address):
+        '''
+        Returns a stream of pairs of node addresses and data, raising
+        AddressNotInTree if ADDRESS is not in the tree.
+
+        First the ancestors of ADDRESS (including itself) are yielded,
+        earliest to latest, and then the descendants of ADDRESS are
+        yielded in an unspecified order.
+
+        Arguments:
+            address (str): the address to be walked
+        '''
+
         node = self._root
 
-        yield node, node.address
+        yield node.address, node.data
 
         current_address = address
 
@@ -112,7 +114,7 @@ class PredecessorTree:
                 self._get_child_and_remainder(
                     node, current_address)
 
-            yield node, node.address
+            yield node.address, node.data
 
         to_process = deque()
 
@@ -122,7 +124,7 @@ class PredecessorTree:
         while to_process:
             node = to_process.pop()
 
-            yield node, node.address
+            yield node.address, node.data
 
             if node.children:
                 to_process.extendleft(
@@ -138,25 +140,48 @@ class PredecessorTree:
             else:
                 if not create:
                     return None
-                child = PredecessorTreeNode(node.address + token)
+                child = Node(node.address + token)
                 node.children[token] = child
                 node = child
+
+        if node.data is None:
+            node.data = Predecessors(readers=[], writer=None)
 
         return node
 
     def get(self, address):
         return self._get(address)
 
+
+class Predecessors:
+    def __init__(self, readers, writer):
+        self.readers = readers
+        self.writer = writer
+
+    def __repr__(self):
+        return repr({
+            'readers': self.readers,
+            'writer': self.writer,
+        })
+
+
+class PredecessorTree:
+    def __init__(self, token_size=2):
+        self._tree = Tree(token_size)
+
+    def __repr__(self):
+        return repr(self._tree)
+
     def add_reader(self, address, reader):
-        node = self._get(address, create=True)
-        node.readers.append(reader)
+        node = self._tree._get(address, create=True)
+        node.data.readers.append(reader)
 
     def set_writer(self, address, writer):
-        node = self._get(address, create=True)
-        node.readers = []
-        node.writer = writer
+        node = self._tree._get(address, create=True)
+        node.data.readers = []
+        node.data.writer = writer
 
-        self.prune(address)
+        self._tree.prune(address)
 
     def find_write_predecessors(self, address):
         """Returns all predecessor transaction ids for a write of the provided
@@ -200,7 +225,7 @@ class PredecessorTree:
 
         enclosing_writer = None
 
-        node_stream = self.walk(address)
+        node_stream = self._tree.walk(address)
 
         address_len = len(address)
 
@@ -208,14 +233,15 @@ class PredecessorTree:
         # and updating the enclosing_writer if needed.
 
         try:
-            for node, node_address in node_stream:
-                predecessors.update(node.readers)
+            for node_address, node in node_stream:
+                if node is not None:
+                    predecessors.update(node.readers)
 
-                if node.writer is not None:
-                    enclosing_writer = node.writer
+                    if node.writer is not None:
+                        enclosing_writer = node.writer
 
-                if len(node_address) >= address_len:
-                    break
+                    if len(node_address) >= address_len:
+                        break
 
         # If the address isn't on the tree, then there aren't any
         # predecessors below the node to worry about (because there
@@ -231,11 +257,12 @@ class PredecessorTree:
         # Next, descend down the tree starting at the address node and
         # find all descendant readers and writers.
 
-        for node, _ in node_stream:
-            if node.writer is not None:
-                predecessors.add(node.writer)
+        for _, node in node_stream:
+            if node is not None:
+                if node.writer is not None:
+                    predecessors.add(node.writer)
 
-            predecessors.update(node.readers)
+                predecessors.update(node.readers)
 
         return predecessors
 
@@ -275,7 +302,7 @@ class PredecessorTree:
 
         enclosing_writer = None
 
-        node_stream = self.walk(address)
+        node_stream = self._tree.walk(address)
 
         address_len = len(address)
 
@@ -283,12 +310,13 @@ class PredecessorTree:
         # enclosing_writer if needed.
 
         try:
-            for node, node_address in node_stream:
-                if node.writer is not None:
-                    enclosing_writer = node.writer
+            for node_address, node in node_stream:
+                if node is not None:
+                    if node.writer is not None:
+                        enclosing_writer = node.writer
 
-                if len(node_address) >= address_len:
-                    break
+                    if len(node_address) >= address_len:
+                        break
 
         # If the address isn't on the tree, then there aren't any
         # predecessors below the node to worry about (because there
@@ -304,9 +332,10 @@ class PredecessorTree:
         # Next, descend down the tree starting at the address node and
         # find all descendant writers.
 
-        for node, _ in node_stream:
-            if node.writer is not None:
-                predecessors.add(node.writer)
+        for _, node in node_stream:
+            if node is not None:
+                if node.writer is not None:
+                    predecessors.add(node.writer)
 
         return predecessors
 
