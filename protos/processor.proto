@@ -38,6 +38,10 @@ message TpRegisterRequest {
     // when processing transactions matching this specification; will be
     // enforced by the state API on the validator.
     repeated string namespaces = 4;
+
+    // The maximum number of transactions that this transaction processor can
+    // handle at once.
+    uint32 max_occupancy = 5;
 }
 
 // A response sent from the validator to the transaction processor
