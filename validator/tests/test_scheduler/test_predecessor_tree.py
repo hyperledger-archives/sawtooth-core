@@ -970,34 +970,24 @@ class TestPredecessorTree(unittest.TestCase):
         Asserts the total number of readers and writers in the tree
         '''
 
-        def count_readers(node=None):
-            if node is None:
-                node = self.get_node('')  # root node
-            count = len(node.readers)
-            for child in node.children:
-                next_node = node.children[child]
-                count += count_readers(next_node)
-            return count
+        readers, writers = 0, 0
 
-        def count_writers(node=None):
-            if node is None:
-                node = self.get_node('')  # root node
-            count = 1 if node.writer is not None else 0
-            for child in node.children:
-                next_node = node.children[child]
-                count += count_writers(next_node)
-            return count
+        for node, _ in self.tree.walk(''):
+            if node.writer is not None:
+                writers += 1
+
+            readers += len(node.readers)
 
         error_msg = 'Incorrect {} count'
 
         self.assertEqual(
             reader_count,
-            count_readers(),
+            readers,
             error_msg.format('reader'))
 
         self.assertEqual(
             writer_count,
-            count_writers(),
+            writers,
             error_msg.format('writer'))
 
     def assert_rw_preds_at_addresses(self, rw_pred_dict):
