@@ -22,15 +22,7 @@ const XoPayload = require('./xo_payload')
 const { XO_NAMESPACE, XO_FAMILY, XoState } = require('./xo_state')
 
 const { TransactionHandler } = require('sawtooth-sdk/processor/handler')
-const {
-  InvalidTransaction,
-  InternalError
-} = require('sawtooth-sdk/processor/exceptions')
-
-const _toInternalError = (err) => {
-  let message = err.message ? err.message : err
-  throw new InternalError(message)
-}
+const { InvalidTransaction } = require('sawtooth-sdk/processor/exceptions')
 
 const _gameToStr = (board, state, player1, player2, name) => {
   board = board.replace(/-/g, ' ')
@@ -120,7 +112,6 @@ class XOHandler extends TransactionHandler {
 
   apply (transactionProcessRequest, context) {
     return new XoPayload().fromBytes(transactionProcessRequest.payload)
-      .catch(_toInternalError)
       .then((payload) => {
         let xoState = new XoState(context)
 
