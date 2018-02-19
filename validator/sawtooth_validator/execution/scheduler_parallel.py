@@ -36,43 +36,39 @@ _AnnotatedBatch = namedtuple('ScheduledBatch',
 
 
 class AddressNotInTree(Exception):
-    pass
+    def __init__(self, match=None):
+        super().__init__()
+        self.match = match
 
 
 class Node:
     def __init__(self, address, data=None):
         self.address = address
-        self.children = {}
+        self.children = set()
         self.data = data
-
-    def __repr__(self):
-        return repr({
-            'address': self.address,
-            'children': self.children,
-            'data': self.data,
-        })
 
 
 class Tree:
-    def __init__(self, token_size):
+    '''
+    This tree is a prefix tree: a node's address is always a strict
+    prefix of the addresses of its children, and every node either has
+    data or has multiple children.
+    '''
+    def __init__(self):
         self._root = Node('')
-        self._token_size = token_size
-
-    def __repr__(self):
-        return repr(self._root)
-
-    def _tokenize_address(self, address):
-        return [
-            address[i:i + self._token_size]
-            for i in range(0, len(address), self._token_size)
-        ]
 
     def _get_child(self, node, address):
-        for child in node.children.values():
+        for child in node.children:
             if address.startswith(child.address):
                 return child
 
-        raise AddressNotInTree()
+        match = None
+
+        for child in node.children:
+            if child.address.startswith(address):
+                match = child.address
+
+        raise AddressNotInTree(match=match)
 
     def _walk_to_address(self, address):
         node = self._root
@@ -100,7 +96,7 @@ class Tree:
             address (str): the address to be updated
         '''
 
-        node = self._get(address)
+        node = self._get_or_create(address)
 
         node.data = updater(node.data)
 
@@ -140,7 +136,7 @@ class Tree:
         to_process = deque()
 
         to_process.extendleft(
-            node.children.values())
+            node.children)
 
         while to_process:
             node = to_process.pop()
@@ -149,21 +145,73 @@ class Tree:
 
             if node.children:
                 to_process.extendleft(
-                    node.children.values())
+                    node.children)
 
-    def _get(self, address):
-        tokens = self._tokenize_address(address)
+    def _get_or_create(self, address):
+        # Walk as far down the tree as possible. If the desired
+        # address is reached, return that node. Otherwise, add a new
+        # one.
+        try:
+            for step in self._walk_to_address(address):
+                node = step
 
-        node = self._root
-        for token in tokens:
-            if token in node.children:
-                node = node.children[token]
-            else:
-                child = Node(node.address + token)
-                node.children[token] = child
-                node = child
+            return node
 
-        return node
+        except AddressNotInTree:
+            # The rest of the function deals with adding a new node,
+            # but there's no sense adding a level of indentation, so
+            # just pass here.
+            pass
+
+        # The address isn't in the tree, so a new node will be added
+        # one way or another.
+        new_node = Node(address)
+
+        # Try to get the next child with a matching prefix.
+        try:
+            prefix_len = len(node.address)
+
+            match = next(
+                child
+                for child in node.children
+                if child.address[prefix_len:].startswith(
+                    address[prefix_len:][0])
+            )
+
+        # There's no match, so just add the new address as a child.
+        except StopIteration:
+            node.children.add(new_node)
+            return new_node
+
+        # If node address is 'rustic' and the address being added is
+        # 'rust', then 'rust' will be the intermediate node taking
+        # 'rustic' as a child.
+        if match.address.startswith(address):
+            node.children.add(new_node)
+            new_node.children.add(match)
+            node.children.remove(match)
+            return new_node
+
+        # The address and the match address share a common prefix, so
+        # an intermediate node with the prefix as its address will
+        # take them both as children.
+
+        shorter = (
+            address
+            if len(address) < len(match.address)
+            else match.address
+        )
+
+        for i in range(1, len(shorter)):
+            if address[i] != match.address[i]:
+                prefix = shorter[:i]
+                break
+
+        intermediate_node = Node(prefix)
+        intermediate_node.children.update((new_node, match))
+        node.children.add(intermediate_node)
+        node.children.remove(match)
+        return new_node
 
 
 class Predecessors:
@@ -171,19 +219,10 @@ class Predecessors:
         self.readers = readers
         self.writer = writer
 
-    def __repr__(self):
-        return repr({
-            'readers': self.readers,
-            'writer': self.writer,
-        })
-
 
 class PredecessorTree:
-    def __init__(self, token_size=2):
-        self._tree = Tree(token_size)
-
-    def __repr__(self):
-        return repr(self._tree)
+    def __init__(self):
+        self._tree = Tree()
 
     def add_reader(self, address, reader):
         def updater(data):
@@ -274,7 +313,10 @@ class PredecessorTree:
         # predecessors below the node to worry about (because there
         # isn't anything at all), so return the predecessors that have
         # already been collected.
-        except AddressNotInTree:
+        except AddressNotInTree as err:
+            if err.match is not None:
+                return self.find_write_predecessors(err.match)
+
             return predecessors
 
         finally:
@@ -349,7 +391,10 @@ class PredecessorTree:
         # predecessors below the node to worry about (because there
         # isn't anything at all), so return the predecessors that have
         # already been collected.
-        except AddressNotInTree:
+        except AddressNotInTree as err:
+            if err.match is not None:
+                return self.find_read_predecessors(err.match)
+
             return predecessors
 
         finally:

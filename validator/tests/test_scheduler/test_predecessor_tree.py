@@ -44,12 +44,10 @@ class TestPredecessorTree(unittest.TestCase):
         4) Assert the read and write predecessors for various addresses
            (using assert_rw_preds_at_addresses).
 
-    Although the default token size for the predecessor tree is 2,
-    1 is used for most tests because it makes for more natural examples.
     '''
 
     def setUp(self):
-        self.tree = PredecessorTree(token_size=1)
+        self.tree = PredecessorTree()
 
     def tearDown(self):
         self.tree = None
@@ -627,10 +625,10 @@ class TestPredecessorTree(unittest.TestCase):
         })
 
     def test_long_addresses(self):
-        """Tests predecessor tree with len-64 addresses and token size 2
+        """Tests predecessor tree with len-64 addresses
         """
 
-        self.tree = PredecessorTree(token_size=2)
+        self.tree = PredecessorTree()
 
         address_a = \
             'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb'
