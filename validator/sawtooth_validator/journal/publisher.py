@@ -682,17 +682,6 @@ class BlockPublisher(object):
         self._pending_batches = []
         self._pending_batch_ids = []
 
-        num_committed_batches = len(committed_batches)
-        if num_committed_batches > 0:
-            # Only update the average if either:
-            # a. Not drained below the current average
-            # b. Drained the queue, but the queue was not bigger than the
-            #    current running average
-            remainder = len(self._pending_batches) - num_committed_batches
-            if remainder > self._publish_count_average.value or \
-                    num_committed_batches > self._publish_count_average.value:
-                self._publish_count_average.update(num_committed_batches)
-
         # Uncommitted and pending disjoint sets
         # since batches can only be committed to a chain once.
         for batch in uncommitted_batches:
@@ -704,6 +693,24 @@ class BlockPublisher(object):
             if batch.header_signature not in committed_set:
                 self._pending_batches.append(batch)
                 self._pending_batch_ids.append(batch.header_signature)
+
+    def _update_pending_queue_limit(self, num_committed_batches):
+        """Take the number of committed batches and use that to update the
+        rolling average of batches, if it is a significant enough change.
+
+        Args:
+            num_committed_batches (int): the number committed batches in a
+                block
+        """
+        if num_committed_batches > 0:
+            # Only update the average if either:
+            # a. Not drained below the current average
+            # b. Drained the queue, but the queue was not bigger than the
+            #    current running average
+            remainder = len(self._pending_batches) - num_committed_batches
+            if remainder > self._publish_count_average.value or \
+                    num_committed_batches > self._publish_count_average.value:
+                self._publish_count_average.update(num_committed_batches)
 
     def on_chain_updated(self, chain_head,
                          committed_batches=None,
@@ -737,6 +744,7 @@ class BlockPublisher(object):
                 # _CandidateBlock (if we can) since the block chain has updated
                 # under us.
                 if chain_head is not None:
+                    self._update_pending_queue_limit(len(chain_head.batches))
                     self._rebuild_pending_batches(committed_batches,
                                                   uncommitted_batches)
                     self._build_candidate_block(chain_head)
