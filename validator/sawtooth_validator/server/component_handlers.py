@@ -61,6 +61,7 @@ def add(
         event_broadcaster,
         permission_verifier,
         thread_pool,
+        client_thread_pool,
         sig_pool,
         block_publisher,
         metrics_registry=None
@@ -118,7 +119,7 @@ def add(
             block_publisher.get_current_queue_info,
             metrics_registry=metrics_registry
         ),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
@@ -128,23 +129,23 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
         structure_verifier.BatchListStructureVerifier(),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
         CompleterBatchListBroadcastHandler(
             completer, gossip),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
         client_handlers.BatchSubmitFinisher(batch_tracker),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_STATUS_REQUEST,
         client_handlers.BatchStatusRequest(batch_tracker),
-        thread_pool)
+        client_thread_pool)
 
     # State
     dispatcher.add_handler(
@@ -152,81 +153,81 @@ def add(
         client_handlers.StateListRequest(
             merkle_db,
             block_store),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_STATE_GET_REQUEST,
         client_handlers.StateGetRequest(
             merkle_db,
             block_store),
-        thread_pool)
+        client_thread_pool)
 
     # Blocks
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BLOCK_LIST_REQUEST,
         client_handlers.BlockListRequest(block_store),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BLOCK_GET_BY_ID_REQUEST,
         client_handlers.BlockGetByIdRequest(block_store),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BLOCK_GET_BY_NUM_REQUEST,
         client_handlers.BlockGetByNumRequest(block_store),
-        thread_pool)
+        client_thread_pool)
 
     # Batches
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_LIST_REQUEST,
         client_handlers.BatchListRequest(block_store),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_GET_REQUEST,
         client_handlers.BatchGetRequest(block_store),
-        thread_pool)
+        client_thread_pool)
 
     # Transactions
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_TRANSACTION_LIST_REQUEST,
         client_handlers.TransactionListRequest(
             block_store),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_TRANSACTION_GET_REQUEST,
         client_handlers.TransactionGetRequest(
             block_store),
-        thread_pool)
+        client_thread_pool)
 
     # Receipts
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_RECEIPT_GET_REQUEST,
         ClientReceiptGetRequestHandler(receipt_store),
-        thread_pool)
+        client_thread_pool)
 
     # Events
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
         ClientEventsSubscribeValidationHandler(event_broadcaster),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
         ClientEventsSubscribeHandler(event_broadcaster),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST,
         ClientEventsUnsubscribeHandler(event_broadcaster),
-        thread_pool)
+        client_thread_pool)
 
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_EVENTS_GET_REQUEST,
         ClientEventsGetRequestHandler(event_broadcaster),
-        thread_pool)
+        client_thread_pool)
 
     # Peers
 
