@@ -27,5 +27,13 @@ Javascript
 - `Signing
   <javascript_sdk/signing/index.html#http://>`__
 
+Rust
+----
+- `Transaction Processor
+  <rust_sdk/doc/sawtooth_sdk/processor/index.html#http://>`__
+- `Signing
+  <rust_sdk/doc/sawtooth_sdk/signing/index.html#http://>`__
+
+
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
