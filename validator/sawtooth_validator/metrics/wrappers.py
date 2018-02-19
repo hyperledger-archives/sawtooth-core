@@ -20,9 +20,11 @@ class MetricsRegistryWrapper():
     def __init__(self, registry):
         self._registry = registry
 
-    def gauge(self, name, default=0):
+    def gauge(self, name, default=0, tags=None):
+        if not tags:
+            tags = []
         return self._registry.gauge(
-            ''.join([name, ',host=', platform.node()]),
+            ','.join([name, 'host={}'.format(platform.node())] + tags),
             default=default)
 
     def counter(self, name, tags=None):
