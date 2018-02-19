@@ -24,9 +24,14 @@ use std::borrow::Borrow;
 
 #[derive(Debug)]
 pub enum Error {
+    /// Returned when trying to create an algorithm which does not exist.
     NoSuchAlgorithm(String),
+    /// Returned when an error occurs during deserialization of a Private or
+    /// Public key from various formats.
     ParseError(String),
+    /// Returned when an error occurs during the signing process.
     SigningError(Box<StdError>),
+    /// Returned when an error occurs during key generation
     KeyGenError(String),
 }
 
@@ -65,23 +70,72 @@ impl std::fmt::Display for Error {
     }
 }
 
+/// A private key instance.
+/// The underlying content is dependent on implementation.
 pub trait PrivateKey {
+    /// Returns the algorithm name used for this private key.
     fn get_algorithm_name(&self) -> &str;
+    /// Return the private key encoded as a hex string.
     fn as_hex(&self) -> String;
+    /// Return the private key bytes.
     fn as_slice(&self) -> &[u8];
 }
 
+/// A public key instance.
+/// The underlying content is dependent on implementation.
 pub trait PublicKey {
+    /// Returns the algorithm name used for this public key.
     fn get_algorithm_name(&self) -> &str;
+    /// Return the public key encoded as a hex string.
     fn as_hex(&self) -> String;
+    /// Return the public key bytes.
     fn as_slice(&self) -> &[u8];
 }
 
+/// A context for a cryptographic signing algorithm.
 pub trait Context {
+    /// Returns the algorithm name.
     fn get_algorithm_name(&self) -> &str;
+    /// Sign a message
+    /// Given a private key for this algorithm, sign the given message bytes
+    /// and return a hex-encoded string of the resulting signature.
+    /// # Arguments
+    ///
+    /// * `message`- the message bytes
+    /// * `private_key` the private key
+    ///
+    /// # Returns
+    ///
+    /// * `signature` - The signature in a hex-encoded string
     fn sign(&self, message: &[u8], key: &PrivateKey) -> Result<String, Error>;
+
+    /// Verifies that the signature of a message was produced with the
+    /// associated public key.
+    /// # Arguments
+    ///
+    /// * `signature` - the hex-encoded signature
+    /// * `message` - the message bytes
+    /// * `public_key` - the public key to use for verification
+    ///
+    /// # Returns
+    ///
+    /// * `boolean` - True if the public key is associated with the signature for that method,
+    ///            False otherwise
     fn verify(&self, signature: &str, message: &[u8], key: &PublicKey) -> Result<bool, Error>;
+
+    /// Produce the public key for the given private key.
+    /// # Arguments
+    ///
+    /// `private_key` - a private key
+    ///
+    /// # Returns
+    /// * `public_key` - the public key for the given private key
     fn get_public_key(&self, private_key: &PrivateKey) -> Result<Box<PublicKey>, Error>;
+
+    ///Generates a new random PrivateKey using this context.
+    /// # Returns
+    ///
+    /// * `private_key` - a random private key
     fn new_random_private_key(&self) -> Result<Box<PrivateKey>, Error>;
 }
 
@@ -91,31 +145,57 @@ pub fn create_context(algorithm_name: &str) -> Result<Box<Context>, Error> {
         _ => Err(Error::NoSuchAlgorithm(format!("no such algorithm: {}", algorithm_name)))
     }
 }
-
+/// Factory for generating signers.
 pub struct CryptoFactory<'a> {
     context: &'a Context
 }
 
 impl<'a> CryptoFactory<'a> {
+
+    /// Constructs a CryptoFactory.
+    /// # Arguments
+    ///
+    /// * `context` - a cryptographic context
     pub fn new(context: &'a Context) -> Self {
         CryptoFactory{ context: context }
     }
 
+    /// Returns the context associated with this factory
+    ///
+    /// # Returns
+    ///
+    /// * `context` - a cryptographic context
     pub fn get_context(&self) -> &Context {
         return self.context
     }
 
+    /// Create a new signer for the given private key.
+    ///
+    /// # Arguments
+    ///
+    /// `private_key` - a private key
+    ///
+    /// # Returns
+    ///
+    /// * `signer` - a signer instance
     pub fn new_signer(&self, key: &'a PrivateKey) -> Signer {
         Signer::new(self.context, key)
     }
 }
 
+/// A convenient wrapper of Context and PrivateKey
 pub struct Signer<'a> {
     context: &'a Context,
     key: &'a PrivateKey
 }
 
 impl<'a> Signer<'a> {
+    /// Constructs a new Signer
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - a cryptographic context
+    /// * `private_key` - private key
     pub fn new(context: &'a Context, key: &'a PrivateKey) -> Self {
         Signer {
             context: context,
@@ -123,10 +203,24 @@ impl<'a> Signer<'a> {
         }
     }
 
+    /// Signs the given message.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - the message bytes
+    ///
+    /// # Returns
+    ///
+    /// * `signature` - the signature in a hex-encoded string
     pub fn sign(&self, message: &[u8]) -> Result<String, Error> {
         self.context.sign(message, self.key)
     }
 
+    /// Return the public key for this Signer instance.
+    ///
+    /// # Returns
+    ///
+    /// * `public_key` - the public key instance
     pub fn get_public_key(&self) -> Result<Box<PublicKey>, Error> {
         self.context.get_public_key(self.key)
     }
