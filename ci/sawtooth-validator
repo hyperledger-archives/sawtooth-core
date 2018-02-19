@@ -33,6 +33,7 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe" >> /etc
  && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
  && apt-get install -y -q \
+    python3-sawtooth-block-info \
     python3-sawtooth-cli \
     python3-sawtooth-validator \
     python3-sawtooth-poet-cli \
