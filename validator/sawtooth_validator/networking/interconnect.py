@@ -48,6 +48,7 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
+from sawtooth_validator.metrics.wrappers import GaugeWrapper
 from sawtooth_validator.metrics.wrappers import TimerWrapper
 from sawtooth_validator.metrics.wrappers import CounterWrapper
 
@@ -159,6 +160,7 @@ class _SendReceive(object):
         self._monitor_sock = None
 
         self._metrics_registry = metrics_registry
+        self._queue_size_gauges = {}
         self._received_message_counters = {}
         self._dispatcher_queue = None
 
@@ -176,6 +178,17 @@ class _SendReceive(object):
                 hashlib.sha512(zmq_identity).hexdigest()
 
         return self._identities_to_connection_ids[zmq_identity]
+
+    def _get_queue_size_gauge(self, tag):
+        if tag not in self._queue_size_gauges:
+            if self._metrics_registry:
+                self._queue_size_gauges[tag] = GaugeWrapper(
+                    self._metrics_registry.gauge(
+                        'interconnect.dispatcher_queue_size', tags=[
+                            'connection={}'.format(tag)]))
+            else:
+                self._queue_size_gauges[tag] = GaugeWrapper()
+        return self._queue_size_gauges[tag]
 
     def _get_received_message_counter(self, tag):
         if tag not in self._received_message_counters:
@@ -289,12 +302,10 @@ class _SendReceive(object):
     def _dispatch_message(self):
         while True:
             try:
-                queue_size = self._dispatcher_queue.qsize()
-                if queue_size > 10:
-                    LOGGER.debug("Dispatch queue size: %s", queue_size)
-
                 zmq_identity, msg_bytes = \
                     yield from self._dispatcher_queue.get()
+                self._get_queue_size_gauge(self.connection).set_value(
+                    self._dispatcher_queue.qsize())
                 message = validator_pb2.Message()
                 message.ParseFromString(msg_bytes)
 
@@ -350,6 +361,8 @@ class _SendReceive(object):
                     msg_bytes = yield from self._socket.recv()
                     self._last_message_time = time.time()
                     self._dispatcher_queue.put_nowait((None, msg_bytes))
+                self._get_queue_size_gauge(self.connection).set_value(
+                    self._dispatcher_queue.qsize())
 
             except CancelledError:
                 # The concurrent.futures.CancelledError is caught by asyncio
