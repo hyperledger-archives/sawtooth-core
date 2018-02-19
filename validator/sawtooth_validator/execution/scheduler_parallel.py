@@ -922,6 +922,10 @@ class ParallelScheduler(Scheduler):
             LOGGER.debug('Removed %s incomplete batches from the schedule',
                          len(incomplete_batches))
 
+    def is_transaction_in_schedule(self, txn_signature):
+        with self._condition:
+            return txn_signature in self._batches_by_txn_id
+
     def finalize(self):
         with self._condition:
             self._final = True

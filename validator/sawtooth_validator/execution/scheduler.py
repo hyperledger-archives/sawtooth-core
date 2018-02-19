@@ -116,6 +116,17 @@ class Scheduler(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def is_transaction_in_schedule(self, txn_signature):
+        """Returns True if a transaction is in this schedule.
+
+        Args:
+            txn_signature (str): The signature of the transaction, which
+                must match the header_signature field of the Transaction
+                object which was part of the added Batch.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def finalize(self):
         """Tell the scheduler that no more batches/transactions will be added.
 
