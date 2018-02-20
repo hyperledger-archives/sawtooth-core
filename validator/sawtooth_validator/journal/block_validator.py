@@ -542,9 +542,8 @@ class BlockValidator(object):
     def _wrap_callback(self, block, callback):
         # Internal cleanup after verification
         def wrapper(commit_new_block, result):
-            LOGGER.debug(
-                "Removing block from processing %s",
-                block.identifier[:6])
+            block = result.block
+            LOGGER.debug("Removing block from processing %s", block.identifier)
             try:
                 self._blocks_processing.remove(block.identifier)
             except KeyError:
@@ -595,7 +594,6 @@ class BlockValidator(object):
                     # Get descendants of the descendant
                     blocks_to_remove.extend(
                         self._blocks_pending.pop(block.identifier, []))
-
 
             callback(commit_new_block, result)
 
