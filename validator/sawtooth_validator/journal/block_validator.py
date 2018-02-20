@@ -636,7 +636,7 @@ class BlockValidator(object):
                     result.transaction_count += block.num_transactions
                 else:
                     LOGGER.info(
-                        "Block marked invalid(invalid predecessor): %s", blk)
+                        "Block marked invalid (invalid predecessor): %s", blk)
                     blk.status = BlockStatus.Invalid
 
             if not valid:
