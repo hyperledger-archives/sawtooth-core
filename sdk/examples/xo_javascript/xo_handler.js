@@ -1,5 +1,5 @@
 /**
- * Copyright 2017 Intel Corporation
+ * Copyright 2017-2018 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,74 +17,12 @@
 
 'use strict'
 
+const XoPayload = require('./xo_payload')
+
+const { XO_NAMESPACE, XO_FAMILY, XoState } = require('./xo_state')
+
 const { TransactionHandler } = require('sawtooth-sdk/processor/handler')
-const {
-  InvalidTransaction,
-  InternalError
-} = require('sawtooth-sdk/processor/exceptions')
-
-const crypto = require('crypto')
-
-const _hash = (x) =>
-  crypto.createHash('sha512').update(x).digest('hex').toLowerCase().substring(0, 64)
-
-const XO_FAMILY = 'xo'
-const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)
-
-const _decodeRequest = (payload) =>
-  new Promise((resolve, reject) => {
-    payload = payload.toString().split(',')
-    if (payload.length === 3) {
-      resolve({
-        name: payload[0],
-        action: payload[1],
-        space: payload[2]
-      })
-    } else {
-      let reason = new InvalidTransaction('Invalid payload serialization')
-      reject(reason)
-    }
-  })
-
-const _decodeStateData = (data, name) => {
-  let stringData = data.toString()
-
-  if (!stringData) {
-    return {
-      board: '',
-      gameState: '',
-      player1: '',
-      player2: '',
-      addressData: []
-    }
-  }
-
-  let addressData = stringData.split('|').map(x => x.split(','))
-
-  let gameInfo = addressData.filter(x => x[0] === name)[0]
-
-  addressData = addressData.filter(x => x[0] !== name)
-
-  return {
-    board: gameInfo[1],
-    gameState: gameInfo[2],
-    player1: gameInfo[3],
-    player2: gameInfo[4],
-    addressData: addressData
-  }
-}
-
-const _toInternalError = (err) => {
-  let message = err.message ? err.message : err
-  throw new InternalError(message)
-}
-
-const _setEntry = (context, address, data) => {
-  let entries = {
-    [address]: data
-  }
-  return context.setState(entries)
-}
+const { InvalidTransaction } = require('sawtooth-sdk/processor/exceptions')
 
 const _gameToStr = (board, state, player1, player2, name) => {
   board = board.replace(/-/g, ' ')
@@ -167,183 +105,123 @@ const _isWin = (board, letter) => {
   return false
 }
 
-const _handleCreate = (context, address, update, player) => (possibleAddressValues) => {
-  let stateValueRep = possibleAddressValues[address]
-
-  let name = update.name
-
-  let stateValue = _decodeStateData(stateValueRep, name)
-  if (stateValue.board !== '') {
-    throw new InvalidTransaction('Invalid Action: Game already exists.')
-  }
-
-  let board = '---------'
-  let gameState = 'P1-NEXT'
-  let player1 = ''
-  let player2 = ''
-
-  let gameString = [name, board, gameState, player1, player2].join(',')
-
-  let addressData = stateValue.addressData.concat([gameString])
-
-  addressData.sort()
-
-  let setValue = Buffer.from(addressData.join('|'))
-
-  _display(`Player ${player.toString().substring(0, 6)} created a game.`)
-
-  return _setEntry(context, address, setValue)
-}
-
-const _handleTake = (context, address, update, player) => (possibleAddressValues) => {
-  let stateValueRep = possibleAddressValues[address]
-
-  let name = update.name
-
-  let stateValue = _decodeStateData(stateValueRep, name)
-
-  try {
-    parseInt(update.space)
-  } catch (err) {
-    throw new InvalidTransaction('Space could not be converted as an integer.')
-  }
-
-  if (update.space < 1 || update.space > 9) {
-    throw new InvalidTransaction('Invalid space ' + update.space)
-  }
-
-  if (stateValue.board === '') {
-    throw new InvalidTransaction(
-      'Invalid Action: Take requires an existing game.'
-    )
-  }
-  if (['P1-WIN', 'P2-WIN', 'TIE'].includes(stateValue.gameState)) {
-    throw new InvalidTransaction('Invalid Action: Game has ended.')
-  }
-
-  if (!['P1-NEXT', 'P2-NEXT'].includes(stateValue.gameState)) {
-    throw new InternalError(
-      `Game has reached an invalid state: ${stateValue.gameState}`
-    )
-  }
-
-  if (stateValue.player1 === '') {
-    stateValue.player1 = player
-  } else if (stateValue.player2 === '') {
-    stateValue.player2 = player
-  }
-  let boardList = stateValue.board.split('')
-
-  if (boardList[update.space - 1] !== '-') {
-    throw new InvalidTransaction('Invalid Action: Space already taken.')
-  }
-
-  if (stateValue.gameState === 'P1-NEXT' && player === stateValue.player1) {
-    boardList[update.space - 1] = 'X'
-    stateValue.gameState = 'P2-NEXT'
-  } else if (
-    stateValue.gameState === 'P2-NEXT' &&
-    player === stateValue.player2
-  ) {
-    boardList[update.space - 1] = 'O'
-    stateValue.gameState = 'P1-NEXT'
-  } else {
-    throw new InvalidTransaction(
-      `Not this player's turn: ${player.toString().substring(0, 6)}`
-    )
-  }
-
-  stateValue.board = boardList.join('')
-
-  if (_isWin(stateValue.board, 'X')) {
-    stateValue.gameState = 'P1-WIN'
-  } else if (_isWin(stateValue.board, 'O')) {
-    stateValue.gameState = 'P2-WIN'
-  } else if (stateValue.board.search('-') === -1) {
-    stateValue.gameState = 'TIE'
-  }
-
-  let board = stateValue.board
-  let gameState = stateValue.gameState
-  let player1 = stateValue.player1
-  let player2 = stateValue.player2
-
-  let gameString = [name, board, gameState, player1, player2].join(',')
-
-  let addressData = stateValue.addressData.concat([gameString])
-
-  addressData.sort()
-
-  let setValue = Buffer.from(addressData.join('|'))
-
-  let playerString = player.toString().substring(0, 6)
-
-  _display(
-    `Player ${playerString} takes space: ${update.space}\n\n` +
-      _gameToStr(
-        stateValue.board,
-        stateValue.gameState,
-        stateValue.player1,
-        stateValue.player2,
-        update.name
-      )
-  )
-
-  return _setEntry(context, address, setValue)
-}
-
-const _handleDelete = (context, address) => {
-  return context.deleteState([address])
-}
-
 class XOHandler extends TransactionHandler {
   constructor () {
     super(XO_FAMILY, ['1.0'], [XO_NAMESPACE])
   }
 
   apply (transactionProcessRequest, context) {
-    return _decodeRequest(transactionProcessRequest.payload)
-      .catch(_toInternalError)
-      .then((update) => {
-        let header = transactionProcessRequest.header
-        let player = header.signerPublicKey
-        if (!update.name) {
-          throw new InvalidTransaction('Name is required')
-        }
+    let payload = XoPayload.fromBytes(transactionProcessRequest.payload)
+    let xoState = new XoState(context)
+    let header = transactionProcessRequest.header
+    let player = header.signerPublicKey
 
-        if (update.name.indexOf('|') !== -1) {
-          throw new InvalidTransaction('Name cannot contain "|"')
-        }
+    if (payload.action === 'create') {
+      return xoState.getGame(payload.name)
+        .then((game) => {
+          if (game !== undefined) {
+            throw new InvalidTransaction('Invalid Action: Game already exists.')
+          }
 
-        if (!update.action) {
-          throw new InvalidTransaction('Action is required')
-        }
+          let createdGame = {
+            name: payload.name,
+            board: '---------',
+            state: 'P1-NEXT',
+            player1: '',
+            player2: ''
+          }
 
-        // Perform the action
-        let handlerFn
-        if (update.action === 'create') {
-          handlerFn = _handleCreate
-        } else if (update.action === 'take') {
-          handlerFn = _handleTake
-        } else if (update.action === 'delete') {
-          handlerFn = _handleDelete
-        } else {
-          throw new InvalidTransaction(
-            `Action must be create or take not ${update.action}`
+          _display(`Player ${player.toString().substring(0, 6)} created game ${payload.name}`)
+
+          return xoState.setGame(payload.name, createdGame)
+        })
+    } else if (payload.action === 'take') {
+      return xoState.getGame(payload.name)
+        .then((game) => {
+          try {
+            parseInt(payload.space)
+          } catch (err) {
+            throw new InvalidTransaction('Space could not be converted as an integer.')
+          }
+
+          if (payload.space < 1 || payload.space > 9) {
+            throw new InvalidTransaction('Invalid space ' + payload.space)
+          }
+
+          if (game === undefined) {
+            throw new InvalidTransaction(
+              'Invalid Action: Take requires an existing game.'
+            )
+          }
+          if (['P1-WIN', 'P2-WIN', 'TIE'].includes(game.state)) {
+            throw new InvalidTransaction('Invalid Action: Game has ended.')
+          }
+
+          if (game.player1 === '') {
+            game.player1 = player
+          } else if (game.player2 === '') {
+            game.player2 = player
+          }
+          let boardList = game.board.split('')
+
+          if (boardList[payload.space - 1] !== '-') {
+            throw new InvalidTransaction('Invalid Action: Space already taken.')
+          }
+
+          if (game.state === 'P1-NEXT' && player === game.player1) {
+            boardList[payload.space - 1] = 'X'
+            game.state = 'P2-NEXT'
+          } else if (
+            game.state === 'P2-NEXT' &&
+            player === game.player2
+          ) {
+            boardList[payload.space - 1] = 'O'
+            game.state = 'P1-NEXT'
+          } else {
+            throw new InvalidTransaction(
+              `Not this player's turn: ${player.toString().substring(0, 6)}`
+            )
+          }
+
+          game.board = boardList.join('')
+
+          if (_isWin(game.board, 'X')) {
+            game.state = 'P1-WIN'
+          } else if (_isWin(game.board, 'O')) {
+            game.state = 'P2-WIN'
+          } else if (game.board.search('-') === -1) {
+            game.state = 'TIE'
+          }
+
+          let playerString = player.toString().substring(0, 6)
+
+          _display(
+            `Player ${playerString} takes space: ${payload.space}\n\n` +
+              _gameToStr(
+                game.board,
+                game.state,
+                game.player1,
+                game.player2,
+                payload.name
+              )
           )
-        }
 
-        let address = XO_NAMESPACE + _hash(update.name)
-
-        return context
-          .getState([address])
-          .then(handlerFn(context, address, update, player))
-          .then(addresses => {
-            if (addresses.length === 0) {
-              throw new InternalError('State Error!')
-            }
-          })
-      })
+          return xoState.setGame(payload.name, game)
+        })
+    } else if (payload.action === 'delete') {
+      return xoState.getGame(payload.name)
+        .then((game) => {
+          if (game === undefined) {
+            throw new InvalidTransaction(
+              `No game exists with name ${payload.name}: unable to delete`)
+          }
+          return xoState.deleteGame(payload.name)
+        })
+    } else {
+      throw new InvalidTransaction(
+        `Action must be create or take not ${payload.action}`
+      )
+    }
   }
 }
 
