@@ -111,130 +111,117 @@ class XOHandler extends TransactionHandler {
   }
 
   apply (transactionProcessRequest, context) {
-    return new XoPayload().fromBytes(transactionProcessRequest.payload)
-      .then((payload) => {
-        let xoState = new XoState(context)
+    let payload = XoPayload.fromBytes(transactionProcessRequest.payload)
+    let xoState = new XoState(context)
+    let header = transactionProcessRequest.header
+    let player = header.signerPublicKey
 
-        let header = transactionProcessRequest.header
-        let player = header.signerPublicKey
-        if (!payload.name) {
-          throw new InvalidTransaction('Name is required')
-        }
-        if (payload.name.indexOf('|') !== -1) {
-          throw new InvalidTransaction('Name cannot contain "|"')
-        }
+    if (payload.action === 'create') {
+      return xoState.getGame(payload.name)
+        .then((game) => {
+          if (game !== undefined) {
+            throw new InvalidTransaction('Invalid Action: Game already exists.')
+          }
 
-        if (!payload.action) {
-          throw new InvalidTransaction('Action is required')
-        }
+          let createdGame = {
+            name: payload.name,
+            board: '---------',
+            state: 'P1-NEXT',
+            player1: '',
+            player2: ''
+          }
 
-        if (payload.action === 'create') {
-          return xoState.getGame(payload.name)
-            .then((game) => {
-              if (game !== undefined) {
-                throw new InvalidTransaction('Invalid Action: Game already exists.')
-              }
+          _display(`Player ${player.toString().substring(0, 6)} created game ${payload.name}`)
 
-              let createdGame = {
-                name: payload.name,
-                board: '---------',
-                state: 'P1-NEXT',
-                player1: '',
-                player2: ''
-              }
+          return xoState.setGame(payload.name, createdGame)
+        })
+    } else if (payload.action === 'take') {
+      return xoState.getGame(payload.name)
+        .then((game) => {
+          try {
+            parseInt(payload.space)
+          } catch (err) {
+            throw new InvalidTransaction('Space could not be converted as an integer.')
+          }
 
-              _display(`Player ${player.toString().substring(0, 6)} created game ${payload.name}`)
+          if (payload.space < 1 || payload.space > 9) {
+            throw new InvalidTransaction('Invalid space ' + payload.space)
+          }
 
-              return xoState.setGame(payload.name, createdGame)
-            })
-        } else if (payload.action === 'take') {
-          return xoState.getGame(payload.name)
-            .then((game) => {
-              try {
-                parseInt(payload.space)
-              } catch (err) {
-                throw new InvalidTransaction('Space could not be converted as an integer.')
-              }
+          if (game === undefined) {
+            throw new InvalidTransaction(
+              'Invalid Action: Take requires an existing game.'
+            )
+          }
+          if (['P1-WIN', 'P2-WIN', 'TIE'].includes(game.state)) {
+            throw new InvalidTransaction('Invalid Action: Game has ended.')
+          }
 
-              if (payload.space < 1 || payload.space > 9) {
-                throw new InvalidTransaction('Invalid space ' + payload.space)
-              }
+          if (game.player1 === '') {
+            game.player1 = player
+          } else if (game.player2 === '') {
+            game.player2 = player
+          }
+          let boardList = game.board.split('')
 
-              if (game === undefined) {
-                throw new InvalidTransaction(
-                  'Invalid Action: Take requires an existing game.'
-                )
-              }
-              if (['P1-WIN', 'P2-WIN', 'TIE'].includes(game.state)) {
-                throw new InvalidTransaction('Invalid Action: Game has ended.')
-              }
+          if (boardList[payload.space - 1] !== '-') {
+            throw new InvalidTransaction('Invalid Action: Space already taken.')
+          }
 
-              if (game.player1 === '') {
-                game.player1 = player
-              } else if (game.player2 === '') {
-                game.player2 = player
-              }
-              let boardList = game.board.split('')
+          if (game.state === 'P1-NEXT' && player === game.player1) {
+            boardList[payload.space - 1] = 'X'
+            game.state = 'P2-NEXT'
+          } else if (
+            game.state === 'P2-NEXT' &&
+            player === game.player2
+          ) {
+            boardList[payload.space - 1] = 'O'
+            game.state = 'P1-NEXT'
+          } else {
+            throw new InvalidTransaction(
+              `Not this player's turn: ${player.toString().substring(0, 6)}`
+            )
+          }
 
-              if (boardList[payload.space - 1] !== '-') {
-                throw new InvalidTransaction('Invalid Action: Space already taken.')
-              }
+          game.board = boardList.join('')
 
-              if (game.state === 'P1-NEXT' && player === game.player1) {
-                boardList[payload.space - 1] = 'X'
-                game.state = 'P2-NEXT'
-              } else if (
-                game.state === 'P2-NEXT' &&
-                player === game.player2
-              ) {
-                boardList[payload.space - 1] = 'O'
-                game.state = 'P1-NEXT'
-              } else {
-                throw new InvalidTransaction(
-                  `Not this player's turn: ${player.toString().substring(0, 6)}`
-                )
-              }
+          if (_isWin(game.board, 'X')) {
+            game.state = 'P1-WIN'
+          } else if (_isWin(game.board, 'O')) {
+            game.state = 'P2-WIN'
+          } else if (game.board.search('-') === -1) {
+            game.state = 'TIE'
+          }
 
-              game.board = boardList.join('')
+          let playerString = player.toString().substring(0, 6)
 
-              if (_isWin(game.board, 'X')) {
-                game.state = 'P1-WIN'
-              } else if (_isWin(game.board, 'O')) {
-                game.state = 'P2-WIN'
-              } else if (game.board.search('-') === -1) {
-                game.state = 'TIE'
-              }
-
-              let playerString = player.toString().substring(0, 6)
-
-              _display(
-                `Player ${playerString} takes space: ${payload.space}\n\n` +
-                  _gameToStr(
-                    game.board,
-                    game.state,
-                    game.player1,
-                    game.player2,
-                    payload.name
-                  )
+          _display(
+            `Player ${playerString} takes space: ${payload.space}\n\n` +
+              _gameToStr(
+                game.board,
+                game.state,
+                game.player1,
+                game.player2,
+                payload.name
               )
-
-              return xoState.setGame(payload.name, game)
-            })
-        } else if (payload.action === 'delete') {
-          return xoState.getGame(payload.name)
-            .then((game) => {
-              if (game === undefined) {
-                throw new InvalidTransaction(
-                  `No game exists with name ${payload.name}: unable to delete`)
-              }
-              return xoState.deleteGame(payload.name)
-            })
-        } else {
-          throw new InvalidTransaction(
-            `Action must be create or take not ${payload.action}`
           )
-        }
-      })
+
+          return xoState.setGame(payload.name, game)
+        })
+    } else if (payload.action === 'delete') {
+      return xoState.getGame(payload.name)
+        .then((game) => {
+          if (game === undefined) {
+            throw new InvalidTransaction(
+              `No game exists with name ${payload.name}: unable to delete`)
+          }
+          return xoState.deleteGame(payload.name)
+        })
+    } else {
+      throw new InvalidTransaction(
+        `Action must be create or take not ${payload.action}`
+      )
+    }
   }
 }
 
