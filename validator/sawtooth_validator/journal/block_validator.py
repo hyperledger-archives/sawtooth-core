@@ -46,6 +46,13 @@ class BlockValidationFailure(Exception):
     """
 
 
+class BlockValidationError(Exception):
+    """
+    Indication that an error occured during block validation and the validity
+    of the block could not be determined.
+    """
+
+
 class ChainHeadUpdated(Exception):
     """ Raised when a chain head changed event is detected and we need to abort
     processing and restart processing with the new chain head.
@@ -366,6 +373,10 @@ class BlockValidator(object):
             blkw.status = BlockStatus.Invalid
             raise err
 
+        except BlockValidationError as err:
+            blkw.status = BlockStatus.Unknown
+            raise err
+
         except ChainHeadUpdated as e:
             raise e
 
@@ -542,15 +553,14 @@ class BlockValidator(object):
                     " wasn't in processes: %s",
                     block.identifier)
 
-            # If the block is invalid, mark all descendant blocks as invalid
-            # and remove from pending.
+            # If the block was valid, submit all pending blocks for validation
             if block.status == BlockStatus.Valid:
                 blocks_now_ready = self._blocks_pending.pop(
                     block.identifier, [])
                 self.submit_blocks_for_verification(blocks_now_ready, callback)
 
-            else:
-                # Get all the pending blocks that can now be processed
+            elif block.status == BlockStatus.Invalid:
+                # If the block was invalid, mark all pending blocks as invalid
                 blocks_now_invalid = self._blocks_pending.pop(
                     block.identifier, [])
 
@@ -565,6 +575,27 @@ class BlockValidator(object):
                     # Get descendants of the descendant
                     blocks_now_invalid.extend(
                         self._blocks_pending.pop(invalid_block.identifier, []))
+
+            else:
+                # If an error occured during validation, something is wrong
+                # internally and we need to abort validation of this block
+                # and all its children without marking them as invalid.
+                blocks_to_remove = self._blocks_pending.pop(
+                    block.identifier, [])
+
+                while blocks_to_remove:
+                    block = blocks_to_remove.pop()
+
+                    LOGGER.debug(
+                        'Removing block from cache and pending due to error '
+                        'during validation: %s', block)
+
+                    del self._block_cache[block.identifier]
+
+                    # Get descendants of the descendant
+                    blocks_to_remove.extend(
+                        self._blocks_pending.pop(block.identifier, []))
+
 
             callback(commit_new_block, result)
 
@@ -618,7 +649,14 @@ class BlockValidator(object):
                     new_block, current_block,
                     result.new_chain, result.current_chain)
             except BlockValidationFailure as err:
-                LOGGER.warning('%s', err)
+                LOGGER.warning(
+                    'Block %s failed validation: %s',
+                    block, err)
+                block.status = BlockStatus.Invalid
+            except BlockValidationError as err:
+                LOGGER.error(
+                    'Encountered an error while validating %s: %s',
+                    block, err)
                 callback(False, result)
                 return
 
@@ -633,6 +671,11 @@ class BlockValidator(object):
                             'Block %s failed validation: %s',
                             blk, err)
                         valid = False
+                    except BlockValidationError as err:
+                        LOGGER.error(
+                            'Encountered an error while validating %s: %s',
+                            blk, err)
+                        callback(False, result)
                     result.transaction_count += block.num_transactions
                 else:
                     LOGGER.info(
