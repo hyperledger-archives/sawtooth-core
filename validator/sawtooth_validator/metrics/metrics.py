@@ -12,6 +12,64 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ------------------------------------------------------------------------------
+"""
+Metric types
+------------
+
+Currently, three types of metrics are supported: gauge, counter, and timer.
+
+- Gauge: Used to record a value that changes arbitrarily.
+- Counter: Used to record a value that increments or decrements.
+- Timer: Used to record the duration of tasks.
+
+To add more metric types, corresponding mock metrics must be added to the end
+of metrics.py as these mocks are used when metric reporting is disabled.
+
+API Usage
+---------
+
+To create a new metric, a handle to the metrics collector must be created at
+the beggining of the module with:
+
+    from sawtooth_validator import metrics
+    COLLECTOR = metrics.get_collector(__name__)
+
+This creates a new handle which will tag all metrics created with the handle
+using the full module name. To create a new metric, call the function with the
+corresponding name:
+
+    important_value_gauge = COLLECTOR.gauge("important_value")
+
+The above creates a metric named
+`"sawtooth_validator.module_name.important_value"` and tags it with the process
+id and hostname where the validator is running. If metrics reporting for this
+metric is disabled, a mock object is returned which implements the same API
+as the regular metric object. **Note:** Mock objects do not maintain state.
+
+If the metric is part of a class, the instance should be passed in when the
+metric is created like so:
+
+    important_instance_value_counter = COLLECTOR.counter(
+        "important_instance_value", instance=self)
+
+This extends the metric name to include the class name and adds another tag
+for the instance id obtained using `id(self)`.
+
+Additionally, a metrics reporting level can be set and additional tags can be
+added when it is created using the `level` and `tags` parameters:
+
+    important_timer = COLLECTOR.timer(
+        "important_timer",
+        instance=self,
+        level=metrics.DEBUG,
+        tags={"name": self.name})
+
+Tags should be used to separate metrics from multiple sources that are
+collected in the same place. For example, `InstrumentedThreadPoolExecutor` uses
+tags to distinguish threadpool metrics by the threadpool's name. While you
+could also separate out these metrics by instance id, adding a name tag makes
+interpreting the metrics much easier.
+"""
 
 import os
 import platform
