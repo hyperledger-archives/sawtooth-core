@@ -322,7 +322,7 @@ class BlockValidator(object):
             try:
                 prev_state_root = self._get_previous_block_state_root(blkw)
             except KeyError:
-                raise BlockValidationFailure(
+                raise BlockValidationError(
                     'Block {} rejected due to missing predecessor'.format(
                         blkw))
 
@@ -405,7 +405,7 @@ class BlockValidator(object):
             last block in the shorter chain. Ordered newest to oldest.
 
         Raises:
-            BlockValidationFailure
+            BlockValidationError
                 The block is missing a predecessor. Note that normally this
                 shouldn't happen because of the completer."""
         fork_diff = []
@@ -421,15 +421,7 @@ class BlockValidator(object):
             try:
                 blk = self._block_cache[blk.previous_block_id]
             except KeyError:
-                LOGGER.debug(
-                    "Failed to build fork diff due to missing predecessor: %s",
-                    blk)
-
-                # Mark all blocks in the longer chain since the invalid block
-                # as invalid.
-                for blk in fork_diff:
-                    blk.status = BlockStatus.Invalid
-                raise BlockValidationFailure(
+                raise BlockValidationError(
                     'Failed to build fork diff: block {} missing predecessor'
                     .format(blk))
 
@@ -455,9 +447,7 @@ class BlockValidator(object):
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
-                for b in new_chain:
-                    b.status = BlockStatus.Invalid
-                raise BlockValidationFailure(
+                raise BlockValidationError(
                     'Block {} rejected due to missing predecessor {}'.format(
                         new_blkw, new_blkw.previous_block_id))
 
