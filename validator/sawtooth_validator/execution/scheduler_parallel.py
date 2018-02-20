@@ -188,9 +188,9 @@ class PredecessorTree:
     def add_reader(self, address, reader):
         def updater(data):
             if data is None:
-                return Predecessors(readers=[reader], writer=None)
+                return Predecessors(readers={reader}, writer=None)
 
-            data.readers.append(reader)
+            data.readers.add(reader)
 
             return data
 
@@ -199,7 +199,7 @@ class PredecessorTree:
     def set_writer(self, address, writer):
         def updater(data):
             if data is None:
-                return Predecessors(readers=[], writer=writer)
+                return Predecessors(readers=set(), writer=writer)
 
             data.writer = writer
             data.readers.clear()
