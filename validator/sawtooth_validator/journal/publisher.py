@@ -69,6 +69,23 @@ class PendingBatchObserver(metaclass=abc.ABCMeta):
                                   '"notify_batch_pending" method')
 
 
+class PendingBatchQueueObserver(metaclass=abc.ABCMeta):
+    """An interface class for components wishing to be notified when the size
+    of the pending batch queue has changed.
+    """
+    @abc.abstractmethod
+    def notify_pending_batch_queue_limit(self, limit):
+        """This method will be called when the pending batch queue's size
+        limit has been updated.
+
+        Args:
+            limit (int): the updated maximmum allowed number of batches in the
+                pending batch queue.
+        """
+        raise NotImplementedError('PendingBatchQueueObserver must have a '
+                                  '"notify_pending_batch_queue_limit" method')
+
+
 class _PublisherThread(InstrumentedThread):
     def __init__(self, block_publisher, batch_queue,
                  check_publish_block_frequency):
@@ -454,6 +471,7 @@ class BlockPublisher(object):
                  permission_verifier,
                  check_publish_block_frequency,
                  batch_observers,
+                 batch_queue_observers,
                  batch_injector_factory=None,
                  metrics_registry=None):
         """
@@ -476,6 +494,8 @@ class BlockPublisher(object):
                 consensus module can be stored.
             config_dir (str): path to location where configuration can be
                 found.
+            batch_queue_observers (:list:`PendingBatchQueueObserver`) a list
+                of obvservers to be notified about pending batch queue changes.
             batch_injector_factory (:obj:`BatchInjectorFatctory`): A factory
                 for creating BatchInjectors.
             metrics_registry (MetricsRegistry): Metrics registry used to
@@ -517,6 +537,7 @@ class BlockPublisher(object):
         self._batch_queue = queue.Queue()
         self._queued_batch_ids = []
         self._batch_observers = batch_observers
+        self._batch_queue_observers = batch_queue_observers
         self._check_publish_block_frequency = check_publish_block_frequency
         self._publisher_thread = None
 
@@ -692,6 +713,10 @@ class BlockPublisher(object):
             if remainder > self._publish_count_average.value or \
                     num_committed_batches > self._publish_count_average.value:
                 self._publish_count_average.update(num_committed_batches)
+
+                for observer in self._batch_queue_observers:
+                    observer.notify_pending_batch_queue_limit(
+                        self._get_current_queue_limit())
 
         # Uncommitted and pending disjoint sets
         # since batches can only be committed to a chain once.

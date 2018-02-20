@@ -167,6 +167,8 @@ class TransactionExecutorThread(object):
             for observer in self._invalid_observers:
                 observer.notify_txn_invalid(
                     req.signature,
+                    self._scheduler.get_batch_id_for_transaction(
+                        req.signature),
                     response.message,
                     response.extended_data)
 
@@ -509,13 +511,15 @@ class InvalidTransactionObserver(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def notify_txn_invalid(self, txn_id, message=None, extended_data=None):
+    def notify_txn_invalid(self, txn_id, batch_id,
+                           message=None, extended_data=None):
         """This method will be called when a Transaction Processor sends back
         a Transaction with the status INVALID_TRANSACTION, and includes any
         error message or extended data sent back.
 
         Args:
             txn_id (str): The id of the invalid Transaction
+            batch_id (str): The id of the batch containing the transaction
             message (str, optional): Message explaining why it is invalid
             extended_data (bytes, optional): Additional error data
         """

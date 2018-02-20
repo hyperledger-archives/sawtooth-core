@@ -136,7 +136,8 @@ class BlockTreeManager(object):
             config_dir=None,
             permission_verifier=MockPermissionVerifier(),
             check_publish_block_frequency=0.1,
-            batch_observers=[])
+            batch_observers=[],
+            batch_queue_observers=[])
 
     @property
     def chain_head(self):

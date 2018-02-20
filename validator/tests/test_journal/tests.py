@@ -153,6 +153,7 @@ class TestBlockPublisher(unittest.TestCase):
             config_dir=None,
             check_publish_block_frequency=0.1,
             batch_observers=[],
+            batch_queue_observers=[],
             permission_verifier=self.permission_verifier)
 
         self.init_chain_head = self.block_tree_manager.chain_head
@@ -313,6 +314,7 @@ class TestBlockPublisher(unittest.TestCase):
             config_dir=None,
             check_publish_block_frequency=0.1,
             batch_observers=[],
+            batch_queue_observers=[],
             permission_verifier=self.permission_verifier)
 
         self.receive_batches()
@@ -349,6 +351,7 @@ class TestBlockPublisher(unittest.TestCase):
             config_dir=None,
             check_publish_block_frequency=0.1,
             batch_observers=[],
+            batch_queue_observers=[],
             permission_verifier=self.permission_verifier)
 
         self.assert_no_block_published()
@@ -407,6 +410,7 @@ class TestBlockPublisher(unittest.TestCase):
             permission_verifier=self.permission_verifier,
             check_publish_block_frequency=0.1,
             batch_observers=[],
+            batch_queue_observers=[],
             batch_injector_factory=MockBatchInjectorFactory(injected_batch))
 
         self.receive_batches()
@@ -452,6 +456,7 @@ class TestBlockPublisher(unittest.TestCase):
             config_dir=None,
             check_publish_block_frequency=0.1,
             batch_observers=[],
+            batch_queue_observers=[],
             permission_verifier=self.permission_verifier)
 
         self.receive_batches(batches=[batch1, batch2])
@@ -1345,6 +1350,7 @@ class TestJournal(unittest.TestCase):
                 permission_verifier=self.permission_verifier,
                 check_publish_block_frequency=0.1,
                 batch_observers=[],
+                batch_queue_observers=[],
                 batch_injector_factory=DefaultBatchInjectorFactory(
                     block_store=btm.block_store,
                     state_view_factory=MockStateViewFactory(btm.state_db),

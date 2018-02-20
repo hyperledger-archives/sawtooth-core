@@ -68,7 +68,8 @@ class BatchTracker(ChainObserver,
                     self._update_observers(batch_id,
                                            ClientBatchStatus.COMMITTED)
 
-    def notify_txn_invalid(self, txn_id, message=None, extended_data=None):
+    def notify_txn_invalid(self, txn_id, batch_id,
+                           message=None, extended_data=None):
         """Adds a batch id to the invalid cache along with the id of the
         transaction that was rejected and any error message or extended data.
         Removes that batch id from the pending set. The cache is only
@@ -76,6 +77,7 @@ class BatchTracker(ChainObserver,
 
         Args:
             txn_id (str): The id of the invalid batch
+            batch_id (str): the transaction's containing batch id
             message (str, optional): Message explaining why batch is invalid
             extended_data (bytes, optional): Additional error data
         """
@@ -86,14 +88,15 @@ class BatchTracker(ChainObserver,
             invalid_txn_info['extended_data'] = extended_data
 
         with self._lock:
-            for batch_id, txn_ids in self._batch_info.items():
+            for tracked_id, txn_ids in self._batch_info.items():
                 if txn_id in txn_ids:
-                    if batch_id not in self._invalid:
-                        self._invalid[batch_id] = [invalid_txn_info]
+                    if tracked_id not in self._invalid:
+                        self._invalid[tracked_id] = [invalid_txn_info]
                     else:
-                        self._invalid[batch_id].append(invalid_txn_info)
-                    self._pending.discard(batch_id)
-                    self._update_observers(batch_id, ClientBatchStatus.INVALID)
+                        self._invalid[tracked_id].append(invalid_txn_info)
+                    self._pending.discard(tracked_id)
+                    self._update_observers(
+                        tracked_id, ClientBatchStatus.INVALID)
                     return
 
     def notify_batch_pending(self, batch):

@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 import logging
 
+from sawtooth_validator.gossip.token_pool import NoTokenAvailable
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -116,11 +117,12 @@ class PeerUnregisterHandler(Handler):
             message_type=validator_pb2.Message.NETWORK_ACK)
 
 
-class GossipMessageDuplicateHandler(Handler):
-    def __init__(self, completer, has_block, has_batch):
+class GossipMessageDropHandler(Handler):
+    def __init__(self, completer, has_block, has_batch, batch_token_pool):
         self._completer = completer
         self._has_block = has_block
         self._has_batch = has_batch
+        self._batch_token_pool = batch_token_pool
 
     def handle(self, connection_id, message_content):
         gossip_message = GossipMessage()
@@ -139,6 +141,11 @@ class GossipMessageDuplicateHandler(Handler):
                 return HandlerResult(HandlerStatus.DROP)
 
         if gossip_message.content_type == gossip_message.BATCH:
+
+            # Check to see if there are any available tokens
+            if not self._batch_token_pool.has_available_tokens():
+                return HandlerResult(HandlerStatus.DROP)
+
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
             has_batch = False
@@ -149,6 +156,12 @@ class GossipMessageDuplicateHandler(Handler):
                 has_batch = True
 
             if has_batch:
+                return HandlerResult(HandlerStatus.DROP)
+
+            try:
+                self._batch_token_pool.acquire_token(batch.header_signature)
+            except NoTokenAvailable:
+                # The available tokesn may have changed since our last check
                 return HandlerResult(HandlerStatus.DROP)
 
         return HandlerResult(HandlerStatus.PASS)

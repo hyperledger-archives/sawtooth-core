@@ -49,6 +49,8 @@ from sawtooth_validator.state.state_view import StateViewFactory
 from sawtooth_validator.gossip.permission_verifier import PermissionVerifier
 from sawtooth_validator.gossip.permission_verifier import IdentityCache
 from sawtooth_validator.gossip.identity_observer import IdentityObserver
+from sawtooth_validator.gossip.token_pool import TokenPool
+from sawtooth_validator.gossip.token_pool import BatchTokenPoolUpdater
 from sawtooth_validator.networking.interconnect import Interconnect
 from sawtooth_validator.gossip.gossip import Gossip
 
@@ -196,7 +198,9 @@ class Validator(object):
         # -- Setup Transaction Execution Platform -- #
         context_manager = ContextManager(global_state_db)
 
+        batch_token_pool = TokenPool()
         batch_tracker = BatchTracker(block_store)
+        batch_token_pool_updater = BatchTokenPoolUpdater(batch_token_pool)
 
         settings_cache = SettingsCache(
             SettingsViewFactory(state_view_factory),
@@ -207,7 +211,7 @@ class Validator(object):
             context_manager=context_manager,
             settings_view_factory=SettingsViewFactory(state_view_factory),
             scheduler_type=scheduler_type,
-            invalid_observers=[batch_tracker],
+            invalid_observers=[batch_tracker, batch_token_pool_updater],
             metrics_registry=metrics_registry)
 
         component_service.set_check_connections(
@@ -280,6 +284,7 @@ class Validator(object):
             permission_verifier=permission_verifier,
             check_publish_block_frequency=0.1,
             batch_observers=[batch_tracker],
+            batch_queue_observers=[batch_token_pool_updater],
             batch_injector_factory=batch_injector_factory,
             metrics_registry=metrics_registry)
 
@@ -307,6 +312,7 @@ class Validator(object):
                 event_broadcaster,
                 receipt_store,
                 batch_tracker,
+                batch_token_pool_updater,
                 identity_observer,
                 settings_observer
             ],
@@ -335,7 +341,8 @@ class Validator(object):
             network_dispatcher, network_service, gossip, completer,
             responder, network_thread_pool, sig_pool,
             chain_controller.has_block, block_publisher.has_batch,
-            permission_verifier, block_publisher, metrics_registry)
+            permission_verifier, block_publisher, batch_token_pool,
+            metrics_registry)
 
         component_handlers.add(
             component_dispatcher, gossip, context_manager,

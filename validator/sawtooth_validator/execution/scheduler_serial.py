@@ -174,6 +174,10 @@ class SerialScheduler(Scheduler):
                     results.append(result)
             return results
 
+    def get_batch_id_for_transaction(self, transaction_id):
+        with self._condition:
+            return self._txn_to_batch.get(transaction_id)
+
     def count(self):
         with self._condition:
             return len(self._scheduled_transactions)

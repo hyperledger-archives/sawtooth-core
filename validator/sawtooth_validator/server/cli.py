@@ -357,27 +357,28 @@ def main(args=None):
         'Starting validator with %s scheduler',
         validator_config.scheduler)
 
-    validator = Validator(
-        bind_network,
-        bind_component,
-        endpoint,
-        validator_config.peering,
-        validator_config.seeds,
-        validator_config.peers,
-        path_config.data_dir,
-        path_config.config_dir,
-        identity_signer,
-        validator_config.scheduler,
-        validator_config.permissions,
-        validator_config.minimum_peer_connectivity,
-        validator_config.maximum_peer_connectivity,
-        validator_config.network_public_key,
-        validator_config.network_private_key,
-        roles=validator_config.roles,
-        metrics_registry=wrapped_registry)
-
+    validator = None
     # pylint: disable=broad-except
     try:
+        validator = Validator(
+            bind_network,
+            bind_component,
+            endpoint,
+            validator_config.peering,
+            validator_config.seeds,
+            validator_config.peers,
+            path_config.data_dir,
+            path_config.config_dir,
+            identity_signer,
+            validator_config.scheduler,
+            validator_config.permissions,
+            validator_config.minimum_peer_connectivity,
+            validator_config.maximum_peer_connectivity,
+            validator_config.network_public_key,
+            validator_config.network_private_key,
+            roles=validator_config.roles,
+            metrics_registry=wrapped_registry)
+
         validator.start()
     except KeyboardInterrupt:
         LOGGER.info("Initiating graceful "
@@ -394,4 +395,6 @@ def main(args=None):
     finally:
         if metrics_reporter:
             metrics_reporter.stop()
-        validator.stop()
+
+        if validator:
+            validator.stop()
