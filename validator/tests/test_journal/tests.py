@@ -32,7 +32,7 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_validator import BlockValidator
-from sawtooth_validator.journal.block_validator import BlockValidationError
+from sawtooth_validator.journal.block_validator import BlockValidationFailure
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
@@ -1301,7 +1301,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
 
         with patch.object(BlockValidator,
                           'validate_block',
-                          side_effect=BlockValidationError):
+                          side_effect=BlockValidationFailure):
             self.chain_ctrl.on_block_received(my_genesis_block)
 
         self.assertIsNone(self.chain_ctrl.chain_head)

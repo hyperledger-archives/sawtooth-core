@@ -40,9 +40,9 @@ from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 LOGGER = logging.getLogger(__name__)
 
 
-class BlockValidationError(Exception):
+class BlockValidationFailure(Exception):
     """
-    Indication that an error has occurred during block validation.
+    Indication that a failure has occurred during block validation.
     """
 
 
@@ -192,7 +192,7 @@ class BlockValidator(object):
             prev_state_root: the state root to execute transactions on top of
 
         Raises:
-            BlockValidationError:
+            BlockValidationFailure:
                 If validation fails, raises this error with the reason.
             MissingDependency:
                 Validation failed because of a missing dependency.
@@ -237,7 +237,7 @@ class BlockValidator(object):
                 DuplicateTransaction,
                 MissingDependency) as err:
             scheduler.cancel()
-            raise BlockValidationError(
+            raise BlockValidationFailure(
                 "Block {} failed validation: {}".format(blkw, err))
 
         except Exception:
@@ -259,12 +259,12 @@ class BlockValidator(object):
                 state_hash = batch_result.state_hash
                 blkw.num_transactions += len(batch.transactions)
             else:
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     "Block {} failed validation: Invalid batch "
                     "{}".format(blkw, batch))
 
         if blkw.state_root_hash != state_hash:
-            raise BlockValidationError(
+            raise BlockValidationFailure(
                 "Block {} failed state root hash validation. Expected {}"
                 " but got {}".format(
                     blkw, blkw.state_root_hash, state_hash))
@@ -301,7 +301,7 @@ class BlockValidator(object):
         if blkw.status == BlockStatus.Valid:
             return
         elif blkw.status == BlockStatus.Invalid:
-            raise BlockValidationError(
+            raise BlockValidationFailure(
                 'Block {} is already invalid'.format(blkw))
 
         # pylint: disable=broad-except
@@ -315,12 +315,12 @@ class BlockValidator(object):
             try:
                 prev_state_root = self._get_previous_block_state_root(blkw)
             except KeyError:
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} rejected due to missing predecessor'.format(
                         blkw))
 
             if not self._validate_permissions(blkw, prev_state_root):
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} failed permission validation'.format(blkw))
 
             try:
@@ -339,12 +339,12 @@ class BlockValidator(object):
                 validator_id=public_key)
 
             if not consensus_block_verifier.verify_block(blkw):
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} failed {} consensus validation'.format(
                         blkw, consensus))
 
             if not self._validate_on_chain_rules(blkw, prev_state_root):
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} failed on-chain validation rules'.format(
                         blkw))
 
@@ -362,7 +362,7 @@ class BlockValidator(object):
 
             blkw.status = BlockStatus.Valid
 
-        except BlockValidationError as err:
+        except BlockValidationFailure as err:
             blkw.status = BlockStatus.Invalid
             raise err
 
@@ -394,7 +394,7 @@ class BlockValidator(object):
             last block in the shorter chain. Ordered newest to oldest.
 
         Raises:
-            BlockValidationError
+            BlockValidationFailure
                 The block is missing a predecessor. Note that normally this
                 shouldn't happen because of the completer."""
         fork_diff = []
@@ -418,7 +418,7 @@ class BlockValidator(object):
                 # as invalid.
                 for blk in fork_diff:
                     blk.status = BlockStatus.Invalid
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Failed to build fork diff: block {} missing predecessor'
                     .format(blk))
 
@@ -436,7 +436,7 @@ class BlockValidator(object):
                 # We are at a genesis block and the blocks are not the same
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} rejected due to wrong genesis {}'.format(
                         cur_blkw, new_blkw))
 
@@ -446,7 +446,7 @@ class BlockValidator(object):
             except KeyError:
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} rejected due to missing predecessor {}'.format(
                         new_blkw, new_blkw.previous_block_id))
 
@@ -617,7 +617,7 @@ class BlockValidator(object):
                 self._extend_fork_diff_to_common_ancestor(
                     new_block, current_block,
                     result.new_chain, result.current_chain)
-            except BlockValidationError as err:
+            except BlockValidationFailure as err:
                 LOGGER.warning('%s', err)
                 callback(False, result)
                 return
@@ -628,7 +628,7 @@ class BlockValidator(object):
                     try:
                         self.validate_block(
                             blk, chain_head)
-                    except BlockValidationError as err:
+                    except BlockValidationFailure as err:
                         LOGGER.warning(
                             'Block %s failed validation: %s',
                             blk, err)

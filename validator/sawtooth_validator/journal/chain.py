@@ -21,7 +21,7 @@ from threading import RLock
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
-from sawtooth_validator.journal.block_validator import BlockValidationError
+from sawtooth_validator.journal.block_validator import BlockValidationFailure
 from sawtooth_validator.protobuf.transaction_receipt_pb2 import \
     TransactionReceipt
 from sawtooth_validator.metrics.wrappers import CounterWrapper
@@ -325,7 +325,7 @@ class ChainController(object):
             else:
                 try:
                     self._block_validator.validate_block(block)
-                except BlockValidationError as err:
+                except BlockValidationFailure as err:
                     LOGGER.warning(
                         'Cannot set chain head; '
                         'genesis block %s is not valid: %s',
