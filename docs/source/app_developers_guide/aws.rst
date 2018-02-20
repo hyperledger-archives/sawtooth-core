@@ -70,6 +70,9 @@ Launching a Sawtooth Instance
       * To access the REST API remotely, add an inbound rule to allow TCP
         traffic on port 8008.
 
+      * To communicate with another validator node, add an inbound rule to
+        allow TCP traffic on port 8800.
+
       For information on editing the security group rules, see Amazon's
       Security Groups documentation,
       `Adding, Removing, and Updating Rules <http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_SecurityGroups.html#AddRemoveRules>`_.
