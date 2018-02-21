@@ -17,13 +17,13 @@ import abc
 import json
 import logging
 import threading
-import queue
 
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import transaction_pb2
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf import transaction_receipt_pb2
+from sawtooth_validator.exceptions import WaitCancelledException
 
 from sawtooth_validator.concurrent.threadpool import \
     InstrumentedThreadPoolExecutor
@@ -51,7 +51,6 @@ class TransactionExecutorThread(object):
                  context_manager,
                  scheduler,
                  processors,
-                 waiting_threadpool,
                  settings_view_factory,
                  invalid_observers):
         """
@@ -62,10 +61,6 @@ class TransactionExecutorThread(object):
                 execute.
             processors (ProcessorIteratorCollection): Provides the next
                 transaction processor to send to.
-            waiters_by_type (_WaitersByType): Queues up transactions based on
-                processor type.
-            waiting_threadpool (ThreadPoolExecutor): A thread pool to run
-                indefinite waiting functions in.
             settings_view_factory (SettingsViewFactory): Read the configuration
                 state
         Attributes:
@@ -79,8 +74,6 @@ class TransactionExecutorThread(object):
         self._processors = processors
         self._settings_view_factory = settings_view_factory
         self._tp_settings_key = "sawtooth.validator.transaction_families"
-        self._waiters_by_type = _WaitersByType()
-        self._waiting_threadpool = waiting_threadpool
         self._done = False
         self._invalid_observers = invalid_observers
         self._open_futures = {}
@@ -145,8 +138,10 @@ class TransactionExecutorThread(object):
 
             # Make sure that the transaction wasn't unscheduled in the interim
             if self._scheduler.is_transaction_in_schedule(req.signature):
-                self._execute_or_wait_for_processor_type(
-                    processor_type, request, req.signature)
+                self._execute(
+                    processor_type=processor_type,
+                    content=request,
+                    signature=req.signature)
 
         else:
             self._context_manager.delete_contexts(
@@ -299,37 +294,25 @@ class TransactionExecutorThread(object):
 
             # Since we have already checked if the transaction should be failed
             # all other cases should either be executed or waited for.
-            self._execute_or_wait_for_processor_type(
+            self._execute(
                 processor_type=processor_type,
                 content=content,
                 signature=txn.header_signature)
 
         self._done = True
 
-    def _execute_or_wait_for_processor_type(
-            self, processor_type, content, signature):
-        processor = self._processors.get_next_of_type(
-            processor_type=processor_type)
-        if processor is None:
-            LOGGER.debug("no transaction processors registered for "
-                         "processor type %s", processor_type)
-            if processor_type not in self._waiters_by_type:
-                in_queue = queue.Queue()
-                in_queue.put_nowait((content, signature))
-                waiter = _Waiter(
-                    self._send_and_process_result,
-                    processor_type=processor_type,
-                    processors=self._processors,
-                    in_queue=in_queue,
-                    waiters_by_type=self._waiters_by_type)
-                self._waiters_by_type[processor_type] = waiter
-                self._waiting_threadpool.submit(waiter.run_in_threadpool)
-            else:
-                self._waiters_by_type[processor_type].add_to_in_queue(
-                    (content, signature))
-        else:
-            connection_id = processor.connection_id
-            self._send_and_process_result(content, connection_id, signature)
+    def _execute(self, processor_type, content, signature):
+        try:
+            processor = self._processors.get_next_of_type(
+                processor_type=processor_type)
+        except WaitCancelledException:
+            LOGGER.exception("Transaction %s cancelled while "
+                             "waiting for available processor",
+                             content.signature)
+            return
+
+        self._send_and_process_result(
+            content, processor.connection_id, signature)
 
     def _send_and_process_result(self, content, connection_id, signature):
         fut = self._service.send(
@@ -366,11 +349,10 @@ class TransactionExecutorThread(object):
             self._future_done_callback(fut.request, result)
 
     def is_done(self):
-        return self._done and len(self._waiters_by_type) == 0
+        return self._done
 
     def cancel(self):
-        for waiter in self._waiters_by_type.values():
-            waiter.cancel()
+        self._processors.cancel()
         self._scheduler.cancel()
 
 
@@ -391,18 +373,12 @@ class TransactionExecutor(object):
             processors (ProcessorIteratorCollection): All of the registered
                 transaction processors and a way to find the next one to send
                 to.
-            _waiting_threadpool (ThreadPoolExecutor): A threadpool to run
-                waiting to process transactions functions in.
-            _waiters_by_type (_WaitersByType): Threadsafe map of ProcessorType
-                to _Waiter that is waiting on a processor of that type.
         """
         self._service = service
         self._context_manager = context_manager
         self.processors = processor_iterator.ProcessorIteratorCollection(
             processor_iterator.RoundRobinProcessorIterator)
         self._settings_view_factory = settings_view_factory
-        self._waiting_threadpool = \
-            InstrumentedThreadPoolExecutor(max_workers=3, name='Waiting')
         self._executing_threadpool = \
             InstrumentedThreadPoolExecutor(max_workers=5, name='Executing')
         self._alive_threads = []
@@ -482,7 +458,6 @@ class TransactionExecutor(object):
             context_manager=self._context_manager,
             scheduler=scheduler,
             processors=self.processors,
-            waiting_threadpool=self._waiting_threadpool,
             settings_view_factory=self._settings_view_factory,
             invalid_observers=self._invalid_observers)
         self._executing_threadpool.submit(t.execute_thread)
@@ -491,7 +466,6 @@ class TransactionExecutor(object):
 
     def stop(self):
         self._cancel_threads()
-        self._waiting_threadpool.shutdown(wait=True)
         self._executing_threadpool.shutdown(wait=True)
 
 
@@ -513,108 +487,3 @@ class InvalidTransactionObserver(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError('InvalidTransactionObservers must have a '
                                   '"notify_txn_invalid" method')
-
-
-class _Waiter(object):
-    """The _Waiter class waits for a transaction processor
-    of a particular processor type to register and then processes
-    all of the transactions that have queued up while waiting for the
-    transaction processor.
-    """
-
-    def __init__(self,
-                 send_and_process_func,
-                 processor_type,
-                 processors,
-                 in_queue,
-                 waiters_by_type):
-        super().__init__()
-        self._processors = processors
-        self._processor_type = processor_type
-        self._in_queue = in_queue
-        self._send_and_process = send_and_process_func
-        self._waiters_by_type = waiters_by_type
-        self._cancelled_event = threading.Event()
-
-    def add_to_in_queue(self, content):
-        self._in_queue.put_nowait(content)
-
-    def run_in_threadpool(self):
-        try:
-            self._wait_for_processors()
-        except Exception:  # pylint: disable=broad-except
-            LOGGER.exception("Unhandled exception while waiting")
-
-    def _wait_for_processors(self):
-        LOGGER.info(
-            'Waiting for transaction processor (%s, %s)',
-            self._processor_type.name,
-            self._processor_type.version,
-        )
-        # Wait for the processor type to be registered
-        self._processors.cancellable_wait(
-            processor_type=self._processor_type,
-            cancelled_event=self._cancelled_event)
-
-        if self._cancelled_event.is_set():
-            LOGGER.info("waiting cancelled on %s", self._processor_type)
-            # The processing of transactions for a particular ProcessorType
-            # has been cancelled.
-            return
-
-        while not self._in_queue.empty():
-            content, signature = self._in_queue.get_nowait()
-            connection_id = self._processors.get_next_of_type(
-                self._processor_type).connection_id
-            self._send_and_process(content, connection_id, signature)
-
-        del self._waiters_by_type[self._processor_type]
-
-    def cancel(self):
-        self._cancelled_event.set()
-        self._processors.notify()
-
-
-class _WaitersByType(object):
-    """Simple threadsafe datastructure to be a Map of ProcessorType: _Waiter
-    pairs. It needs to be threadsafe so it can be accessed from each of the
-    _Waiter threads after processing all of the queued transactions.
-    """
-
-    def __init__(self):
-        self._waiters = {}
-        self._lock = threading.RLock()
-
-    def __contains__(self, item):
-        with self._lock:
-            return item in self._waiters
-
-    def __getitem__(self, item):
-        with self._lock:
-            return self._waiters[item]
-
-    def __setitem__(self, key, value):
-        with self._lock:
-            self._waiters[key] = value
-
-    def __delitem__(self, key):
-        with self._lock:
-            del self._waiters[key]
-
-    def __len__(self):
-        with self._lock:
-            return len(self._waiters)
-
-    def values(self):
-        """
-        Returns (list of _Waiter): All the _Waiter objects.
-        """
-        with self._lock:
-            return list(self._waiters.values())
-
-    def keys(self):
-        """
-        Returns (list of _ProcessorType): All the ProcessorTypes waited for
-        """
-        with self._lock:
-            return list(self._waiters.keys())
