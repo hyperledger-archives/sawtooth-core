@@ -19,6 +19,10 @@ import itertools
 import logging
 from threading import RLock
 from threading import Condition
+from threading import Event
+
+from sawtooth_validator.exceptions import NoProcessorVacancyError
+from sawtooth_validator.exceptions import WaitCancelledException
 
 
 LOGGER = logging.getLogger(__name__)
@@ -37,6 +41,7 @@ class ProcessorIteratorCollection(object):
         self._processors = {}
         self._proc_iter_class = processor_iterator_class
         self._condition = Condition()
+        self._cancelled_event = Event()
 
     def __getitem__(self, item):
         """Get a particular ProcessorIterator
@@ -52,7 +57,8 @@ class ProcessorIteratorCollection(object):
             return item in self._processors
 
     def get_next_of_type(self, processor_type):
-        """Get the next processor of a particular type
+        """Get the next available processor of a particular type and increment
+        its occupancy counter.
 
         Args:
             processor_type (ProcessorType): The processor type associated with
@@ -62,9 +68,14 @@ class ProcessorIteratorCollection(object):
             (Processor): Information about the transaction processor
         """
         with self._condition:
-            if processor_type in self:
-                return self[processor_type].next_processor()
-            return None
+            if processor_type not in self:
+                self.wait_for_registration(processor_type)
+            try:
+                processor = self[processor_type].next_processor()
+            except NoProcessorVacancyError:
+                processor = self.wait_for_vacancy(processor_type)
+            processor.inc_occupancy()
+            return processor
 
     def get_all_processors(self):
         processors = []
@@ -124,7 +135,7 @@ class ProcessorIteratorCollection(object):
     def __repr__(self):
         return ",".join([repr(k) for k in self._processors])
 
-    def cancellable_wait(self, processor_type, cancelled_event):
+    def wait_for_registration(self, processor_type):
         """Waits for a particular processor type to register or until
         is_cancelled is True. is_cancelled cannot be part of this class
         since we aren't cancelling all waiting for a processor_type,
@@ -133,21 +144,51 @@ class ProcessorIteratorCollection(object):
         Args:
             processor_type (ProcessorType): The family, and version of
                 the transaction processor.
-            cancelled_event (threading.Event): is_set() will return True when
-                the wait is cancelled.
 
         Returns:
             None
         """
         with self._condition:
-            self._condition.wait_for(
-                lambda: processor_type in self or cancelled_event.is_set()
-            )
+            self._condition.wait_for(lambda: (
+                processor_type in self
+                or self._cancelled_event.is_set()))
+            if self._cancelled_event.is_set():
+                raise WaitCancelledException()
+
+    def wait_for_vacancy(self, processor_type):
+        """Waits for a particular processor type to have the capacity to
+        handle additional transactions or until is_cancelled is True.
+
+        Args:
+            processor_type (ProcessorType): The family, and version of
+                the transaction processor.
+
+        Returns:
+            Processor
+        """
+
+        with self._condition:
+            self._condition.wait_for(lambda: (
+                self._processor_available(processor_type)
+                or self._cancelled_event.is_set()))
+            if self._cancelled_event.is_set():
+                raise WaitCancelledException()
+            processor = self[processor_type].next_processor()
+            return processor
+
+    def _processor_available(self, processor_type):
+        try:
+            self[processor_type].next_processor()
+        except NoProcessorVacancyError:
+            return False
+        return True
+
+    def cancel(self):
+        with self._condition:
+            self._cancelled_event.set()
+            self._condition.notify_all()
 
     def notify(self):
-        """Must be called after setting the cancelled_event, when
-        cancelling a wait.
-        """
         with self._condition:
             self._condition.notify_all()
 
@@ -236,7 +277,11 @@ class RoundRobinProcessorIterator(ProcessorIterator):
 
     def __next__(self):
         with self._lock:
-            return next(self._inf_iterator)
+            for _ in range(len(self._processors)):
+                processor = next(self._inf_iterator)
+                if processor.has_vacancy():
+                    return processor
+            raise NoProcessorVacancyError()
 
     def __repr__(self):
         with self._lock:
