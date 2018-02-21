@@ -195,6 +195,7 @@ class ProcessorIteratorCollection(object):
 
 class Processor(object):
     def __init__(self, connection_id, namespaces, max_occupancy):
+        self._lock = RLock()
         self.connection_id = connection_id
         self.namespaces = namespaces
         self._max_occupancy = max_occupancy
@@ -206,6 +207,18 @@ class Processor(object):
 
     def __eq__(self, other):
         return self.connection_id == other.connection_id
+
+    def inc_occupancy(self):
+        with self._lock:
+            self._current_occupancy += 1
+
+    def dec_occupancy(self):
+        with self._lock:
+            self._current_occupancy -= 1
+
+    def has_vacancy(self):
+        with self._lock:
+            return self._current_occupancy < self._max_occupancy
 
 
 class ProcessorType(object):
@@ -295,6 +308,11 @@ class RoundRobinProcessorIterator(ProcessorIterator):
         with self._lock:
             self._processors.append(processor)
             self._inf_iterator = itertools.cycle(self._processors)
+
+    def get_processor(self, processor_identity):
+        with self._lock:
+            idx = self.processor_identities().index(processor_identity)
+            return self._processors[idx]
 
     def remove_processor(self, processor_identity):
         with self._lock:
