@@ -72,3 +72,15 @@ class PossibleForkDetectedError(Exception):
     through the block store.
     """
     pass
+
+
+class NoProcessorVacancyError(Exception):
+    """Error thrown when no processor has occupancy to handle a transaction
+    """
+    pass
+
+
+class WaitCancelledException(Exception):
+    """Exception thrown when a wait function has detected a cancellation event
+    """
+    pass
