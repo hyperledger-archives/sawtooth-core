@@ -153,9 +153,11 @@ class ProcessorIteratorCollection(object):
 
 
 class Processor(object):
-    def __init__(self, connection_id, namespaces):
+    def __init__(self, connection_id, namespaces, max_occupancy):
         self.connection_id = connection_id
         self.namespaces = namespaces
+        self._max_occupancy = max_occupancy
+        self._current_occupancy = 0
 
     def __repr__(self):
         return "{}: {}".format(self.connection_id,
