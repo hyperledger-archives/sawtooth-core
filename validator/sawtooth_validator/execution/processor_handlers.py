@@ -25,6 +25,8 @@ from sawtooth_validator.networking.dispatch import HandlerStatus
 
 LOGGER = logging.getLogger(__name__)
 
+DEFAULT_MAX_OCCUPANCY = 10
+
 
 class ProcessorRegisterHandler(Handler):
     def __init__(self, processor_collection):
@@ -33,14 +35,23 @@ class ProcessorRegisterHandler(Handler):
     def handle(self, connection_id, message_content):
         request = processor_pb2.TpRegisterRequest()
         request.ParseFromString(message_content)
+        if request.max_occupancy == 0:
+            max_occupancy = DEFAULT_MAX_OCCUPANCY
+            LOGGER.warning(
+                'Max occupancy was not provided by transaction processor: %s.'
+                ' Using default max occupancy: %s',
+                connection_id, DEFAULT_MAX_OCCUPANCY)
+        else:
+            max_occupancy = request.max_occupancy
 
         LOGGER.info(
             'registered transaction processor: connection_id=%s, family=%s, '
-            'version=%s, namespaces=%s',
+            'version=%s, namespaces=%s, max_occupancy=%s',
             connection_id,
             request.family,
             request.version,
-            list(request.namespaces))
+            list(request.namespaces),
+            max_occupancy)
 
         processor_type = processor_iterator.ProcessorType(
             request.family,
@@ -48,7 +59,8 @@ class ProcessorRegisterHandler(Handler):
 
         processor = processor_iterator.Processor(
             connection_id,
-            request.namespaces)
+            request.namespaces,
+            max_occupancy)
 
         self._collection[processor_type] = processor
 
