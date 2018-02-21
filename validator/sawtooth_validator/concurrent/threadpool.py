@@ -14,12 +14,10 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import multiprocessing
 import os
 
 from concurrent.futures import ThreadPoolExecutor
 
-from sawtooth_validator.concurrent import atomic
 from sawtooth_validator import metrics
 
 
@@ -40,17 +38,10 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
 
         LOGGER.debug('Creating thread pool executor %s', self._name)
 
-        self._workers_in_use = atomic.Counter()
-
-        self._max_workers = max_workers
-        if self._max_workers is None:
-            # This is the same default as ThreadPoolExecutor, but we want to
-            # know how many workers there are for logging
-            self._max_workers = multiprocessing.cpu_count() * 5
         super().__init__(max_workers)
 
-        self._workers_already_in_use_gauge = COLLECTOR.gauge(
-            "workers_already_in_use",
+        self._workers_in_use = COLLECTOR.counter(
+            "workers_in_use",
             instance=self,
             tags={"name": self._name})
         # Tracks how long tasks take to run
@@ -80,8 +71,7 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
         def wrapper():
             time_in_queue_ctx.stop()
 
-            self._workers_already_in_use_gauge.set_value(
-                self._workers_in_use.get_and_inc())
+            self._workers_in_use.inc()
 
             if self._trace:
                 LOGGER.debug(
