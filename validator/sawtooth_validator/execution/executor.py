@@ -94,6 +94,14 @@ class TransactionExecutorThread(object):
         response = processor_pb2.TpProcessResponse()
         response.ParseFromString(result.content)
 
+        processor_type = processor_iterator.ProcessorType(
+            req.header.family_name,
+            req.header.family_version)
+
+        self._processors[processor_type].get_processor(
+            result.connection_id).dec_occupancy()
+        self._processors.notify()
+
         if result.connection_id in self._open_futures and \
                 req.signature in self._open_futures[result.connection_id]:
             del self._open_futures[result.connection_id][req.signature]
@@ -129,10 +137,6 @@ class TransactionExecutorThread(object):
                 "(transaction: %s, name: %s, version: %s)",
                 response.message,
                 req.signature,
-                req.header.family_name,
-                req.header.family_version)
-
-            processor_type = processor_iterator.ProcessorType(
                 req.header.family_name,
                 req.header.family_version)
 
