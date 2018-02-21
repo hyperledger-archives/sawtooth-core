@@ -31,7 +31,7 @@ targets:
     args:
         language: JavaScript
 
-  sdk_TP_tutorial_java:
+  sdk_TP_tutorial_go:
     template: sdk_TP_tutorial.rst
     args:
-        language: Java
+        language: Go

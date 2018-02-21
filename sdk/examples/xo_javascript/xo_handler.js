@@ -219,7 +219,7 @@ class XOHandler extends TransactionHandler {
         })
     } else {
       throw new InvalidTransaction(
-        `Action must be create or take not ${payload.action}`
+        `Action must be create, delete, or take not ${payload.action}`
       )
     }
   }
