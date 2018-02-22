@@ -1,0 +1,225 @@
+# Copyright 2018 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# -----------------------------------------------------------------------------
+
+- - addresses_to_set:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867: null
+    inputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    outputs:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867
+    valid: true
+- - addresses_to_set:
+    - aaaaaa5976eb2e63527615c5a1a764b209baafff9be080488242a980908d324c345d89: null
+    inputs:
+    - 910ccad3d4b0175067804d6a1c72a10aec635aee3ba10ed39394823a4cecb006db426a
+    outputs:
+    - aaaaaa5976eb2e63527615c5a1a764b209baafff9be080488242a980908d324c345d89
+    valid: true
+- - addresses_to_set:
+    - aaaaaa35c8da7400823339c2e9d18966aba4e662fd38290bfcd6879973476c78919020: null
+    inputs:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface
+    outputs:
+    - aaaaaa35c8da7400823339c2e9d18966aba4e662fd38290bfcd6879973476c78919020
+    valid: true
+- - addresses_to_set:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82: null
+    inputs:
+    - aaaaaa5976eb2e63527615c5a1a764b209baafff9be080488242a980908d324c345d89
+    outputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    valid: true
+- - addresses_to_set:
+    - 9484c5726c9a310a2dac935b78f3dff85d50552d04b9109b7640c20fe6aa7c96bb1749: null
+    inputs:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015
+    outputs:
+    - 9484c5726c9a310a2dac935b78f3dff85d50552d04b9109b7640c20fe6aa7c96bb1749
+    valid: true
+- - addresses_to_set:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015: null
+    inputs:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015
+    outputs:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015
+    valid: true
+- - addresses_to_set:
+    - aaaaaa35c8da7400823339c2e9d18966aba4e662fd38290bfcd6879973476c78919020: null
+    inputs:
+    - 910ccad3d4b0175067804d6a1c72a10aec635aee3ba10ed39394823a4cecb006db426a
+    outputs:
+    - aaaaaa35c8da7400823339c2e9d18966aba4e662fd38290bfcd6879973476c78919020
+    valid: true
+- - addresses_to_set:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015: null
+    inputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    outputs:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015
+    valid: true
+- - addresses_to_set:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface: null
+    inputs:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015
+    outputs:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface
+    valid: true
+- - addresses_to_set:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867: null
+    inputs:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015
+    outputs:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867
+    valid: true
+- - addresses_to_set:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface: null
+    inputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    outputs:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface
+    valid: true
+- - addresses_to_set:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015: null
+    inputs:
+    - aaaaaa35c8da7400823339c2e9d18966aba4e662fd38290bfcd6879973476c78919020
+    outputs:
+    - 48356b0f0de3c515bcc491b4ac338f0245840ab08f9e709a37829270872345203ca015
+    valid: true
+- - addresses_to_set:
+    - 910ccad3d4b0175067804d6a1c72a10aec635aee3ba10ed39394823a4cecb006db426a: null
+    inputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    outputs:
+    - 910ccad3d4b0175067804d6a1c72a10aec635aee3ba10ed39394823a4cecb006db426a
+    valid: true
+- - addresses_to_set:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82: null
+    inputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    outputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    valid: true
+- - addresses_to_set:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82: null
+    inputs:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247
+    outputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    valid: true
+- - addresses_to_set:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface: null
+    inputs:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247
+    outputs:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface
+    valid: true
+- - addresses_to_set:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface: null
+    inputs:
+    - aaaaaa35c8da7400823339c2e9d18966aba4e662fd38290bfcd6879973476c78919020
+    outputs:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface
+    valid: true
+- - addresses_to_set:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247: null
+    inputs:
+    - 9484c5726c9a310a2dac935b78f3dff85d50552d04b9109b7640c20fe6aa7c96bb1749
+    outputs:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247
+    valid: true
+- - addresses_to_set:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247: null
+    inputs:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867
+    outputs:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247
+    valid: true
+- - addresses_to_set:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface: null
+    inputs:
+    - 48b0f3d0e1a13b38d61beb9122533f5106e03f54f0634485df2329a47029e94a8e84eb
+    outputs:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface
+    valid: true
+- - addresses_to_set:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867: null
+    inputs:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867
+    outputs:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867
+    valid: true
+- - addresses_to_set:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867: null
+    inputs:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface
+    outputs:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867
+    valid: true
+- - addresses_to_set:
+    - aaaaaa5976eb2e63527615c5a1a764b209baafff9be080488242a980908d324c345d89: null
+    inputs:
+    - aaaaaa35c8da7400823339c2e9d18966aba4e662fd38290bfcd6879973476c78919020
+    outputs:
+    - aaaaaa5976eb2e63527615c5a1a764b209baafff9be080488242a980908d324c345d89
+    valid: true
+- - addresses_to_set:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247: null
+    inputs:
+    - aaaaaa9453b4b3a3179cffa87379f9fdedafaff0818b713cfc506820aba96b998eface
+    outputs:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247
+    valid: true
+- - addresses_to_set:
+    - 48b0f3d0e1a13b38d61beb9122533f5106e03f54f0634485df2329a47029e94a8e84eb: null
+    inputs:
+    - 48b0f3d0e1a13b38d61beb9122533f5106e03f54f0634485df2329a47029e94a8e84eb
+    outputs:
+    - 48b0f3d0e1a13b38d61beb9122533f5106e03f54f0634485df2329a47029e94a8e84eb
+    valid: true
+- - addresses_to_set:
+    - aaaaaa5976eb2e63527615c5a1a764b209baafff9be080488242a980908d324c345d89: null
+    inputs:
+    - aaaaaa3898b6f64b8270fef88190ff81c63460ab31e608a61aeae89c2e571932857b82
+    outputs:
+    - aaaaaa5976eb2e63527615c5a1a764b209baafff9be080488242a980908d324c345d89
+    valid: true
+- - addresses_to_set:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867: null
+    inputs:
+    - 9484c5726c9a310a2dac935b78f3dff85d50552d04b9109b7640c20fe6aa7c96bb1749
+    outputs:
+    - 537c3a00bfae8c55ed3ce400326f9b4eb26bbae32f1ce1cf577a1a6460242d01750867
+    valid: true
+- - addresses_to_set:
+    - 48b0f3d0e1a13b38d61beb9122533f5106e03f54f0634485df2329a47029e94a8e84eb: null
+    inputs:
+    - aaaaaa5976eb2e63527615c5a1a764b209baafff9be080488242a980908d324c345d89
+    outputs:
+    - 48b0f3d0e1a13b38d61beb9122533f5106e03f54f0634485df2329a47029e94a8e84eb
+    valid: true
+- - addresses_to_set:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247: null
+    inputs:
+    - 910ccad3d4b0175067804d6a1c72a10aec635aee3ba10ed39394823a4cecb006db426a
+    outputs:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247
+    valid: true
+- - addresses_to_set:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247: null
+    inputs:
+    - 9484c5726c9a310a2dac935b78f3dff85d50552d04b9109b7640c20fe6aa7c96bb1749
+    outputs:
+    - aaaaaa4aa54a13991ff024662bbb98029072d34d0ce2fec9594db2e208f263a3983247
+    valid: true
