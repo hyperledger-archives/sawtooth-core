@@ -69,7 +69,7 @@ class Completer(object):
         """
         self.gossip = gossip
         self.batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
-        self.block_cache = block_cache
+        self._block_cache = block_cache
         self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
         self._incomplete_batches = TimedCache(cache_keep_time,
                                               cache_purge_frequency)
@@ -126,11 +126,11 @@ class Completer(object):
 
         """
 
-        if block.header_signature in self.block_cache:
+        if block.header_signature in self._block_cache:
             LOGGER.debug("Drop duplicate block: %s", block)
             return None
 
-        if block.previous_block_id not in self.block_cache:
+        if block.previous_block_id not in self._block_cache:
             if not self._has_block(block.previous_block_id):
                 if block.previous_block_id not in self._incomplete_blocks:
                     self._incomplete_blocks[block.previous_block_id] = [block]
@@ -241,7 +241,7 @@ class Completer(object):
                 # Check to see if the dependency has been seen or is in the
                 # current chain (block_store)
                 if dependency not in self._seen_txns and not \
-                        self.block_cache.block_store.has_transaction(
+                        self._block_cache.block_store.has_transaction(
                         dependency):
                     self._unsatisfied_dependency_count.inc()
 
@@ -286,7 +286,7 @@ class Completer(object):
                     inc_blocks = self._incomplete_blocks[my_key]
                     for inc_block in inc_blocks:
                         if self._complete_block(inc_block):
-                            self.block_cache[inc_block.header_signature] = \
+                            self._block_cache[inc_block.header_signature] = \
                                 inc_block
                             self._on_block_received(inc_block)
                             to_complete.append(inc_block.header_signature)
@@ -306,7 +306,7 @@ class Completer(object):
             blkw = BlockWrapper(block)
             block = self._complete_block(blkw)
             if block is not None:
-                self.block_cache[block.header_signature] = blkw
+                self._block_cache[block.header_signature] = blkw
                 self._on_block_received(blkw)
                 self._process_incomplete_blocks(block.header_signature)
             self._incomplete_blocks_length.set_value(
@@ -340,12 +340,12 @@ class Completer(object):
             BlockWrapper: The head of the chain.
         """
         with self.lock:
-            return self.block_cache.block_store.chain_head
+            return self._block_cache.block_store.chain_head
 
     def get_block(self, block_id):
         with self.lock:
-            if block_id in self.block_cache:
-                return self.block_cache[block_id]
+            if block_id in self._block_cache:
+                return self._block_cache[block_id]
             return None
 
     def get_batch(self, batch_id):
@@ -354,7 +354,7 @@ class Completer(object):
                 return self.batch_cache[batch_id]
 
             else:
-                block_store = self.block_cache.block_store
+                block_store = self._block_cache.block_store
                 try:
                     return block_store.get_batch(batch_id)
                 except ValueError:
@@ -367,7 +367,7 @@ class Completer(object):
                 return self.get_batch(batch_id)
 
             else:
-                block_store = self.block_cache.block_store
+                block_store = self._block_cache.block_store
                 try:
                     return block_store.get_batch_by_transaction(transaction_id)
                 except ValueError:
