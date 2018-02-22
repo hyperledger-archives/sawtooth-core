@@ -732,7 +732,9 @@ class ParallelScheduler(Scheduler):
     def _is_predecessor_of_possible_successor(self,
                                               txn_id,
                                               possible_successor):
-        return txn_id in self._txn_predecessors[possible_successor]
+        return self._predecessor_chain.is_predecessor_of_other(
+            txn_id,
+            [possible_successor])
 
     def _txn_has_result(self, txn_id):
         return txn_id in self._txn_results
