@@ -17,7 +17,6 @@ SDKs are provided in several languages: C++, Go, Java, Javascript, and Python.
 
    app_developers_guide/sdk_table
    app_developers_guide/installing_sawtooth
-   app_developers_guide/example_transaction_processors
    app_developers_guide/address_and_namespace
    app_developers_guide/intro_xo_transaction_family
    app_developers_guide/java_sdk

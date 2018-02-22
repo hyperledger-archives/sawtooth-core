@@ -2,6 +2,8 @@
 Transaction Family Specifications
 *********************************
 
+.. include:: transaction_family_specifications/example_transaction_families.rst
+
 .. toctree::
    :maxdepth: 3
 
