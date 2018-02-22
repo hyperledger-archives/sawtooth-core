@@ -2,191 +2,166 @@
 Introduction to the XO Transaction Family
 *****************************************
 
-What is XO?
-===========
+XO is an example transaction family that implements the game
+`tic-tac-toe <https://en.wikipedia.org/wiki/Tic-tac-toe>`_,
+also known as *Noughts and Crosses* or *X's and O's*.
+We chose XO as an example transaction family for Sawtooth because of its
+simplicity, global player base, and straightforward implementation as a computer
+program. This transaction family demonstrates the functionality of Sawtooth;
+in addition, the code that implements it serves as a reference for building
+other transaction processors.
 
-*XO* is an example transaction family contained within the Sawtooth SDK. It is an
-implementation of the popular game *Tic-tac-toe* (otherwise known as
-*Noughts and Crosses* or *X's and O's*).
+This section introduces the concepts of a Sawtooth transaction family with XO,
+summarizes XO game rules, and describes how use the ``xo`` client application
+to play a game of tic-tac-toe on the blockchain.
 
-*X's and O's*-style games have been played across the world for many centuries. The
-origin of this type of game is unclear; however, some historians believe that the first
-version of *Tic-tac-toe* may have originated in ancient Egypt. Others believe that the
-modern *Tic-tac-toe* is an evolution of a game known as *Terni Lapilli*, which was
-popular within the Roman Empire.
 
-*Tic-tac-toe* also has historical significance within the field of Computer Science. In
-1952, it became the basis of one of the first-ever video games when
-`OXO <https://en.wikipedia.org/wiki/OXO>`_ was developed by Alexander S. Douglas at the
-University of Cambridge. More information regarding the origins and properties of
-*Tic-tac-toe* can be found `here <https://en.wikipedia.org/wiki/Tic-tac-toe>`_.
+About the XO Transaction Family
+===============================
 
-*XO* was chosen as an example transaction family for Sawtooth due to its simplicity,
-global player base, and straightforward implementation as a computer program. This example
-transaction family demonstrates the functionality of Sawtooth, and the code that implements
-it serves as a reference for building other transaction processors.
+The XO transaction family defines the data model and business logic for
+playing tic-tac-toe on the blockchain by submitting transactions for `create`,
+`take`, and `delete` actions. For more information, see
+:doc:`/transaction_family_specifications/xo_transaction_family`
 
-How to Play XO
-==============
+The XO transaction family includes:
+
+ * Transaction processors in several languages, including Go (``xo-tp-go``),
+   JavaScript (``xo-tp-js``), and Python (``xo-tp-python``). These transaction
+   processors implement the business logic of XO game play.
+
+ * An ``xo`` client: A set of commands that provide a command-line interface
+   for playing XO. The ``xo`` client handles the constructing and submission
+   of transactions. For more information, see :doc:`/cli/xo`.
+
 
 Game Rules
-----------
+==========
 
-*Tic-tac-toe* is a two-player game in which players take turns marking spaces on a 3x3
-grid. Conventionally, *player one* marks spaces with an 'X' and *player two* marks spaces
-with an 'O'; and *player one* always takes the first turn.
+In tic-tac-toe, two players take turns marking spaces on a 3x3 grid.
 
-A player wins the game by marking 3 spaces in a horizontal, vertical, or diagonal row.
-If all 9 spaces on the grid have been marked but no player has achieved a winning board
-position, the game is considered a draw.
+* The first player (player 1) marks spaces with an X. Player 1 always
+  makes the first move.
 
-Playing XO Using the Command-line Interface
--------------------------------------------
+* The second player (player 2) marks spaces with an O.
 
-A command-line interface is provided for playing *XO* which handles the construction and
-submission of transactions. Instructions on how to use the CLI are detailed below:
+* A player wins the game by marking three adjoining spaces in a horizontal,
+  vertical, or diagonal row.
 
-Start up a validator, *XO* transaction processor, and the REST API. For more information
-on configuring and running Sawtooth components, see
-:doc:`/app_developers_guide/installing_sawtooth`.
+* The game is a tie if all nine spaces on the grid have been marked,
+  but no player has won.
 
-A user creates a new game using the ``xo create [name]`` command.
+See `Wikipedia <https://en.wikipedia.org/wiki/Tic-tac-toe>`_ for more
+information on playing tic-tac-toe.
+For the detailed business logic of game play, see "Execution" in
+:doc:`/transaction_family_specifications/xo_transaction_family`.
 
-- The *name* argument is the identifier for the new game to be created.
 
-Players take turns using the ``xo take [name] [space]`` command to mark spaces on
-the grid.
+Playing XO with the xo Client
+=============================
 
-- The *name* argument is the identifier for an existing game.
-- The *space* argument is the space that is to be marked, which is an integer in the
-  range of 1 through 9.
+This procedure introduces you to the XO transaction family by playing a game
+with the ``xo`` client.
 
-.. note::
 
-  The first player to issue an ``xo take`` command to a newly created game is
-  recorded by their username as *player one*. The second player to issue a ``take``
-  command is recorded by their username as *player two*.
+Prerequisites
+-------------
 
-``xo create`` and ``xo take`` each take ``--username`` and
-``--key-dir`` arguments. These are used to locate the user's private
-key file: ``<key-dir>/<username>.priv``. ``key-dir`` defaults to
-``~/.sawtooth/keys`` and ``username`` defaults to the name of the OS
-user.
+* A working Sawtooth development environment, as described in
+  :doc:`/app_developers_guide/installing_sawtooth`.
+  Ensure that this environment is running a validator, a REST API, and an XO
+  transaction processor (such as ``xo-tp-python``).
 
-.. note::
+* If you are using a Docker development environment, open a client container
+  by running the following command from your host computer’s terminal window:
 
-  All ``xo`` commands also support ``--auth-user`` and ``--auth-password``,
-  but these options are not used in this example.
+  .. code-block:: console
 
-Each time a user attempts to take a space, the transaction processor will verify
-that their username matches the name of the player whose turn it is. This ensures
-that no player is able to mark a space out of turn.
+     % docker exec -it sawtooth-shell-default bash
 
-The *XO* transaction processor will scan for winning or draw board conditions after
-each turn. If either condition occurs, further ``take`` actions on the finished game
-will not be allowed.
+* Verify that you can connect to the REST API.
 
-.. note::
+  * Docker: See :ref:`confirming-connectivity-docker-label`
 
-  Either user can use the ``xo reset`` command to delete their local *XO* data.
-  This includes the saved URL and username.
+  * Ubuntu: See :doc:`/app_developers_guide/installing_sawtooth`
 
-Viewing the Game State
+  * AWS: See :ref:`confirming-connectivity-aws-label`
+
+  .. Important::
+
+     The ``xo`` client sends requests to update and query the blockchain to the
+     URL of the REST API (by default, ``http://127.0.0.1:8008``).
+
+     If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
+     ``--url`` argument to each ``xo`` command in this procedure.
+
+
+Step 1. Create Players
 ----------------------
-
-The *XO* CLI also supports commands to view the state of ongoing or finished games.
-These commands are ``xo show [game]`` and ``xo list``
-
-- ``xo show [game]`` shows the board of a specified game, as well as data about the
-  players and game state.
-- ``xo list`` shows a list of all ongoing and finished games.
-
-.. note::
-
-  The *XO* client optionally supports authentication. If the REST API
-  is connected to an authentication proxy, you can point the *XO*
-  client at it with the ``--url`` argument. You must enter your
-  authentication information using the ``--auth-user [user]`` and
-  ``--auth-password [password]`` options for each *XO* command.
-
-  *Note that the value of the* ``--auth-user`` *argument is not the
-  same username that is entered with the* ``--username`` *argument*.
-
-URL
----
-
-The ``xo`` commands all take a ``--url`` argument that defaults to
-``http://127.0.0.1:8008``. This should be set to the URL of the REST
-API. The *XO* client will send requests to update and query the
-blockchain to this URL.
-
-
-.. seealso::
-  :doc:`/cli/xo`
-
-Playing XO with the XO Client (Example)
-=======================================
-
-Now that we have gone through the basics of the *XO* transaction processor, we are ready
-to play a game. The steps below show you how to set up and play a game using the *XO* CLI.
-
-Start the Necessary Components
-------------------------------
-
-To play *XO*, ensure that the following components are running and connected:
-
-#. At least one validator
-#. An *XO* family transaction processor
-#. The REST API
-
-Create Players
---------------
 
 Create keys for two players to play the game:
 
 .. code-block:: console
 
     $ sawtooth keygen jack
-    $ sawtooth keygen jill
-
-
-The command produces output similar to the following for both players:
-
-.. code-block:: console
-
     writing file: /home/ubuntu/.sawtooth/keys/jack.priv
     writing file: /home/ubuntu/.sawtooth/keys/jack.addr
+
+    $ sawtooth keygen jill
     writing file: /home/ubuntu/.sawtooth/keys/jill.priv
     writing file: /home/ubuntu/.sawtooth/keys/jill.addr
 
 
-Create a Game
--------------
+.. note::
 
-Create a game with the following command:
+   The output may differ slightly from this example.
+
+
+Step 2. Create a Game
+---------------------
+
+Create a game named ``game`` with the following command:
 
 .. code-block:: console
 
     $ xo create game --username jack
 
-To see list of the created games, enter the following command:
+To specify a non-default URL for the REST API, add the ``url`` argument
+to this and all following ``xo`` commands.  This example shows the URL for
+the Docker application environment, ``http://rest-api:8008``.
+
+.. code-block:: console
+
+   $ xo create game --username jack --url http://rest-api:8008
+
+.. note::
+
+   The ``--username`` argument is required for ``xo create`` and ``xo take``
+   so that a single user (you) can play as two players. By default,
+   ``<username>`` is the player's user name.
+
+   An optional ``--key-dir`` argument can be used to specify a non-default
+   location for the user's private key file. By default, this file is at
+   ``<key-dir>/<username>.priv``.
+
+Verify that the game was created by displaying the list of existing games:
 
 .. code-block:: console
 
     $ xo list
-
-The command outputs a list of the games that have been created:
-
-.. code-block:: console
-
     GAME            PLAYER 1        PLAYER 2        BOARD     STATE
     game                                            --------- P1-NEXT
 
 
-Take a Space as Player One
---------------------------
+Step 3. Take a Space as Player 1
+--------------------------------
 
-Start playing by taking a space as the first player, "jack":
+The first player to issue an ``xo take`` command to a newly created game is
+recorded by username as ``PLAYER 1``. The second player to issue a ``take``
+command is recorded by username as ``PLAYER 2``.
+
+Start playing tic-tac-toe by taking a space as the first player, Jack. In this
+example, Jack takes space 5:
 
 .. code-block:: console
 
@@ -195,21 +170,31 @@ Start playing by taking a space as the first player, "jack":
 .. note::
 
     The board spaces are numbered from 1 to 9. The upper-left corner is
-    number 1, and the lower right corner is number 9.
+    number 1, and the lower right corner is number 9. This example shows
+    the number of each space.
+
+     .. code-block:: none
+
+        1 | 2 | 3
+       ---|---|---
+        4 | 5 | 6
+       ---|---|---
+        7 | 8 | 9
 
 
-Take a Space as Player Two
---------------------------
+Step 4. Take a Space as Player 2
+--------------------------------
 
-Now take a space on the board as player two:
+Next, take a space on the board as player 2, Jill.  In this example,
+Jill takes space 1:
 
 .. code-block:: console
 
     $ xo take game 1 --username jill
 
 
-Show the Current State of the Game Board
-----------------------------------------
+Step 5. Show the Current Game Board
+-----------------------------------
 
 Whenever you want to see the current state of the game board, enter the
 following command:
@@ -218,7 +203,10 @@ following command:
 
     $ xo show game
 
-You will see the current state of the board displayed:
+The output includes the game name, public key of each player, game state,
+and the current board state. This example shows the game state ``P1-NEXT``
+(player 1 has the next turn) and a board with Jack's X in space 5 (the center)
+and Jill's 0 in space 1 (the upper left).
 
 .. code-block:: console
 
@@ -234,11 +222,21 @@ You will see the current state of the board displayed:
         |   |
 
 
-Continue the Game
------------------
+Step 6. Continue the Game
+-------------------------
 
-You can continue the game until one of the players wins, or
-the game ends in a draw:
+Players take turns using ``xo take <name> <space>`` to mark spaces on the grid.
+
+Each time a user attempts to take a space, the transaction processor will verify
+that their username matches the name of the player whose turn it is. This
+ensures that no player is able to mark a space out of turn.
+
+After each turn, the XO transaction processor scans the board state for a win or
+tie. If either condition occurs, no more ``take`` actions are allowed on the
+finished game.
+
+You can continue the game until one of the players wins or the game ends in a
+tie, as in this example:
 
 .. code-block:: console
 
@@ -255,12 +253,29 @@ the game ends in a draw:
       X | O | X
 
 
-XO Transaction Family Specification
-===================================
+Step 7. Delete the Game
+-----------------------
 
-The XO Transaction Family Specification contains technical information about the *XO*
-transaction family. This specification can be found here:
-:doc:`/transaction_family_specifications/xo_transaction_family`
+Either user can use the ``xo delete`` command to delete their local XO data.
+This includes all games, the saved URL, and the username.
+
+.. code-block:: console
+
+   $ xo delete
+
+
+Using Authentication with the xo Client
+=======================================
+
+The XO client supports optional authentication. If the REST API is connected
+to an authentication proxy, you can point the XO client at it with the ``--url``
+argument. You  must also specify your authentication information using the
+``--auth-user [user]`` and ``--auth-password [password]`` options for each
+``xo`` command.
+
+Note that the value of the ``--auth-user`` argument is **not** the
+same username that is entered with the ``--username`` argument.
+
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
