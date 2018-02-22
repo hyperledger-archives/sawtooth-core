@@ -1,3 +1,4 @@
+
 *****************************************
 Introduction to the XO Transaction Family
 *****************************************
@@ -31,7 +32,7 @@ The XO transaction family includes:
    processors implement the business logic of XO game play.
 
  * An ``xo`` client: A set of commands that provide a command-line interface
-   for playing XO. The ``xo`` client handles the constructing and submission
+   for playing XO. The ``xo`` client handles the construction and submission
    of transactions. For more information, see :doc:`/cli/xo`.
 
 
@@ -61,7 +62,8 @@ Playing XO with the xo Client
 =============================
 
 This procedure introduces you to the XO transaction family by playing a game
-with the ``xo`` client.
+with the ``xo`` client. Each ``xo`` command is a transaction that the client
+submits to the validator via the REST API.
 
 
 Prerequisites
@@ -72,12 +74,16 @@ Prerequisites
   Ensure that this environment is running a validator, a REST API, and an XO
   transaction processor (such as ``xo-tp-python``).
 
-* If you are using a Docker development environment, open a client container
-  by running the following command from your host computer’s terminal window:
+* If you are using the Docker development environment described in
+  :doc:`/app_developers_guide/installing_sawtooth`,
+  open a client container by running the following command from your host
+  computer’s terminal window:
 
   .. code-block:: console
 
      % docker exec -it sawtooth-shell-default bash
+
+  Otherwise, see your docker-compose file for the correct container name.
 
 * Verify that you can connect to the REST API.
 
@@ -94,6 +100,13 @@ Prerequisites
 
      If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
      ``--url`` argument to each ``xo`` command in this procedure.
+
+     The following example specifies the URL for the Docker demo application
+     environment when creating a new game:
+
+     .. code-block:: console
+
+        $ xo create my-game --username jack --url http://rest-api:8008
 
 
 Step 1. Create Players
@@ -120,66 +133,83 @@ Create keys for two players to play the game:
 Step 2. Create a Game
 ---------------------
 
-Create a game named ``game`` with the following command:
+Create a game named ``my-game`` with the following command:
 
 .. code-block:: console
 
-    $ xo create game --username jack
-
-To specify a non-default URL for the REST API, add the ``url`` argument
-to this and all following ``xo`` commands.  This example shows the URL for
-the Docker application environment, ``http://rest-api:8008``.
-
-.. code-block:: console
-
-   $ xo create game --username jack --url http://rest-api:8008
+    $ xo create my-game --username jack
 
 .. note::
 
    The ``--username`` argument is required for ``xo create`` and ``xo take``
-   so that a single user (you) can play as two players. By default,
-   ``<username>`` is the player's user name.
+   so that a single player (you) can play as two players. By default,
+   ``<username>`` is the Linux user name of the person playing the game.
 
-   An optional ``--key-dir`` argument can be used to specify a non-default
-   location for the user's private key file. By default, this file is at
-   ``<key-dir>/<username>.priv``.
-
-Verify that the game was created by displaying the list of existing games:
+Verify that the ``create`` transaction was committed by displaying the list of
+existing games:
 
 .. code-block:: console
 
     $ xo list
     GAME            PLAYER 1        PLAYER 2        BOARD     STATE
-    game                                            --------- P1-NEXT
+    my-game                                         --------- P1-NEXT
+
+.. note::
+
+   The ``xo list`` command is a wrapper that provides a quick way to show game
+   state rather than using ``curl`` with the REST API's URL to request state.
 
 
 Step 3. Take a Space as Player 1
 --------------------------------
 
-The first player to issue an ``xo take`` command to a newly created game is
-recorded by username as ``PLAYER 1``. The second player to issue a ``take``
-command is recorded by username as ``PLAYER 2``.
+.. note::
+
+   The first player to issue an ``xo take`` command to a newly created game is
+   recorded as ``PLAYER 1`` . The second player to issue a ``take`` command is
+   recorded by username as ``PLAYER 2``.
+
+   The ``--username`` argument determines where the ``xo`` client should look
+   for the player's key to sign the transaction. By default, if you're logged in
+   as ``root``, ``xo`` would look for the key file named
+   ``~/.sawtooth/keys/root.priv``. Instead, the following command specifies
+   that ``xo`` should use the key file ``~/.sawtooth/keys/jack.priv``.
 
 Start playing tic-tac-toe by taking a space as the first player, Jack. In this
 example, Jack takes space 5:
 
 .. code-block:: console
 
-    $ xo take game 5 --username jack
+    $ xo take my-game 5 --username jack
 
-.. note::
 
-    The board spaces are numbered from 1 to 9. The upper-left corner is
-    number 1, and the lower right corner is number 9. This example shows
-    the number of each space.
+This diagram shows the number of each space.
 
-     .. code-block:: none
+ .. code-block:: none
 
-        1 | 2 | 3
-       ---|---|---
-        4 | 5 | 6
-       ---|---|---
-        7 | 8 | 9
+     1 | 2 | 3
+    ---|---|---
+     4 | 5 | 6
+    ---|---|---
+     7 | 8 | 9
+
+**What Happens During a Game Move?**
+
+Each ``xo`` command is a transaction. A successful transaction updates global
+state with the game name, board state, game state, and player keys, using
+this format:
+
+.. code-block:: none
+
+      <game-name>,<board-state>,<game-state>,<player1-key>,<player2-key>
+
+Each time a player attempts to take a space, the transaction processor will
+verify that their username matches the name of the player whose turn it is.
+This ensures that no player is able to mark a space out of turn.
+
+After each turn, the XO transaction processor scans the board state for a
+win or tie. If either condition occurs, no more ``take`` actions are allowed
+on the finished game.
 
 
 Step 4. Take a Space as Player 2
@@ -190,7 +220,7 @@ Jill takes space 1:
 
 .. code-block:: console
 
-    $ xo take game 1 --username jill
+    $ xo take my-game 1 --username jill
 
 
 Step 5. Show the Current Game Board
@@ -201,16 +231,16 @@ following command:
 
 .. code-block:: console
 
-    $ xo show game
+    $ xo show my-game
 
-The output includes the game name, public key of each player, game state,
-and the current board state. This example shows the game state ``P1-NEXT``
-(player 1 has the next turn) and a board with Jack's X in space 5 (the center)
-and Jill's 0 in space 1 (the upper left).
+The output includes the game name, the first six characters of each player's
+public key, the game state, and the current board state. This example shows the
+game state ``P1-NEXT`` (player 1 has the next turn) and a board with Jack's X in
+space 5 and Jill's O in space 1.
 
 .. code-block:: console
 
-    GAME:     : game
+    GAME:     : my-game
     PLAYER 1  : 02403a
     PLAYER 2  : 03729b
     STATE     : P1-NEXT
@@ -221,27 +251,26 @@ and Jill's 0 in space 1 (the upper left).
      ---|---|---
         |   |
 
+This ``xo`` client formats the global state data so that it's easier to read
+than the state returned to the transaction processor:
+
+.. code-block:: none
+
+   my-game,O---X----,P1-NEXT,02403a...,03729b...
+
 
 Step 6. Continue the Game
 -------------------------
 
-Players take turns using ``xo take <name> <space>`` to mark spaces on the grid.
-
-Each time a user attempts to take a space, the transaction processor will verify
-that their username matches the name of the player whose turn it is. This
-ensures that no player is able to mark a space out of turn.
-
-After each turn, the XO transaction processor scans the board state for a win or
-tie. If either condition occurs, no more ``take`` actions are allowed on the
-finished game.
+Players take turns using ``xo take my-game <space>`` to mark spaces on the grid.
 
 You can continue the game until one of the players wins or the game ends in a
 tie, as in this example:
 
 .. code-block:: console
 
-    $ xo show game
-    GAME:     : game
+    $ xo show my-game
+    GAME:     : my-game
     PLAYER 1  : 02403a
     PLAYER 2  : 03729b
     STATE     : TIE
@@ -256,12 +285,12 @@ tie, as in this example:
 Step 7. Delete the Game
 -----------------------
 
-Either user can use the ``xo delete`` command to delete their local XO data.
-This includes all games, the saved URL, and the username.
+Either player can use the ``xo delete`` command to remove the game data from
+global state.
 
 .. code-block:: console
 
-   $ xo delete
+   $ xo delete my-game
 
 
 Using Authentication with the xo Client
