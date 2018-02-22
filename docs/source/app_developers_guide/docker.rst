@@ -215,6 +215,8 @@ the client container name.
   <https://docs.docker.com/>`_ for details.
 
 
+.. _confirming-connectivity-docker-label:
+
 Confirming Connectivity
 -----------------------
 
