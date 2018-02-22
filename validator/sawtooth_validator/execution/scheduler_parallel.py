@@ -413,6 +413,46 @@ class PredecessorTree:
         return predecessors
 
 
+class PredecessorChain(object):
+
+    def __init__(self):
+        self._predecessors_by_id = dict()
+
+    def add_relationship(self, txn_id, predecessors):
+        """Add a predecessor-successor relationship between one txn id and
+        a set of predecessors.
+
+        Args:
+            txn_id (str): The transaction id of the transaction.
+            predecessors (set): The transaction ids of the
+                transaction's predecessors
+
+        Returns:
+            None
+        """
+
+        all_pred = set(predecessors)
+        for pred in predecessors:
+            all_pred.update(self._predecessors_by_id[pred])
+
+        self._predecessors_by_id[txn_id] = all_pred
+
+    def is_predecessor_of_other(self, predecessor, others):
+        """Returns whether the predecessor is a predecessor or a predecessor
+        of a predecessor...of any of the others.
+
+        Args:
+            predecessor (str): The txn id of the predecessor.
+            others (list(str)): The txn id of the successor.
+
+        Returns:
+            (bool)
+
+        """
+
+        return any(predecessor in self._predecessors_by_id[o] for o in others)
+
+
 class ParallelScheduler(Scheduler):
     def __init__(self, squash_handler, first_state_hash, always_persist):
         self._squash = squash_handler
@@ -423,6 +463,8 @@ class ParallelScheduler(Scheduler):
         self._txn_predecessors = {}
 
         self._always_persist = always_persist
+
+        self._predecessor_chain = PredecessorChain()
 
         # Transaction identifiers which have been scheduled.  Stored as a list,
         # since order is important; SchedulerIterator instances, for example,
@@ -532,6 +574,9 @@ class ParallelScheduler(Scheduler):
                 txn_id = txn.header_signature
                 # Update our internal state with the computed predecessors.
                 self._txn_predecessors[txn_id] = set(predecessors)
+                self._predecessor_chain.add_relationship(
+                    txn_id=txn_id,
+                    predecessors=predecessors)
 
                 # Update the predecessor tree.
                 #
@@ -684,7 +729,9 @@ class ParallelScheduler(Scheduler):
     def _is_predecessor_of_possible_successor(self,
                                               txn_id,
                                               possible_successor):
-        return txn_id in self._txn_predecessors[possible_successor]
+        return self._predecessor_chain.is_predecessor_of_other(
+            txn_id,
+            [possible_successor])
 
     def _txn_has_result(self, txn_id):
         return txn_id in self._txn_results
