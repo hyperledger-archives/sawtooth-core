@@ -156,7 +156,7 @@ This glossary defines general Sawtooth terms and concepts.
     associated transaction family. Sawtooth includes transaction processors for
     the sample transaction families, such as ``identity-tp`` for the Identity
     transaction family. For more information, see
-    :doc:`app_developers_guide/example_transaction_processors`.
+    :doc:`transaction_family_specifications`.
 
   Validator
     Component responsible for validating batches of transactions, combining
