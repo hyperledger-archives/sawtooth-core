@@ -213,7 +213,8 @@ class BlockTreeManager(object):
         LOGGER.debug("Generated %s", dumps_block(block_wrapper))
         return block_wrapper
 
-    def generate_chain(self, root_block, blocks, params=None):
+    def generate_chain(self, root_block, blocks, params=None,
+                       exclude_head=True):
         """
         Generate a new chain based on the root block and place it in the
         block cache.
@@ -229,7 +230,8 @@ class BlockTreeManager(object):
 
         try:
             block_defs = [self._block_def(**params) for _ in range(blocks)]
-            block_defs[-1] = self._block_def()
+            if exclude_head:
+                block_defs[-1] = self._block_def()
         except TypeError:
             block_defs = blocks
 
