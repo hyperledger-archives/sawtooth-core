@@ -648,7 +648,7 @@ class TestBlockValidator(unittest.TestCase):
 
         self.validate_block(head)
 
-        self.assert_invalid_block(head)
+        self.assert_unknown_block(head)
         self.assert_new_block_not_committed()
 
     def test_fork_invalid_predecessor(self):
@@ -827,6 +827,11 @@ class TestBlockValidator(unittest.TestCase):
         self.assertEqual(
             block.status, BlockStatus.Invalid,
             "Block should be invalid")
+
+    def assert_unknown_block(self, block):
+        self.assertEqual(
+            block.status, BlockStatus.Unknown,
+            "Block should be unknown")
 
     def assert_new_block_committed(self):
         self.assert_handler_has_result()
