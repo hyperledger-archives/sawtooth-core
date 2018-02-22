@@ -282,15 +282,13 @@ class ChainController(object):
     def on_block_received(self, block):
         try:
             with self._lock:
+                # are we already processing this block
                 if self.has_block(block.header_signature):
-                    # do we already have this block
                     return
 
                 if self.chain_head is None:
                     self._set_genesis(block)
                     return
-
-                self._block_cache[block.identifier] = block
 
                 # schedule this block for validation.
                 self._submit_blocks_for_verification([block])
@@ -302,9 +300,6 @@ class ChainController(object):
 
     def has_block(self, block_id):
         with self._lock:
-            if block_id in self._block_cache:
-                return True
-
             if self._block_validator.in_process(block_id):
                 return True
 

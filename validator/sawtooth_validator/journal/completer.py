@@ -17,9 +17,7 @@ import logging
 from threading import RLock
 from collections import deque
 
-from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
-from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
@@ -49,14 +47,14 @@ class Completer(object):
     """
 
     def __init__(self,
-                 block_store,
+                 block_cache,
                  gossip,
                  cache_keep_time=1200,
                  cache_purge_frequency=30,
                  requested_keep_time=300,
                  metrics_registry=None):
         """
-        :param block_store (dictionary) The block store shared with the journal
+        :param block_cache (dictionary) The shared block cache
         :param gossip (gossip.Gossip) Broadcasts block and batch request to
                 peers
         :param cache_keep_time (float) Time in seconds to keep values in
@@ -71,12 +69,7 @@ class Completer(object):
         """
         self.gossip = gossip
         self.batch_cache = TimedCache(cache_keep_time, cache_purge_frequency)
-        self.block_cache = BlockCache(block_store,
-                                      cache_keep_time,
-                                      cache_purge_frequency)
-        self._block_store = block_store
-        # avoid throwing away the genesis block
-        self.block_cache[NULL_BLOCK_IDENTIFIER] = None
+        self.block_cache = block_cache
         self._seen_txns = TimedCache(cache_keep_time, cache_purge_frequency)
         self._incomplete_batches = TimedCache(cache_keep_time,
                                               cache_purge_frequency)
@@ -347,7 +340,7 @@ class Completer(object):
             BlockWrapper: The head of the chain.
         """
         with self.lock:
-            return self._block_store.chain_head
+            return self.block_cache.block_store.chain_head
 
     def get_block(self, block_id):
         with self.lock:

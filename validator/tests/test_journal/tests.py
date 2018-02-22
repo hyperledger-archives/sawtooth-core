@@ -1138,33 +1138,33 @@ class TestChainController(unittest.TestCase):
         '''
 
         # create forks of various lengths
-        _, a_0 = self.generate_chain(self.init_head, 3)
-        _, b_0 = self.generate_chain(self.init_head, 5)
-        _, c_0 = self.generate_chain(self.init_head, 7)
+        _, a_0 = self.generate_chain(self.init_head, 3, exclude_head=False)
+        _, b_0 = self.generate_chain(self.init_head, 5, exclude_head=False)
+        _, c_0 = self.generate_chain(self.init_head, 7, exclude_head=False)
 
         self.receive_and_process_blocks(a_0, b_0, c_0)
         self.assert_is_chain_head(c_0)
 
         # extend every fork by 2
-        _, a_1 = self.generate_chain(a_0, 2)
-        _, b_1 = self.generate_chain(b_0, 2)
-        _, c_1 = self.generate_chain(c_0, 2)
+        _, a_1 = self.generate_chain(a_0, 2, exclude_head=False)
+        _, b_1 = self.generate_chain(b_0, 2, exclude_head=False)
+        _, c_1 = self.generate_chain(c_0, 2, exclude_head=False)
 
         self.receive_and_process_blocks(a_1, b_1, c_1)
         self.assert_is_chain_head(c_1)
 
         # extend the forks by different lengths
-        _, a_2 = self.generate_chain(a_1, 1)
-        _, b_2 = self.generate_chain(b_1, 6)
-        _, c_2 = self.generate_chain(c_1, 3)
+        _, a_2 = self.generate_chain(a_1, 1, exclude_head=False)
+        _, b_2 = self.generate_chain(b_1, 6, exclude_head=False)
+        _, c_2 = self.generate_chain(c_1, 3, exclude_head=False)
 
         self.receive_and_process_blocks(a_2, b_2, c_2)
         self.assert_is_chain_head(b_2)
 
         # extend every fork by 2
-        _, a_3 = self.generate_chain(a_2, 8)
-        _, b_3 = self.generate_chain(b_2, 8)
-        _, c_3 = self.generate_chain(c_2, 8)
+        _, a_3 = self.generate_chain(a_2, 8, exclude_head=False)
+        _, b_3 = self.generate_chain(b_2, 8, exclude_head=False)
+        _, c_3 = self.generate_chain(c_2, 8, exclude_head=False)
 
         self.receive_and_process_blocks(a_3, b_3, c_3)
         self.assert_is_chain_head(b_3)
@@ -1191,7 +1191,8 @@ class TestChainController(unittest.TestCase):
             block_sig[:8],
             'Not chain head')
 
-    def generate_chain(self, root_block, num_blocks, params=None):
+    def generate_chain(self, root_block, num_blocks, params=None,
+                       exclude_head=True):
         '''Returns (chain, chain_head).
         Usually only the head is needed,
         but occasionally the chain itself is used.
@@ -1200,7 +1201,7 @@ class TestChainController(unittest.TestCase):
             params = {'add_to_cache': True}
 
         chain = self.block_tree_manager.generate_chain(
-            root_block, num_blocks, params)
+            root_block, num_blocks, params, exclude_head)
 
         head = chain[-1]
 

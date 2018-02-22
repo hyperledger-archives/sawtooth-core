@@ -26,6 +26,7 @@ from sawtooth_signing import CryptoFactory
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.database.dict_database import DictDatabase
 from sawtooth_validator.journal.block_store import BlockStore
+from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader, \
     Transaction
@@ -38,8 +39,10 @@ class TestCompleter(unittest.TestCase):
     def setUp(self):
         self.block_store = BlockStore(DictDatabase(
             indexes=BlockStore.create_index_configuration()))
+        self.block_cache = BlockCache(
+            self.block_store, keep_time=300, purge_frequency=30)
         self.gossip = MockGossip()
-        self.completer = Completer(self.block_store, self.gossip)
+        self.completer = Completer(self.block_cache, self.gossip)
         self.completer._on_block_received = self._on_block_received
         self.completer._on_batch_received = self._on_batch_received
         self.completer._has_block = self._has_block
