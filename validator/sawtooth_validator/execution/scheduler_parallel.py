@@ -572,7 +572,11 @@ class ParallelScheduler(Scheduler):
 
                 txn_id = txn.header_signature
                 # Update our internal state with the computed predecessors.
-                self._txn_predecessors[txn_id] = set(predecessors)
+
+                pred = list(set(predecessors))
+                pred.sort(key=self._index_of_txn_in_schedule, reverse=True)
+
+                self._txn_predecessors[txn_id] = pred
                 self._predecessor_chain.add_relationship(
                     txn_id,
                     set(predecessors))
@@ -920,10 +924,7 @@ class ParallelScheduler(Scheduler):
         # dependencies that could have failed this txn did so.
         contexts = []
         txn_dependencies = deque()
-        predecessors = self._txn_predecessors[txn.header_signature]
-        txn_dependencies.extend(self._sort_txn_ids_in_reverse(
-            predecessors))
-
+        txn_dependencies.extend(self._txn_predecessors[txn.header_signature])
         while txn_dependencies:
             prior_txn_id = txn_dependencies.popleft()
             if self._txn_is_in_valid_batch(prior_txn_id):
@@ -931,9 +932,7 @@ class ParallelScheduler(Scheduler):
                 if (prior_txn_id, result.context_id) not in contexts:
                     contexts.append((prior_txn_id, result.context_id))
             else:
-                predecessors_sorted = self._sort_txn_ids_in_reverse(
-                    self._txn_predecessors[prior_txn_id])
-                for txn_id in predecessors_sorted:
+                for txn_id in self._txn_predecessors[prior_txn_id]:
                     if txn_id not in txn_dependencies:
                         txn_dependencies.append(txn_id)
         contexts.sort(
@@ -945,10 +944,6 @@ class ParallelScheduler(Scheduler):
             if not self._predecessor_chain.is_predecessor_of_other(
                 t_id,
                 others)]
-
-    def _sort_txn_ids_in_reverse(self, txn_ids):
-        return sorted(txn_ids,
-                      key=self._index_of_txn_in_schedule, reverse=True)
 
     def _index_of_txn_in_schedule(self, txn_id):
         batch = self._batches_by_txn_id[txn_id]
