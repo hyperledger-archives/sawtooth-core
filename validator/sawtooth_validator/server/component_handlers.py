@@ -177,6 +177,16 @@ def add(
         client_handlers.BlockGetByNumRequest(block_store),
         thread_pool)
 
+    dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_BLOCK_GET_BY_BATCH_ID_REQUEST,
+        client_handlers.BlockGetByBatchRequest(block_store),
+        thread_pool)
+
+    dispatcher.add_handler(
+        validator_pb2.Message.CLIENT_BLOCK_GET_BY_TRANSACTION_ID_REQUEST,
+        client_handlers.BlockGetByTransactionRequest(block_store),
+        thread_pool)
+
     # Batches
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_LIST_REQUEST,
