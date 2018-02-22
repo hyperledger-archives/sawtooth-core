@@ -78,10 +78,19 @@ class TransactionExecutorThread(object):
         self._invalid_observers = invalid_observers
         self._open_futures = {}
 
+        self._tp_process_response_counters = {}
         self._transaction_execution_count = COLLECTOR.counter(
             'transaction_execution_count', instance=self)
         self._in_process_transactions_count = COLLECTOR.counter(
             'in_process_transactions_count', instance=self)
+
+    def _get_tp_process_response_counter(self, tag):
+        if tag not in self._tp_process_response_counters:
+            self._tp_process_response_counters[tag] = COLLECTOR.counter(
+                'tp_process_response_count',
+                tags={'response_type': tag},
+                instance=self)
+        return self._tp_process_response_counters[tag]
 
     def _future_done_callback(self, request, result):
         """
@@ -101,6 +110,9 @@ class TransactionExecutorThread(object):
         self._processors[processor_type].get_processor(
             result.connection_id).dec_occupancy()
         self._processors.notify()
+
+        self._get_tp_process_response_counter(
+            response.Status.Name(response.status)).inc()
 
         if result.connection_id in self._open_futures and \
                 req.signature in self._open_futures[result.connection_id]:
