@@ -202,29 +202,29 @@ Real-world Application Examples
     :doc:`/app_developers_guide/intro_xo_transaction_family`.
 
   * Sawtooth Supply Chain:
-    Helps you trace the provenance and other
-    contextual information of any asset. Supply Chain provides a complete
+    Demonstrates how to trace the provenance and other
+    contextual information of any asset. Supply Chain provides an
     example application with a transaction processor, custom REST API, and web
-    app. This application also demonstrates a secure and decentralized solution
+    app. This example application also demonstrates a decentralized solution
     for in-browser transaction signing, and illustrates how to synchronize the
     blockchain state to a local database for complex queries. For more
-    information, see the `sawtooth-supply-chain repo on GitHub
+    information, see the `sawtooth-supply-chain repository on GitHub
     <https://github.com/hyperledger/sawtooth-supply-chain>`_.
 
   * Sawtooth Marketplace:
-    Allows users to exchange specific quantities of customized assets with other
-    users on the blockchain. This application contains a number of components
-    that, together with a Sawtooth validator, will run a Sawtooth blockchain and
-    provide a simple RESTful API to interact with it.  For more information, see
-    the `sawtooth-marketplace repo on GitHub
+    Demonstrates how to exchange specific quantities of customized assets with
+    other users on the blockchain. This example application contains a number
+    of components that, together with a Sawtooth validator, will run a Sawtooth
+    blockchain and provide a simple RESTful API to interact with it.  For more
+    information, see the `sawtooth-marketplace repository on GitHub
     <https://github.com/hyperledger/sawtooth-marketplace>`_.
 
   * Sawtooth Private UTXO:
     Demonstrates how assets can be created and traded.
-    It shows how to use SGX to allow for assets to be
+    This example application shows how to use SGX to allow for assets to be
     transferred off ledger and privately traded, where only the trading parties
     know the details of the transaction. For more information, see the
-    `sawtooth-private-utxo repo on GitHub
+    `sawtooth-private-utxo repository on GitHub
     <https://github.com/hyperledger/sawtooth-private-utxo>`_.
 
 
