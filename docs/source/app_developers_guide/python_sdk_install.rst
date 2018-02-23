@@ -1,38 +1,20 @@
-
-
-***********************
-Python SDK Installation
-***********************
-
-Overview
-========
-
-The Python SDK is installed automatically when you install Hyperledger
-Sawtooth by following the instructions in :doc:`installing_sawtooth`. This
-tutorial explains how import the SDK into your Python environment.
-
-
-Prerequisites
-=============
-
-The Sawtooth Python SDK requires Python version 3.5 or higher.
+************************
+Importing the Python SDK
+************************
 
 .. note::
+   The Sawtooth Python SDK requires Python version 3.5 or higher
 
-    If you install Sawtooth as described in :doc:`installing_sawtooth`, using the method
-    described in :doc:`ubuntu`, then Python is installed
-    for you automatically if it is not already installed.
+The Python SDK is installed automatically in the demo development environment,
+as described by :doc:`installing_sawtooth`. This SDK is available through the
+standard Python import system.
 
+You can use the Python REPL to import the SDK into your Python environment,
+then verify the import by viewing the SDK's docstring.
 
-Importing the SDK
-=================
+.. code-block:: console
 
-As part of the installation process, the Python SDK is installed and made available through
-the standard Python import system. From the Python REPL, for example, you could import
-the SDK and then view the SDK's docstring:
-
-.. code-block:: python
-
+    $ python3
     >>> import sawtooth_sdk
     >>> help(sawtooth_sdk)
     Help on package sawtooth_sdk:
@@ -67,8 +49,6 @@ the SDK and then view the SDK's docstring:
 
     FILE
         /usr/lib/python3/dist-packages/sawtooth_sdk/__init__.py
-
-
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

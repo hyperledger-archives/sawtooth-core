@@ -1,10 +1,10 @@
-************************************
-Building and Submitting Transactions
-************************************
+********************************************
+Client: Building and Submitting Transactions
+********************************************
 
 The process of encoding information to be submitted to a distributed ledger is
 generally non-trivial. A series of cryptographic safeguards are used to
-confirm identity and data validity. *Hyperledger Sawtooth* is no different, but
+confirm identity and data validity. Hyperledger Sawtooth is no different, but
 the {{ language }} SDK does provide client functionality that abstracts away
 most of these details, and greatly simplifies the process of making changes to
 the blockchain.

@@ -22,7 +22,6 @@ developing for Sawtooth *without* the help of an SDK.
    :maxdepth: 2
 
    ../_autogen/txn_submit_tutorial
-   ./event_subscriptions
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
