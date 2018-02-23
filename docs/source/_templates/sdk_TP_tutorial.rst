@@ -12,55 +12,18 @@
     {% set lowercase_lang = 'go' %}
 {% endif %}
 
-***********************************************
-Transaction Processor Tutorial  {{ language }}
-***********************************************
+*****************************************************
+Transaction Processor: Creating a Transaction Handler
+*****************************************************
 
-Overview
-========
+A transaction processor has two top-level components: a processor class and
+a handler class.
 
-This tutorial covers the creation of a new Sawtooth transaction family in
-{{ language }}, based on the Sawtooth SDK. We will construct a transaction
-handler which implements a distributed version of the multi-player game tic-
-tac-toe.
+* The SDK provides a general-purpose processor class.
 
-.. note::
-
-    The SDK contains a fully-implemented version of tic-tac-toe. This tutorial
-    is meant to demonstrate the relevant concepts, rather than to create a
-    complete implementation. See the SDK_ for full implementations in
-    multiple languages.
-
-.. _SDK: https://github.com/hyperledger/sawtooth-core/tree/master/sdk/examples
-
-A general description of tic-tac-toe, including the rules, can be found on
-Wikipedia at:
-
-    https://en.wikipedia.org/wiki/Tic-tac-toe
-
-A full implementation of the tic-tac-toe transaction family can be found in
-
-``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
-
-Prerequisites
-=============
-
-This tutorial assumes that you have gone through
-:doc:`/app_developers_guide/installing_sawtooth` and are familiar with the
-concepts introduced there.
-
-You should be familiar with the concepts introduced in the
-:doc:`/app_developers_guide/installing_sawtooth` guide and have a working
-Sawtooth environment prior to completing this tutorial.
-
-The Transaction Processor
-=========================
-
-There are two top-level components of a transaction processor: a processor
-class and a handler class. The SDK provides a general-purpose processor class.
-The handler class is application-dependent and contains the business logic for
-a particular family of transactions. Multiple handlers can be connected to an
-instance of the processor class.
+* The handler class is application-dependent. It contains the business logic for
+  a particular family of transactions. Multiple handlers can be connected to an
+  instance of the processor class.
 
 Handlers get called in two ways:
 
@@ -215,8 +178,19 @@ Payload
 So how do we get data out of the transaction? The transaction consists of a
 header and a payload. The header contains the "signer", which is used to
 identify the current player. The payload will contain an encoding of the game
-name, the action ('create' a game, 'delete' a game, 'take' a space), and the space (which will be
-an empty string if the action isn't 'take').
+name, the action (``create`` a game, ``delete`` a game, ``take`` a space), and
+the space (which will be an empty string if the action isn't ``take``).
+
+An XO transaction request payload consists of the UTF-8 encoding of a
+string with exactly two commas, formatted as follows:
+
+``<name>,<action>,<space>``
+
+where
+
+* <name> is a nonempty string not containing the character ``|``
+* <action> is either ``take`` or ``create``
+* <space> is an integer strictly between 0 and 10 if the action is ``take``
 
 {% if language == 'JavaScript' %}
 
@@ -360,14 +334,19 @@ an empty string if the action isn't 'take').
 
 {% endif %}
 
-Game logic
+Game Logic
 ==========
 
-The validation rules and state updates that are associated with 'create', 'delete', and 'take'
-are shown below.
+The XO game logic is described in the XO transaction family specification;
+see :ref:`xo-execution-label`.
 
+The validation rules and state updates that are associated with the ``create``,
+``delete``, and ``take`` actions are shown below.
 
-Create:
+Create
+------
+
+The ``create`` action has the following definition:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
@@ -412,7 +391,7 @@ Create:
 		displayCreate(payload, player)
         return xoState.SetGame(payload.Name, game)
 
-Where ``validateCreate`` is defined as
+``validateCreate`` is defined as follows:
 
 .. code-block:: go
 
@@ -449,7 +428,10 @@ Where ``validateCreate`` is defined as
 
 {% endif %}
 
-Delete:
+Delete
+------
+
+The ``delete`` action has the following definition:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
@@ -480,7 +462,7 @@ Delete:
 		}
         return xoState.DeleteGame(payload.Name)
 
-Where ``validateDelete`` is defined as
+``validateDelete`` is defined as follows:
 
 .. code-block:: go
 
@@ -509,7 +491,11 @@ Where ``validateDelete`` is defined as
         xo_state.delete_game(xo_payload.name)
 {% endif %}
 
-Take:
+Take
+----
+
+The ``take`` action has the following definition:
+
 {% if language == 'JavaScript' %}
 
 .. code-block:: none
@@ -634,7 +620,7 @@ Take:
 		displayTake(payload, player, game)
         return xoState.SetGame(payload.Name, game)
 
-Where ``validateTake`` is defined as
+``validateTake`` is defined as follows:
 
 .. code-block:: go
 
@@ -716,11 +702,31 @@ Where ``validateTake`` is defined as
 
 {% endif %}
 
+State
+-----
 
 The XoState class handles hash collisions due to the addressing scheme,
 transforming the game name into an address, and turning the game information
 into bytes that can be stored in the validator's Radix-Merkle tree.
 
+An XO state entry consists of the UTF-8 encoding of a string with
+exactly four commas formatted as follows:
+
+``<name>,<board>,<game-state>,<player-key-1>,<player-key-2>``
+
+where
+
+* <name> is a nonempty string not containing `|`,
+* <board> is a string of length 9 containing only `O`, `X`, or `-`,
+* <game-state> is one of the following: `P1-NEXT`, `P2-NEXT`, `P1-WIN`,
+* `P2-WIN`, or `TIE`, and
+* <player-key-1> and <player-key-2> are the (possibly empty) public keys
+* associated with the game's players.
+
+In the event of a hash collision (i.e. two or more state entries
+sharing the same address), the colliding state entries will stored as
+the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
+<a-entry>, <b-entry>,... are sorted alphabetically.
 
 {% if language == 'JavaScript' %}
 
@@ -852,7 +858,7 @@ into bytes that can be stored in the validator's Radix-Merkle tree.
         }
     }
 
-    // GetGame returns a game by it's name.
+    // GetGame returns a game by its name.
     func (self *XoState) GetGame(name string) (*Game, error) {
         games, err := self.loadGames(name)
         if err != nil {
@@ -865,7 +871,7 @@ into bytes that can be stored in the validator's Radix-Merkle tree.
         return nil, nil
     }
 
-    // SetGame sets a game to it's name
+    // SetGame sets a game to its name
     func (self *XoState) SetGame(name string, game *Game) error {
         games, err := self.loadGames(name)
         if err != nil {
@@ -1150,8 +1156,29 @@ into bytes that can be stored in the validator's Radix-Merkle tree.
 
 {% endif %}
 
+Addressing
+----------
+
 By convention, we'll store game data at an address obtained from hashing the
-game name prepended with some constant:
+game name prepended with some constant.
+
+XO data is stored in state using addresses generated from the XO
+family name and the name of the game being stored. In particular, an
+XO address consists of the first 6 characters of the SHA-512 hash of
+the UTF-8 encoding of the string "xo" (which is "5b7349") plus the
+first 64 characters of the SHA-512 hash of the UTF-8 encoding of the
+game name.
+
+For example, the XO address for a game called "mygame" could be
+generated as follows:
+
+.. code-block:: pycon
+
+    >>> hashlib.sha512('xo'.encode('utf-8')).hexdigest()[:6] +
+    >>> hashlib.sha512('mygame'.encode('utf-8')).hexdigest()[:64]
+    '5b7349700e158b598043efd6d7610345a75a00b22ac14c9278db53f586179a92b72fbd'
+
+Addressing is defined as follows:
 
 {% if language == 'JavaScript' %}
 
@@ -1200,8 +1227,8 @@ about what kinds of transactions it can handle.
       apply (transactionProcessRequest, stateStore) {
         //
 
-Note that the XOHandler class extends the TransactionHandler class defined in the
-JavaScript SDK.
+Note that the ``XOHandler`` class extends the ``TransactionHandler`` class
+defined in the JavaScript SDK.
 
 {% elif language == 'Go' %}
 

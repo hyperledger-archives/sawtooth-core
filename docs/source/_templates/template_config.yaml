@@ -35,3 +35,18 @@ targets:
     template: sdk_TP_tutorial.rst
     args:
         language: Go
+
+  sdk_overview_tutorial_python:
+    template: sdk_overview_tutorial.rst
+    args:
+        language: Python
+
+  sdk_overview_tutorial_js:
+    template: sdk_overview_tutorial.rst
+    args:
+        language: JavaScript
+
+  sdk_overview_tutorial_go:
+    template: sdk_overview_tutorial.rst
+    args:
+        language: Java
