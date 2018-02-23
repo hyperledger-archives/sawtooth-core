@@ -67,7 +67,7 @@ Each application defines the custom
 requirements. Sawtooth provides several example
 :term:`transaction families<Transaction family>` to serve as models for
 low-level functions (such as maintaining chain-wide settings and storing
-on-chain permissions) and for specific applications like as performance
+on-chain permissions) and for specific applications such as performance
 analysis and storing block information.
 
 Transaction processor SDKs are available in multiple languages to streamline
