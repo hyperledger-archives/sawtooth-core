@@ -33,6 +33,7 @@ from sawtooth_validator.journal.batch_sender import BroadcastBatchSender
 from sawtooth_validator.journal.block_sender import BroadcastBlockSender
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_cache import BlockCache
+from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.completer import Completer
 from sawtooth_validator.journal.responder import Responder
 from sawtooth_validator.journal.batch_injector import \
@@ -135,6 +136,7 @@ class Validator(object):
         block_store = BlockStore(block_db)
         block_cache = BlockCache(
             block_store, keep_time=300, purge_frequency=30)
+        block_cache[NULL_BLOCK_IDENTIFIER] = None
 
         # -- Setup Thread Pools -- #
         component_thread_pool = InstrumentedThreadPoolExecutor(
@@ -232,7 +234,7 @@ class Validator(object):
         )
 
         completer = Completer(
-            block_store,
+            block_cache,
             gossip,
             metrics_registry=metrics_registry)
 
