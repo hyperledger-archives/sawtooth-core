@@ -49,4 +49,4 @@ targets:
   sdk_overview_tutorial_go:
     template: sdk_overview_tutorial.rst
     args:
-        language: Java
+        language: Go
