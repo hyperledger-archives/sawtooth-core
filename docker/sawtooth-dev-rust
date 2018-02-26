@@ -29,6 +29,8 @@ FROM ubuntu:xenial
 
 LABEL "install-type"="mounted"
 
+ENV https_proxy $http_proxy
+
 RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
  && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
