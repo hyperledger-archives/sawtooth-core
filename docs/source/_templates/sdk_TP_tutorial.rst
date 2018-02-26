@@ -24,10 +24,152 @@ A transaction processor has two top-level components:
   business logic for a particular family of transactions. Multiple handlers
   can be connected to an instance of the processor class.
 
+Entry Point
+===========
+
+Since a transaction processor is a long running process, it must have an
+entry point.
+
+In the entry point, the ``TransactionProcessor`` class is given the address
+to connect with the validator and the handler class.
+
+{% if language == 'JavaScript' %}
+
+.. code-block:: javascript
+    :caption: a simplified xo_javascript/index.js
+
+    const { TransactionProcessor } = require('sawtooth-sdk/processor')
+    const XOHandler = require('./xo_handler')
+
+    // In docker, the address would be the validator's container name
+    // with port 4004
+    const address = 'tcp://127.0.0.1:4004'
+    const transactionProcessor = new TransactionProcessor(address)
+
+    transactionProcessor.addHandler(new XOHandler())
+
+    transactionProcessor.start()
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+    :caption: a simplified sawtooth_xo/main.go
+
+    import (
+        "sawtooth_sdk/processor"
+        xo "sawtooth_xo/handler"
+        "syscall"
+    )
+
+    func main() {
+
+        endpoint := "tcp://127.0.0.1:4004"
+        // In docker, endpoint would be the validator's container name
+        // with port 4004
+        handler := &xo.XoHandler{}
+        processor := processor.NewTransactionProcessor(endpoint)
+        processor.AddHandler(handler)
+        processor.ShutdownOnSignal(syscall.SIGINT, syscall.SIGTERM)
+
+        processor.Start()
+    }
+
+{% else %}
+
+.. code-block:: python
+    :caption: a simplified sawtooth_xo/processor/main.py
+
+    from sawtooth_sdk.processor.core import TransactionProcessor
+    from sawtooth_xo.processor.handler import XoTransactionHandler
+
+    def main():
+        # In docker, the url would be the validator's container name with
+        # port 4004
+        processor = TransactionProcessor(url='tcp://127.0.0.1:4004')
+
+        handler = XoTransactionHandler()
+
+        processor.add_handler(handler)
+
+        processor.start()
+
+{% endif %}
+
 Handlers get called in two ways: with an ``apply`` method and with various
 "metadata" methods. The metadata is used to connect the handler to the
 processor. The bulk of the handler, however, is made up of ``apply`` and its
 helper functions.
+
+{% if language == 'JavaScript' %}
+
+.. code-block:: javascript
+    :caption: xo_javascript/xo_handler.js
+
+    class XOHandler extends TransactionHandler {
+      constructor () {
+        super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
+      }
+
+      apply (transactionProcessRequest, stateStore) {
+        //
+
+Note that the ``XOHandler`` class extends the ``TransactionHandler`` class defined in the
+JavaScript SDK.
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go
+
+    type XoHandler struct {
+    }
+
+    func (self *XoHandler) FamilyName() string {
+        return "xo"
+    }
+
+    func (self *XoHandler) FamilyVersions() []string {
+        return []string{"1.0"}
+    }
+
+    func (self *XoHandler) Namespaces() []string {
+        return []string{xo_state.Namespace}
+    }
+
+    func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
+
+{% else %}
+
+.. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py
+
+    class XoTransactionHandler(TransactionHandler):
+        def __init__(self, namespace_prefix):
+            self._namespace_prefix = namespace_prefix
+
+        @property
+        def family_name(self):
+            return 'xo'
+
+        @property
+        def family_versions(self):
+            return ['1.0']
+
+        @property
+        def encodings(self):
+            return ['csv-utf8']
+
+        @property
+        def namespaces(self):
+            return [self._namespace_prefix]
+
+        def apply(self, transaction, context):
+            # ...
+
+Note that the ``XoTransactionHandler`` extends the ``TransactionHandler`` defined
+in the Python SDK.
+
+{% endif %}
 
 The ``apply`` Method
 ====================
@@ -1201,90 +1343,6 @@ Addressing is implemented as follows:
     def _make_xo_address(name):
     return XO_NAMESPACE + \
         hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
-
-
-{% endif %}
-
-
-The {% if language == 'JavaScript' %}``XOHandler``{% elif language == 'Go' %}
-``XoHandler``{% else %}``XoTransactionHandler``{% endif %} Class
-===================================
-
-{% if language == 'JavaScript' %}
-
-All that's left to do is set up the
-``XOHandler`` class and its metadata. The metadata is used to
-*register* the transaction processor with a validator by sending it information
-about what kinds of transactions it can handle.
-
-.. code-block:: javascript
-
-    class XOHandler extends TransactionHandler {
-      constructor () {
-        super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
-      }
-
-      apply (transactionProcessRequest, stateStore) {
-        //
-
-Note that the ``XOHandler`` class extends the ``TransactionHandler`` class
-defined in the JavaScript SDK.
-
-{% elif language == 'Go' %}
-
-All that's left to do is set up the
-``XoHandler`` class and its metadata. The metadata is used to
-*register* the transaction processor with a validator by sending it information
-about what kinds of transactions it can handle.
-
-.. code-block:: go
-
-    type XoHandler struct {
-    }
-
-    func (self *XoHandler) FamilyName() string {
-        return "xo"
-    }
-
-    func (self *XoHandler) FamilyVersions() []string {
-        return []string{"1.0"}
-    }
-
-    func (self *XoHandler) Namespaces() []string {
-        return []string{xo_state.Namespace}
-    }
-
-{% else %}
-
-All that's left to do is set up the
-``XoTransactionHandler`` class and its metadata. The metadata is used to
-*register* the transaction processor with a validator by sending it information
-about what kinds of transactions it can handle.
-
-.. code-block:: python
-
-    class XoTransactionHandler:
-        def __init__(self, namespace_prefix):
-            self._namespace_prefix = namespace_prefix
-
-        @property
-        def family_name(self):
-            return 'xo'
-
-        @property
-        def family_versions(self):
-            return ['1.0']
-
-        @property
-        def encodings(self):
-            return ['csv-utf8']
-
-        @property
-        def namespaces(self):
-            return [self._namespace_prefix]
-
-        def apply(self, transaction, context):
-            # ...
 
 
 {% endif %}
