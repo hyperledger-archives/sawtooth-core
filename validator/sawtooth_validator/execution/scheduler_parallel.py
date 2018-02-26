@@ -87,7 +87,7 @@ class Tree:
 
             yield node
 
-    def update(self, address, updater):
+    def update(self, address, updater, prune=False):
         '''
         Walk to ADDRESS, creating nodes if necessary, and set the data
         there to UPDATER(data).
@@ -99,6 +99,9 @@ class Tree:
         node = self._get_or_create(address)
 
         node.data = updater(node.data)
+
+        if prune:
+            node.children.clear()
 
     def prune(self, address):
         '''
@@ -245,9 +248,7 @@ class PredecessorTree:
 
             return data
 
-        self._tree.update(address, updater)
-
-        self._tree.prune(address)
+        self._tree.update(address, updater, prune=True)
 
     def find_write_predecessors(self, address):
         """Returns all predecessor transaction ids for a write of the provided
