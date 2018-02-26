@@ -303,173 +303,6 @@ action. If all of the rules validate, then
 state is updated based on whether we are creating a game, deleting a game, or updating the
 game by taking a space.
 
-Payload
-=======
-
-.. note::
-
-    :doc:`/architecture/transactions_and_batches` contains a detailed
-    description of how transactions are structured and used. Please read
-    this document before proceeding, if you have not reviewed it.
-
-So how do we get data out of the transaction? The transaction consists of a
-header and a payload. The header contains the "signer", which is used to
-identify the current player. The payload will contain an encoding of the game
-name, the action (``create`` a game, ``delete`` a game, ``take`` a space), and
-the space (which will be an empty string if the action isn't ``take``).
-
-An XO transaction request payload consists of the UTF-8 encoding of a
-string with exactly two commas, formatted as follows:
-
-``<name>,<action>,<space>``
-
-where
-
-* <name> is a nonempty string not containing the character ``|``
-* <action> is either ``take`` or ``create``
-* <space> is an integer strictly between 0 and 10 if the action is ``take``
-
-{% if language == 'JavaScript' %}
-
-.. code-block:: javascript
-
-    class XoPayload {
-        constructor (name, action, space) {
-            this.name = name
-            this.action = action
-            this.space = space
-        }
-
-        static fromBytes (payload) {
-            payload = payload.toString().split(',')
-            if (payload.length === 3) {
-                let xoPayload = new XoPayload(payload[0], payload[1], payload[2])
-                if (!xoPayload.name) {
-                    throw new InvalidTransaction('Name is required')
-                }
-                if (xoPayload.name.indexOf('|') !== -1) {
-                    throw new InvalidTransaction('Name cannot contain "|"')
-                }
-
-                if (!xoPayload.action) {
-                    throw new InvalidTransaction('Action is required')
-                }
-                return xoPayload
-            } else {
-            throw new InvalidTransaction('Invalid payload serialization')
-            }
-        }
-    }
-
-{% elif language == 'Go' %}
-
-.. code-block:: go
-
-    type XoPayload struct {
-        Name   string
-        Action string
-        Space  int
-    }
-
-    func FromBytes(payloadData []byte) (*XoPayload, error) {
-        if payloadData == nil {
-            return nil, &processor.InvalidTransactionError{Msg: "Must contain payload"}
-        }
-
-        parts := strings.Split(string(payloadData), ",")
-        if len(parts) != 3 {
-            return nil, &processor.InvalidTransactionError{Msg: "Payload is malformed"}
-        }
-
-        payload := XoPayload{}
-        payload.Name = parts[0]
-        payload.Action = parts[1]
-
-        if len(payload.Name) < 1 {
-            return nil, &processor.InvalidTransactionError{Msg: "Name is required"}
-        }
-
-        if len(payload.Action) < 1 {
-            return nil, &processor.InvalidTransactionError{Msg: "Action is required"}
-        }
-
-        if payload.Action == "take" {
-            space, err := strconv.Atoi(parts[2])
-            if err != nil {
-                return nil, &processor.InvalidTransactionError{
-                    Msg: fmt.Sprintf("Invalid Space: '%v'", parts[2])}
-            }
-            payload.Space = space
-        }
-
-        if strings.Contains(payload.Name, "|") {
-            return nil, &processor.InvalidTransactionError{
-                Msg: fmt.Sprintf("Invalid Name (char '|' not allowed): '%v'", parts[2])}
-        }
-
-        return &payload, nil
-    }
-
-
-{% else %}
-
-.. code-block:: python
-
-    class XoPayload(object):
-
-        def __init__(self, payload):
-            try:
-                # The payload is csv utf-8 encoded string
-                name, action, space = payload.decode().split(",")
-            except ValueError:
-                raise InvalidTransaction("Invalid payload serialization")
-
-            if not name:
-                raise InvalidTransaction('Name is required')
-
-            if '|' in name:
-                raise InvalidTransaction('Name cannot contain "|"')
-
-            if not action:
-                raise InvalidTransaction('Action is required')
-
-            if action not in ('create', 'take', 'delete'):
-                raise InvalidTransaction('Invalid action: {}'.format(action))
-
-            if action == 'take':
-                try:
-
-                    if int(space) not in range(1, 10):
-                        raise InvalidTransaction(
-                            "Space must be an integer from 1 to 9")
-                except ValueError:
-                    raise InvalidTransaction(
-                        'Space must be an integer from 1 to 9')
-
-            if action == 'take':
-                space = int(space)
-
-            self._name = name
-            self._action = action
-            self._space = space
-
-        @staticmethod
-        def from_bytes(payload):
-            return XoPayload(payload=payload)
-
-        @property
-        def name(self):
-            return self._name
-
-        @property
-        def action(self):
-            return self._action
-
-        @property
-        def space(self):
-            return self._space
-
-{% endif %}
 
 Game Logic
 ==========
@@ -839,12 +672,180 @@ The ``take`` action has the following implementation:
 
 {% endif %}
 
-State
------
+Payload
+=======
 
-The XoState class handles hash collisions due to the addressing scheme,
-transforming the game name into an address, and turning the game information
-into bytes that can be stored in the validator's Radix-Merkle tree.
+.. note::
+
+    :doc:`/architecture/transactions_and_batches` contains a detailed
+    description of how transactions are structured and used. Please read
+    this document before proceeding, if you have not reviewed it.
+
+So how do we get data out of the transaction? The transaction consists of a
+header and a payload. The header contains the "signer", which is used to
+identify the current player. The payload will contain an encoding of the game
+name, the action (``create`` a game, ``delete`` a game, ``take`` a space), and
+the space (which will be an empty string if the action isn't ``take``).
+
+An XO transaction request payload consists of the UTF-8 encoding of a
+string with exactly two commas, formatted as follows:
+
+``<name>,<action>,<space>``
+
+where
+
+* <name> is a nonempty string not containing the character ``|``
+* <action> is either ``take`` or ``create``
+* <space> is an integer strictly between 0 and 10 if the action is ``take``
+
+{% if language == 'JavaScript' %}
+
+.. code-block:: javascript
+
+    class XoPayload {
+        constructor (name, action, space) {
+            this.name = name
+            this.action = action
+            this.space = space
+        }
+
+        static fromBytes (payload) {
+            payload = payload.toString().split(',')
+            if (payload.length === 3) {
+                let xoPayload = new XoPayload(payload[0], payload[1], payload[2])
+                if (!xoPayload.name) {
+                    throw new InvalidTransaction('Name is required')
+                }
+                if (xoPayload.name.indexOf('|') !== -1) {
+                    throw new InvalidTransaction('Name cannot contain "|"')
+                }
+
+                if (!xoPayload.action) {
+                    throw new InvalidTransaction('Action is required')
+                }
+                return xoPayload
+            } else {
+            throw new InvalidTransaction('Invalid payload serialization')
+            }
+        }
+    }
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+
+    type XoPayload struct {
+        Name   string
+        Action string
+        Space  int
+    }
+
+    func FromBytes(payloadData []byte) (*XoPayload, error) {
+        if payloadData == nil {
+            return nil, &processor.InvalidTransactionError{Msg: "Must contain payload"}
+        }
+
+        parts := strings.Split(string(payloadData), ",")
+        if len(parts) != 3 {
+            return nil, &processor.InvalidTransactionError{Msg: "Payload is malformed"}
+        }
+
+        payload := XoPayload{}
+        payload.Name = parts[0]
+        payload.Action = parts[1]
+
+        if len(payload.Name) < 1 {
+            return nil, &processor.InvalidTransactionError{Msg: "Name is required"}
+        }
+
+        if len(payload.Action) < 1 {
+            return nil, &processor.InvalidTransactionError{Msg: "Action is required"}
+        }
+
+        if payload.Action == "take" {
+            space, err := strconv.Atoi(parts[2])
+            if err != nil {
+                return nil, &processor.InvalidTransactionError{
+                    Msg: fmt.Sprintf("Invalid Space: '%v'", parts[2])}
+            }
+            payload.Space = space
+        }
+
+        if strings.Contains(payload.Name, "|") {
+            return nil, &processor.InvalidTransactionError{
+                Msg: fmt.Sprintf("Invalid Name (char '|' not allowed): '%v'", parts[2])}
+        }
+
+        return &payload, nil
+    }
+
+
+{% else %}
+
+.. code-block:: python
+
+    class XoPayload(object):
+
+        def __init__(self, payload):
+            try:
+                # The payload is csv utf-8 encoded string
+                name, action, space = payload.decode().split(",")
+            except ValueError:
+                raise InvalidTransaction("Invalid payload serialization")
+
+            if not name:
+                raise InvalidTransaction('Name is required')
+
+            if '|' in name:
+                raise InvalidTransaction('Name cannot contain "|"')
+
+            if not action:
+                raise InvalidTransaction('Action is required')
+
+            if action not in ('create', 'take', 'delete'):
+                raise InvalidTransaction('Invalid action: {}'.format(action))
+
+            if action == 'take':
+                try:
+
+                    if int(space) not in range(1, 10):
+                        raise InvalidTransaction(
+                            "Space must be an integer from 1 to 9")
+                except ValueError:
+                    raise InvalidTransaction(
+                        'Space must be an integer from 1 to 9')
+
+            if action == 'take':
+                space = int(space)
+
+            self._name = name
+            self._action = action
+            self._space = space
+
+        @staticmethod
+        def from_bytes(payload):
+            return XoPayload(payload=payload)
+
+        @property
+        def name(self):
+            return self._name
+
+        @property
+        def action(self):
+            return self._action
+
+        @property
+        def space(self):
+            return self._space
+
+{% endif %}
+
+State
+=====
+
+The XoState class turns game information into bytes and stores it in the validator's Radix-Merkle tree,
+turns bytes stored in the validator's Radix-Merkle tree into game information, and does these
+operations with a state storage scheme that handles hash collisions.
 
 An XO state entry consists of the UTF-8 encoding of a string with
 exactly four commas formatted as follows:
