@@ -103,7 +103,7 @@ helper functions.
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
-    :caption: xo_javascript/xo_handler.js
+    :caption: xo_javascript/xo_handler.js XOHandler class
 
     class XOHandler extends TransactionHandler {
       constructor () {
@@ -119,7 +119,7 @@ JavaScript SDK.
 {% elif language == 'Go' %}
 
 .. code-block:: go
-    :caption: sawtooth_xo/handler/handler.go
+    :caption: sawtooth_xo/handler/handler.go XoHandler struct
 
     type XoHandler struct {
     }
@@ -141,7 +141,7 @@ JavaScript SDK.
 {% else %}
 
 .. code-block:: python
-    :caption: sawtooth_xo/processor/handler.py
+    :caption: sawtooth_xo/processor/handler.py XoTransactionHandler class
 
     class XoTransactionHandler(TransactionHandler):
         def __init__(self, namespace_prefix):
@@ -219,6 +219,8 @@ Valid actions are: create a new game, take an unoccupied space, and delete a gam
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_handler.js apply overview
+
 
     apply (transactionProcessRequest, context) {
         let payload = XoPayload.fromBytes(transactionProcessRequest.payload)
@@ -241,6 +243,7 @@ Valid actions are: create a new game, take an unoccupied space, and delete a gam
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go apply overview
 
     func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
         // The xo player is defined as the signer of the transaction, so we unpack
@@ -276,6 +279,7 @@ Valid actions are: create a new game, take an unoccupied space, and delete a gam
 {# Python code is the default #}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py apply overview
 
     def apply(self, transaction, context):
 
@@ -320,6 +324,7 @@ The ``create`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_handler.js apply 'create'
 
     if (payload.action === 'create') {
       return xoState.getGame(payload.name)
@@ -345,6 +350,7 @@ The ``create`` action has the following implementation:
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go apply 'create'
 
     case "create":
 		err := validateCreate(xoState, payload.Name)
@@ -379,8 +385,9 @@ The ``create`` action has the following implementation:
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py apply 'create'
 
-    if xo_payload.action == 'create':
+    elif xo_payload.action == 'create':
 
         if xo_state.get_game(xo_payload.name) is not None:
             raise InvalidTransaction(
@@ -405,6 +412,7 @@ The ``delete`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_handler.js apply 'delete'
 
     if (payload.action === 'delete') {
       return xoState.getGame(payload.name)
@@ -424,6 +432,7 @@ The ``delete`` action has the following implementation:
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go apply 'delete'
 
     case "delete":
 		err := validateDelete(xoState, payload.Name)
@@ -450,6 +459,8 @@ The ``delete`` action has the following implementation:
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py apply 'delete'
+
 
     if xo_payload.action == 'delete':
         game = xo_state.get_game(xo_payload.name)
@@ -469,6 +480,7 @@ The ``take`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: none
+    :caption: xo_javascript/xo_handler.js apply 'take'
 
     if (payload.action === 'take') {
       return xoState.getGame(payload.name)
@@ -548,6 +560,7 @@ The ``take`` action has the following implementation:
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go apply 'take'
 
     case "take":
 		err := validateTake(xoState, payload, player)
@@ -620,6 +633,7 @@ The ``take`` action has the following implementation:
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py apply 'take'
 
     elif xo_payload.action == 'take':
         game = xo_state.get_game(xo_payload.name)
@@ -701,6 +715,7 @@ where
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_payload.js
 
     class XoPayload {
         constructor (name, action, space) {
@@ -733,6 +748,7 @@ where
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/xo_payload/xo_payload.go
 
     type XoPayload struct {
         Name   string
@@ -783,6 +799,7 @@ where
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/xo_payload.py
 
     class XoPayload(object):
 
@@ -869,6 +886,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_state.js
 
     class XoState {
         constructor (context) {
@@ -970,6 +988,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/xo_state/xo_state.go
 
     var Namespace = hexdigest("xo")[:6]
 
@@ -1144,6 +1163,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/xo_state.py
 
     XO_NAMESPACE = hashlib.sha512('xo'.encode("utf-8")).hexdigest()[0:6]
 
