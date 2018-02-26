@@ -37,7 +37,7 @@ from sawtooth_validator.server.log import log_configuration
 from sawtooth_validator.server.state_verifier import verify_state
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
-from sawtooth_validator.metrics.wrappers import MetricsRegistryWrapper
+from sawtooth_validator import metrics
 
 
 LOGGER = logging.getLogger(__name__)
@@ -321,7 +321,6 @@ def main(args=None):
                        "communications between validators will not be "
                        "authenticated or encrypted.")
 
-    wrapped_registry = None
     metrics_reporter = None
     if validator_config.opentsdb_url:
         LOGGER.info("Adding metrics reporter: url=%s, db=%s",
@@ -332,7 +331,7 @@ def main(args=None):
         proto, db_server, db_port, = url.scheme, url.hostname, url.port
 
         registry = MetricsRegistry()
-        wrapped_registry = MetricsRegistryWrapper(registry)
+        metrics.init_metrics(registry=registry)
 
         metrics_reporter = InfluxReporter(
             registry=registry,
@@ -345,6 +344,8 @@ def main(args=None):
             username=validator_config.opentsdb_username,
             password=validator_config.opentsdb_password)
         metrics_reporter.start()
+    else:
+        metrics.init_metrics()
 
     # Verify state integrity before startup
     verify_state(
@@ -373,8 +374,7 @@ def main(args=None):
         validator_config.maximum_peer_connectivity,
         validator_config.network_public_key,
         validator_config.network_private_key,
-        roles=validator_config.roles,
-        metrics_registry=wrapped_registry)
+        roles=validator_config.roles)
 
     # pylint: disable=broad-except
     try:

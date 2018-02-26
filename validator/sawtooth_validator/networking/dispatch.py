@@ -23,9 +23,10 @@ import functools
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.metrics.wrappers import TimerWrapper
+from sawtooth_validator import metrics
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class Priority(enum.IntEnum):
@@ -39,7 +40,7 @@ def _gen_message_id():
 
 
 class Dispatcher(InstrumentedThread):
-    def __init__(self, timeout=10, metrics_registry=None):
+    def __init__(self, timeout=10):
         super().__init__(name='Dispatcher')
         self._timeout = timeout
         self._msg_type_handlers = {}
@@ -48,19 +49,14 @@ class Dispatcher(InstrumentedThread):
         self._send_last_message = {}
         self._message_information = {}
         self._condition = Condition()
-        self._metrics_registry = metrics_registry
         self._dispatch_timers = {}
         self._priority = {}
 
     def _get_dispatch_timer(self, tag):
         if tag not in self._dispatch_timers:
-            if self._metrics_registry:
-                self._dispatch_timers[tag] = TimerWrapper(
-                    self._metrics_registry.timer(
-                        'dispatch_execution_time', tags=[
-                            'handler={}'.format(tag)]))
-            else:
-                self._dispatch_timers[tag] = TimerWrapper()
+            self._dispatch_timers[tag] = COLLECTOR.timer(
+                'dispatch_execution_time', tags={"handler": tag},
+                instance=self)
         return self._dispatch_timers[tag]
 
     def add_send_message(self, connection, send_message):

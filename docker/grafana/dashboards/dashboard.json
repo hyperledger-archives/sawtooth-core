@@ -85,7 +85,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.chain_head",
+              "measurement": "sawtooth_validator.chain.ChainController.chain_head",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -177,7 +177,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.block_num",
+              "measurement": "sawtooth_validator.chain.ChainController.block_num",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -289,7 +289,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.committed_transactions_count",
+              "measurement": "sawtooth_validator.chain.ChainController.committed_transactions_count",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -413,7 +413,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.blocks_published_count",
+              "measurement": "sawtooth_validator.publisher.BlockPublisher.blocks_published_count",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -526,7 +526,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.blocks_considered_count",
+              "measurement": "sawtooth_validator.chain.ChainController.blocks_considered_count",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -638,7 +638,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.chain_head_moved_to_fork_count",
+              "measurement": "sawtooth_validator.block_validator.BlockValidator.chain_head_moved_to_fork_count",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -762,7 +762,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.pending_batch_gauge",
+              "measurement": "sawtooth_validator.publisher.BlockPublisher.pending_batch_gauge",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -874,7 +874,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.backpressure_batches_rejected_gauge",
+              "measurement": "sawtooth_validator.back_pressure_handlers.ClientBatchSubmitBackpressureHandler.backpressure_batches_rejected_gauge",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -998,7 +998,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.transaction_execution_count",
+              "measurement": "sawtooth_validator.executor.TransactionExecutorThread.transaction_execution_count",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -1075,7 +1075,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": true,
+            "show": false,
             "total": false,
             "values": false
           },
@@ -1116,7 +1116,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.in_process_transactions_count",
+              "measurement": "sawtooth_validator.executor.TransactionExecutorThread.in_process_transactions_count",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -1228,7 +1228,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.interconnect_send_response_time",
+              "measurement": "sawtooth_validator.interconnect.Interconnect.send_response_time",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -1636,7 +1636,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.interconnect_send_response_time",
+              "measurement": "sawtooth_validator.interconnect.Interconnect.send_response_time",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -1754,7 +1754,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.interconnect_send_response_time",
+              "measurement": "sawtooth_validator.interconnect.Interconnect.send_response_time",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -1879,7 +1879,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.interconnect_received_message_count",
+              "measurement": "sawtooth_validator.interconnect._SendReceive.received_message_count",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -3686,10 +3686,10 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Network-threadpool.task_run_time",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.task_run_time",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Network-threadpool.task_run_time\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "query": "",
               "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
@@ -3707,7 +3707,13 @@
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Network"
+                }
+              ]
             }
           ],
           "thresholds": [],
@@ -3802,10 +3808,10 @@
               ],
               "hide": false,
               "limit": "",
-              "measurement": "sawtooth_validator.Network-threadpool.task_time_in_queue",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.task_time_in_queue",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Network-threadpool.task_time_in_queue\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "query": "",
               "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
@@ -3823,7 +3829,13 @@
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Network"
+                }
+              ]
             }
           ],
           "thresholds": [],
@@ -3911,15 +3923,15 @@
                 },
                 {
                   "params": [
-                    "0"
+                    "previous"
                   ],
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Network-threadpool.workers_already_in_use",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.workers_in_use",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"value\") FROM \"sawtooth_validator.Network-threadpool.workers_already_in_use\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "query": "",
               "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
@@ -3927,7 +3939,7 @@
                 [
                   {
                     "params": [
-                      "value"
+                      "count"
                     ],
                     "type": "field"
                   },
@@ -3937,13 +3949,19 @@
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Network"
+                }
+              ]
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Network Threadpool Workers Already in Use",
+          "title": "Network Threadpool Workers in Use",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -4043,11 +4061,11 @@
                 }
               ],
               "hide": false,
-              "measurement": "sawtooth_validator.Component-threadpool.task_run_time",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.task_run_time",
               "orderByTime": "ASC",
               "policy": "default",
               "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Component-threadpool.task_run_time\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
-              "rawQuery": true,
+              "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
@@ -4064,7 +4082,13 @@
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Component"
+                }
+              ]
             }
           ],
           "thresholds": [],
@@ -4157,7 +4181,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Component-threadpool.task_time_in_queue",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.task_time_in_queue",
               "orderByTime": "ASC",
               "policy": "default",
               "query": "",
@@ -4178,7 +4202,13 @@
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Component"
+                }
+              ]
             }
           ],
           "thresholds": [],
@@ -4266,16 +4296,16 @@
                 },
                 {
                   "params": [
-                    "0"
+                    "previous"
                   ],
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Component-threadpool.workers_already_in_use",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.workers_in_use",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"value\") FROM \"sawtooth_validator.Component-threadpool.workers_already_in_use\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(0)",
-              "rawQuery": true,
+              "query": "",
+              "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
@@ -4289,22 +4319,22 @@
                   {
                     "params": [],
                     "type": "last"
-                  },
-                  {
-                    "params": [
-                      "1s"
-                    ],
-                    "type": "non_negative_derivative"
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Component"
+                }
+              ]
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Component Threadpool Workers Already in Use",
+          "title": "Component Threadpool Workers in Use",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -4403,11 +4433,11 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Signature-threadpool.task_run_time",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.task_run_time",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Signature-threadpool.task_run_time\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
-              "rawQuery": true,
+              "query": "",
+              "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
               "select": [
@@ -4424,7 +4454,13 @@
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Signature"
+                }
+              ]
             }
           ],
           "thresholds": [],
@@ -4517,10 +4553,10 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Signature-threadpool.task_time_in_queue",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.task_time_in_queue",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"99_percentile\") FROM \"sawtooth_validator.Signature-threadpool.task_time_in_queue\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "query": "",
               "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
@@ -4538,7 +4574,13 @@
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Signature"
+                }
+              ]
             }
           ],
           "thresholds": [],
@@ -4626,15 +4668,15 @@
                 },
                 {
                   "params": [
-                    "0"
+                    "previous"
                   ],
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.Signature-threadpool.workers_already_in_use",
+              "measurement": "sawtooth_validator.threadpool.InstrumentedThreadPoolExecutor.workers_in_use",
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"value\") FROM \"sawtooth_validator.Signature-threadpool.workers_already_in_use\" WHERE $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
+              "query": "",
               "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
@@ -4642,7 +4684,7 @@
                 [
                   {
                     "params": [
-                      "value"
+                      "count"
                     ],
                     "type": "field"
                   },
@@ -4652,13 +4694,19 @@
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "name",
+                  "operator": "=",
+                  "value": "Signature"
+                }
+              ]
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Signature Threadpool Workers Already in Use",
+          "title": "Signature Threadpool Workers in Use",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -4757,7 +4805,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.interconnect.dispatcher_queue_size",
+              "measurement": "sawtooth_validator.interconnect._SendReceive.dispatcher_queue_size",
               "orderByTime": "ASC",
               "policy": "default",
               "query": "SELECT mean(\"value\") FROM \"sawtooth_validator.interconnect.dispatcher_queue_size\" WHERE (\"connection\" = 'OutBoundCOnnectionTHread') AND $timeFilter GROUP BY time($__interval), \"host\" fill(none)",
@@ -4878,7 +4926,7 @@
                 }
               ],
               "hide": false,
-              "measurement": "sawtooth_validator.interconnect.dispatcher_queue_size",
+              "measurement": "sawtooth_validator.interconnect._SendReceive.dispatcher_queue_size",
               "orderByTime": "ASC",
               "policy": "default",
               "query": "SELECT mean(\"value\") FROM \"sawtooth_validator.interconnect.dispatcher_queue_size\" WHERE (\"connection\" =~ 'OutboundConnectionThread') AND $timeFilter GROUP BY time($__interval), \"host\" fill(none)",

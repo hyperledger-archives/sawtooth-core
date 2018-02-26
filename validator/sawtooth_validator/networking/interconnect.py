@@ -48,11 +48,10 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import \
     AuthorizationChallengeSubmit
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
-from sawtooth_validator.metrics.wrappers import GaugeWrapper
-from sawtooth_validator.metrics.wrappers import TimerWrapper
-from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator import metrics
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 # pylint: disable=too-many-lines
 
@@ -94,8 +93,7 @@ class _SendReceive(object):
                  zmq_identity=None, dispatcher=None, secured=False,
                  server_public_key=None, server_private_key=None,
                  heartbeat=False, heartbeat_interval=10,
-                 connection_timeout=60, monitor=False,
-                 metrics_registry=None):
+                 connection_timeout=60, monitor=False):
         """
         Constructor for _SendReceive.
 
@@ -159,7 +157,6 @@ class _SendReceive(object):
         self._monitor_fd = None
         self._monitor_sock = None
 
-        self._metrics_registry = metrics_registry
         self._queue_size_gauges = {}
         self._received_message_counters = {}
         self._dispatcher_queue = None
@@ -181,24 +178,18 @@ class _SendReceive(object):
 
     def _get_queue_size_gauge(self, tag):
         if tag not in self._queue_size_gauges:
-            if self._metrics_registry:
-                self._queue_size_gauges[tag] = GaugeWrapper(
-                    self._metrics_registry.gauge(
-                        'interconnect.dispatcher_queue_size', tags=[
-                            'connection={}'.format(tag)]))
-            else:
-                self._queue_size_gauges[tag] = GaugeWrapper()
+            self._queue_size_gauges[tag] = COLLECTOR.gauge(
+                'dispatcher_queue_size',
+                tags={'connection': tag},
+                instance=self)
         return self._queue_size_gauges[tag]
 
     def _get_received_message_counter(self, tag):
         if tag not in self._received_message_counters:
-            if self._metrics_registry:
-                self._received_message_counters[tag] = CounterWrapper(
-                    self._metrics_registry.counter(
-                        'interconnect_received_message_count', tags=[
-                            'message_type={}'.format(tag)]))
-            else:
-                self._received_message_counters[tag] = CounterWrapper()
+            self._received_message_counters[tag] = COLLECTOR.counter(
+                'received_message_count',
+                tags={'message_type': tag},
+                instance=self)
         return self._received_message_counters[tag]
 
     @asyncio.coroutine
@@ -660,9 +651,7 @@ class Interconnect(object):
                  max_future_callback_workers=10,
                  roles=None,
                  authorize=False,
-                 signer=None,
-                 metrics_registry=None
-                 ):
+                 signer=None):
         """
         Constructor for Interconnect.
 
@@ -724,12 +713,10 @@ class Interconnect(object):
             server_private_key=server_private_key,
             heartbeat=heartbeat,
             connection_timeout=connection_timeout,
-            monitor=monitor,
-            metrics_registry=metrics_registry)
+            monitor=monitor)
 
         self._thread = None
 
-        self._metrics_registry = metrics_registry
         self._send_response_timers = {}
 
     @property
@@ -742,13 +729,10 @@ class Interconnect(object):
 
     def _get_send_response_timer(self, tag):
         if tag not in self._send_response_timers:
-            if self._metrics_registry:
-                self._send_response_timers[tag] = TimerWrapper(
-                    self._metrics_registry.timer(
-                        'interconnect_send_response_time', tags=[
-                            'message_type={}'.format(tag)]))
-            else:
-                self._send_response_timers[tag] = TimerWrapper()
+            self._send_response_timers[tag] = COLLECTOR.timer(
+                'send_response_time',
+                tags={'message_type': tag},
+                instance=self)
         return self._send_response_timers[tag]
 
     def connection_id_to_public_key(self, connection_id):
@@ -812,8 +796,7 @@ class Interconnect(object):
             server_private_key=self._server_private_key,
             future_callback_threadpool=self._future_callback_threadpool,
             heartbeat=True,
-            connection_timeout=self._connection_timeout,
-            metrics_registry=self._metrics_registry)
+            connection_timeout=self._connection_timeout)
 
         self.outbound_connections[uri] = conn
         conn.start()
@@ -1241,8 +1224,7 @@ class OutboundConnection(object):
                  server_private_key,
                  future_callback_threadpool,
                  heartbeat=True,
-                 connection_timeout=60,
-                 metrics_registry=None):
+                 connection_timeout=60):
         self._futures = future.FutureCollection(
             resolving_threadpool=future_callback_threadpool)
         self._zmq_identity = zmq_identity
@@ -1266,11 +1248,9 @@ class OutboundConnection(object):
             server_public_key=server_public_key,
             server_private_key=server_private_key,
             heartbeat=heartbeat,
-            connection_timeout=connection_timeout,
-            metrics_registry=metrics_registry)
+            connection_timeout=connection_timeout)
 
         self._thread = None
-        self._metrics_registry = metrics_registry
 
     @property
     def connection_id(self):

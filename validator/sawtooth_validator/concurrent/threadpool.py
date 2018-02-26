@@ -14,22 +14,19 @@
 # ------------------------------------------------------------------------------
 
 import logging
-import multiprocessing
 import os
 
 from concurrent.futures import ThreadPoolExecutor
 
-from sawtooth_validator.concurrent import atomic
-from sawtooth_validator.metrics.wrappers import GaugeWrapper
-from sawtooth_validator.metrics.wrappers import TimerWrapper
+from sawtooth_validator import metrics
 
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
-    def __init__(self, max_workers=None, name='',
-                 trace=None, metrics_registry=None):
+    def __init__(self, max_workers=None, name='', trace=None):
         if trace is None:
             self._trace = 'SAWTOOTH_TRACE_LOGGING' in os.environ
         else:
@@ -41,32 +38,22 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
 
         LOGGER.debug('Creating thread pool executor %s', self._name)
 
-        self._workers_in_use = atomic.Counter()
-
-        self._max_workers = max_workers
-        if self._max_workers is None:
-            # This is the same default as ThreadPoolExecutor, but we want to
-            # know how many workers there are for logging
-            self._max_workers = multiprocessing.cpu_count() * 5
         super().__init__(max_workers)
 
-        if metrics_registry:
-            # Tracks how many workers are already in use
-            self._workers_already_in_use_gauge = GaugeWrapper(
-                metrics_registry.gauge(
-                    '{}-threadpool.workers_already_in_use'.format(self._name)))
-            # Tracks how long tasks take to run
-            self._task_run_timer = TimerWrapper(
-                metrics_registry.timer(
-                    '{}-threadpool.task_run_time'.format(self._name)))
-            # Tracks how long tasks wait in the queue
-            self._task_time_in_queue_timer = TimerWrapper(
-                metrics_registry.timer(
-                    '{}-threadpool.task_time_in_queue'.format(self._name)))
-        else:
-            self._workers_already_in_use_gauge = GaugeWrapper()
-            self._task_run_timer = TimerWrapper()
-            self._task_time_in_queue_timer = TimerWrapper()
+        self._workers_in_use = COLLECTOR.counter(
+            "workers_in_use",
+            instance=self,
+            tags={"name": self._name})
+        # Tracks how long tasks take to run
+        self._task_run_timer = COLLECTOR.timer(
+            "task_run_time",
+            instance=self,
+            tags={"name": self._name})
+        # Tracks how long tasks wait in the queue
+        self._task_time_in_queue_timer = COLLECTOR.timer(
+            "task_time_in_queue",
+            instance=self,
+            tags={"name": self._name})
 
     def submit(self, fn, *args, **kwargs):
         time_in_queue_ctx = self._task_time_in_queue_timer.time()
@@ -84,8 +71,7 @@ class InstrumentedThreadPoolExecutor(ThreadPoolExecutor):
         def wrapper():
             time_in_queue_ctx.stop()
 
-            self._workers_already_in_use_gauge.set_value(
-                self._workers_in_use.get_and_inc())
+            self._workers_in_use.inc()
 
             if self._trace:
                 LOGGER.debug(

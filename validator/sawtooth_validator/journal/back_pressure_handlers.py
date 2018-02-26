@@ -19,14 +19,14 @@ from sawtooth_validator.protobuf.client_batch_submit_pb2 \
     import ClientBatchSubmitResponse
 from sawtooth_validator.protobuf.validator_pb2 import Message
 
-from sawtooth_validator.metrics.wrappers import CounterWrapper
-from sawtooth_validator.metrics.wrappers import GaugeWrapper
+from sawtooth_validator import metrics
 
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class ClientBatchSubmitBackpressureHandler(Handler):
@@ -34,21 +34,16 @@ class ClientBatchSubmitBackpressureHandler(Handler):
     able.  Otherwise it returns a QUEUE_FULL response.
     """
 
-    def __init__(self, can_accept_fn, queue_info_fn, metrics_registry=None):
+    def __init__(self, can_accept_fn, queue_info_fn):
         self._can_accept = can_accept_fn
         self._queue_info = queue_info_fn
         self._applying_backpressure = False
 
-        if metrics_registry:
-            self._batches_rejected_count = CounterWrapper(
-                metrics_registry.counter(
-                    'backpressure_batches_rejected_count'))
-            self._batches_rejected_gauge = GaugeWrapper(
-                metrics_registry.gauge(
-                    'backpressure_batches_rejected_gauge', default=0))
-        else:
-            self._batches_rejected_count = CounterWrapper()
-            self._batches_rejected_gauge = GaugeWrapper()
+        self._batches_rejected_count = COLLECTOR.counter(
+            'backpressure_batches_rejected_count', instance=self)
+        self._batches_rejected_gauge = COLLECTOR.gauge(
+            'backpressure_batches_rejected_gauge', instance=self)
+        self._batches_rejected_gauge.set_value(0)
 
     def handle(self, connection_id, message_content):
         if not self._can_accept():

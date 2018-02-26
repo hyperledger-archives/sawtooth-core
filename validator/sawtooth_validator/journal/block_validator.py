@@ -32,12 +32,13 @@ from sawtooth_validator.journal.chain_commit_state import MissingDependency
 from sawtooth_validator.journal.validation_rule_enforcer import \
     enforce_validation_rules
 from sawtooth_validator.state.settings_view import SettingsViewFactory
-from sawtooth_validator.metrics.wrappers import CounterWrapper
+from sawtooth_validator import metrics
 
 from sawtooth_validator.state.merkle import INIT_ROOT_KEY
 
 
 LOGGER = logging.getLogger(__name__)
+COLLECTOR = metrics.get_collector(__name__)
 
 
 class BlockValidationError(Exception):
@@ -115,7 +116,6 @@ class BlockValidator(object):
                  data_dir,
                  config_dir,
                  permission_verifier,
-                 metrics_registry=None,
                  thread_pool=None):
         """Initialize the BlockValidator
         Args:
@@ -136,8 +136,6 @@ class BlockValidator(object):
                 consensus module can be found.
             permission_verifier: The delegate for handling permission
                 validation on blocks.
-            metrics_registry: (Optional) Pyformance metrics registry handle for
-                creating new metrics.
             thread_pool: (Optional) Executor pool used to submit block
                 validation jobs. If not specified, a default will be created.
         Returns:
@@ -157,11 +155,8 @@ class BlockValidator(object):
         self._thread_pool = InstrumentedThreadPoolExecutor(1) \
             if thread_pool is None else thread_pool
 
-        if metrics_registry:
-            self._moved_to_fork_count = CounterWrapper(
-                metrics_registry.counter('chain_head_moved_to_fork_count'))
-        else:
-            self._moved_to_fork_count = CounterWrapper()
+        self._moved_to_fork_count = COLLECTOR.counter(
+            'chain_head_moved_to_fork_count', instance=self)
 
         # Blocks that are currently being processed
         self._blocks_processing = ConcurrentSet()
