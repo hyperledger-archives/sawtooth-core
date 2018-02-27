@@ -131,6 +131,9 @@ class ChainController(object):
         self._chain_observers = chain_observers
 
         self._chain_head_gauge = COLLECTOR.gauge('chain_head', instance=self)
+        self._committed_transactions_gauge = COLLECTOR.gauge(
+            'committed_transactions_gauge', instance=self)
+        self._committed_transactions_gauge.set_value(0)
         self._committed_transactions_count = COLLECTOR.counter(
             'committed_transactions_count', instance=self)
         self._block_num_gauge = COLLECTOR.gauge('block_num', instance=self)
@@ -232,6 +235,9 @@ class ChainController(object):
 
                         self._chain_head_gauge.set_value(
                             self._chain_head.identifier[:8])
+
+                        self._committed_transactions_gauge.set_value(
+                            self._block_store.get_transaction_count())
 
                         self._committed_transactions_count.inc(
                             result.transaction_count)
