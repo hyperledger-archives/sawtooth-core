@@ -13,18 +13,6 @@ A transaction family includes these components:
 * A data model to record and store data
 * A client to handle the client logic for your application
 
-The transaction processor is responsible for registering with the validator,
-providing a transaction handler with an apply method and a transaction handler
-class for metadata, and getting/setting state as needed.
-
-The client is responsible for creating and signing transactions, combining
-those transactions into batches, and submitting them to the validator. The
-client can post batches through the REST API or connect directly to the
-validator via `ZeroMQ <http://zeromq.org>`_.
-
-The client and transaction processor must use the same data model,
-serialization/encoding method, and addressing scheme.
-
 See :doc:`../transaction_family_specifications` for a list of example
 transaction families. Sawtooth provides these examples to serve as models for
 low-level functions (such as maintaining chain-wide settings and storing

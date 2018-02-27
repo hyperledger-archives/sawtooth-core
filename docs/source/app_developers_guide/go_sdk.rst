@@ -1,6 +1,6 @@
-*********************************************************
-Tutorial: Writing a Transaction Processor with the Go SDK
-*********************************************************
+**************************
+Tutorial: Using the Go SDK
+**************************
 
 .. toctree::
    :maxdepth: 2

@@ -16,23 +16,18 @@
 Transaction Processor: Creating a Transaction Handler
 *****************************************************
 
-A transaction processor has two top-level components: a processor class and
-a handler class.
+A transaction processor has two top-level components:
 
-* The SDK provides a general-purpose processor class.
+* Processor class. The SDK provides a general-purpose processor class.
 
-* The handler class is application-dependent. It contains the business logic for
-  a particular family of transactions. Multiple handlers can be connected to an
-  instance of the processor class.
+* Handler class. The handler class is application-dependent. It contains the
+  business logic for a particular family of transactions. Multiple handlers
+  can be connected to an instance of the processor class.
 
-Handlers get called in two ways:
-
-#. An ``apply`` method
-#. Various "metadata" methods
-
-The metadata is used to connect the handler to the processor, and
-we'll discuss it at the end of this tutorial. The bulk of the handler, however,
-is made up of ``apply`` and its helper functions, so that's where we'll start.
+Handlers get called in two ways: with an ``apply`` method and with various
+"metadata" methods. The metadata is used to connect the handler to the
+processor. The bulk of the handler, however, is made up of ``apply`` and its
+helper functions.
 
 The ``apply`` Method
 ====================
@@ -346,7 +341,7 @@ The validation rules and state updates that are associated with the ``create``,
 Create
 ------
 
-The ``create`` action has the following definition:
+The ``create`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
@@ -431,7 +426,7 @@ The ``create`` action has the following definition:
 Delete
 ------
 
-The ``delete`` action has the following definition:
+The ``delete`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
@@ -494,7 +489,7 @@ The ``delete`` action has the following definition:
 Take
 ----
 
-The ``take`` action has the following definition:
+The ``take`` action has the following implementation:
 
 {% if language == 'JavaScript' %}
 
@@ -742,7 +737,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
     getGame (name) {
       return this._loadGames(name).then((games) => games.get(name))
     }
-  
+
     setGame (name, game) {
       let address = _makeXoAddress(name)
 
@@ -1169,16 +1164,21 @@ the UTF-8 encoding of the string "xo" (which is "5b7349") plus the
 first 64 characters of the SHA-512 hash of the UTF-8 encoding of the
 game name.
 
-For example, the XO address for a game called "mygame" could be
+For example, the XO address for a game called "my-game" could be
 generated as follows:
 
 .. code-block:: pycon
 
-    >>> hashlib.sha512('xo'.encode('utf-8')).hexdigest()[:6] +
-    >>> hashlib.sha512('mygame'.encode('utf-8')).hexdigest()[:64]
-    '5b7349700e158b598043efd6d7610345a75a00b22ac14c9278db53f586179a92b72fbd'
+    >>> x = hashlib.sha512('xo'.encode('utf-8')).hexdigest()[:6]
+    >>> x
+    '5b7349'
+    >>> y = hashlib.sha512('my-game'.encode('utf-8')).hexdigest()[:64]
+    >>> y
+    '4d4cffe9cf3fb4e41def5114a323e292af9b0e07925cca6299d671ce7fc7ec37'
+    >>> x+y
+    '5b73494d4cffe9cf3fb4e41def5114a323e292af9b0e07925cca6299d671ce7fc7ec37'
 
-Addressing is defined as follows:
+Addressing is implemented as follows:
 
 {% if language == 'JavaScript' %}
 
