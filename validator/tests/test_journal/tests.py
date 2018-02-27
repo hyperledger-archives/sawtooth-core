@@ -32,7 +32,7 @@ from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 
 from sawtooth_validator.journal.block_store import BlockStore
 from sawtooth_validator.journal.block_validator import BlockValidator
-from sawtooth_validator.journal.block_validator import BlockValidationError
+from sawtooth_validator.journal.block_validator import BlockValidationFailure
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.chain_commit_state import ChainCommitState
 from sawtooth_validator.journal.chain_commit_state import DuplicateTransaction
@@ -648,7 +648,7 @@ class TestBlockValidator(unittest.TestCase):
 
         self.validate_block(head)
 
-        self.assert_invalid_block(head)
+        self.assert_unknown_block(head)
         self.assert_new_block_not_committed()
 
     def test_fork_invalid_predecessor(self):
@@ -672,7 +672,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where the new block has a bad batch
         """
         _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
+            self.root, 5, {'add_to_store': True}, False)
 
         new_block = self.block_tree_manager.generate_block(
             previous_block=head,
@@ -689,7 +689,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where the new block has a bad batch
         """
         _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
+            self.root, 5, {'add_to_store': True}, False)
 
         new_block = self.block_tree_manager.generate_block(
             previous_block=head,
@@ -707,7 +707,7 @@ class TestBlockValidator(unittest.TestCase):
         dependency.
         """
         _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
+            self.root, 5, {'add_to_store': True}, False)
 
         txn = self.block_tree_manager.generate_transaction(deps=["missing"])
         batch = self.block_tree_manager.generate_batch(txns=[txn])
@@ -728,7 +728,7 @@ class TestBlockValidator(unittest.TestCase):
         the chain.
         """
         _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
+            self.root, 5, {'add_to_store': True}, False)
 
         batch = self.block_tree_manager.generate_batch()
         new_block = self.block_tree_manager.generate_block(
@@ -753,7 +753,7 @@ class TestBlockValidator(unittest.TestCase):
         Test the case where the new block has a duplicate batches.
         """
         _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
+            self.root, 5, {'add_to_store': True}, False)
 
         batch = self.block_tree_manager.generate_batch()
 
@@ -773,7 +773,7 @@ class TestBlockValidator(unittest.TestCase):
         committed.
         """
         _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
+            self.root, 5, {'add_to_store': True}, False)
 
         txn = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn])
@@ -802,7 +802,7 @@ class TestBlockValidator(unittest.TestCase):
         transactions.
         """
         _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
+            self.root, 5, {'add_to_store': True}, False)
 
         txn = self.block_tree_manager.generate_transaction()
         batch = self.block_tree_manager.generate_batch(txns=[txn, txn])
@@ -827,6 +827,11 @@ class TestBlockValidator(unittest.TestCase):
         self.assertEqual(
             block.status, BlockStatus.Invalid,
             "Block should be invalid")
+
+    def assert_unknown_block(self, block):
+        self.assertEqual(
+            block.status, BlockStatus.Unknown,
+            "Block should be unknown")
 
     def assert_new_block_committed(self):
         self.assert_handler_has_result()
@@ -879,9 +884,10 @@ class TestBlockValidator(unittest.TestCase):
 
     # block tree manager interface
 
-    def generate_chain_with_head(self, root_block, num_blocks, params=None):
+    def generate_chain_with_head(self, root_block, num_blocks, params=None,
+                                 exclude_head=True):
         chain = self.block_tree_manager.generate_chain(
-            root_block, num_blocks, params)
+            root_block, num_blocks, params, exclude_head)
 
         head = chain[-1]
 
@@ -1298,7 +1304,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
 
         with patch.object(BlockValidator,
                           'validate_block',
-                          side_effect=BlockValidationError):
+                          side_effect=BlockValidationFailure):
             self.chain_ctrl.on_block_received(my_genesis_block)
 
         self.assertIsNone(self.chain_ctrl.chain_head)

@@ -41,9 +41,16 @@ LOGGER = logging.getLogger(__name__)
 COLLECTOR = metrics.get_collector(__name__)
 
 
+class BlockValidationFailure(Exception):
+    """
+    Indication that a failure has occurred during block validation.
+    """
+
+
 class BlockValidationError(Exception):
     """
-    Indication that an error has occurred during block validation.
+    Indication that an error occured during block validation and the validity
+    of the block could not be determined.
     """
 
 
@@ -187,7 +194,7 @@ class BlockValidator(object):
             prev_state_root: the state root to execute transactions on top of
 
         Raises:
-            BlockValidationError:
+            BlockValidationFailure:
                 If validation fails, raises this error with the reason.
             MissingDependency:
                 Validation failed because of a missing dependency.
@@ -232,7 +239,7 @@ class BlockValidator(object):
                 DuplicateTransaction,
                 MissingDependency) as err:
             scheduler.cancel()
-            raise BlockValidationError(
+            raise BlockValidationFailure(
                 "Block {} failed validation: {}".format(blkw, err))
 
         except Exception:
@@ -254,12 +261,12 @@ class BlockValidator(object):
                 state_hash = batch_result.state_hash
                 blkw.num_transactions += len(batch.transactions)
             else:
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     "Block {} failed validation: Invalid batch "
                     "{}".format(blkw, batch))
 
         if blkw.state_root_hash != state_hash:
-            raise BlockValidationError(
+            raise BlockValidationFailure(
                 "Block {} failed state root hash validation. Expected {}"
                 " but got {}".format(
                     blkw, blkw.state_root_hash, state_hash))
@@ -296,7 +303,7 @@ class BlockValidator(object):
         if blkw.status == BlockStatus.Valid:
             return
         elif blkw.status == BlockStatus.Invalid:
-            raise BlockValidationError(
+            raise BlockValidationFailure(
                 'Block {} is already invalid'.format(blkw))
 
         # pylint: disable=broad-except
@@ -315,7 +322,7 @@ class BlockValidator(object):
                         blkw))
 
             if not self._validate_permissions(blkw, prev_state_root):
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} failed permission validation'.format(blkw))
 
             try:
@@ -334,12 +341,12 @@ class BlockValidator(object):
                 validator_id=public_key)
 
             if not consensus_block_verifier.verify_block(blkw):
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} failed {} consensus validation'.format(
                         blkw, consensus))
 
             if not self._validate_on_chain_rules(blkw, prev_state_root):
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} failed on-chain validation rules'.format(
                         blkw))
 
@@ -357,8 +364,12 @@ class BlockValidator(object):
 
             blkw.status = BlockStatus.Valid
 
-        except BlockValidationError as err:
+        except BlockValidationFailure as err:
             blkw.status = BlockStatus.Invalid
+            raise err
+
+        except BlockValidationError as err:
+            blkw.status = BlockStatus.Unknown
             raise err
 
         except ChainHeadUpdated as e:
@@ -405,14 +416,6 @@ class BlockValidator(object):
             try:
                 blk = self._block_cache[blk.previous_block_id]
             except KeyError:
-                LOGGER.debug(
-                    "Failed to build fork diff due to missing predecessor: %s",
-                    blk)
-
-                # Mark all blocks in the longer chain since the invalid block
-                # as invalid.
-                for blk in fork_diff:
-                    blk.status = BlockStatus.Invalid
                 raise BlockValidationError(
                     'Failed to build fork diff: block {} missing predecessor'
                     .format(blk))
@@ -431,7 +434,7 @@ class BlockValidator(object):
                 # We are at a genesis block and the blocks are not the same
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationError(
+                raise BlockValidationFailure(
                     'Block {} rejected due to wrong genesis {}'.format(
                         cur_blkw, new_blkw))
 
@@ -439,8 +442,6 @@ class BlockValidator(object):
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
-                for b in new_chain:
-                    b.status = BlockStatus.Invalid
                 raise BlockValidationError(
                     'Block {} rejected due to missing predecessor {}'.format(
                         new_blkw, new_blkw.previous_block_id))
@@ -526,9 +527,8 @@ class BlockValidator(object):
     def _wrap_callback(self, block, callback):
         # Internal cleanup after verification
         def wrapper(commit_new_block, result):
-            LOGGER.debug(
-                "Removing block from processing %s",
-                block.identifier[:6])
+            block = result.block
+            LOGGER.debug("Removing block from processing %s", block.identifier)
             try:
                 self._blocks_processing.remove(block.identifier)
             except KeyError:
@@ -537,15 +537,14 @@ class BlockValidator(object):
                     " wasn't in processes: %s",
                     block.identifier)
 
-            # If the block is invalid, mark all descendant blocks as invalid
-            # and remove from pending.
+            # If the block was valid, submit all pending blocks for validation
             if block.status == BlockStatus.Valid:
                 blocks_now_ready = self._blocks_pending.pop(
                     block.identifier, [])
                 self.submit_blocks_for_verification(blocks_now_ready, callback)
 
-            else:
-                # Get all the pending blocks that can now be processed
+            elif block.status == BlockStatus.Invalid:
+                # If the block was invalid, mark all pending blocks as invalid
                 blocks_now_invalid = self._blocks_pending.pop(
                     block.identifier, [])
 
@@ -560,6 +559,26 @@ class BlockValidator(object):
                     # Get descendants of the descendant
                     blocks_now_invalid.extend(
                         self._blocks_pending.pop(invalid_block.identifier, []))
+
+            else:
+                # If an error occured during validation, something is wrong
+                # internally and we need to abort validation of this block
+                # and all its children without marking them as invalid.
+                blocks_to_remove = self._blocks_pending.pop(
+                    block.identifier, [])
+
+                while blocks_to_remove:
+                    block = blocks_to_remove.pop()
+
+                    LOGGER.debug(
+                        'Removing block from cache and pending due to error '
+                        'during validation: %s', block)
+
+                    del self._block_cache[block.identifier]
+
+                    # Get descendants of the descendant
+                    blocks_to_remove.extend(
+                        self._blocks_pending.pop(block.identifier, []))
 
             callback(commit_new_block, result)
 
@@ -612,8 +631,15 @@ class BlockValidator(object):
                 self._extend_fork_diff_to_common_ancestor(
                     new_block, current_block,
                     result.new_chain, result.current_chain)
+            except BlockValidationFailure as err:
+                LOGGER.warning(
+                    'Block %s failed validation: %s',
+                    block, err)
+                block.status = BlockStatus.Invalid
             except BlockValidationError as err:
-                LOGGER.warning('%s', err)
+                LOGGER.error(
+                    'Encountered an error while validating %s: %s',
+                    block, err)
                 callback(False, result)
                 return
 
@@ -623,15 +649,20 @@ class BlockValidator(object):
                     try:
                         self.validate_block(
                             blk, chain_head)
-                    except BlockValidationError as err:
+                    except BlockValidationFailure as err:
                         LOGGER.warning(
                             'Block %s failed validation: %s',
                             blk, err)
                         valid = False
+                    except BlockValidationError as err:
+                        LOGGER.error(
+                            'Encountered an error while validating %s: %s',
+                            blk, err)
+                        callback(False, result)
                     result.transaction_count += block.num_transactions
                 else:
                     LOGGER.info(
-                        "Block marked invalid(invalid predecessor): %s", blk)
+                        "Block marked invalid (invalid predecessor): %s", blk)
                     blk.status = BlockStatus.Invalid
 
             if not valid:
