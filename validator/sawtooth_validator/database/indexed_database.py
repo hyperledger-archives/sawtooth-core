@@ -109,6 +109,16 @@ class IndexedDatabase(database.Database):
         with self._lmdb.begin(db=self._main_db) as txn:
             return txn.stat()['entries']
 
+    def count(self, index=None):
+        if index is None:
+            return len(self)
+        else:
+            if index is not None and index not in self._indexes:
+                raise ValueError('Index {} does not exist'.format(index))
+
+            with self._lmdb.begin(db=self._indexes[index][0]) as txn:
+                return txn.stat()['entries']
+
     def contains_key(self, key, index=None):
         if index is not None and index not in self._indexes:
             raise ValueError('Index {} does not exist'.format(index))

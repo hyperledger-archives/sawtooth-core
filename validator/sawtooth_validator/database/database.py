@@ -46,6 +46,11 @@ class Database(metaclass=ABCMeta):
     def contains_key(self, key, index=None):
         raise NotImplementedError()
 
+    @abstractmethod
+    def count(self, index=None):
+        """Retrieve the count of entries in the main database or the index."""
+        raise NotImplementedError()
+
     def get(self, key, index=None):
         """Retrieves a value associated with a key from the database
 

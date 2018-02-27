@@ -46,6 +46,15 @@ class DictDatabase(database.Database):
 
         return key in self._data
 
+    def count(self, index=None):
+        if index is not None and index not in self._indexes:
+            raise ValueError('Index {} does not exist'.format(index))
+
+        if index:
+            return len(self._indexes[index][0])
+
+        return len(self._data)
+
     def get_multi(self, keys, index=None):
         if index is not None and index not in self._indexes:
             raise ValueError('Index {} does not exist'.format(index))

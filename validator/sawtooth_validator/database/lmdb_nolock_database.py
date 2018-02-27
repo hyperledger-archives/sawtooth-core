@@ -80,6 +80,12 @@ class LMDBNoLockDatabase(database.Database):
         """
         raise NotImplementedError()
 
+    def count(self, index=None):
+        """
+        This currently is just to satisfy the interface.
+        """
+        raise NotImplementedError()
+
     def update(self, puts, deletes):
         with self._lmdb.begin(write=True, buffers=True) as txn:
             for k in deletes:
