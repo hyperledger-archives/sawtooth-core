@@ -188,7 +188,7 @@ private:
 class XoTransactionPayload {
 public:
     // construct a class instance from CSV input string   
-    XoTransactionPayload(const string& csv) {
+    explicit XoTransactionPayload(const string& csv) {
         size_t pos = 0;
 
         bValid = false;
