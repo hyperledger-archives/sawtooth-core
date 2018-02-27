@@ -28,7 +28,7 @@ from sawtooth_validator.exceptions import WaitCancelledException
 LOGGER = logging.getLogger(__name__)
 
 
-class ProcessorIteratorCollection(object):
+class ProcessorManager(object):
     """Contains all of the registered (added via __setitem__)
     transaction processors in a _processors (dict) where the keys
     are ProcessorTypes and the values are ProcessorIterators.

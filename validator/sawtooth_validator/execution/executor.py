@@ -31,7 +31,10 @@ from sawtooth_validator.execution.context_manager import \
     CreateContextException
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
-from sawtooth_validator.execution import processor_iterator
+from sawtooth_validator.execution.processor_manager import ProcessorType
+from sawtooth_validator.execution.processor_manager import ProcessorManager
+from sawtooth_validator.execution.processor_manager import \
+    RoundRobinProcessorIterator
 from sawtooth_validator.networking.future import FutureResult
 from sawtooth_validator.networking.future import FutureTimeoutError
 from sawtooth_validator import metrics
@@ -50,7 +53,7 @@ class TransactionExecutorThread(object):
                  service,
                  context_manager,
                  scheduler,
-                 processors,
+                 processor_manager,
                  settings_view_factory,
                  invalid_observers):
         """
@@ -59,7 +62,7 @@ class TransactionExecutorThread(object):
             context_manager (ContextManager): The cached state for tps
             scheduler (scheduler.Scheduler): Provides the order of txns to
                 execute.
-            processors (ProcessorIteratorCollection): Provides the next
+            processor_manager (ProcessorManager): Provides the next
                 transaction processor to send to.
             settings_view_factory (SettingsViewFactory): Read the configuration
                 state
@@ -71,7 +74,7 @@ class TransactionExecutorThread(object):
         self._service = service
         self._context_manager = context_manager
         self._scheduler = scheduler
-        self._processors = processors
+        self._processor_manager = processor_manager
         self._settings_view_factory = settings_view_factory
         self._tp_settings_key = "sawtooth.validator.transaction_families"
         self._done = False
@@ -103,13 +106,13 @@ class TransactionExecutorThread(object):
         response = processor_pb2.TpProcessResponse()
         response.ParseFromString(result.content)
 
-        processor_type = processor_iterator.ProcessorType(
+        processor_type = ProcessorType(
             req.header.family_name,
             req.header.family_version)
 
-        self._processors[processor_type].get_processor(
+        self._processor_manager[processor_type].get_processor(
             result.connection_id).dec_occupancy()
-        self._processors.notify()
+        self._processor_manager.notify()
 
         self._get_tp_process_response_counter(
             response.Status.Name(response.status)).inc()
@@ -191,7 +194,7 @@ class TransactionExecutorThread(object):
             header = transaction_pb2.TransactionHeader()
             header.ParseFromString(txn.header)
 
-            processor_type = processor_iterator.ProcessorType(
+            processor_type = ProcessorType(
                 header.family_name,
                 header.family_version)
 
@@ -209,7 +212,7 @@ class TransactionExecutorThread(object):
             try:
                 transaction_families = json.loads(transaction_families)
                 required_transaction_processors = [
-                    processor_iterator.ProcessorType(
+                    ProcessorType(
                         d.get('family'),
                         d.get('version')) for d in transaction_families]
             except ValueError:
@@ -319,7 +322,7 @@ class TransactionExecutorThread(object):
 
     def _execute(self, processor_type, content, signature):
         try:
-            processor = self._processors.get_next_of_type(
+            processor = self._processor_manager.get_next_of_type(
                 processor_type=processor_type)
         except WaitCancelledException:
             LOGGER.exception("Transaction %s cancelled while "
@@ -348,7 +351,7 @@ class TransactionExecutorThread(object):
         if connection_id not in self._open_futures:
             # Connection has already been removed.
             return
-        self._processors.remove(connection_id)
+        self._processor_manager.remove(connection_id)
         futures_to_set = [
             self._open_futures[connection_id][key]
             for key in self._open_futures[connection_id]
@@ -368,7 +371,7 @@ class TransactionExecutorThread(object):
         return self._done
 
     def cancel(self):
-        self._processors.cancel()
+        self._processor_manager.cancel()
         self._scheduler.cancel()
 
 
@@ -386,14 +389,13 @@ class TransactionExecutor(object):
             settings_view_factory (SettingsViewFactory): Read-only view of
                 setting state.
         Attributes:
-            processors (ProcessorIteratorCollection): All of the registered
+            processor_manager (ProcessorManager): All of the registered
                 transaction processors and a way to find the next one to send
                 to.
         """
         self._service = service
         self._context_manager = context_manager
-        self.processors = processor_iterator.ProcessorIteratorCollection(
-            processor_iterator.RoundRobinProcessorIterator)
+        self.processor_manager = ProcessorManager(RoundRobinProcessorIterator)
         self._settings_view_factory = settings_view_factory
         self._executing_threadpool = \
             InstrumentedThreadPoolExecutor(max_workers=5, name='Executing')
@@ -445,7 +447,8 @@ class TransactionExecutor(object):
         try:
             with self._lock:
                 futures = {}
-                for connection_id in self.processors.get_all_processors():
+                for connection_id in \
+                        self.processor_manager.get_all_processors():
                     fut = self._service.send(
                         validator_pb2.Message.PING_REQUEST,
                         network_pb2.PingRequest().SerializeToString(),
@@ -473,7 +476,7 @@ class TransactionExecutor(object):
             service=self._service,
             context_manager=self._context_manager,
             scheduler=scheduler,
-            processors=self.processors,
+            processor_manager=self.processor_manager,
             settings_view_factory=self._settings_view_factory,
             invalid_observers=self._invalid_observers)
         self._executing_threadpool.submit(t.execute_thread)
