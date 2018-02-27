@@ -185,6 +185,17 @@ class BlockStoreTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             stored = block_store.get_transaction("bad")
 
+    def test_get_count(self):
+        """ Test BlockStore get_*_count operations.
+        """
+        block = self.create_block()
+        block_store = self.create_block_store()
+        block_store.update_chain([block])
+
+        self.assertEqual(1, block_store.get_block_count())
+        self.assertEqual(1, block_store.get_batch_count())
+        self.assertEqual(1, block_store.get_transaction_count())
+
     def assert_blocks_equal(self, stored, reference):
         self.asset_protobufs_equal(stored.block,
                                    reference.block)

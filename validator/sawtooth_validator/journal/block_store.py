@@ -437,6 +437,30 @@ class BlockStore(MutableMapping):
             for txn_id, block in blocks
         ]
 
+    def get_transaction_count(self):
+        """Returns the count of transactions in the block store.
+
+        Returns:
+            Integer: The count of transactions
+        """
+        return self._block_store.count(index='transaction')
+
+    def get_batch_count(self):
+        """Returns the count of batches in the block store.
+
+        Returns:
+            Integer: The count of batches
+        """
+        return self._block_store.count(index='batch')
+
+    def get_block_count(self):
+        """Returns the count of blocks in the block store.
+
+        Returns:
+            Integer: The count of blocks
+        """
+        return self._block_store.count()
+
     @staticmethod
     def _get_txn_from_block(block, txn_id):
         for batch in block.batches:
