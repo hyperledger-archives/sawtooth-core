@@ -1,6 +1,6 @@
-*************************************************************
-Tutorial: Writing a Transaction Processor with the Python SDK
-*************************************************************
+******************************
+Tutorial: Using the Python SDK
+******************************
 
 .. toctree::
    :maxdepth: 2

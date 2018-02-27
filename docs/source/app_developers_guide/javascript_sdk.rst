@@ -1,6 +1,6 @@
-*****************************************************************
-Tutorial: Writing a Transaction Processor with the JavaScript SDK
-*****************************************************************
+**********************************
+Tutorial: Using the JavaScript SDK
+**********************************
 
 .. toctree::
    :maxdepth: 2

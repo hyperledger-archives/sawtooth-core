@@ -12,19 +12,48 @@
     {% set lowercase_lang = 'go' %}
 {% endif %}
 
-This tutorial describes how to create a Hyperledger Sawtooth transaction
-processor using the Sawtooth {{ language }} SDK.
-In this tutorial, you will construct a transaction handler that implements a
-distributed version of the two-player game
+This tutorial describes how to develop a Sawtooth application with an example
+transaction family, using the Sawtooth {{ language }} SDK.
+
+A transaction family includes these components:
+
+* A transaction processor to define the business logic for your application.
+  The transaction processor is responsible for registering with the validator,
+  handling transaction payloads and associated metadata, and getting/setting
+  state as needed.
+
+* A data model to record and store data
+
+* A client to handle the client logic for your application.
+  The client is responsible for creating and signing transactions, combining
+  those transactions into batches, and submitting them to the validator. The
+  client can post batches through the REST API or connect directly to the
+  validator via `ZeroMQ <http://zeromq.org>`_.
+
+The client and transaction processor must use the same data model,
+serialization/encoding method, and addressing scheme.
+
+In this tutorial, you will construct a transaction handler that implements XO,
+a distributed version of the two-player game
 `tic-tac-toe <https://en.wikipedia.org/wiki/Tic-tac-toe>`_.
+
+{% if language == 'Python' %}
 
 This tutorial also describes how a client can use the {{ language }} SDK
 to create transactions and submit them as :term:`Sawtooth batches<Batch>`.
 
+{% elif language == 'JavaScript' %}
+
+This tutorial also describes how a client can use the {{ language }} SDK
+to create transactions and submit them as :term:`Sawtooth batches<Batch>`.
+
+{% endif %}
+
+
 .. note::
 
    This tutorial demonstrates the relevant concepts for a Sawtooth transaction
-   processor and client, but does not  create a complete implementation.
+   processor and client, but does not create a complete implementation.
 
    * For a full implementation of the tic-tac-toe transaction family, see
      ``/project/sawtooth-core/sdk/examples/xo_{{ lowercase_lang }}/``.
@@ -43,12 +72,6 @@ Prerequisites
 
  * Understanding of the Sawtooth transaction and batch data structures as
    described in :doc:`/architecture/transactions_and_batches`
-
-{% if language == 'Python' %}
-
- * Python 3, version 3.5 or higher
-
-{% endif %}
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License
