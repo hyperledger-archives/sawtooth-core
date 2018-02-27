@@ -364,10 +364,7 @@ class ChainController(object):
                     return
 
                 if self.chain_head is None:
-                    try:
-                        self._set_genesis(block)
-                    except BlockValidationAborted as err:
-                        LOGGER.warning(err)
+                    self._set_genesis(block)
                     return
 
                 # If we are already currently processing this block, then
