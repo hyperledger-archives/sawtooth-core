@@ -72,7 +72,7 @@ int GetToken(const string& src, string& dst, size_t startPos, const char* delime
 class XoState{
 public:
     // Parse CSV input string
-    void FromCsv(string csv) {
+    void FromCsv(const string& csv) {
         string lastState;
         size_t pos = 0;
 
@@ -151,7 +151,7 @@ public:
     };
 
     // Initialize new state (e.g. on 'create')
-    void InitNew(string _name) {
+    void InitNew(const string& _name) {
         player1 = "";
         player2 = "";
         board = "---------";
@@ -188,7 +188,7 @@ private:
 class XoTransactionPayload {
 public:
     // construct a class instance from CSV input string   
-    XoTransactionPayload(string csv) {
+    XoTransactionPayload(const string& csv) {
         size_t pos = 0;
 
         bValid = false;
