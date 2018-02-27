@@ -45,7 +45,7 @@ class AddressMapper {
     // Constructor for an address mapping object, Takes the
     // unencoded namespace name, it will be mapping objects, to as a parameter.
     // The namespace argument passed will be mapped to a namespace_prefix
-    AddressMapper(const std::string& namespace_);
+    explicit AddressMapper(const std::string& namespace_);
     virtual ~AddressMapper() {}
 
     // Maps an namespace string to an namespace address prefix.
