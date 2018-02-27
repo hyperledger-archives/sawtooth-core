@@ -15,7 +15,7 @@
 
 import logging
 
-from sawtooth_validator.execution import processor_iterator
+from sawtooth_validator.execution import processor_manager
 
 from sawtooth_validator.protobuf import processor_pb2
 from sawtooth_validator.protobuf import validator_pb2
@@ -53,11 +53,11 @@ class ProcessorRegisterHandler(Handler):
             list(request.namespaces),
             max_occupancy)
 
-        processor_type = processor_iterator.ProcessorType(
+        processor_type = processor_manager.ProcessorType(
             request.family,
             request.version)
 
-        processor = processor_iterator.Processor(
+        processor = processor_manager.Processor(
             connection_id,
             request.namespaces,
             max_occupancy)
