@@ -14,7 +14,7 @@
 # ----------------------------------------------------------------------------
 
 import unittest
-
+import logging
 import os
 
 from sawtooth_validator.database import dict_database
@@ -23,6 +23,9 @@ from sawtooth_validator.execution.scheduler_parallel import ParallelScheduler
 from sawtooth_validator.execution.scheduler_serial import SerialScheduler
 
 from test_scheduler.yaml_scheduler_tester import SchedulerTester
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TestSchedulersWithYaml(unittest.TestCase):
@@ -45,269 +48,66 @@ class TestSchedulersWithYaml(unittest.TestCase):
                                       always_persist=False)
         return context_manager, scheduler
 
-    def test_complex_batches_multiple_failures(self):
-        """Tests the schedulers against the
-        test_scheduler/data/complex_batches_multiple_failures.yaml file.
+    def _get_filenames(self):
+        base_dir = os.path.abspath(os.path.dirname(__file__))
+        data_dir = os.path.join(base_dir, 'data')
 
-        Notes:
-            This yaml file has 33 batches with several txns per batch,
-            multiple implicit dependencies per txn, and several
-            failed batches.
-        """
+        filepaths = []
+        for root, _, filenames in os.walk(data_dir):
+            filepaths.extend(
+                map(
+                    lambda f, r=root: os.path.join(r, f),
+                    filter(
+                        lambda f: f.endswith('.yml') or f.endswith('.yaml'),
+                        filenames)))
+        return filepaths
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_batches_multiple_failures.yaml')
+    def test_all_yaml_files(self):
+        """Tests the schedulers against each of the yaml files in the
+        test_scheduler/data directory"""
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_batches_multiple_failures.yaml',
-            lifo=True)
+        for file_path in self._get_filenames():
+            try:
+                context_manager, scheduler = self._setup_parallel_scheduler()
+                self._single_block_files_individually(
+                    scheduler=scheduler,
+                    context_manager=context_manager,
+                    name=file_path)
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_batches_multiple_failures.yaml')
+                context_manager, scheduler = self._setup_parallel_scheduler()
+                self._single_block_files_individually(
+                    scheduler=scheduler,
+                    context_manager=context_manager,
+                    name=file_path,
+                    lifo=True)
 
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_batches_multiple_failures.yaml',
-            lifo=True)
+                context_manager, scheduler = self._setup_parallel_scheduler()
+                self._single_block_files_individually_alt(
+                    scheduler=scheduler,
+                    context_manager=context_manager,
+                    name=file_path)
 
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_batches_multiple_failures.yaml')
+                context_manager, scheduler = self._setup_parallel_scheduler()
+                self._single_block_files_individually_alt(
+                    scheduler=scheduler,
+                    context_manager=context_manager,
+                    name=file_path,
+                    lifo=True)
 
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_batches_multiple_failures.yaml')
+                context_manager, scheduler = self._setup_serial_scheduler()
+                self._single_block_files_individually(
+                    scheduler=scheduler,
+                    context_manager=context_manager,
+                    name=file_path)
 
-    def test_enclosing_writer_fails(self):
-        """Tests the schedulers against the
-        test_scheduler/data/enclosing_writer_fails.yaml file.
-
-        Notes:
-            This yaml file has failed batches that have txns that implicitly
-            depend on multiple prior txns because they have the
-            whole tree ('') in the inputs and outputs, and also are
-            the implicit dependency of several subsequent txns. When
-            the batch fails, those dependent txns need to be replayed with
-            a different state.
-        """
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='enclosing_writer_fails.yaml')
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='enclosing_writer_fails.yaml',
-            lifo=True)
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='enclosing_writer_fails.yaml')
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='enclosing_writer_fails.yaml',
-            lifo=True)
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='enclosing_writer_fails.yaml')
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='enclosing_writer_fails.yaml')
-
-    def test_dependencies(self):
-        """Tests the schedulers against the
-        test_scheduler/data/dependencies.yaml file.
-
-        Notes:
-            This yaml file has batches with transactions that have implicit
-            dependencies, explicit dependencies, and multiple failed batches.
-        """
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='dependencies.yaml')
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='dependencies.yaml',
-            lifo=True)
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='dependencies.yaml')
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='dependencies.yaml',
-            lifo=True)
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='dependencies.yaml')
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='dependencies.yaml')
-
-    def test_deletes(self):
-        """Tests the schedulers against the
-        test_scheduler/data/deletes_test.yaml file.
-
-        Notes:
-            This yaml file has complex batches with failures and transactions
-            with deletes from the context manager.
-        """
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='deletes_test.yaml')
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='deletes_test.yaml',
-            lifo=True)
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='deletes_test.yaml')
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='deletes_test.yaml',
-            lifo=True)
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='deletes_test.yaml')
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='deletes_test.yaml')
-
-    def test_complex_dependency_failures(self):
-        """Tests the schedulers against the
-        test_scheduler/data/complex_dependency_failures.yaml file.
-
-        Notes:
-            This yaml file has complex batches with failures and transactions
-            with deletes from the context manager.
-        """
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_dependency_failures.yaml')
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_dependency_failures.yaml',
-            lifo=True)
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_dependency_failures.yaml')
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_dependency_failures.yaml',
-            lifo=True)
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_dependency_failures.yaml')
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually_alt(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='complex_dependency_failures.yaml')
-
-    def test_long_chain_of_inputs_outputs(self):
-        """Tests the schedulers against the
-        test_scheduler/data/long_chain_of_inputs_outputs.yaml file.
-
-        Tests that transactions are sorted correctly in
-        _sort_txn_ids_in_reverse by making it very unlikely that they will be
-        sorted correctly by chance if the sorting is not working correctly. The
-        key part of this test is that inputs and outputs contain the addresses
-        alternating between one and two addresses and that there are many
-        transactions that set the same address.
-        """
-
-        context_manager, scheduler = self._setup_parallel_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='long_chain_of_inputs_outputs.yaml')
-
-        context_manager, scheduler = self._setup_serial_scheduler()
-        self._single_block_files_individually(
-            scheduler=scheduler,
-            context_manager=context_manager,
-            name='long_chain_of_inputs_outputs.yaml')
+                context_manager, scheduler = self._setup_serial_scheduler()
+                self._single_block_files_individually_alt(
+                    scheduler=scheduler,
+                    context_manager=context_manager,
+                    name=file_path)
+            except AssertionError:
+                LOGGER.warning("Failure on file %s", file_path)
+                raise
 
     def _single_block_files_individually_alt(self,
                                              scheduler,
@@ -323,7 +123,7 @@ class TestSchedulersWithYaml(unittest.TestCase):
 
         """
 
-        file_name = self._path_to_yaml_file(name)
+        file_name = name
         tester = SchedulerTester(file_name)
         defined_batch_results_dict = tester.batch_results
         batch_results, txns_to_assert_state = tester.run_scheduler_alternating(
@@ -349,7 +149,7 @@ class TestSchedulersWithYaml(unittest.TestCase):
 
         """
 
-        file_name = self._path_to_yaml_file(name)
+        file_name = name
         tester = SchedulerTester(file_name)
         defined_batch_results_dict = tester.batch_results
         batch_results, txns_to_assert_state = tester.run_scheduler(
@@ -447,8 +247,3 @@ class TestSchedulersWithYaml(unittest.TestCase):
         self.assertEqual(len(state_roots), 1,
                          "The scheduler calculated more than one state "
                          "root when only one was expected")
-
-    def _path_to_yaml_file(self, name):
-        parent_dir = os.path.dirname(__file__)
-        file_name = os.path.join(parent_dir, 'data', name)
-        return file_name
