@@ -29,6 +29,7 @@ pub mod client_state;
 pub mod client_transaction;
 pub mod client_batch_submit;
 pub mod client_list_control;
+pub mod client_peers;
 pub mod network;
 pub mod events;
 pub mod client_event;
