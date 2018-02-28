@@ -917,27 +917,6 @@ class ParallelScheduler(Scheduler):
             for sig in set(self._txn_results).intersection(
                 (txn.header_signature for txn in batch.transactions)))
 
-    def _predecessor_not_in_chain(self,
-                                  prior_txn_id,
-                                  chain):
-        """
-
-        Args:
-            prior_txn_id (str): The predecessor's txn header_signature.
-            chain (list): The txn_ids whose context_ids have already been
-                added.
-
-        Returns:
-            (bool): The prior_txn_id has not had its state added yet.
-        """
-
-        for pred_id in chain:
-            if (prior_txn_id in self._txn_predecessors[pred_id] or
-                prior_txn_id in chain) and \
-                    self._txn_is_in_valid_batch(pred_id):
-                return False
-        return True
-
     def _get_initial_state_for_transaction(self, txn):
         # Collect contexts that this transaction depends upon
         # We assume that all prior txns in the batch are valid
@@ -947,28 +926,20 @@ class ParallelScheduler(Scheduler):
         # dependencies that could have failed this txn did so.
         contexts = []
         txn_dependencies = deque()
-        predecessors = self._txn_predecessors[txn.header_signature]
-        txn_dependencies.extend(self._sort_txn_ids_in_reverse(
-            predecessors))
-        in_chain = []
+        txn_dependencies.extend(self._txn_predecessors[txn.header_signature])
         while txn_dependencies:
             prior_txn_id = txn_dependencies.popleft()
             if self._txn_is_in_valid_batch(prior_txn_id):
                 result = self._txn_results[prior_txn_id]
-                if self._predecessor_not_in_chain(
-                        prior_txn_id,
-                        in_chain):
-                    in_chain.append(prior_txn_id)
-                    contexts.append(result.context_id)
+                if (prior_txn_id, result.context_id) not in contexts:
+                    contexts.append((prior_txn_id, result.context_id))
             else:
-                predecessors_sorted = self._sort_txn_ids_in_reverse(
-                    self._txn_predecessors[prior_txn_id])
-                txn_dependencies.extend(predecessors_sorted)
-        return contexts
+                txn_dependencies.extend(self._txn_predecessors[prior_txn_id])
 
-    def _sort_txn_ids_in_reverse(self, txn_ids):
-        return sorted(txn_ids,
-                      key=self._index_of_txn_in_schedule, reverse=True)
+        contexts.sort(
+            key=lambda x: self._index_of_txn_in_schedule(x[0]),
+            reverse=True)
+        return [c_id for _, c_id in contexts]
 
     def _index_of_txn_in_schedule(self, txn_id):
         batch = self._batches_by_txn_id[txn_id]
