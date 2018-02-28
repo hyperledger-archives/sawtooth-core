@@ -24,10 +24,152 @@ A transaction processor has two top-level components:
   business logic for a particular family of transactions. Multiple handlers
   can be connected to an instance of the processor class.
 
+Entry Point
+===========
+
+Since a transaction processor is a long running process, it must have an
+entry point.
+
+In the entry point, the ``TransactionProcessor`` class is given the address
+to connect with the validator and the handler class.
+
+{% if language == 'JavaScript' %}
+
+.. code-block:: javascript
+    :caption: a simplified xo_javascript/index.js
+
+    const { TransactionProcessor } = require('sawtooth-sdk/processor')
+    const XOHandler = require('./xo_handler')
+
+    // In docker, the address would be the validator's container name
+    // with port 4004
+    const address = 'tcp://127.0.0.1:4004'
+    const transactionProcessor = new TransactionProcessor(address)
+
+    transactionProcessor.addHandler(new XOHandler())
+
+    transactionProcessor.start()
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+    :caption: a simplified sawtooth_xo/main.go
+
+    import (
+        "sawtooth_sdk/processor"
+        xo "sawtooth_xo/handler"
+        "syscall"
+    )
+
+    func main() {
+
+        endpoint := "tcp://127.0.0.1:4004"
+        // In docker, endpoint would be the validator's container name
+        // with port 4004
+        handler := &xo.XoHandler{}
+        processor := processor.NewTransactionProcessor(endpoint)
+        processor.AddHandler(handler)
+        processor.ShutdownOnSignal(syscall.SIGINT, syscall.SIGTERM)
+
+        processor.Start()
+    }
+
+{% else %}
+
+.. code-block:: python
+    :caption: a simplified sawtooth_xo/processor/main.py
+
+    from sawtooth_sdk.processor.core import TransactionProcessor
+    from sawtooth_xo.processor.handler import XoTransactionHandler
+
+    def main():
+        # In docker, the url would be the validator's container name with
+        # port 4004
+        processor = TransactionProcessor(url='tcp://127.0.0.1:4004')
+
+        handler = XoTransactionHandler()
+
+        processor.add_handler(handler)
+
+        processor.start()
+
+{% endif %}
+
 Handlers get called in two ways: with an ``apply`` method and with various
 "metadata" methods. The metadata is used to connect the handler to the
 processor. The bulk of the handler, however, is made up of ``apply`` and its
 helper functions.
+
+{% if language == 'JavaScript' %}
+
+.. code-block:: javascript
+    :caption: xo_javascript/xo_handler.js XOHandler class
+
+    class XOHandler extends TransactionHandler {
+      constructor () {
+        super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
+      }
+
+      apply (transactionProcessRequest, stateStore) {
+        //
+
+Note that the ``XOHandler`` class extends the ``TransactionHandler`` class defined in the
+JavaScript SDK.
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go XoHandler struct
+
+    type XoHandler struct {
+    }
+
+    func (self *XoHandler) FamilyName() string {
+        return "xo"
+    }
+
+    func (self *XoHandler) FamilyVersions() []string {
+        return []string{"1.0"}
+    }
+
+    func (self *XoHandler) Namespaces() []string {
+        return []string{xo_state.Namespace}
+    }
+
+    func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
+
+{% else %}
+
+.. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py XoTransactionHandler class
+
+    class XoTransactionHandler(TransactionHandler):
+        def __init__(self, namespace_prefix):
+            self._namespace_prefix = namespace_prefix
+
+        @property
+        def family_name(self):
+            return 'xo'
+
+        @property
+        def family_versions(self):
+            return ['1.0']
+
+        @property
+        def encodings(self):
+            return ['csv-utf8']
+
+        @property
+        def namespaces(self):
+            return [self._namespace_prefix]
+
+        def apply(self, transaction, context):
+            # ...
+
+Note that the ``XoTransactionHandler`` extends the ``TransactionHandler`` defined
+in the Python SDK.
+
+{% endif %}
 
 The ``apply`` Method
 ====================
@@ -77,6 +219,8 @@ Valid actions are: create a new game, take an unoccupied space, and delete a gam
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_handler.js apply overview
+
 
     apply (transactionProcessRequest, context) {
         let payload = XoPayload.fromBytes(transactionProcessRequest.payload)
@@ -99,6 +243,7 @@ Valid actions are: create a new game, take an unoccupied space, and delete a gam
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go apply overview
 
     func (self *XoHandler) Apply(request *processor_pb2.TpProcessRequest, context *processor.Context) error {
         // The xo player is defined as the signer of the transaction, so we unpack
@@ -134,6 +279,7 @@ Valid actions are: create a new game, take an unoccupied space, and delete a gam
 {# Python code is the default #}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py apply overview
 
     def apply(self, transaction, context):
 
@@ -161,173 +307,6 @@ action. If all of the rules validate, then
 state is updated based on whether we are creating a game, deleting a game, or updating the
 game by taking a space.
 
-Payload
-=======
-
-.. note::
-
-    :doc:`/architecture/transactions_and_batches` contains a detailed
-    description of how transactions are structured and used. Please read
-    this document before proceeding, if you have not reviewed it.
-
-So how do we get data out of the transaction? The transaction consists of a
-header and a payload. The header contains the "signer", which is used to
-identify the current player. The payload will contain an encoding of the game
-name, the action (``create`` a game, ``delete`` a game, ``take`` a space), and
-the space (which will be an empty string if the action isn't ``take``).
-
-An XO transaction request payload consists of the UTF-8 encoding of a
-string with exactly two commas, formatted as follows:
-
-``<name>,<action>,<space>``
-
-where
-
-* <name> is a nonempty string not containing the character ``|``
-* <action> is either ``take`` or ``create``
-* <space> is an integer strictly between 0 and 10 if the action is ``take``
-
-{% if language == 'JavaScript' %}
-
-.. code-block:: javascript
-
-    class XoPayload {
-        constructor (name, action, space) {
-            this.name = name
-            this.action = action
-            this.space = space
-        }
-
-        static fromBytes (payload) {
-            payload = payload.toString().split(',')
-            if (payload.length === 3) {
-                let xoPayload = new XoPayload(payload[0], payload[1], payload[2])
-                if (!xoPayload.name) {
-                    throw new InvalidTransaction('Name is required')
-                }
-                if (xoPayload.name.indexOf('|') !== -1) {
-                    throw new InvalidTransaction('Name cannot contain "|"')
-                }
-
-                if (!xoPayload.action) {
-                    throw new InvalidTransaction('Action is required')
-                }
-                return xoPayload
-            } else {
-            throw new InvalidTransaction('Invalid payload serialization')
-            }
-        }
-    }
-
-{% elif language == 'Go' %}
-
-.. code-block:: go
-
-    type XoPayload struct {
-        Name   string
-        Action string
-        Space  int
-    }
-
-    func FromBytes(payloadData []byte) (*XoPayload, error) {
-        if payloadData == nil {
-            return nil, &processor.InvalidTransactionError{Msg: "Must contain payload"}
-        }
-
-        parts := strings.Split(string(payloadData), ",")
-        if len(parts) != 3 {
-            return nil, &processor.InvalidTransactionError{Msg: "Payload is malformed"}
-        }
-
-        payload := XoPayload{}
-        payload.Name = parts[0]
-        payload.Action = parts[1]
-
-        if len(payload.Name) < 1 {
-            return nil, &processor.InvalidTransactionError{Msg: "Name is required"}
-        }
-
-        if len(payload.Action) < 1 {
-            return nil, &processor.InvalidTransactionError{Msg: "Action is required"}
-        }
-
-        if payload.Action == "take" {
-            space, err := strconv.Atoi(parts[2])
-            if err != nil {
-                return nil, &processor.InvalidTransactionError{
-                    Msg: fmt.Sprintf("Invalid Space: '%v'", parts[2])}
-            }
-            payload.Space = space
-        }
-
-        if strings.Contains(payload.Name, "|") {
-            return nil, &processor.InvalidTransactionError{
-                Msg: fmt.Sprintf("Invalid Name (char '|' not allowed): '%v'", parts[2])}
-        }
-
-        return &payload, nil
-    }
-
-
-{% else %}
-
-.. code-block:: python
-
-    class XoPayload(object):
-
-        def __init__(self, payload):
-            try:
-                # The payload is csv utf-8 encoded string
-                name, action, space = payload.decode().split(",")
-            except ValueError:
-                raise InvalidTransaction("Invalid payload serialization")
-
-            if not name:
-                raise InvalidTransaction('Name is required')
-
-            if '|' in name:
-                raise InvalidTransaction('Name cannot contain "|"')
-
-            if not action:
-                raise InvalidTransaction('Action is required')
-
-            if action not in ('create', 'take', 'delete'):
-                raise InvalidTransaction('Invalid action: {}'.format(action))
-
-            if action == 'take':
-                try:
-
-                    if int(space) not in range(1, 10):
-                        raise InvalidTransaction(
-                            "Space must be an integer from 1 to 9")
-                except ValueError:
-                    raise InvalidTransaction(
-                        'Space must be an integer from 1 to 9')
-
-            if action == 'take':
-                space = int(space)
-
-            self._name = name
-            self._action = action
-            self._space = space
-
-        @staticmethod
-        def from_bytes(payload):
-            return XoPayload(payload=payload)
-
-        @property
-        def name(self):
-            return self._name
-
-        @property
-        def action(self):
-            return self._action
-
-        @property
-        def space(self):
-            return self._space
-
-{% endif %}
 
 Game Logic
 ==========
@@ -345,6 +324,7 @@ The ``create`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_handler.js apply 'create'
 
     if (payload.action === 'create') {
       return xoState.getGame(payload.name)
@@ -370,6 +350,7 @@ The ``create`` action has the following implementation:
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go apply 'create'
 
     case "create":
 		err := validateCreate(xoState, payload.Name)
@@ -404,8 +385,9 @@ The ``create`` action has the following implementation:
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py apply 'create'
 
-    if xo_payload.action == 'create':
+    elif xo_payload.action == 'create':
 
         if xo_state.get_game(xo_payload.name) is not None:
             raise InvalidTransaction(
@@ -430,6 +412,7 @@ The ``delete`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_handler.js apply 'delete'
 
     if (payload.action === 'delete') {
       return xoState.getGame(payload.name)
@@ -449,6 +432,7 @@ The ``delete`` action has the following implementation:
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go apply 'delete'
 
     case "delete":
 		err := validateDelete(xoState, payload.Name)
@@ -475,6 +459,8 @@ The ``delete`` action has the following implementation:
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py apply 'delete'
+
 
     if xo_payload.action == 'delete':
         game = xo_state.get_game(xo_payload.name)
@@ -494,6 +480,7 @@ The ``take`` action has the following implementation:
 {% if language == 'JavaScript' %}
 
 .. code-block:: none
+    :caption: xo_javascript/xo_handler.js apply 'take'
 
     if (payload.action === 'take') {
       return xoState.getGame(payload.name)
@@ -573,6 +560,7 @@ The ``take`` action has the following implementation:
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/handler/handler.go apply 'take'
 
     case "take":
 		err := validateTake(xoState, payload, player)
@@ -645,6 +633,7 @@ The ``take`` action has the following implementation:
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/handler.py apply 'take'
 
     elif xo_payload.action == 'take':
         game = xo_state.get_game(xo_payload.name)
@@ -697,12 +686,183 @@ The ``take`` action has the following implementation:
 
 {% endif %}
 
-State
------
+Payload
+=======
 
-The XoState class handles hash collisions due to the addressing scheme,
-transforming the game name into an address, and turning the game information
-into bytes that can be stored in the validator's Radix-Merkle tree.
+.. note::
+
+    :doc:`/architecture/transactions_and_batches` contains a detailed
+    description of how transactions are structured and used. Please read
+    this document before proceeding, if you have not reviewed it.
+
+So how do we get data out of the transaction? The transaction consists of a
+header and a payload. The header contains the "signer", which is used to
+identify the current player. The payload will contain an encoding of the game
+name, the action (``create`` a game, ``delete`` a game, ``take`` a space), and
+the space (which will be an empty string if the action isn't ``take``).
+
+An XO transaction request payload consists of the UTF-8 encoding of a
+string with exactly two commas, formatted as follows:
+
+``<name>,<action>,<space>``
+
+where
+
+* <name> is a nonempty string not containing the character ``|``
+* <action> is either ``take`` or ``create``
+* <space> is an integer strictly between 0 and 10 if the action is ``take``
+
+{% if language == 'JavaScript' %}
+
+.. code-block:: javascript
+    :caption: xo_javascript/xo_payload.js
+
+    class XoPayload {
+        constructor (name, action, space) {
+            this.name = name
+            this.action = action
+            this.space = space
+        }
+
+        static fromBytes (payload) {
+            payload = payload.toString().split(',')
+            if (payload.length === 3) {
+                let xoPayload = new XoPayload(payload[0], payload[1], payload[2])
+                if (!xoPayload.name) {
+                    throw new InvalidTransaction('Name is required')
+                }
+                if (xoPayload.name.indexOf('|') !== -1) {
+                    throw new InvalidTransaction('Name cannot contain "|"')
+                }
+
+                if (!xoPayload.action) {
+                    throw new InvalidTransaction('Action is required')
+                }
+                return xoPayload
+            } else {
+            throw new InvalidTransaction('Invalid payload serialization')
+            }
+        }
+    }
+
+{% elif language == 'Go' %}
+
+.. code-block:: go
+    :caption: sawtooth_xo/xo_payload/xo_payload.go
+
+    type XoPayload struct {
+        Name   string
+        Action string
+        Space  int
+    }
+
+    func FromBytes(payloadData []byte) (*XoPayload, error) {
+        if payloadData == nil {
+            return nil, &processor.InvalidTransactionError{Msg: "Must contain payload"}
+        }
+
+        parts := strings.Split(string(payloadData), ",")
+        if len(parts) != 3 {
+            return nil, &processor.InvalidTransactionError{Msg: "Payload is malformed"}
+        }
+
+        payload := XoPayload{}
+        payload.Name = parts[0]
+        payload.Action = parts[1]
+
+        if len(payload.Name) < 1 {
+            return nil, &processor.InvalidTransactionError{Msg: "Name is required"}
+        }
+
+        if len(payload.Action) < 1 {
+            return nil, &processor.InvalidTransactionError{Msg: "Action is required"}
+        }
+
+        if payload.Action == "take" {
+            space, err := strconv.Atoi(parts[2])
+            if err != nil {
+                return nil, &processor.InvalidTransactionError{
+                    Msg: fmt.Sprintf("Invalid Space: '%v'", parts[2])}
+            }
+            payload.Space = space
+        }
+
+        if strings.Contains(payload.Name, "|") {
+            return nil, &processor.InvalidTransactionError{
+                Msg: fmt.Sprintf("Invalid Name (char '|' not allowed): '%v'", parts[2])}
+        }
+
+        return &payload, nil
+    }
+
+
+{% else %}
+
+.. code-block:: python
+    :caption: sawtooth_xo/processor/xo_payload.py
+
+    class XoPayload(object):
+
+        def __init__(self, payload):
+            try:
+                # The payload is csv utf-8 encoded string
+                name, action, space = payload.decode().split(",")
+            except ValueError:
+                raise InvalidTransaction("Invalid payload serialization")
+
+            if not name:
+                raise InvalidTransaction('Name is required')
+
+            if '|' in name:
+                raise InvalidTransaction('Name cannot contain "|"')
+
+            if not action:
+                raise InvalidTransaction('Action is required')
+
+            if action not in ('create', 'take', 'delete'):
+                raise InvalidTransaction('Invalid action: {}'.format(action))
+
+            if action == 'take':
+                try:
+
+                    if int(space) not in range(1, 10):
+                        raise InvalidTransaction(
+                            "Space must be an integer from 1 to 9")
+                except ValueError:
+                    raise InvalidTransaction(
+                        'Space must be an integer from 1 to 9')
+
+            if action == 'take':
+                space = int(space)
+
+            self._name = name
+            self._action = action
+            self._space = space
+
+        @staticmethod
+        def from_bytes(payload):
+            return XoPayload(payload=payload)
+
+        @property
+        def name(self):
+            return self._name
+
+        @property
+        def action(self):
+            return self._action
+
+        @property
+        def space(self):
+            return self._space
+
+{% endif %}
+
+State
+=====
+
+The XoState class turns game information into bytes and stores it in the validator's Radix-Merkle tree,
+turns bytes stored in the validator's Radix-Merkle tree into game information, and does these
+operations with a state storage scheme that handles hash collisions.
 
 An XO state entry consists of the UTF-8 encoding of a string with
 exactly four commas formatted as follows:
@@ -726,107 +886,109 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
 {% if language == 'JavaScript' %}
 
 .. code-block:: javascript
+    :caption: xo_javascript/xo_state.js
 
-      class XoState {
-    constructor (context) {
-      this.context = context
-      this.addressCache = new Map([])
-      this.timeout = 500 // Timeout in milliseconds
-    }
-
-    getGame (name) {
-      return this._loadGames(name).then((games) => games.get(name))
-    }
-
-    setGame (name, game) {
-      let address = _makeXoAddress(name)
-
-      return this._loadGames(name).then((games) => {
-        games.set(name, game)
-        return games
-      }).then((games) => {
-        let data = _serialize(games)
-
-        this.addressCache.set(address, data)
-        let entries = {
-          [address]: data
+    class XoState {
+        constructor (context) {
+            this.context = context
+            this.addressCache = new Map([])
+            this.timeout = 500 // Timeout in milliseconds
         }
-        return this.context.setState(entries, this.timeout)
-      })
-    }
 
-    deleteGame (name) {
-      let address = _makeXoAddress(name)
-      return this._loadGames(name).then((games) => {
-        games.delete(name)
-
-        if (games.size === 0) {
-          this.addressCache.set(address, null)
-          return this.context.deleteState([address], this.timeout)
-        } else {
-          let data = _serialize(games)
-          this.addressCache.set(address, data)
-          let entries = {
-            [address]: data
-          }
-          return this.context.setState(entries, this.timeout)
+        getGame (name) {
+            return this._loadGames(name).then((games) => games.get(name))
         }
-      })
-    }
+  
+        setGame (name, game) {
+            let address = _makeXoAddress(name)
 
-    _loadGames (name) {
-      let address = _makeXoAddress(name)
-      if (this.addressCache.has(address)) {
-        if (this.addressCache.get(address) === null) {
-          return Promise.resolve(new Map([]))
-        } else {
-          return Promise.resolve(_deserialize(this.addressCache.get(address)))
+            return this._loadGames(name).then((games) => {
+                games.set(name, game)
+                return games
+            }).then((games) => {
+                let data = _serialize(games)
+
+                this.addressCache.set(address, data)
+                let entries = {
+                    [address]: data
+                }
+                return this.context.setState(entries, this.timeout)
+            })
         }
-      } else {
-        return this.context.getState([address], this.timeout)
-          .then((addressValues) => {
-            if (!addressValues[address].toString()) {
-              this.addressCache.set(address, null)
-              return new Map([])
-            } else {
-              let data = addressValues[address].toString()
-              this.addressCache.set(address, data)
-              return _deserialize(data)
+
+        deleteGame (name) {
+            let address = _makeXoAddress(name)
+            return this._loadGames(name).then((games) => {
+                games.delete(name)
+
+                if (games.size === 0) {
+                    this.addressCache.set(address, null)
+                    return this.context.deleteState([address], this.timeout)
+                } else {
+                    let data = _serialize(games)
+                    this.addressCache.set(address, data)
+                    let entries = {
+                        [address]: data
+                    }
+                        return this.context.setState(entries, this.timeout)
+                    }
+                })
             }
-          })
-      }
+
+        _loadGames (name) {
+            let address = _makeXoAddress(name)
+            if (this.addressCache.has(address)) {
+                if (this.addressCache.get(address) === null) {
+                    return Promise.resolve(new Map([]))
+                } else {
+                    return Promise.resolve(_deserialize(this.addressCache.get(address)))
+                }
+            } else {
+                return this.context.getState([address], this.timeout)
+                    .then((addressValues) => {
+                        if (!addressValues[address].toString()) {
+                            this.addressCache.set(address, null)
+                            return new Map([])
+                        } else {
+                            let data = addressValues[address].toString()
+                            this.addressCache.set(address, data)
+                            return _deserialize(data)
+                        }
+                    })
+                }
+            }
+        }
+
+    const _hash = (x) =>
+        crypto.createHash('sha512').update(x).digest('hex').toLowerCase().substring(0, 64)
+
+    const XO_FAMILY = 'xo'
+
+    const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)
+
+    const _deserialize = (data) => {
+        let gamesIterable = data.split('|').map(x => x.split(','))
+            .map(x => [x[0], {name: x[0], board: x[1], state: x[2], player1: x[3], player2: x[4]}])
+        return new Map(gamesIterable)
     }
-  }
 
-  const _hash = (x) =>
-    crypto.createHash('sha512').update(x).digest('hex').toLowerCase().substring(0, 64)
+    const _serialize = (games) => {
+        let gameStrs = []
+        for (let nameGame of games) {
+            let name = nameGame[0]
+            let game = nameGame[1]
+            gameStrs.push([name, game.board, game.state, game.player1, game.player2].join(','))
+        }
 
-  const XO_FAMILY = 'xo'
+        gameStrs.sort()
 
-  const XO_NAMESPACE = _hash(XO_FAMILY).substring(0, 6)
-
-  const _deserialize = (data) => {
-    let gamesIterable = data.split('|').map(x => x.split(','))
-      .map(x => [x[0], {name: x[0], board: x[1], state: x[2], player1: x[3], player2: x[4]}])
-    return new Map(gamesIterable)
-  }
-
-  const _serialize = (games) => {
-    let gameStrs = []
-    for (let nameGame of games) {
-      let name = nameGame[0]
-      let game = nameGame[1]
-      gameStrs.push([name, game.board, game.state, game.player1, game.player2].join(','))
+        return Buffer.from(gameStrs.join('|'))
     }
-
-    gameStrs.sort()
-
-    return Buffer.from(gameStrs.join('|'))
-  }
 
 {% elif language == 'Go' %}
 
 .. code-block:: go
+    :caption: sawtooth_xo/xo_state/xo_state.go
 
     var Namespace = hexdigest("xo")[:6]
 
@@ -1001,6 +1163,7 @@ the UTF-8 encoding of the string ``<a-entry>|<b-entry>|...``, where
 {% else %}
 
 .. code-block:: python
+    :caption: sawtooth_xo/processor/xo_state.py
 
     XO_NAMESPACE = hashlib.sha512('xo'.encode("utf-8")).hexdigest()[0:6]
 
@@ -1201,90 +1364,6 @@ Addressing is implemented as follows:
     def _make_xo_address(name):
     return XO_NAMESPACE + \
         hashlib.sha512(name.encode('utf-8')).hexdigest()[:64]
-
-
-{% endif %}
-
-
-The {% if language == 'JavaScript' %}``XOHandler``{% elif language == 'Go' %}
-``XoHandler``{% else %}``XoTransactionHandler``{% endif %} Class
-===================================
-
-{% if language == 'JavaScript' %}
-
-All that's left to do is set up the
-``XOHandler`` class and its metadata. The metadata is used to
-*register* the transaction processor with a validator by sending it information
-about what kinds of transactions it can handle.
-
-.. code-block:: javascript
-
-    class XOHandler extends TransactionHandler {
-      constructor () {
-        super(XO_FAMILY, '1.0', 'csv-utf8', [XO_NAMESPACE])
-      }
-
-      apply (transactionProcessRequest, stateStore) {
-        //
-
-Note that the ``XOHandler`` class extends the ``TransactionHandler`` class
-defined in the JavaScript SDK.
-
-{% elif language == 'Go' %}
-
-All that's left to do is set up the
-``XoHandler`` class and its metadata. The metadata is used to
-*register* the transaction processor with a validator by sending it information
-about what kinds of transactions it can handle.
-
-.. code-block:: go
-
-    type XoHandler struct {
-    }
-
-    func (self *XoHandler) FamilyName() string {
-        return "xo"
-    }
-
-    func (self *XoHandler) FamilyVersions() []string {
-        return []string{"1.0"}
-    }
-
-    func (self *XoHandler) Namespaces() []string {
-        return []string{xo_state.Namespace}
-    }
-
-{% else %}
-
-All that's left to do is set up the
-``XoTransactionHandler`` class and its metadata. The metadata is used to
-*register* the transaction processor with a validator by sending it information
-about what kinds of transactions it can handle.
-
-.. code-block:: python
-
-    class XoTransactionHandler:
-        def __init__(self, namespace_prefix):
-            self._namespace_prefix = namespace_prefix
-
-        @property
-        def family_name(self):
-            return 'xo'
-
-        @property
-        def family_versions(self):
-            return ['1.0']
-
-        @property
-        def encodings(self):
-            return ['csv-utf8']
-
-        @property
-        def namespaces(self):
-            return [self._namespace_prefix]
-
-        def apply(self, transaction, context):
-            # ...
 
 
 {% endif %}
