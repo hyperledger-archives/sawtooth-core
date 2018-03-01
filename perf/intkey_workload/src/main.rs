@@ -18,21 +18,52 @@
 extern crate cbor;
 extern crate clap;
 extern crate crypto;
-#[macro_use]
-extern crate log;
+extern crate protobuf;
 extern crate rand;
 extern crate sawtooth_perf;
+extern crate sawtooth_sdk;
+extern crate simplelog;
 
 mod intkey_addresser;
 mod intkey_iterator;
+mod intkey_transformer;
+
+use std::error::Error;
+use std::io::Read;
+use std::fs::File;
+use std::str::Split;
 
 use clap::{App, Arg, ArgMatches};
+
+use rand::{Rng, StdRng};
+
+use sawtooth_perf::batch_gen::SignedBatchIterator;
+use sawtooth_perf::batch_submit::InfiniteBatchListIterator;
+use sawtooth_perf::batch_submit::run_workload;
+
+use sawtooth_sdk::signing;
+use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
+
+use simplelog::{Config, LevelFilter, SimpleLogger};
+
+use intkey_iterator::IntKeyIterator;
+use intkey_transformer::IntKeyTransformer;
 
 const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 fn main() {
-    get_arg_matches();
+    match SimpleLogger::init(LevelFilter::Warn, Config::default()) {
+        Ok(_) => (),
+        Err(err) => println!("Failed to load logger: {}", err.description()),
+    }
+
+    let arg_matches = get_arg_matches();
+
+    match run_load_command(&arg_matches) {
+        Ok(_) => (),
+        Err(err) => println!("{}", err.description()),
+    }
 }
 
 fn get_arg_matches<'a>() -> ArgMatches<'a> {
@@ -41,7 +72,7 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
         .about("Submit intkey workload at a continuous rate")
         .arg(
             Arg::with_name("display")
-                .short("d")
+                .long("display")
                 .takes_value(true)
                 .number_of_values(1)
                 .default_value("30")
@@ -113,7 +144,7 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .help("Comma separated list of Sawtooth REST Apis"),
         )
         .arg(
-            Arg::with_name("validity")
+            Arg::with_name("invalid")
                 .long("invalid")
                 .value_name("INVALID")
                 .takes_value(true)
@@ -143,4 +174,130 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .help("Basic auth password to authenticate with the Sawtooth REST Api"),
         )
         .get_matches()
+}
+
+fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
+    let batch_size: usize = args.value_of("batch-size")
+        .unwrap_or("1")
+        .parse()
+        .map_err(|_| String::from("batch-size must be a positive integer"))?;
+
+    let num_names: usize = args.value_of("names")
+        .unwrap_or("100")
+        .parse()
+        .map_err(|err: std::num::ParseIntError| String::from(err.description()))?;
+
+    let urls: Vec<String> = args.value_of("urls")
+        .unwrap_or("http://127.0.0.1:8008")
+        .parse()
+        .map_err(|_| String::from("urls are a comma separated list of strings"))
+        .and_then(|st| {
+            let s: String = st;
+            let split: Split<&str> = s.split(",");
+            Ok(split.map(|s| s.to_string()).collect())
+        })?;
+
+    let rate: usize = args.value_of("rate")
+        .unwrap_or("10")
+        .parse()
+        .map_err(|_| String::from("rate must be a positive integer"))?;
+
+    let unsatisfiable: f32 = args.value_of("unsatisfiable")
+        .unwrap_or("0.0")
+        .parse()
+        .map_err(|_| {
+            String::from("unsatisfiable must be a positive float in the range [0.0, 1.0]")
+        })?;
+
+    let wildcard: f32 = args.value_of("wildcard")
+        .unwrap_or("0.0")
+        .parse()
+        .map_err(|_| String::from("wildcard must be a positive float in the range [0.0, 1.0]"))?;
+
+    let invalid: f32 = args.value_of("invalid")
+        .unwrap_or("0.0")
+        .parse()
+        .map_err(|_| String::from("invalid must be a positive float in the range [0.0, 1.0]"))?;
+
+    let display: u32 = args.value_of("display")
+        .unwrap_or("30")
+        .parse()
+        .map_err(|_| String::from("display must be a positive integer"))?;
+
+    let username = args.value_of("username");
+    let password = args.value_of("password");
+
+    let basic_auth = {
+        match username {
+            Some(username) => match password {
+                None => Some(String::from(username)),
+                Some(password) => Some([username, password].join(":")),
+            },
+            None => None,
+        }
+    };
+    let s: Result<Vec<usize>, std::num::ParseIntError> = match args.value_of("seed") {
+        Some(s) => {
+            let split: Split<&str> = s.split(",");
+            split.map(|s| s.parse()).collect()
+        }
+        None => {
+            let mut rng = StdRng::new()?;
+
+            Ok(rng.gen_iter().take(10).collect())
+        }
+    };
+
+    let seed = s?;
+
+    let context = signing::create_context("secp256k1")?;
+
+    let private_key: Result<Box<signing::PrivateKey>, Box<Error>> = match args.value_of("key") {
+        Some(file) => {
+            let mut key_file = File::open(file)?;
+            let mut buf = String::new();
+            key_file.read_to_string(&mut buf)?;
+            buf.pop(); // remove the new line
+            let private_key = Secp256k1PrivateKey::from_hex(&buf)?;
+            Ok(Box::new(private_key))
+        }
+        None => {
+            let private_key = context.new_random_private_key()?;
+            Ok(private_key)
+        }
+    };
+
+    let priv_key = private_key?;
+
+    let signer = signing::Signer::new(context.as_ref(), priv_key.as_ref());
+
+    let signer_ref = &signer;
+
+    let mut transformer =
+        IntKeyTransformer::new(signer_ref, &seed, unsatisfiable, wildcard, num_names);
+
+    let mut transaction_iterator = IntKeyIterator::new(num_names, invalid, &seed)
+        .map(|payload| transformer.intkey_payload_to_transaction(payload))
+        .filter_map(|payload| payload.ok());
+    let mut batch_iter =
+        SignedBatchIterator::new(&mut transaction_iterator, batch_size, signer_ref);
+    let mut batchlist_iter = InfiniteBatchListIterator::new(&mut batch_iter);
+
+    let time_to_wait: u32 = 1_000_000_000 / rate as u32;
+
+    println!("--invalid {} --batch-size {} --rate {} --wildcard {} --urls {:?} --unsatisfiable {} --seed {:?} --num-names {} --display {}",
+        invalid,
+        batch_size,
+        rate,
+        wildcard,
+        urls,
+        unsatisfiable,
+        seed,
+        num_names,
+        display);
+
+    match run_workload(&mut batchlist_iter, time_to_wait, display, urls, basic_auth) {
+        Ok(_) => Ok(()),
+        Err(err) => Err(Box::new(err)),
+    }
 }
