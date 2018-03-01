@@ -24,7 +24,7 @@ namespace Sawtooth.Sdk.Processor
 
         public void AddHandler(ITransactionHandler handler) => Handlers.Add(handler);
 
-        public async Task Start()
+        public async void Start()
         {
             Stream.Connect();
 

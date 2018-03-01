@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,20 +21,20 @@ namespace Sawtooth.Sdk.Processor
             ContextId = contextId;
         }
 
-        public async Task<TpStateEntry[]> GetState(string[] addresses)
+        public async Task<Dictionary<string, ByteString>> GetState(string[] addresses)
         {
             var request = new TpStateGetRequest { ContextId = ContextId };
             request.Addresses.AddRange(addresses);
 
             return MessageExt.Decode<TpStateGetResponse>(
                 await Stream.Send(MessageExt.Encode(request, MessageType.TpStateGetRequest), CancellationToken.None))
-                             .Entries.ToArray();
+                             .Entries.ToDictionary(x => x.Address, x => x.Data);
         }
 
-        public async Task<string[]> SetState(TpStateEntry[] addressValuePairs)
+        public async Task<string[]> SetState(Dictionary<string, ByteString> addressValuePairs)
         {
             var request = new TpStateSetRequest { ContextId = ContextId };
-            request.Entries.AddRange(addressValuePairs);
+            request.Entries.AddRange(addressValuePairs.Select(x => new TpStateEntry { Address = x.Key, Data = x.Value }));
 
             return MessageExt.Decode<TpStateSetResponse>(
                 await Stream.Send(MessageExt.Encode(request, MessageType.TpStateSetRequest), CancellationToken.None))
@@ -50,14 +51,14 @@ namespace Sawtooth.Sdk.Processor
                              .Addresses.ToArray();
         }
 
-        public async Task<TpReceiptAddDataResponse.Types.Status> AddReceiptData(ByteString data)
+        public async Task<bool> AddReceiptData(ByteString data)
         {
             var request = new TpReceiptAddDataRequest() { ContextId = ContextId };
             request.Data = data;
 
             return MessageExt.Decode<TpReceiptAddDataResponse>(
                 await Stream.Send(MessageExt.Encode(request, MessageType.TpReceiptAddDataRequest), CancellationToken.None))
-                             .Status;
+                             .Status == TpReceiptAddDataResponse.Types.Status.Ok;
         }
     }
 }

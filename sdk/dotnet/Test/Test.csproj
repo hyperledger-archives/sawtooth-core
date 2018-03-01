@@ -16,6 +16,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sdk\Sdk.csproj" />
-    <ProjectReference Include="..\Client\Client.csproj" />
   </ItemGroup>
 </Project>

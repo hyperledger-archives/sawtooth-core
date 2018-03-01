@@ -42,7 +42,7 @@ namespace Sawtooth.Sdk.Test
 
             var stateResponse = await context.GetState(addresses);
 
-            Assert.Equal(addresses.Length, stateResponse.Length);
+            Assert.Equal(addresses.Length, stateResponse.Count());
         }
     }
 }

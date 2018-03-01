@@ -47,7 +47,7 @@ namespace Sawtooth.Sdk.Messaging
 
         void Receive(object _, NetMQSocketEventArgs e)
         {
-            foreach (var frame in e.Socket.ReceiveMultipartBytes())
+            var frame = e.Socket.ReceiveFrameBytes();
             {
                 var message = new Message();
                 message.MergeFrom(frame);
@@ -80,7 +80,7 @@ namespace Sawtooth.Sdk.Messaging
 
                 if (Futures.TryGetValue(message.CorrelationId, out var source))
                 {
-                    if (source.Task.Status == TaskStatus.RanToCompletion)
+                    if (source.Task.Status != TaskStatus.RanToCompletion)
                     {
                         source.SetResult(message);
 
