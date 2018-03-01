@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Sawtooth.Sdk</id>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <authors>Tomislav Markovski</authors>
     <owners>Tomislav Markovski</owners>
     <licenseUrl>https://github.com/tmarkovski/sawtooth-sdk-net/blob/master/LICENSE</licenseUrl>
