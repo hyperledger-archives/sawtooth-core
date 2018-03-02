@@ -47,6 +47,8 @@ from sawtooth_validator.gossip.gossip_handlers import \
 from sawtooth_validator.gossip.gossip_handlers import \
     gossip_message_preprocessor
 from sawtooth_validator.gossip.gossip_handlers import \
+    gossip_batch_response_preprocessor
+from sawtooth_validator.gossip.gossip_handlers import \
     gossip_block_response_preprocessor
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
@@ -353,6 +355,11 @@ def add(
             permission_verifier=permission_verifier,
             gossip=gossip
         ),
+        thread_pool)
+
+    dispatcher.set_preprocessor(
+        validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+        gossip_batch_response_preprocessor,
         thread_pool)
 
     # GOSSIP_BATCH_RESPONSE 1) Check for duplicate responses

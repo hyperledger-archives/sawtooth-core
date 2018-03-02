@@ -19,11 +19,9 @@ import logging
 from google.protobuf.message import DecodeError
 
 from sawtooth_validator.protobuf import client_batch_submit_pb2
-from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import network_pb2
-from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -117,11 +115,8 @@ class GossipBlockResponseStructureVerifier(Handler):
 
 class GossipBatchResponseStructureVerifier(Handler):
     def handle(self, connection_id, message_content):
-        batch_response_message = GossipBatchResponse()
-        batch_response_message.ParseFromString(message_content)
+        batch, _ = message_content
 
-        batch = Batch()
-        batch.ParseFromString(batch_response_message.content)
         if not is_valid_batch(batch):
             LOGGER.debug("requested batch's structure is invalid: %s",
                          batch.header_signature)
