@@ -165,7 +165,7 @@ class TestResponder(unittest.TestCase):
             content=block.SerializeToString())
 
         self.block_response_handler.handle(
-            "Connection_1", response_message.SerializeToString())
+            "Connection_1", (block, response_message.SerializeToString()))
 
         # ResponderBlockResponseHandler should not send any messages.
         self.assert_message_not_sent("Connection_1")
@@ -186,7 +186,7 @@ class TestResponder(unittest.TestCase):
         # requested the block but it could not be fulfilled at that time of the
         # request the received BlockResponse is forwarded to Connection_2
         self.block_response_handler.handle(
-            "Connection_1", response_message.SerializeToString())
+            "Connection_1", (block, response_message.SerializeToString()))
 
         self.assert_message_sent(
             connection_id="Connection_2",

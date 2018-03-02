@@ -160,10 +160,7 @@ class GossipBlockResponseHandler(Handler):
         self._chain_controller_has_block = chain_controller_has_block
 
     def handle(self, connection_id, message_content):
-        block_response_message = GossipBlockResponse()
-        block_response_message.ParseFromString(message_content)
-        block = Block()
-        block.ParseFromString(block_response_message.content)
+        block, _ = message_content
 
         block_id = block.header_signature
 
@@ -270,5 +267,16 @@ def gossip_message_preprocessor(message_content_bytes):
         obj.ParseFromString(gossip_message.content)
 
     content = obj, tag, gossip_message.time_to_live
+
+    return PreprocessorResult(content=content)
+
+
+def gossip_block_response_preprocessor(message_content_bytes):
+    block_response = GossipBlockResponse()
+    block_response.ParseFromString(message_content_bytes)
+    block = Block()
+    block.ParseFromString(block_response.content)
+
+    content = block, message_content_bytes
 
     return PreprocessorResult(content=content)
