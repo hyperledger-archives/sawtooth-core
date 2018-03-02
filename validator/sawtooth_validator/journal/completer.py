@@ -22,7 +22,6 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.client_batch_submit_pb2 \
     import ClientBatchSubmitRequest
@@ -406,11 +405,7 @@ class CompleterGossipBlockResponseHandler(Handler):
         self._completer = completer
 
     def handle(self, connection_id, message_content):
-        block_response_message = network_pb2.GossipBlockResponse()
-        block_response_message.ParseFromString(message_content)
-
-        block = Block()
-        block.ParseFromString(block_response_message.content)
+        block, _ = message_content
         self._completer.add_block(block)
 
         return HandlerResult(status=HandlerStatus.PASS)

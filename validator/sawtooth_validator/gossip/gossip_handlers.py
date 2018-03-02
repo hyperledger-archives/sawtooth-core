@@ -21,8 +21,8 @@ from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
-from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
 from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
+from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
 from sawtooth_validator.protobuf.network_pb2 import GetPeersRequest
 from sawtooth_validator.protobuf.network_pb2 import GetPeersResponse
 from sawtooth_validator.protobuf.network_pb2 import PeerRegisterRequest
@@ -159,10 +159,7 @@ class GossipBlockResponseHandler(Handler):
         self._chain_controller_has_block = chain_controller_has_block
 
     def handle(self, connection_id, message_content):
-        block_response_message = GossipBlockResponse()
-        block_response_message.ParseFromString(message_content)
-        block = Block()
-        block.ParseFromString(block_response_message.content)
+        block, _ = message_content
 
         block_id = block.header_signature
 
@@ -269,3 +266,12 @@ def gossip_message_preprocessor(message_content_bytes):
         obj.ParseFromString(gossip_message.content)
 
     return obj, tag, gossip_message.time_to_live
+
+
+def gossip_block_response_preprocessor(message_content_bytes):
+    block_response = GossipBlockResponse()
+    block_response.ParseFromString(message_content_bytes)
+    block = Block()
+    block.ParseFromString(block_response.content)
+
+    return block, message_content_bytes
