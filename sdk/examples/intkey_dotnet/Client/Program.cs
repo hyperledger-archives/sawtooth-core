@@ -5,6 +5,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Linq;
 using PeterO.Cbor;
+using Console = Colorful.Console;
+using System.Drawing;
 
 namespace Client
 {
@@ -12,9 +14,13 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            if (args == null && (args.Count() < 2 || args.Count() > 3))
+            if (args != null && (args.Count() < 2 || args.Count() > 3))
             {
-                Console.WriteLine("Name and Verb arguments must be set.");
+                Console.WriteLine("Name and Verb arguments must be set.", Color.Red);
+                Console.WriteLine("Usage: dotnet run [keyname] [verb] [optional value]");
+                Console.WriteLine(" dotnet run myintkey set 42\t- sets initial value");
+                Console.WriteLine(" dotnet run myintkey inc\t- increases existing value");
+                Console.WriteLine(" dotnet run myintkey dec\t- decreases existing value");
                 return;
             }
 
@@ -29,14 +35,14 @@ namespace Client
                 obj.Add("Value", Int32.Parse(args[2]));
             }
 
-            var prefix = "myintkey".ToByteArray().ToSha512().ToHexString().Substring(0, 6);
+            var prefix = "intkey".ToByteArray().ToSha512().ToHexString().Substring(0, 6);
             var signer = new Signer();
 
             var settings = new EncoderSettings()
             {
                 BatcherPublicKey = signer.GetPublicKey().ToHexString(),
                 SignerPublickey = signer.GetPublicKey().ToHexString(),
-                FamilyName = "myintkey",
+                FamilyName = "intkey",
                 FamilyVersion = "1.0"
             };
             settings.Inputs.Add(prefix);

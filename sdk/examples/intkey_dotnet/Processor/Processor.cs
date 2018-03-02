@@ -17,7 +17,7 @@ namespace Program
 {
     public class IntKeyProcessor : ITransactionHandler
     {
-        const string familyName = "myintkey";
+        const string familyName = "intkey";
         readonly string PREFIX = familyName.ToByteArray().ToSha512().ToHexString().Substring(0, 6);
 
         public string FamilyName { get => familyName; }
