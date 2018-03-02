@@ -392,16 +392,12 @@ class CompleterGossipHandler(Handler):
         self._completer = completer
 
     def handle(self, connection_id, message_content):
-        gossip_message = network_pb2.GossipMessage()
-        gossip_message.ParseFromString(message_content)
-        if gossip_message.content_type == network_pb2.GossipMessage.BLOCK:
-            block = Block()
-            block.ParseFromString(gossip_message.content)
-            self._completer.add_block(block)
-        elif gossip_message.content_type == network_pb2.GossipMessage.BATCH:
-            batch = Batch()
-            batch.ParseFromString(gossip_message.content)
-            self._completer.add_batch(batch)
+        obj, tag, _ = message_content
+
+        if tag == network_pb2.GossipMessage.BLOCK:
+            self._completer.add_block(obj)
+        elif tag == network_pb2.GossipMessage.BATCH:
+            self._completer.add_batch(obj)
         return HandlerResult(status=HandlerStatus.PASS)
 
 

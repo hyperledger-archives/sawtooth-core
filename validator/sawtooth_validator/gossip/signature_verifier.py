@@ -129,37 +129,32 @@ class GossipMessageSignatureVerifier(Handler):
             'already_validated_block_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
-        gossip_message = GossipMessage()
-        gossip_message.ParseFromString(message_content)
+        obj, tag, _ = message_content
 
-        if gossip_message.content_type == GossipMessage.BLOCK:
-            block = Block()
-            block.ParseFromString(gossip_message.content)
-            if block.header_signature in self._seen_cache:
+        if tag == GossipMessage.BLOCK:
+            if obj.header_signature in self._seen_cache:
                 self._block_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            if not is_valid_block(block):
+            if not is_valid_block(obj):
                 LOGGER.debug("block signature is invalid: %s",
-                             block.header_signature)
+                             obj.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            self._seen_cache[block.header_signature] = None
+            self._seen_cache[obj.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
-        elif gossip_message.content_type == GossipMessage.BATCH:
-            batch = Batch()
-            batch.ParseFromString(gossip_message.content)
-            if batch.header_signature in self._seen_cache:
+        elif tag == GossipMessage.BATCH:
+            if obj.header_signature in self._seen_cache:
                 self._batch_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            if not is_valid_batch(batch):
+            if not is_valid_batch(obj):
                 LOGGER.debug("batch signature is invalid: %s",
-                             batch.header_signature)
+                             obj.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            self._seen_cache[batch.header_signature] = None
+            self._seen_cache[obj.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
         # should drop the message if it does not have a valid content_type

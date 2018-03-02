@@ -26,7 +26,6 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
-from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -425,15 +424,13 @@ class NetworkConsensusPermissionHandler(Handler):
         self._gossip = gossip
 
     def handle(self, connection_id, message_content):
-        message = GossipMessage()
-        message.ParseFromString(message_content)
-        if message.content_type == GossipMessage.BLOCK:
+        obj, tag, _ = message_content
+
+        if tag == GossipMessage.BLOCK:
             public_key = \
                 self._network.connection_id_to_public_key(connection_id)
-            block = Block()
-            block.ParseFromString(message.content)
             header = BlockHeader()
-            header.ParseFromString(block.header)
+            header.ParseFromString(obj.header)
             if header.signer_public_key == public_key:
                 permitted = \
                     self._permission_verifier.check_network_consensus_role(

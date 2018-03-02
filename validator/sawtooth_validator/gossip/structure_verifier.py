@@ -85,23 +85,19 @@ def is_valid_batch(batch):
 
 class GossipHandlerStructureVerifier(Handler):
     def handle(self, connection_id, message_content):
-        gossip_message = network_pb2.GossipMessage()
-        gossip_message.ParseFromString(message_content)
-        if gossip_message.content_type == network_pb2.GossipMessage.BLOCK:
-            block = Block()
-            block.ParseFromString(gossip_message.content)
-            if not is_valid_block(block):
+        obj, tag, _ = message_content
+
+        if tag == network_pb2.GossipMessage.BLOCK:
+            if not is_valid_block(obj):
                 LOGGER.debug("block's batches structure is invalid: %s",
-                             block.header_signature)
+                             obj.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
             return HandlerResult(status=HandlerStatus.PASS)
-        elif gossip_message.content_type == network_pb2.GossipMessage.BATCH:
-            batch = Batch()
-            batch.ParseFromString(gossip_message.content)
-            if not is_valid_batch(batch):
+        elif tag == network_pb2.GossipMessage.BATCH:
+            if not is_valid_batch(obj):
                 LOGGER.debug("batch structure is invalid: %s",
-                             batch.header_signature)
+                             obj.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
             return HandlerResult(status=HandlerStatus.PASS)
