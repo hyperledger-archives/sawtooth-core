@@ -12,16 +12,22 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            if (args == null && (args.Count() < 2 || args.Count() > 3))
+            {
+                Console.WriteLine("Name and Verb arguments must be set.");
+                return;
+            }
+
+            var name = args[0];
+            var verb = args[1];
 
             var obj = CBORObject.NewMap()
-                                .Add("name", "tomislav")
-                                .Add("value", 1);
-            
-            var b = obj.EncodeToBytes();
-
-            var a = CBORObject.DecodeFromBytes(b);
-            return;
+                                .Add("Name", name)
+                                .Add("Verb", verb);
+            if (args.Count() == 3)
+            {
+                obj.Add("Value", Int32.Parse(args[2]));
+            }
 
             var prefix = "myintkey".ToByteArray().ToSha512().ToHexString().Substring(0, 6);
             var signer = new Signer();
@@ -37,7 +43,7 @@ namespace Client
             settings.Outputs.Add(prefix);
             var encoder = new Encoder(settings, signer.GetPrivateKey());
 
-            var payload = encoder.EncodeSingleTransaction(new[] { (byte)6 });
+            var payload = encoder.EncodeSingleTransaction(obj.EncodeToBytes());
 
             var content = new ByteArrayContent(payload);
             content.Headers.Add("Content-Type", "application/octet-stream");

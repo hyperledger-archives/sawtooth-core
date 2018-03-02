@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="PeterO.Cbor" Version="3.0.3" />
     <PackageReference Include="Sawtooth.Sdk" Version="1.0.3" />
   </ItemGroup>
 </Project>

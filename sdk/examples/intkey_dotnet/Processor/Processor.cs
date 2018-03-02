@@ -8,48 +8,92 @@ using System.Text;
 using System.Linq;
 using Google.Protobuf;
 using System.Collections.Generic;
+using PeterO.Cbor;
+using System.Drawing;
+using Colorful;
+using Console = Colorful.Console;
 
 namespace Program
 {
     public class IntKeyProcessor : ITransactionHandler
     {
         const string familyName = "myintkey";
+        readonly string PREFIX = familyName.ToByteArray().ToSha512().ToHexString().Substring(0, 6);
 
         public string FamilyName { get => familyName; }
         public string Version { get => "1.0"; }
-
-        readonly string PREFIX = familyName.ToByteArray().ToSha512().ToHexString().Substring(0, 6);
-
         public string[] Namespaces { get => new[] { PREFIX }; }
+
+        T[] Arrayify<T>(T obj) => new[] { obj };
+        string GetAddress(string name) => PREFIX + name.ToByteArray().ToSha512().TakeLast(32).ToArray().ToHexString();
 
         public async Task Apply(TpProcessRequest request, Context context)
         {
-            var a = "name".ToByteArray().ToSha512().ToHexString();
-            var address = PREFIX + a.Substring(a.Length - 64, 64);
-            var state = await context.GetState(new[] { address });
+            var obj = CBORObject.DecodeFromBytes(request.Payload.ToByteArray());
 
-            if (state != null && state.Any())
+            var name = obj["Name"].AsString();
+            var verb = obj["Verb"].AsString().ToLowerInvariant();
+
+            switch (verb)
             {
-                Console.WriteLine("State found");
-                int value = state.First().Value.FirstOrDefault() + 1;
-
-                Console.WriteLine($"Setting new value: {value}");
-                await context.SetState(new Dictionary<string, ByteString>()
-                    {
-                        { address, ByteString.CopyFrom(new [] { (byte)value }) }
-                    });
+                case "set":
+                    var value = obj["Value"].AsInt32();
+                    await SetValue(name, value, context);
+                    break;
+                case "inc":
+                    await Increase(name, context);
+                    break;
+                case "dec":
+                    await Decrease(name, context);
+                    break;
+                default:
+                    throw new InvalidTransactionException($"Unknown verb {verb}");
             }
-            else
+        }
+
+        async Task Decrease(string name, Context context)
+        {
+            var state = await context.GetState(Arrayify(GetAddress(name)));
+            if (state != null && state.Any() && !state.First().Value.IsEmpty)
             {
-                Console.WriteLine("No state found");
-                int value = 0;
-                await context.SetState(new Dictionary<string, ByteString>()
-                    {
-                        { address, ByteString.CopyFrom(new [] { (byte)value }) }
-                    });
+                var val = BitConverter.ToInt32(state.First().Value.ToByteArray(), 0) - 1;
+                await context.SetState(new Dictionary<string, ByteString>
+                {
+                    { state.First().Key, ByteString.CopyFrom(BitConverter.GetBytes(val)) }
+                });
+                Console.WriteLine($"Value for {name} decreased to {val}");
+                return;
             }
+            throw new InvalidTransactionException($"Verb is 'dec', but state wasn't found at this address");
+        }
 
-            Console.WriteLine($"Request received by tx processor: {Encoding.UTF8.GetString(request.Payload.ToByteArray())} Context {request.ContextId}");
+        async Task Increase(string name, Context context)
+        {
+            var state = await context.GetState(Arrayify(GetAddress(name)));
+            if (state != null && state.Any() && !state.First().Value.IsEmpty)
+            {
+                var val = BitConverter.ToInt32(state.First().Value.ToByteArray(), 0) + 1;
+                await context.SetState(new Dictionary<string, ByteString>
+                {
+                    { state.First().Key, ByteString.CopyFrom(BitConverter.GetBytes(val)) }
+                });
+                Console.WriteLine($"Value for {name} increased to {val}");
+                return;
+            }
+            throw new InvalidTransactionException("Verb is 'inc', but state wasn't found at this address");
+        }
+
+        async Task SetValue(string name, int value, Context context)
+        {
+            var state = await context.GetState(Arrayify(GetAddress(name)));
+            if (state != null && state.Any() && !state.First().Value.IsEmpty)
+            {
+                throw new InvalidTransactionException($"Verb is 'set', but address is aleady set");
+            }
+            await context.SetState(new Dictionary<string, ByteString>
+            {
+                { GetAddress(name), ByteString.CopyFrom(BitConverter.GetBytes(value)) }
+            });
         }
     }
 }
