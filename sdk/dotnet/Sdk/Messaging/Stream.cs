@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Linq;
 using System.Threading;
+using Sawtooth.Sdk.Processor;
 
 namespace Sawtooth.Sdk.Messaging
 {
@@ -47,51 +48,80 @@ namespace Sawtooth.Sdk.Messaging
 
         void Receive(object _, NetMQSocketEventArgs e)
         {
-            var frame = e.Socket.ReceiveFrameBytes();
+            var message = new Message();
+            message.MergeFrom(Socket.ReceiveFrameBytes());
+
+            switch (message.MessageType)
             {
-                var message = new Message();
-                message.MergeFrom(frame);
+                case MessageType.PingRequest:
+                    Socket.SendFrame(MessageExt.Encode(message, new PingResponse(), MessageType.PingResponse));
+                    return;
 
-                switch (message.MessageType)
-                {
-                    case MessageType.PingRequest:
-                        Socket.SendFrame(MessageExt.Encode(message, new PingResponse(), MessageType.PingResponse));
-                        return;
-                    case MessageType.TpProcessRequest:
-                        Task.Run(async () =>
-                        {
-                            await ProcessRequestHandler?.Invoke(MessageExt.Decode<TpProcessRequest>(message))
-                                .ContinueWith((task) =>
-                                {
-                                    if (task.Status == TaskStatus.RanToCompletion)
-                                        Socket.SendFrame(MessageExt.Encode(message, new TpProcessResponse { Status = TpProcessResponse.Types.Status.Ok }, MessageType.TpProcessResponse));
-                                    else
-                                        Console.WriteLine("Couldn't complete handler Apply method.");
-                                });
-                        });
-                        return;
-                    case MessageType.TpRegisterResponse:
-                        Console.WriteLine($"Transaction processor registration: {MessageExt.Decode<TpRegisterResponse>(message).Status}");
-                        return;
-                    default:
-                        Debug.WriteLine($"Message of type {message.MessageType} received");
-                        break;
-                }
-
-                if (Futures.TryGetValue(message.CorrelationId, out var source))
-                {
-                    if (source.Task.Status != TaskStatus.RanToCompletion)
+                case MessageType.TpProcessRequest:
+                    Task.Run(async () =>
                     {
-                        source.SetResult(message);
+                        await ProcessRequestHandler?.Invoke(MessageExt.Decode<TpProcessRequest>(message))
+                            .ContinueWith((task) =>
+                            {
+                                switch (task.Status)
+                                {
+                                    case TaskStatus.RanToCompletion:
+                                        Socket.SendFrame(MessageExt.Encode(message, new TpProcessResponse
+                                        {
+                                            Status = TpProcessResponse.Types.Status.Ok
+                                        }, MessageType.TpProcessResponse));
+                                        break;
 
-                    }
-                    Futures.TryRemove(message.CorrelationId, out var _);
-                }
-                else
+                                    case TaskStatus.Faulted:
+                                        var errorData = ByteString.CopyFrom(task.Exception?.ToString() ?? string.Empty, Encoding.UTF8);
+                                        if (task.Exception != null && task.Exception.InnerException is InvalidTransactionException)
+                                        {
+                                            Socket.SendFrame(MessageExt.Encode(message, new TpProcessResponse
+                                            {
+                                                Status = TpProcessResponse.Types.Status.InvalidTransaction,
+                                                ExtendedData = errorData
+                                            }, MessageType.TpProcessResponse));
+                                        }
+                                        else
+                                        {
+                                            Socket.SendFrame(MessageExt.Encode(message, new TpProcessResponse
+                                            {
+                                                Status = TpProcessResponse.Types.Status.InternalError,
+                                                ExtendedData = errorData
+                                            }, MessageType.TpProcessResponse));
+                                        }
+                                        break;
+                                }
+                            });
+                    });
+                    return;
+
+                case MessageType.TpRegisterResponse:
+                    Console.WriteLine($"Transaction processor registration: {MessageExt.Decode<TpRegisterResponse>(message).Status}");
+                    break;
+
+                case MessageType.TpUnregisterResponse:
+                    Console.WriteLine($"Transaction processor unregister status: {MessageExt.Decode<TpUnregisterResponse>(message).Status}");
+                    break;
+
+                default:
+                    Debug.WriteLine($"Message of type {message.MessageType} received");
+                    break;
+            }
+
+            if (Futures.TryGetValue(message.CorrelationId, out var source))
+            {
+                if (source.Task.Status != TaskStatus.RanToCompletion)
                 {
-                    Debug.WriteLine("Possible unexpected message received");
-                    Futures.TryAdd(message.CorrelationId, new TaskCompletionSource<Message>());
+                    source.SetResult(message);
+
                 }
+                Futures.TryRemove(message.CorrelationId, out var _);
+            }
+            else
+            {
+                Debug.WriteLine("Possible unexpected message received");
+                Futures.TryAdd(message.CorrelationId, new TaskCompletionSource<Message>());
             }
         }
 

@@ -33,7 +33,7 @@ namespace Sawtooth.Sdk.Test
                 return message;
             });
 
-            Task.WaitAll(new[] { task1, task2 });
+            Task.WhenAll(new[] { task1, task2 });
 
             var actualMessage = task2.Result;
 

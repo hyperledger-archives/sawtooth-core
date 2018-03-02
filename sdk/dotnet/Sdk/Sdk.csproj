@@ -7,14 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Protobuf\Protobuf.csproj" />
-  </ItemGroup>
-  <ItemGroup>
     <Folder Include="Processor\" />
     <Folder Include="Messaging\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NetMQ" Version="4.0.0.1" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Protobuf\Protobuf.csproj" />
   </ItemGroup>
 </Project>

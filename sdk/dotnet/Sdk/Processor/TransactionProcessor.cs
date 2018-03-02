@@ -34,14 +34,19 @@ namespace Sawtooth.Sdk.Processor
                 request.Namespaces.AddRange(handler.Namespaces);
 
                 var registrationResult = MessageExt.Decode<TpRegisterResponse>(await Stream.Send(MessageExt.Encode(request, MessageType.TpRegisterRequest), CancellationToken.None));
-
-                Debug.WriteLine($"Transaction processor {handler.FamilyName} {handler.Version} registration status: {registrationResult.Status}");
+                Console.WriteLine($"Transaction processor {handler.FamilyName} {handler.Version} registration status: {registrationResult.Status}");
             }
+        }
+
+        public void Stop()
+        {
+            Task.WaitAll(new Task[] { Stream.Send(MessageExt.Encode(new TpUnregisterRequest(), MessageType.TpUnregisterRequest), CancellationToken.None) });
+            Stream.Disconnect();
         }
 
         async Task OnProcessRequest(TpProcessRequest request)
         {
-            await Handlers.FirstOrDefault(x => x.FamilyName == request.Header.FamilyName 
+            await Handlers.FirstOrDefault(x => x.FamilyName == request.Header.FamilyName
                                           && x.Version == request.Header.FamilyVersion)?
                           .Apply(request, new Context(Stream, request.ContextId));
         }
