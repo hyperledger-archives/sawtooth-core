@@ -730,6 +730,9 @@ class ParallelScheduler(Scheduler):
         for txn in batch.transactions:
             txn_id = txn.header_signature
             for poss_successor in self._scheduled.copy():
+                if not self.is_transaction_in_schedule(poss_successor):
+                    continue
+
                 if self._is_txn_to_replay(txn_id, poss_successor, seen):
                     if self._txn_has_result(poss_successor):
                         del self._txn_results[poss_successor]
