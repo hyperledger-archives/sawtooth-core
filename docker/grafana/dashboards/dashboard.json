@@ -1,4 +1,4 @@
-{
+{ "dashboard": {
   "annotations": {
     "list": [
       {
@@ -5054,4 +5054,8 @@
   "timezone": "browser",
   "title": "dashboard",
   "version": 0
+},
+"folderId": 0,
+"overwrite": false
 }
+
