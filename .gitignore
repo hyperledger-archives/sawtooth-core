@@ -102,6 +102,14 @@
 /sdk/rust/Cargo.lock
 /sdk/rust/src/messages/*.rs
 !/sdk/rust/src/messages/mod.rs
+/sdk/dotnet/**/*.userprefs
+/sdk/dotnet/**/bin/
+/sdk/dotnet/**/obj/
+/sdk/dotnet/**/bin/
+/sdk/dotnet/**/*.nupkg
+/sdk/examples/dotnet/**/obj/
+/sdk/examples/dptnet/**/bin/
+/sdk/examples/intkey_dotnet/**/*.userprefs
 
 /signing/build/
 /signing/sawtooth_signing.egg-info/
@@ -129,7 +137,3 @@
 /perf/smallbank_workload/smallbank.txns
 
 *.batch
-
-*.userprefs
-
-*.nupkg
