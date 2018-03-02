@@ -40,10 +40,8 @@ class TestDuplicateHandler(unittest.TestCase):
         chain controller, the gossip message is passed.
         """
         block = Block(header_signature="Block1")
-        message = GossipMessage(content_type=GossipMessage.BLOCK,
-                                content=block.SerializeToString())
         handler_status = self.handler.handle(
-            "connection_id", message.SerializeToString())
+            "connection_id", (block, GossipMessage.BLOCK, 2))
         self.assertEqual(handler_status.status, HandlerStatus.PASS)
 
     def test_no_batch(self):
@@ -52,10 +50,8 @@ class TestDuplicateHandler(unittest.TestCase):
         chain controller, the gossip message is passed.
         """
         batch = Batch(header_signature="Batch1")
-        message = GossipMessage(content_type=GossipMessage.BATCH,
-                                content=batch.SerializeToString())
         handler_status = self.handler.handle(
-            "connection_id", message.SerializeToString())
+            "connection_id", (batch, GossipMessage.BATCH, 2))
         self.assertEqual(handler_status.status, HandlerStatus.PASS)
 
     def test_completer_has_block(self):
@@ -65,10 +61,8 @@ class TestDuplicateHandler(unittest.TestCase):
         """
         block = Block(header_signature="Block1")
         self.completer.add_block("Block1")
-        message = GossipMessage(content_type=GossipMessage.BLOCK,
-                                content=block.SerializeToString())
         handler_status = self.handler.handle(
-            "connection_id", message.SerializeToString())
+            "connection_id", (block, GossipMessage.BLOCK, 2))
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
 
     def test_completer_has_batch(self):
@@ -78,10 +72,8 @@ class TestDuplicateHandler(unittest.TestCase):
         """
         batch = Batch(header_signature="Batch1")
         self.completer.add_batch("Batch1")
-        message = GossipMessage(content_type=GossipMessage.BATCH,
-                                content=batch.SerializeToString())
         handler_status = self.handler.handle(
-            "connection_id", message.SerializeToString())
+            "connection_id", (batch, GossipMessage.BATCH, 2))
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
 
     def test_chain_has_block(self):
@@ -91,10 +83,8 @@ class TestDuplicateHandler(unittest.TestCase):
         """
         block = Block(header_signature="Block1")
         self.chain.add_block("Block1")
-        message = GossipMessage(content_type=GossipMessage.BLOCK,
-                                content=block.SerializeToString())
         handler_status = self.handler.handle(
-            "connection_id", message.SerializeToString())
+            "connection_id", (block, GossipMessage.BLOCK, 2))
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
 
     def test_publisher_has_block(self):
@@ -104,8 +94,6 @@ class TestDuplicateHandler(unittest.TestCase):
         """
         batch = Batch(header_signature="Batch1")
         self.publisher.add_batch("Batch1")
-        message = GossipMessage(content_type=GossipMessage.BATCH,
-                                content=batch.SerializeToString())
         handler_status = self.handler.handle(
-            "connection_id", message.SerializeToString())
+            "connection_id", (batch, GossipMessage.BATCH, 2))
         self.assertEqual(handler_status.status, HandlerStatus.DROP)
