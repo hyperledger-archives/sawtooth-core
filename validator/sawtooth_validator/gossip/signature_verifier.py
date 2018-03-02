@@ -25,10 +25,8 @@ from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
-from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
-from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
 from sawtooth_validator import metrics
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -188,11 +186,8 @@ class GossipBatchResponseSignatureVerifier(Handler):
             'already_validated_batch_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
-        batch_response_message = GossipBatchResponse()
-        batch_response_message.ParseFromString(message_content)
+        batch, _ = message_content
 
-        batch = Batch()
-        batch.ParseFromString(batch_response_message.content)
         if batch.header_signature in self._seen_cache:
             self._batch_dropped_count.inc()
             return HandlerResult(status=HandlerStatus.DROP)

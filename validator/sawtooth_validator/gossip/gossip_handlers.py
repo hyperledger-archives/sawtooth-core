@@ -194,10 +194,7 @@ class GossipBatchResponseHandler(Handler):
         self._block_publisher_has_batch = block_publisher_has_batch
 
     def handle(self, connection_id, message_content):
-        batch_response_message = GossipBatchResponse()
-        batch_response_message.ParseFromString(message_content)
-        batch = Batch()
-        batch.ParseFromString(batch_response_message.content)
+        batch, _ = message_content
 
         batch_id = batch.header_signature
 
@@ -278,5 +275,16 @@ def gossip_block_response_preprocessor(message_content_bytes):
     block.ParseFromString(block_response.content)
 
     content = block, message_content_bytes
+
+    return PreprocessorResult(content=content)
+
+
+def gossip_batch_response_preprocessor(message_content_bytes):
+    batch_response = GossipBatchResponse()
+    batch_response.ParseFromString(message_content_bytes)
+    batch = Batch()
+    batch.ParseFromString(batch_response.content)
+
+    content = batch, message_content_bytes
 
     return PreprocessorResult(content=content)
