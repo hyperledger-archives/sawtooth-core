@@ -60,6 +60,7 @@ class Dispatcher(InstrumentedThread):
         self._condition = Condition()
         self._dispatch_timers = {}
         self._priority = {}
+        self._preprocessors = {}
 
     def _get_dispatch_timer(self, tag):
         if tag not in self._dispatch_timers:
@@ -174,10 +175,46 @@ class Dispatcher(InstrumentedThread):
         if priority is not None:
             self._priority[message_type] = priority
 
+    def set_preprocessor(self, message_type, preprocessor, executor):
+        self._preprocessors[message_type] = \
+            _PreprocessorManager(
+                executor=executor,
+                preprocessor=preprocessor)
+
     def set_message_priority(self, message_type, priority):
         self._priority[message_type] = priority
 
     def _process(self, message_id):
+        message_info = self._message_information[message_id]
+
+        try:
+            preprocessor = self._preprocessors[message_info.message_type]
+        except KeyError:
+            self._process_next(message_id)
+            return
+
+        def do_next(result):
+            try:
+                self._message_information[message_id] = \
+                    _MessageInformation(
+                        connection=message_info.connection,
+                        connection_id=message_info.connection_id,
+                        content=result,
+                        correlation_id=message_info.correlation_id,
+                        collection=message_info.collection,
+                        message_type=message_info.message_type)
+
+                self._process_next(message_id)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception(
+                    "Unhandled exception after preprocessing")
+
+        preprocessor.execute(
+            connection_id=message_info.connection_id,
+            message_content=message_info.content,
+            callback=do_next)
+
+    def _process_next(self, message_id):
         message_info = self._message_information[message_id]
 
         try:
@@ -213,7 +250,7 @@ class Dispatcher(InstrumentedThread):
             del self._message_information[message_id]
 
         elif result.status == HandlerStatus.PASS:
-            self._process(message_id)
+            self._process_next(message_id)
 
         elif result.status == HandlerStatus.RETURN_AND_PASS:
             message_info = self._message_information[message_id]
@@ -235,7 +272,7 @@ class Dispatcher(InstrumentedThread):
                         message_info.connection_id,
                         message_info.connection)
 
-                self._process(message_id)
+                self._process_next(message_id)
             else:
                 LOGGER.error("HandlerResult with status of RETURN_AND_PASS "
                              "is missing message_out or message_type")
@@ -317,6 +354,18 @@ class Dispatcher(InstrumentedThread):
         with self._condition:
             if self._message_information:
                 self._condition.wait()
+
+
+class _PreprocessorManager:
+    def __init__(self, executor, preprocessor):
+        self._executor = executor
+        self._preprocessor = preprocessor
+
+    def execute(self, connection_id, message_content, callback):
+        def wrapped(message_content):
+            return callback(self._preprocessor(message_content))
+
+        return self._executor.submit(wrapped, message_content)
 
 
 class _HandlerManager(object):
