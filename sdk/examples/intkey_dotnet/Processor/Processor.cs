@@ -22,7 +22,7 @@ namespace Program
 
         public string FamilyName { get => familyName; }
         public string Version { get => "1.0"; }
-        public string[] Namespaces { get => new[] { PREFIX }; }
+        public string[] Namespaces { get => Arrayify(PREFIX); }
 
         T[] Arrayify<T>(T obj) => new[] { obj };
         string GetAddress(string name) => PREFIX + name.ToByteArray().ToSha512().TakeLast(32).ToArray().ToHexString();

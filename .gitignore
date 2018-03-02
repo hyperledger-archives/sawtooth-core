@@ -107,8 +107,8 @@
 /sdk/dotnet/**/obj/
 /sdk/dotnet/**/bin/
 /sdk/dotnet/**/*.nupkg
-/sdk/examples/dotnet/**/obj/
-/sdk/examples/dptnet/**/bin/
+/sdk/examples/intkey_dotnet/**/obj/
+/sdk/examples/intkey_dotnet/**/bin/
 /sdk/examples/intkey_dotnet/**/*.userprefs
 
 /signing/build/
