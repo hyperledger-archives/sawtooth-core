@@ -60,6 +60,7 @@ class Dispatcher(InstrumentedThread):
         self._condition = Condition()
         self._dispatch_timers = {}
         self._priority = {}
+        self._preprocessors = {}
 
     def _get_dispatch_timer(self, tag):
         if tag not in self._dispatch_timers:
@@ -174,10 +175,86 @@ class Dispatcher(InstrumentedThread):
         if priority is not None:
             self._priority[message_type] = priority
 
+    def set_preprocessor(self, message_type, preprocessor, executor):
+        '''
+        Sets PREPROCESSOR to run on MESSAGE_TYPE in EXECUTOR.
+
+        PREPROCESSOR: fn(message_content: bytes) -> PreprocessorResult
+        '''
+        self._preprocessors[message_type] = \
+            _PreprocessorManager(
+                executor=executor,
+                preprocessor=preprocessor)
+
     def set_message_priority(self, message_type, priority):
         self._priority[message_type] = priority
 
     def _process(self, message_id):
+        message_info = self._message_information[message_id]
+
+        try:
+            preprocessor = self._preprocessors[message_info.message_type]
+        except KeyError:
+            self._process_next(message_id)
+            return
+
+        def do_next(result):
+            message_info = self._message_information[message_id]
+
+            try:
+                # check for a None result
+                if result is None:
+                    LOGGER.error(
+                        "%s preprocessor returned None result for messsage %s",
+                        preprocessor,
+                        message_id)
+                    return
+
+                # check for result status
+                if result.status == HandlerStatus.RETURN:
+                    del self._message_information[message_id]
+
+                    message = validator_pb2.Message(
+                        content=result.message_out.SerializeToString(),
+                        correlation_id=message_info.correlation_id,
+                        message_type=result.message_type)
+
+                    try:
+                        self._send_message[message_info.connection](
+                            msg=message,
+                            connection_id=message_info.connection_id)
+                    except KeyError:
+                        LOGGER.warning(
+                            "Can't send message %s back to "
+                            "%s because connection %s not in dispatcher",
+                            get_enum_name(message.message_type),
+                            message_info.connection_id,
+                            message_info.connection)
+
+                    return
+
+                # store the preprocessor result
+                self._message_information[message_id] = \
+                    _MessageInformation(
+                        connection=message_info.connection,
+                        connection_id=message_info.connection_id,
+                        content=result.content,
+                        correlation_id=message_info.correlation_id,
+                        collection=message_info.collection,
+                        message_type=message_info.message_type)
+
+                self._process_next(message_id)
+
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception(
+                    "Unhandled exception after preprocessing")
+
+        preprocessor.execute(
+            connection_id=message_info.connection_id,
+            message_content=message_info.content,
+            callback=do_next)
+
+    def _process_next(self, message_id):
         message_info = self._message_information[message_id]
 
         try:
@@ -213,7 +290,7 @@ class Dispatcher(InstrumentedThread):
             del self._message_information[message_id]
 
         elif result.status == HandlerStatus.PASS:
-            self._process(message_id)
+            self._process_next(message_id)
 
         elif result.status == HandlerStatus.RETURN_AND_PASS:
             message_info = self._message_information[message_id]
@@ -235,7 +312,7 @@ class Dispatcher(InstrumentedThread):
                         message_info.connection_id,
                         message_info.connection)
 
-                self._process(message_id)
+                self._process_next(message_id)
             else:
                 LOGGER.error("HandlerResult with status of RETURN_AND_PASS "
                              "is missing message_out or message_type")
@@ -319,6 +396,18 @@ class Dispatcher(InstrumentedThread):
                 self._condition.wait()
 
 
+class _PreprocessorManager:
+    def __init__(self, executor, preprocessor):
+        self._executor = executor
+        self._preprocessor = preprocessor
+
+    def execute(self, connection_id, message_content, callback):
+        def wrapped(message_content):
+            return callback(self._preprocessor(message_content))
+
+        return self._executor.submit(wrapped, message_content)
+
+
 class _HandlerManager(object):
     def __init__(self, executor, handler):
         """
@@ -372,6 +461,19 @@ class HandlerStatus(enum.Enum):
     RETURN_AND_PASS = 3  # Send a message out and process the next handler
     PASS = 4  # Send the message to the next handler
     RETURN_AND_CLOSE = 5  # Send the message out and close connection
+
+
+class PreprocessorResult(HandlerResult):
+    def __init__(self, content=None, status=None,
+                 message_out=None, message_type=None):
+        """
+        :param content: the content returned if preprocessing is successful
+        :param status HandlerStatus: informs the dispatcher on how to proceed
+        :param message_out protobuf Python class:
+        :param message_type: validator_pb2.Message.* enum value
+        """
+        self.content = content
+        super().__init__(status, message_out, message_type)
 
 
 class Handler(object, metaclass=abc.ABCMeta):
