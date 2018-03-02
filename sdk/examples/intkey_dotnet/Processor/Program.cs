@@ -17,7 +17,7 @@ namespace Program
     {
         static void Main(string[] args)
         {
-            var validatorAddress = "tcp://localhost:4004";
+            var validatorAddress = args.Any() ? args.First() : "tcp://127.0.0.1:4004";
 
             var processor = new TransactionProcessor(validatorAddress);
             processor.AddHandler(new IntKeyProcessor());

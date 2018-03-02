@@ -24,6 +24,7 @@ EXCLUDE=""
 
 ALL_TARGETS="
         cxx
+        dotnet
         ext
         go
         java
@@ -148,6 +149,9 @@ main() {
                 cxx)
                     build_cxx
                     ;;
+                dotnet)
+                    build_dotnet
+                    ;;
                 ext)
                     build_external
                     ;;
@@ -268,6 +272,12 @@ then
         docker_run sawtooth-dev-cxx
     }
 
+    build_dotnet() {
+        docker_build docker/sawtooth-dev-dotnet docker/ sawtooth-dev-dotnet
+        docker_build docker/sawtooth-dev-dotnet docker/ sawtooth-intkey-tp-dotnet
+        docker_run sawtooth-dev-dotnet
+    }
+
     build_go() {
         docker_build docker/sawtooth-dev-go docker/ sawtooth-dev-go
         docker_build docker/sawtooth-dev-go docker/ sawtooth-intkey-tp-go
@@ -326,6 +336,13 @@ then
         cp $top_dir/ci/sawtooth-build-debs $build_dir
         docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
         docker_run sawtooth-build-debs cxx
+    }
+
+    build_dotnet() {
+        warn "Installed dotnet images not implemented, building mounted instead"
+        docker_build docker/sawtooth-dev-dotnet docker/ sawtooth-dev-dotnet
+        docker_build docker/sawtooth-dev-dotnet docker/ sawtooth-intkey-tp-dotnet
+        docker_run sawtooth-dev-dotnet
     }
 
     build_go() {
