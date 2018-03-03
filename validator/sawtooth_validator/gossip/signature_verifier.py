@@ -15,9 +15,6 @@
 
 import logging
 import hashlib
-# pylint: disable=import-error,no-name-in-module
-# needed for google.protobuf import
-from google.protobuf.message import DecodeError
 
 from sawtooth_signing import create_context
 from sawtooth_signing.secp256k1 import Secp256k1PublicKey
@@ -211,18 +208,12 @@ class BatchListSignatureVerifier(Handler):
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
-        try:
-            request = client_batch_submit_pb2.ClientBatchSubmitRequest()
-            request.ParseFromString(message_content)
-        except DecodeError:
-            return make_response(response_proto.INTERNAL_ERROR)
-
-        for batch in request.batches:
+        for batch in message_content.batches:
             if batch.trace:
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
 
-        if not all(map(is_valid_batch, request.batches)):
+        if not all(map(is_valid_batch, message_content.batches)):
             return make_response(response_proto.INVALID_BATCH)
 
         return HandlerResult(status=HandlerStatus.PASS)

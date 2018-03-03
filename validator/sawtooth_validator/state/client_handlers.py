@@ -33,6 +33,7 @@ from sawtooth_validator.state.batch_tracker import BatchFinishObserver
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
+from sawtooth_validator.networking.dispatch import PreprocessorResult
 
 from sawtooth_validator.protobuf import client_batch_pb2
 from sawtooth_validator.protobuf import client_block_pb2
@@ -44,6 +45,8 @@ from sawtooth_validator.protobuf import client_peers_pb2
 from sawtooth_validator.protobuf import client_status_pb2
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import validator_pb2
+from sawtooth_validator.protobuf.client_batch_submit_pb2 \
+    import ClientBatchSubmitResponse
 
 
 LOGGER = logging.getLogger(__name__)
@@ -626,6 +629,14 @@ class BatchSubmitFinisher(_ClientRequestHandler):
             client_batch_submit_pb2.ClientBatchSubmitResponse,
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
+    def handle(self, connection_id, message_content):
+        try:
+            response = self._respond(message_content)
+        except _ResponseFailed as e:
+            response = e.status
+
+        return self._wrap_result(response)
+
     def _respond(self, request):
         for batch in request.batches:
             if batch.trace:
@@ -1094,3 +1105,20 @@ class StatusGetRequest(_ClientRequestHandler):
         return self._wrap_response(
             endpoint=self._gossip.endpoint,
             peers=sorted(peers, key=lambda peer: peer.endpoint))
+
+
+def client_batch_submit_request_preprocessor(message_content_bytes):
+    request = client_batch_submit_pb2.ClientBatchSubmitRequest()
+
+    try:
+        request.ParseFromString(message_content_bytes)
+    except DecodeError:
+        LOGGER.error('ClientBatchSubmitRequest failed to deserialize')
+
+        return PreprocessorResult(
+            status=HandlerStatus.RETURN,
+            message_out=ClientBatchSubmitResponse(
+                status=ClientBatchSubmitResponse.INTERNAL_ERROR),
+            message_type=validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
+
+    return PreprocessorResult(content=request)

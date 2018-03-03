@@ -30,6 +30,25 @@ A_1 = 'a' * 127 + '1'
 A_2 = 'a' * 127 + '2'
 
 
+class TestBatchSubmitPreprocessor(ClientHandlerTestCase):
+    def test_batch_submit_bad_request(self):
+        """Verifies preprocessor breaks properly when sent a bad request.
+
+        Expects to find:
+            - a response status of INTERNAL_ERROR
+        """
+
+        request = client_batch_submit_pb2.ClientBatchSubmitRequest(
+            batches=[make_mock_batch('new')]
+        ).SerializeToString()[0:-1]
+
+        result = handlers.client_batch_submit_request_preprocessor(request)
+
+        self.assertEqual(
+            client_batch_submit_pb2.ClientBatchSubmitResponse.INTERNAL_ERROR,
+            result.message_out.status)
+
+
 class TestBatchSubmitFinisher(ClientHandlerTestCase):
     def setUp(self):
         store, tracker = make_store_and_tracker()
@@ -48,19 +67,11 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
             - a response status of OK
             - no batch_statuses
         """
-        response = self.make_request(batches=[make_mock_batch('new')])
+        response = self._handle(
+            client_batch_submit_pb2.ClientBatchSubmitRequest(
+                batches=[make_mock_batch('new')]))
 
         self.assertEqual(self.status.OK, response.status)
-
-    def test_batch_submit_bad_request(self):
-        """Verifies finisher breaks properly when sent a bad request.
-
-        Expects to find:
-            - a response status of INTERNAL_ERROR
-        """
-        response = self.make_bad_request(batches=[make_mock_batch('new')])
-
-        self.assertEqual(self.status.INTERNAL_ERROR, response.status)
 
 
 class TestBatchStatusRequests(ClientHandlerTestCase):

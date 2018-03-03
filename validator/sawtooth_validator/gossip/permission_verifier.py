@@ -14,8 +14,6 @@
 # ------------------------------------------------------------------------------
 import logging
 
-from google.protobuf.message import DecodeError
-
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -355,25 +353,19 @@ class BatchListPermissionVerifier(Handler):
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
-        try:
-            request = client_batch_submit_pb2.ClientBatchSubmitRequest()
-            request.ParseFromString(message_content)
-            for batch in request.batches:
-                if batch.trace:
-                    LOGGER.debug("TRACE %s: %s", batch.header_signature,
-                                 self.__class__.__name__)
-            if not all(
-                    self._verifier.check_off_chain_batch_roles(batch)
-                    for batch in request.batches):
-                return make_response(response_proto.INVALID_BATCH)
+        for batch in message_content.batches:
+            if batch.trace:
+                LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                             self.__class__.__name__)
+        if not all(
+                self._verifier.check_off_chain_batch_roles(batch)
+                for batch in message_content.batches):
+            return make_response(response_proto.INVALID_BATCH)
 
-            if not all(
-                    self._verifier.is_batch_signer_authorized(batch)
-                    for batch in request.batches):
-                return make_response(response_proto.INVALID_BATCH)
-
-        except DecodeError:
-            return make_response(response_proto.INTERNAL_ERROR)
+        if not all(
+                self._verifier.is_batch_signer_authorized(batch)
+                for batch in message_content.batches):
+            return make_response(response_proto.INVALID_BATCH)
 
         return HandlerResult(status=HandlerStatus.PASS)
 
