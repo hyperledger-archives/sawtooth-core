@@ -626,6 +626,14 @@ class BatchSubmitFinisher(_ClientRequestHandler):
             client_batch_submit_pb2.ClientBatchSubmitResponse,
             validator_pb2.Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
+    def handle(self, connection_id, message_content):
+        try:
+            response = self._respond(message_content)
+        except _ResponseFailed as e:
+            response = e.status
+
+        return self._wrap_result(response)
+
     def _respond(self, request):
         for batch in request.batches:
             if batch.trace:
@@ -1094,3 +1102,10 @@ class StatusGetRequest(_ClientRequestHandler):
         return self._wrap_response(
             endpoint=self._gossip.endpoint,
             peers=sorted(peers, key=lambda peer: peer.endpoint))
+
+
+def client_batch_submit_request_preprocessor(message_content_bytes):
+    request = client_batch_submit_pb2.ClientBatchSubmitRequest()
+    request.ParseFromString(message_content_bytes)
+
+    return request

@@ -22,8 +22,6 @@ from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.protobuf.client_batch_submit_pb2 \
-    import ClientBatchSubmitRequest
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -374,9 +372,7 @@ class CompleterBatchListBroadcastHandler(Handler):
         self._gossip = gossip
 
     def handle(self, connection_id, message_content):
-        request = ClientBatchSubmitRequest()
-        request.ParseFromString(message_content)
-        for batch in request.batches:
+        for batch in message_content.batches:
             if batch.trace:
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
