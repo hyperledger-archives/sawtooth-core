@@ -589,13 +589,13 @@ Security Considerations
 Comments on Multi-user or Multi-ledger SGX Enclave Service
 ----------------------------------------------------------
 
-It is possible to use the same enclave for multiple users or ledgers by making
-username and ledgername input **Parameters** to ``generateSignUpData()`` and
-``unsealSignUpData()``. Then the sign-up tuple (username, ledgername, PPK, PSK,
-MCID) is sealed to disk, with username and ledgername used to generate the
-filename. Anytime a user authenticates to the service the latter can have the
-enclave unseal and use the sign-up tuple from the file corresponding to that
-user (and ledger).
+It is possible to use the same enclave for multiple users or ledgers by
+providing username and ledgername as input parameters to 
+``generateSignUpData()`` and ``unsealSignUpData()``. Then the sign-up tuple 
+(username, ledgername, PPK, PSK, MCID) is sealed to disk, with username and
+ledgername used to generate the filename. Anytime a user authenticates to the
+service the latter can have the enclave unseal and use the sign-up tuple from
+the file corresponding to that user (and ledger).
 
 Population Size and Local Mean Computation
 ==========================================
@@ -609,26 +609,25 @@ Population Size and Local Mean Computation
    the ledger contains sampleLength blocks.
 
 #. sampleLength: number of blocks that need to be on the ledger to finish the
-   bootstrapping phase and get into the steady phase.
+   bootstrapping phase
 
 #. minimumWaitTime: a lower bound on the wait time.
 
 The population size is computed as follows:
 
-1. :math:`sm=0`
-#. :math:`sw=0`
-#. **foreach** wait certificate :math:`wc` stored on the ledger:
-   * :math:`sw=sw+wc\textrm{.waitTimer.duration}-\textrm{minimumWaitTime}`
-   * :math:`sm=sm+wc\textrm{.waitTimer.localMean}`
+1. :math:`sumMeans = 0`
+#. :math:`sumWaits = 0`
+#. | **foreach** wait certificate :math:`wc` stored on the ledger:
+   |   :math:`sumWaits += wc\textrm{.duration}-\textrm{minimumWaitTime}`
+   |   :math:`sumMeans += wc\textrm{.localMean}`
 
-#. :math:`populationSize=sm/sw`
+#. :math:`populationSize = sumMeans / sumWaits`
 
-Assuming :math:`b` is the number of blocks currently stored on the ledger the
-local mean is computed as follows:
+Assuming :math:`b` is the number of blocks currently claimed, the local mean is computed as follows:
 
-1. if :math:`b < \textrm{sampleLength}` then :math:`r = 1.0\cdot b /
-   \textrm{sampleLength}` and :math:`\textrm{localMean} =
-   \textrm{targetWaitTime}\cdot (1 - r^2) + \textrm{initialWaitTime}\cdot r^2`.
+1. | if :math:`b < \textrm{sampleLength}` then
+   |    :math:`ratio = 1.0\cdot b / \textrm{sampleLength}` and
+   |    :math:`\textrm{localMean} = \textrm{targetWaitTime}\cdot (1 - ratio^2) + \textrm{initialWaitTime}\cdot ratio^2`.
 #. else :math:`\textrm{localMean}= \textrm{targetWaitTime}\cdot
    \textrm{populationSize}`
 
@@ -636,39 +635,40 @@ z-test
 ======
 
 A z-test is used to test the hypothesis that a validator won elections at a
-higher average rate than expected. **Parameters**:
+higher average rate than expected.
 
-1. zmax: test value, it measures the deviation from the expected mean. It is
-selected so that the desired confidence interval $\alpha$ is obtained. Example
-configurations are:
+**Parameters**:
 
-  a. :math:`\textrm{ztest}=1.645 \leftrightarrow \alpha=0.05`
-  #. :math:`\textrm{ztest}=2.325 \rightarrow \alpha=0.01`
-  #. :math:`\textrm{ztest}=2.575 \rightarrow \alpha=0.005`
-  #. :math:`\textrm{ztest}=3.075 \rightarrow \alpha=0.001`
+1. zmax: test value, it measures the maximum deviation from the expected mean.
+   It is selected so that the desired confidence interval $\alpha$ is obtained.
+   Example configurations are:
 
-2. testIdentifier: the validator identifier under test.
+   a. :math:`\textrm{ztest}=1.645 \leftrightarrow \alpha=0.05`
+   #. :math:`\textrm{ztest}=2.325 \rightarrow \alpha=0.01`
+   #. :math:`\textrm{ztest}=2.575 \rightarrow \alpha=0.005`
+   #. :math:`\textrm{ztest}=3.075 \rightarrow \alpha=0.001`
 
-#. blockArray: an array containing pairs of validator identity and estimated
-   population size: :math:`(\textit{id},  \textit{populationEstimate})`. Each
-   pair represents one published transaction block.
+2. testValidatorId: the validator identifier under test.
 
-#. minObserved: minimum number of election wins that needs to be observed for
-   the identifier under test.
+#. blockArray: an array containing pairs of validator identifier and estimated
+   population size. Each pair represents one published transaction block.
+
+#. minObservedWins: minimum number of election wins that needs to be observed
+   for the identifier under test.
 
 The z-test is computed as follows::
 
-    observed = expected = blockCount = 0
-    foreach b = (id, populationEstimate) in blockArray:
+    observedWins = expectedWins = blockCount = 0
+    foreach block = (validatorId, populationEstimate) in blockArray:
         blockCount += 1
-        expected += 1 / populationEstimate
+        expectedWins += 1 / populationEstimate
 
-        if id is equal to testIdentifier:
-            observed += 1
-            if observed > minObserved and observed > expected:
-                p = expected / blockCount
+        if validatorId is equal to testValidatorId:
+            observedWins += 1
+            if observedWins > minObservedWins and observedWins > expectedWins:
+                p = expectedWins / blockCount
                 σ = sqrt(blockCount * p * (1.0 - p))
-                z = (observed - expected) / σ
+                z = (observedWins - expectedWins) / σ
                 if z > zmax:
                     return False
     return True
