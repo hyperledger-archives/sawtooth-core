@@ -155,13 +155,13 @@ def verify_state(bind_network, bind_component, scheduler_type, data_dir=None):
     component_dispatcher.add_handler(
         validator_pb2.Message.TP_REGISTER_REQUEST,
         processor_handlers.ProcessorRegisterHandler(
-            transaction_executor.processors),
+            transaction_executor.processor_manager),
         component_thread_pool)
 
     component_dispatcher.add_handler(
         validator_pb2.Message.TP_UNREGISTER_REQUEST,
         processor_handlers.ProcessorUnRegisterHandler(
-            transaction_executor.processors),
+            transaction_executor.processor_manager),
         component_thread_pool)
 
     component_dispatcher.start()
