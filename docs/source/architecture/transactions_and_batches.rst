@@ -27,7 +27,6 @@ message types:
 .. literalinclude:: ../../../protos/transaction.proto
    :language: protobuf
    :caption: File: protos/transaction.proto
-   :linenos:
 
 Header, Signature, and Public Keys
 ----------------------------------
@@ -130,7 +129,6 @@ message types:
 .. literalinclude:: ../../../protos/batch.proto
    :language: protobuf
    :caption: File: protos/batch.proto
-   :linenos:
 
 Header, Signature, and Public Keys
 ----------------------------------
