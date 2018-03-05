@@ -28,7 +28,6 @@ that will be set in the genesis block.
 
 .. literalinclude:: output/sawset_usage.out
    :language: console
-   :linenos:
 
 sawset genesis
 ==============
@@ -39,7 +38,6 @@ during genesis block construction.
 
 .. literalinclude:: output/sawset_genesis_usage.out
    :language: console
-   :linenos:
 
 sawset proposal
 ===============
@@ -51,7 +49,6 @@ create and vote on proposed settings.
 
 .. literalinclude:: output/sawset_proposal_usage.out
    :language: console
-   :linenos:
 
 sawset proposal create
 ======================
@@ -62,7 +59,6 @@ series of votes, depending on the vote threshold setting.
 
 .. literalinclude:: output/sawset_proposal_create_usage.out
    :language: console
-   :linenos:
 
 sawset proposal list
 ====================
@@ -73,7 +69,6 @@ proposals can be used to find proposals to vote on.
 
 .. literalinclude:: output/sawset_proposal_list_usage.out
    :language: console
-   :linenos:
 
 sawset proposal vote
 ====================
@@ -84,7 +79,6 @@ find the proposal id.
 
 .. literalinclude:: output/sawset_proposal_vote_usage.out
    :language: console
-   :linenos:
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

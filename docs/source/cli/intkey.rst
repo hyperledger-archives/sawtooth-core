@@ -27,7 +27,6 @@ decrement the value of entries stored in a state dictionary.
 
 .. literalinclude:: output/intkey_usage.out
    :language: console
-   :linenos:
 
 intkey set
 ==========
@@ -38,7 +37,6 @@ This transaction will fail if the value is less than 0 or greater than
 
 .. literalinclude:: output/intkey_set_usage.out
    :language: console
-   :linenos:
 
 intkey inc
 ==========
@@ -49,7 +47,6 @@ would exceed 2\ :sup:`32` - 1.
 
 .. literalinclude:: output/intkey_inc_usage.out
    :language: console
-   :linenos:
 
 intkey dec
 ==========
@@ -60,7 +57,6 @@ would be less than 0.
 
 .. literalinclude:: output/intkey_dec_usage.out
    :language: console
-   :linenos:
 
 intkey show
 ===========
@@ -69,7 +65,6 @@ The ``intkey show`` subcommand displays the value of the specified key (`name`).
 
 .. literalinclude:: output/intkey_show_usage.out
    :language: console
-   :linenos:
 
 intkey list
 ===========
@@ -78,7 +73,6 @@ The ``intkey list`` subcommand displays the value of all keys.
 
 .. literalinclude:: output/intkey_list_usage.out
    :language: console
-   :linenos:
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

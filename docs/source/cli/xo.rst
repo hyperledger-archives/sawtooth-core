@@ -36,7 +36,6 @@ The ``xo`` command provides subcommands for playing XO on the command line.
 
 .. literalinclude:: output/xo_usage.out
    :language: console
-   :linenos:
 
 xo create
 =========
@@ -45,7 +44,6 @@ The ``xo create`` subcommand starts an XO game with the specified name.
 
 .. literalinclude:: output/xo_create_usage.out
    :language: console
-   :linenos:
 
 xo list
 =======
@@ -54,7 +52,6 @@ The ``xo list`` subcommand displays information for all XO games in state.
 
 .. literalinclude:: output/xo_list_usage.out
    :language: console
-   :linenos:
 
 xo show
 =======
@@ -63,7 +60,6 @@ The ``xo show`` subcommand displays information about the specified XO game.
 
 .. literalinclude:: output/xo_show_usage.out
    :language: console
-   :linenos:
 
 xo take
 =======
@@ -74,7 +70,6 @@ already taken.
 
 .. literalinclude:: output/xo_take_usage.out
    :language: console
-   :linenos:
 
 xo delete
 =========
@@ -83,7 +78,6 @@ The ``xo delete`` subcommand deletes an existing xo game.
 
 .. literalinclude:: output/xo_delete_usage.out
    :language: console
-   :linenos:
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

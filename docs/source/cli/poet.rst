@@ -29,7 +29,6 @@ Sawtooth with the PoET consensus method.
 
 .. literalinclude:: output/poet_usage.out
    :language: console
-   :linenos:
 
 poet registration
 =================
@@ -39,7 +38,6 @@ the PoET validator registry.
 
 .. literalinclude:: output/poet_registration_usage.out
    :language: console
-   :linenos:
 
 poet registration create
 ========================
@@ -50,7 +48,6 @@ the validator host wishing to enroll.
 
 .. literalinclude:: output/poet_registration_create_usage.out
    :language: console
-   :linenos:
 
 poet enclave
 ============
@@ -59,7 +56,6 @@ The ``poet enclave`` subcommand generates enclave setup information.
 
 .. literalinclude:: output/poet_enclave_usage.out
    :language: console
-   :linenos:
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

@@ -99,11 +99,9 @@ processor and the REST API are running.
 
 .. literalinclude:: ../cli/output/sawtooth_identity_policy_create_usage.out
   :language: console
-  :linenos:
 
 .. literalinclude:: ../cli/output/sawtooth_identity_role_create_usage.out
   :language: console
-  :linenos:
 
 For example, running the following will create a policy that permits all
 and is named policy_1:
