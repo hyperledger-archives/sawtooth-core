@@ -26,7 +26,6 @@ initializing a validator.
 
 .. literalinclude:: output/sawadm_usage.out
    :language: console
-   :linenos:
 
 sawadm genesis
 ==============
@@ -66,7 +65,6 @@ Use ``--output`` `filename` to specify a different name for the target file.
 
 .. literalinclude:: output/sawadm_genesis_usage.out
    :language: console
-   :linenos:
 
 
 sawadm keygen
@@ -83,7 +81,6 @@ name.
 
 .. literalinclude:: output/sawadm_keygen_usage.out
    :language: console
-   :linenos:
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

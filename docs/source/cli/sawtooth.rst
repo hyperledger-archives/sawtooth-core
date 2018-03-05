@@ -34,7 +34,6 @@ options and arguments that control their behavior. For example:
 
 .. literalinclude:: output/sawtooth_usage.out
    :language: console
-   :linenos:
 
 sawtooth batch
 ==============
@@ -48,7 +47,6 @@ see “Transactions and Batches!”
 
 .. literalinclude:: output/sawtooth_batch_usage.out
    :language: console
-   :linenos:
 
 sawtooth batch list
 ===================
@@ -66,7 +64,6 @@ processing.
 
 .. literalinclude:: output/sawtooth_batch_list_usage.out
    :language: console
-   :linenos:
 
 sawtooth batch show
 ===================
@@ -85,7 +82,6 @@ combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_batch_show_usage.out
    :language: console
-   :linenos:
 
 sawtooth batch status
 =====================
@@ -105,7 +101,6 @@ combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_batch_status_usage.out
    :language: console
-   :linenos:
 
 sawtooth batch submit
 =====================
@@ -124,7 +119,6 @@ combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_batch_submit_usage.out
    :language: console
-   :linenos:
 
 sawtooth block
 ==============
@@ -134,7 +128,6 @@ blocks in the current blockchain.
 
 .. literalinclude:: output/sawtooth_block_usage.out
    :language: console
-   :linenos:
 
 sawtooth block list
 ===================
@@ -152,7 +145,6 @@ processing.
 
 .. literalinclude:: output/sawtooth_block_list_usage.out
    :language: console
-   :linenos:
 
 sawtooth block show
 ===================
@@ -171,7 +163,6 @@ combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_block_show_usage.out
    :language: console
-   :linenos:
 
 sawtooth identity
 =================
@@ -193,7 +184,6 @@ setting.
 
 .. literalinclude:: output/sawtooth_identity_usage.out
   :language: console
-  :linenos:
 
 sawtooth identity policy
 ========================
@@ -203,7 +193,6 @@ current policies stored in state and to create new policies.
 
 .. literalinclude:: output/sawtooth_identity_policy_usage.out
    :language: console
-   :linenos:
 
 sawtooth identity policy create
 ===============================
@@ -217,7 +206,6 @@ without having to also reset the role.
 
 .. literalinclude:: output/sawtooth_identity_policy_create_usage.out
   :language: console
-  :linenos:
 
 sawtooth identity policy list
 =============================
@@ -228,7 +216,6 @@ which policy name should be set for a new role.
 
 .. literalinclude:: output/sawtooth_identity_policy_list_usage.out
   :language: console
-  :linenos:
 
 sawtooth identity role
 ======================
@@ -238,7 +225,6 @@ current roles stored in state and to create new roles.
 
 .. literalinclude:: output/sawtooth_identity_role_usage.out
   :language: console
-  :linenos:
 
 sawtooth identity role create
 =============================
@@ -254,7 +240,6 @@ to sign transactions.
 
 .. literalinclude:: output/sawtooth_identity_role_create_usage.out
   :language: console
-  :linenos:
 
 sawtooth identity role list
 ===========================
@@ -271,7 +256,6 @@ processing.
 
 .. literalinclude:: output/sawtooth_identity_role_list_usage.out
   :language: console
-  :linenos:
 
 sawtooth keygen
 ===============
@@ -284,7 +268,6 @@ and ``<key_dir>/<key_name>.pub``. By default, ``<key_dir>`` is
 
 .. literalinclude:: output/sawtooth_keygen_usage.out
   :language: console
-  :linenos:
 
 sawtooth peer
 =============
@@ -294,7 +277,6 @@ validator's peers.
 
 .. literalinclude:: output/sawtooth_peer_usage.out
    :language: console
-   :linenos:
 
 sawtooth peer list
 ==================
@@ -308,7 +290,6 @@ combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_peer_list_usage.out
    :language: console
-   :linenos:
 
 sawtooth settings
 =================
@@ -318,7 +299,6 @@ active on-chain settings.
 
 .. literalinclude:: output/sawtooth_settings_usage.out
    :language: console
-   :linenos:
 
 sawtooth settings list
 ======================
@@ -328,7 +308,6 @@ and values of on-chain settings.
 
 .. literalinclude:: output/sawtooth_settings_list_usage.out
    :language: console
-   :linenos:
 
 sawtooth state
 ==============
@@ -338,7 +317,6 @@ entries in the current blockchain state.
 
 .. literalinclude:: output/sawtooth_state_usage.out
    :language: console
-   :linenos:
 
 sawtooth state list
 ===================
@@ -364,7 +342,6 @@ combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_state_list_usage.out
    :language: console
-   :linenos:
 
 sawtooth state show
 ===================
@@ -386,7 +363,6 @@ into a file for further processing.
 
 .. literalinclude:: output/sawtooth_state_show_usage.out
    :language: console
-   :linenos:
 
 sawtooth status
 ===============
@@ -396,7 +372,6 @@ validator's status.
 
 .. literalinclude:: output/sawtooth_status_usage.out
    :language: console
-   :linenos:
 
 sawtooth status show
 ====================
@@ -411,7 +386,6 @@ combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_status_show_usage.out
    :language: console
-   :linenos:
 
 sawtooth transaction
 ====================
@@ -421,7 +395,6 @@ transactions in the current blockchain.
 
 .. literalinclude:: output/sawtooth_transaction_usage.out
    :language: console
-   :linenos:
 
 sawtooth transaction list
 =========================
@@ -439,7 +412,6 @@ processing.
 
 .. literalinclude:: output/sawtooth_transaction_list_usage.out
    :language: console
-   :linenos:
 
 sawtooth transaction show
 =========================
@@ -457,7 +429,6 @@ combination when the REST API is behind a Basic Auth proxy.
 
 .. literalinclude:: output/sawtooth_transaction_show_usage.out
    :language: console
-   :linenos:
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/
