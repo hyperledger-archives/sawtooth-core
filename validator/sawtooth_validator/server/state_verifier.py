@@ -49,7 +49,33 @@ class ExecutionError(Exception):
     pass
 
 
-def verify_state(bind_network, bind_component, scheduler_type, data_dir=None):
+def get_databases(bind_network, data_dir=None):
+    # Get the global state database to operate on
+    if data_dir is not None:
+        global_state_db_filename = os.path.join(
+            data_dir, 'merkle-{}.lmdb'.format(bind_network[-2:]))
+        LOGGER.debug(
+            'verifying state in %s', global_state_db_filename)
+        global_state_db = LMDBNoLockDatabase(global_state_db_filename, 'c')
+    else:
+        global_state_db = DictDatabase()
+
+    # Get the blockstore
+    block_db_filename = os.path.join(
+        data_dir, 'block-{}.lmdb'.format(bind_network[-2:]))
+    LOGGER.debug('block store file is %s', block_db_filename)
+    block_db = IndexedDatabase(
+        block_db_filename,
+        BlockStore.serialize_block,
+        BlockStore.deserialize_block,
+        flag='c',
+        indexes=BlockStore.create_index_configuration())
+    blockstore = BlockStore(block_db)
+
+    return global_state_db, blockstore
+
+
+def verify_state(global_state_db, blockstore, bind_component, scheduler_type):
     """
     Verify the state root hash of all blocks is in state and if not,
     reconstruct the missing state. Assumes that there are no "holes" in
@@ -63,30 +89,7 @@ def verify_state(bind_network, bind_component, scheduler_type, data_dir=None):
         ExecutionError: An unrecoverable error was encountered during batch
             execution.
     """
-
-    # Get the global state database to operate on
-    if data_dir is not None:
-        global_state_db_filename = os.path.join(
-            data_dir, 'merkle-{}.lmdb'.format(bind_network[-2:]))
-        LOGGER.debug(
-            'verifying state in %s', global_state_db_filename)
-        global_state_db = LMDBNoLockDatabase(global_state_db_filename, 'c')
-    else:
-        global_state_db = DictDatabase()
-
     state_view_factory = StateViewFactory(global_state_db)
-
-    # Get the blockstore
-    block_db_filename = os.path.join(
-        data_dir, 'block-{}.lmdb'.format(bind_network[-2:]))
-    LOGGER.debug('block store file is %s', block_db_filename)
-    block_db = IndexedDatabase(
-        block_db_filename,
-        BlockStore.serialize_block,
-        BlockStore.deserialize_block,
-        flag='c',
-        indexes=BlockStore.create_index_configuration())
-    blockstore = BlockStore(block_db)
 
     # Check if we should do state verification
     start_block, prev_state_root = search_for_present_state_root(
