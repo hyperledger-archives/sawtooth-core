@@ -200,7 +200,8 @@ class _SendReceive(object):
                     yield from self._do_router_heartbeat()
                 elif self._socket.getsockopt(zmq.TYPE) == zmq.DEALER:
                     yield from self._do_dealer_heartbeat()
-                yield from asyncio.sleep(self._heartbeat_interval)
+                yield from asyncio.sleep(self._heartbeat_interval,
+                                         loop=self._event_loop)
             except CancelledError:
                 # The concurrent.futures.CancelledError is caught by asyncio
                 # when the Task associated with the coroutine is cancelled.
@@ -600,11 +601,12 @@ class _SendReceive(object):
         self._dispatcher.remove_send_message(self._connection)
         self._dispatcher.remove_send_last_message(self._connection)
         yield from self._stop_auth()
+
         tasks = list(asyncio.Task.all_tasks(self._event_loop).copy())
         for task in tasks:
             task.cancel()
 
-        asyncio.ensure_future(self._stop_event_loop())
+        asyncio.ensure_future(self._stop_event_loop(), loop=self._event_loop)
 
     @asyncio.coroutine
     def _notify_started(self):
@@ -625,24 +627,8 @@ class _SendReceive(object):
             # event loop was never started, so the only Task that is running
             # is the Auth Task.
             self._event_loop.run_until_complete(self._stop_auth())
-        # Cancel all running tasks
-        tasks = list(asyncio.Task.all_tasks(self._event_loop).copy())
-        for task in tasks:
-            self._event_loop.call_soon_threadsafe(task.cancel)
-        while tasks:
-            for task in tasks.copy():
-                if task.done() is True:
-                    tasks.remove(task)
-            time.sleep(.2)
-        if self._event_loop is not None:
-            try:
-                self._event_loop.call_soon_threadsafe(self._event_loop.stop)
-            except RuntimeError:
-                # Depending on the timing of shutdown, the event loop may
-                # already be shutdown from _stop(). If it is,
-                # call_soon_threadsafe will raise a RuntimeError,
-                # which can safely be ignored.
-                pass
+
+        asyncio.ensure_future(self._stop(), loop=self._event_loop)
 
 
 class Interconnect(object):
