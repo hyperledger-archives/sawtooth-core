@@ -543,6 +543,7 @@ class _SendReceive(object):
             # Put the exception on the queue where in start we are waiting
             # for it.
             complete_or_error_queue.put_nowait(e)
+            self._close_sockets()
             raise
 
         if self._heartbeat:
@@ -557,10 +558,15 @@ class _SendReceive(object):
         # event_loop.stop called elsewhere will cause the loop to break out
         # of run_forever then it can be closed and the context destroyed.
         self._event_loop.close()
-        self._socket.close(linger=0)
+        self._close_sockets()
+
+    def _close_sockets(self):
+        if self._socket:
+            self._socket.close(linger=0)
         if self._monitor:
             self._monitor_sock.close(linger=0)
-        self._context.destroy(linger=0)
+        if self._context:
+            self._context.destroy(linger=0)
 
     @asyncio.coroutine
     def _monitor_disconnects(self):
