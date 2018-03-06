@@ -477,6 +477,10 @@ class _SendReceive(object):
             self._context = zmq.asyncio.Context()
             self._socket = self._context.socket(socket_type)
 
+            self._socket.set(zmq.TCP_KEEPALIVE, 1)
+            self._socket.set(zmq.TCP_KEEPALIVE_IDLE, self._connection_timeout)
+            self._socket.set(zmq.TCP_KEEPALIVE_INTVL, self._heartbeat_interval)
+
             if socket_type == zmq.DEALER:
                 self._socket.identity = "{}-{}".format(
                     self._zmq_identity,
