@@ -1,0 +1,19 @@
+[[constraint]]
+  branch = "master"
+  name = "github.com/btcsuite/btcd"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/btcsuite/btcutil"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/golang/protobuf"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/pebbe/zmq4"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/satori/go.uuid"

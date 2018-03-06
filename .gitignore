@@ -86,6 +86,8 @@
 /sdk/examples/xo_java/target/
 /sdk/java/target/
 /sdk/go/src/sawtooth_sdk/protobuf/
+/sdk/go/src/sawtooth_sdk/vendor/
+/sdk/go/src/sawtooth_sdk/Gopkg.lock
 /sdk/go/src/mocks/
 /sdk/go/src/github.com/
 /sdk/go/bin/
