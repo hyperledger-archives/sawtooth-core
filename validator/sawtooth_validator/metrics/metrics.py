@@ -41,10 +41,10 @@ corresponding name:
     important_value_gauge = COLLECTOR.gauge("important_value")
 
 The above creates a metric named
-`"sawtooth_validator.module_name.important_value"` and tags it with the process
-id and hostname where the validator is running. If metrics reporting for this
-metric is disabled, a mock object is returned which implements the same API
-as the regular metric object. **Note:** Mock objects do not maintain state.
+`"sawtooth_validator.module_name.important_value"` and tags it with the
+hostname where the validator is running. If metrics reporting for this metric
+is disabled, a mock object is returned which implements the same API as the
+regular metric object. **Note:** Mock objects do not maintain state.
 
 If the metric is part of a class, the instance should be passed in when the
 metric is created like so:
@@ -52,8 +52,7 @@ metric is created like so:
     important_instance_value_counter = COLLECTOR.counter(
         "important_instance_value", instance=self)
 
-This extends the metric name to include the class name and adds another tag
-for the instance id obtained using `id(self)`.
+This automatically adds the class name to the metric name.
 
 Additionally, a metrics reporting level can be set and additional tags can be
 added when it is created using the `level` and `tags` parameters:
@@ -62,7 +61,11 @@ added when it is created using the `level` and `tags` parameters:
         "important_timer",
         instance=self,
         level=metrics.DEBUG,
-        tags={"name": self.name})
+        tags={
+            "name": self.name,
+            "pid": os.getpid(),
+            "instance": id(self),
+        })
 
 Tags should be used to separate metrics from multiple sources that are
 collected in the same place. For example, `InstrumentedThreadPoolExecutor` uses
@@ -71,7 +74,6 @@ could also separate out these metrics by instance id, adding a name tag makes
 interpreting the metrics much easier.
 """
 
-import os
 import platform
 
 
@@ -118,7 +120,6 @@ class MetricsCollector:
         self._registry = registry
 
         self._base_tags = (
-            ("pid", os.getpid()),
             ("host", platform.node()),
         )
 
@@ -158,8 +159,6 @@ class MetricsCollector:
         if tags is not None:
             tag_list.extend(tags.items())
         tag_list.extend(self._base_tags)
-        if instance is not None:
-            tag_list.append(("instance", id(instance)))
         return ".".join(identifier) + "," + ",".join(
             "{}={}".format(k, v)
             for k, v in tag_list
