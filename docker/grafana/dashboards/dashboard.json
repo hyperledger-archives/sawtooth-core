@@ -240,6 +240,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$DATASOURCE",
+          "description": "The current count of transactions committed to the blockstore. Note that on forking networks, this is not necessarily monotonic.",
           "fill": 0,
           "id": 3,
           "legend": {
@@ -288,7 +289,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "sawtooth_validator.chain.ChainController.committed_transactions_count",
+              "measurement": "sawtooth_validator.chain.ChainController.committed_transactions_gauge",
               "orderByTime": "ASC",
               "policy": "default",
               "refId": "A",
@@ -297,13 +298,13 @@
                 [
                   {
                     "params": [
-                      "count"
+                      "value"
                     ],
                     "type": "field"
                   },
                   {
                     "params": [],
-                    "type": "last"
+                    "type": "mean"
                   }
                 ]
               ],
