@@ -413,6 +413,46 @@ class PredecessorTree:
         return predecessors
 
 
+class PredecessorChain(object):
+
+    def __init__(self):
+        self._predecessors_by_id = dict()
+
+    def add_relationship(self, txn_id, predecessors):
+        """Add a predecessor-successor relationship between one txn id and
+        a set of predecessors.
+
+        Args:
+            txn_id (str): The transaction id of the transaction.
+            predecessors (set): The transaction ids of the
+                transaction's predecessors
+
+        Returns:
+            None
+        """
+
+        all_pred = set()
+        all_pred.update(predecessors)
+        for pred in predecessors:
+            all_pred.update(self._predecessors_by_id[pred])
+
+        self._predecessors_by_id[txn_id] = all_pred
+
+    def is_predecessor_of_other(self, predecessor, others):
+        """Returns True if the predecessor is a predecessor of the successor,
+        or is a predecessor's predecessor ...
+
+        Args:
+            predecessor (str): The txn id of the predecessor.
+            successor (str): The txn id of the successor.
+
+        Returns:
+            (bool)
+        """
+
+        return any(predecessor in self._predecessors_by_id[o] for o in others)
+
+
 class ParallelScheduler(Scheduler):
     def __init__(self, squash_handler, first_state_hash, always_persist):
         self._squash = squash_handler
@@ -423,6 +463,8 @@ class ParallelScheduler(Scheduler):
         self._txn_predecessors = {}
 
         self._always_persist = always_persist
+
+        self._predecessor_chain = PredecessorChain()
 
         # Transaction identifiers which have been scheduled.  Stored as a list,
         # since order is important; SchedulerIterator instances, for example,
@@ -531,7 +573,14 @@ class ParallelScheduler(Scheduler):
 
                 txn_id = txn.header_signature
                 # Update our internal state with the computed predecessors.
-                self._txn_predecessors[txn_id] = set(predecessors)
+
+                pred = list(set(predecessors))
+                pred.sort(key=self._index_of_txn_in_schedule, reverse=True)
+
+                self._txn_predecessors[txn_id] = pred
+                self._predecessor_chain.add_relationship(
+                    txn_id,
+                    set(predecessors))
 
                 # Update the predecessor tree.
                 #
@@ -684,7 +733,9 @@ class ParallelScheduler(Scheduler):
     def _is_predecessor_of_possible_successor(self,
                                               txn_id,
                                               possible_successor):
-        return txn_id in self._txn_predecessors[possible_successor]
+        return self._predecessor_chain.is_predecessor_of_other(
+            txn_id,
+            [possible_successor])
 
     def _txn_has_result(self, txn_id):
         return txn_id in self._txn_results
@@ -870,27 +921,6 @@ class ParallelScheduler(Scheduler):
             for sig in set(self._txn_results).intersection(
                 (txn.header_signature for txn in batch.transactions)))
 
-    def _predecessor_not_in_chain(self,
-                                  prior_txn_id,
-                                  chain):
-        """
-
-        Args:
-            prior_txn_id (str): The predecessor's txn header_signature.
-            chain (list): The txn_ids whose context_ids have already been
-                added.
-
-        Returns:
-            (bool): The prior_txn_id has not had its state added yet.
-        """
-
-        for pred_id in chain:
-            if (prior_txn_id in self._txn_predecessors[pred_id] or
-                prior_txn_id in chain) and \
-                    self._txn_is_in_valid_batch(pred_id):
-                return False
-        return True
-
     def _get_initial_state_for_transaction(self, txn):
         # Collect contexts that this transaction depends upon
         # We assume that all prior txns in the batch are valid
@@ -900,28 +930,26 @@ class ParallelScheduler(Scheduler):
         # dependencies that could have failed this txn did so.
         contexts = []
         txn_dependencies = deque()
-        predecessors = self._txn_predecessors[txn.header_signature]
-        txn_dependencies.extend(self._sort_txn_ids_in_reverse(
-            predecessors))
-        in_chain = []
+        txn_dependencies.extend(self._txn_predecessors[txn.header_signature])
         while txn_dependencies:
             prior_txn_id = txn_dependencies.popleft()
             if self._txn_is_in_valid_batch(prior_txn_id):
                 result = self._txn_results[prior_txn_id]
-                if self._predecessor_not_in_chain(
-                        prior_txn_id,
-                        in_chain):
-                    in_chain.append(prior_txn_id)
-                    contexts.append(result.context_id)
+                if (prior_txn_id, result.context_id) not in contexts:
+                    contexts.append((prior_txn_id, result.context_id))
             else:
-                predecessors_sorted = self._sort_txn_ids_in_reverse(
-                    self._txn_predecessors[prior_txn_id])
-                txn_dependencies.extend(predecessors_sorted)
-        return contexts
-
-    def _sort_txn_ids_in_reverse(self, txn_ids):
-        return sorted(txn_ids,
-                      key=self._index_of_txn_in_schedule, reverse=True)
+                for txn_id in self._txn_predecessors[prior_txn_id]:
+                    if txn_id not in txn_dependencies:
+                        txn_dependencies.append(txn_id)
+        contexts.sort(
+            key=lambda x: self._index_of_txn_in_schedule(x[0]),
+            reverse=True)
+        others = (t_id for t_id, _ in contexts)
+        return [
+            c_id for t_id, c_id in contexts
+            if not self._predecessor_chain.is_predecessor_of_other(
+                t_id,
+                others)]
 
     def _index_of_txn_in_schedule(self, txn_id):
         batch = self._batches_by_txn_id[txn_id]
