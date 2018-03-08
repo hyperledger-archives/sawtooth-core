@@ -50,6 +50,9 @@ class IndexedDatabaseTest(unittest.TestCase):
 
         self.assertEqual(3, len(db))
 
+        self.assertEqual(3, db.count())
+        self.assertEqual(3, db.count(index="name"))
+
     def test_contains(self):
         """Given a database with three records and an index, test the
         following:
