@@ -34,7 +34,7 @@ from sawtooth_validator.server.core import Validator
 from sawtooth_validator.server.keys import load_identity_signer
 from sawtooth_validator.server.log import init_console_logging
 from sawtooth_validator.server.log import log_configuration
-from sawtooth_validator.server.state_verifier import verify_state
+from sawtooth_validator.server import state_verifier
 from sawtooth_validator.exceptions import GenesisError
 from sawtooth_validator.exceptions import LocalConfigurationError
 from sawtooth_validator import metrics
@@ -348,11 +348,15 @@ def main(args=None):
         metrics.init_metrics()
 
     # Verify state integrity before startup
-    verify_state(
+    global_state_db, blockstore = state_verifier.get_databases(
         bind_network,
-        bind_component,
-        validator_config.scheduler,
         path_config.data_dir)
+
+    state_verifier.verify_state(
+        global_state_db,
+        blockstore,
+        bind_component,
+        validator_config.scheduler)
 
     LOGGER.info(
         'Starting validator with %s scheduler',
