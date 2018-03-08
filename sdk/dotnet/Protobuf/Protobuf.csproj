@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Sawtooth.Protobuf</RootNamespace>
+    <AssemblyName>Sawtooth.Protobuf</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf.Tools" Version="3.5.1" />
+    <PackageReference Include="Google.Protobuf" Version="3.5.1" />
+  </ItemGroup>
+</Project>
