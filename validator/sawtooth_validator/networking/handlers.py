@@ -415,8 +415,8 @@ class AuthorizationChallengeSubmitHandler(Handler):
         try:
             payload = self._challenge_payload_cache[connection_id]
         except KeyError:
-            LOGGER.debug("Connection's challenge payload expired before a"
-                         "response was received. %s", connection_id)
+            LOGGER.warning("Connection's challenge payload expired before a"
+                           "response was received. %s", connection_id)
             return AuthorizationChallengeSubmitHandler \
                 ._network_violation_result()
 
@@ -434,7 +434,7 @@ class AuthorizationChallengeSubmitHandler(Handler):
         if not context.verify(auth_challenge_submit.signature,
                               payload,
                               public_key):
-            LOGGER.warning("Signature was not able to be verifed. Remove "
+            LOGGER.warning("Signature was not able to be verified. Remove "
                            "connection to %s", connection_id)
             return AuthorizationChallengeSubmitHandler \
                 ._network_violation_result()
