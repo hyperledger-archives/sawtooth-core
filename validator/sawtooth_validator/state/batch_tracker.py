@@ -152,12 +152,8 @@ class BatchTracker(ChainObserver,
                 * 'message' - the error message sent by the TP
                 * 'extended_data' - any additional data sent by the TP
         """
-        try:
-            return self._invalid[batch_id]
-        except KeyError:
-            # If batch has been purged from the invalid cache before its txn
-            # info is fetched, return an empty array of txn info
-            return []
+        with self._lock:
+            return [info.copy() for info in self._invalid.get(batch_id, [])]
 
     def watch_statuses(self, observer, batch_ids):
         """Allows a component to register to be notified when a set of
