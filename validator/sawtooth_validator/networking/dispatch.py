@@ -264,6 +264,10 @@ class Dispatcher(InstrumentedThread):
                     correlation_id=original_message.correlation_id,
                     message_type=res.message_type)
                 try:
+                    LOGGER.warning(
+                        "Sending hang-up in reply to %s to connection %s",
+                        get_enum_name(original_message.message_type),
+                        connection_id)
                     self._send_last_message[connection](
                         msg=message,
                         connection_id=connection_id)
