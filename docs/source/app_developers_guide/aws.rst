@@ -88,6 +88,8 @@ If you're uncertain about the state or would like to start over, see
 `Resetting the Environment`_.
 
 
+.. _confirming-connectivity-aws-label:
+
 Checking the Status of Sawtooth Components
 ==========================================
 
@@ -256,10 +258,6 @@ In the example above, the ``intkey create_batch`` command created the file
 ``batches.intkey``.  Rather than using ``intkey load`` to submit these
 transactions, you could use the following command to submit them:
 
-.. _confirming-connectivity-aws-label:
-
-Connecting To the REST API
-==========================
 
 .. code-block:: console
 
