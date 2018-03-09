@@ -30,11 +30,12 @@ FROM ubuntu:xenial
 LABEL "install-type"="mounted"
 
 RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sources.list \
+ && echo "deb http://archive.ubuntu.com/ubuntu xenial-backports universe" >> /etc/apt/sources.list \
  && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD \
  && apt-get update \
  && apt-get install -y -q --allow-downgrades \
     build-essential \
-    golang \
+    golang-1.9-go \
     git \
     libssl-dev \
     libzmq3-dev \
@@ -44,6 +45,8 @@ RUN echo "deb http://repo.sawtooth.me/ubuntu/ci xenial universe" >> /etc/apt/sou
  && rm -rf /var/lib/apt/lists/*
 
 ENV GOPATH=/go:/project/sawtooth-core/sdk/go:/project/sawtooth-core/sdk/examples/intkey_go:/project/sawtooth-core/sdk/examples/noop_go:/project/sawtooth-core/sdk/examples/xo_go
+
+ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin:/usr/lib/go-1.9/bin
 
 RUN mkdir /go
 
@@ -69,8 +72,6 @@ RUN mkdir -p /project/sawtooth-core/ \
  && mkdir -p /var/lib/sawtooth \
  && mkdir -p /etc/sawtooth \
  && mkdir -p /etc/sawtooth/keys
-
-ENV PATH=$PATH:/project/sawtooth-core/bin:/go/bin
 
 WORKDIR /
 
