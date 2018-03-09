@@ -79,6 +79,15 @@ impl<'a> IntKeyTransformer<'a> {
         Ok(encoder.into_inner().into_writer())
     }
 
+    fn generate_random_address_length(&mut self) -> usize {
+        let val = self.rng.gen_range(0, 60);
+        if val % 2 == 0 {
+            val
+        } else {
+            val + 1
+        }
+    }
+
     pub fn intkey_payload_to_transaction(
         &mut self,
         payload: IntKeyPayload,
@@ -103,7 +112,19 @@ impl<'a> IntKeyTransformer<'a> {
 
         let addresser = IntKeyAddresser::new();
 
-        let addresses = RepeatedField::from_vec(vec![addresser.make_address(payload.name.clone())]);
+        let address_length = if self.rng.gen_range(0.0, 1.0) < self.wildcard {
+            self.generate_random_address_length()
+        } else {
+            70
+        };
+
+        let addresses = RepeatedField::from_vec(vec![
+            addresser
+                .make_address(payload.name.clone())
+                .chars()
+                .take(address_length)
+                .collect(),
+        ]);
 
         txn_header.set_inputs(addresses.clone());
 
@@ -245,4 +266,79 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_all_wildcards() {
+        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+
+        let intkey_iterator = IntKeyIterator::new(2, 0.0, &seed);
+
+        let context = signing::create_context("secp256k1").unwrap();
+        let private_key = context.new_random_private_key().unwrap();
+        let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
+
+        let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 1.0, 100);
+
+        let transaction_iterator = intkey_iterator
+            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .filter_map(|p| p.ok());
+
+        let num_to_consider = 1_000;
+        assert!(
+            transaction_iterator
+                .take(num_to_consider)
+                .fold(0, |acc, transaction| {
+                    let mut header = TransactionHeader::new();
+                    header
+                        .merge_from_bytes(transaction.get_header())
+                        .expect("Failed to deserialize header bytes");
+                    if header
+                        .get_inputs()
+                        .iter()
+                        .any(|address| !(address.len() == 70))
+                    {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                }) == num_to_consider
+        );
+    }
+
+    #[test]
+    fn test_no_wildcards() {
+        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+
+        let intkey_iterator = IntKeyIterator::new(2, 0.0, &seed);
+
+        let context = signing::create_context("secp256k1").unwrap();
+        let private_key = context.new_random_private_key().unwrap();
+        let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
+
+        let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, 100);
+
+        let transaction_iterator = intkey_iterator
+            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .filter_map(|p| p.ok());
+
+        let num_to_consider = 1_000;
+        assert!(
+            transaction_iterator
+                .take(num_to_consider)
+                .fold(0, |acc, transaction| {
+                    let mut header = TransactionHeader::new();
+                    header
+                        .merge_from_bytes(transaction.get_header())
+                        .expect("Failed to deserialize header bytes");
+                    if header
+                        .get_inputs()
+                        .iter()
+                        .any(|address| !(address.len() == 70))
+                    {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                }) == 0
+        );
+    }
 }
