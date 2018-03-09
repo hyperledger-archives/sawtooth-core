@@ -1,0 +1,18 @@
+[package]
+name = "intkey_workload"
+version = "0.1.0"
+
+[[bin]]
+name = "intkey-workload"
+path = "./src/main.rs"
+
+[dependencies]
+cbor-codec = "0.7.1"
+clap = "2.30"
+log = "0.4"
+protobuf = "1.4"
+rand = "0.4"
+rust-crypto = "^0.2"
+sawtooth_perf = { path = "../sawtooth_perf" }
+sawtooth_sdk = { path = "../../sdk/rust" }
+simplelog = "0.5"

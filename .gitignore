@@ -127,5 +127,7 @@
 /perf/smallbank_workload/smallbank.batches
 /perf/smallbank_workload/smallbank.playlist
 /perf/smallbank_workload/smallbank.txns
+/perf/intkey_workload/Cargo.lock
+/perf/intkey_workload/target
 
 *.batch
