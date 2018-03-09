@@ -118,6 +118,15 @@ impl<'a> IntKeyTransformer<'a> {
                 None => {}
             }
         }
+        if self.rng.gen_range(0.0, 1.0) < self.unsatisfiable {
+            let random_bytes: Vec<u8> = self.rng.gen_iter::<u8>().take(100).collect();
+
+            match self.signer.sign(random_bytes.as_slice()) {
+                Ok(dep) => txn_header.dependencies.push(dep),
+                Err(_) => (),
+            }
+        }
+
         let header_bytes = txn_header.write_to_bytes()?;
 
         let signature = self.signer.sign(&header_bytes.to_vec())?;
@@ -141,4 +150,99 @@ impl<'a> IntKeyTransformer<'a> {
 
         Ok(txn)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::IntKeyTransformer;
+
+    use protobuf::Message;
+
+    use sawtooth_sdk::messages::transaction::TransactionHeader;
+    use sawtooth_sdk::signing;
+
+    use intkey_iterator::IntKeyIterator;
+
+    #[test]
+    fn test_unsatisfiable() {
+        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+
+        let intkey_iterator = IntKeyIterator::new(2, 0.0, &seed);
+
+        let context = signing::create_context("secp256k1").unwrap();
+        let private_key = context.new_random_private_key().unwrap();
+        let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
+
+        let mut transformer = IntKeyTransformer::new(&signer, &seed, 1.0, 0.0, 100);
+
+        let transaction_iterator = intkey_iterator
+            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .filter_map(|p| p.ok());
+
+        let num_to_consider = 1_000;
+        let mut transactions = Vec::new();
+        assert!(
+            transaction_iterator
+                .take(num_to_consider)
+                .fold(0, |acc, transaction| {
+                    let sig = transaction.get_header_signature().to_string();
+                    transactions.push(sig);
+                    let mut header = TransactionHeader::new();
+                    header
+                        .merge_from_bytes(transaction.get_header())
+                        .expect("Failed to deserialize header bytes");
+                    if header
+                        .get_dependencies()
+                        .iter()
+                        .any(|dep| !transactions.contains(&dep))
+                    {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                }) == num_to_consider
+        );
+    }
+
+    #[test]
+    fn test_all_satisfiable() {
+        let seed = [2, 3, 45, 95, 18, 81, 222, 2, 252, 2, 45];
+
+        let intkey_iterator = IntKeyIterator::new(2, 0.0, &seed);
+
+        let context = signing::create_context("secp256k1").unwrap();
+        let private_key = context.new_random_private_key().unwrap();
+        let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
+
+        let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, 100);
+
+        let transaction_iterator = intkey_iterator
+            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .filter_map(|p| p.ok());
+
+        let num_to_consider = 1_000;
+        let mut transactions = Vec::new();
+        assert!(
+            transaction_iterator
+                .take(num_to_consider)
+                .fold(0, |acc, transaction| {
+                    let sig = transaction.get_header_signature().to_string();
+                    transactions.push(sig);
+                    let mut header = TransactionHeader::new();
+                    header
+                        .merge_from_bytes(transaction.get_header())
+                        .expect("Failed to deserialize header bytes");
+                    if header
+                        .get_dependencies()
+                        .iter()
+                        .any(|dep| !transactions.contains(&dep))
+                    {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                }) == 0
+        );
+    }
+
 }
