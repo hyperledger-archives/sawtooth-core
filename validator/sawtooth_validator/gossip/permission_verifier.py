@@ -390,8 +390,8 @@ class NetworkPermissionHandler(Handler):
         public_key = self._network.connection_id_to_public_key(connection_id)
 
         if public_key is None:
-            LOGGER.debug("No public key found, %s is not permitted. "
-                         "Close connection.", connection_id)
+            LOGGER.warning("No public key found, %s is not permitted. "
+                           "Close connection.", connection_id)
             violation = AuthorizationViolation(
                 violation=RoleType.Value("NETWORK"))
             self._gossip.unregister_peer(connection_id)
