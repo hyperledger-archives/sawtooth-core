@@ -243,21 +243,20 @@ class GossipBroadcastHandler(Handler):
 
         else:
             # decrement time_to_live
-            time_to_live = gossip_message.time_to_live
-            gossip_message.time_to_live = time_to_live - 1
+            ttl = gossip_message.time_to_live - 1
 
         if gossip_message.content_type == GossipMessage.BATCH:
             batch = Batch()
             batch.ParseFromString(gossip_message.content)
             # If we already have this batch, don't forward it
             if not self._completer.get_batch(batch.header_signature):
-                self._gossip.broadcast_batch(batch, exclude)
+                self._gossip.broadcast_batch(batch, exclude, time_to_live=ttl)
         elif gossip_message.content_type == GossipMessage.BLOCK:
             block = Block()
             block.ParseFromString(gossip_message.content)
             # If we already have this block, don't forward it
             if not self._completer.get_block(block.header_signature):
-                self._gossip.broadcast_block(block, exclude)
+                self._gossip.broadcast_block(block, exclude, time_to_live=ttl)
         else:
             LOGGER.info("received %s, not BATCH or BLOCK",
                         gossip_message.content_type)
