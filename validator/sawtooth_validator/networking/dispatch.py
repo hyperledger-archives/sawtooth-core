@@ -174,28 +174,20 @@ class Dispatcher(InstrumentedThread):
             del self._message_information[message_id]
             return
 
-        future = handler_manager.execute(connection_id, message.content)
-
         timer_tag = type(handler_manager.handler).__name__
         timer_ctx = self._get_dispatch_timer(timer_tag).time()
 
-        def do_next(future):
+        def do_next(result):
             timer_ctx.stop()
             try:
-                self._determine_next(message_id, future)
+                self._determine_next(message_id, result)
             except Exception:  # pylint: disable=broad-except
                 LOGGER.exception(
                     "Unhandled exception while determining next")
 
-        future.add_done_callback(do_next)
+        handler_manager.execute(connection_id, message.content, do_next)
 
-    def _determine_next(self, message_id, future):
-        try:
-            result = future.result(timeout=self._timeout)
-        except TimeoutError:
-            LOGGER.exception("Dispatcher timeout waiting on handler result.")
-            raise
-
+    def _determine_next(self, message_id, result):
         if result is None:
             LOGGER.debug('Ignoring None handler result, likely due to an '
                          'unhandled error while executing the handler')
@@ -321,9 +313,11 @@ class _HandlerManager(object):
     def handler(self):
         return self._handler
 
-    def execute(self, connection_id, message):
-        return self._executor.submit(
-            self._handler.handle, connection_id, message)
+    def execute(self, connection_id, message, callback):
+        def wrapped(connection_id, message):
+            return callback(self._handler.handle(connection_id, message))
+
+        return self._executor.submit(wrapped, connection_id, message)
 
 
 class _ManagerCollection(object):
