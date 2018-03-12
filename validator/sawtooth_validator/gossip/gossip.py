@@ -238,9 +238,9 @@ class Gossip(object):
                 self._topology.set_connection_status(connection_id,
                                                      PeerStatus.TEMP)
             else:
-                LOGGER.debug("Connection unregister failed as connection "
-                             "was not registered: %s",
-                             connection_id)
+                LOGGER.warning("Connection unregister failed as connection "
+                               "was not registered: %s",
+                               connection_id)
 
     def get_time_to_live(self):
         time_to_live = \
