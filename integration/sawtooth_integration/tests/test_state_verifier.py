@@ -16,6 +16,7 @@
 import logging
 import hashlib
 import unittest
+import os
 import cbor
 
 from sawtooth_signing import create_context
@@ -196,3 +197,9 @@ class TestStateVerifier(unittest.TestCase):
             blockstore,
             "tcp://eth0:4004",
             "serial")
+
+        # There is a bug in the shutdown code for some component this depends
+        # on, which causes it to occassionally hang during shutdown. Just kill
+        # the process for now.
+        # pylint: disable=protected-access
+        os._exit(0)
