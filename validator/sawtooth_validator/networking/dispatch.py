@@ -18,7 +18,6 @@ import logging
 from threading import Condition
 import queue
 import uuid
-import functools
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.networking.interconnect import get_enum_name
@@ -167,53 +166,56 @@ class Dispatcher(InstrumentedThread):
     def _process(self, message_id):
         _, connection_id, \
             message, collection = self._message_information[message_id]
+
         try:
             handler_manager = next(collection)
-            future = handler_manager.execute(connection_id, message.content)
-
-            timer_tag = type(handler_manager.handler).__name__
-            timer_ctx = self._get_dispatch_timer(timer_tag).time()
-
-            def do_next(timer_ctx, future):
-                timer_ctx.stop()
-                try:
-                    self._determine_next(message_id, future)
-                except Exception:  # pylint: disable=broad-except
-                    LOGGER.exception(
-                        "Unhandled exception while determining next")
-
-            future.add_done_callback(functools.partial(do_next, timer_ctx))
         except IndexError:
             # IndexError is raised if done with handlers
             del self._message_information[message_id]
+            return
+
+        future = handler_manager.execute(connection_id, message.content)
+
+        timer_tag = type(handler_manager.handler).__name__
+        timer_ctx = self._get_dispatch_timer(timer_tag).time()
+
+        def do_next(future):
+            timer_ctx.stop()
+            try:
+                self._determine_next(message_id, future)
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception(
+                    "Unhandled exception while determining next")
+
+        future.add_done_callback(do_next)
 
     def _determine_next(self, message_id, future):
         try:
-            res = future.result(timeout=self._timeout)
+            result = future.result(timeout=self._timeout)
         except TimeoutError:
             LOGGER.exception("Dispatcher timeout waiting on handler result.")
             raise
 
-        if res is None:
+        if result is None:
             LOGGER.debug('Ignoring None handler result, likely due to an '
                          'unhandled error while executing the handler')
             return
 
-        if res.status == HandlerStatus.DROP:
+        if result.status == HandlerStatus.DROP:
             del self._message_information[message_id]
 
-        elif res.status == HandlerStatus.PASS:
+        elif result.status == HandlerStatus.PASS:
             self._process(message_id)
 
-        elif res.status == HandlerStatus.RETURN_AND_PASS:
+        elif result.status == HandlerStatus.RETURN_AND_PASS:
             connection, connection_id, \
                 original_message, _ = self._message_information[message_id]
 
-            if res.message_out and res.message_type:
+            if result.message_out and result.message_type:
                 message = validator_pb2.Message(
-                    content=res.message_out.SerializeToString(),
+                    content=result.message_out.SerializeToString(),
                     correlation_id=original_message.correlation_id,
-                    message_type=res.message_type)
+                    message_type=result.message_type)
                 try:
                     self._send_message[connection](msg=message,
                                                    connection_id=connection_id)
@@ -228,17 +230,17 @@ class Dispatcher(InstrumentedThread):
                 LOGGER.error("HandlerResult with status of RETURN_AND_PASS "
                              "is missing message_out or message_type")
 
-        elif res.status == HandlerStatus.RETURN:
+        elif result.status == HandlerStatus.RETURN:
             connection, connection_id,  \
                 original_message, _ = self._message_information[message_id]
 
             del self._message_information[message_id]
 
-            if res.message_out and res.message_type:
+            if result.message_out and result.message_type:
                 message = validator_pb2.Message(
-                    content=res.message_out.SerializeToString(),
+                    content=result.message_out.SerializeToString(),
                     correlation_id=original_message.correlation_id,
-                    message_type=res.message_type)
+                    message_type=result.message_type)
                 try:
                     self._send_message[connection](msg=message,
                                                    connection_id=connection_id)
@@ -252,17 +254,17 @@ class Dispatcher(InstrumentedThread):
                 LOGGER.error("HandlerResult with status of RETURN "
                              "is missing message_out or message_type")
 
-        elif res.status == HandlerStatus.RETURN_AND_CLOSE:
+        elif result.status == HandlerStatus.RETURN_AND_CLOSE:
             connection, connection_id,  \
                 original_message, _ = self._message_information[message_id]
 
             del self._message_information[message_id]
 
-            if res.message_out and res.message_type:
+            if result.message_out and result.message_type:
                 message = validator_pb2.Message(
-                    content=res.message_out.SerializeToString(),
+                    content=result.message_out.SerializeToString(),
                     correlation_id=original_message.correlation_id,
-                    message_type=res.message_type)
+                    message_type=result.message_type)
                 try:
                     LOGGER.warning(
                         "Sending hang-up in reply to %s to connection %s",
