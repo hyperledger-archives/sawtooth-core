@@ -274,7 +274,6 @@ test_validator() {
     run_docker_test test_namespace_permission
     copy_coverage .coverage.namespace_permission
     run_docker_test test_state_verifier --timeout 30
-    copy_coverage .coverage.state_verifier
 }
 
 test_go_sdk() {
