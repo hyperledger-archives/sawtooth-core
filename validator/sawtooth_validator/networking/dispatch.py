@@ -18,6 +18,7 @@ import logging
 from threading import Condition
 import queue
 import uuid
+from collections import namedtuple
 
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.networking.interconnect import get_enum_name
@@ -36,6 +37,15 @@ class Priority(enum.IntEnum):
 
 def _gen_message_id():
     return uuid.uuid4().hex.encode()
+
+
+_MessageInformation = namedtuple('_MessageInformation', (
+    'connection',
+    'connection_id',
+    'content',
+    'correlation_id',
+    'collection',
+    'message_type'))
 
 
 class Dispatcher(InstrumentedThread):
@@ -129,13 +139,17 @@ class Dispatcher(InstrumentedThread):
         if message.message_type in self._msg_type_handlers:
             priority = self._priority.get(message.message_type, Priority.LOW)
             message_id = _gen_message_id()
-            self._message_information[message_id] = (
-                connection,
-                connection_id,
-                message,
-                _ManagerCollection(
-                    self._msg_type_handlers[message.message_type])
-            )
+
+            self._message_information[message_id] = \
+                _MessageInformation(
+                    connection=connection,
+                    connection_id=connection_id,
+                    content=message.content,
+                    correlation_id=message.correlation_id,
+                    message_type=message.message_type,
+                    collection=_ManagerCollection(
+                        self._msg_type_handlers[message.message_type]))
+
             self._in_queue.put_nowait((priority, message_id))
 
             queue_size = self._in_queue.qsize()
@@ -164,11 +178,10 @@ class Dispatcher(InstrumentedThread):
         self._priority[message_type] = priority
 
     def _process(self, message_id):
-        _, connection_id, \
-            message, collection = self._message_information[message_id]
+        message_info = self._message_information[message_id]
 
         try:
-            handler_manager = next(collection)
+            handler_manager = next(message_info.collection)
         except IndexError:
             # IndexError is raised if done with handlers
             del self._message_information[message_id]
@@ -185,7 +198,10 @@ class Dispatcher(InstrumentedThread):
                 LOGGER.exception(
                     "Unhandled exception while determining next")
 
-        handler_manager.execute(connection_id, message.content, do_next)
+        handler_manager.execute(
+            message_info.connection_id,
+            message_info.content,
+            do_next)
 
     def _determine_next(self, message_id, result):
         if result is None:
@@ -200,24 +216,24 @@ class Dispatcher(InstrumentedThread):
             self._process(message_id)
 
         elif result.status == HandlerStatus.RETURN_AND_PASS:
-            connection, connection_id, \
-                original_message, _ = self._message_information[message_id]
+            message_info = self._message_information[message_id]
 
             if result.message_out and result.message_type:
                 message = validator_pb2.Message(
                     content=result.message_out.SerializeToString(),
-                    correlation_id=original_message.correlation_id,
+                    correlation_id=message_info.correlation_id,
                     message_type=result.message_type)
                 try:
-                    self._send_message[connection](msg=message,
-                                                   connection_id=connection_id)
+                    self._send_message[message_info.connection](
+                        msg=message,
+                        connection_id=message_info.connection_id)
                 except KeyError:
                     LOGGER.warning(
                         "Can't send message %s back to "
                         "%s because connection %s not in dispatcher",
                         get_enum_name(message.message_type),
-                        connection_id,
-                        connection)
+                        message_info.connection_id,
+                        message_info.connection)
 
                 self._process(message_id)
             else:
@@ -225,56 +241,55 @@ class Dispatcher(InstrumentedThread):
                              "is missing message_out or message_type")
 
         elif result.status == HandlerStatus.RETURN:
-            connection, connection_id,  \
-                original_message, _ = self._message_information[message_id]
+            message_info = self._message_information[message_id]
 
             del self._message_information[message_id]
 
             if result.message_out and result.message_type:
                 message = validator_pb2.Message(
                     content=result.message_out.SerializeToString(),
-                    correlation_id=original_message.correlation_id,
+                    correlation_id=message_info.correlation_id,
                     message_type=result.message_type)
                 try:
-                    self._send_message[connection](msg=message,
-                                                   connection_id=connection_id)
+                    self._send_message[message_info.connection](
+                        msg=message,
+                        connection_id=message_info.connection_id)
                 except KeyError:
                     LOGGER.warning(
                         "Can't send message %s back to "
                         "%s because connection %s not in dispatcher",
                         get_enum_name(message.message_type),
-                        connection_id,
-                        connection)
+                        message_info.connection_id,
+                        message_info.connection)
             else:
                 LOGGER.error("HandlerResult with status of RETURN "
                              "is missing message_out or message_type")
 
         elif result.status == HandlerStatus.RETURN_AND_CLOSE:
-            connection, connection_id,  \
-                original_message, _ = self._message_information[message_id]
+            message_info = self._message_information[message_id]
 
             del self._message_information[message_id]
 
             if result.message_out and result.message_type:
                 message = validator_pb2.Message(
                     content=result.message_out.SerializeToString(),
-                    correlation_id=original_message.correlation_id,
+                    correlation_id=message_info.correlation_id,
                     message_type=result.message_type)
                 try:
                     LOGGER.warning(
                         "Sending hang-up in reply to %s to connection %s",
-                        get_enum_name(original_message.message_type),
-                        connection_id)
-                    self._send_last_message[connection](
+                        get_enum_name(message_info.message_type),
+                        message_info.connection_id)
+                    self._send_last_message[message_info.connection](
                         msg=message,
-                        connection_id=connection_id)
+                        connection_id=message_info.connection_id)
                 except KeyError:
                     LOGGER.warning(
                         "Can't send last message %s back to "
                         "%s because connection %s not in dispatcher",
                         get_enum_name(message.message_type),
-                        connection_id,
-                        connection)
+                        message_info.connection_id,
+                        message_info.connection)
             else:
                 LOGGER.error("HandlerResult with status of RETURN_AND_CLOSE "
                              "is missing message_out or message_type")
