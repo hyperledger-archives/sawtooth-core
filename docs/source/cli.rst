@@ -15,12 +15,12 @@
 
 .. _cli-reference-label:
 
-*************
-CLI Reference
-*************
+*********************
+CLI Command Reference
+*********************
 
-The Sawtooth command-line interface provides a set of commands to interact with
-Sawtooth services.
+The Sawtooth command-line interface (CLI) provides a set of commands to interact
+with Sawtooth services.
 
 This chapter shows the available options and arguments for each command and
 subcommand. The synopsis for each command shows its parameters and their usage.
@@ -30,22 +30,22 @@ subcommand. The synopsis for each command shows its parameters and their usage.
 - User-supplied values are shown in angle brackets.
 
 This usage information is also available on the command line by using the
-``-h`` or`` --help`` option.
+``-h`` or ``--help`` option.
 
 .. toctree::
    :maxdepth: 2
 
    cli/sawtooth.rst
+   cli/sawtooth-validator.rst
+   cli/sawtooth-rest-api.rst
    cli/sawadm.rst
    cli/sawnet.rst
    cli/sawset.rst
    cli/poet.rst
-   cli/validator.rst
-   cli/rest_api.rst
-   cli/intkey.rst
-   cli/xo.rst
-   cli/settings-tp.rst
    cli/identity-tp.rst
+   cli/intkey.rst
+   cli/settings-tp.rst
+   cli/xo.rst
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

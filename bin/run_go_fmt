@@ -28,6 +28,7 @@ $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey
 $top_dir/sdk/examples/intkey_go/src/sawtooth_intkey/handler
 $top_dir/sdk/examples/xo_go/src/sawtooth_xo
 $top_dir/sdk/examples/xo_go/src/sawtooth_xo/handler
+$top_dir/families/smallbank/smallbank_go/src/sawtooth_smallbank
 "
 
 exitcode=0

@@ -117,7 +117,7 @@ def do_create(args):
     public_key = signer.get_public_key().as_hex()
 
     public_key_hash = sha256(public_key.encode()).hexdigest()
-
+    nonce = SignupInfo.block_id_to_nonce(args.block)
     with PoetEnclaveModuleWrapper(
             enclave_module=args.enclave_module,
             config_dir=config.get_config_dir(),
@@ -125,7 +125,7 @@ def do_create(args):
         signup_info = SignupInfo.create_signup_info(
             poet_enclave_module=poet_enclave_module,
             originator_public_key_hash=public_key_hash,
-            nonce=SignupInfo.block_id_to_nonce(args.block))
+            nonce=nonce)
 
     print(
         'Writing key state for PoET public key: {}...{}'.format(
@@ -141,7 +141,8 @@ def do_create(args):
     poet_key_state_store[signup_info.poet_public_key] = \
         PoetKeyState(
             sealed_signup_data=signup_info.sealed_signup_data,
-            has_been_refreshed=False)
+            has_been_refreshed=False,
+            signup_nonce=nonce)
 
     # Create the validator registry payload
     payload = \

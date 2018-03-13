@@ -74,6 +74,8 @@ services:
           \\\"$$(cat /project/sawtooth-core/consensus/poet/simulator/packaging/simulator_rk_pub.pem)\\\" \
           sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
           sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
+          sawtooth.validator.batch_injectors=block_info \
+          'sawtooth.validator.block_validation_rules=NofX:1,block_info;XatY:block_info,0;local:0' \
           -o config.batch && \
         poet registration create -k /etc/sawtooth/keys/validator.priv -o poet.batch && \
         sawset proposal create \
@@ -87,7 +89,8 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core"
+        /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   validator-1:
@@ -105,7 +108,8 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core"
+        /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   validator-2:
@@ -123,7 +127,8 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core"
+        /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   validator-3:
@@ -141,7 +146,8 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core"
+        /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   validator-4:
@@ -159,7 +165,8 @@ services:
     environment:
       PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
         /project/sawtooth-core/consensus/poet/simulator:\
-        /project/sawtooth-core/consensus/poet/core"
+        /project/sawtooth-core/consensus/poet/core:\
+        /project/sawtooth-core/families/block_info"
     stop_signal: SIGKILL
 
   rest-api-0:
@@ -355,4 +362,59 @@ services:
     command: poet-validator-registry-tp -C tcp://validator-4:4004
     environment:
       PYTHONPATH: /project/sawtooth-core/consensus/poet/common
+    stop_signal: SIGKILL
+
+  block-info-tp-0:
+    image: sawtooth-block-info-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: block-info-tp -C tcp://validator-0:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/families/block_info
+    stop_signal: SIGKILL
+
+  block-info-tp-1:
+    image: sawtooth-block-info-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: block-info-tp -C tcp://validator-1:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/families/block_info
+    stop_signal: SIGKILL
+
+  block-info-tp-2:
+    image: sawtooth-block-info-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: block-info-tp -C tcp://validator-2:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/families/block_info
+    stop_signal: SIGKILL
+
+  block-info-tp-3:
+    image: sawtooth-block-info-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: block-info-tp -C tcp://validator-3:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/families/block_info
+    stop_signal: SIGKILL
+
+  block-info-tp-4:
+    image: sawtooth-block-info-tp:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    command: block-info-tp -C tcp://validator-4:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/families/block_info
     stop_signal: SIGKILL

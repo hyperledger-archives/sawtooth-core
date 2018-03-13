@@ -13,13 +13,15 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-******************************************************
-Settings Transaction Processor CLI (sawtooth-settings)
-******************************************************
+***********
+settings-tp
+***********
 
-The Settings transaction processor CLI, ``sawtooth-settings``, starts
-a Settings transaction processor. This transaction family provides
-a methodology for storing on-chain configuration settings.
+The ``settings-tp`` command starts the Settings transaction processor,
+which provides a methodology for storing on-chain configuration settings.
+
+**Note:** This transaction processor is required in order to apply changes to
+on-chain settings.
 
 The settings stored in state as a result of this transaction family play a
 critical role in the operation of a validator. For example, the consensus module
@@ -35,12 +37,6 @@ that can make changes or multiple authorized keys. In the case of multiple keys,
 a percentage of votes signed by the keys is required to make a change. Note that
 only the keys in ``sawtooth.settings.vote.authorized_keys`` are allowed to
 submit setting transactions.
-
-settings-tp
-===========
-
-The ``settings-tp`` command starts a Settings transaction processor,
-which is required in order to apply changes to on-chain settings.
 
 .. literalinclude:: output/settings-tp_usage.out
    :language: console

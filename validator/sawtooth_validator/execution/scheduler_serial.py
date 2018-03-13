@@ -82,8 +82,6 @@ class SerialScheduler(Scheduler):
         with self._condition:
             if (self._in_progress_transaction is None or
                     self._in_progress_transaction != txn_signature):
-                LOGGER.debug('Received result for %s, but was unscheduled',
-                             txn_signature)
                 return
 
             self._in_progress_transaction = None
@@ -313,6 +311,10 @@ class SerialScheduler(Scheduler):
         if incomplete_batches:
             LOGGER.debug('Removed %s incomplete batches from the schedule',
                          len(incomplete_batches))
+
+    def is_transaction_in_schedule(self, txn_signature):
+        with self._condition:
+            return txn_signature in self._txn_to_batch
 
     def finalize(self):
         with self._condition:

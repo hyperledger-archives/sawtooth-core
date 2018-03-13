@@ -68,6 +68,11 @@ MAXIMUM_STATIC_RETRIES = 24
 
 TIME_TO_LIVE = 3
 
+# This is the protocol version number.  It should only be incremented when
+# there are changes to the network protocols, as well as only once per
+# release.
+NETWORK_PROTOCOL_VERSION = 1
+
 
 class Gossip(object):
     def __init__(self, network,
@@ -776,7 +781,8 @@ class ConnectionManager(InstrumentedThread):
                     endpoint)
 
             register_request = PeerRegisterRequest(
-                endpoint=self._endpoint)
+                endpoint=self._endpoint,
+                protocol_version=NETWORK_PROTOCOL_VERSION)
 
             self._network.send(
                 validator_pb2.Message.GOSSIP_REGISTER,
@@ -884,7 +890,8 @@ class ConnectionManager(InstrumentedThread):
         LOGGER.debug("Connection to %s succeeded", connection_id)
 
         register_request = PeerRegisterRequest(
-            endpoint=self._endpoint)
+            endpoint=self._endpoint,
+            protocol_version=NETWORK_PROTOCOL_VERSION)
         self._connection_statuses[connection_id] = PeerStatus.TEMP
         try:
             self._network.send(

@@ -25,6 +25,7 @@ from sawtooth_validator.concurrent.threadpool import \
 from sawtooth_validator.execution.context_manager import ContextManager
 from sawtooth_validator.database.indexed_database import IndexedDatabase
 from sawtooth_validator.database.lmdb_nolock_database import LMDBNoLockDatabase
+from sawtooth_validator.journal.block_validator import BlockValidator
 from sawtooth_validator.journal.publisher import BlockPublisher
 from sawtooth_validator.journal.chain import ChainController
 from sawtooth_validator.journal.genesis import GenesisController
@@ -140,6 +141,9 @@ class Validator(object):
             max_workers=10, name='Component')
         network_thread_pool = InstrumentedThreadPoolExecutor(
             max_workers=10, name='Network')
+        client_thread_pool = InstrumentedThreadPoolExecutor(
+            max_workers=5,
+            name='Client')
         sig_pool = InstrumentedThreadPoolExecutor(
             max_workers=3, name='Signature')
 
@@ -191,7 +195,7 @@ class Validator(object):
             SettingsViewFactory(state_view_factory),
         )
 
-        executor = TransactionExecutor(
+        transaction_executor = TransactionExecutor(
             service=component_service,
             context_manager=context_manager,
             settings_view_factory=SettingsViewFactory(state_view_factory),
@@ -199,7 +203,8 @@ class Validator(object):
             invalid_observers=[batch_tracker],
             metrics_registry=metrics_registry)
 
-        component_service.set_check_connections(executor.check_connections)
+        component_service.set_check_connections(
+            transaction_executor.check_connections)
 
         event_broadcaster = EventBroadcaster(
             component_service, block_store, receipt_store)
@@ -251,7 +256,7 @@ class Validator(object):
             signer=identity_signer)
 
         block_publisher = BlockPublisher(
-            transaction_executor=executor,
+            transaction_executor=transaction_executor,
             block_cache=block_cache,
             state_view_factory=state_view_factory,
             settings_cache=settings_cache,
@@ -268,19 +273,26 @@ class Validator(object):
             batch_injector_factory=batch_injector_factory,
             metrics_registry=metrics_registry)
 
-        chain_controller = ChainController(
-            block_sender=block_sender,
+        block_validator = BlockValidator(
             block_cache=block_cache,
             state_view_factory=state_view_factory,
-            transaction_executor=executor,
-            chain_head_lock=block_publisher.chain_head_lock,
-            on_chain_updated=block_publisher.on_chain_updated,
+            transaction_executor=transaction_executor,
             squash_handler=context_manager.get_squash_handler(),
-            chain_id_manager=chain_id_manager,
             identity_signer=identity_signer,
             data_dir=data_dir,
             config_dir=config_dir,
             permission_verifier=permission_verifier,
+            metrics_registry=metrics_registry)
+
+        chain_controller = ChainController(
+            block_cache=block_cache,
+            block_validator=block_validator,
+            state_view_factory=state_view_factory,
+            chain_head_lock=block_publisher.chain_head_lock,
+            on_chain_updated=block_publisher.on_chain_updated,
+            chain_id_manager=chain_id_manager,
+            data_dir=data_dir,
+            config_dir=config_dir,
             chain_observers=[
                 event_broadcaster,
                 receipt_store,
@@ -292,7 +304,7 @@ class Validator(object):
 
         genesis_controller = GenesisController(
             context_manager=context_manager,
-            transaction_executor=executor,
+            transaction_executor=transaction_executor,
             completer=completer,
             block_store=block_store,
             state_view_factory=state_view_factory,
@@ -316,11 +328,13 @@ class Validator(object):
             permission_verifier, block_publisher)
 
         component_handlers.add(
-            component_dispatcher, gossip, context_manager, executor, completer,
-            block_store, batch_tracker, global_state_db,
-            self.get_chain_head_state_root_hash, receipt_store,
-            event_broadcaster, permission_verifier, component_thread_pool,
-            sig_pool, block_publisher, metrics_registry)
+            component_dispatcher, gossip, context_manager,
+            transaction_executor, completer, block_store, batch_tracker,
+            global_state_db, self.get_chain_head_state_root_hash,
+            receipt_store, event_broadcaster, permission_verifier,
+            component_thread_pool, client_thread_pool,
+            sig_pool, block_publisher,
+            metrics_registry)
 
         # -- Store Object References -- #
         self._component_dispatcher = component_dispatcher
@@ -331,15 +345,17 @@ class Validator(object):
         self._network_service = network_service
         self._network_thread_pool = network_thread_pool
 
+        self._client_thread_pool = client_thread_pool
         self._sig_pool = sig_pool
 
         self._context_manager = context_manager
-        self._executor = executor
+        self._transaction_executor = transaction_executor
         self._genesis_controller = genesis_controller
         self._gossip = gossip
 
         self._block_publisher = block_publisher
         self._chain_controller = chain_controller
+        self._block_validator = block_validator
 
     def start(self):
         self._component_dispatcher.start()
@@ -376,13 +392,15 @@ class Validator(object):
 
         self._network_thread_pool.shutdown(wait=True)
         self._component_thread_pool.shutdown(wait=True)
+        self._client_thread_pool.shutdown(wait=True)
         self._sig_pool.shutdown(wait=True)
 
-        self._executor.stop()
+        self._transaction_executor.stop()
         self._context_manager.stop()
 
         self._block_publisher.stop()
         self._chain_controller.stop()
+        self._block_validator.stop()
 
         threads = threading.enumerate()
 

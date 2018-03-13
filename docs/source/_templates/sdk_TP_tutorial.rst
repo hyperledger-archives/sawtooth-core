@@ -487,10 +487,7 @@ sophisticated, `BSON <http://bsonspec.org/>`_.
 Implementing Game Play
 ======================
 
-Next, describe how to play tic-tac-toe. The details here are fairly
-straightforward, and the functionality could certainly be implemented in
-different ways.
-
+Game-play functionality can be implemented in different ways.
 For our implementation, see
 {% if language == 'JavaScript' %}
 `sawtooth-core/sdk/examples/xo_javascript/xo_handler.js

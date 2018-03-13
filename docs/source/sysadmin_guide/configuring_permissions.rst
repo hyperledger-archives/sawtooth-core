@@ -1,6 +1,6 @@
-*************
-Permissioning
-*************
+***********************
+Configuring Permissions
+***********************
 
 Transactor Permissioning
 ========================
@@ -93,8 +93,8 @@ roles and policies.
 
   $ sawset proposal create sawtooth.identity.allowed_keys=02b2be336a6ada8f96881cd55fd848c10386d99d0a05e1778d2fc1c60c2783c2f4
 
-Once your signer key is stored in the setting, the ``identity`` CLI can be used
-to set and update roles and policies. Make sure that the identity transaction
+Once your signer key is stored in the setting, the ``identity-tp`` command can be used
+to set and update roles and policies. Make sure that the Identity transaction
 processor and the REST API are running.
 
 .. literalinclude:: ../cli/output/sawtooth_identity_policy_create_usage.out

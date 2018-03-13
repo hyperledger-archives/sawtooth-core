@@ -13,23 +13,16 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-************************************************
-Identity Transaction Processor CLI (identity-tp)
-************************************************
+***********
+identity-tp
+***********
 
-The Identity transaction processor CLI, ``sawtooth-identity``, handles
-on-chain permissioning for transactor and validator keys to streamline
-managing identities for lists of public keys.
+The ``identity-tp`` command starts the Identity transaction processor,
+which handles on-chain permissioning for transactor and validator keys
+to streamline managing identities for lists of public keys.
 
 The Settings transaction processor is required when using the Identity
 transaction processor.
-
-identity-tp
-===========
-
-The ``identity-tp`` command starts an Identity transition processor, which
-is responsible for applying the changes to on-chain permissions that are used
-by the Sawtooth platform.
 
 In order to send identity transactions, your public key
 must be stored in ``sawtooth.identity.allowed_keys``.

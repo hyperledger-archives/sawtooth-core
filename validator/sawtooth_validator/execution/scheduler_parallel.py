@@ -649,6 +649,10 @@ class ParallelScheduler(Scheduler):
             if txn_signature not in self._scheduled:
                 raise SchedulerError(
                     "transaction not scheduled: {}".format(txn_signature))
+
+            if txn_signature not in self._batches_by_txn_id:
+                return
+
             self._set_least_batch_id(txn_signature=txn_signature)
             if not is_valid:
                 self._remove_subsequent_result_because_of_batch_failure(
@@ -690,10 +694,6 @@ class ParallelScheduler(Scheduler):
     def _is_outstanding(self, txn):
         return txn.header_signature in self._outstanding
 
-    def _txn_result_is_invalid(self, sig):
-        return sig in self._txn_results and \
-            not self._txn_results[sig].is_valid
-
     def _txn_is_in_valid_batch(self, txn_id):
         """Returns whether the transaction is in a valid batch.
 
@@ -705,10 +705,13 @@ class ParallelScheduler(Scheduler):
         """
 
         batch = self._batches_by_txn_id[txn_id]
-        for txn in batch.transactions:
-            if self._txn_result_is_invalid(sig=txn.header_signature):
-                return False
-        return True
+
+        # Return whether every transaction in the batch with a
+        # transaction result is valid
+        return all(
+            self._txn_results[sig].is_valid
+            for sig in set(self._txn_results).intersection(
+                (txn.header_signature for txn in batch.transactions)))
 
     def _predecessor_not_in_chain(self,
                                   prior_txn_id,
@@ -768,11 +771,14 @@ class ParallelScheduler(Scheduler):
         index_of_batch_in_schedule = self._batches.index(batch)
         number_of_txns_in_prior_batches = 0
         for prior in self._batches[:index_of_batch_in_schedule]:
-            number_of_txns_in_prior_batches += len(prior.transactions) - 1
+            number_of_txns_in_prior_batches += len(prior.transactions)
 
-        txn_ids_in_order = [t.header_signature for t in batch.transactions]
-        txn_index = txn_ids_in_order.index(txn_id)
-        return number_of_txns_in_prior_batches + txn_index
+        txn_index, _ = next(
+            (i, t)
+            for i, t in enumerate(batch.transactions)
+            if t.header_signature == txn_id)
+
+        return number_of_txns_in_prior_batches + txn_index - 1
 
     def _can_fail_fast(self, txn_id):
         batch_id = self._batches_by_txn_id[txn_id].header_signature
@@ -909,6 +915,10 @@ class ParallelScheduler(Scheduler):
         if incomplete_batches:
             LOGGER.debug('Removed %s incomplete batches from the schedule',
                          len(incomplete_batches))
+
+    def is_transaction_in_schedule(self, txn_signature):
+        with self._condition:
+            return txn_signature in self._batches_by_txn_id
 
     def finalize(self):
         with self._condition:

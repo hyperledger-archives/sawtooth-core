@@ -36,12 +36,12 @@ class SynchronousExecutor(Executor):
     def __init__(self):
         self._work_queue = []
 
-    def submit(self, job):
-        self._work_queue.append(job)
+    def submit(self, job, *args, **kwargs):
+        self._work_queue.append((job, args, kwargs))
 
     def process_next(self):
         job = self._work_queue.pop()
-        job()
+        job[0](*job[1], **job[2])
 
     def process_all(self):
         while self._work_queue:
@@ -120,6 +120,9 @@ class MockScheduler(Scheduler):
 
     def unschedule_incomplete_batches(self):
         pass
+
+    def is_transaction_in_schedule(self, txn_id):
+        raise NotImplementedError()
 
     def finalize(self):
         pass
@@ -263,12 +266,13 @@ def CreateSetting(key, value):
     addr = SettingsView.setting_address(key)
 
     setting = Setting()
-    setting.entries.add(key=key, value=repr(value))
+    setting.entries.add(key=key, value=str(value))
     return addr, setting.SerializeToString()
 
 
 class MockPermissionVerifier(object):
-    def is_batch_signer_authorized(self, batch, state_root=None):
+    def is_batch_signer_authorized(self, batch, state_root=None,
+                                   from_state=False):
         return True
 
 

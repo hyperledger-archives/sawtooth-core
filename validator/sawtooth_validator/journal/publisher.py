@@ -31,6 +31,8 @@ from sawtooth_validator.journal.consensus.batch_publisher import \
     BatchPublisher
 from sawtooth_validator.journal.consensus.consensus_factory import \
     ConsensusFactory
+from sawtooth_validator.journal.validation_rule_enforcer import \
+    enforce_validation_rules
 
 from sawtooth_validator.journal.chain_commit_state import \
     TransactionCommitCache
@@ -40,6 +42,8 @@ from sawtooth_validator.metrics.wrappers import GaugeWrapper
 
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
+
+from sawtooth_validator.state.settings_view import SettingsView
 
 LOGGER = logging.getLogger(__name__)
 
@@ -120,6 +124,8 @@ class _CandidateBlock(object):
                  block_builder,
                  max_batches,
                  batch_injectors,
+                 settings_view,
+                 signer_public_key,
                  ):
         self._pending_batches = []
         self._pending_batch_ids = set()
@@ -135,10 +141,14 @@ class _CandidateBlock(object):
         self._max_batches = max_batches
         self._batch_injectors = batch_injectors
 
+        self._settings_view = settings_view
+        self._signer_public_key = signer_public_key
+
     def __del__(self):
-        # Cancel the scheduler if it is not complete
-        if not self._scheduler.complete(block=False):
-            self._scheduler.cancel()
+        self.cancel()
+
+    def cancel(self):
+        self._scheduler.cancel()
 
     @property
     def previous_block_id(self):
@@ -263,6 +273,12 @@ class _CandidateBlock(object):
                     self._block_builder.previous_block_id), batches_to_add)
 
             batches_to_add.append(batch)
+
+            if not enforce_validation_rules(
+                    self._settings_view,
+                    self._signer_public_key,
+                    self._pending_batches + batches_to_add):
+                return
 
             for b in batches_to_add:
                 self._pending_batches.append(b)
@@ -592,7 +608,9 @@ class BlockPublisher(object):
             committed_txn_cache,
             block_builder,
             max_batches,
-            batch_injectors)
+            batch_injectors,
+            SettingsView(state_view),
+            public_key)
 
         for batch in self._pending_batches:
             if self._candidate_block.can_add_batch:
@@ -641,17 +659,6 @@ class BlockPublisher(object):
         self._pending_batches = []
         self._pending_batch_ids = []
 
-        num_committed_batches = len(committed_batches)
-        if num_committed_batches > 0:
-            # Only update the average if either:
-            # a. Not drained below the current average
-            # b. Drained the queue, but the queue was not bigger than the
-            #    current running average
-            remainder = len(self._pending_batches) - num_committed_batches
-            if remainder > self._publish_count_average.value or \
-                    num_committed_batches > self._publish_count_average.value:
-                self._publish_count_average.update(num_committed_batches)
-
         # Uncommitted and pending disjoint sets
         # since batches can only be committed to a chain once.
         for batch in uncommitted_batches:
@@ -663,6 +670,24 @@ class BlockPublisher(object):
             if batch.header_signature not in committed_set:
                 self._pending_batches.append(batch)
                 self._pending_batch_ids.append(batch.header_signature)
+
+    def _update_pending_queue_limit(self, num_committed_batches):
+        """Take the number of committed batches and use that to update the
+        rolling average of batches, if it is a significant enough change.
+
+        Args:
+            num_committed_batches (int): the number committed batches in a
+                block
+        """
+        if num_committed_batches > 0:
+            # Only update the average if either:
+            # a. Not drained below the current average
+            # b. Drained the queue, but the queue was not bigger than the
+            #    current running average
+            remainder = len(self._pending_batches) - num_committed_batches
+            if remainder > self._publish_count_average.value or \
+                    num_committed_batches > self._publish_count_average.value:
+                self._publish_count_average.update(num_committed_batches)
 
     def on_chain_updated(self, chain_head,
                          committed_batches=None,
@@ -689,10 +714,14 @@ class BlockPublisher(object):
 
                 self._chain_head = chain_head
 
+                if self._candidate_block:
+                    self._candidate_block.cancel()
+
                 self._candidate_block = None  # we need to make a new
                 # _CandidateBlock (if we can) since the block chain has updated
                 # under us.
                 if chain_head is not None:
+                    self._update_pending_queue_limit(len(chain_head.batches))
                     self._rebuild_pending_batches(committed_batches,
                                                   uncommitted_batches)
                     self._build_candidate_block(chain_head)
