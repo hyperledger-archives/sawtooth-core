@@ -877,10 +877,6 @@ class ParallelScheduler(Scheduler):
 
             self._condition.notify_all()
 
-    def _unscheduled_transactions(self):
-
-        return self._txns_available.copy()
-
     def _has_predecessors(self, txn_id):
         for predecessor_id in self._txn_predecessors[txn_id]:
             if predecessor_id not in self._txn_results:
@@ -965,7 +961,10 @@ class ParallelScheduler(Scheduler):
             # is not blocked by a dependency.
 
             next_txn = None
-            for txn in self._unscheduled_transactions():
+
+            no_longer_available = []
+
+            for txn in self._txns_available:
                 txn_id = txn.header_signature
 
                 if (self._has_predecessors(txn_id)
@@ -980,7 +979,7 @@ class ParallelScheduler(Scheduler):
                     continue
 
                 if self._txn_failed_by_dep(deps):
-                    self._txns_available.remove(txn)
+                    no_longer_available.append(txn)
                     self._txn_results[txn_id] = \
                         TxnExecutionResult(
                             signature=txn_id,
@@ -993,11 +992,14 @@ class ParallelScheduler(Scheduler):
                         self._can_fail_fast(txn_id):
                     self._txn_results[txn_id] = \
                         TxnExecutionResult(False, None, None)
-                    self._txns_available.remove(txn)
+                    no_longer_available.append(txn)
                     continue
 
                 next_txn = txn
                 break
+
+            for txn in no_longer_available:
+                self._txns_available.remove(txn)
 
             if next_txn is not None:
                 bases = self._get_initial_state_for_transaction(next_txn)
@@ -1043,7 +1045,7 @@ class ParallelScheduler(Scheduler):
             # is not blocked by a dependency.
 
             count = 0
-            for txn in self._unscheduled_transactions():
+            for txn in self._txns_available:
                 if not self._has_predecessors(txn.header_signature):
                     count += 1
 
@@ -1053,7 +1055,7 @@ class ParallelScheduler(Scheduler):
         incomplete_batches = set()
         with self._condition:
             # These transactions have never been scheduled.
-            for txn in self._unscheduled_transactions():
+            for txn in self._txns_available:
                 batch = self._batches_by_txn_id[txn.header_signature]
                 batch_id = batch.header_signature
 
