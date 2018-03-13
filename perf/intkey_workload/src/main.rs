@@ -125,6 +125,15 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .help("Comma separated list of u8 to make the workload reproduceable"),
         )
         .arg(
+            Arg::with_name("unnecessary")
+                .long("unnecessary")
+                .takes_value(true)
+                .number_of_values(1)
+                .default_value("0.0")
+                .value_name("UNNECESSARY")
+                .help("Probability of a transaction having a satisfiable but unnecessary depedendency"),
+        )
+        .arg(
             Arg::with_name("unsatisfiable")
                 .long("unsatisfiable")
                 .takes_value(true)
@@ -209,6 +218,11 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
             String::from("unsatisfiable must be a positive float in the range [0.0, 1.0]")
         })?;
 
+    let unnecessary: f32 = args.value_of("unnecessary")
+        .unwrap_or("0.0")
+        .parse()
+        .map_err(|_| String::from("unnecessary must be a positive float in the range [0.0, 1.0]"))?;
+
     let wildcard: f32 = args.value_of("wildcard")
         .unwrap_or("0.0")
         .parse()
@@ -273,8 +287,14 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
 
     let signer_ref = &signer;
 
-    let mut transformer =
-        IntKeyTransformer::new(signer_ref, &seed, unsatisfiable, wildcard, num_names);
+    let mut transformer = IntKeyTransformer::new(
+        signer_ref,
+        &seed,
+        unsatisfiable,
+        wildcard,
+        num_names,
+        unnecessary,
+    );
 
     let mut transaction_iterator = IntKeyIterator::new(num_names, invalid, &seed)
         .map(|payload| transformer.intkey_payload_to_transaction(payload))
