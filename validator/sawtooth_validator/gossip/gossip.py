@@ -251,8 +251,9 @@ class Gossip(object):
             )
         return int(time_to_live)
 
-    def broadcast_block(self, block, exclude=None):
-        time_to_live = self.get_time_to_live()
+    def broadcast_block(self, block, exclude=None, time_to_live=None):
+        if time_to_live is None:
+            time_to_live = self.get_time_to_live()
         gossip_message = GossipMessage(
             content_type=GossipMessage.BLOCK,
             content=block.SerializeToString(),
@@ -281,8 +282,9 @@ class Gossip(object):
                   connection_id,
                   one_way=True)
 
-    def broadcast_batch(self, batch, exclude=None):
-        time_to_live = self.get_time_to_live()
+    def broadcast_batch(self, batch, exclude=None, time_to_live=None):
+        if time_to_live is None:
+            time_to_live = self.get_time_to_live()
         gossip_message = GossipMessage(
             content_type=GossipMessage.BATCH,
             content=batch.SerializeToString(),
