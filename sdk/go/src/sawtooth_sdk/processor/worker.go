@@ -119,7 +119,7 @@ func worker(context *zmq.Context, uri string, queue <-chan *validator_pb2.Messag
 func findHandler(handlers []TransactionHandler, header *transaction_pb2.TransactionHeader) (TransactionHandler, error) {
 	for _, handler := range handlers {
 		if header.GetFamilyName() != handler.FamilyName() {
-			break
+			continue
 		}
 
 		HeaderVersion := header.GetFamilyVersion()
@@ -132,7 +132,7 @@ func findHandler(handlers []TransactionHandler, header *transaction_pb2.Transact
 		}
 
 		if !HasVersion {
-			break
+			continue
 		}
 
 		return handler, nil
