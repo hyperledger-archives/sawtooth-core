@@ -427,6 +427,12 @@ mod tests {
         {
             Ok(Box::new(MockPublicKey))
         }
+
+        fn new_random_private_key(&self)
+            -> Result<Box<signing::PrivateKey>, signing::Error>
+        {
+            Ok(Box::new(MockPrivateKey))
+        }
     }
 
     struct MockPublicKey;
