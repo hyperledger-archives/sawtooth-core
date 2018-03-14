@@ -93,11 +93,12 @@ func NewConnection(context *zmq.Context, t zmq.Type, uri string) (*ZmqConnection
 	identity := GenerateId()
 	socket.SetIdentity(identity)
 
-	logger.Info("Connecting to ", uri)
 	switch t {
 	case zmq.ROUTER:
+		logger.Info("Binding to ", uri)
 		err = socket.Bind(uri)
 	case zmq.DEALER:
+		logger.Info("Connecting to ", uri)
 		err = socket.Connect(uri)
 	}
 	if err != nil {

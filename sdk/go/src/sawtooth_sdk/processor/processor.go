@@ -143,6 +143,11 @@ func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
 	// Register all handlers with the validator
 	for _, handler := range self.handlers {
 		for _, version := range handler.FamilyVersions() {
+			logger.Debugf(
+				"Registering (%v, %v, %v)",
+				handler.FamilyName(),
+				version,
+				handler.Namespaces())
 			err := register(validator, handler, version, queue, uint32(self.maxQueue))
 			if err != nil {
 				return restart, fmt.Errorf(
