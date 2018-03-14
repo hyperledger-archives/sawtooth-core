@@ -65,6 +65,15 @@ class LMDBNoLockDatabase(database.Database):
         with self._lmdb.begin() as txn:
             return txn.get(key.encode()) is not None
 
+    def get(self, key, index=None):
+        with self._lmdb.begin() as txn:
+            packed = txn.get(key.encode())
+
+        try:
+            return cbor.loads(packed)
+        except ValueError:
+            return None
+
     def get_multi(self, keys, index=None):
         with self._lmdb.begin() as txn:
             result = []

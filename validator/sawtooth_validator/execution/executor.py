@@ -187,6 +187,8 @@ class TransactionExecutorThread(object):
                 "Unhandled exception while executing schedule: %s", exc)
 
     def _execute_schedule(self):
+        configs = {}
+
         for txn_info in self._scheduler:
             self._transaction_execution_count.inc()
 
@@ -198,8 +200,12 @@ class TransactionExecutorThread(object):
                 header.family_name,
                 header.family_version)
 
-            config = self._settings_view_factory.create_settings_view(
-                txn_info.state_hash)
+            try:
+                config = configs[txn_info.state_hash]
+            except KeyError:
+                config = self._settings_view_factory.create_settings_view(
+                    txn_info.state_hash)
+                configs[txn_info.state_hash] = config
 
             transaction_families = config.get_setting(
                 key=self._tp_settings_key,
