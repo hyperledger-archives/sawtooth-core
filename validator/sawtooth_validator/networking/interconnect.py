@@ -758,6 +758,20 @@ class Interconnect(object):
             return connection_info.status
         return None
 
+    def is_connection_handshake_complete(self, connection_id):
+        """
+        Indicates whether or not a connection has completed the authorization
+        handshake.
+
+        Returns:
+            bool - True if the connection handshake is complete, False
+                otherwise
+        """
+        if connection_id in self._connections:
+            connection_info = self._connections[connection_id]
+            return connection_info.status == ConnectionStatus.CONNECTED
+        return False
+
     def set_check_connections(self, function):
         self._send_receive_thread.set_check_connections(function)
 
