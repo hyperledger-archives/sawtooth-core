@@ -28,7 +28,7 @@ import (
 )
 
 // The main worker thread finds an appropriate handler and processes the request
-func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message, handlers []TransactionHandler) {
+func worker(context *zmq.Context, uri string, queue <-chan *validator_pb2.Message, handlers []TransactionHandler) {
 	// Connect to the main send/receive thread
 	connection, err := messaging.NewConnection(context, zmq.DEALER, uri)
 	if err != nil {
