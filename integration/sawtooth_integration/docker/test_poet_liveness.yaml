@@ -278,21 +278,21 @@ services:
     stop_signal: SIGKILL
 
   smallbank-tp-0:
-    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    image: sawtooth-dev-rust:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: smallbank-tp-go -C tcp://validator-0:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: smallbank-tp-rust -C tcp://validator-0:4004
     stop_signal: SIGKILL
 
   smallbank-tp-1:
-    image: sawtooth-smallbank-tp-go:$ISOLATION_ID
+    image: sawtooth-dev-rust:$ISOLATION_ID
     volumes:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-    command: smallbank-tp-go -C tcp://validator-1:4004 --max-queue-size 1024 --worker-thread-count 32
+    command: smallbank-tp-rust -C tcp://validator-1:4004
     stop_signal: SIGKILL
 
   smallbank-tp-2:
