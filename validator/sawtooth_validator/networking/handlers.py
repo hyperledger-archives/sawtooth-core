@@ -210,10 +210,12 @@ class PingHandler(Handler):
                 message_type=validator_pb2.Message.PING_RESPONSE)
 
         if connection_id in self._last_message:
-            if time.time() - self._last_message[connection_id] < \
-                    self._allowed_frequency:
-                LOGGER.warning("Too many Pings in %s seconds before "
+            ping_frequency = time.time() - self._last_message[connection_id]
+
+            if ping_frequency < self._allowed_frequency:
+                LOGGER.warning("Too many Pings (%s) in %s seconds before "
                                "authorization is complete: %s",
+                               ping_frequency,
                                self._allowed_frequency,
                                connection_id)
                 violation = AuthorizationViolation(
