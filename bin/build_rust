@@ -39,6 +39,12 @@ mkdir -p $top_dir/sdk/examples/intkey_rust/bin/
 cd $top_dir/sdk/examples/intkey_rust
 cargo build && cp ./target/debug/intkey_rust $top_dir/sdk/examples/intkey_rust/bin/intkey_rust
 
+echo -e "\033[0;32m--- Building smallbank-tp-rust ---\n\033[0m"
+rm -rf $top_dir/families/smallbank/smallbank_rust/bin/
+mkdir -p $top_dir/families/smallbank/smallbank_rust/bin/
+cd $top_dir/families/smallbank/smallbank_rust
+cargo build && cp ./target/debug/smallbank_rust $top_dir/families/smallbank/smallbank_rust/bin/smallbank_rust
+
 # echo -e "\033[0;32m--- Building xo-tp-rust ---\n\033[0m"
 
 # echo -e "\033[0;32m--- Building noop-tp-rust ---\n\033[0m"
