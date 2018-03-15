@@ -735,28 +735,46 @@ class Interconnect(object):
         """
         Get stored public key for a connection.
         """
-        if connection_id in self._connections:
-            connection_info = self._connections[connection_id]
-            return connection_info.public_key
-        return None
+        with self._connections_lock:
+            try:
+                connection_info = self._connections[connection_id]
+                return connection_info.public_key
+            except KeyError:
+                return None
 
     def connection_id_to_endpoint(self, connection_id):
         """
         Get stored public key for a connection.
         """
-        if connection_id in self._connections:
-            connection_info = self._connections[connection_id]
-            return connection_info.uri
-        return None
+        with self._connections_lock:
+            try:
+                connection_info = self._connections[connection_id]
+                return connection_info.uri
+            except KeyError:
+                return None
 
     def get_connection_status(self, connection_id):
         """
         Get status of the connection during Role enforcement.
         """
-        if connection_id in self._connections:
-            connection_info = self._connections[connection_id]
-            return connection_info.status
-        return None
+        with self._connections_lock:
+            try:
+                connection_info = self._connections[connection_id]
+                return connection_info.status
+            except KeyError:
+                return None
+
+    def is_connection_handshake_complete(self, connection_id):
+        """
+        Indicates whether or not a connection has completed the authorization
+        handshake.
+
+        Returns:
+            bool - True if the connection handshake is complete, False
+                otherwise
+        """
+        return self.get_connection_status(connection_id) == \
+            ConnectionStatus.CONNECTED
 
     def set_check_connections(self, function):
         self._send_receive_thread.set_check_connections(function)

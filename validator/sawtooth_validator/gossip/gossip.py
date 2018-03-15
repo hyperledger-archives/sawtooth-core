@@ -761,7 +761,11 @@ class ConnectionManager(InstrumentedThread):
 
             # If the connection does exist, request peers.
             if conn_id is not None:
-                if conn_id in peers:
+                if not self._network.is_connection_handshake_complete(conn_id):
+                    # has not finished the authorization (trust/challenge)
+                    # process yet.
+                    continue
+                elif conn_id in peers:
                     # connected and peered - we've already sent peer request
                     continue
                 else:
