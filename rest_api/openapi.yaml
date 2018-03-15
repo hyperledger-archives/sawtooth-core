@@ -278,7 +278,7 @@ paths:
               data:
                 type: array
                 items:
-                  - $ref: "#/definitions/Block"
+                  $ref: "#/definitions/Block"
               head:
                 $ref: "#/definitions/Head"
               link:
@@ -739,7 +739,7 @@ definitions:
   TransactionReceipts:
     type: array
     items:
-      - $ref: "#/definitions/TransactionReceipt"
+      $ref: "#/definitions/TransactionReceipt"
 
   BatchHeader:
     properties:
