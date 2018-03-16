@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+#
+# Copyright 2017 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+top_dir=$(cd $(dirname $(dirname $0)) && pwd)
+
+cd $top_dir/sdk/dotnet
+
+# Restore the nuget packages including Google.Protobuf.Tools used in the next step
+dotnet restore
+
+echo -e "\033[0;36m\n[--- Generating protobuf class files ---]\n\033[0m"
+
+# Generate protobuf classes for C#. Google's 'protoc' tool requires fully qualified path to run, cannot work with absolute paths
+cd $top_dir/protos
+~/.nuget/packages/google.protobuf.tools/3.5.1/tools/linux_x64/protoc --csharp_out=/project/sawtooth-core/sdk/dotnet/Protobuf/ *
+
+cd $top_dir/sdk/dotnet
+
+# Build the SDK
+dotnet build -c Release -f netstandard2.0 Sdk
+
+# Build nuget packages
+dotnet pack
+
+# Run unit tests using xUnit
+dotnet test -c Release Test

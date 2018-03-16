@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Sawtooth.Sdk</id>
+    <version>1.0.10</version>
+    <authors>Tomislav Markovski</authors>
+    <owners>Tomislav Markovski</owners>
+    <licenseUrl>https://github.com/tmarkovski/sawtooth-sdk-net/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/tmarkovski/sawtooth-sdk-net/</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Hyperledger Sawtooth SDK</description>
+    <releaseNotes>Transaction processor, handler and client signer support. Includes protobuf types.</releaseNotes>
+    <copyright>Copyright 2018</copyright>
+    <tags>sawtooth hyperledger</tags>
+    <dependencies>
+      <dependency id="NetMQ" version="4.0.0.1" />
+      <dependency id="Google.Protobuf" version="3.5.1" />
+      <dependency id="Portable.BouncyCastle" version="1.8.1.4" />
+      <dependency id="Colorful.Console" version="1.2.6" />
+    </dependencies>
+  </metadata>
+
+  <files>
+    <file src="Sdk/bin/Release/netstandard2.0/publish/Sawtooth.Sdk.dll" target="lib/netstandard2.0" />
+    <file src="Sdk/bin/Release/netstandard2.0/publish/Sawtooth.Sdk.deps.json" target="lib/netstandard2.0" />
+    <file src="Sdk/bin/Release/netstandard2.0/publish/Sawtooth.Protobuf.dll" target="lib/netstandard2.0" />
+  </files>
+</package>
