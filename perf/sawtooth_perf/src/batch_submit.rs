@@ -17,6 +17,7 @@
 
 //! Tools for submitting batch lists of signed batches to Sawtooth endpoints
 
+use std::cell::RefCell;
 use std::error;
 use std::fmt;
 use std::io::Read;
@@ -43,6 +44,7 @@ use sawtooth_sdk::messages::batch::BatchList;
 
 use batch_gen::{BatchResult, BatchingError};
 use source::LengthDelimitedMessageSource;
+use batch_map::BatchMap;
 use workload;
 
 /// Populates a channel from a stream of length-delimited batches.
@@ -177,6 +179,12 @@ pub fn run_workload<'a>(
 
     let mut urls: Cycle<IntoIter<String>> = targets.into_iter().cycle();
 
+    let batch_map = Rc::new(RefCell::new(BatchMap::new()));
+    let batch_map_clone = Rc::clone(&batch_map);
+
+    let batches = Rc::new(RefCell::new(Vec::new()));
+    let batches_clone = Rc::clone(&batches);
+
     let interval = Interval::new(time::Duration::new(0, time_to_wait), &handle).unwrap();
     let mut log_time = time::Instant::now();
     let stream = interval
@@ -186,7 +194,9 @@ pub fn run_workload<'a>(
             workload::log(counter_clone, &mut log_time, update_time)
         })
         .map(move |_| -> Result<BatchList, workload::WorkloadError> {
-            workload::get_next_batchlist(batch_list_iter)
+            let batch_map = Rc::clone(&batch_map_clone);
+            let batches_clone = Rc::clone(&batches_clone);
+            workload::get_next_batchlist(batch_list_iter, batch_map, batches_clone)
         })
         .map(|batch_list: Result<BatchList, workload::WorkloadError>| {
             let basic_auth_c = basic_auth.clone();
@@ -194,12 +204,22 @@ pub fn run_workload<'a>(
             workload::form_request_from_batchlist(urls_c, batch_list, basic_auth_c)
         })
         .map_err(|err| workload::WorkloadError::from(err))
-        .and_then(|req: Result<Request, workload::WorkloadError>| {
-            let handle_clone = handle.clone();
-            let client_clone = Rc::clone(&client);
-            let counter_clone = Rc::clone(&counter);
-            workload::make_request(client_clone, handle_clone, counter_clone, req)
-        })
+        .and_then(
+            |req: Result<(Request, Option<String>), workload::WorkloadError>| {
+                let handle_clone = handle.clone();
+                let client_clone = Rc::clone(&client);
+                let counter_clone = Rc::clone(&counter);
+                let batches_clone = Rc::clone(&batches);
+                workload::make_request(
+                    client_clone,
+                    handle_clone,
+                    counter_clone,
+                    Rc::clone(&batch_map),
+                    batches_clone,
+                    req,
+                )
+            },
+        )
         .for_each(|_| Ok(()));
 
     core.run(stream)

@@ -17,6 +17,7 @@
 
 /// Tools for interacting with the Sawtooth Rest API
 
+use std::cell::RefCell;
 use std::error;
 use std::fmt;
 use std::io;
@@ -34,6 +35,7 @@ use hyper::header::{Authorization, Basic, ContentLength, ContentType};
 use hyper::Method;
 use hyper::Error as HyperError;
 use hyper::error::UriError;
+use hyper::StatusCode;
 use hyper::Uri;
 use protobuf;
 use protobuf::Message;
@@ -43,6 +45,8 @@ use sawtooth_sdk::messages::batch::BatchList;
 
 use batch_submit::BatchListResult;
 use batch_submit::BatchReadingError;
+
+use batch_map::BatchMap;
 
 #[derive(Debug)]
 pub enum WorkloadError {
@@ -205,11 +209,19 @@ pub fn log(
 /// Call next on the BatchList Iterator and return the batchlist if no error.
 pub fn get_next_batchlist(
     batch_list_iter: &mut Iterator<Item = BatchListResult>,
+    batch_map: Rc<RefCell<BatchMap>>,
+    batches: Rc<RefCell<Vec<BatchList>>>,
 ) -> Result<BatchList, WorkloadError> {
-    match batch_list_iter.next() {
-        Some(Ok(batch_list)) => Ok(batch_list),
-        Some(Err(err)) => return Err(WorkloadError::from(err)),
-        None => return Err(WorkloadError::NoBatchError),
+    match batches.borrow_mut().pop() {
+        Some(batchlist) => Ok(batchlist),
+        None => match batch_list_iter.next() {
+            Some(Ok(batch_list)) => {
+                batch_map.borrow_mut().add(batch_list.clone());
+                Ok(batch_list)
+            }
+            Some(Err(err)) => return Err(WorkloadError::from(err)),
+            None => return Err(WorkloadError::NoBatchError),
+        },
     }
 }
 
@@ -218,12 +230,18 @@ pub fn form_request_from_batchlist(
     targets: &mut Cycle<IntoIter<String>>,
     batch_list: Result<BatchList, WorkloadError>,
     basic_auth: Option<String>,
-) -> Result<Request, WorkloadError> {
+) -> Result<(Request, Option<String>), WorkloadError> {
     let mut batch_url = targets.next().unwrap();
     batch_url.push_str("/batches");
     debug!("Batches POST: {}", batch_url);
 
-    let bytes = batch_list?.write_to_bytes()?;
+    let batchlist_unwrapped = batch_list?;
+
+    let batch_id = match batchlist_unwrapped.batches.last() {
+        Some(batch) => Some(batch.header_signature.clone()),
+        None => None,
+    };
+    let bytes = batchlist_unwrapped.write_to_bytes()?;
     let mut req = Request::new(Method::Post, Uri::from_str(&batch_url)?);
     let content_len = bytes.len() as u64;
     req.set_body(bytes);
@@ -238,18 +256,38 @@ pub fn form_request_from_batchlist(
         None => {}
     }
 
-    Ok(req)
+    Ok((req, batch_id))
 }
 
 /// Log if there is a HTTP Error.
-fn handle_http_error(response: Result<Response, HyperError>) -> Result<Response, HyperError> {
-    match response {
-        Ok(response) => Ok(response),
-        Err(err) => {
-            info!("{}", err);
-            Err(err)
-        }
+fn handle_http_error(
+    response: Result<Response, HyperError>,
+    batch_id: Option<String>,
+    batches: Rc<RefCell<Vec<BatchList>>>,
+    batch_map: Rc<RefCell<BatchMap>>,
+) -> Result<(), HyperError> {
+    match batch_id {
+        Some(batch_id) => match response {
+            Ok(response) => match response.status() {
+                StatusCode::Accepted => {
+                    batch_map.borrow_mut().mark_submit_success(batch_id.clone())
+                }
+                _ => match batch_map.borrow_mut().get_batchlist_to_submit(batch_id) {
+                    Some(batchlist) => batches.borrow_mut().push(batchlist),
+                    None => {}
+                },
+            },
+            Err(err) => {
+                match batch_map.borrow_mut().get_batchlist_to_submit(batch_id) {
+                    Some(batchlist) => batches.borrow_mut().push(batchlist),
+                    None => {}
+                }
+                info!("{}", err);
+            }
+        },
+        None => {}
     }
+    Ok(())
 }
 
 /// POST the batchlist to the rest api.
@@ -257,15 +295,19 @@ pub fn make_request(
     client: Rc<Client<HttpConnector>>,
     handle: Handle,
     counter: Rc<HTTPRequestCounter>,
-    req: Result<Request, WorkloadError>,
+    batch_map: Rc<RefCell<BatchMap>>,
+    batches: Rc<RefCell<Vec<BatchList>>>,
+    req: Result<(Request, Option<String>), WorkloadError>,
 ) -> Result<(), WorkloadError> {
     let handle_clone = handle.clone();
     match req {
-        Ok(req) => {
+        Ok((req, batch_id)) => {
             counter.increment_sent();
             let response_future = client
                 .request(req)
-                .then(|response: Result<Response, HyperError>| handle_http_error(response))
+                .then(|response: Result<Response, HyperError>| {
+                    handle_http_error(response, batch_id, batches, batch_map)
+                })
                 .map(|_| ())
                 .map_err(|_| ());
 
