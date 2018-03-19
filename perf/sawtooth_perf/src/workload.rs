@@ -246,7 +246,7 @@ impl HTTPRequestCounter {
     pub fn log(&self, seconds: u64, nanoseconds: u32) {
         let update = seconds as f64 + nanoseconds as f64 * 1e-9;
         println!(
-            "{} Batches/s {:.3} Committed/s {:.3} Invalid/s {:.3}",
+            "{}, Batches/s {:.3}, Committed/s {:.3}, Invalid/s {:.3}",
             self,
             self.sent_count.load(Ordering::Relaxed) as f64 / update,
             self.committed_count.load(Ordering::Relaxed) as f64 / update,
