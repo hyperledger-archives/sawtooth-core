@@ -45,7 +45,8 @@ _MessageInformation = namedtuple('_MessageInformation', (
     'content',
     'correlation_id',
     'collection',
-    'message_type'))
+    'message_type',
+    'timer'))
 
 
 class Dispatcher(InstrumentedThread):
@@ -61,6 +62,9 @@ class Dispatcher(InstrumentedThread):
         self._dispatch_timers = {}
         self._priority = {}
         self._preprocessors = {}
+        self._gossip_throughput_timer = COLLECTOR.timer(
+            'gossip_throughput',
+            instance=self)
 
     def _get_dispatch_timer(self, tag):
         if tag not in self._dispatch_timers:
@@ -149,7 +153,8 @@ class Dispatcher(InstrumentedThread):
                     correlation_id=message.correlation_id,
                     message_type=message.message_type,
                     collection=_ManagerCollection(
-                        self._msg_type_handlers[message.message_type]))
+                        self._msg_type_handlers[message.message_type]),
+                    timer=None)
 
             self._in_queue.put_nowait((priority, message_id))
 
@@ -187,9 +192,26 @@ class Dispatcher(InstrumentedThread):
     def _process(self, message_id):
         message_info = self._message_information[message_id]
 
+        # timer_ctx = self._gossip_throughput_timer.time()
+
+        timer_ctx = (
+            None if (message_info.message_type
+                     != validator_pb2.Message.GOSSIP_MESSAGE)
+            else self._gossip_throughput_timer.time()
+        )
+
         try:
             preprocessor = self._preprocessors[message_info.message_type]
         except KeyError:
+            self._message_information[message_id] = \
+                _MessageInformation(
+                    connection=message_info.connection,
+                    connection_id=message_info.connection_id,
+                    content=message_info.content,
+                    correlation_id=message_info.correlation_id,
+                    collection=message_info.collection,
+                    message_type=message_info.message_type,
+                    timer=timer_ctx)
             self._process_next(message_id)
             return
 
@@ -202,7 +224,8 @@ class Dispatcher(InstrumentedThread):
                         content=result,
                         correlation_id=message_info.correlation_id,
                         collection=message_info.collection,
-                        message_type=message_info.message_type)
+                        message_type=message_info.message_type,
+                        timer=timer_ctx)
 
                 self._process_next(message_id)
             except Exception:  # pylint: disable=broad-except
@@ -221,6 +244,10 @@ class Dispatcher(InstrumentedThread):
             handler_manager = next(message_info.collection)
         except IndexError:
             # IndexError is raised if done with handlers
+            try:
+                message_info.timer.stop()
+            except AttributeError:
+                pass
             del self._message_information[message_id]
             return
 
