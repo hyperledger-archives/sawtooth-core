@@ -16,7 +16,7 @@ host system:
 .. code-block:: console
 
   $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-  $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
+  $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
 
 Nightly Builds:
 
@@ -28,7 +28,7 @@ following commands in a terminal window on your host system:
 .. code-block:: console
 
   $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
-  $ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
+  $ sudo apt-add-repository "deb [arch=amd64] http://repo.sawtooth.me/ubuntu/nightly xenial universe"
 
 Update your package lists and install Sawtooth:
 

@@ -82,7 +82,7 @@ stable or nightly.  We recommend using the stable repository.
      .. code-block:: console
 
        $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 8AA7AF1F1091A5FD
-       $ sudo add-apt-repository 'deb http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
+       $ sudo add-apt-repository 'deb [arch=amd64] http://repo.sawtooth.me/ubuntu/1.0/stable xenial universe'
        $ sudo apt-get update
 
    * To use the nightly repository, run the following commands:
