@@ -48,19 +48,11 @@ class TestBatchSubmitFinisher(ClientHandlerTestCase):
             - a response status of OK
             - no batch_statuses
         """
-        response = self.make_request(batches=[make_mock_batch('new')])
+        response = self._handle(
+            client_batch_submit_pb2.ClientBatchSubmitRequest(
+                batches=[make_mock_batch('new')]))
 
         self.assertEqual(self.status.OK, response.status)
-
-    def test_batch_submit_bad_request(self):
-        """Verifies finisher breaks properly when sent a bad request.
-
-        Expects to find:
-            - a response status of INTERNAL_ERROR
-        """
-        response = self.make_bad_request(batches=[make_mock_batch('new')])
-
-        self.assertEqual(self.status.INTERNAL_ERROR, response.status)
 
 
 class TestBatchStatusRequests(ClientHandlerTestCase):

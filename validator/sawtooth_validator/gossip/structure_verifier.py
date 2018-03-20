@@ -14,18 +14,11 @@
 # ------------------------------------------------------------------------------
 
 import logging
-# pylint: disable=import-error,no-name-in-module
-# needed for google.protobuf import
-from google.protobuf.message import DecodeError
 
 from sawtooth_validator.protobuf import client_batch_submit_pb2
-from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
-from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.protobuf import network_pb2
-from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
-from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -85,23 +78,19 @@ def is_valid_batch(batch):
 
 class GossipHandlerStructureVerifier(Handler):
     def handle(self, connection_id, message_content):
-        gossip_message = network_pb2.GossipMessage()
-        gossip_message.ParseFromString(message_content)
-        if gossip_message.content_type == network_pb2.GossipMessage.BLOCK:
-            block = Block()
-            block.ParseFromString(gossip_message.content)
-            if not is_valid_block(block):
+        obj, tag, _ = message_content
+
+        if tag == network_pb2.GossipMessage.BLOCK:
+            if not is_valid_block(obj):
                 LOGGER.debug("block's batches structure is invalid: %s",
-                             block.header_signature)
+                             obj.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
             return HandlerResult(status=HandlerStatus.PASS)
-        elif gossip_message.content_type == network_pb2.GossipMessage.BATCH:
-            batch = Batch()
-            batch.ParseFromString(gossip_message.content)
-            if not is_valid_batch(batch):
+        elif tag == network_pb2.GossipMessage.BATCH:
+            if not is_valid_batch(obj):
                 LOGGER.debug("batch structure is invalid: %s",
-                             batch.header_signature)
+                             obj.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
             return HandlerResult(status=HandlerStatus.PASS)
@@ -111,11 +100,8 @@ class GossipHandlerStructureVerifier(Handler):
 
 class GossipBlockResponseStructureVerifier(Handler):
     def handle(self, connection_id, message_content):
-        block_response_message = GossipBlockResponse()
-        block_response_message.ParseFromString(message_content)
+        block, _ = message_content
 
-        block = Block()
-        block.ParseFromString(block_response_message.content)
         if not is_valid_block(block):
             LOGGER.debug("requested block's batches structure is invalid: %s",
                          block.header_signature)
@@ -126,11 +112,8 @@ class GossipBlockResponseStructureVerifier(Handler):
 
 class GossipBatchResponseStructureVerifier(Handler):
     def handle(self, connection_id, message_content):
-        batch_response_message = GossipBatchResponse()
-        batch_response_message.ParseFromString(message_content)
+        batch, _ = message_content
 
-        batch = Batch()
-        batch.ParseFromString(batch_response_message.content)
         if not is_valid_batch(batch):
             LOGGER.debug("requested batch's structure is invalid: %s",
                          batch.header_signature)
@@ -149,18 +132,12 @@ class BatchListStructureVerifier(Handler):
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
-        try:
-            request = client_batch_submit_pb2.ClientBatchSubmitRequest()
-            request.ParseFromString(message_content)
-        except DecodeError:
-            return make_response(response_proto.INTERNAL_ERROR)
-
-        for batch in request.batches:
+        for batch in message_content.batches:
             if batch.trace:
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
 
-        if not all(map(is_valid_batch, request.batches)):
+        if not all(map(is_valid_batch, message_content.batches)):
             return make_response(response_proto.INVALID_BATCH)
 
         return HandlerResult(status=HandlerStatus.PASS)

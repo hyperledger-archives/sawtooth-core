@@ -15,9 +15,6 @@
 
 import logging
 import hashlib
-# pylint: disable=import-error,no-name-in-module
-# needed for google.protobuf import
-from google.protobuf.message import DecodeError
 
 from sawtooth_signing import create_context
 from sawtooth_signing.secp256k1 import Secp256k1PublicKey
@@ -25,12 +22,8 @@ from sawtooth_signing.secp256k1 import Secp256k1PublicKey
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
-from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
-from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
-from sawtooth_validator.protobuf.network_pb2 import GossipBlockResponse
-from sawtooth_validator.protobuf.network_pb2 import GossipBatchResponse
 from sawtooth_validator import metrics
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -129,37 +122,32 @@ class GossipMessageSignatureVerifier(Handler):
             'already_validated_block_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
-        gossip_message = GossipMessage()
-        gossip_message.ParseFromString(message_content)
+        obj, tag, _ = message_content
 
-        if gossip_message.content_type == GossipMessage.BLOCK:
-            block = Block()
-            block.ParseFromString(gossip_message.content)
-            if block.header_signature in self._seen_cache:
+        if tag == GossipMessage.BLOCK:
+            if obj.header_signature in self._seen_cache:
                 self._block_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            if not is_valid_block(block):
+            if not is_valid_block(obj):
                 LOGGER.debug("block signature is invalid: %s",
-                             block.header_signature)
+                             obj.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            self._seen_cache[block.header_signature] = None
+            self._seen_cache[obj.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
-        elif gossip_message.content_type == GossipMessage.BATCH:
-            batch = Batch()
-            batch.ParseFromString(gossip_message.content)
-            if batch.header_signature in self._seen_cache:
+        elif tag == GossipMessage.BATCH:
+            if obj.header_signature in self._seen_cache:
                 self._batch_dropped_count.inc()
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            if not is_valid_batch(batch):
+            if not is_valid_batch(obj):
                 LOGGER.debug("batch signature is invalid: %s",
-                             batch.header_signature)
+                             obj.header_signature)
                 return HandlerResult(status=HandlerStatus.DROP)
 
-            self._seen_cache[batch.header_signature] = None
+            self._seen_cache[obj.header_signature] = None
             return HandlerResult(status=HandlerStatus.PASS)
 
         # should drop the message if it does not have a valid content_type
@@ -173,10 +161,8 @@ class GossipBlockResponseSignatureVerifier(Handler):
             'already_validated_block_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
-        block_response_message = GossipBlockResponse()
-        block_response_message.ParseFromString(message_content)
-        block = Block()
-        block.ParseFromString(block_response_message.content)
+        block, _ = message_content
+
         if block.header_signature in self._seen_cache:
             self.block_dropped_count.inc()
             return HandlerResult(status=HandlerStatus.DROP)
@@ -197,11 +183,8 @@ class GossipBatchResponseSignatureVerifier(Handler):
             'already_validated_batch_dropped_count', instance=self)
 
     def handle(self, connection_id, message_content):
-        batch_response_message = GossipBatchResponse()
-        batch_response_message.ParseFromString(message_content)
+        batch, _ = message_content
 
-        batch = Batch()
-        batch.ParseFromString(batch_response_message.content)
         if batch.header_signature in self._seen_cache:
             self._batch_dropped_count.inc()
             return HandlerResult(status=HandlerStatus.DROP)
@@ -225,18 +208,12 @@ class BatchListSignatureVerifier(Handler):
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
-        try:
-            request = client_batch_submit_pb2.ClientBatchSubmitRequest()
-            request.ParseFromString(message_content)
-        except DecodeError:
-            return make_response(response_proto.INTERNAL_ERROR)
-
-        for batch in request.batches:
+        for batch in message_content.batches:
             if batch.trace:
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
 
-        if not all(map(is_valid_batch, request.batches)):
+        if not all(map(is_valid_batch, message_content.batches)):
             return make_response(response_proto.INVALID_BATCH)
 
         return HandlerResult(status=HandlerStatus.PASS)

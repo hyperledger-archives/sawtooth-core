@@ -21,11 +21,7 @@ from sawtooth_validator.journal.block_cache import BlockCache
 from sawtooth_validator.journal.block_wrapper import BlockWrapper
 from sawtooth_validator.journal.block_wrapper import NULL_BLOCK_IDENTIFIER
 from sawtooth_validator.journal.timed_cache import TimedCache
-from sawtooth_validator.protobuf.batch_pb2 import Batch
-from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
-from sawtooth_validator.protobuf.client_batch_submit_pb2 \
-    import ClientBatchSubmitRequest
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
@@ -376,9 +372,7 @@ class CompleterBatchListBroadcastHandler(Handler):
         self._gossip = gossip
 
     def handle(self, connection_id, message_content):
-        request = ClientBatchSubmitRequest()
-        request.ParseFromString(message_content)
-        for batch in request.batches:
+        for batch in message_content.batches:
             if batch.trace:
                 LOGGER.debug("TRACE %s: %s", batch.header_signature,
                              self.__class__.__name__)
@@ -392,16 +386,12 @@ class CompleterGossipHandler(Handler):
         self._completer = completer
 
     def handle(self, connection_id, message_content):
-        gossip_message = network_pb2.GossipMessage()
-        gossip_message.ParseFromString(message_content)
-        if gossip_message.content_type == network_pb2.GossipMessage.BLOCK:
-            block = Block()
-            block.ParseFromString(gossip_message.content)
-            self._completer.add_block(block)
-        elif gossip_message.content_type == network_pb2.GossipMessage.BATCH:
-            batch = Batch()
-            batch.ParseFromString(gossip_message.content)
-            self._completer.add_batch(batch)
+        obj, tag, _ = message_content
+
+        if tag == network_pb2.GossipMessage.BLOCK:
+            self._completer.add_block(obj)
+        elif tag == network_pb2.GossipMessage.BATCH:
+            self._completer.add_batch(obj)
         return HandlerResult(status=HandlerStatus.PASS)
 
 
@@ -410,11 +400,7 @@ class CompleterGossipBlockResponseHandler(Handler):
         self._completer = completer
 
     def handle(self, connection_id, message_content):
-        block_response_message = network_pb2.GossipBlockResponse()
-        block_response_message.ParseFromString(message_content)
-
-        block = Block()
-        block.ParseFromString(block_response_message.content)
+        block, _ = message_content
         self._completer.add_block(block)
 
         return HandlerResult(status=HandlerStatus.PASS)
@@ -425,11 +411,7 @@ class CompleterGossipBatchResponseHandler(Handler):
         self._completer = completer
 
     def handle(self, connection_id, message_content):
-        batch_response_message = network_pb2.GossipBatchResponse()
-        batch_response_message.ParseFromString(message_content)
-
-        batch = Batch()
-        batch.ParseFromString(batch_response_message.content)
+        batch, _ = message_content
         self._completer.add_batch(batch)
 
         return HandlerResult(status=HandlerStatus.PASS)

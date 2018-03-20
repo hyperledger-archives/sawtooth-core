@@ -165,7 +165,7 @@ class TestResponder(unittest.TestCase):
             content=block.SerializeToString())
 
         self.block_response_handler.handle(
-            "Connection_1", response_message.SerializeToString())
+            "Connection_1", (block, response_message.SerializeToString()))
 
         # ResponderBlockResponseHandler should not send any messages.
         self.assert_message_not_sent("Connection_1")
@@ -186,7 +186,7 @@ class TestResponder(unittest.TestCase):
         # requested the block but it could not be fulfilled at that time of the
         # request the received BlockResponse is forwarded to Connection_2
         self.block_response_handler.handle(
-            "Connection_1", response_message.SerializeToString())
+            "Connection_1", (block, response_message.SerializeToString()))
 
         self.assert_message_sent(
             connection_id="Connection_2",
@@ -462,7 +462,7 @@ class TestResponder(unittest.TestCase):
             content=batch.SerializeToString())
 
         self.batch_response_handler.handle(
-            "Connection_1", response_message.SerializeToString())
+            "Connection_1", (batch, response_message.SerializeToString()))
 
         # ResponderBlockResponseHandler should not send any messages.
         self.assert_message_not_sent("Connection_1")
@@ -483,7 +483,7 @@ class TestResponder(unittest.TestCase):
         # requested the batch but it could not be fulfilled at that time of the
         # request the received BatchResponse is forwarded to Connection_2
         self.batch_response_handler.handle(
-            "Connection_1", response_message.SerializeToString())
+            "Connection_1", (batch, response_message.SerializeToString()))
 
         self.assert_message_sent(
             connection_id="Connection_2",
@@ -522,7 +522,7 @@ class TestResponder(unittest.TestCase):
 
         # Send Batch Response that contains the batch that has txn "123"
         self.batch_response_handler.handle(
-            "Connection_1", response_message.SerializeToString())
+            "Connection_1", (batch, response_message.SerializeToString()))
 
         # Handle the the BatchResponse Message. Since Connection_2 had
         # requested the txn_id in the batch but it could not be fulfilled at
