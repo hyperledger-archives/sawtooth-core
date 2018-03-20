@@ -24,12 +24,7 @@ extern crate hyper;
 #[macro_use]
 extern crate log;
 extern crate protobuf;
-extern crate serde;
 
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde_json;
 extern crate tokio_core;
 extern crate tokio_timer;
 

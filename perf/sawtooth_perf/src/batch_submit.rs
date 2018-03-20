@@ -198,8 +198,7 @@ pub fn run_workload<'a>(
             let handle_clone = handle.clone();
             let client_clone = Rc::clone(&client);
             let counter_clone = Rc::clone(&counter);
-            let basic_auth_c = basic_auth.clone();
-            workload::make_request(client_clone, handle_clone, counter_clone, req, basic_auth_c)
+            workload::make_request(client_clone, handle_clone, counter_clone, req)
         })
         .for_each(|_| Ok(()));
 
