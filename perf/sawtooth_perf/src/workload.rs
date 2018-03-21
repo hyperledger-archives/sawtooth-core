@@ -265,6 +265,7 @@ fn handle_http_error(
     batch_id: Option<String>,
     batches: Rc<RefCell<Vec<BatchList>>>,
     batch_map: Rc<RefCell<BatchMap>>,
+    counter: Rc<HTTPRequestCounter>,
 ) -> Result<(), HyperError> {
     match batch_id {
         Some(batch_id) => match response {
@@ -272,6 +273,8 @@ fn handle_http_error(
                 StatusCode::Accepted => {
                     batch_map.borrow_mut().mark_submit_success(batch_id.clone())
                 }
+                StatusCode::TooManyRequests => counter.increment_queue_full(),
+
                 _ => match batch_map.borrow_mut().get_batchlist_to_submit(batch_id) {
                     Some(batchlist) => batches.borrow_mut().push(batchlist),
                     None => {}
@@ -306,7 +309,7 @@ pub fn make_request(
             let response_future = client
                 .request(req)
                 .then(|response: Result<Response, HyperError>| {
-                    handle_http_error(response, batch_id, batches, batch_map)
+                    handle_http_error(response, batch_id, batches, batch_map, counter)
                 })
                 .map(|_| ())
                 .map_err(|_| ());
