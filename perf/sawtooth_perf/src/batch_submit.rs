@@ -99,8 +99,8 @@ pub fn http_submitter(
         .tick_duration(time::Duration::new(0, 1000000))
         .build();
 
-    /// Define a target timeslice (how often to submit batches) based
-    /// on number of nanoseconds in a second divided by rate
+    // Define a target timeslice (how often to submit batches) based
+    // on number of nanoseconds in a second divided by rate
     let timeslice = time::Duration::new(0, 1000000000 / rate as u32);
 
     let mut uri = target.clone();
@@ -304,7 +304,7 @@ impl<'a> Iterator for BatchListFeeder<'a> {
             return None;
         }
 
-        /// Construct a BatchList out of the read batches
+        // Construct a BatchList out of the read batches
         let mut batch_list = BatchList::new();
         batch_list.set_batches(protobuf::RepeatedField::from_vec(batches));
 
