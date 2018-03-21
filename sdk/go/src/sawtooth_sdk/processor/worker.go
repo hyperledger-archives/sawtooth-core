@@ -28,11 +28,12 @@ import (
 )
 
 // The main worker thread finds an appropriate handler and processes the request
-func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message, handlers []TransactionHandler) {
+func worker(context *zmq.Context, uri string, queue <-chan *validator_pb2.Message, done chan<- bool, handlers []TransactionHandler) {
 	// Connect to the main send/receive thread
-	connection, err := messaging.NewConnection(context, zmq.DEALER, uri)
+	connection, err := messaging.NewConnection(context, zmq.DEALER, uri, false)
 	if err != nil {
 		logger.Errorf("Failed to connect to main thread: %v", err)
+		done <- false
 		return
 	}
 	defer connection.Close()
@@ -110,15 +111,7 @@ func worker(context *zmq.Context, uri string, queue chan *validator_pb2.Message,
 		}
 	}
 
-	// Queue has closed, so send shutdown signal
-	logger.Infof("(%v) No more work in queue, shutting down", id)
-	err = connection.SendMsg(
-		validator_pb2.Message_DEFAULT,
-		[]byte{byte(0)}, "shutdown",
-	)
-	if err != nil {
-		logger.Errorf("(%v) Error sending shutdown: %v", id, err)
-	}
+	done <- true
 }
 
 // Searches for and returns a handler that matches the header. If a suitable
@@ -148,66 +141,4 @@ func findHandler(handlers []TransactionHandler, header *transaction_pb2.Transact
 		"Unknown handler: (%v, %v)", header.GetFamilyName(),
 		header.GetFamilyVersion(),
 	)
-}
-
-// Waits for something to come along a channel and then initiates processor shutdown
-func shutdown(context *zmq.Context, uri string, queue chan *validator_pb2.Message, wait chan bool) {
-	// Wait for a request to shutdown
-	connection, err := messaging.NewConnection(context, zmq.DEALER, uri)
-	if err != nil {
-		logger.Errorf("Failed to connect to main thread: %v", err)
-		return
-	}
-	defer connection.Close()
-	id := "shutdown"
-
-	force := <-wait
-
-	if !force {
-		// Send a request to be unregistered
-		data, err := proto.Marshal(&processor_pb2.TpUnregisterRequest{})
-		if err != nil {
-			logger.Errorf(
-				"Failed to unregister: %v", err,
-			)
-		}
-		corrId, err := connection.SendNewMsg(
-			validator_pb2.Message_TP_UNREGISTER_REQUEST, data,
-		)
-		if err != nil {
-			logger.Errorf(
-				"Failed to unregister: %v", err,
-			)
-		}
-
-		// Wait for a response
-		_, msg, err := connection.RecvMsgWithId(corrId)
-		if err != nil {
-			logger.Errorf("Failed to receive TpUnregisterResponse: %v", err)
-		}
-		if msg.GetCorrelationId() != corrId {
-			logger.Errorf(
-				"Expected message with correlation id %v but got %v",
-				corrId, msg.GetCorrelationId(),
-			)
-		}
-		if msg.GetMessageType() != validator_pb2.Message_TP_UNREGISTER_RESPONSE {
-			logger.Errorf(
-				"Expected TP_UNREGISTER_RESPONSE but got %v", msg.GetMessageType(),
-			)
-		}
-	}
-
-	// Close the work queue, telling the worker threads there's no more work
-	close(queue)
-
-	err = connection.SendMsg(
-		validator_pb2.Message_DEFAULT,
-		[]byte{byte(0)}, "shutdown",
-	)
-	if err != nil {
-		logger.Errorf("(%v) Error sending shutdown message to router: %v", id, err)
-	} else {
-		logger.Infof("(%v) Sent shutdown message to router", id)
-	}
 }

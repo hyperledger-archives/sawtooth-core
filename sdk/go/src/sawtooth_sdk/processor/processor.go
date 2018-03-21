@@ -29,6 +29,7 @@ import (
 	"sawtooth_sdk/protobuf/network_pb2"
 	"sawtooth_sdk/protobuf/processor_pb2"
 	"sawtooth_sdk/protobuf/validator_pb2"
+	"time"
 )
 
 var logger *logging.Logger = logging.Get()
@@ -39,24 +40,24 @@ const DEFAULT_MAX_WORK_QUEUE_SIZE = 100
 // and routing transaction processing requests to a registered handler. It uses
 // ZMQ and channels to handle requests concurrently.
 type TransactionProcessor struct {
-	uri      string
-	ids      map[string]string
-	handlers []TransactionHandler
-	nThreads uint
-	maxQueue uint
-	shutdown chan bool
+	uri         string
+	ids         map[string]string
+	handlers    []TransactionHandler
+	nThreads    uint
+	maxQueue    uint
+	shutdown_tx messaging.Connection
 }
 
 // NewTransactionProcessor initializes a new Transaction Process and points it
 // at the given URI. If it fails to initialize, it will panic.
 func NewTransactionProcessor(uri string) *TransactionProcessor {
 	return &TransactionProcessor{
-		uri:      uri,
-		ids:      make(map[string]string),
-		handlers: make([]TransactionHandler, 0),
-		nThreads: uint(runtime.GOMAXPROCS(0)),
-		maxQueue: DEFAULT_MAX_WORK_QUEUE_SIZE,
-		shutdown: make(chan bool),
+		uri:         uri,
+		ids:         make(map[string]string),
+		handlers:    make([]TransactionHandler, 0),
+		nThreads:    uint(runtime.GOMAXPROCS(0)),
+		maxQueue:    DEFAULT_MAX_WORK_QUEUE_SIZE,
+		shutdown_tx: nil,
 	}
 }
 
@@ -101,11 +102,10 @@ func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
 	restart := false
 
 	// Establish a connection to the validator
-	validator, err := messaging.NewConnection(context, zmq.DEALER, self.uri)
+	validator, err := messaging.NewConnection(context, zmq.DEALER, self.uri, false)
 	if err != nil {
 		return restart, fmt.Errorf("Could not connect to validator: %v", err)
 	}
-	defer validator.Close()
 
 	monitor, err := validator.Monitor(zmq.EVENT_DISCONNECTED)
 	if err != nil {
@@ -113,13 +113,23 @@ func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
 	}
 
 	// Setup connection to internal worker thread pool
-	workers, err := messaging.NewConnection(context, zmq.ROUTER, "inproc://workers")
+	workers, err := messaging.NewConnection(context, zmq.ROUTER, "inproc://workers", true)
 	if err != nil {
 		return restart, fmt.Errorf("Could not create thread pool router: %v", err)
 	}
 
+	// Setup shutdown listening socket
+	shutdown_rx, err := messaging.NewConnection(context, zmq.PAIR, "inproc://shutdown", true)
+	if err != nil {
+		return restart, fmt.Errorf("Could not create shutdown connection: %v", err)
+	}
+	self.shutdown_tx, err = messaging.NewConnection(context, zmq.PAIR, "inproc://shutdown", false)
+
 	// Make work queue. Buffer so the router doesn't block
 	queue := make(chan *validator_pb2.Message, self.maxQueue)
+
+	// Make done channel for tracking thread shutdown
+	workers_done := make(chan bool, self.nThreads)
 
 	// Keep track of which correlation ids go to which worker threads, i.e. map
 	// corrId->workerThreadId
@@ -127,23 +137,18 @@ func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
 
 	// Startup worker thread pool
 	for i := uint(0); i < self.nThreads; i++ {
-		go worker(context, "inproc://workers", queue, self.handlers)
+		go worker(context, "inproc://workers", queue, workers_done, self.handlers)
 	}
-	// Setup shutdown thread
-	go shutdown(context, "inproc://workers", queue, self.shutdown)
-
-	workersLeft := self.nThreads + 1
-
-	// Setup ZMQ poller for routing messages between worker threads and validator
-	poller := zmq.NewPoller()
-	poller.Add(validator.Socket(), zmq.POLLIN)
-	poller.Add(monitor, zmq.POLLIN)
-	poller.Add(workers.Socket(), zmq.POLLIN)
 
 	// Register all handlers with the validator
 	for _, handler := range self.handlers {
 		for _, version := range handler.FamilyVersions() {
-			err := register(validator, handler, version, queue, uint32(self.maxQueue))
+			logger.Debugf(
+				"Registering (%v, %v, %v)",
+				handler.FamilyName(),
+				version,
+				handler.Namespaces())
+			err := register(validator, shutdown_rx, handler, version, queue, uint32(self.maxQueue))
 			if err != nil {
 				return restart, fmt.Errorf(
 					"Error registering handler (%v, %v, %v): %v",
@@ -153,6 +158,13 @@ func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
 			}
 		}
 	}
+
+	// Setup ZMQ poller for routing messages between worker threads and validator
+	poller := zmq.NewPoller()
+	poller.Add(validator.Socket(), zmq.POLLIN)
+	poller.Add(monitor, zmq.POLLIN)
+	poller.Add(workers.Socket(), zmq.POLLIN)
+	poller.Add(shutdown_rx.Socket(), zmq.POLLIN)
 
 	// Poll for messages from worker threads or validator
 	for {
@@ -166,13 +178,14 @@ func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
 				receiveValidator(ids, validator, workers, queue)
 
 			case monitor:
-				restart = receiveMonitor(monitor, self.shutdown)
+				restart = receiveMonitor(monitor, self.shutdown_tx)
 
 			case workers.Socket():
-				receiveWorkers(ids, validator, workers, &workersLeft)
-				if workersLeft == 0 {
-					return restart, nil
-				}
+				receiveWorkers(ids, validator, workers)
+
+			case shutdown_rx.Socket():
+				restart = receiveShutdown(queue, self.nThreads, workers_done, shutdown_rx, validator, workers, monitor)
+				return restart, nil
 			}
 		}
 	}
@@ -181,7 +194,12 @@ func (self *TransactionProcessor) start(context *zmq.Context) (bool, error) {
 // Shutdown sends a message to the processor telling it to deregister.
 func (self *TransactionProcessor) Shutdown() {
 	// Initiate a clean shutdown
-	self.shutdown <- false
+	if self.shutdown_tx != nil {
+		err := self.shutdown_tx.SendData("", []byte("shutdown"))
+		if err != nil {
+			logger.Errorf("Failed to send restart command")
+		}
+	}
 }
 
 // ShutdownOnSignal sets up signal handling to shutdown the processor when one
@@ -292,7 +310,7 @@ func receiveValidator(ids map[string]string, validator, workers messaging.Connec
 }
 
 // Handle monitor events
-func receiveMonitor(monitor *zmq.Socket, shutdown chan bool) bool {
+func receiveMonitor(monitor *zmq.Socket, shutdown messaging.Connection) bool {
 	restart := false
 	event, endpoint, _, err := monitor.RecvEvent(0)
 	if err != nil {
@@ -304,13 +322,16 @@ func receiveMonitor(monitor *zmq.Socket, shutdown chan bool) bool {
 		} else {
 			logger.Errorf("Received unexpected event on monitor socket: %v", event)
 		}
-		shutdown <- true
+		err = shutdown.SendData("", []byte("restart"))
+		if err != nil {
+			logger.Errorf("Failed to send restart command")
+		}
 	}
 	return restart
 }
 
 // Handle incoming messages from the workers
-func receiveWorkers(ids map[string]string, validator, workers messaging.Connection, workersLeft *uint) {
+func receiveWorkers(ids map[string]string, validator, workers messaging.Connection) {
 	// Receive a mesasge from the workers
 	workerId, data, err := workers.RecvData()
 	if err != nil {
@@ -327,11 +348,6 @@ func receiveWorkers(ids map[string]string, validator, workers messaging.Connecti
 	t := msg.GetMessageType()
 	corrId := msg.GetCorrelationId()
 
-	if t == validator_pb2.Message_DEFAULT && corrId == "shutdown" {
-		*workersLeft = *workersLeft - 1
-		return
-	}
-
 	// Store which thread the response should be routed to
 	if t != validator_pb2.Message_TP_PROCESS_RESPONSE {
 		ids[corrId] = workerId
@@ -345,8 +361,103 @@ func receiveWorkers(ids map[string]string, validator, workers messaging.Connecti
 	}
 }
 
+// Handle shutdown
+func receiveShutdown(queue chan *validator_pb2.Message, worker_count uint, done <-chan bool, shutdown_rx, validator, workers messaging.Connection, monitor *zmq.Socket) bool {
+	_, data, err := shutdown_rx.RecvData()
+	if err != nil {
+		logger.Errorf("Error receiving shutdown: %v", err)
+	}
+
+	restart := false
+	cmd := string(data)
+	if cmd == "restart" {
+		restart = true
+	} else if cmd != "shutdown" {
+		fmt.Errorf("Received unexpected shutdown command: %v", cmd)
+		return false
+	}
+
+	logger.Infof("Received command to %v", cmd)
+	err = shutdown(queue, worker_count, done, shutdown_rx, validator, workers, monitor, restart)
+	if err != nil {
+		logger.Errorf("Error shutting down: %v", err)
+		return false
+	}
+	return restart
+}
+
+func shutdown(queue chan *validator_pb2.Message, worker_count uint, workers_done <-chan bool, shutdown_rx, validator, workers messaging.Connection, monitor *zmq.Socket, force bool) error {
+	// Close the work queue, telling the worker threads there's no more work
+	close(queue)
+
+	// Close the workers connection, causing any workers that try to send/recv
+	// to get an error
+	workers.Close()
+
+	// Close the monitor socket
+	monitor.Close()
+
+	if !force {
+		// Send a request to be unregistered
+		data, err := proto.Marshal(&processor_pb2.TpUnregisterRequest{})
+		if err != nil {
+			logger.Errorf(
+				"Failed to unregister: %v", err,
+			)
+		}
+		corrId, err := validator.SendNewMsg(
+			validator_pb2.Message_TP_UNREGISTER_REQUEST, data,
+		)
+		if err != nil {
+			logger.Errorf(
+				"Failed to unregister: %v", err,
+			)
+		}
+
+		// Wait for a response, or timeout
+		unregistered := make(chan bool, 1)
+		go func() {
+			_, msg, err := validator.RecvMsgWithId(corrId)
+			if err != nil {
+				logger.Errorf("Failed to receive TpUnregisterResponse: %v", err)
+			}
+			if msg.GetCorrelationId() != corrId {
+				logger.Errorf(
+					"Expected message with correlation id %v but got %v",
+					corrId, msg.GetCorrelationId(),
+				)
+			}
+			if msg.GetMessageType() != validator_pb2.Message_TP_UNREGISTER_RESPONSE {
+				logger.Errorf(
+					"Expected TP_UNREGISTER_RESPONSE but got %v", msg.GetMessageType(),
+				)
+			}
+		}()
+
+		select {
+		case <-unregistered:
+			logger.Infof("Unregister successful")
+		case <-time.After(3 * time.Second):
+			logger.Warnf("Waiting for unregister response timed out")
+		}
+
+	}
+
+	validator.Close()
+	shutdown_rx.Close()
+
+	// Wait for worker threads to die
+	for i := uint(0); i < worker_count; i++ {
+		logger.Debugf("Workers done %v/%v", i, worker_count)
+		<-workers_done
+	}
+	logger.Debugf("Workers done %v/%v", worker_count, worker_count)
+
+	return nil
+}
+
 // Register a handler with the validator
-func register(validator messaging.Connection, handler TransactionHandler, version string, queue chan *validator_pb2.Message, maxOccupancy uint32) error {
+func register(validator, shutdown_rx messaging.Connection, handler TransactionHandler, version string, queue chan *validator_pb2.Message, maxOccupancy uint32) error {
 	regRequest := &processor_pb2.TpRegisterRequest{
 		Family:       handler.FamilyName(),
 		Version:      version,
@@ -367,40 +478,55 @@ func register(validator messaging.Connection, handler TransactionHandler, versio
 		return err
 	}
 
-	// The validator is impatient and will send requests before confirming
-	// registration.
-	var msg *validator_pb2.Message
+	// Need to also watch the shutdown socket so we can abort registration
+	poller := zmq.NewPoller()
+	poller.Add(validator.Socket(), zmq.POLLIN)
+	poller.Add(shutdown_rx.Socket(), zmq.POLLIN)
+
 	for {
-		_, msg, err = validator.RecvMsg()
+		polled, err := poller.Poll(-1)
 		if err != nil {
-			return err
+			return fmt.Errorf("Polling failed: %v", err)
 		}
+		for _, ready := range polled {
+			switch socket := ready.Socket; socket {
+			case validator.Socket():
+				var msg *validator_pb2.Message
+				_, msg, err = validator.RecvMsg()
+				if err != nil {
+					return err
+				}
 
-		if msg.GetCorrelationId() != corrId {
-			queue <- msg
-		} else {
-			break
+				// The validator is impatient and will send requests before confirming
+				// registration.
+				if msg.GetCorrelationId() != corrId {
+					queue <- msg
+				}
+
+				if msg.GetMessageType() != validator_pb2.Message_TP_REGISTER_RESPONSE {
+					return fmt.Errorf("Received unexpected message type: %v", msg.GetMessageType())
+				}
+
+				regResponse := &processor_pb2.TpRegisterResponse{}
+				err = proto.Unmarshal(msg.GetContent(), regResponse)
+				if err != nil {
+					return err
+				}
+
+				if regResponse.GetStatus() != processor_pb2.TpRegisterResponse_OK {
+					return fmt.Errorf("Got response: %v", regResponse.GetStatus())
+				}
+				logger.Infof(
+					"Successfully registered handler (%v, %v, %v)",
+					handler.FamilyName(), version,
+					handler.Namespaces(),
+				)
+
+				return nil
+
+			case shutdown_rx.Socket():
+				return fmt.Errorf("Received shutdown while registering")
+			}
 		}
 	}
-
-	if msg.GetMessageType() != validator_pb2.Message_TP_REGISTER_RESPONSE {
-		return fmt.Errorf("Received unexpected message type: %v", msg.GetMessageType())
-	}
-
-	regResponse := &processor_pb2.TpRegisterResponse{}
-	err = proto.Unmarshal(msg.GetContent(), regResponse)
-	if err != nil {
-		return err
-	}
-
-	if regResponse.GetStatus() != processor_pb2.TpRegisterResponse_OK {
-		return fmt.Errorf("Got response: %v", regResponse.GetStatus())
-	}
-	logger.Infof(
-		"Successfully registered handler (%v, %v, %v)",
-		handler.FamilyName(), version,
-		handler.Namespaces(),
-	)
-
-	return nil
 }
