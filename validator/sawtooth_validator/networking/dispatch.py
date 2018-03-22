@@ -20,6 +20,10 @@ import queue
 import uuid
 from collections import namedtuple
 
+# pylint: disable=import-error,no-name-in-module
+# needed for google.protobuf import
+from google.protobuf.message import DecodeError
+
 from sawtooth_validator.concurrent.thread import InstrumentedThread
 from sawtooth_validator.networking.interconnect import get_enum_name
 from sawtooth_validator.protobuf import validator_pb2
@@ -211,6 +215,10 @@ class Dispatcher(InstrumentedThread):
                     return
 
                 # check for result status
+                if result.status == HandlerStatus.DROP:
+                    del self._message_information[message_id]
+                    return
+
                 if result.status == HandlerStatus.RETURN:
                     del self._message_information[message_id]
 
@@ -403,7 +411,17 @@ class _PreprocessorManager:
 
     def execute(self, connection_id, message_content, callback):
         def wrapped(message_content):
-            return callback(self._preprocessor(message_content))
+            try:
+                processed = self._preprocessor(message_content)
+            except DecodeError:
+                LOGGER.exception(
+                    'Could not deserialize message from %s',
+                    connection_id)
+
+                return PreprocessorResult(
+                    status=HandlerStatus.DROP)
+
+            return callback(processed)
 
         return self._executor.submit(wrapped, message_content)
 
