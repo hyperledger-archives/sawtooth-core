@@ -17,6 +17,7 @@ import logging
 from sawtooth_validator.networking.dispatch import Handler
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
+from sawtooth_validator.networking.dispatch import PreprocessorResult
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.batch_pb2 import Batch
 from sawtooth_validator.protobuf.block_pb2 import Block
@@ -123,29 +124,27 @@ class GossipMessageDuplicateHandler(Handler):
         self._has_batch = has_batch
 
     def handle(self, connection_id, message_content):
-        gossip_message = GossipMessage()
-        gossip_message.ParseFromString(message_content)
-        if gossip_message.content_type == gossip_message.BLOCK:
-            block = Block()
-            block.ParseFromString(gossip_message.content)
+        obj, tag, _ = message_content
+
+        header_signature = obj.header_signature
+
+        if tag == GossipMessage.BLOCK:
             has_block = False
-            if self._completer.get_block(block.header_signature) is not None:
+            if self._completer.get_block(header_signature) is not None:
                 has_block = True
 
-            if not has_block and self._has_block(block.header_signature):
+            if not has_block and self._has_block(header_signature):
                 has_block = True
 
             if has_block:
                 return HandlerResult(HandlerStatus.DROP)
 
-        if gossip_message.content_type == gossip_message.BATCH:
-            batch = Batch()
-            batch.ParseFromString(gossip_message.content)
+        if tag == GossipMessage.BATCH:
             has_batch = False
-            if self._completer.get_batch(batch.header_signature) is not None:
+            if self._completer.get_batch(header_signature) is not None:
                 has_batch = True
 
-            if not has_batch and self._has_batch(batch.header_signature):
+            if not has_batch and self._has_batch(header_signature):
                 has_batch = True
 
             if has_batch:
@@ -161,10 +160,7 @@ class GossipBlockResponseHandler(Handler):
         self._chain_controller_has_block = chain_controller_has_block
 
     def handle(self, connection_id, message_content):
-        block_response_message = GossipBlockResponse()
-        block_response_message.ParseFromString(message_content)
-        block = Block()
-        block.ParseFromString(block_response_message.content)
+        block, _ = message_content
 
         block_id = block.header_signature
 
@@ -198,10 +194,7 @@ class GossipBatchResponseHandler(Handler):
         self._block_publisher_has_batch = block_publisher_has_batch
 
     def handle(self, connection_id, message_content):
-        batch_response_message = GossipBatchResponse()
-        batch_response_message.ParseFromString(message_content)
-        batch = Batch()
-        batch.ParseFromString(batch_response_message.content)
+        batch, _ = message_content
 
         batch_id = batch.header_signature
 
@@ -234,30 +227,64 @@ class GossipBroadcastHandler(Handler):
         self._completer = completer
 
     def handle(self, connection_id, message_content):
+        obj, tag, ttl = message_content
+
         exclude = [connection_id]
-        gossip_message = GossipMessage()
-        gossip_message.ParseFromString(message_content)
-        if gossip_message.time_to_live == 0:
+
+        ttl -= 1
+
+        if ttl <= 0:
             # Do not forward message if it has reached its time to live limit
             return HandlerResult(status=HandlerStatus.PASS)
 
-        else:
-            # decrement time_to_live
-            ttl = gossip_message.time_to_live - 1
-
-        if gossip_message.content_type == GossipMessage.BATCH:
-            batch = Batch()
-            batch.ParseFromString(gossip_message.content)
+        if tag == GossipMessage.BATCH:
             # If we already have this batch, don't forward it
-            if not self._completer.get_batch(batch.header_signature):
-                self._gossip.broadcast_batch(batch, exclude, time_to_live=ttl)
-        elif gossip_message.content_type == GossipMessage.BLOCK:
-            block = Block()
-            block.ParseFromString(gossip_message.content)
+            if not self._completer.get_batch(obj.header_signature):
+                self._gossip.broadcast_batch(obj, exclude, time_to_live=ttl)
+        elif tag == GossipMessage.BLOCK:
             # If we already have this block, don't forward it
-            if not self._completer.get_block(block.header_signature):
-                self._gossip.broadcast_block(block, exclude, time_to_live=ttl)
+            if not self._completer.get_block(obj.header_signature):
+                self._gossip.broadcast_block(obj, exclude, time_to_live=ttl)
         else:
-            LOGGER.info("received %s, not BATCH or BLOCK",
-                        gossip_message.content_type)
+            LOGGER.info("received %s, not BATCH or BLOCK", tag)
         return HandlerResult(status=HandlerStatus.PASS)
+
+
+def gossip_message_preprocessor(message_content_bytes):
+    gossip_message = GossipMessage()
+    gossip_message.ParseFromString(message_content_bytes)
+
+    tag = gossip_message.content_type
+
+    if tag == GossipMessage.BLOCK:
+        obj = Block()
+        obj.ParseFromString(gossip_message.content)
+    elif tag == GossipMessage.BATCH:
+        obj = Batch()
+        obj.ParseFromString(gossip_message.content)
+
+    content = obj, tag, gossip_message.time_to_live
+
+    return PreprocessorResult(content=content)
+
+
+def gossip_block_response_preprocessor(message_content_bytes):
+    block_response = GossipBlockResponse()
+    block_response.ParseFromString(message_content_bytes)
+    block = Block()
+    block.ParseFromString(block_response.content)
+
+    content = block, message_content_bytes
+
+    return PreprocessorResult(content=content)
+
+
+def gossip_batch_response_preprocessor(message_content_bytes):
+    batch_response = GossipBatchResponse()
+    batch_response.ParseFromString(message_content_bytes)
+    batch = Batch()
+    batch.ParseFromString(batch_response.content)
+
+    content = batch, message_content_bytes
+
+    return PreprocessorResult(content=content)

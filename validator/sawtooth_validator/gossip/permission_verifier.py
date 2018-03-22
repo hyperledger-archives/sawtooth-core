@@ -14,8 +14,6 @@
 # ------------------------------------------------------------------------------
 import logging
 
-from google.protobuf.message import DecodeError
-
 from sawtooth_validator.protobuf import client_batch_submit_pb2
 from sawtooth_validator.protobuf.batch_pb2 import BatchHeader
 from sawtooth_validator.protobuf.transaction_pb2 import TransactionHeader
@@ -26,7 +24,6 @@ from sawtooth_validator.protobuf.authorization_pb2 import \
 from sawtooth_validator.protobuf.authorization_pb2 import RoleType
 from sawtooth_validator.protobuf import validator_pb2
 from sawtooth_validator.protobuf.network_pb2 import GossipMessage
-from sawtooth_validator.protobuf.block_pb2 import Block
 from sawtooth_validator.protobuf.block_pb2 import BlockHeader
 from sawtooth_validator.networking.dispatch import HandlerResult
 from sawtooth_validator.networking.dispatch import HandlerStatus
@@ -356,25 +353,19 @@ class BatchListPermissionVerifier(Handler):
                 message_out=response_proto(status=out_status),
                 message_type=Message.CLIENT_BATCH_SUBMIT_RESPONSE)
 
-        try:
-            request = client_batch_submit_pb2.ClientBatchSubmitRequest()
-            request.ParseFromString(message_content)
-            for batch in request.batches:
-                if batch.trace:
-                    LOGGER.debug("TRACE %s: %s", batch.header_signature,
-                                 self.__class__.__name__)
-            if not all(
-                    self._verifier.check_off_chain_batch_roles(batch)
-                    for batch in request.batches):
-                return make_response(response_proto.INVALID_BATCH)
+        for batch in message_content.batches:
+            if batch.trace:
+                LOGGER.debug("TRACE %s: %s", batch.header_signature,
+                             self.__class__.__name__)
+        if not all(
+                self._verifier.check_off_chain_batch_roles(batch)
+                for batch in message_content.batches):
+            return make_response(response_proto.INVALID_BATCH)
 
-            if not all(
-                    self._verifier.is_batch_signer_authorized(batch)
-                    for batch in request.batches):
-                return make_response(response_proto.INVALID_BATCH)
-
-        except DecodeError:
-            return make_response(response_proto.INTERNAL_ERROR)
+        if not all(
+                self._verifier.is_batch_signer_authorized(batch)
+                for batch in message_content.batches):
+            return make_response(response_proto.INVALID_BATCH)
 
         return HandlerResult(status=HandlerStatus.PASS)
 
@@ -425,15 +416,13 @@ class NetworkConsensusPermissionHandler(Handler):
         self._gossip = gossip
 
     def handle(self, connection_id, message_content):
-        message = GossipMessage()
-        message.ParseFromString(message_content)
-        if message.content_type == GossipMessage.BLOCK:
+        obj, tag, _ = message_content
+
+        if tag == GossipMessage.BLOCK:
             public_key = \
                 self._network.connection_id_to_public_key(connection_id)
-            block = Block()
-            block.ParseFromString(message.content)
             header = BlockHeader()
-            header.ParseFromString(block.header)
+            header.ParseFromString(obj.header)
             if header.signer_public_key == public_key:
                 permitted = \
                     self._permission_verifier.check_network_consensus_role(

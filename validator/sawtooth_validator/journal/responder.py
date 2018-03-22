@@ -22,8 +22,6 @@ from sawtooth_validator.networking.dispatch import HandlerStatus
 from sawtooth_validator.journal.timed_cache import TimedCache
 from sawtooth_validator.protobuf import network_pb2
 from sawtooth_validator.protobuf import validator_pb2
-from sawtooth_validator.protobuf import block_pb2
-from sawtooth_validator.protobuf import batch_pb2
 
 LOGGER = logging.getLogger(__name__)
 
@@ -143,10 +141,8 @@ class ResponderBlockResponseHandler(Handler):
         self._gossip = gossip
 
     def handle(self, connection_id, message_content):
-        block_response = network_pb2.GossipBlockResponse()
-        block_response.ParseFromString(message_content)
-        block = block_pb2.Block()
-        block.ParseFromString(block_response.content)
+        block, message_content = message_content
+
         open_request = self._responder.get_request(block.header_signature)
 
         if open_request is None:
@@ -332,10 +328,8 @@ class ResponderBatchResponseHandler(Handler):
         self._gossip = gossip
 
     def handle(self, connection_id, message_content):
-        batch_response = network_pb2.GossipBatchResponse()
-        batch_response.ParseFromString(message_content)
-        batch = batch_pb2.Batch()
-        batch.ParseFromString(batch_response.content)
+        batch, message_content = message_content
+
         open_request = self._responder.get_request(batch.header_signature)
 
         if open_request is None:

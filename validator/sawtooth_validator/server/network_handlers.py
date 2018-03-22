@@ -44,6 +44,12 @@ from sawtooth_validator.gossip.gossip_handlers import \
     GossipBlockResponseHandler
 from sawtooth_validator.gossip.gossip_handlers import \
     GossipBatchResponseHandler
+from sawtooth_validator.gossip.gossip_handlers import \
+    gossip_message_preprocessor
+from sawtooth_validator.gossip.gossip_handlers import \
+    gossip_batch_response_preprocessor
+from sawtooth_validator.gossip.gossip_handlers import \
+    gossip_block_response_preprocessor
 from sawtooth_validator.gossip.gossip_handlers import PeerRegisterHandler
 from sawtooth_validator.gossip.gossip_handlers import PeerUnregisterHandler
 from sawtooth_validator.gossip.gossip_handlers import GetPeersRequestHandler
@@ -191,6 +197,12 @@ def add(
         thread_pool)
 
     # GOSSIP_MESSAGE ) Check if this is a block and if we already have it
+
+    dispatcher.set_preprocessor(
+        validator_pb2.Message.GOSSIP_MESSAGE,
+        gossip_message_preprocessor,
+        thread_pool)
+
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_MESSAGE,
         GossipMessageDuplicateHandler(completer, has_block, has_batch),
@@ -261,6 +273,11 @@ def add(
     dispatcher.add_handler(
         validator_pb2.Message.GOSSIP_BLOCK_REQUEST,
         BlockResponderHandler(responder, gossip),
+        thread_pool)
+
+    dispatcher.set_preprocessor(
+        validator_pb2.Message.GOSSIP_BLOCK_RESPONSE,
+        gossip_block_response_preprocessor,
         thread_pool)
 
     # GOSSIP_BLOCK_RESPONSE 1) Check for duplicate responses
@@ -338,6 +355,11 @@ def add(
             permission_verifier=permission_verifier,
             gossip=gossip
         ),
+        thread_pool)
+
+    dispatcher.set_preprocessor(
+        validator_pb2.Message.GOSSIP_BATCH_RESPONSE,
+        gossip_batch_response_preprocessor,
         thread_pool)
 
     # GOSSIP_BATCH_RESPONSE 1) Check for duplicate responses

@@ -113,6 +113,11 @@ def add(
         sig_pool)
 
     # Submit
+    dispatcher.set_preprocessor(
+        validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
+        client_handlers.client_batch_submit_request_preprocessor,
+        client_thread_pool)
+
     dispatcher.add_handler(
         validator_pb2.Message.CLIENT_BATCH_SUBMIT_REQUEST,
         ClientBatchSubmitBackpressureHandler(
