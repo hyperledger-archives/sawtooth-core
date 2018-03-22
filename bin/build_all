@@ -122,6 +122,7 @@ main() {
 
     if [[ $BUILD_MODE == $DEBS ]]
     then
+        build_rust
         build_debs
     fi
 
@@ -424,14 +425,28 @@ then
         rm -rf $build_dir
         mkdir -p $build_dir
 
+        cp $top_dir/docker/sawtooth-dev-rust $build_dir
+        docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-dev-rust
+        docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-intkey-tp-rust
+        docker_run sawtooth-dev-rust
+
         cp $top_dir/bin/install_packaging_deps $build_dir
         cp $top_dir/ci/sawtooth-build-debs $build_dir
         docker_build $build_dir/sawtooth-build-debs $build_dir sawtooth-build-debs
         docker_run sawtooth-build-debs rust
 
+    }
+fi
+
+if [[ $BUILD_MODE == $DEBS ]]
+then
+    build_rust() {
+        build_dir=/tmp/build-docker$ISOLATION_ID
+        rm -rf $build_dir
+        mkdir -p $build_dir
+
         cp $top_dir/docker/sawtooth-dev-rust $build_dir
         docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-dev-rust
-        docker_build $build_dir/sawtooth-dev-rust $build_dir/ sawtooth-intkey-tp-rust
         docker_run sawtooth-dev-rust
     }
 fi
