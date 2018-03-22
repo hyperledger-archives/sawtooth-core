@@ -210,17 +210,9 @@ build_rust() {
     rm -f $output_dir/*.deb
 
     info "sawadm"
-    rm -rf $top_dir/adm/bin
-    mkdir -p $top_dir/adm/bin
-    cd $top_dir/adm
-    cargo build && cp ./target/debug/sawadm $top_dir/adm/bin/sawadm
     build_rust_pkg sawadm $top_dir/adm $output_dir
 
     info "smallbank-workload"
-    rm -rf $top_dir/perf/smallbank_workload/bin
-    mkdir -p $top_dir/perf/smallbank_workload/bin
-    cd $top_dir/perf/smallbank_workload
-    cargo build && cp ./target/debug/smallbank-workload $top_dir/perf/smallbank_workload/bin/smallbank-workload
     build_rust_pkg smallbank-workload $top_dir/perf/smallbank_workload $output_dir
 
     for pkg in $output_dir/*.deb
