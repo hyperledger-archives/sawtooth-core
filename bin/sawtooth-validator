@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+#!/bin/bash
 #
-# Copyright 2016 Intel Corporation
+# Copyright 2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,23 +15,14 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-import os
-import sys
-import sysconfig
+CORE=$(cd $(dirname $(dirname $0)) && pwd)
+export PYTHONPATH=$PYTHONPATH:$CORE/validator:$CORE/signing
 
-build_str = "lib.{}-{}.{}".format(
-    sysconfig.get_platform(),
-    sys.version_info.major, sys.version_info.minor)
+bin=$CORE/validator/bin/sawtooth-validator
 
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'validator'))
-
-sys.path.insert(0, os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'signing'))
-
-from sawtooth_validator.server.cli import main
-
-if __name__ == '__main__':
-    main()
+if [ -e $bin ]
+then
+    $bin $*
+else
+    echo "Please build sawtooth-validator first with 'build_all' or 'build_validator'"
+fi

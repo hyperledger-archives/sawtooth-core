@@ -117,6 +117,9 @@
 /validator/sawtooth_validator.egg-info/
 /validator/sawtooth_validator/protobuf/
 /validator/**/__pycache__/
+/validator/target/
+/validator/Cargo.lock
+/validator/bin/
 
 /sdk/cxx/build/
 

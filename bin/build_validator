@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2017 Intel Corporation
+# Copyright 2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,15 +25,7 @@ echo -e "\033[0;32m--- Running protogen ---\n\033[0m"
 $top_dir/bin/protogen || exit 1
 
 pkgs="
-    signing
-    cli
-    sdk/python
-    rest_api
-    consensus/poet/cli
-    consensus/poet/common
-    consensus/poet/core
-    consensus/poet/families
-    consensus/poet/simulator
+    validator
 "
 
 for pkg in $pkgs
@@ -43,13 +35,15 @@ do
     python3 setup.py clean --all
 done
 
+echo -e "\033[0;32m--- Building validator ---\n\033[0m"
+rm -rf $top_dir/validator/bin/
+mkdir -p $top_dir/validator/bin/
+cd $top_dir/validator
+cargo build && cp ./target/debug/sawtooth-validator $top_dir/validator/bin/sawtooth-validator
+
 for pkg in $pkgs
 do
     echo -e "\033[0;32m--- Running build in $pkg ---\n\033[0m"
     cd $top_dir/$pkg
     python3 setup.py build
-    if [ $pkg = "signing" ]; then
-        # Workaround for swig ordering bug.
-        python3 setup.py build
-    fi
 done

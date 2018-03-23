@@ -44,8 +44,9 @@ LOGGER = logging.getLogger(__name__)
 DISTRIBUTION_NAME = 'sawtooth-validator'
 
 
-def parse_args(args):
+def parse_args(prog_name, args):
     parser = argparse.ArgumentParser(
+        prog=prog_name,
         description='Configures and starts a Sawtooth validator.',
         formatter_class=argparse.RawTextHelpFormatter)
 
@@ -210,8 +211,12 @@ def create_validator_config(opts):
 
 def main(args=None):
     if args is None:
+        prog_name = sys.argv[0]
         args = sys.argv[1:]
-    opts = parse_args(args)
+    else:
+        prog_name = args[0]
+        args = args[1:]
+    opts = parse_args(prog_name, args)
     verbose_level = opts.verbose
 
     # Determine if any args which support delimited lists should be
