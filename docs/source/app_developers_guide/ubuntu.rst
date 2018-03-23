@@ -6,9 +6,11 @@ This procedure explains how to set up Hyperledger Sawtooth for application
 development on Ubuntu 16.04. It shows you how to install Sawtooth on Ubuntu,
 then walks you through the following tasks:
 
+ * Generating a user key
  * Creating the genesis block
- * Starting the Sawtooth components: validator, REST API, and transaction
-   processors
+ * Generating a root key
+ * Starting the components: validator, REST API, and
+   transaction processors
  * Checking the status of the REST API
  * Using Sawtooth commands to submit transactions, display block data, and view
    global state
@@ -115,9 +117,24 @@ stable or nightly.  We recommend using the stable repository.
       $ dpkg -l '*sawtooth*'
 
 
+.. _generate-user-key-ubuntu:
+
+Step 2: Generate a User Key
+===========================
+
+Generate your user key for Sawtooth, using the same terminal window as the
+previous step.
+
+   .. code-block:: console
+
+      $ sawtooth keygen
+      writing file: /home/yourname/.sawtooth/keys/yourname.priv
+      writing file: /home/yourname/.sawtooth/keys/yourname.pub
+
+
 .. _create-genesis-block-ubuntu-label:
 
-Step 2: Create the Genesis Block
+Step 3: Create the Genesis Block
 ================================
 
 Because this is a new network, you must create a genesis block (the first block
@@ -130,14 +147,6 @@ distributed ledger is created and used for the first time, including the keys
 for users who are authorized to set and change configuration settings.
 
 Use the same terminal window as the previous step.
-
-#. Generate your key for Sawtooth.
-
-   .. code-block:: console
-
-      $ sawtooth keygen
-      writing file: /home/yourname/.sawtooth/keys/yourname.priv
-      writing file: /home/yourname/.sawtooth/keys/yourname.pub
 
 #. Create a settings proposal (as a batch of transactions) that authorizes you
    to set and change configuration settings. By default (if no options are
@@ -162,21 +171,30 @@ Use the same terminal window as the previous step.
      Generating /var/lib/sawtooth/genesis.batch
 
 
-Step 3: Start the Validator
+.. _generate-root-key-ubuntu:
+
+Step 4: Generate the Root Key for the Validator
+===============================================
+
+Generate the key for the validator, which runs as root. Use the same terminal
+window as the previous step.
+
+.. code-block:: console
+
+   user@validator$ sudo sawadm keygen
+   writing file: /etc/sawtooth/keys/validator.priv
+   writing file: /etc/sawtooth/keys/validator.pub
+
+
+.. _start-validator-ubuntu-label:
+
+Step 5: Start the Validator
 ===========================
 
 Use the same terminal window as the previous step.
 From this point on, this procedure refers to this window as the "validator
 terminal window". In the following examples, the prompt ``user@validator$``
 shows the commands that must run in this window.
-
-#. Generate the key for the validator, which runs as root.
-
-   .. code-block:: console
-
-      user@validator$ sudo sawadm keygen
-      writing file: /etc/sawtooth/keys/validator.priv
-      writing file: /etc/sawtooth/keys/validator.pub
 
 #. Start a validator that listens locally on the default ports.
 
@@ -223,7 +241,7 @@ complete this procedure.
 
 .. _start-rest-api-label:
 
-Step 4: Start the REST API
+Step 6: Start the REST API
 ==========================
 
 The REST API allows you to configure a running validator, submit batches, and
@@ -259,7 +277,7 @@ The rest-api terminal window continues display log messages as you complete this
 procedure.
 
 
-Step 5: Start the Transaction Processors
+Step 7: Start the Transaction Processors
 ========================================
 
 In this step, you will open a new terminal window for each transaction
@@ -359,7 +377,7 @@ processor.
 
 .. _confirm-rest-api-ubuntu-label:
 
-Step 6: Confirm Connectivity to the REST API
+Step 8: Confirm Connectivity to the REST API
 ============================================
 
 #. Open a new terminal window (the client terminal window). In this
@@ -377,9 +395,7 @@ Step 6: Confirm Connectivity to the REST API
 #. If necessary, restart the REST API (see :ref:`start-rest-api-label`).
 
 
-.. _configure-tf-settings-ubuntu_label:
-
-Step 7: Use Sawtooth Commands as a Client
+Step 9: Use Sawtooth Commands as a Client
 =========================================
 
 Sawtooth includes commands that act as a client application. This step describes
@@ -595,8 +611,8 @@ state data in a :term:`Merkle-Radix tree`; for more information, see
 
 .. _examine-logs-ubuntu-label:
 
-Step 8: Examine Sawtooth Logs
-=============================
+Step 10: Examine Sawtooth Logs
+==============================
 
 By default, Sawtooth logs are stored in the directory ``/var/log/sawtooth``.
 Each component (validator, REST API, and transaction processors) has both a
@@ -632,8 +648,8 @@ For more information on log files, see
 
 .. _stop-sawtooth-ubuntu-label:
 
-Step 9: Stop Sawtooth Components
-================================
+Step 11: Stop Sawtooth Components
+=================================
 
 Use this procedure if you need to stop or reset the Sawtooth environment for any
 reason.
