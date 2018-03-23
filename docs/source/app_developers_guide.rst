@@ -23,6 +23,7 @@ Python SDKs.
    app_developers_guide/overview
    app_developers_guide/sdk_table
    app_developers_guide/installing_sawtooth
+   app_developers_guide/creating_sawtooth_network.rst
    app_developers_guide/intro_xo_transaction_family
    app_developers_guide/go_sdk
    app_developers_guide/javascript_sdk

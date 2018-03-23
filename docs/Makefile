@@ -94,6 +94,7 @@ html: templates cli python go javascript rust
 	@echo
 	@echo "Build finished. The HTML pages are in $(HTMLDIR)."
 	@cp $(SAWTOOTH)/docker/compose/sawtooth-default.yaml $(HTMLDIR)/app_developers_guide/sawtooth-default.yaml
+	@cp $(SAWTOOTH)/docker/compose/sawtooth-default-poet.yaml $(HTMLDIR)/app_developers_guide/sawtooth-default-poet.yaml
 
 dirhtml: templates cli
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) $(BUILDDIR)/dirhtml
