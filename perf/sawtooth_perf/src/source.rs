@@ -32,7 +32,8 @@ pub struct LengthDelimitedMessageSource<'a, T: 'a> {
 }
 
 impl<'a, T> LengthDelimitedMessageSource<'a, T>
-    where T: Message + MessageStatic
+where
+    T: Message + MessageStatic,
 {
     /// Creates a new `LengthDelimitedMessageSource` from a given reader.
     pub fn new(source: &'a mut Read) -> Self {
@@ -46,9 +47,7 @@ impl<'a, T> LengthDelimitedMessageSource<'a, T>
     /// Returns the next set of messages.
     /// The vector of messages will contain up to `max_msgs` number of
     /// messages.  An empty vector indicates that the source has been consumed.
-    pub fn next(&mut self, max_msgs: usize)
-        -> Result<Vec<T>, protobuf::ProtobufError>
-    {
+    pub fn next(&mut self, max_msgs: usize) -> Result<Vec<T>, protobuf::ProtobufError> {
         let mut results = Vec::with_capacity(max_msgs);
         for _ in 0..max_msgs {
             if self.source.eof()? {

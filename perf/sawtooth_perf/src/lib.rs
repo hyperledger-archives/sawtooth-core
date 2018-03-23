@@ -24,16 +24,13 @@ extern crate hyper;
 #[macro_use]
 extern crate log;
 extern crate protobuf;
-extern crate serde;
+extern crate rand;
 
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde_json;
 extern crate tokio_core;
 extern crate tokio_timer;
 
 pub mod batch_gen;
 pub mod batch_submit;
 pub mod source;
+mod batch_map;
 mod workload;

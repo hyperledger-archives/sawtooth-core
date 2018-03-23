@@ -37,13 +37,13 @@ use source::LengthDelimitedMessageSource;
 /// Constrains the batches to `max_batch_size` number of transactions per
 /// batch.  The resulting batches are written in a length-delimited fashion to
 /// the given writer.
-pub fn generate_signed_batches<'a>(reader: &'a mut Read,
-                                   writer: &'a mut Write,
-                                   max_batch_size: usize,
-                                   signing_context: &signing::Context,
-                                   signing_key: &signing::PrivateKey)
-    -> Result<(), BatchingError>
-{
+pub fn generate_signed_batches<'a>(
+    reader: &'a mut Read,
+    writer: &'a mut Write,
+    max_batch_size: usize,
+    signing_context: &signing::Context,
+    signing_key: &signing::PrivateKey,
+) -> Result<(), BatchingError> {
     let crypto_factory = signing::CryptoFactory::new(signing_context);
     let signer = crypto_factory.new_signer(signing_key);
 
@@ -54,7 +54,7 @@ pub fn generate_signed_batches<'a>(reader: &'a mut Read,
                 if let Err(err) = batch.write_length_delimited_to_writer(writer) {
                     return Err(BatchingError::MessageError(err));
                 }
-            },
+            }
             None => break,
             Some(Err(err)) => return Err(err),
         }
@@ -73,7 +73,6 @@ pub enum BatchingError {
 }
 
 impl From<signing::Error> for BatchingError {
-
     fn from(err: signing::Error) -> Self {
         BatchingError::SigningError(err)
     }
@@ -88,10 +87,10 @@ impl From<protobuf::ProtobufError> for BatchingError {
 impl fmt::Display for BatchingError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            BatchingError::MessageError(ref err) =>
-                write!(f, "Error occurred reading messages: {}", err),
-            BatchingError::SigningError(ref err) =>
-                write!(f, "Unable to sign batch: {}", err),
+            BatchingError::MessageError(ref err) => {
+                write!(f, "Error occurred reading messages: {}", err)
+            }
+            BatchingError::SigningError(ref err) => write!(f, "Unable to sign batch: {}", err),
         }
     }
 }
@@ -123,12 +122,9 @@ pub struct SignedBatchProducer<'a> {
 pub type BatchResult = Result<Batch, BatchingError>;
 
 impl<'a> SignedBatchProducer<'a> {
-
     /// Creates a new `SignedBatchProducer` with a given Transaction source and
     /// a max number of transactions per batch.
-    pub fn new(source: &'a mut Read, max_batch_size: usize, signer: &'a signing::Signer)
-        -> Self
-    {
+    pub fn new(source: &'a mut Read, max_batch_size: usize, signer: &'a signing::Signer) -> Self {
         let transaction_source = LengthDelimitedMessageSource::new(source);
         SignedBatchProducer {
             transaction_source,
@@ -139,7 +135,6 @@ impl<'a> SignedBatchProducer<'a> {
 }
 
 impl<'a> Iterator for SignedBatchProducer<'a> {
-
     type Item = BatchResult;
 
     /// Gets the next BatchResult.
@@ -158,7 +153,6 @@ impl<'a> Iterator for SignedBatchProducer<'a> {
 }
 
 fn batch_transactions(txns: Vec<Transaction>, signer: &signing::Signer) -> BatchResult {
-
     let mut batch_header = BatchHeader::new();
 
     // set signer_public_key
@@ -168,13 +162,16 @@ fn batch_transactions(txns: Vec<Transaction>, signer: &signing::Signer) -> Batch
     };
     let public_key = pk.as_hex();
 
-
-    let txn_ids = txns.iter().map(|txn| String::from(txn.get_header_signature())).collect();
+    let txn_ids = txns.iter()
+        .map(|txn| String::from(txn.get_header_signature()))
+        .collect();
     batch_header.set_transaction_ids(protobuf::RepeatedField::from_vec(txn_ids));
     batch_header.set_signer_public_key(public_key);
 
     let header_bytes = batch_header.write_to_bytes()?;
-    let signature = signer.sign(&header_bytes).map_err(BatchingError::SigningError);
+    let signature = signer
+        .sign(&header_bytes)
+        .map_err(BatchingError::SigningError);
     match signature {
         Ok(signature) => {
             let mut batch = Batch::new();
@@ -183,7 +180,7 @@ fn batch_transactions(txns: Vec<Transaction>, signer: &signing::Signer) -> Batch
             batch.set_transactions(protobuf::RepeatedField::from_vec(txns));
 
             Ok(batch)
-        },
+        }
         Err(err) => Err(err),
     }
 }
@@ -195,7 +192,11 @@ pub struct SignedBatchIterator<'a> {
 }
 
 impl<'a> SignedBatchIterator<'a> {
-    pub fn new(iterator: &'a mut Iterator<Item = Transaction>, max_batch_size: usize, signer: &'a signing::Signer) -> Self {
+    pub fn new(
+        iterator: &'a mut Iterator<Item = Transaction>,
+        max_batch_size: usize,
+        signer: &'a signing::Signer,
+    ) -> Self {
         SignedBatchIterator {
             transaction_iterator: iterator,
             max_batch_size: max_batch_size,
@@ -204,17 +205,17 @@ impl<'a> SignedBatchIterator<'a> {
     }
 }
 
-impl<'a> Iterator for SignedBatchIterator<'a>
-{
+impl<'a> Iterator for SignedBatchIterator<'a> {
     type Item = BatchResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let txns = self.transaction_iterator.take(self.max_batch_size).collect();
+        let txns = self.transaction_iterator
+            .take(self.max_batch_size)
+            .collect();
 
         Some(batch_transactions(txns, self.signer))
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -328,8 +329,10 @@ mod tests {
         assert_eq!(batch_header.transaction_ids.len(), 2);
         assert_eq!(batch_header.transaction_ids[0], String::from("sig1"));
         assert_eq!(batch_header.transaction_ids[1], String::from("sig2"));
-        assert_eq!(batch.header_signature,
-                   String::from("signed by mock_algorithm"));
+        assert_eq!(
+            batch.header_signature,
+            String::from("signed by mock_algorithm")
+        );
 
         // pull the next batch
         batch_result = producer.next();
@@ -362,12 +365,11 @@ mod tests {
         let private_key = MockPrivateKey;
 
         super::generate_signed_batches(&mut source, &mut output, 2, &context, &private_key)
-             .expect("Should have generated batches!");
+            .expect("Should have generated batches!");
 
         // reset for reading
         output.set_position(0);
-        let mut batch_source: BatchSource =
-            LengthDelimitedMessageSource::new(&mut output);
+        let mut batch_source: BatchSource = LengthDelimitedMessageSource::new(&mut output);
 
         let batch = &(batch_source.next(1).unwrap())[0];
         let batch_header: BatchHeader = protobuf::parse_from_bytes(&batch.header).unwrap();
@@ -400,7 +402,8 @@ mod tests {
 
     fn write_txn_with_sig(sig: &str, out: &mut Write) {
         let txn = make_txn(sig);
-        txn.write_length_delimited_to_writer(out).expect("Unable to write delimiter");
+        txn.write_length_delimited_to_writer(out)
+            .expect("Unable to write delimiter");
     }
 
     struct MockContext;
@@ -410,27 +413,31 @@ mod tests {
             "mock_algorithm"
         }
 
-        fn sign(&self, message: &[u8], key: &signing::PrivateKey)
-            -> Result<String, signing::Error>
-        {
+        fn sign(
+            &self,
+            message: &[u8],
+            key: &signing::PrivateKey,
+        ) -> Result<String, signing::Error> {
             Ok(String::from("signed by mock_algorithm"))
         }
 
-        fn verify(&self, signature: &str, message: &[u8], key: &signing::PublicKey)
-            -> Result<bool, signing::Error>
-        {
+        fn verify(
+            &self,
+            signature: &str,
+            message: &[u8],
+            key: &signing::PublicKey,
+        ) -> Result<bool, signing::Error> {
             Ok(true)
         }
 
-        fn get_public_key(&self, private_key: &signing::PrivateKey)
-            -> Result<Box<signing::PublicKey>, signing::Error>
-        {
+        fn get_public_key(
+            &self,
+            private_key: &signing::PrivateKey,
+        ) -> Result<Box<signing::PublicKey>, signing::Error> {
             Ok(Box::new(MockPublicKey))
         }
 
-        fn new_random_private_key(&self)
-            -> Result<Box<signing::PrivateKey>, signing::Error>
-        {
+        fn new_random_private_key(&self) -> Result<Box<signing::PrivateKey>, signing::Error> {
             Ok(Box::new(MockPrivateKey))
         }
     }
@@ -465,6 +472,5 @@ mod tests {
         fn as_slice(&self) -> &[u8] {
             "123456789abcdef123456789abcdef".as_bytes()
         }
-
     }
 }
