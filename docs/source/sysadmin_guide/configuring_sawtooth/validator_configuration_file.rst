@@ -14,7 +14,7 @@ more information.) Specifying an option on the command line overrides the
 setting in the configuration file.
 
 An example configuration file is in
-``/sawtooth-core/packaging/validator.toml.example``.
+``/sawtooth-core/validator/packaging/validator.toml.example``.
 To create a validator configuration file, copy the example file to the config
 directory and name it ``validator.toml``. Then edit the file to change the
 example configuration options as necessary for your system.
