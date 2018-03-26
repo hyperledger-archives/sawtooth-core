@@ -216,7 +216,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let context = signing::create_context("secp256k1")?;
     let signer = signing::Signer::new(context.as_ref(), &private_key);
 
-    let transformer = SBPayloadTransformer::new(&signer);
+    let mut transformer = SBPayloadTransformer::new(&signer);
 
     let mut transaction_iterator = SmallbankGeneratingIter::new(accounts, seed.as_slice())
         .map(|payload| {transformer.payload_to_transaction(payload)}).map(|item| item.unwrap());

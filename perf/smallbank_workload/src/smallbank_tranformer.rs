@@ -15,7 +15,10 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::cmp::Eq;
+use std::collections::HashMap;
 use std::error::Error;
+use std::hash::Hash;
 use std::time::Instant;
 
 use crypto::sha2::Sha512;
@@ -28,20 +31,76 @@ use sawtooth_sdk::signing;
 
 use playlist::bytes_to_hex_str;
 use playlist::make_addresses;
-use smallbank::SmallbankTransactionPayload;
+use smallbank::{SmallbankTransactionPayload, SmallbankTransactionPayload_PayloadType};
 
 /// Transforms SmallbankTransactionPayloads into Sawtooth Transactions.
 pub struct SBPayloadTransformer<'a> {
     signer: &'a signing::Signer<'a>,
+    dependencies: SignatureTracker<u32>,
 }
 
 impl<'a> SBPayloadTransformer<'a> {
     pub fn new(signer: &'a signing::Signer) -> Self {
-        SBPayloadTransformer { signer: signer }
+        SBPayloadTransformer {
+            signer: signer,
+            dependencies: SignatureTracker::new(),
+        }
+    }
+
+    fn add_signature_if_create_account(
+        &mut self,
+        payload: &SmallbankTransactionPayload,
+        signature: String,
+    ) {
+        if payload.get_payload_type() == SmallbankTransactionPayload_PayloadType::CREATE_ACCOUNT {
+            self.dependencies
+                .add_signature(payload.get_create_account().get_customer_id(), signature);
+        }
+    }
+
+    fn get_dependencies_for_customer_ids(&self, customer_ids: Vec<u32>) -> Vec<String> {
+        customer_ids
+            .iter()
+            .filter_map(|id| self.dependencies.get_signature(id))
+            .map(|sig| sig.to_owned())
+            .collect()
+    }
+
+    fn get_dependencies(&self, payload: &SmallbankTransactionPayload) -> Vec<String> {
+        match payload.get_payload_type() {
+            SmallbankTransactionPayload_PayloadType::DEPOSIT_CHECKING => {
+                self.get_dependencies_for_customer_ids(vec![
+                    payload.get_deposit_checking().get_customer_id(),
+                ])
+            }
+            SmallbankTransactionPayload_PayloadType::WRITE_CHECK => {
+                self.get_dependencies_for_customer_ids(vec![
+                    payload.get_write_check().get_customer_id(),
+                ])
+            }
+            SmallbankTransactionPayload_PayloadType::TRANSACT_SAVINGS => {
+                self.get_dependencies_for_customer_ids(vec![
+                    payload.get_transact_savings().get_customer_id(),
+                ])
+            }
+            SmallbankTransactionPayload_PayloadType::SEND_PAYMENT => {
+                self.get_dependencies_for_customer_ids(vec![
+                    payload.get_send_payment().get_source_customer_id(),
+                    payload.get_send_payment().get_dest_customer_id(),
+                ])
+            }
+            SmallbankTransactionPayload_PayloadType::AMALGAMATE => {
+                self.get_dependencies_for_customer_ids(vec![
+                    payload.get_amalgamate().get_source_customer_id(),
+                    payload.get_amalgamate().get_dest_customer_id(),
+                ])
+            }
+            _ => vec![],
+        }
     }
 
     pub fn payload_to_transaction(
-        &self,
+        &mut self,
         payload: SmallbankTransactionPayload,
     ) -> Result<Transaction, Box<Error>> {
         let mut txn = Transaction::new();
@@ -58,7 +117,10 @@ impl<'a> SBPayloadTransformer<'a> {
         txn_header.set_inputs(addresses.clone());
         txn_header.set_outputs(addresses.clone());
 
-        let payload_bytes = payload.write_to_bytes()?;
+        let dependencies = protobuf::RepeatedField::from_vec(self.get_dependencies(&payload));
+        txn_header.set_dependencies(dependencies);
+
+        let payload_bytes = payload.clone().write_to_bytes()?;
 
         let mut sha = Sha512::new();
         sha.input(&payload_bytes);
@@ -72,6 +134,7 @@ impl<'a> SBPayloadTransformer<'a> {
         let header_bytes = txn_header.write_to_bytes()?;
 
         let signature = self.signer.sign(&header_bytes.to_vec())?;
+        self.add_signature_if_create_account(&payload, signature.clone());
 
         txn.set_header(header_bytes);
         txn.set_header_signature(signature);
@@ -80,3 +143,30 @@ impl<'a> SBPayloadTransformer<'a> {
         Ok(txn)
     }
 }
+
+struct SignatureTracker<T>
+where
+    T: Eq + Hash,
+{
+    signature_by_id: HashMap<T, String>,
+}
+
+impl<T> SignatureTracker<T>
+where
+    T: Eq + Hash,
+{
+    pub fn new() -> SignatureTracker<T> {
+        SignatureTracker {
+            signature_by_id: HashMap::new(),
+        }
+    }
+
+    pub fn get_signature(&self, id: &T) -> Option<&String> {
+        self.signature_by_id.get(id)
+    }
+
+    pub fn add_signature(&mut self, id: T, signature: String) {
+        self.signature_by_id.insert(id, signature);
+    }
+}
+
