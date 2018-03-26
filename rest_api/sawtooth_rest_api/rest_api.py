@@ -62,6 +62,9 @@ def parse_args(args):
     parser.add_argument('-t', '--timeout',
                         help='set time (in seconds) to wait for validator \
                         response')
+    parser.add_argument('--client-max-size',
+                        type=int,
+                        help='the max size (in bytes) of a request body')
     parser.add_argument('-v', '--verbose',
                         action='count',
                         default=0,
@@ -87,12 +90,13 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def start_rest_api(host, port, connection, timeout, registry):
+def start_rest_api(host, port, connection, timeout, registry,
+                   client_max_size=None):
     """Builds the web app, adds route handlers, and finally starts the app.
     """
     loop = asyncio.get_event_loop()
     connection.open()
-    app = web.Application(loop=loop)
+    app = web.Application(loop=loop, client_max_size=client_max_size)
     app.on_cleanup.append(lambda app: connection.close())
 
     # Add routes to the web app
@@ -178,7 +182,8 @@ def main():
             connect=opts.connect,
             timeout=opts.timeout,
             opentsdb_url=opts.opentsdb_url,
-            opentsdb_db=opts.opentsdb_db)
+            opentsdb_db=opts.opentsdb_db,
+            client_max_size=opts.client_max_size)
         rest_api_config = load_rest_api_config(opts_config)
         url = None
         if "tcp://" not in rest_api_config.connect:
@@ -238,7 +243,8 @@ def main():
             port,
             connection,
             int(rest_api_config.timeout),
-            wrapped_registry)
+            wrapped_registry,
+            client_max_size=rest_api_config.client_max_size)
         # pylint: disable=broad-except
     except Exception as e:
         LOGGER.exception(e)
