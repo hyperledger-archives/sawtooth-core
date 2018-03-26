@@ -15,6 +15,11 @@ Unix-based operating systems do not use ``/var/lib``, so it would be appropriate
 to use this file to set ``data_dir`` to the natural operating system default
 path for application data.
 
+An example file is in ``/etc/sawtooth/path.toml.example``. To create a path
+configuration file, copy the example file to the config directory and name it
+``path.toml``. Then edit the file to change the example configuration options as
+necessary for your system.
+
 This file configures the following settings:
 
 - ``key_dir`` = `path`

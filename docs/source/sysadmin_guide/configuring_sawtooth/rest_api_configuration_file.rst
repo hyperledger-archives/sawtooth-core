@@ -11,10 +11,13 @@ config directory is ``/etc/sawtooth/``; see :doc:`path_configuration_file` for
 more information.) Specifying a command-line option will override the setting
 in the configuration file.
 
-An example configuration file is in
+Note: By default, the config directory is /etc/sawtooth/.
+See :doc:`path_configuration_file` for more information.
+
+An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/rest_api/packaging/rest_api.toml.example``.
-To create a REST API configuration file, copy the example file to the config
-directory and name it ``rest_api.toml``. Then edit the file to change the
+To create a REST API configuration file, download this example file to the
+config directory and name it ``rest_api.toml``. Then edit the file to change the
 example configuration options as necessary for your system.
 
 The ``rest_api.toml`` configuration file has the following options:

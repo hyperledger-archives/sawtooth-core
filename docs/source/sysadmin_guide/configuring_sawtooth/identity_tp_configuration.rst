@@ -13,11 +13,12 @@ file.
 Note: By default, the config directory is /etc/sawtooth/.
 See :doc:`path_configuration_file` for more information.
 
-An example configuration file is in
+An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/families/identity/packaging/identity.toml.example``.
-To create a Identity transaction processor configuration file, copy the example
-file to the config directory and name it ``identity.toml``. Then edit the file
-to change the example configuration options as necessary for your system.
+To create an Identity transaction processor configuration file, download this
+example file to the config directory and name it ``identity.toml``. Then edit
+the file to change the example configuration options as necessary for your
+system.
 
 The ``identity.toml`` configuration file has the following option:
 

@@ -48,7 +48,9 @@ To change the default logging behavior of a Sawtooth component, such as the
 validator, put a log configuration file in the config directory (see
 :doc:`configuring_sawtooth/path_configuration_file`).
 
-The validator log config file should be named ``log_config.toml``.
+An example log configuration file is at
+``/etc/sawtooth/log_config.toml.example``. To create a log configuration file,
+copy the example file to ``/etc/sawtooth`` and name it ``log_config.toml``.
 
 Each transaction processor can define its own config file. The name of
 this file is determined by the author. The transaction processors included in
