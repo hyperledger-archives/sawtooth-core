@@ -46,6 +46,17 @@ The ``rest_api.toml`` configuration file has the following options:
 
     timeout = 900
 
+- ``client_max_size`` = `value`
+
+  Specifies the size, in bytes, that the REST API will accept for the body of
+  requests. If the body is larger a ``413: Request Entity Too Large`` will be
+  returned
+  Default: none. For example:
+
+  .. code-block:: none
+
+    client_max_size = 1048576
+
 - ``opentsdb_url`` = "`value`"
 
   Sets the host and port for Open TSDB database (used for metrics).
