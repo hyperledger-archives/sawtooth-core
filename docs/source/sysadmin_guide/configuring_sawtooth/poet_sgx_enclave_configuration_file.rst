@@ -10,11 +10,14 @@ config directory is ``/etc/sawtooth/``; see :doc:`path_configuration_file` for
 more information.) Specifying a command-line option will override the setting
 in the configuration file.
 
-An example configuration file is in
+Note: By default, the config directory is /etc/sawtooth/.
+See :doc:`path_configuration_file` for more information.
+
+An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/consensus/poet/sgx/packaging/poet_enclave_sgx.toml.example``.
-To create a PoET SGX enclave configuration file, copy the example file to the
-config directory and name it ``poet_enclave_sgx.toml``. Then edit the file to
-change the example configuration options as necessary for your system.
+To create a PoET SGX enclave configuration file, download this example file to
+the config directory and name it ``poet_enclave_sgx.toml``. Then edit the file
+to change the example configuration options as necessary for your system.
 
 .. Note::
 
@@ -48,10 +51,10 @@ The ``poet_enclave_sgx.toml`` configuration file has the following options:
 
   Identifies the PEM-encoded certificate file that was submitted to Intel in
   order to obtain a SPID. Default: none. Specify the full path to the
-  certificate file. This pem file can be created from ``cert.crt`` and 
+  certificate file. This pem file can be created from ``cert.crt`` and
   ``cert.key`` files with this command:
 
-  .. code-block:: console 
+  .. code-block:: console
 
     $ cat cert.crt cert.key > cert.pem
 

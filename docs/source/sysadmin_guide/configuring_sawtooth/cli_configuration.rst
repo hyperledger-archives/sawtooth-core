@@ -14,9 +14,12 @@ run. (By default, the config directory is /etc/sawtooth/; see
 Specifying command-line options will override the settings in the
 configuration file.
 
-An example configuration file is in
+Note: By default, the config directory is /etc/sawtooth/.
+See :doc:`path_configuration_file` for more information.
+
+An example configuration file is in the ``sawtooth-core`` repository at
 ``/sawtooth-core/cli/cli.toml.example``. To create a CLI configuration
-file, copy the example file to the config directory and name it
+file, download this example file to the config directory and name it
 ``cli.toml``.
 
 The example file shows the format of the ``url`` option. To use it,
