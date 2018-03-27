@@ -170,3 +170,78 @@ where
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::SBPayloadTransformer;
+
+    use protobuf::Message;
+    use sawtooth_sdk::messages::transaction::TransactionHeader;
+    use sawtooth_sdk::signing;
+
+    use playlist::SmallbankGeneratingIter;
+
+    const NUM_CREATE_ACCOUNTS: usize = 100;
+    const NUM_TO_CONSIDER: usize = 1_000;
+
+    #[test]
+    fn test_dependencies() {
+        let seed = [84, 24, 24, 29, 98, 254, 76, 111, 198, 96, 211, 218, 238, 27];
+
+        let payload_iterator = SmallbankGeneratingIter::new(NUM_CREATE_ACCOUNTS, &seed);
+
+        let context = signing::create_context("secp256k1").unwrap();
+        let private_key = context.new_random_private_key().unwrap();
+        let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
+
+        let mut transformer = SBPayloadTransformer::new(&signer);
+
+        let mut transaction_iterator = payload_iterator
+            .map(|payload| transformer.payload_to_transaction(payload))
+            .filter_map(|transaction| transaction.ok());
+
+        let mut create_account_txn_ids = Vec::new();
+
+        assert_eq!(
+            transaction_iterator
+                .by_ref()
+                .take(NUM_CREATE_ACCOUNTS)
+                .fold(0, |acc, transaction| {
+                    create_account_txn_ids.push(transaction.header_signature.clone());
+
+                    let header = header_from_bytes(transaction.get_header());
+                    if header.dependencies.len() > 0 {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                }),
+            0
+        );
+
+        assert_eq!(
+            transaction_iterator
+                .take(NUM_TO_CONSIDER)
+                .fold(0, |acc, transaction| {
+                    let header = header_from_bytes(transaction.get_header());
+                    assert!(header.get_dependencies().len() > 0);
+                    if header
+                        .get_dependencies()
+                        .iter()
+                        .any(|dep| !create_account_txn_ids.contains(&dep))
+                    {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                }),
+            0
+        );
+    }
+
+    fn header_from_bytes(header_bytes: &[u8]) -> TransactionHeader {
+        let mut header = TransactionHeader::new();
+        header.merge_from_bytes(header_bytes).unwrap();
+        header
+    }
+
+}
