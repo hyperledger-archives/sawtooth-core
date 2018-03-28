@@ -88,6 +88,9 @@
 - name: Ashish Mishra
   user: askmish
 
+- name: Amol Kulkarni
+  user: kulkarniamol
+
 - name: James Mitchell
   user: jsmitchell
 
@@ -123,3 +126,9 @@
 
 - name: Yevgeniy Y Yarmosh
   user: eugeneyyy
+
+- name: Mithun Shashidhara
+  user: mithunshashidhara
+
+- name: Manohar Ganapathi
+  user: c5188849
