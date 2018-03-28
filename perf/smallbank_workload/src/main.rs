@@ -24,6 +24,7 @@ extern crate protobuf;
 
 mod playlist;
 mod smallbank;
+mod smallbank_tranformer;
 
 use std::fs::File;
 use std::io;
@@ -31,7 +32,6 @@ use std::io::Write;
 use std::io::Read;
 use std::error::Error;
 use std::str::{FromStr, Split};
-use std::time::Instant;
 
 use batch_gen::generate_signed_batches;
 use batch_gen::SignedBatchIterator;
@@ -39,24 +39,18 @@ use batch_submit::InfiniteBatchListIterator;
 use batch_submit::submit_signed_batches;
 use batch_submit::run_workload;
 use clap::{App, ArgMatches, AppSettings, Arg, SubCommand};
-use crypto::sha2::Sha512;
-use crypto::digest::Digest;
 use playlist::generate_smallbank_playlist;
 use playlist::process_smallbank_playlist;
-use playlist::bytes_to_hex_str;
-use playlist::make_addresses;
-use protobuf::Message;
 use rand::Rng;
-use smallbank::SmallbankTransactionPayload;
 
 use sawtooth_perf::batch_gen;
 use sawtooth_perf::batch_submit;
 
-use sawtooth_sdk::messages::transaction::{Transaction, TransactionHeader};
 use sawtooth_sdk::signing;
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 
 use playlist::SmallbankGeneratingIter;
+use smallbank_tranformer::SBPayloadTransformer;
 
 const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -222,7 +216,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let context = signing::create_context("secp256k1")?;
     let signer = signing::Signer::new(context.as_ref(), &private_key);
 
-    let transformer = SBPayloadTransformer::new(&signer);
+    let mut transformer = SBPayloadTransformer::new(&signer);
 
     let mut transaction_iterator = SmallbankGeneratingIter::new(accounts, seed.as_slice())
         .map(|payload| {transformer.payload_to_transaction(payload)}).map(|item| item.unwrap());
@@ -505,58 +499,6 @@ fn run_playlist_process_command(args: &ArgMatches) -> Result<(), Box<Error>> {
                                     context.as_ref(), &private_key));
 
     Ok(())
-}
-
-/// Transforms SmallbankTransactionPayloads into Sawtooth Transactions.
-pub struct SBPayloadTransformer<'a> {
-    signer: &'a signing::Signer<'a>
-}
-
-impl<'a> SBPayloadTransformer<'a> {
-    pub fn new(signer: &'a signing::Signer) -> Self {
-        SBPayloadTransformer {
-            signer: signer,
-        }
-    }
-
-    pub fn payload_to_transaction(&self, payload: SmallbankTransactionPayload)
-        -> Result<Transaction, Box<Error>>
-    {
-        let mut txn = Transaction::new();
-        let mut txn_header = TransactionHeader::new();
-
-        txn_header.set_family_name(String::from("smallbank"));
-        txn_header.set_family_version(String::from("1.0"));
-
-        let elapsed = Instant::now().elapsed();
-        txn_header.set_nonce(format!("{}{}", elapsed.as_secs(), elapsed.subsec_nanos()));
-
-        let addresses = protobuf::RepeatedField::from_vec(make_addresses(&payload));
-
-        txn_header.set_inputs(addresses.clone());
-        txn_header.set_outputs(addresses.clone());
-
-        let payload_bytes = payload.write_to_bytes()?;
-
-        let mut sha = Sha512::new();
-        sha.input(&payload_bytes);
-        let hash: &mut [u8] = & mut [0; 64];
-        sha.result(hash);
-
-        txn_header.set_payload_sha512(bytes_to_hex_str(hash));
-        txn_header.set_signer_public_key(self.signer.get_public_key()?.as_hex());
-        txn_header.set_batcher_public_key(self.signer.get_public_key()?.as_hex());
-
-        let header_bytes = txn_header.write_to_bytes()?;
-
-        let signature = self.signer.sign(&header_bytes.to_vec())?;
-
-        txn.set_header(header_bytes);
-        txn.set_header_signature(signature);
-        txn.set_payload(payload_bytes);
-
-        Ok(txn)
-    }
 }
 
 #[derive(Debug)]
