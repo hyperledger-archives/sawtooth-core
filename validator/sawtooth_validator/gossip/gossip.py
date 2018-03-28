@@ -347,7 +347,9 @@ class Gossip(object):
             if exclude is None:
                 exclude = []
             for connection_id in self._peers.copy():
-                if connection_id not in exclude:
+                if connection_id not in exclude and \
+                        self._network.is_connection_handshake_complete(
+                            connection_id):
                     self.send(
                         message_type,
                         gossip_message.SerializeToString(),
