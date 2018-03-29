@@ -332,7 +332,7 @@ def _do_identity_policy_list(args):
                 output = [policy.name]
                 for entry in policy.entries:
                     output.append(
-                        Policy.Type.Name(entry.type) + " " + entry.key)
+                        Policy.EntryType.Name(entry.type) + " " + entry.key)
                 writer.writerow(output)
         except csv.Error:
             raise CliException('Error writing CSV')
@@ -341,7 +341,7 @@ def _do_identity_policy_list(args):
         for policy in printable_policies:
             value = "Entries: "
             for entry in policy.entries:
-                entry_string = Policy.Type.Name(entry.type) + " " \
+                entry_string = Policy.EntryType.Name(entry.type) + " " \
                     + entry.key
                 value += entry_string + " "
             output[policy.name] = value
