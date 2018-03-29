@@ -217,3 +217,162 @@ impl<'a> LmdbDatabaseWriter<'a> {
             DatabaseError::WriterError(format!("{}", err)))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use config;
+
+    /// Asserts that there are COUNT many objects in DB.
+    fn assert_database_count(count: usize, db: &LmdbDatabase) {
+        let reader = db.reader().unwrap();
+
+        assert_eq!(
+            reader.count().unwrap(),
+            count,
+        );
+    }
+
+    /// Asserts that there are are COUNT many objects in DB's INDEX.
+    fn assert_index_count(index: &str, count: usize, db: &LmdbDatabase) {
+        let reader = db.reader().unwrap();
+
+        assert_eq!(
+            reader.index_count(index).unwrap(),
+            count,
+        );
+    }
+
+    /// Asserts that KEY is associated with VAL in DB.
+    fn assert_key_value(key: u8, val: u8, db: &LmdbDatabase) {
+        let reader = db.reader().unwrap();
+
+        assert_eq!(
+            reader.get(&[key]).unwrap(),
+            [val],
+        );
+    }
+
+    /// Asserts that KEY is associated with VAL in DB's INDEX.
+    fn assert_index_key_value(index: &str, key: u8, val: u8, db: &LmdbDatabase) {
+        let reader = db.reader().unwrap();
+
+        assert_eq!(
+            reader.index_get(index, &[key]).unwrap().unwrap(),
+            [val],
+        );
+    }
+
+    /// Asserts that KEY is not in DB.
+    fn assert_not_in_database(key: u8, db: &LmdbDatabase) {
+        let reader = db.reader().unwrap();
+
+        assert!(reader.get(&[key]).is_none());
+    }
+
+    /// Asserts that KEY is not in DB's INDEX.
+    fn assert_not_in_index(index: &str, key: u8, db: &LmdbDatabase) {
+        let reader = db.reader().unwrap();
+
+        assert!(reader.index_get(index, &[key]).unwrap().is_none());
+    }
+
+    /// Opens an LmdbDatabase and executes its basic operations
+    /// (adding keys, deleting keys, etc), making assertions about the
+    /// database contents at each step.
+    #[test]
+    fn test_lmdb() {
+        let path_config = config::get_path_config();
+
+        let blockstore_path =
+            &path_config.data_dir.join(String::from("unit-lmdb.lmdb"));
+
+        let ctx = LmdbContext::new(blockstore_path, 3, None)
+            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+            .unwrap();
+
+        let database = LmdbDatabase::new(&ctx, &["a", "b"])
+            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+            .unwrap();
+
+        assert_database_count(0, &database);
+        assert_not_in_database(3, &database);
+        assert_not_in_database(5, &database);
+
+        // Add {3: 4}
+        let mut writer = database.writer().unwrap();
+        writer.put(&[3], &[4]).unwrap();
+
+        assert_database_count(0, &database);
+        assert_not_in_database(3, &database);
+
+        writer.commit().unwrap();
+
+        assert_database_count(1, &database);
+        assert_key_value(3, 4, &database);
+
+        // Add {5: 6}
+        let mut writer = database.writer().unwrap();
+        writer.put(&[5], &[6]).unwrap();
+        writer.commit().unwrap();
+
+        assert_database_count(2, &database);
+        assert_key_value(5, 6, &database);
+        assert_key_value(3, 4, &database);
+
+        // Delete {3: 4}
+        let mut writer = database.writer().unwrap();
+        writer.delete(&[3]).unwrap();
+
+        assert_database_count(2, &database);
+
+        writer.commit().unwrap();
+
+        assert_database_count(1, &database);
+        assert_key_value(5, 6, &database);
+        assert_not_in_database(3, &database);
+
+        // Add {55: 5} in "a"
+        assert_index_count("a", 0, &database);
+        assert_index_count("b", 0, &database);
+        assert_not_in_index("a", 5, &database);
+        assert_not_in_index("b", 5, &database);
+
+        let mut writer = database.writer().unwrap();
+        writer.index_put("a", &[55], &[5]).unwrap();
+
+        assert_index_count("a", 0, &database);
+        assert_index_count("b", 0, &database);
+        assert_not_in_index("a", 5, &database);
+        assert_not_in_index("b", 5, &database);
+
+        writer.commit().unwrap();
+
+        assert_index_count("a", 1, &database);
+        assert_index_count("b", 0, &database);
+        assert_index_key_value("a", 55, 5, &database);
+        assert_not_in_index("b", 5, &database);
+        assert_database_count(1, &database);
+        assert_key_value(5, 6, &database);
+        assert_not_in_database(3, &database);
+
+        // Delete {55: 5} in "a"
+        let mut writer = database.writer().unwrap();
+        writer.index_delete("a", &[55]).unwrap();
+
+        assert_index_count("a", 1, &database);
+        assert_index_count("b", 0, &database);
+        assert_index_key_value("a", 55, 5, &database);
+        assert_not_in_index("b", 5, &database);
+
+        writer.commit().unwrap();
+
+        assert_index_count("a", 0, &database);
+        assert_index_count("b", 0, &database);
+        assert_not_in_index("a", 5, &database);
+        assert_not_in_index("b", 5, &database);
+        assert_database_count(1, &database);
+        assert_key_value(5, 6, &database);
+        assert_not_in_database(3, &database);
+    }
+}
