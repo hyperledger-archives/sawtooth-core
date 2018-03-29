@@ -176,3 +176,132 @@ impl<'a> Blockstore<'a> {
         reader.index_count("index_batch")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use config;
+    use database::lmdb::LmdbContext;
+    use sawtooth_sdk::messages::batch::{Batch, BatchHeader};
+    use sawtooth_sdk::messages::transaction::Transaction;
+
+    /// Asserts that BLOCKSTORE has a current height of COUNT.
+    fn assert_current_height(count: usize, blockstore: &Blockstore) {
+        assert_eq!(
+            blockstore.get_current_height().unwrap(),
+            count,
+        );
+    }
+
+    /// Asserts that BLOCK has SIGNATURE.
+    fn assert_header_signature(block: Block, signature: String) {
+        assert_eq!(
+            block.header_signature,
+            signature,
+        );
+    }
+
+    /// Asserts that BLOCKSTORE's chain head has SIGNATURE.
+    fn assert_chain_head(signature: String, blockstore: &Blockstore) {
+        assert_eq!(
+            blockstore.get_chain_head().unwrap(),
+            signature,
+        );
+    }
+
+    /// Opens a blockstore and executes its basic operations (adding,
+    /// deleting, and looking up blocks), making assertions about the
+    /// blockstore contents at each step.
+    #[test]
+    fn test_blockstore() {
+        let path_config = config::get_path_config();
+
+        let blockstore_path =
+            &path_config.data_dir.join(config::get_blockstore_filename());
+
+        let ctx = LmdbContext::new(blockstore_path, 3, None)
+            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+            .unwrap();
+
+        let database = LmdbDatabase::new(
+            &ctx,
+            &["index_batch", "index_transaction", "index_block_num"])
+            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+            .unwrap();
+
+        let blockstore = Blockstore::new(database);
+
+        // The blockstore starts with no blocks.
+        assert_current_height(0, &blockstore);
+
+        // Add 5 blocks.
+        for i in 0..5 {
+            let mut block = Block::new();
+            block.set_header_signature(format!("block-{}", i));
+            let mut header = BlockHeader::new();
+            header.set_block_num(i);
+            block.set_header(header.write_to_bytes().unwrap());
+
+            blockstore.put(block).unwrap();
+
+            assert_current_height(i as usize + 1, &blockstore);
+            assert_chain_head(format!("block-{}", i), &blockstore);
+        }
+
+        assert_current_height(5, &blockstore);
+
+        // Check that the blocks are in the right order.
+        for i in 0..5 {
+            let block = blockstore.get_by_height(i).unwrap();
+
+            assert_header_signature(block, format!("block-{}", i));
+        }
+
+        // Get a block.
+        let get_block = blockstore.get("block-2").unwrap();
+
+        assert_header_signature(get_block, String::from("block-2"));
+
+        // Add a block with a batch.
+        let mut transaction = Transaction::new();
+        transaction.set_header_signature(String::from("transaction"));
+
+        let mut batch = Batch::new();
+        batch.set_header_signature(String::from("batch"));
+        batch.set_transactions(
+            protobuf::RepeatedField::from_vec(vec!(transaction)));
+        let batch_header = BatchHeader::new();
+        batch.set_header(batch_header.write_to_bytes().unwrap());
+
+        let mut block = Block::new();
+        block.set_header_signature(String::from("block-with-batch"));
+        let mut block_header = BlockHeader::new();
+        block_header.set_block_num(6);
+        block.set_header(block_header.write_to_bytes().unwrap());
+        block.set_batches(protobuf::RepeatedField::from_vec(vec!(batch)));
+
+        blockstore.put(block).unwrap();
+
+        assert_current_height(6, &blockstore);
+        assert_chain_head(String::from("block-with-batch"), &blockstore);
+
+        let get_by_batch = blockstore.get_by_batch("batch").unwrap();
+
+        assert_header_signature(
+            get_by_batch,
+            String::from("block-with-batch"));
+
+        let get_by_transaction =
+            blockstore.get_by_transaction("transaction").unwrap();
+
+        assert_header_signature(
+            get_by_transaction,
+            String::from("block-with-batch"));
+
+        // Delete a block.
+        blockstore.delete("block-with-batch").unwrap();
+
+        assert_current_height(5, &blockstore);
+        assert_chain_head(String::from("block-4"), &blockstore);
+    }
+}
