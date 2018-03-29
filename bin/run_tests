@@ -208,6 +208,7 @@ test_cli() {
     copy_coverage .coverage.cli
     run_docker_test test_peer_list
     copy_coverage .coverage.peer_list
+    run_docker_test ./adm/unit_sawadm.yaml
 }
 
 test_rest_api() {
