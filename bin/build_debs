@@ -215,6 +215,9 @@ build_rust() {
     info "smallbank-workload"
     build_rust_pkg smallbank-workload $top_dir/perf/smallbank_workload $output_dir
 
+    info "intkey-workload"
+    build_rust_pkg intkey-workload $top_dir/perf/intkey_workload $output_dir
+
     for pkg in $output_dir/*.deb
     do
         echo

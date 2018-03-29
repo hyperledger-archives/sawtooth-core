@@ -33,6 +33,11 @@ cd $top_dir/perf/smallbank_workload
 mkdir -p $top_dir/perf/smallbank_workload/bin
 cargo build && cp ./target/debug/smallbank-workload $top_dir/perf/smallbank_workload/bin/smallbank-workload
 
+echo -e "\033[0;32m--- Building intkey_workload ---\n\033[0m"
+cd $top_dir/perf/intkey_workload
+mkdir -p $top_dir/perf/intkey_workload/bin
+cargo build --release && cp ./target/release/intkey-workload $top_dir/perf/intkey_workload/bin/intkey-workload
+
 echo -e "\033[0;32m--- Building intkey-tp-rust ---\n\033[0m"
 rm -rf $top_dir/sdk/examples/intkey_rust/bin/
 mkdir -p $top_dir/sdk/examples/intkey_rust/bin/
