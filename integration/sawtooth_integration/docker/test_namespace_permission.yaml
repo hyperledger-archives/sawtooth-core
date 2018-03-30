@@ -39,6 +39,17 @@ services:
     command: intkey-tp-python -vvv -C tcp://validator:4004
     stop_signal: SIGKILL
 
+  xo-tp-python:
+    image: sawtooth-xo-tp-python:$ISOLATION_ID
+    volumes:
+      - $SAWTOOTH_CORE:/project/sawtooth-core
+    expose:
+      - 4004
+    depends_on:
+      - validator
+    command: xo-tp-python -vv -C tcp://validator:4004
+    stop_signal: SIGKILL
+
   block-info-tp:
     image: sawtooth-block-info-tp:$ISOLATION_ID
     volumes:
@@ -57,7 +68,7 @@ services:
     expose:
       - 4004
       - 8800
-    # start the validator with an empty genesis batch
+    # the namespaces for the intkey family are purposefuly incorrect
     command: "bash -c \"\
         sawadm keygen && \
         sawset genesis \
@@ -65,7 +76,19 @@ services:
           -o config-genesis.batch && \
         sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
-          sawtooth.validator.transaction_families='[{\\\"family\\\": \\\"block_info\\\", \\\"version\\\": \\\"1.0\\\", \\\"namespaces\\\": [\\\"00b10c\\\"]}, {\\\"family\\\": \\\"intkey\\\", \\\"version\\\": \\\"1.0\\\", \\\"namespaces\\\": [\\\"1cf125\\\",\\\"1cf127\\\"]}, {\\\"family\\\":\\\"sawtooth_settings\\\", \\\"version\\\":\\\"1.0\\\", \\\"encoding\\\":\\\"application/protobuf\\\"}]' \
+          sawtooth.validator.transaction_families='[
+            {\\\"family\\\": \\\"block_info\\\",
+             \\\"version\\\": \\\"1.0\\\",
+             \\\"namespaces\\\": [\\\"00b10c\\\"]},
+            {\\\"family\\\": \\\"intkey\\\",
+             \\\"version\\\": \\\"1.0\\\",
+             \\\"namespaces\\\": [\\\"1cf125\\\",\\\"1cf127\\\"]},
+            {\\\"family\\\":\\\"sawtooth_settings\\\",
+             \\\"version\\\":\\\"1.0\\\",
+             \\\"encoding\\\":\\\"application/protobuf\\\"},
+            {\\\"family\\\":\\\"xo\\\",
+             \\\"version\\\":\\\"1.0\\\",
+             \\\"namespaces\\\":[\\\"5b7349\\\"]}]' \
           -o config_transaction_families.batch && \
         sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
@@ -88,10 +111,10 @@ services:
       - $SAWTOOTH_CORE:/project/sawtooth-core
     expose:
       - 4004
-      - 8080
+      - 8008
     depends_on:
       - validator
-    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8080
+    command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:8008
     stop_signal: SIGKILL
 
   test-namespace-permission:
@@ -103,17 +126,16 @@ services:
     depends_on:
       - validator
       - rest-api
-    command: "bash -c \"\
-        nose2-3 \
-	  -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg \
-          -v \
-          -s /project/sawtooth-core/integration/sawtooth_integration/tests \
-          test_namespace_permission.TestNamespacePermission \
-    \""
+    command: nose2-3
+          -c /project/sawtooth-core/integration/sawtooth_integration/nose2.cfg
+          -v
+          -s /project/sawtooth-core/integration/sawtooth_integration/tests
+          test_namespace_permission.TestNamespacePermission
     stop_signal: SIGKILL
     environment:
       PYTHONPATH: "/project/sawtooth-core/sdk/python:\
         /project/sawtooth-core/sdk/examples/intkey_python:\
+        /project/sawtooth-core/sdk/examples/xo_python:\
         /project/sawtooth-core/families/block_info:\
         /project/sawtooth-core/integration:\
         /project/sawtooth-core/signing"
