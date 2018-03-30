@@ -1,7 +1,6 @@
-
-*****************************************
-Introduction to the XO Transaction Family
-*****************************************
+**************************************
+Playing with the XO Transaction Family
+**************************************
 
 XO is an example transaction family that implements the game
 `tic-tac-toe <https://en.wikipedia.org/wiki/Tic-tac-toe>`_,
@@ -70,46 +69,72 @@ Prerequisites
 -------------
 
 * A working Sawtooth development environment, as described in
-  :doc:`/app_developers_guide/installing_sawtooth`.
-  Ensure that this environment is running a validator, a REST API, and an XO
-  transaction processor (such as ``xo-tp-python``).
+  :doc:`/app_developers_guide/installing_sawtooth`. This environment must be
+  running a validator, a REST API, and the Settings transaction processor.
+  (The IntegerKey transaction processor is not used in this procedure.)
 
-* If you are using the Docker development environment described in
-  :doc:`/app_developers_guide/installing_sawtooth`,
-  open a client container by running the following command from your host
-  computer’s terminal window:
-
-  .. code-block:: console
-
-     % docker exec -it sawtooth-shell-default bash
-
-  Otherwise, see your docker-compose file for the correct container name.
-
-* Verify that you can connect to the REST API.
-
-  * Docker: See :ref:`confirming-connectivity-docker-label`
-
-  * Ubuntu: See :doc:`/app_developers_guide/installing_sawtooth`
-
-  * AWS: See :ref:`confirming-connectivity-aws-label`
-
-  .. Important::
-
-     The ``xo`` client sends requests to update and query the blockchain to the
-     URL of the REST API (by default, ``http://127.0.0.1:8008``).
-
-     If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
-     ``--url`` argument to each ``xo`` command in this procedure.
-
-     The following example specifies the URL for the Docker demo application
-     environment when creating a new game:
-
-     .. code-block:: console
-
-        $ xo create my-game --username jack --url http://rest-api:8008
+* This procedure also requires the XO transaction processor. The Docker and AWS
+  procedures start it automatically. For Ubuntu, this procedure shows how to
+  start the XO transaction processor if necessary.
 
 
-Step 1. Create Players
+Step 1: Confirm Connectivity to the REST API
+--------------------------------------------
+
+#. Connect to your development environment, as described in the procedure for
+   your platform in :doc:`installing_sawtooth`.
+
+#. Verify that you can connect to the REST API.
+
+   * Docker: See :ref:`confirming-connectivity-docker-label`
+
+   * Ubuntu: See :doc:`/app_developers_guide/installing_sawtooth`
+
+   * AWS: See :ref:`confirming-connectivity-aws-label`
+
+   .. Important::
+
+      The ``xo`` client sends requests to update and query the blockchain to the
+      URL of the REST API (by default, ``http://127.0.0.1:8008``).
+
+      If the REST API's URL is not ``http://127.0.0.1:8008``, you must add the
+      ``--url`` argument to each ``xo`` command in this procedure.
+
+      For example, the following command specifies the URL for the Docker demo
+      application environment when creating a new game:
+
+      .. code-block:: console
+
+         $ xo create my-game --username jack --url http://rest-api:8008
+
+
+Step 2. Ubuntu only: Start the XO Transaction Processor
+-------------------------------------------------------
+
+If you did not start the XO transaction processor on your Ubuntu application
+development environment, start it now.
+
+#. Open a new terminal window (the xo window).
+
+#. Check whether the XO transaction processor is running.
+
+   .. code-block:: console
+
+      user@xo$ ps aux | grep [x]o-tp
+      root      1546  0.0  0.1  52700  3776 pts/2    S+   19:15   0:00 sudo -u sawtooth xo-tp-python -v
+      sawtooth  1547  0.0  1.5 277784 31192 pts/2    Sl+  19:15   0:00 /usr/bin/python3 /usr/bin/xo-tp-python -v
+
+#. If the output does not show that ``/usr/bin/xo-tp-python`` is running, start
+   the XO transaction processor with the following command:
+
+   .. code-block:: console
+
+      user@xo$ sudo -u sawtooth xo-tp-python -v
+
+For more information, see Step 5.3 in :doc:`ubuntu`.
+
+
+Step 3. Create Players
 ----------------------
 
 Create keys for two players to play the game:
@@ -130,7 +155,7 @@ Create keys for two players to play the game:
    The output may differ slightly from this example.
 
 
-Step 2. Create a Game
+Step 4. Create a Game
 ---------------------
 
 Create a game named ``my-game`` with the following command:
@@ -160,7 +185,7 @@ existing games:
    state rather than using ``curl`` with the REST API's URL to request state.
 
 
-Step 3. Take a Space as Player 1
+Step 5. Take a Space as Player 1
 --------------------------------
 
 .. note::
@@ -212,7 +237,7 @@ win or tie. If either condition occurs, no more ``take`` actions are allowed
 on the finished game.
 
 
-Step 4. Take a Space as Player 2
+Step 6. Take a Space as Player 2
 --------------------------------
 
 Next, take a space on the board as player 2, Jill.  In this example,
@@ -223,7 +248,7 @@ Jill takes space 1:
     $ xo take my-game 1 --username jill
 
 
-Step 5. Show the Current Game Board
+Step 7. Show the Current Game Board
 -----------------------------------
 
 Whenever you want to see the current state of the game board, enter the
@@ -259,7 +284,7 @@ than the state returned to the transaction processor:
    my-game,O---X----,P1-NEXT,02403a...,03729b...
 
 
-Step 6. Continue the Game
+Step 8. Continue the Game
 -------------------------
 
 Players take turns using ``xo take my-game <space>`` to mark spaces on the grid.
@@ -282,7 +307,7 @@ tie, as in this example:
       X | O | X
 
 
-Step 7. Delete the Game
+Step 9. Delete the Game
 -----------------------
 
 Either player can use the ``xo delete`` command to remove the game data from
