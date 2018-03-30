@@ -1,6 +1,6 @@
-*******************************
-Installing and Running Sawtooth
-*******************************
+*********************************************************
+Setting Up a Sawtooth Application Development Environment
+*********************************************************
 
 Before you can start developing for the *Hyperledger Sawtooth* platform, you'll
 need to set up and run a local validator to test your application against. Once
