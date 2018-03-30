@@ -16,10 +16,11 @@
 import unittest
 import logging
 import json
+import subprocess
+import shlex
 import urllib.request
 import urllib.error
 import base64
-import time
 
 from sawtooth_block_info.common import CONFIG_ADDRESS
 from sawtooth_block_info.common import create_block_address
@@ -27,10 +28,13 @@ from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfoConfig
 from sawtooth_block_info.protobuf.block_info_pb2 import BlockInfo
 
 from sawtooth_intkey.intkey_message_factory import IntkeyMessageFactory
-
+from sawtooth_integration.tests.integration_tools import wait_for_rest_apis
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
+
+XO_PREFIX = '5b7349'
+WAIT = 300
 
 
 def get_blocks():
@@ -55,6 +59,16 @@ def get_state(address):
     return base64.b64decode(response['data'])
 
 
+def get_state_by_prefix(prefix):
+    response = query_rest_api('/state?address=' + prefix)
+    return response['data']
+
+
+def get_xo_state():
+    state = get_state_by_prefix(XO_PREFIX)
+    return state
+
+
 def post_batch(batch):
     headers = {'Content-Type': 'application/octet-stream'}
     response = query_rest_api(
@@ -66,7 +80,7 @@ def post_batch(batch):
 def query_rest_api(suffix='', data=None, headers=None):
     if headers is None:
         headers = {}
-    url = 'http://rest-api:8080' + suffix
+    url = 'http://rest-api:8008' + suffix
     return submit_request(urllib.request.Request(url, data, headers))
 
 
@@ -80,26 +94,58 @@ def make_batches(keys):
     return [imf.create_batch([('set', k, 0)]) for k in keys]
 
 
+def send_xo_cmd(cmd_str):
+    LOGGER.info('Sending xo cmd: %s', cmd_str)
+    subprocess.run(
+        shlex.split(cmd_str),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True)
+
+
 class TestNamespacePermission(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        wait_for_rest_apis(['rest-api:8008'])
+
     def test_namespace_permission(self):
-        """Tests that namespace permission onchain are letting block_info
-        transactions be injected and preventing intkey transactions to
-        be validated.
+        """Tests that namespace permission stored onchain control which
+        transaction family is allowed to be executed by:
+        - allowing block_info transactions
+        - disallowing intkey transactions
+        - allowing xo transactions
         """
-        batches = make_batches('abcd')
+        batches = make_batches('abcdef')
+
+        send_xo_cmd('sawtooth keygen')
+
+        xo_cmds = [
+            'xo create game',
+            'xo take game 5',
+            'xo take game 5',
+            'xo take game 9',
+            'xo create game',
+            'xo take game 4',
+        ]
 
         # Assert all block info transactions are committed
         for i, batch in enumerate(batches):
             post_batch(batch)
-            time.sleep(1)
+            send_xo_cmd('{} --url {} --wait {}'.format(
+                xo_cmds[i],
+                'http://rest-api:8008',
+                WAIT))
             block_info = get_block_info(i)
             self.assertEqual(block_info.block_num, i)
 
         # Assert block info batches are first in the block and
-        # no other batch is included
+        # that any other batch is of the xo family
         for block in get_blocks()[:-1]:
             LOGGER.debug(block['header']['block_num'])
             family_name = \
                 block['batches'][0]['transactions'][0]['header']['family_name']
             self.assertEqual(family_name, 'block_info')
-            self.assertEqual(len(block['batches']), 1)
+            for batch in block['batches'][1:]:
+                self.assertEqual(
+                    batch['transactions'][0]['header']['family_name'], 'xo')
