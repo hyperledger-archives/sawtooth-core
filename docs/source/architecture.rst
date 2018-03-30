@@ -1,7 +1,7 @@
 
-************************
-Architecture Description
-************************
+************
+Architecture
+************
 
 The following diagram shows a high-level view of the Sawtooth architecture.
 
