@@ -1,5 +1,5 @@
 **************************
-Tutorial: Using the Go SDK
+Using the Go SDK
 **************************
 
 .. toctree::

@@ -1,5 +1,5 @@
 ******************************
-Tutorial: Using the Python SDK
+Using the Python SDK
 ******************************
 
 .. toctree::

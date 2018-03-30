@@ -1,5 +1,5 @@
 **********************************
-Tutorial: Using the JavaScript SDK
+Using the JavaScript SDK
 **********************************
 
 .. toctree::
