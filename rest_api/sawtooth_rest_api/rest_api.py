@@ -55,7 +55,7 @@ def parse_args(args):
 
     parser.add_argument('-B', '--bind',
                         help='identify host and port for API to run on \
-                        default: http://localhost:8080)',
+                        default: http://localhost:8008)',
                         action='append')
     parser.add_argument('-C', '--connect',
                         help='specify URL to connect to a running validator')
