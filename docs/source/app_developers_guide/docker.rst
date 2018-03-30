@@ -1,6 +1,6 @@
-**************************
-Using Sawtooth with Docker
-**************************
+*********************************************
+Using Docker for your Development Environment
+*********************************************
 
 This procedure explains how to set up Hyperledger Sawtooth for application
 development using a multi-container Docker environment. It shows you how to
@@ -8,60 +8,59 @@ start Sawtooth and connect to the necessary Docker containers, then walks you
 through the following tasks:
 
  * Checking the status of Sawtooth components
- * Configuring transaction family settings
  * Using Sawtooth commands to submit transactions, display block data, and view
    global state
  * Examining Sawtooth logs
  * Stopping Sawtooth and resetting the Docker environment
 
-After completing this tutorial, you will be prepared for the other tutorials
-in this guide. The next tutorial introduces the XO transaction family with
-``xo`` client commands. The final set of tutorials describe how to use an SDK to
-create a transaction family that implements your application's business logic.
+After completing this tutorial, you will have the application development
+environment that is required for the other tutorials in this guide. The next
+tutorial introduces the XO transaction family by using the ``xo`` client
+commands to play a game of tic-tac-toe. The final set of tutorials describe how
+to use an SDK to create a transaction family that implements your application's
+business logic.
 
-.. important::
+About the Application Development Environment
+=============================================
 
-   This demo environment is required for the other tutorials in this guide.
-
-
-About the Demo Sawtooth Environment
-===================================
-
-The Docker demo environment is a single validator node that is running a
-validator, a REST API, and three transaction processors. This environment uses
-Developer mode (dev mode) consensus and serial transaction processing.
+The Docker application development environment is a single validator node that
+is running a validator, a REST API, and three transaction processors. This
+environment uses Developer mode (dev mode) consensus and serial transaction
+processing.
 
 .. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%
    :align: center
-   :alt: Demo Sawtooth environment with Docker
+   :alt: Docker application environment environment for Sawtooth
 
-This demo environment introduces basic Sawtooth functionality with the
-`IntegerKey <../transaction_family_specifications/integerkey_transaction_family>`_
+This environment introduces basic Sawtooth functionality with the
+`IntegerKey
+<../transaction_family_specifications/integerkey_transaction_family>`_
 and
 `Settings <../transaction_family_specifications/settings_transaction_family>`_
-transaction processors for the business logic
-and Sawtooth commands that act as a client application. It also includes the
+transaction processors for the business logic and Sawtooth commands as a client.
+It also includes the
 `XO <../transaction_family_specifications/xo_transaction_family>`_
 transaction processor, which is used in later tutorials.
 
+The IntegerKey and XO families are simple examples of a transaction family, but
+Settings is a reference implementation. In a production environment, you should
+always run a transaction processor that supports the Settings transaction
+family.
+
 .. note::
 
-   The validator can process transactions in serial or parallel with no
-   difference in the state produced. By default, the validator uses serial
-   scheduling. Parallel scheduling provides the most benefit when many
-   transaction processors are running on the validator node.
-
-   To process transactions in parallel, edit the `sawtooth-default.yaml` file
-   and add the option ``--scheduler parallel`` to the ``sawtooth-validator``
-   command. For more information, see :doc:`../cli/sawtooth-validator` in the
-   CLI Command Reference.
+   The Docker environment includes a Docker Compose file that
+   handles environment setup steps such as generating keys and creating a
+   genesis block. To learn how the typical startup process works, see
+   :doc:`ubuntu`.
 
 
 Prerequisites
 =============
 
-This demo environment requires Docker Engine and Docker Compose.
+This application development environment requires Docker Engine and Docker
+Compose.
 
 * Windows: Install the latest version of
   `Docker Engine for Windows <https://docs.docker.com/docker-for-windows/install/>`_
@@ -75,16 +74,20 @@ This demo environment requires Docker Engine and Docker Compose.
   `Docker Engine <https://docs.docker.com/engine/installation/linux/ubuntu>`_
   and `Docker Compose <https://github.com/docker/compose/releases>`_.
 
-  .. important::
+In this procedure, you will open six terminal windows to connect to the Docker
+containers: one for each Sawtooth component and one to use for client commands.
 
-     This demo environment requires Docker Engine version 17.03.0-ce or
-     later. Linux distributions often ship with older versions of Docker.
+.. note::
+
+   The Docker Compose file for Sawtooth handles environment setup steps such as
+   generating keys and creating a genesis block. To learn how the typical
+   startup process works, see :doc:`ubuntu`.
 
 
 Step 1: Download the Sawtooth Docker Compose File
 =================================================
 
-Download the Docker Compose file for the Sawtooth demo environment,
+Download the Docker Compose file for the Sawtooth environment,
 `sawtooth-default.yaml <./sawtooth-default.yaml>`_.
 
 This example Compose file defines the process for constructing a simple
@@ -125,12 +128,6 @@ system:
 Step 3: Start the Sawtooth Docker Environment
 =============================================
 
-.. note::
-
-   The Docker Compose file for Sawtooth handles environment setup steps such as
-   generating keys and creating a genesis block. To learn how the typical
-   startup process works, see :doc:`ubuntu`.
-
 To start the Sawtooth Docker environment, perform the following tasks:
 
 1. Open a terminal window.
@@ -149,7 +146,7 @@ To start the Sawtooth Docker environment, perform the following tasks:
    In this procedure, the prompt ``user@host$`` is used for commands that should
    be run in the terminal window for the host system.
 
-#. Downloading the Docker images for the Sawtooth demo environment can take
+#. Downloading the Docker images for the Sawtooth environment can take
    several minutes. Wait until you see output that shows the containers
    registering and creating initial blocks.  Once you see output that resembles
    the following example, you can move on to the next step.
@@ -203,128 +200,74 @@ be run in the terminal window for the client container.
 
   Your environment is ready for experimenting with Sawtooth. However, any work
   done in this environment will be lost once the container in which you ran
-  ``docker-compose`` exits. In order to use this demo environment for
-  application development, you would need to take additional steps, such as
-  mounting a host directory into the container. See the `Docker documentation
-  <https://docs.docker.com/>`_ for more information.
+  ``docker-compose`` exits. In order to use this application development
+  environment for application development, you would need to take additional
+  steps, such as mounting a host directory into the container. See the `Docker
+  documentation <https://docs.docker.com/>`_ for more information.
 
 .. _confirming-connectivity-docker-label:
 
-Step 5: Confirm Connectivity
-============================
+Step 5: Confirm Connectivity to the REST API
+============================================
 
- #. To confirm that the REST API and validator are running and reachable from
-    the client container, run this ``curl`` command:
-
-    .. code-block:: console
-
-       root@client# curl http://rest-api:8008/blocks
-
- #. To check connectivity from the host computer, open a new terminal window on
-    your host system and run this ``curl`` command:
-
-    .. code-block:: console
-
-       user@host$ curl http://localhost:8008/blocks
-
-    If the validator and REST API are running and reachable, the output for each
-    command should be similar to this example:
-
-    .. code-block:: console
-
-      {
-        "data": [
-          {
-            "batches": [],
-            "header": {
-              "batch_ids": [],
-              "block_num": 0,
-              "consensus": "R2VuZXNpcw==",
-              "previous_block_id": "0000000000000000",
-              "signer_public_key": "03061436bef428626d11c17782f9e9bd8bea55ce767eb7349f633d4bfea4dd4ae9",
-              "state_root_hash": "708ca7fbb701799bb387f2e50deaca402e8502abe229f705693d2d4f350e1ad6"
-            },
-            "header_signature": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b"
-          }
-        ],
-        "head": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
-        "link": "http://rest-api:8008/blocks?head=119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
-        "paging": {
-          "start_index": 0,
-          "total_count": 1
-        }
-      }
-
-    If the validator process or the validator container is not running, the
-    ``curl`` command will time out or return nothing.
-
-
-Step 6: Configure the Transaction Family Settings
-=================================================
-
-By default, Sawtooth allows transactions from any transaction family. In this
-step, you will change the configuration settings to allow only IntegerKey
-(``intkey``) and Settings (``sawtooth_settings``) transactions.
-
-This configuration change is itself a transaction that is submitted in a batch.
-Sawtooth configuration settings are stored on the blockchain so that all
-validator nodes in a Sawtooth network know the configuration. The setting for
-the list of supported transaction families is defined by the
-:doc:`Settings transaction family
-<../transaction_family_specifications/settings_transaction_family>`.
-
-.. note::
-
-   The ``sawset proposal create`` command needs to use a key generated in the
-   validator container. You must run this command in the validator container,
-   rather than the client container that is used for other Sawtooth commands.
-
-#. Connect to the validator container:
+#. To confirm that the REST API and validator are running and reachable from
+   the client container, run this ``curl`` command:
 
    .. code-block:: console
 
-      user@host$ docker exec -it sawtooth-validator-default bash
-      root@validator#
+      root@client# curl http://rest-api:8008/blocks
 
-   In this procedure, the prompt ``root@validator#`` is used for commands that
-   should be run in the terminal window for the validator container.
-
-#. Use the ``sawset proposal create`` command to create and submit a batch
-   containing the new settings. This batch submits a JSON array that tells the
-   validator to accept only transactions of specified transaction type (in
-   this case, ``intkey`` and ``sawtooth_settings``).
-
-   Enter the following command:
+#. To check connectivity from the host computer, open a new terminal window on
+   your host system and run this ``curl`` command:
 
    .. code-block:: console
 
-      root@validator# sawset proposal create --url http://rest-api:8008 \
-      --key /root/.sawtooth/keys/my_key.priv \
-      sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
+      user@host$ curl http://localhost:8008/blocks
 
-   After you run this command, a ``TP_PROCESS_REQUEST`` message appears in the
-   window where you started the Docker environment.
-
-#. Verify the setting change with this command:
+   If the validator and REST API are running and reachable, the output for each
+   command should be similar to this example:
 
    .. code-block:: console
 
-      root@validator# sawtooth settings list --url http://rest-api:8008
-      sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
-      sawtooth.validator.transaction_families: [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "versi...
+     {
+       "data": [
+         {
+           "batches": [],
+           "header": {
+             "batch_ids": [],
+             "block_num": 0,
+             "mconsensus": "R2VuZXNpcw==",
+             "previous_block_id": "0000000000000000",
+             "signer_public_key": "03061436bef428626d11c17782f9e9bd8bea55ce767eb7349f633d4bfea4dd4ae9",
+             "state_root_hash": "708ca7fbb701799bb387f2e50deaca402e8502abe229f705693d2d4f350e1ad6"
+           },
+           "header_signature": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b"
+         }
+       ],
+       "head": "119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+       "link": "http://rest-api:8008/blocks?head=119f076815af8b2c024b59998e2fab29b6ae6edf3e28b19de91302bd13662e6e43784263626b72b1c1ac120a491142ca25393d55ac7b9f3c3bf15d1fdeefeb3b",
+       "paging": {
+         "start_index": 0,
+         "total_count": 1
+       }
+     }
+
+   If the validator process or the validator container is not running, the
+   ``curl`` command will time out or return nothing.
 
 
-Step 7: Use Sawtooth Commands as a Client
+.. _configure-tf-settings-docker-label:
+
+Step 6: Use Sawtooth Commands as a Client
 =========================================
 
-Sawtooth includes commands that act as a client application. This section
-describes how to use the ``intkey`` and ``sawtooth`` commands to create and
-submit transactions, display blockchain and block data, and examine global state
-data.
+Sawtooth includes commands that act as a client application. This step describes
+how to use the ``intkey`` and ``sawtooth`` commands to create and submit
+transactions, display blockchain and block data, and examine global state data.
 
 .. note::
 
-   Use the ``--help`` flag with any Sawtooth command to display the available
+   Use the ``--help`` option with any Sawtooth command to display the available
    options and subcommands.
 
 To run the commands in this section, use the terminal window for the client
@@ -336,53 +279,52 @@ Creating and Submitting Transactions with intkey
 The ``intkey`` command creates and submits IntegerKey transactions for testing
 purposes.
 
- #. Use ``intkey create_batch`` to prepare batches of transactions that set
-    a few keys to random values, then randomly increment and decrement those
-    values. These batches are saved locally in the file ``batches.intkey``.
+#. Use ``intkey create_batch`` to prepare batches of transactions that set
+   a few keys to random values, then randomly increment and decrement those
+   values. These batches are saved locally in the file ``batches.intkey``.
 
-    .. code-block:: console
+   .. code-block:: console
 
-       root@client# intkey create_batch --count 10 --key-count 5
-       Writing to batches.intkey...
+      root@client# intkey create_batch --count 10 --key-count 5
+      Writing to batches.intkey...
 
- #. Use ``intkey load`` to submit the batches to the validator.
+#. Use ``intkey load`` to submit the batches to the validator.
 
-    .. code-block:: console
+   .. code-block:: console
 
-       root@client# intkey load -f batches.intkey -url http://rest-api:8008
-       batches: 11 batch/sec: 141.7800162868952
+      root@client# intkey load -f batches.intkey -url http://rest-api:8008
+      batches: 11 batch/sec: 141.7800162868952
 
-    The terminal window in which you ran the ``docker-compose`` command displays
-    logging output from the validator and the IntegerKey transaction processor
-    as they handle the transactions just submitted. The output shows that values
-    are being incremented and decremented.
+#. The terminal window in which you ran the ``docker-compose`` command displays
+   log messages showing that the validator is handling the submitted
+   transactions and that values are being incremented and decremented, as in
+   this example:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       sawtooth-intkey-tp-python-default | [2018-03-08 21:26:20.334 DEBUG    core] received message of type: TP_PROCESS_REQUEST
-       sawtooth-intkey-tp-python-default | [2018-03-08 21:26:20.339 DEBUG    handler] Decrementing "GEJTiZ" by 10
-       sawtooth-intkey-tp-python-default | [2018-03-08 21:26:20.347 DEBUG    core] received message of type: TP_PROCESS_REQUEST
-       sawtooth-intkey-tp-python-default | [2018-03-08 21:26:20.352 DEBUG    handler] Decrementing "lrAYjm" by 8
-       ...
-       sawtooth-validator-default | [2018-03-08 21:26:20.397 INFO     chain] Fork comparison at height 50 is between - and 3d4d952d
-       sawtooth-validator-default | [2018-03-08 21:26:20.397 INFO     chain] Chain head updated to: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
-       sawtooth-validator-default | [2018-03-08 21:26:20.398 INFO     publisher] Now building on top of block: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
-       sawtooth-validator-default | [2018-03-08 21:26:20.401 DEBUG    chain] Verify descendant blocks: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82) ([])
-       sawtooth-validator-default | [2018-03-08 21:26:20.402 INFO     chain] Finished block validation of: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
+      sawtooth-intkey-tp-python-default | [2018-03-08 21:26:20.334 DEBUG    core] received message of type: TP_PROCESS_REQUEST
+      sawtooth-intkey-tp-python-default | [2018-03-08 21:26:20.339 DEBUG    handler] Decrementing "GEJTiZ" by 10
+      sawtooth-intkey-tp-python-default | [2018-03-08 21:26:20.347 DEBUG    core] received message of type: TP_PROCESS_REQUEST
+      sawtooth-intkey-tp-python-default | [2018-03-08 21:26:20.352 DEBUG    handler] Decrementing "lrAYjm" by 8
+      ...
+      sawtooth-validator-default | [2018-03-08 21:26:20.397 INFO     chain] Fork comparison at height 50 is between - and 3d4d952d
+      sawtooth-validator-default | [2018-03-08 21:26:20.397 INFO     chain] Chain head updated to: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
+      sawtooth-validator-default | [2018-03-08 21:26:20.398 INFO     publisher] Now building on top of block: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
+      sawtooth-validator-default | [2018-03-08 21:26:20.401 DEBUG    chain] Verify descendant blocks: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82) ([])
+      sawtooth-validator-default | [2018-03-08 21:26:20.402 INFO     chain] Finished block validation of: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
 
+#. You can also use ``docker logs`` to examine at the Sawtooth log messages
+   from your host system. For example, this command displays the last five
+   entries in the log:
 
- #. You can also use ``docker logs`` to examine at the Sawtooth log messages
-    from your host system. For example, this command displays the last five
-    entries in the log:
+   .. code-block:: console
 
-    .. code-block:: console
-
-       user@host$ docker logs --tail 5 sawtooth-validator-default
-       sawtooth-validator-default | [2018-03-08 21:26:20.397 INFO     chain] Fork comparison at height 50 is between - and 3d4d952d
-       sawtooth-validator-default | [2018-03-08 21:26:20.397 INFO     chain] Chain head updated to: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
-       sawtooth-validator-default | [2018-03-08 21:26:20.398 INFO     publisher] Now building on top of block: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
-       sawtooth-validator-default | [2018-03-08 21:26:20.401 DEBUG    chain] Verify descendant blocks: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82) ([])
-       sawtooth-validator-default | [2018-03-08 21:26:20.402 INFO     chain] Finished block validation of: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
+      user@host$ docker logs --tail 5 sawtooth-validator-default
+      sawtooth-validator-default | [2018-03-08 21:26:20.397 INFO     chain] Fork comparison at height 50 is between - and 3d4d952d
+      sawtooth-validator-default | [2018-03-08 21:26:20.397 INFO     chain] Chain head updated to: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
+      sawtooth-validator-default | [2018-03-08 21:26:20.398 INFO     publisher] Now building on top of block: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
+      sawtooth-validator-default | [2018-03-08 21:26:20.401 DEBUG    chain] Verify descendant blocks: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82) ([])
+      sawtooth-validator-default | [2018-03-08 21:26:20.402 INFO     chain] Finished block validation of: 3d4d952d4774988bd67a4deb85830155a5f505c68bea11d832a6ddbdd5eeebc34f5a63a9e59a426376cd2e215e19c0dfa679fe016be26307c3ee698cce171d51 (block_num:50, state:e18c2ce54859d1e9a6e4fb949f8d861e483d330b363b4060b069f53d7e6c6380, previous_block_id:e05737151717eb8787a2db46279fedf9d331a501c12cd8059df379996d9a34577cf605e95f531514558b200a386dc73e11de3fa17d6c00882acf6f9d9c387e82)
 
 Submitting Transactions with sawtooth batch submit
 --------------------------------------------------
@@ -391,19 +333,19 @@ In the example above, the ``intkey create_batch`` command created the file
 ``batches.intkey``.  Rather than using ``intkey load`` to submit these
 transactions, you could use ``sawtooth batch submit`` to submit them.
 
- #. As before, create a batch of transactions:
+#. As before, create a batch of transactions:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       root@client# intkey create_batch --count 10 --key-count 5
-       Writing to batches.intkey...
+      root@client# intkey create_batch --count 10 --key-count 5
+      Writing to batches.intkey...
 
- #. Submit the batch file with ``sawtooth batch submit``:
+#. Submit the batch file with ``sawtooth batch submit``:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       root@client# sawtooth batch submit -f batches.intkey --url http://rest-api:8008
-       batches: 11,  batch/sec: 216.80369536716367
+      root@client# sawtooth batch submit -f batches.intkey --url http://rest-api:8008
+      batches: 11,  batch/sec: 216.80369536716367
 
 Viewing Blockchain and Block Data with sawtooth block
 -----------------------------------------------------
@@ -411,7 +353,7 @@ Viewing Blockchain and Block Data with sawtooth block
 The ``sawtooth block`` command displays information about the blocks stored on
 the blockchain.
 
- #. Use ``sawtooth block list`` to display the list of blocks stored in state.
+#. Use ``sawtooth block list`` to display the list of blocks stored in state.
 
     .. code-block:: console
 
@@ -435,18 +377,18 @@ the blockchain.
        1    3ab950b2cd370f26e188d95ee97268965732768080ca1adb71759e3c1f22d1ea19945b48fc81f5f821387fde355349f87096da00a4e356408b630ab80576d3ae  1     5     020d21...
        0    51a704e1a83086372a3c0823533881ffac9479995289902a311fd5d99ff6a32216cd1fb9883a421449c943cad8604ce1447b0f6080c8892e334b14dc082f91d3  1     1     020d21...
 
- #. From the output generated by the ``sawtooth block list`` command, copy the
-    ID of a block you want to get more info about, then paste it in place of
-    ``{BLOCK_ID}`` in the following command:
+#. From the output generated by ``sawtooth block list``, copy the ID of a block
+   you want to view, then paste it in place of ``{BLOCK_ID}`` in the following
+   command:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       root@client# sawtooth block show --url http://rest-api:8008 {BLOCK_ID}
+      root@client# sawtooth block show --url http://rest-api:8008 {BLOCK_ID}
 
-    The output of this command can be quite long, because it includes all data
-    stored under that block. This is a truncated example:
+   The output of this command can be quite long, because it includes all data
+   stored under that block. This is a truncated example:
 
-    .. code-block:: console
+   .. code-block:: console
 
       batches:
       - header:
@@ -478,108 +420,110 @@ The ``sawtooth state`` command lets you display state data. Sawtooth stores
 state data in a :term:`Merkle-Radix tree`; for more information, see
 :doc:`../architecture/global_state`.
 
- #. Use ``sawtooth state list`` to list the nodes (addresses) in state:
+#. Use ``sawtooth state list`` to list the nodes (addresses) in state:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       root@client# sawtooth state list --url http://rest-api:8008
+      root@client# sawtooth state list --url http://rest-api:8008
 
-    The output will be similar to this truncated example:
+   The output will be similar to this truncated example:
 
-    .. code-block:: console
+   .. code-block:: console
 
-      ADDRESS                                                                                                                                SIZE DATA
-      1cf126ddb507c936e4ee2ed07aa253c2f4e7487af3a0425f0dc7321f94be02950a081ab7058bf046c788dbaf0f10a980763e023cde0ee282585b9855e6e5f3715bf1fe 11   b'\xa1fcCTdcH\x...
-      1cf1260cd1c2492b6e700d5ef65f136051251502e5d4579827dc303f7ed76ddb7185a19be0c6443503594c3734141d2bdcf5748a2d8c75541a8e568bae063983ea27b9 11   b'\xa1frdLONu\x...
-      1cf126ed7d0ac4f755be5dd040e2dfcd71c616e697943f542682a2feb14d5f146538c643b19bcfc8c4554c9012e56209f94efe580b6a94fb326be9bf5bc9e177d6af52 11   b'\xa1fAUZZqk\x...
-      1cf126c46ff13fcd55713bcfcf7b66eba515a51965e9afa8b4ff3743dc6713f4c40b4254df1a2265d64d58afa14a0051d3e38999704f6e25c80bed29ef9b80aee15c65 11   b'\xa1fLvUYLk\x...
-      1cf126c4b1b09ebf28775b4923e5273c4c01ba89b961e6a9984632612ec9b5af82a0f7c8fc1a44b9ae33bb88f4ed39b590d4774dc43c04c9a9bd89654bbee68c8166f0 13   b'\xa1fXHonWY\x...
-      1cf126e924a506fb2c4bb8d167d20f07d653de2447df2754de9eb61826176c7896205a17e363e457c36ccd2b7c124516a9b573d9a6142f031499b18c127df47798131a 13   b'\xa1foWZXEz\x...
-      1cf126c295a476acf935cd65909ed5ead2ec0168f3ee761dc6f37ea9558fc4e32b71504bf0ad56342a6671db82cb8682d64689838731da34c157fa045c236c97f1dd80 13   b'\xa1fadKGve\x...
+     ADDRESS                                                                                                                                SIZE DATA
+     1cf126ddb507c936e4ee2ed07aa253c2f4e7487af3a0425f0dc7321f94be02950a081ab7058bf046c788dbaf0f10a980763e023cde0ee282585b9855e6e5f3715bf1fe 11   b'\xa1fcCTdcH\x...
+     1cf1260cd1c2492b6e700d5ef65f136051251502e5d4579827dc303f7ed76ddb7185a19be0c6443503594c3734141d2bdcf5748a2d8c75541a8e568bae063983ea27b9 11   b'\xa1frdLONu\x...
+     1cf126ed7d0ac4f755be5dd040e2dfcd71c616e697943f542682a2feb14d5f146538c643b19bcfc8c4554c9012e56209f94efe580b6a94fb326be9bf5bc9e177d6af52 11   b'\xa1fAUZZqk\x...
+     1cf126c46ff13fcd55713bcfcf7b66eba515a51965e9afa8b4ff3743dc6713f4c40b4254df1a2265d64d58afa14a0051d3e38999704f6e25c80bed29ef9b80aee15c65 11   b'\xa1fLvUYLk\x...
+     1cf126c4b1b09ebf28775b4923e5273c4c01ba89b961e6a9984632612ec9b5af82a0f7c8fc1a44b9ae33bb88f4ed39b590d4774dc43c04c9a9bd89654bbee68c8166f0 13   b'\xa1fXHonWY\x...
+     1cf126e924a506fb2c4bb8d167d20f07d653de2447df2754de9eb61826176c7896205a17e363e457c36ccd2b7c124516a9b573d9a6142f031499b18c127df47798131a 13   b'\xa1foWZXEz\x...
+     1cf126c295a476acf935cd65909ed5ead2ec0168f3ee761dc6f37ea9558fc4e32b71504bf0ad56342a6671db82cb8682d64689838731da34c157fa045c236c97f1dd80 13   b'\xa1fadKGve\x...
 
- #. Use ``sawtooth state show`` to view state data at a specific address (a node
-    in the Merkle-Radix database). Copy the address from the output of
-    ``sawtooth state list``, then paste it in place of ``{STATE_ADDRESS}`` in
-    the following command:
+#. Use ``sawtooth state show`` to view state data at a specific address (a node
+   in the Merkle-Radix database). Copy the address from the output of
+   ``sawtooth state list``, then paste it in place of ``{STATE_ADDRESS}`` in
+   the following command:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       root@client# sawtooth state show --url http://rest-api:8008 {STATE_ADDRESS}
+      root@client# sawtooth state show --url http://rest-api:8008 {STATE_ADDRESS}
 
-    The output shows the bytes stored at that address and the block ID of the
-    "chain head" that the current state is tied to, as in this example:
+   The output shows the bytes stored at that address and the block ID of the
+   "chain head" that the current state is tied to, as in this example:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       DATA: "b'\xa1fcCTdcH\x192B'"
-       HEAD: "0c4364c6d5181282a1c7653038ec9515cb0530c6bfcb46f16e79b77cb524491676638339e8ff8e3cc57155c6d920e6a4d1f53947a31dc02908bcf68a91315ad5"
+      DATA: "b'\xa1fcCTdcH\x192B'"
+      HEAD: "0c4364c6d5181282a1c7653038ec9515cb0530c6bfcb46f16e79b77cb524491676638339e8ff8e3cc57155c6d920e6a4d1f53947a31dc02908bcf68a91315ad5"
 
 .. _container-names-label:
 
-Step 8: Connect to Each Container (Optional)
+Step 7: Connect to Each Container (Optional)
 ============================================
 
-Use this information when you need to connect to any container in the demo
-Sawtooth environment. For example, you can examine the log files or check the
-status of Sawtooth components in any container.
+Use this information when you need to connect to any container in the Sawtooth
+application development environment. For example, you can examine the log files
+or check the status of Sawtooth components in any container.
 
- #. Use the following ``docker exec`` command from your host system to connect
-    to a Sawtooth Docker container.
+#. Use the following ``docker exec`` command from your host system to connect
+   to a Sawtooth Docker container.
 
-    .. code-block:: console
+   .. code-block:: console
 
-       user@host$ docker exec -it {ContainerName} bash
+      user@host$ docker exec -it {ContainerName} bash
 
-    The Docker Compose file defines the name of each container. It also
-    specifies the TCP port and host name, if applicable. The following table
-    shows the values in the example Compose file, ``sawtooth-default.yaml``.
+   The Docker Compose file defines the name of each container. It also
+   specifies the TCP port and host name, if applicable. The following table
+   shows the values in the example Compose file, ``sawtooth-default.yaml``.
 
-    +---------------+---------------------------------------+----------+----------------------+
-    | **Component** | **Container Name**                    | **Port** | **Host Name**        |
-    +===============+=======================================+==========+======================+
-    | Validator     | ``sawtooth-validator-default``        | 4004     | ``validator``        |
-    +---------------+---------------------------------------+----------+----------------------+
-    | REST API      | ``sawtooth-rest-api-default``         | 8008     | ``rest-api``         |
-    +---------------+---------------------------------------+----------+----------------------+
-    | Settings TP   | ``sawtooth-settings-tp-default``      |          | ``settings-tp``      |
-    +---------------+---------------------------------------+----------+----------------------+
-    | IntegerKey TP | ``sawtooth-intkey-tp-python-default`` |          | ``intkey-tp-python`` |
-    +---------------+---------------------------------------+----------+----------------------+
-    | XO TP         | ``sawtooth-xo-tp-python-default``     |          | ``xo-tp-python``     |
-    +---------------+---------------------------------------+----------+----------------------+
-    | Shell         | ``sawtooth-shell-default``            |          |                      |
-    +---------------+---------------------------------------+----------+----------------------+
+   +---------------+---------------------------------------+----------+----------------------+
+   | **Component** | **Container Name**                    | **Port** | **Host Name**        |
+   +===============+=======================================+==========+======================+
+   | Validator     | ``sawtooth-validator-default``        | 4004     | ``validator``        |
+   +---------------+---------------------------------------+----------+----------------------+
+   | REST API      | ``sawtooth-rest-api-default``         | 8008     | ``rest-api``         |
+   +---------------+---------------------------------------+----------+----------------------+
+   | Settings TP   | ``sawtooth-settings-tp-default``      |          | ``settings-tp``      |
+   +---------------+---------------------------------------+----------+----------------------+
+   | IntegerKey TP | ``sawtooth-intkey-tp-python-default`` |          | ``intkey-tp-python`` |
+   +---------------+---------------------------------------+----------+----------------------+
+   | XO TP         | ``sawtooth-xo-tp-python-default``     |          | ``xo-tp-python``     |
+   +---------------+---------------------------------------+----------+----------------------+
+   | Shell         | ``sawtooth-shell-default``            |          |                      |
+   +---------------+---------------------------------------+----------+----------------------+
 
-    Note that the validator and REST API ports are exposed to other containers
-    and forwarded (published) for external connections, such as from your host
-    system.
+   Note that the validator and REST API ports are exposed to other containers
+   and forwarded (published) for external connections, such as from your host
+   system.
 
-    For example, you can use the following command from your host system to
-    connect to the validator container:
+   For example, you can use the following command from your host system to
+   connect to the validator container:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       user@host$ docker exec -it sawtooth-validator-default bash
+      user@host$ docker exec -it sawtooth-validator-default bash
 
- #. After connecting to the container, you can use ``ps`` to verify that the
-    Sawtooth component is running.
+#. After connecting to the container, you can use ``ps`` to verify that the
+   Sawtooth component is running.
 
-    .. code-block:: console
+   .. code-block:: console
 
-       # ps --pid 1 fw
+      # ps --pid 1 fw
 
-    In the validator container, the output resembles the following example:
+   In the validator container, the output resembles the following example:
 
-    .. code-block:: console
+   .. code-block:: console
 
-       PID TTY      STAT   TIME COMMAND
-        1 ?        Ss     0:00 bash -c sawadm keygen && sawtooth keygen my_key
-       && sawset genesis -k /root/.sawtooth/keys/my_key.priv && sawadm genesis
-       config-genesis.batch && sawtooth-validator -vv --endpoint
+      PID TTY      STAT   TIME COMMAND
+       1 ?        Ss     0:00 bash -c sawadm keygen && sawtooth keygen my_key
+      && sawset genesis -k /root/.sawtooth/keys/my_key.priv && sawadm genesis
+      config-genesis.batch && sawtooth-validator -vv --endpoint
 
 
-Step 9: Examine Sawtooth Log Files
-==================================
+.. _examine-logs-docker-label:
+
+Step 8: Examine Sawtooth Logs
+=============================
 
 As described above, you can display Sawtooth log messages by using the
 ``docker logs`` command from your host system:
@@ -617,13 +561,14 @@ The IntegerKey container has these log files:
 For more information on log files, see
 :doc:`../sysadmin_guide/log_configuration`.
 
+
 .. _stop-sawtooth-docker-label:
 
-Step 10: Stop the Sawtooth Environment (Optional)
-=================================================
+Step 9: Stop the Sawtooth Environment
+=====================================
 
-If you need to stop or reset the Sawtooth Docker environment for any reason, you
-can return it to the default state with the following steps.
+Use this procedure if you need to stop or reset the Sawtooth environment for any
+reason.
 
 .. important::
 
@@ -659,6 +604,7 @@ can return it to the default state with the following steps.
       Removing sawtooth-rest-api-default         ... done
       Removing sawtooth-validator-default        ... done
       Removing network testsawtooth_default
+
 
 .. Licensed under Creative Commons Attribution 4.0 International License
 .. https://creativecommons.org/licenses/by/4.0/

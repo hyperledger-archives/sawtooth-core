@@ -1,6 +1,6 @@
-******************************
-Using Sawtooth on Ubuntu 16.04
-******************************
+*********************************************
+Using Ubuntu for Your Development Environment
+*********************************************
 
 This procedure explains how to set up Hyperledger Sawtooth for application
 development on Ubuntu 16.04. It shows you how to install Sawtooth on Ubuntu,
@@ -10,45 +10,45 @@ then walks you through the following tasks:
  * Starting the Sawtooth components: validator, REST API, and transaction
    processors
  * Checking the status of the REST API
- * Configuring the transaction family settings
  * Using Sawtooth commands to submit transactions, display block data, and view
    global state
  * Examining Sawtooth logs
- * Stopping Sawtooth and removing blockchain data
+ * Stopping Sawtooth and resetting the development environment
 
-After completing this procedure, you will be prepared for the advanced tutorials
-in this guide. The next tutorial introduces the XO transaction family by using
-the ``xo`` client commands to play a game of tic-tac-toe. The final set of
-tutorials describe how to use an SDK to create a transaction family that
-implements your application's business logic.
-
-.. important::
-
-   The Sawtooth demo environment is required for the other tutorials in this
-   guide.
+After completing this procedure, you will have the application development
+environment that is required for the other tutorials in this guide. The next
+tutorial introduces the XO transaction family by using the ``xo`` client
+commands to play a game of tic-tac-toe. The final set of tutorials describe how
+to use an SDK to create a transaction family that implements your application's
+business logic.
 
 
-About the Demo Sawtooth Environment
-===================================
+About the Application Development Environment
+=============================================
 
-The Ubuntu demo environment is a single validator node that is running a
-validator, a REST API, and three transaction processors. This environment uses
-Developer mode (dev mode) consensus and serial transaction processing.
+The Ubuntu application development environment is a single validator node that
+is running a validator, a REST API, and three transaction processors. This
+environment uses Developer mode (dev mode) consensus and serial transaction
+processing.
 
 .. figure:: ../images/appdev-environment-one-node-3TPs.*
    :width: 100%
    :align: center
-   :alt: Demo Sawtooth environment with Ubuntu
+   :alt: Ubuntu application development environment for Ubuntu
 
-This demo environment introduces basic Sawtooth functionality with the
-`IntegerKey
-<../transaction_family_specifications/integerkey_transaction_family>`_
+This environment introduces basic Sawtooth functionality with the
+`IntegerKey <../transaction_family_specifications/integerkey_transaction_family>`_
 and
 `Settings <../transaction_family_specifications/settings_transaction_family>`_
 transaction processors for the business logic and Sawtooth commands as a client.
 It also includes the
 `XO <../transaction_family_specifications/xo_transaction_family>`_
 transaction processor, which is used in later tutorials.
+
+The IntegerKey and XO families are simple examples of a transaction family, but
+Settings is a reference implementation. In a production environment, you should
+always run a transaction processor that supports the Settings transaction
+family.
 
 In this procedure, you will open six terminal windows on your host system: one
 for each Sawtooth component and one to use for client commands.
@@ -87,17 +87,17 @@ stable or nightly.  We recommend using the stable repository.
 
    * To use the nightly repository, run the following commands:
 
-     .. code-block:: console
-
-        $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
-        $ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
-        $ sudo apt-get update
-
      .. Caution::
 
         Nightly builds have not gone through long-running network testing and
         could be out of sync with the documentation.  We really do recommend the
         stable repository.
+
+     .. code-block:: console
+
+        $ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 44FC67F19B2466EA
+        $ sudo apt-add-repository "deb http://repo.sawtooth.me/ubuntu/nightly xenial universe"
+        $ sudo apt-get update
 
 #. Install the Sawtooth packages. Sawtooth consists of several Ubuntu packages
    that can be installed together using the ``sawtooth`` meta-package. Run the
@@ -114,6 +114,8 @@ stable or nightly.  We recommend using the stable repository.
 
       $ dpkg -l '*sawtooth*'
 
+
+.. _create-genesis-block-ubuntu-label:
 
 Step 2: Create the Genesis Block
 ================================
@@ -147,6 +149,9 @@ Use the same terminal window as the previous step.
       $ sawset genesis
       Generated config-genesis.batch
 
+    This settings proposal will change authorized keys in the setting
+    ``sawtooth.settings.vote.authorized_keys``. The change will take effect
+    after the validator and Settings transaction processor have started.
 
 #. Run the following command:
 
@@ -160,13 +165,7 @@ Use the same terminal window as the previous step.
 Step 3: Start the Validator
 ===========================
 
-.. note::
-
-   To delete existing blockchain data before starting a validator, remove all
-   files from ``/var/lib/sawtooth``.
-
 Use the same terminal window as the previous step.
-
 From this point on, this procedure refers to this window as the "validator
 terminal window". In the following examples, the prompt ``user@validator$``
 shows the commands that must run in this window.
@@ -210,8 +209,11 @@ shows the commands that must run in this window.
       [2018-03-14 15:53:34.934 DEBUG    executor] no transaction processors registered for processor type sawtooth_settings: 1.0
       [2018-03-14 15:53:34.936 INFO     executor] Waiting for transaction processor (sawtooth_settings, 1.0)
 
+   Note that the validator is waiting for the Settings transaction processor
+   (``sawtooth_settings``) to start.
+
 The validator terminal window will continue to display log messages as you
-continue with this procedure.
+complete this procedure.
 
 .. note::
 
@@ -263,9 +265,9 @@ Step 5: Start the Transaction Processors
 In this step, you will open a new terminal window for each transaction
 processor.
 
-#. Start the Settings transaction processor, ``settings-tp``.
+1. Start the Settings transaction processor, ``settings-tp``.
 
-   #. Open a new terminal (the settings terminal window). The prompt
+   a. Open a new terminal window (the settings terminal window). The prompt
       ``user@settings-tp$`` shows the commands that should be run in this
       window.
 
@@ -288,12 +290,20 @@ processor.
 
          [2018-03-14 16:00:17.223 INFO     processor_handlers] registered transaction processor: connection_id=eca3a9ad0ff1cdbc29e449cc61af4936bfcaf0e064952dd56615bc00bb9df64c4b01209d39ae062c555d3ddc5e3a9903f1a9e2d0fd2cdd47a9559ae3a78936ed, family=sawtooth_settings, version=1.0, namespaces=['000000']
 
+   #. At this point, you can see the authorized keys setting that was proposed
+      in :ref:`create-genesis-block-ubuntu-label`. Run the following command:
+
+      .. code-block:: console
+
+         user@client$ sawtooth settings list
+         sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
+
    The ``settings-tp`` transaction processor continues to run and to display log
    messages in its terminal window.
 
 #. Start the IntegerKey transaction processor, ``intkey-tp-python``.
 
-   #. Open a new terminal (the intkey terminal window). The prompt
+   a. Open a new terminal window (the intkey terminal window). The prompt
       ``user@intkey$`` shows the commands that should be run in this window.
 
    #. Run the following command:
@@ -322,14 +332,14 @@ processor.
 #. (Optional) Start the XO transaction processor, ``xo-tp-python``. This
    transaction processor will be used in a later tutorial.
 
-   #. Open a new terminal (the xo terminal window). The prompt ``user@xo-tp$``
-      shows the commands that should be run in this window.
+   a. Open a new terminal window (the xo terminal window). The prompt
+      ``user@xo$`` shows the commands that should be run in this window.
 
    #. Run the following command:
 
       .. code-block:: console
 
-         user@xo-tp$ sudo -u sawtooth xo-tp-python -v
+         user@xo$ sudo -u sawtooth xo-tp-python -v
 
       .. note::
 
@@ -347,13 +357,10 @@ processor.
    log messages in its terminal window.
 
 
-Step 6: Confirm that the REST API is Running
+.. _confirm-rest-api-ubuntu-label:
+
+Step 6: Confirm Connectivity to the REST API
 ============================================
-
-In order to configure the validator, the REST API must be running.
-
-.. The client terminal window is used to run Sawtooth commands, which interact
-.. with the validator through the REST API.
 
 #. Open a new terminal window (the client terminal window). In this
    procedure, the prompt ``user@client$`` shows the commands that should be
@@ -370,50 +377,9 @@ In order to configure the validator, the REST API must be running.
 #. If necessary, restart the REST API (see :ref:`start-rest-api-label`).
 
 
-Step 7: Configure the Transaction Family Settings
-=================================================
+.. _configure-tf-settings-ubuntu_label:
 
-By default, Sawtooth allows transactions from any transaction family. In this
-step, you will change the configuration settings to allow only IntegerKey and
-Settings transactions.
-
-This configuration change is itself a transaction that is submitted in a batch.
-Sawtooth configuration settings are stored on the blockchain so that all
-validator nodes in a Sawtooth network know the configuration. The setting for
-the list of supported transaction families is defined by the
-:doc:`Settings transaction family
-<../transaction_family_specifications/settings_transaction_family>`.
-
-#. Use the following ``sawset proposal create`` command to create and submit the
-   new settings to the validator (as a batch of transactions).
-
-   .. code-block:: console
-
-      user@client$ sawset proposal create sawtooth.validator.transaction_families='[{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]'
-
-   This command specifies a JSON array that tells the validator to accept only
-   transactions from version 1.0 of the IntegerKey and Settings transaction
-   processors, using the family names ``intkey`` and ``sawtooth_settings``,
-   respectively.  For more information on transaction family names, see
-   :doc:`../transaction_family_specifications`).
-
-#. In the settings terminal window, you can see the settings transaction being
-   handled, as in this example:
-
-      .. code-block:: console
-
-         [2018-03-14 16:18:57.721 INFO     handler] Setting setting sawtooth.validator.transaction_families changed from None to [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "version":"1.0"}]
-
-#. You can also verify the setting change with this command:
-
-   .. code-block:: console
-
-      user@client$ sawtooth settings list
-      sawtooth.settings.vote.authorized_keys: 0276023d4f7323103db8d8683a4b7bc1eae1f66fbbf79c20a51185f589e2d304ce
-      sawtooth.validator.transaction_families: [{"family": "intkey", "version": "1.0"}, {"family":"sawtooth_settings", "versi...
-
-
-Step 8: Use Sawtooth Commands as a Client
+Step 7: Use Sawtooth Commands as a Client
 =========================================
 
 Sawtooth includes commands that act as a client application. This step describes
@@ -492,7 +458,7 @@ purposes.
 
       .. note::
 
-         For the transaction processors, the log file names contain a random
+         The log file names for the transaction processors contain a random
          string that is unique for each instance of the transaction processor.
          For more information, see :ref:`examine-logs-ubuntu-label`.
 
@@ -547,9 +513,9 @@ the blockchain.
       1    3ab950b2cd370f26e188d95ee97268965732768080ca1adb71759e3c1f22d1ea19945b48fc81f5f821387fde355349f87096da00a4e356408b630ab80576d3ae  1     5     020d21...
       0    51a704e1a83086372a3c0823533881ffac9479995289902a311fd5d99ff6a32216cd1fb9883a421449c943cad8604ce1447b0f6080c8892e334b14dc082f91d3  1     1     020d21...
 
-#. From the output generated by the ``sawtooth block list`` command, copy the
-   ID of a block you want to view, then paste it in place of ``{BLOCK_ID}`` in
-   the following command:
+#. From the output generated by ``sawtooth block list``, copy the ID of a block
+   you want to view, then paste it in place of ``{BLOCK_ID}`` in the following
+   command:
 
    .. code-block:: console
 
@@ -629,13 +595,13 @@ state data in a :term:`Merkle-Radix tree`; for more information, see
 
 .. _examine-logs-ubuntu-label:
 
-Examining Sawtooth Logs
-=======================
+Step 8: Examine Sawtooth Logs
+=============================
 
 By default, Sawtooth logs are stored in the directory ``/var/log/sawtooth``.
 Each component (validator, REST API, and transaction processors) has both a
-debug log and an error log. This example shows the log files for the demo
-environment:
+debug log and an error log. This example shows the log files for this
+application development environment:
 
   .. code-block:: console
 
@@ -655,10 +621,10 @@ environment:
 
 .. note::
 
-   For the transaction processors, the log file names the contain a random
-   string to make the names unique. This string changes for each instance of a
-   transaction processor. The file names on your system will be different
-   than these examples.
+   For the transaction processors, the log file names contain a random string to
+   make the names unique. This string changes for each instance of a transaction
+   processor. The file names on your system will be different than these
+   examples.
 
 For more information on log files, see
 :doc:`../sysadmin_guide/log_configuration`.
@@ -666,11 +632,19 @@ For more information on log files, see
 
 .. _stop-sawtooth-ubuntu-label:
 
-Step 10: Stop Sawtooth Components (Optional)
-============================================
+Step 9: Stop Sawtooth Components
+================================
 
 Use this procedure if you need to stop or reset the Sawtooth environment for any
 reason.
+
+.. note::
+
+   This application development environment is used in later procedures in this
+   guide. Do not stop this environment if you intend to continue with these
+   procedures.
+
+To stop the Sawtooth components:
 
 #. Stop the validator by entering CTRL-c in the validator terminal window.
 
@@ -684,8 +658,17 @@ reason.
 #. Stop each transaction processor by entering a single CTRL-c in the
    appropriate window.
 
-#. (Optional) To delete the blockchain data, remove all files from
-   ``/var/lib/sawtooth``.
+You can restart the Sawtooth components at a later time and continue working
+with your application development environment.
+
+To completely reset the Sawtooth environment and start over from the beginning
+of this procedure, add these steps:
+
+* To delete the blockchain data, remove all files from ``/var/lib/sawtooth``.
+
+* To delete the Sawtooth keys, remove the key files
+   ``/etc/sawtooth/keys/validator.\*`` and
+   ``/home/``\ `yourname`\ ``/.sawtooth/keys/``\ `yourname`\ ``.\*``.
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License
