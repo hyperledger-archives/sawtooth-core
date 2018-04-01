@@ -97,6 +97,14 @@ class ValidatorDisconnected(_ApiError):
                'Try your request again later.')
 
 
+class SendBackoffTimeout(_ApiError):
+    api_code = 19
+    status_code = 408
+    title = 'Send timed out'
+    message = ('Sending message to validator timed out. Retry limit reached. '
+               'Try your request again later.')
+
+
 class ValidatorResponseInvalid(_ApiError):
     api_code = 20
     status_code = 500

@@ -25,8 +25,36 @@ from zmq.asyncio import Context
 
 from sawtooth_rest_api.protobuf.validator_pb2 import Message
 
-
 LOGGER = logging.getLogger(__name__)
+
+
+class _Backoff:
+    """Implements a simple backoff mechanism.
+    """
+
+    def __init__(self, max_retries=3, interval=100, error=Exception()):
+        self.num_retries = 0
+        self.max_retries = max_retries
+        self.interval = interval
+        self.error = error
+
+    async def do_backoff(self, err_msg=" "):
+        if self.num_retries == self.max_retries:
+            LOGGER.warning("Failed sending message to the Validator. No more "
+                           "retries left. Backoff terminated: %s",
+                           err_msg)
+            raise self.error
+
+        self.num_retries += 1
+        LOGGER.warning("Sleeping for %s ms after failed attempt %s of %s to "
+                       "send message to the Validator: %s",
+                       str(self.num_retries),
+                       str(self.max_retries),
+                       str(self.interval / 1000),
+                       err_msg)
+
+        await asyncio.sleep(self.interval / 1000)
+        self.interval *= 2
 
 
 class _MessageRouter:
@@ -161,10 +189,22 @@ class _Sender:
             content=message_content,
             message_type=message_type)
 
-        try:
-            await self._socket.send_multipart([message.SerializeToString()])
-        except asyncio.CancelledError:
-            raise
+        # Send the message. Backoff and retry in case of an error
+        # We want a short backoff and retry attempt, so use the defaults
+        # of 3 retries with 200ms of backoff
+        backoff = _Backoff(max_retries=3,
+                           interval=200,
+                           error=SendBackoffTimeoutError())
+
+        while True:
+            try:
+                await self._socket.send_multipart(
+                    [message.SerializeToString()])
+                break
+            except asyncio.CancelledError:
+                raise
+            except zmq.error.Again as e:
+                await backoff.do_backoff(err_msg=repr(e))
 
         return await self._msg_router.await_reply(correlation_id,
                                                   timeout=timeout)
@@ -176,6 +216,14 @@ class DisconnectError(Exception):
 
     def __init__(self):
         super().__init__("The connection was lost")
+
+
+class SendBackoffTimeoutError(Exception):
+    """Raised when the send times out.
+    """
+
+    def __init__(self):
+        super().__init__("Timed out sending message over ZMQ")
 
 
 class ConnectionEvent(Enum):
