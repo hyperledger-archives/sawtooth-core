@@ -30,6 +30,7 @@ from sawtooth_rest_api.protobuf.validator_pb2 import Message
 import sawtooth_rest_api.exceptions as errors
 import sawtooth_rest_api.error_handlers as error_handlers
 from sawtooth_rest_api.messaging import DisconnectError
+from sawtooth_rest_api.messaging import SendBackoffTimeoutError
 from sawtooth_rest_api.protobuf import client_transaction_pb2
 from sawtooth_rest_api.protobuf import client_list_control_pb2
 from sawtooth_rest_api.protobuf import client_batch_submit_pb2
@@ -628,6 +629,9 @@ class RouteHandler(object):
         except asyncio.TimeoutError:
             LOGGER.warning('Timed out while waiting for validator response')
             raise errors.ValidatorTimedOut()
+        except SendBackoffTimeoutError:
+            LOGGER.warning('Failed sending message - Backoff timed out')
+            raise errors.SendBackoffTimeout()
 
     async def _head_to_root(self, block_id):
         error_traps = [error_handlers.BlockNotFoundTrap]
