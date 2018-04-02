@@ -26,12 +26,12 @@ cargo build
 echo -e "\033[0;32m--- Building sawadm ---\n\033[0m"
 cd $top_dir/adm
 mkdir -p $top_dir/adm/bin
-cargo build && cp ./target/debug/sawadm $top_dir/adm/bin/sawadm
+cargo build --release && cp ./target/release/sawadm $top_dir/adm/bin/sawadm
 
 echo -e "\033[0;32m--- Building smallbank_workload ---\n\033[0m"
 cd $top_dir/perf/smallbank_workload
 mkdir -p $top_dir/perf/smallbank_workload/bin
-cargo build && cp ./target/debug/smallbank-workload $top_dir/perf/smallbank_workload/bin/smallbank-workload
+cargo build --release && cp ./target/release/smallbank-workload $top_dir/perf/smallbank_workload/bin/smallbank-workload
 
 echo -e "\033[0;32m--- Building intkey_workload ---\n\033[0m"
 cd $top_dir/perf/intkey_workload
@@ -42,13 +42,13 @@ echo -e "\033[0;32m--- Building intkey-tp-rust ---\n\033[0m"
 rm -rf $top_dir/sdk/examples/intkey_rust/bin/
 mkdir -p $top_dir/sdk/examples/intkey_rust/bin/
 cd $top_dir/sdk/examples/intkey_rust
-cargo build && cp ./target/debug/intkey_rust $top_dir/sdk/examples/intkey_rust/bin/intkey_rust
+cargo build --release && cp ./target/release/intkey_rust $top_dir/sdk/examples/intkey_rust/bin/intkey_rust
 
 echo -e "\033[0;32m--- Building smallbank-tp-rust ---\n\033[0m"
 rm -rf $top_dir/families/smallbank/smallbank_rust/bin/
 mkdir -p $top_dir/families/smallbank/smallbank_rust/bin/
 cd $top_dir/families/smallbank/smallbank_rust
-cargo build && cp ./target/debug/smallbank_rust $top_dir/families/smallbank/smallbank_rust/bin/smallbank_rust
+cargo build --release && cp ./target/release/smallbank_rust $top_dir/families/smallbank/smallbank_rust/bin/smallbank_rust
 
 # echo -e "\033[0;32m--- Building xo-tp-rust ---\n\033[0m"
 
