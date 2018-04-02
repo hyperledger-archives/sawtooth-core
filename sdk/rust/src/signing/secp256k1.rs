@@ -25,6 +25,7 @@ use signing::PrivateKey;
 use signing::PublicKey;
 use signing::Context;
 use signing::Error;
+#[cfg(feature = "pem")]
 use signing::pem_loader::load_pem_key;
 
 impl From<secp256k1::Error> for Error {
@@ -42,11 +43,13 @@ impl Secp256k1PrivateKey {
         hex_str_to_bytes(s).map(|key_bytes| Secp256k1PrivateKey{ private: key_bytes })
     }
 
+    #[cfg(feature = "pem")]
     pub fn from_pem(s: &str) -> Result<Self, Error> {
         let (priv_key_str, _) = load_pem_key(s, "")?;
         Self::from_hex(&priv_key_str)
     }
 
+    #[cfg(feature = "pem")]
     pub fn from_pem_with_password(s: &str, pw: &str) -> Result<Self, Error> {
         let (priv_key_str, _) = load_pem_key(s, pw)?;
         Self::from_hex(&priv_key_str)
