@@ -148,13 +148,14 @@ class StateDeltaSubscriberHandler:
             self._subscribers.append((web_sock, addr_prefixes))
 
         event = self._latest_state_delta_event
-        await web_sock.send_str(json.dumps({
-            'block_id': event.block_id,
-            'block_num': event.block_num,
-            'previous_block_id': event.previous_block_id,
-            'state_changes': self._client_deltas(
-                event.state_changes, addr_prefixes)
-        }))
+        if event is not None:
+            await web_sock.send_str(json.dumps({
+                'block_id': event.block_id,
+                'block_num': event.block_num,
+                'previous_block_id': event.previous_block_id,
+                'state_changes': self._client_deltas(
+                    event.state_changes, addr_prefixes)
+            }))
 
     async def _handle_unsubscribe(self, web_sock):
         index = None
@@ -325,7 +326,8 @@ class StateDeltaSubscriberHandler:
                     'previous_block_id': state_delta_event.previous_block_id,
                 }
 
-                if state_delta_event.block_num <= \
+                if self._latest_state_delta_event is not None and \
+                        state_delta_event.block_num <= \
                         self._latest_state_delta_event.block_num:
                     base_event['fork_detected'] = True
 
