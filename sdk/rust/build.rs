@@ -22,13 +22,16 @@ extern crate protoc_rust;
 use std::fs;
 
 fn main() {
+
     // Compile C PEM loader file
-    println!("cargo:rustc-link-lib={}={}", "dylib", "crypto");
-    cc::Build::new()
-        .file("../c/loader.c")
-        .file("../c/c11_support.c")
-        .include("../c")
-        .compile("libloader.a");
+    if cfg!(feature = "pem") {
+        println!("cargo:rustc-link-lib={}={}", "dylib", "crypto");
+        cc::Build::new()
+            .file("../c/loader.c")
+            .file("../c/c11_support.c")
+            .include("../c")
+            .compile("libloader.a");
+    }
 
     // Generate protobuf files
     let proto_src_files = glob_simple("../../protos/*.proto");
