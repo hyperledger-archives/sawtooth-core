@@ -122,6 +122,13 @@ def main(args):
         LOGGER.error(str(local_config_err))
         sys.exit(1)
 
+    try:
+        log_configuration(log_dir=path_config.log_dir,
+                          name="validator")
+    except LocalConfigurationError as local_config_err:
+        LOGGER.error(str(local_config_err))
+        sys.exit(1)
+
     # Process initial initialization errors, delaying the sys.exit(1) until
     # all errors have been reported to the user (via LOGGER.error()).  This
     # is intended to provide enough information to the user so they can correct
@@ -132,8 +139,6 @@ def main(args):
             key_dir=path_config.key_dir,
             key_name='validator')
     except LocalConfigurationError as e:
-        log_configuration(log_dir=path_config.log_dir,
-                          name="validator")
         LOGGER.error(str(e))
         init_errors = True
 
