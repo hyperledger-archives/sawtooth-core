@@ -277,6 +277,8 @@ The rest-api terminal window continues display log messages as you complete this
 procedure.
 
 
+.. _start-tps-label:
+
 Step 7: Start the Transaction Processors
 ========================================
 
