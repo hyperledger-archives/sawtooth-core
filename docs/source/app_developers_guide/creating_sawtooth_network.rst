@@ -11,7 +11,8 @@ these differences:
   Docker Compose file that creates a network with five validator nodes.
 
 * Ubuntu: You will add a node to the existing application development
-  environment that is described in :doc:`ubuntu`.
+  environment that is described in :doc:`ubuntu`, but you will delete all
+  existing blockchain data, including the genesis block.
 
 The following figure shows an example network with two validator nodes:
 
@@ -224,7 +225,7 @@ to the Internet. In this case, you could use one of the following:
   network bind string such as ``tcp://eth0:8800``.
 
 * If you would like the validator node to accept only connections from local
-  Sawtooth components locally, you could specify the component bind string
+  Sawtooth components, you could specify the component bind string
   ``tcp://lo:4004``. Note that this is equivalent to ``tcp://127.0.0.1:4004``.
 
 For more information on how to specify the component and network bind strings,
@@ -258,16 +259,68 @@ a socket" in the `zmq-tcp API Reference <http://api.zeromq.org/4-2:zmq-tcp>`_.
 Step 1: Configure the Network on the First Node
 -----------------------------------------------
 
-.. important::
-
-   This step requires an existing application development environment as
-   described in :doc:`ubuntu`.
+   This step assumes an existing application development environment as
+   described in :doc:`ubuntu`. However, you will delete the existing blockchain
+   data, including the genesis block.
 
 #. If the first validator node is running, stop the validator, as described
    in the first step of :ref:`stop-sawtooth-ubuntu-label`.
 
-   If the first validator node is not running, start all Sawtooth components
-   except for the validator (see :doc:`docker`).
+#. If necessary, regenerate a validator private/public key pair in
+   ``/etc/sawtooth/keys/``.
+
+   .. code-block:: console
+
+      $ sawadm keygen --force
+
+#. Delete any existing blockchain data by removing all files from
+   ``/var/lib/sawtooth``.
+
+#. Create a batch to initialize the Settings transaction family in the genesis
+   block.
+
+   .. code-block:: console
+
+      $ sawset genesis -k /etc/sawtooth/keys/validator.priv -o config-genesis.batch
+
+#. Create a batch to initialize the PoET consensus settings. This command sets
+   the consensus algorithm to PoET simulator, and then applies the required
+   settings.
+
+   .. code-block:: console
+
+      $ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
+      -o config.batch
+      sawtooth.consensus.algorithm=poet \
+      sawtooth.poet.report_public_key_pem={simulator_rk_pub.pem} \
+      sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
+      sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)
+
+#. Create a batch to register the first validator with the PoET Validator
+   Registry. Without this command, the validator would not be able to publish
+   any blocks.
+
+   .. code-block:: console
+
+      $ poet registration create -k /etc/sawtooth/keys/validator.priv -o poet.batch
+
+#. (Optional) Create a batch to configure optional PoET settings.  This example
+   shows the default settings.
+
+   .. code-block:: console
+
+      $ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
+      -o poet-settings.batch \
+      sawtooth.poet.target_wait_time=5 \
+      sawtooth.poet.initial_wait_time=25 \
+      sawtooth.publisher.max_batches_per_block=100
+
+#. Combine the previously created batches into a single genesis batch that will
+   be committed in the genesis block.
+
+   .. code-block:: console
+
+      $ sawadm genesis config-genesis.batch config.batch poet.batch poet-settings.batch
 
 #. Use the following command to start the validator on the first node.
    Substitute your actual values for the network and component bind strings,
@@ -289,8 +342,13 @@ Step 1: Configure the Network on the First Node
 
         --peers tcp://172.0.1.3,tcp://172.0.1.4
 
-#. If the XO transaction processor is not running, start it as described in
-   Step 7 of :doc:`docker`.
+#. If necessary, start the other Sawtooth components.
+
+   a. Start the REST API as described in :ref:`start-rest-api-label`.
+
+   #. Start the transaction processors, as described in :ref:`start-tps-label`.
+      Be sure to start the XO transaction processor, as described in
+      Step 7 of :doc:`docker`.
 
 
 .. _install-second-val-ubuntu-label:
@@ -376,7 +434,7 @@ If you have additional nodes in the network, repeat this step on those nodes.
 Confirm Network Functionality
 =============================
 
-#. To check whether peering has occurred on the network, submit a block query
+#. To check whether peering has occurred on the network, submit a peers query
    to the local REST API from the first validator node.
 
      * Docker: Run this command:
