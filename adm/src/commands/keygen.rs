@@ -18,7 +18,10 @@
 use std::ffi::CString;
 use std::fs::{metadata, OpenOptions};
 use std::io::prelude::*;
+#[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
+#[cfg(not(target_os = "linux"))]
+use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
@@ -71,8 +74,11 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     let key_dir_info =
         metadata(key_dir).map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
-    let key_dir_uid = key_dir_info.st_uid();
-    let key_dir_gid = key_dir_info.st_gid();
+
+    #[cfg(not(target_os = "linux"))]
+    let (key_dir_uid, key_dir_gid) = (key_dir_info.uid(), key_dir_info.gid());
+    #[cfg(target_os = "linux")]
+    let (key_dir_uid, key_dir_gid) = (key_dir_info.st_uid(), key_dir_info.st_gid());
 
     {
         if private_key_path.exists() {
