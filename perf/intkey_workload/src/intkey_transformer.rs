@@ -157,7 +157,7 @@ impl<'a> IntKeyTransformer<'a> {
         }
 
         if self.rng.gen_range(0.0, 1.0) < self.unnecessary {
-            if self.prior_txn_ids.len() > 0 {
+            if !self.prior_txn_ids.is_empty() {
                 let txn_id = self.prior_txn_ids.remove(0);
                 txn_header.dependencies.push(txn_id);
             }

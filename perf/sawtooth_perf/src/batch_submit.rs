@@ -300,7 +300,7 @@ impl<'a> Iterator for BatchListFeeder<'a> {
             Err(err) => return Some(Err(BatchReadingError::MessageError(err))),
         };
 
-        if batches.len() == 0 {
+        if batches.is_empty() {
             return None;
         }
 

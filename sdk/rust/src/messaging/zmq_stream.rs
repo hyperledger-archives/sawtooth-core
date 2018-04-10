@@ -264,7 +264,7 @@ impl SendReceiveStream {
                 // Grab the last part, which should contain our message
                 if let Some(received_bytes) = received_parts.pop() {
                     trace!("Received {} bytes", received_bytes.len());
-                    if received_bytes.len() != 0 {
+                    if !received_bytes.is_empty() {
                         let message = protobuf::parse_from_bytes(&received_bytes).unwrap();
                         self.inbound_router.route(Ok(message));
                     }

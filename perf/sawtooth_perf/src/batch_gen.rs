@@ -144,7 +144,7 @@ impl<'a> Iterator for SignedBatchProducer<'a> {
             Ok(txns) => txns,
             Err(err) => return Some(Err(BatchingError::MessageError(err))),
         };
-        if txns.len() == 0 {
+        if txns.is_empty() {
             None
         } else {
             Some(batch_transactions(txns, self.signer))
