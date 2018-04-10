@@ -276,6 +276,7 @@ impl TransactionContext {
     /// # Arguments
     ///
     /// * `addresses` - the addresses to fetch
+    #[allow(needless_pass_by_value)]
     pub fn delete_state(
         &mut self,
         addresses: Vec<String>,
