@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
+pub mod consensus;
 pub mod validator;
 pub mod transaction;
 pub mod batch;
