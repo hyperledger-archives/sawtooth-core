@@ -15,10 +15,10 @@
  * -----------------------------------------------------------------------------
  */
 
-extern crate zmq;
+extern crate ctrlc;
 extern crate protobuf;
 extern crate rand;
-extern crate ctrlc;
+extern crate zmq;
 
 use std::sync::mpsc::RecvTimeoutError;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -59,7 +59,7 @@ fn generate_correlation_id() -> String {
 pub struct TransactionProcessor<'a> {
     endpoint: String,
     conn: ZmqMessageConnection,
-    handlers: Vec<&'a TransactionHandler>
+    handlers: Vec<&'a TransactionHandler>,
 }
 
 impl<'a> TransactionProcessor<'a> {
@@ -70,7 +70,7 @@ impl<'a> TransactionProcessor<'a> {
         TransactionProcessor {
             endpoint: String::from(endpoint),
             conn: ZmqMessageConnection::new(endpoint),
-            handlers: Vec::new()
+            handlers: Vec::new(),
         }
     }
 
@@ -90,40 +90,42 @@ impl<'a> TransactionProcessor<'a> {
                 request.set_family(handler.family_name().clone());
                 request.set_version(version.clone());
                 request.set_namespaces(RepeatedField::from_vec(handler.namespaces().clone()));
-                info!("sending TpRegisterRequest: {} {}",
-                      &handler.family_name(),
-                      &version);
+                info!(
+                    "sending TpRegisterRequest: {} {}",
+                    &handler.family_name(),
+                    &version
+                );
                 let serialized = match request.write_to_bytes() {
                     Ok(serialized) => serialized,
                     Err(err) => {
                         error!("Serialization failed: {}", err.description());
                         // try reconnect
-                        return false
+                        return false;
                     }
                 };
-                let x : &[u8] = &serialized;
+                let x: &[u8] = &serialized;
 
                 let mut future = match sender.send(
                     Message_MessageType::TP_REGISTER_REQUEST,
                     &generate_correlation_id(),
-                    x) {
-                        Ok(fut) => fut,
-                        Err(err) => {
-                            error!("Registration failed: {}", err.description());
-                            // try reconnect
-                            return false
-                        }
-                    };
+                    x,
+                ) {
+                    Ok(fut) => fut,
+                    Err(err) => {
+                        error!("Registration failed: {}", err.description());
+                        // try reconnect
+                        return false;
+                    }
+                };
 
                 // Absorb the TpRegisterResponse message
-                loop{
+                loop {
                     let _ = match future.get_timeout(Duration::from_millis(10000)) {
                         Ok(_) => break,
                         Err(_) => {
-                            if unregister.load(Ordering::SeqCst){
-                                return false
+                            if unregister.load(Ordering::SeqCst) {
+                                return false;
                             }
-
                         }
                     };
                 }
@@ -139,36 +141,36 @@ impl<'a> TransactionProcessor<'a> {
             Ok(serialized) => serialized,
             Err(err) => {
                 error!("Serialization failed: {}", err.description());
-                return
+                return;
             }
         };
-        let x : &[u8] = &serialized;
+        let x: &[u8] = &serialized;
 
         let mut future = match sender.send(
             Message_MessageType::TP_UNREGISTER_REQUEST,
             &generate_correlation_id(),
-            x) {
-                Ok(fut) => fut,
-                Err(err) => {
-                    error!("Unregistration failed: {}", err.description());
-                    return
-                }
-            };
+            x,
+        ) {
+            Ok(fut) => fut,
+            Err(err) => {
+                error!("Unregistration failed: {}", err.description());
+                return;
+            }
+        };
         // Absorb the TpUnregisterResponse message, wait one second for response then continue
-        let _ = match future.get_timeout(Duration::from_millis(1000)){
+        let _ = match future.get_timeout(Duration::from_millis(1000)) {
             Ok(_) => (),
             Err(err) => {
                 info!("Unregistration failed: {}", err.description());
             }
         };
-
     }
 
     /// Connects the transaction processor to a validator and starts
     /// listening for requests and routing them to an appropriate
     /// transaction handler.
     pub fn start(&mut self) {
-        let unregister =  Arc::new(AtomicBool::new(false));
+        let unregister = Arc::new(AtomicBool::new(false));
         let r = unregister.clone();
         ctrlc::set_handler(move || {
             r.store(true, Ordering::SeqCst);
@@ -186,7 +188,7 @@ impl<'a> TransactionProcessor<'a> {
             }
             let (mut sender, receiver) = self.conn.create();
 
-            if unregister.load(Ordering::SeqCst){
+            if unregister.load(Ordering::SeqCst) {
                 self.unregister(sender.clone());
                 restart = false;
                 continue;
@@ -195,11 +197,11 @@ impl<'a> TransactionProcessor<'a> {
             // if registration is not succesful, retry
             match self.register(sender.clone(), unregister.clone()) {
                 true => (),
-                false => continue
+                false => continue,
             }
 
             loop {
-                if unregister.load(Ordering::SeqCst){
+                if unregister.load(Ordering::SeqCst) {
                     self.unregister(sender.clone());
                     restart = false;
                     break;
@@ -209,7 +211,7 @@ impl<'a> TransactionProcessor<'a> {
                         // Check if we have a message
                         let message = match r {
                             Ok(message) => message,
-                            Err(ReceiveError::DisconnectedError)=> {
+                            Err(ReceiveError::DisconnectedError) => {
                                 info!("Trying to Reconnect");
                                 break;
                             }
@@ -223,69 +225,77 @@ impl<'a> TransactionProcessor<'a> {
 
                         match message.get_message_type() {
                             Message_MessageType::TP_PROCESS_REQUEST => {
-                                let request: TpProcessRequest = match protobuf::parse_from_bytes(
-                                    &message.get_content()) {
-                                    Ok(request) => request,
-                                    Err(err) => {
-                                        error!("Cannot parse TpProcessRequest: {}",
-                                               err.description());
-                                        continue
-                                    }
-                                };
+                                let request: TpProcessRequest =
+                                    match protobuf::parse_from_bytes(&message.get_content()) {
+                                        Ok(request) => request,
+                                        Err(err) => {
+                                            error!(
+                                                "Cannot parse TpProcessRequest: {}",
+                                                err.description()
+                                            );
+                                            continue;
+                                        }
+                                    };
 
                                 let mut context = TransactionContext::new(
-                                    request.get_context_id(), sender.clone());
+                                    request.get_context_id(),
+                                    sender.clone(),
+                                );
 
                                 let mut response = TpProcessResponse::new();
                                 match self.handlers[0].apply(&request, &mut context) {
                                     Ok(()) => {
                                         response.set_status(TpProcessResponse_Status::OK);
                                         info!("TP_PROCESS_REQUEST sending TpProcessResponse: OK");
-                                    },
+                                    }
                                     Err(ApplyError::InvalidTransaction(msg)) => {
                                         response.set_status(
-                                            TpProcessResponse_Status::INVALID_TRANSACTION);
+                                            TpProcessResponse_Status::INVALID_TRANSACTION,
+                                        );
                                         response.set_message(msg.clone());
-                                        info!("TP_PROCESS_REQUEST sending TpProcessResponse: {}",
-                                              msg);
-                                    },
+                                        info!(
+                                            "TP_PROCESS_REQUEST sending TpProcessResponse: {}",
+                                            msg
+                                        );
+                                    }
                                     Err(err) => {
-                                        response.set_status(
-                                            TpProcessResponse_Status::INTERNAL_ERROR);
+                                        response
+                                            .set_status(TpProcessResponse_Status::INTERNAL_ERROR);
                                         response.set_message(String::from(err.description()));
-                                        info!("TP_PROCESS_REQUEST sending TpProcessResponse: {}",
-                                              err.description());
+                                        info!(
+                                            "TP_PROCESS_REQUEST sending TpProcessResponse: {}",
+                                            err.description()
+                                        );
                                     }
                                 };
 
-                                let serialized = match response.write_to_bytes()
-                                {
+                                let serialized = match response.write_to_bytes() {
                                     Ok(serialized) => serialized,
                                     Err(err) => {
                                         error!("Serialization failed: {}", err.description());
-                                        continue
+                                        continue;
                                     }
                                 };
 
-                                let x : &[u8] = &serialized;
+                                let x: &[u8] = &serialized;
                                 match sender.reply(
                                     Message_MessageType::TP_PROCESS_RESPONSE,
                                     message.get_correlation_id(),
-                                    x) {
-                                        Ok(_) => (),
-                                        Err(SendError::DisconnectedError) => {
-                                            error!("DisconnectedError");
-                                            break
-                                        },
-                                        Err(SendError::TimeoutError) =>
-                                            error!("TimeoutError"),
-                                        Err(SendError::UnknownError) => {
-                                            restart = false;
-                                            println!("UnknownError");
-                                            break
-                                        }
-                                    };
-                            },
+                                    x,
+                                ) {
+                                    Ok(_) => (),
+                                    Err(SendError::DisconnectedError) => {
+                                        error!("DisconnectedError");
+                                        break;
+                                    }
+                                    Err(SendError::TimeoutError) => error!("TimeoutError"),
+                                    Err(SendError::UnknownError) => {
+                                        restart = false;
+                                        println!("UnknownError");
+                                        break;
+                                    }
+                                };
+                            }
                             Message_MessageType::PING_REQUEST => {
                                 info!("sending PingResponse");
                                 let response = PingResponse::new();
@@ -293,33 +303,36 @@ impl<'a> TransactionProcessor<'a> {
                                     Ok(serialized) => serialized,
                                     Err(err) => {
                                         error!("Serialization failed: {}", err.description());
-                                        continue
+                                        continue;
                                     }
                                 };
-                                let x : &[u8] = &serialized;
+                                let x: &[u8] = &serialized;
                                 match sender.reply(
                                     Message_MessageType::TP_PROCESS_RESPONSE,
                                     message.get_correlation_id(),
-                                    x){
-                                        Ok(_) => (),
-                                        Err(SendError::DisconnectedError) => {
-                                            error!("DisconnectedError");
-                                            break
-                                        },
-                                        Err(SendError::TimeoutError) => error!("TimeoutError"),
-                                        Err(SendError::UnknownError) => {
-                                            restart = false;
-                                            println!("UnknownError");
-                                            break
-                                        }
-                                    };
-                            },
+                                    x,
+                                ) {
+                                    Ok(_) => (),
+                                    Err(SendError::DisconnectedError) => {
+                                        error!("DisconnectedError");
+                                        break;
+                                    }
+                                    Err(SendError::TimeoutError) => error!("TimeoutError"),
+                                    Err(SendError::UnknownError) => {
+                                        restart = false;
+                                        println!("UnknownError");
+                                        break;
+                                    }
+                                };
+                            }
                             _ => {
-                                info!("Transaction Processor recieved invalid message type: {:?}",
-                                          message.get_message_type());
+                                info!(
+                                    "Transaction Processor recieved invalid message type: {:?}",
+                                    message.get_message_type()
+                                );
                             }
                         }
-                    },
+                    }
                     Err(RecvTimeoutError::Timeout) => (),
                     Err(err) => {
                         error!("Error: {}", err.description());

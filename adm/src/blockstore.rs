@@ -28,87 +28,128 @@ pub struct Blockstore<'a> {
 
 impl<'a> Blockstore<'a> {
     pub fn new(db: LmdbDatabase<'a>) -> Self {
-        Blockstore{
-            db: db,
-        }
+        Blockstore { db: db }
     }
 
     pub fn get(&self, block_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
-        let packed = reader.get(&block_id.as_bytes())
-            .ok_or(DatabaseError::NotFoundError(format!("Block not found: {}", block_id)))?;
-        let block: Block = protobuf::parse_from_bytes(&packed)
-            .map_err(|err|
-                DatabaseError::CorruptionError(
-                    format!("Could not interpret stored data as a block: {}", err)))?;
+        let packed = reader
+            .get(&block_id.as_bytes())
+            .ok_or(DatabaseError::NotFoundError(format!(
+                "Block not found: {}",
+                block_id
+            )))?;
+        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+            DatabaseError::CorruptionError(format!(
+                "Could not interpret stored data as a block: {}",
+                err
+            ))
+        })?;
         Ok(block)
     }
 
     pub fn get_by_height(&self, height: u64) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
         let block_num = format!("0x{:0>16x}", height);
-        let block_id = reader.index_get("index_block_num", &block_num.as_bytes())
-            .and_then(|block_id|
-                block_id.ok_or(
-                    DatabaseError::NotFoundError(format!("Block not found: {}", height))))?;
-        let packed = reader.get(&block_id)
-            .ok_or(DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id)))?;
-        let block: Block = protobuf::parse_from_bytes(&packed)
-            .map_err(|err|
-                DatabaseError::CorruptionError(
-                    format!("Could not interpret stored data as a block: {}", err)))?;
+        let block_id = reader
+            .index_get("index_block_num", &block_num.as_bytes())
+            .and_then(|block_id| {
+                block_id.ok_or(DatabaseError::NotFoundError(format!(
+                    "Block not found: {}",
+                    height
+                )))
+            })?;
+        let packed = reader
+            .get(&block_id)
+            .ok_or(DatabaseError::CorruptionError(format!(
+                "Block not found: {:?}",
+                block_id
+            )))?;
+        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+            DatabaseError::CorruptionError(format!(
+                "Could not interpret stored data as a block: {}",
+                err
+            ))
+        })?;
         Ok(block)
     }
 
     pub fn get_by_batch(&self, batch_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
-        let block_id = reader.index_get("index_batch", &batch_id.as_bytes())
-            .and_then(|block_id|
-                block_id.ok_or(
-                    DatabaseError::NotFoundError(format!("Batch not found: {}", batch_id))))?;
-        let packed = reader.get(&block_id)
-            .ok_or(DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id)))?;
-        let block: Block = protobuf::parse_from_bytes(&packed)
-            .map_err(|err|
-                DatabaseError::CorruptionError(
-                    format!("Could not interpret stored data as a block: {}", err)))?;
+        let block_id = reader
+            .index_get("index_batch", &batch_id.as_bytes())
+            .and_then(|block_id| {
+                block_id.ok_or(DatabaseError::NotFoundError(format!(
+                    "Batch not found: {}",
+                    batch_id
+                )))
+            })?;
+        let packed = reader
+            .get(&block_id)
+            .ok_or(DatabaseError::CorruptionError(format!(
+                "Block not found: {:?}",
+                block_id
+            )))?;
+        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+            DatabaseError::CorruptionError(format!(
+                "Could not interpret stored data as a block: {}",
+                err
+            ))
+        })?;
         Ok(block)
     }
 
     pub fn get_by_transaction(&self, transaction_id: &str) -> Result<Block, DatabaseError> {
         let reader = self.db.reader()?;
-        let block_id = reader.index_get("index_transaction", &transaction_id.as_bytes())
-            .and_then(|block_id|
-                block_id.ok_or(
-                    DatabaseError::NotFoundError(format!("Transaction not found: {}", transaction_id))))?;
-        let packed = reader.get(&block_id)
-            .ok_or(DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id)))?;
-        let block: Block = protobuf::parse_from_bytes(&packed)
-            .map_err(|err|
-                DatabaseError::CorruptionError(
-                    format!("Could not interpret stored data as a block: {}", err)))?;
+        let block_id = reader
+            .index_get("index_transaction", &transaction_id.as_bytes())
+            .and_then(|block_id| {
+                block_id.ok_or(DatabaseError::NotFoundError(format!(
+                    "Transaction not found: {}",
+                    transaction_id
+                )))
+            })?;
+        let packed = reader
+            .get(&block_id)
+            .ok_or(DatabaseError::CorruptionError(format!(
+                "Block not found: {:?}",
+                block_id
+            )))?;
+        let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
+            DatabaseError::CorruptionError(format!(
+                "Could not interpret stored data as a block: {}",
+                err
+            ))
+        })?;
         Ok(block)
     }
 
     pub fn put(&self, block: Block) -> Result<(), DatabaseError> {
-        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err|
-            DatabaseError::CorruptionError(format!("Invalid block header: {}", err)))?;
+        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err| {
+            DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
+        })?;
         let mut writer = self.db.writer()?;
         // Add block to main db
-        let packed = block.write_to_bytes().map_err(|err|
-            DatabaseError::WriterError(format!("Failed to serialize block: {}", err)))?;
+        let packed = block.write_to_bytes().map_err(|err| {
+            DatabaseError::WriterError(format!("Failed to serialize block: {}", err))
+        })?;
         writer.put(&block.header_signature.as_bytes(), &packed)?;
 
         // Add block to block num index
         let block_num_index = format!("0x{:0>16x}", block_header.block_num);
-        writer.index_put("index_block_num", &block_num_index.as_bytes(), &block.header_signature.as_bytes())?;
+        writer.index_put(
+            "index_block_num",
+            &block_num_index.as_bytes(),
+            &block.header_signature.as_bytes(),
+        )?;
 
         for batch in block.batches.iter() {
             for txn in batch.transactions.iter() {
                 writer.index_put(
                     "index_transaction",
                     &txn.header_signature.as_bytes(),
-                    &block.header_signature.as_bytes())?;
+                    &block.header_signature.as_bytes(),
+                )?;
             }
         }
 
@@ -117,7 +158,8 @@ impl<'a> Blockstore<'a> {
             writer.index_put(
                 "index_batch",
                 &batch.header_signature.as_bytes(),
-                &block.header_signature.as_bytes())?;
+                &block.header_signature.as_bytes(),
+            )?;
         }
 
         writer.commit()
@@ -126,8 +168,9 @@ impl<'a> Blockstore<'a> {
     pub fn delete(&self, block_id: &str) -> Result<(), DatabaseError> {
         let block = self.get(block_id)?;
         let block_id = &block.header_signature;
-        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err|
-            DatabaseError::CorruptionError(format!("Invalid block header: {}", err)))?;
+        let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err| {
+            DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
+        })?;
         // Delete block from main db
         let mut writer = self.db.writer()?;
         writer.delete(&block_id.as_bytes())?;
@@ -154,10 +197,12 @@ impl<'a> Blockstore<'a> {
     pub fn get_chain_head(&self) -> Result<String, DatabaseError> {
         let reader = self.db.reader()?;
         let mut cursor = reader.index_cursor("index_block_num")?;
-        let (_, val) = cursor.last().ok_or(
-            DatabaseError::NotFoundError("No chain head".into()))?;
-        String::from_utf8(val.into()).map_err(|err|
-            DatabaseError::CorruptionError(format!("Chain head block id is corrupt: {}", err)))
+        let (_, val) = cursor
+            .last()
+            .ok_or(DatabaseError::NotFoundError("No chain head".into()))?;
+        String::from_utf8(val.into()).map_err(|err| {
+            DatabaseError::CorruptionError(format!("Chain head block id is corrupt: {}", err))
+        })
     }
 
     // Get the number of blocks
@@ -187,26 +232,17 @@ mod tests {
 
     /// Asserts that BLOCKSTORE has a current height of COUNT.
     fn assert_current_height(count: usize, blockstore: &Blockstore) {
-        assert_eq!(
-            blockstore.get_current_height().unwrap(),
-            count,
-        );
+        assert_eq!(blockstore.get_current_height().unwrap(), count,);
     }
 
     /// Asserts that BLOCK has SIGNATURE.
     fn assert_header_signature(block: Block, signature: String) {
-        assert_eq!(
-            block.header_signature,
-            signature,
-        );
+        assert_eq!(block.header_signature, signature,);
     }
 
     /// Asserts that BLOCKSTORE's chain head has SIGNATURE.
     fn assert_chain_head(signature: String, blockstore: &Blockstore) {
-        assert_eq!(
-            blockstore.get_chain_head().unwrap(),
-            signature,
-        );
+        assert_eq!(blockstore.get_chain_head().unwrap(), signature,);
     }
 
     /// Opens a blockstore and executes its basic operations (adding,
@@ -216,8 +252,7 @@ mod tests {
     fn test_blockstore() {
         let path_config = config::get_path_config();
 
-        let blockstore_path =
-            &path_config.data_dir.join(config::get_blockstore_filename());
+        let blockstore_path = &path_config.data_dir.join(config::get_blockstore_filename());
 
         let ctx = LmdbContext::new(blockstore_path, 3, None)
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))
@@ -225,8 +260,8 @@ mod tests {
 
         let database = LmdbDatabase::new(
             &ctx,
-            &["index_batch", "index_transaction", "index_block_num"])
-            .map_err(|err| DatabaseError::InitError(format!("{}", err)))
+            &["index_batch", "index_transaction", "index_block_num"],
+        ).map_err(|err| DatabaseError::InitError(format!("{}", err)))
             .unwrap();
 
         let blockstore = Blockstore::new(database);
@@ -268,8 +303,7 @@ mod tests {
 
         let mut batch = Batch::new();
         batch.set_header_signature(String::from("batch"));
-        batch.set_transactions(
-            protobuf::RepeatedField::from_vec(vec!(transaction)));
+        batch.set_transactions(protobuf::RepeatedField::from_vec(vec![transaction]));
         let batch_header = BatchHeader::new();
         batch.set_header(batch_header.write_to_bytes().unwrap());
 
@@ -278,7 +312,7 @@ mod tests {
         let mut block_header = BlockHeader::new();
         block_header.set_block_num(6);
         block.set_header(block_header.write_to_bytes().unwrap());
-        block.set_batches(protobuf::RepeatedField::from_vec(vec!(batch)));
+        block.set_batches(protobuf::RepeatedField::from_vec(vec![batch]));
 
         blockstore.put(block).unwrap();
 
@@ -287,16 +321,11 @@ mod tests {
 
         let get_by_batch = blockstore.get_by_batch("batch").unwrap();
 
-        assert_header_signature(
-            get_by_batch,
-            String::from("block-with-batch"));
+        assert_header_signature(get_by_batch, String::from("block-with-batch"));
 
-        let get_by_transaction =
-            blockstore.get_by_transaction("transaction").unwrap();
+        let get_by_transaction = blockstore.get_by_transaction("transaction").unwrap();
 
-        assert_header_signature(
-            get_by_transaction,
-            String::from("block-with-batch"));
+        assert_header_signature(get_by_transaction, String::from("block-with-batch"));
 
         // Delete a block.
         blockstore.delete("block-with-batch").unwrap();

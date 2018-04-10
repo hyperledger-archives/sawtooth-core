@@ -28,7 +28,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            Error::ParseError(ref msg) => write!(f, "ParseError: {}",  msg),
+            Error::ParseError(ref msg) => write!(f, "ParseError: {}", msg),
         }
     }
 }
@@ -41,7 +41,7 @@ impl std::error::Error for Error {
     }
 
     fn cause(&self) -> Option<&std::error::Error> {
-        match * self {
+        match *self {
             Error::ParseError(_) => None,
         }
     }
@@ -61,25 +61,27 @@ pub struct Block {
 impl Block {
     pub fn try_from(block: messages::block::Block) -> Result<Self, Error> {
         protobuf::parse_from_bytes(&block.header)
-            .map_err(|err|
+            .map_err(|err| {
                 Error::ParseError(format!(
-                    "Invalid BlockHeader {}: {}", block.header_signature, err)))
-            .and_then(|block_header: messages::block::BlockHeader|
-                block.get_batches()
+                    "Invalid BlockHeader {}: {}",
+                    block.header_signature, err
+                ))
+            })
+            .and_then(|block_header: messages::block::BlockHeader| {
+                block
+                    .get_batches()
                     .iter()
-                    .map(|batch|
-                        Batch::try_from(batch.clone()))
+                    .map(|batch| Batch::try_from(batch.clone()))
                     .collect::<Result<Vec<Batch>, Error>>()
-                    .map(move |batches|
-                        Block{
-                            batches: batches,
-                            block_num: block_header.get_block_num(),
-                            consensus: Vec::from(block_header.get_consensus()),
-                            header_signature: String::from(block.get_header_signature()),
-                            previous_block_id: String::from(block_header.get_previous_block_id()),
-                            state_root_hash: String::from(block_header.get_state_root_hash()),
+                    .map(move |batches| Block {
+                        batches: batches,
+                        block_num: block_header.get_block_num(),
+                        consensus: Vec::from(block_header.get_consensus()),
+                        header_signature: String::from(block.get_header_signature()),
+                        previous_block_id: String::from(block_header.get_previous_block_id()),
+                        state_root_hash: String::from(block_header.get_state_root_hash()),
                     })
-            )
+            })
     }
 }
 
@@ -93,22 +95,24 @@ pub struct Batch {
 impl Batch {
     pub fn try_from(batch: messages::batch::Batch) -> Result<Self, Error> {
         protobuf::parse_from_bytes(&batch.header)
-            .map_err(|err|
+            .map_err(|err| {
                 Error::ParseError(format!(
-                    "Invalid BatchHeader {}: {}", batch.header_signature, err)))
-            .and_then(|batch_header: messages::batch::BatchHeader|
-                batch.get_transactions()
+                    "Invalid BatchHeader {}: {}",
+                    batch.header_signature, err
+                ))
+            })
+            .and_then(|batch_header: messages::batch::BatchHeader| {
+                batch
+                    .get_transactions()
                     .iter()
-                    .map(|transaction|
-                        Transaction::try_from(transaction.clone()))
+                    .map(|transaction| Transaction::try_from(transaction.clone()))
                     .collect::<Result<Vec<Transaction>, Error>>()
-                    .map(move |transactions|
-                        Batch{
-                            header_signature: String::from(batch.get_header_signature()),
-                            signer_public_key: String::from(batch_header.get_signer_public_key()),
-                            transactions: transactions,
+                    .map(move |transactions| Batch {
+                        header_signature: String::from(batch.get_header_signature()),
+                        signer_public_key: String::from(batch_header.get_signer_public_key()),
+                        transactions: transactions,
                     })
-            )
+            })
     }
 }
 
@@ -131,25 +135,38 @@ pub struct Transaction {
 impl Transaction {
     pub fn try_from(transaction: messages::transaction::Transaction) -> Result<Self, Error> {
         protobuf::parse_from_bytes(&transaction.header)
-            .map_err(|err|
+            .map_err(|err| {
                 Error::ParseError(format!(
-                    "Invalid TransactionHeader {}: {}", transaction.header_signature, err)))
-            .map(|transaction_header: messages::transaction::TransactionHeader|
-                Transaction{
+                    "Invalid TransactionHeader {}: {}",
+                    transaction.header_signature, err
+                ))
+            })
+            .map(
+                |transaction_header: messages::transaction::TransactionHeader| Transaction {
                     batcher_public_key: String::from(transaction_header.get_batcher_public_key()),
-                    dependencies: transaction_header.get_dependencies()
-                        .iter().map(|dependency| dependency.clone()).collect(),
+                    dependencies: transaction_header
+                        .get_dependencies()
+                        .iter()
+                        .map(|dependency| dependency.clone())
+                        .collect(),
                     family_name: String::from(transaction_header.get_family_name()),
                     family_version: String::from(transaction_header.get_family_version()),
                     header_signature: String::from(transaction.get_header_signature()),
-                    inputs: transaction_header.get_inputs()
-                        .iter().map(|input| input.clone()).collect(),
+                    inputs: transaction_header
+                        .get_inputs()
+                        .iter()
+                        .map(|input| input.clone())
+                        .collect(),
                     nonce: String::from(transaction_header.get_nonce()),
-                    outputs: transaction_header.get_outputs()
-                        .iter().map(|output| output.clone()).collect(),
+                    outputs: transaction_header
+                        .get_outputs()
+                        .iter()
+                        .map(|output| output.clone())
+                        .collect(),
                     payload: Vec::from(transaction.get_payload()),
                     payload_sha512: String::from(transaction_header.get_payload_sha512()),
                     signer_public_key: String::from(transaction_header.get_signer_public_key()),
-            })
+                },
+            )
     }
 }
