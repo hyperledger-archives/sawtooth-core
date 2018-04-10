@@ -195,9 +195,10 @@ impl<'a> TransactionProcessor<'a> {
             }
 
             // if registration is not succesful, retry
-            match self.register(sender.clone(), unregister.clone()) {
-                true => (),
-                false => continue,
+            if self.register(sender.clone(), unregister.clone()) {
+                ()
+            } else {
+                continue;
             }
 
             loop {
