@@ -133,5 +133,6 @@
 /perf/smallbank_workload/smallbank.txns
 /perf/intkey_workload/Cargo.lock
 /perf/intkey_workload/target
+/perf/intkey_workload/bin
 
 *.batch
