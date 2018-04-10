@@ -1,0 +1,344 @@
+// Copyright 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// -----------------------------------------------------------------------------
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "sawtooth.sdk.protobuf";
+option go_package = "consensus_pb2";
+
+
+// Data Structures
+
+// Payload is the opaque payload to send to other nodes. The
+// interpretation of message_type is left to the Consensus Engine
+// implementation.
+message ConsensusMessage {
+  string message_type = 1;
+  bytes payload = 2;
+
+  // Used to identify the consensus engine that produced this message
+  string name = 3;
+  string version = 4;
+}
+
+// When used in a blockchain context, this block definition is
+// equivalent to the those parts of the block that are relevant to
+// consensus. When used outside the blockchain context, the
+// interpretation of this data structure is context dependent.
+message ConsensusBlock {
+  string block_id = 1;
+  string previous_id = 2;
+  string signer_id = 3;
+  uint64 block_num = 4;
+  bytes consensus = 5;
+}
+
+message ConsensusPeerUpdate {
+  enum PeerUpdate {
+    CONNECTED = 0;
+    DISCONNECTED = 1;
+  }
+
+  PeerUpdate update = 1;
+  string peer_id = 2;
+}
+
+// P2P Messaging (Consensus Engine -> Validator)
+
+// Send a consensus message to a specific, connected peer
+message ConsensusSendToRequest {
+  ConsensusMessage message = 1;
+  string peer_id = 2;
+}
+
+message ConsensusSendToResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+  }
+
+  Status status = 1;
+}
+
+// Broadcast a message to all peers
+message ConsensusBroadcastRequest {
+  ConsensusMessage message = 1;
+}
+
+message ConsensusBroadcastResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+  }
+
+  Status status = 1;
+}
+
+// Block Creation (Consensus Engine -> Validator)
+
+// Initialize a new block built on the block with the given previous id and
+// begin adding batches to it. If no previous id is specified, the current
+// head will be used.
+message ConsensusInitializeBlockRequest {
+  string previous_id = 1;
+}
+
+message ConsensusInitializeBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+  }
+
+  Status status = 1;
+}
+
+// Stop adding batches to the current block and finalize it. Include
+// the given consensus data in the block. If this call is successful,
+// the consensus engine will receive it afterwards.
+message ConsensusFinalizeBlockRequest {
+  bytes data = 1;
+}
+
+message ConsensusFinalizeBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+  }
+
+  Status status = 1;
+// TODO: Should this just include the block?
+  string block_id = 2;
+}
+
+// Stop adding batches to the current block and abandon it.
+message ConsensusCancelBlockRequest {
+
+}
+
+message ConsensusCancelBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+  }
+
+  Status status = 1;
+}
+
+// Block Management (Consensus Engine -> Validator)
+
+// Set the chain head to the given block id.
+message ConsensusCommitBlockRequest {
+  string block_id = 1;
+}
+
+message ConsensusCommitBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+    NO_RESOURCE = 5;
+  }
+
+  Status status = 1;
+}
+
+// Request that this block not be cleaned up due to inactivity
+message ConsensusHoldBlockRequest {
+  string block_id = 1;
+}
+
+message ConsensusHoldBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+    NO_RESOURCE = 5;
+  }
+
+  Status status = 1;
+}
+
+// Retract a previous hold on a block
+message ConsensusDropBlockRequest {
+  string block_id = 1;
+}
+
+message ConsensusDropBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+    NO_RESOURCE = 5;
+  }
+
+  Status status = 1;
+}
+
+// Mark this block as invalid from the perspective of consensus
+message ConsensusFailBlockRequest {
+  string block_id = 1;
+}
+
+message ConsensusFailBlockResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+    NO_RESOURCE = 5;
+  }
+
+  Status status = 1;
+}
+
+// Queries (Consensus Engine -> Validator)
+
+// Read the current value of the setting.
+message ConsensusSettingGetRequest {
+  string setting = 1;
+  string block_id = 2;
+}
+
+message ConsensusSettingGetResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+    NO_RESOURCE = 5;
+  }
+
+  Status status = 1;
+  bytes data = 2;
+}
+
+// This is needed to read values from arbitrary addresses used by
+// consensus (eg., validator registry).
+message ConsensusStateGetRequest {
+  string address = 1;
+  string block_id = 2;
+}
+
+message ConsensusStateGetResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+    NO_RESOURCE = 5;
+  }
+
+  Status status = 1;
+  bytes data = 2;
+}
+
+// Retrieve consensus-related information about a block. While the
+// consensus engine should maintain a cache of blocks internally, this
+// method is provided to: 1. Allow cache entries to expire without
+// losing the block forever 2. Allow the engine to handle getting a
+// block before its parent
+message ConsensusBlockGetRequest {
+  string block_id = 1;
+}
+
+message ConsensusBlockGetResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+    NO_RESOURCE = 5;
+  }
+
+  Status status = 1;
+  ConsensusBlock block = 2;
+}
+
+// Sent when we connect to the validator
+message ConsensusRegisterRequest {
+  string name = 1;
+  string version = 2;
+};
+message ConsensusRegisterResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+    NOT_READY = 3;
+  }
+
+  Status status = 1;
+};
+
+// Event Handlers (Validator -> Consensus Engine)
+
+// Called when a new consensus message is received
+message ConsensusOnMessageReceivedRequest {
+  ConsensusMessage message = 1;
+}
+
+message ConsensusOnMessageReceivedResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+  }
+
+  Status status = 1;
+}
+
+// Called when a new block is received and validated
+message ConsensusOnNewBlockReceivedRequest {
+  ConsensusBlock block = 1;
+}
+
+message ConsensusOnNewBlockReceivedResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+  }
+
+  Status status = 1;
+}
+
+// Called when a new peer is added
+message ConsensusOnPeerUpdateRequest {
+  ConsensusPeerUpdate peer_update = 1;
+}
+
+message ConsensusOnPeerUpdateResponse {
+  enum Status {
+    STATUS_UNSET = 0;
+    OK = 1;
+    INTERNAL_ERROR = 2;
+  }
+
+  Status status = 1;
+}
