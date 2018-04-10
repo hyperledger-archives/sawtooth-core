@@ -5,7 +5,7 @@ Creating a Sawtooth Network
 This procedure describes how to create a Sawtooth network with two or more
 validator nodes. It creates an application development environment that is
 similar to the single-node environment in :doc:`installing_sawtooth`, but with
-these differences:
+a different consensus mechanism to support additional nodes.
 
 * Docker: You will create a new application development environment by using a
   Docker Compose file that creates a network with five validator nodes.
@@ -22,10 +22,16 @@ The following figure shows an example network with two validator nodes:
    :alt: Application development environment with two nodes
 
 Like the single-node environment, this environment uses serial transaction
-processing and static peering. However, this multiple-node environment uses PoET
-simulator consensus instead of dev_mode consensus. As a result, it adds the
-Validator Registry transaction processor, which handles certain settings for a
-multiple-node network.
+processing and static peering. However, it has the following differences:
+
+* PoET simulator consensus instead of dev mode, because dev mode's random-leader
+  consensus is not recommended for multi-node or production networks. Sawtooth
+  offers two versions of :term:`PoET` consensus. PoET-SGX relies on Intel
+  Software Guard Extensions (SGX) to implement a leader-election lottery system.
+  PoET simulator provides the same consensus algorithm on an SGX simulator.
+
+* An additional transaction processor, Validator Registry, which handles PoET
+  settings for a multiple-node network.
 
 
 About Sawtooth Networks
@@ -43,7 +49,7 @@ A Sawtooth network has the following requirements:
   for an example of a custom REST API.
 
 * Each validator node must advertise a routable address. The Docker platform
-  provides a preconfigured setting. For the Ubuntu platform, you must follow the
+  provides preconfigured settings. For the Ubuntu platform, you must follow the
   instructions in this procedure to provide this information when starting the
   validator.
 
@@ -67,7 +73,8 @@ Docker: Start a Multiple-node Sawtooth Network
 ==============================================
 
 In this procedure, you will use a Docker Compose file that creates a new
-application development environment with five validator nodes.
+application development environment with five validator nodes and four
+transaction processors (Settings, IntegerKey, XO, and PoET Validator Registry).
 
 Prerequisites
 -------------
@@ -161,32 +168,43 @@ Ubuntu: Add a Node to the Single-Node Environment
 
 This procedure describes how to add a second validator node to a single-node
 application development environment, as described in :doc:`ubuntu`.
+You will stop the Sawtooth components on the first node and delete the
+existing blockchain data, then create a new genesis block that specifies PoET
+simulator consensus and related settings. All nodes on the network will run four
+transaction processors (Settings, IntegerKey, XO, and PoET Validator Registry).
+
 
 .. _prereqs-multi-ubuntu-label:
 
 Prerequisites
 -------------
 
-This procedure requires a working (runnable) validator node with a validator,
-REST API, and the Settings, IntegerKey, and XO transaction processors
-(see :doc:`ubuntu`). This procedure describes how to start the XO transaction
-processor if it is not already running.
+This procedure assumes that you have created a working (runnable) validator node
+with a validator, REST API, and the Settings, IntegerKey, and XO transaction
+processors. For more information, see :doc:`ubuntu`.
 
 For each validator node that will be on your network, gather the following
 information:
 
-* Where this validator will listen for incoming communication from this
-  validator's components (the "component bind string")
+* **Component bind string**: Where this validator will listen for incoming
+  communication from this validator's components. You will set this value with
+  ``--bind component`` when starting the validator. Default:
+  ``tcp://127.0.0.1:4004``.
 
-* Where this validator will listen for incoming communication from other
-  validator nodes, also called peers (the "network bind string")
+* **Network bind string**: Where this validator will listen for incoming
+  communication from other validator nodes (also called peers). You will set
+  this value with ``--bind network`` when starting the validator.  Default:
+  ``tcp://127.0.0.1:8800``.
 
-* The address that other peers should use to find this validator node (the
-  "public endpoint string")
+* **Public endpoint string**: The address that other peers should use to
+  find this validator node. You will set this value with ``--endpoint`` when
+  starting the validator. You will also specify this value in the peers list
+  when starting a validator on another node. Default: ``tcp://127.0.0.1:8800``.
 
-* The addresses that this validator should use to connect to the other validator
-  nodes, also referred to as peers (the "peers list"). Each address on the list
-  is referred to as the "peer's public endpoint string".
+* **Peers list**: The addresses that this validator should use to connect to
+  the other validator nodes (peers); that is, the public endpoint strings of
+  those nodes. You will set this value with ``--peers`` when starting the
+  validator. Default: none.
 
 .. _about-bind-strings-label:
 
@@ -259,22 +277,32 @@ a socket" in the `zmq-tcp API Reference <http://api.zeromq.org/4-2:zmq-tcp>`_.
 Step 1: Configure the Network on the First Node
 -----------------------------------------------
 
-   This step assumes an existing application development environment as
-   described in :doc:`ubuntu`. However, you will delete the existing blockchain
-   data, including the genesis block.
+This step assumes an existing application development environment as described
+in :doc:`ubuntu`.
 
-#. If the first validator node is running, stop the validator, as described
-   in the first step of :ref:`stop-sawtooth-ubuntu-label`.
+#. If the first validator node is running, stop the Sawtooth components
+   (validator, REST API, and transaction processors), as described
+   in :ref:`stop-sawtooth-ubuntu-label`.
 
-#. If necessary, regenerate a validator private/public key pair in
-   ``/etc/sawtooth/keys/``.
+#. Delete any existing blockchain data by removing all files from
+   ``/var/lib/sawtooth/``.
+
+#. (Optional) Delete existing logs by removing all files from
+   ``/var/log/sawtooth/``.
+
+#. Ensure that the required user and validator keys exist:
 
    .. code-block:: console
 
-      $ sawadm keygen --force
+      $ ls ~/.sawtooth/keys/
+      yourname.priv    yourname.pub
 
-#. Delete any existing blockchain data by removing all files from
-   ``/var/lib/sawtooth``.
+      $ ls /etc/sawtooth/keys/
+      validator.priv   validator.pub
+
+   If these key files do not exist, create them as described in
+   :ref:`generate-user-key-ubuntu`
+   and :ref:`generate-root-key-ubuntu`.
 
 #. Create a batch to initialize the Settings transaction family in the genesis
    block.
@@ -290,9 +318,9 @@ Step 1: Configure the Network on the First Node
    .. code-block:: console
 
       $ sawset proposal create -k /etc/sawtooth/keys/validator.priv \
-      -o config.batch
+      -o config.batch \
       sawtooth.consensus.algorithm=poet \
-      sawtooth.poet.report_public_key_pem={simulator_rk_pub.pem} \
+      sawtooth.poet.report_public_key_pem=$(cat /etc/sawtooth/simulator_rk_pub.pem) \
       sawtooth.poet.valid_enclave_measurements=$(poet enclave measurement) \
       sawtooth.poet.valid_enclave_basenames=$(poet enclave basename)
 
@@ -323,40 +351,96 @@ Step 1: Configure the Network on the First Node
       $ sawadm genesis config-genesis.batch config.batch poet.batch poet-settings.batch
 
 #. Use the following command to start the validator on the first node.
-   Substitute your actual values for the network and component bind strings,
+   Substitute your actual values for the component and network bind strings,
    public endpoint string, and peer list, as described in
    :ref:`prereqs-multi-ubuntu-label`.
 
    .. code-block:: console
 
       $ sudo -u sawtooth sawtooth-validator \
+      --bind component:{component-bind-string} \
       --bind network:{network-bind-string} \
-      --bind component:(component-bind-string} \
       --endpoint {public-endpoint-string} \
       --peers {peer-list}
 
-   If you plan to add two or more nodes to the network, you can specify
-   multiple peers in a comma-separated list, as in this example:
+   For example, the following command uses the component bind address
+   ``127.0.0.1:4004`` (the default value), the network bind address and endpoint
+   ``192.0.2.0:8800`` (a TEST-NET-1 example address), and one peer at the public
+   endpoint ``203.0.113.0:8800``.
 
-     .. code-block:: none
+      .. code-block:: console
 
-        --peers tcp://172.0.1.3,tcp://172.0.1.4
+         $ sudo -u sawtooth sawtooth-validator \
+         --bind component:tcp://127.0.0.1:4004 \
+         --bind network:tcp://192.0.2.0:8800 \
+         --endpoint tcp://192.0.2.0:8800 \
+         --peers tcp://203.0.113.0:8800
 
-#. If necessary, start the other Sawtooth components.
+   .. note::
 
-   a. Start the REST API as described in :ref:`start-rest-api-label`.
+      Specify multiple peers in a comma-separated list, as in this example:
 
-   #. Start the transaction processors, as described in :ref:`start-tps-label`.
-      Be sure to start the XO transaction processor, as described in
-      Step 7 of :doc:`docker`.
+        .. code-block:: none
 
+           --peers tcp://203.0.113.0:8800,198.51.100.0:8800
+
+#. Open a separate terminal window and start the REST API on the first validator
+   node.
+
+   .. code-block:: console
+
+      $ sudo -u sawtooth sawtooth-rest-api -v
+
+   If necessary, use the ``--connect`` option to specify a non-default value for
+   the validator's component bind address and port, as described in
+   :ref:`prereqs-multi-ubuntu-label`. The following example shows the default
+   value:
+
+      .. code-block:: none
+
+         $ sudo -u sawtooth sawtooth-rest-api -v --connect 127.0.0.1:4004
+
+   For more information, see :ref:`start-rest-api-label`.
+
+#. Start the transaction processors on the first validator node. Open a separate
+   terminal window to start each component.
+
+   As with the previous command, use the ``--connect`` option for each command,
+   if necessary, to specify a non-default value for validator's component bind
+   address and port.
+
+   .. code-block:: console
+
+      $ sudo -u sawtooth settings-tp -v
+
+   .. code-block:: console
+
+      $ sudo -u sawtooth intkey-tp-python -v
+
+   .. code-block:: console
+
+      $ sudo -u sawtooth xo-tp-python -v
+
+   .. code-block:: console
+
+      $ sudo -u sawtooth poet-validator-registry-tp -v
+
+   .. note::
+
+      This network requires ``settings-tp`` and ``poet-validator-registry-tp``.
+      The other transaction processors (``intkey-tp-python`` and
+      ``xo-tp-python``) are not required, but are used for the other tutorials
+      in this guide. Note that each node in the network must run the same
+      transaction processors.
+
+   For more information, see :ref:`start-tps-label`.
 
 .. _install-second-val-ubuntu-label:
 
 Step 2: Set Up the Second Validator Node
 ----------------------------------------
 
-#. Install Sawtooth on the second node, as described in
+#. Install Sawtooth on the second node, as described in Step 1 of
    :doc:`ubuntu`.
 
 #. Create your user key:
@@ -384,33 +468,70 @@ This step starts all the Sawtooth components on the second node. When the second
 validator fully starts, it will peer with the first validator node.
 
 #. Open a new terminal window on the second node, then use the following command
-   to start the validator. Use the actual values for the network and component
+   to start the validator. Use the actual values for the component and network
    bind strings, public endpoint string, and peer list, as described in
    :ref:`prereqs-multi-ubuntu-label`.
 
    .. code-block:: console
 
       $ sudo -u sawtooth sawtooth-validator \
+      --bind component:{component-bind-string} \
       --bind network:{network-bind-string} \
-      --bind component:(component-bind-string} \
       --endpoint {public-endpoint-string} \
       --peers {peer-list}
 
-   If you plan to add two or more node to the network, you can specify
-   multiple peers in a comma-separated list, as in this example:
+   For example, the following command uses the component bind address
+   ``127.0.0.1:4004`` (the default value), the network bind address and
+   endpoint ``203.0.113.0:8800`` (a TEST-NET-3 example address), and a peer (the
+   first node) at the public endpoint ``192.0.2.0:8800``.
 
-     .. code-block:: none
+      .. code-block:: console
 
-        --peers tcp://172.0.1.2,tcp://172.0.1.4
+         $ sudo -u sawtooth sawtooth-validator \
+         --bind component:tcp://127.0.0.1:4004 \
+         --bind network:tcp://203.0.113.0:8800 \
+         --endpoint tcp://203.0.113.0:8800 \
+         --peers tcp://192.0.2.0:8800
 
+   .. note::
 
-#. Start the REST API and transaction processors on the second validator node,
-   as shown in this summary of steps 3, 4, and 5 in :doc:`ubuntu`. Open a
-   separate terminal window to start each component.
+      Specify multiple peers in a comma-separated list, as in this example:
+
+        .. code-block:: none
+
+           --peers tcp://192.0.2.0:8800,tcp://198.51.100.0:8800
+
+#. Open a separate terminal window and start the REST API on the second
+   validator node.
 
    .. code-block:: console
 
       $ sudo -u sawtooth sawtooth-rest-api -v
+
+   If necessary, use the ``--connect`` option to specify a non-default value for
+   the validator's component bind address and port, as described in
+   :ref:`prereqs-multi-ubuntu-label`. The following example shows the default
+   value:
+
+      .. code-block:: none
+
+         $ sudo -u sawtooth sawtooth-rest-api -v --connect 127.0.0.1:4004
+
+   For more information, see :ref:`start-rest-api-label`.
+
+#. Start the transaction processors on the second validator node. Open a
+   separate terminal window to start each component.
+
+   As with the previous command, use the ``--connect`` option for each command,
+   if necessary, to specify a non-default value for validator's component bind
+   address and port.
+
+   .. Important::
+
+      Start the same transaction processors that are running on the first
+      validator node. For example, if you chose not to start
+      ``intkey-tp-python`` and ``xo-tp-python`` on the first node, do not start
+      them on this node.
 
    .. code-block:: console
 
@@ -426,7 +547,9 @@ validator fully starts, it will peer with the first validator node.
 
    .. code-block:: console
 
-      $ sudo -u sawtooth sawtooth-poet-validator-registry-tp -v
+      $ sudo -u sawtooth poet-validator-registry-tp -v
+
+   For more information, see :ref:`start-tps-label`.
 
 If you have additional nodes in the network, repeat this step on those nodes.
 
@@ -439,19 +562,20 @@ Confirm Network Functionality
 
      * Docker: Run this command:
 
-       .. code-block:: console
+          .. code-block:: console
 
-          $ curl http://sawtooth-poet-rest-api-0:8008/peers
+             $ curl http://sawtooth-poet-rest-api-0:8008/peers
 
      * Ubuntu: Run the following command, replacing `{rest-api}` with the host
        name and port for the REST API on the first validator node, as determined
-       in :ref:`prereqs-multi-ubuntu-label`. On a node that is running the REST
-       API and client on the same host system, the default value is
-       ``http://localhost:8008``.
+       in :ref:`prereqs-multi-ubuntu-label`.
 
-       .. code-block:: console
+          .. code-block:: console
 
-          $ curl http://{rest-api}/peers
+             $ curl http://{rest-api}/peers
+
+       On a node that is running the REST API and client on the same system,
+       the default value for `{rest-api}` is ``http://localhost:8008``.
 
    If this query returns a 503 error, the nodes have not yet peered with the
    Sawtooth network. Repeat the query until you see output that resembles the
@@ -479,39 +603,38 @@ Confirm Network Functionality
 
    * Docker:
 
-     .. code-block:: console
+        .. code-block:: console
 
-        # intkey set --url http://sawtooth-poet-rest-api-0:8008 MyKey 999
+           # intkey set --url http://sawtooth-poet-rest-api-0:8008 MyKey 999
 
    * Ubuntu:
 
-     .. code-block:: console
+        .. code-block:: console
 
-        $ intkey set MyKey 999
+           $ intkey set MyKey 999
 
-     If necessary (if the REST API does not use the default URL and port), you
-     must also use the ``--url`` option to provide the actual value for your
-     network.
+     If the REST API does not use the default URL and port, you must use the
+     ``--url`` option to provide the actual value for your network.
 
 #. On the second validator node, watch for this transaction to appear on the
    blockchain. Run the following command:
 
    * Docker:
 
-     .. code-block:: console
+        .. code-block:: console
 
-        # intkey show --url http://sawtooth-poet-rest-api-1:8008 MyKey
-        MyKey: 999
+           # intkey show --url http://sawtooth-poet-rest-api-1:8008 MyKey
+           MyKey: 999
 
    * Ubuntu:
 
-     .. code-block:: console
+        .. code-block:: console
 
-        $ intkey show MyKey
-        MyKey: 999
+           $ intkey show MyKey
+           MyKey: 999
 
      If necessary, use the ``--url`` option to specify the REST API, as in the
-     example above.
+     previous command on the first node.
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License

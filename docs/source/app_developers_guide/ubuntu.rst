@@ -684,9 +684,11 @@ of this procedure, add these steps:
 
 * To delete the blockchain data, remove all files from ``/var/lib/sawtooth``.
 
+* To delete the Sawtooth logs, remove all files from ``/var/log/sawtooth/``.
+
 * To delete the Sawtooth keys, remove the key files
-   ``/etc/sawtooth/keys/validator.\*`` and
-   ``/home/``\ `yourname`\ ``/.sawtooth/keys/``\ `yourname`\ ``.\*``.
+  ``/etc/sawtooth/keys/validator.\*`` and
+  ``/home/``\ `yourname`\ ``/.sawtooth/keys/``\ `yourname`\ ``.\*``.
 
 
 .. Licensed under Creative Commons Attribution 4.0 International License

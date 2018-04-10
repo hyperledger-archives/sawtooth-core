@@ -96,8 +96,12 @@ This glossary defines general Sawtooth terms and concepts.
   PoET
     Proof of Elapsed Time, a Nakamoto-style consensus algorithm that is designed
     to support large networks. PoET relies on a Trusted Execution Environment
-    (TEE) such as |Intel (R)| Software Guard Extensions (SGX).  For more
-    information, see :doc:`architecture/poet`.
+    (TEE) such as |Intel (R)| Software Guard Extensions (SGX).
+
+    Sawtooth offers two version of PoET consensus. PoET-SGX relies on
+    |Intel (R)| SGX to implement a leader-election lottery system. PoET
+    simulator provides the same consensus algorithm on an SGX simulator.
+    For more information, see :doc:`architecture/poet`.
 
   REST API
     In Sawtooth, a core component that adapts communication with a validator to
