@@ -235,7 +235,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         .map_err(|_| String::from("urls are a comma separated list of strings"))
         .and_then(|st| {
             let s: String = st;
-            let split: Split<&str> = s.split(",");
+            let split: Split<char> = s.split(',');
             Ok(split.map(|s| s.to_string()).collect())
         })?;
 
@@ -289,7 +289,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     };
     let s: Result<Vec<usize>, std::num::ParseIntError> = match args.value_of("seed") {
         Some(s) => {
-            let split: Split<&str> = s.split(",");
+            let split: Split<char> = s.split(',');
             split.map(|s| s.parse()).collect()
         }
         None => {

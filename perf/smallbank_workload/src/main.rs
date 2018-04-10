@@ -178,7 +178,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     {
         Ok(st) => {
             let s: String = st;
-            let split: Split<&str> = s.split(",");
+            let split: Split<char> = s.split(',');
             split
                 .map(|s| std::string::String::from_str(s).unwrap())
                 .collect()
