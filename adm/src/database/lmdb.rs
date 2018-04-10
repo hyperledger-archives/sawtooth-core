@@ -113,7 +113,7 @@ impl<'a> LmdbDatabaseReader<'a> {
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let access = self.txn.access();
         let val: Result<&[u8], _> = access.get(&self.db.main, key);
-        val.ok().map(|v| Vec::from(v))
+        val.ok().map(Vec::from)
     }
 
     pub fn index_get(&self, index: &str, key: &[u8]) -> Result<Option<Vec<u8>>, DatabaseError> {
@@ -123,7 +123,7 @@ impl<'a> LmdbDatabaseReader<'a> {
             .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
         let access = self.txn.access();
         let val: Result<&[u8], _> = access.get(index, key);
-        Ok(val.ok().map(|v| Vec::from(v)))
+        Ok(val.ok().map(Vec::from))
     }
 
     pub fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {

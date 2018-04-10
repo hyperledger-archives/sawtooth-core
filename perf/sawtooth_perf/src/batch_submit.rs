@@ -188,7 +188,7 @@ pub fn run_workload<'a>(
     let interval = Interval::new(time::Duration::new(0, time_to_wait), &handle).unwrap();
     let mut log_time = time::Instant::now();
     let stream = interval
-        .map_err(|err| workload::WorkloadError::from(err))
+        .map_err(workload::WorkloadError::from)
         .map(|_: ()| -> Result<(), workload::WorkloadError> {
             let counter_clone = Rc::clone(&counter);
             workload::log(counter_clone, &mut log_time, update_time)
@@ -203,7 +203,7 @@ pub fn run_workload<'a>(
             let urls_c = &mut urls;
             workload::form_request_from_batchlist(urls_c, batch_list, basic_auth_c)
         })
-        .map_err(|err| workload::WorkloadError::from(err))
+        .map_err(workload::WorkloadError::from)
         .and_then(
             |req: Result<(Request, Option<String>), workload::WorkloadError>| {
                 let handle_clone = handle.clone();
