@@ -120,7 +120,7 @@ impl<'a> TransactionProcessor<'a> {
 
                 // Absorb the TpRegisterResponse message
                 loop {
-                    let _ = match future.get_timeout(Duration::from_millis(10000)) {
+                    match future.get_timeout(Duration::from_millis(10000)) {
                         Ok(_) => break,
                         Err(_) => {
                             if unregister.load(Ordering::SeqCst) {
@@ -158,7 +158,7 @@ impl<'a> TransactionProcessor<'a> {
             }
         };
         // Absorb the TpUnregisterResponse message, wait one second for response then continue
-        let _ = match future.get_timeout(Duration::from_millis(1000)) {
+        match future.get_timeout(Duration::from_millis(1000)) {
             Ok(_) => (),
             Err(err) => {
                 info!("Unregistration failed: {}", err.description());
