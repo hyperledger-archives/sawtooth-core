@@ -34,7 +34,7 @@ use err::CliError;
 use config;
 use wrappers::Block as BlockWrapper;
 
-const NULL_BLOCK_IDENTIFIER: &'static str = "0000000000000000";
+const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
 
 pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     match args.subcommand() {

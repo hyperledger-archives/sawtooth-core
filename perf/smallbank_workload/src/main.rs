@@ -52,8 +52,8 @@ use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 use playlist::SmallbankGeneratingIter;
 use smallbank_tranformer::SBPayloadTransformer;
 
-const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     env_logger::init();

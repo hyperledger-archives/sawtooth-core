@@ -53,8 +53,8 @@ use simplelog::{Config, LevelFilter, SimpleLogger};
 use intkey_iterator::IntKeyIterator;
 use intkey_transformer::IntKeyTransformer;
 
-const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     match SimpleLogger::init(LevelFilter::Warn, Config::default()) {
