@@ -35,10 +35,7 @@ impl<'a> Blockstore<'a> {
         let reader = self.db.reader()?;
         let packed = reader
             .get(&block_id.as_bytes())
-            .ok_or(DatabaseError::NotFoundError(format!(
-                "Block not found: {}",
-                block_id
-            )))?;
+            .ok_or_else(|| DatabaseError::NotFoundError(format!("Block not found: {}", block_id)))?;
         let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
@@ -54,17 +51,13 @@ impl<'a> Blockstore<'a> {
         let block_id = reader
             .index_get("index_block_num", &block_num.as_bytes())
             .and_then(|block_id| {
-                block_id.ok_or(DatabaseError::NotFoundError(format!(
-                    "Block not found: {}",
-                    height
-                )))
+                block_id.ok_or_else(|| {
+                    DatabaseError::NotFoundError(format!("Block not found: {}", height))
+                })
             })?;
-        let packed = reader
-            .get(&block_id)
-            .ok_or(DatabaseError::CorruptionError(format!(
-                "Block not found: {:?}",
-                block_id
-            )))?;
+        let packed = reader.get(&block_id).ok_or_else(|| {
+            DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
+        })?;
         let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
@@ -79,17 +72,13 @@ impl<'a> Blockstore<'a> {
         let block_id = reader
             .index_get("index_batch", &batch_id.as_bytes())
             .and_then(|block_id| {
-                block_id.ok_or(DatabaseError::NotFoundError(format!(
-                    "Batch not found: {}",
-                    batch_id
-                )))
+                block_id.ok_or_else(|| {
+                    DatabaseError::NotFoundError(format!("Batch not found: {}", batch_id))
+                })
             })?;
-        let packed = reader
-            .get(&block_id)
-            .ok_or(DatabaseError::CorruptionError(format!(
-                "Block not found: {:?}",
-                block_id
-            )))?;
+        let packed = reader.get(&block_id).ok_or_else(|| {
+            DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
+        })?;
         let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
@@ -104,17 +93,16 @@ impl<'a> Blockstore<'a> {
         let block_id = reader
             .index_get("index_transaction", &transaction_id.as_bytes())
             .and_then(|block_id| {
-                block_id.ok_or(DatabaseError::NotFoundError(format!(
-                    "Transaction not found: {}",
-                    transaction_id
-                )))
+                block_id.ok_or_else(|| {
+                    DatabaseError::NotFoundError(format!(
+                        "Transaction not found: {}",
+                        transaction_id
+                    ))
+                })
             })?;
-        let packed = reader
-            .get(&block_id)
-            .ok_or(DatabaseError::CorruptionError(format!(
-                "Block not found: {:?}",
-                block_id
-            )))?;
+        let packed = reader.get(&block_id).ok_or_else(|| {
+            DatabaseError::CorruptionError(format!("Block not found: {:?}", block_id))
+        })?;
         let block: Block = protobuf::parse_from_bytes(&packed).map_err(|err| {
             DatabaseError::CorruptionError(format!(
                 "Could not interpret stored data as a block: {}",
@@ -199,7 +187,7 @@ impl<'a> Blockstore<'a> {
         let mut cursor = reader.index_cursor("index_block_num")?;
         let (_, val) = cursor
             .last()
-            .ok_or(DatabaseError::NotFoundError("No chain head".into()))?;
+            .ok_or_else(|| DatabaseError::NotFoundError("No chain head".into()))?;
         String::from_utf8(val.into()).map_err(|err| {
             DatabaseError::CorruptionError(format!("Chain head block id is corrupt: {}", err))
         })

@@ -32,10 +32,9 @@ impl LmdbContext {
     pub fn new(filepath: &Path, indexes: u32, size: Option<usize>) -> Result<Self, DatabaseError> {
         let flags = lmdb::open::MAPASYNC | lmdb::open::WRITEMAP | lmdb::open::NOSUBDIR;
 
-        let filepath_str = filepath.to_str().ok_or(DatabaseError::InitError(format!(
-            "Invalid filepath: {:?}",
-            filepath
-        )))?;
+        let filepath_str = filepath
+            .to_str()
+            .ok_or_else(|| DatabaseError::InitError(format!("Invalid filepath: {:?}", filepath)))?;
 
         let mut builder = lmdb::EnvBuilder::new().map_err(|err| {
             DatabaseError::InitError(format!("Failed to initialize environment: {}", err))
@@ -121,10 +120,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::ReaderError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
         let access = self.txn.access();
         let val: Result<&[u8], _> = access.get(index, key);
         Ok(val.ok().map(|v| Vec::from(v)))
@@ -145,10 +141,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::ReaderError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
         let cursor = self.txn
             .cursor(index)
             .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
@@ -172,10 +165,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::ReaderError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
         self.txn
             .db_stat(index)
             .map_err(|err| {
@@ -235,10 +225,7 @@ impl<'a> LmdbDatabaseWriter<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::WriterError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::WriterError(format!("Not an index: {}", index)))?;
         self.txn
             .access()
             .put(index, key, value, lmdb::put::Flags::empty())
@@ -249,10 +236,7 @@ impl<'a> LmdbDatabaseWriter<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::WriterError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::WriterError(format!("Not an index: {}", index)))?;
         self.txn
             .access()
             .del_key(index, key)

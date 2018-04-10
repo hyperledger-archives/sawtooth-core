@@ -34,9 +34,7 @@ use err::CliError;
 pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let genesis_file_path = if args.is_present("output") {
         args.value_of("output")
-            .ok_or(CliError::ArgumentError(format!(
-                "Failed to read `output` arg"
-            )))
+            .ok_or_else(|| CliError::ArgumentError(format!("Failed to read `output` arg")))
             .map(|pathstr| Path::new(pathstr).to_path_buf())
     } else {
         Ok(config::get_path_config().data_dir.join("genesis.batch"))
@@ -50,7 +48,7 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     }
 
     let input_files = args.values_of("input_file")
-        .ok_or(CliError::ArgumentError("No input files passed".into()))?;
+        .ok_or_else(|| CliError::ArgumentError("No input files passed".into()))?;
 
     let batch_lists = input_files
         .map(|filepath| {
