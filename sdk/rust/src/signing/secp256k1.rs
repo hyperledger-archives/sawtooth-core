@@ -66,7 +66,7 @@ impl PrivateKey for Secp256k1PrivateKey {
     }
 
     fn as_slice(&self) -> &[u8] {
-        return &self.private;
+        &self.private
     }
 }
 
@@ -90,7 +90,7 @@ impl PublicKey for Secp256k1PublicKey {
     }
 
     fn as_slice(&self) -> &[u8] {
-        return &self.public;
+        &self.public
     }
 }
 
@@ -189,7 +189,7 @@ fn hex_str_to_bytes(s: &str) -> Result<Vec<u8>, Error> {
         })
         .collect();
 
-    return Ok(decoded);
+    Ok(decoded)
 }
 
 fn bytes_to_hex_str(b: &[u8]) -> String {

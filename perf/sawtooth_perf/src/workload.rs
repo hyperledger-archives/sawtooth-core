@@ -219,8 +219,8 @@ pub fn get_next_batchlist(
                 batch_map.borrow_mut().add(batch_list.clone());
                 Ok(batch_list)
             }
-            Some(Err(err)) => return Err(WorkloadError::from(err)),
-            None => return Err(WorkloadError::NoBatchError),
+            Some(Err(err)) => Err(WorkloadError::from(err)),
+            None => Err(WorkloadError::NoBatchError),
         },
     }
 }

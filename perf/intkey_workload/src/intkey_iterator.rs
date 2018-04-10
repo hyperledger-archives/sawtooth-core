@@ -115,11 +115,11 @@ impl Iterator for IntKeyIterator {
             if self.names.len() < self.num_names {
                 let name = self.gen_name();
                 self.names.insert(name.clone(), 0);
-                return Some(IntKeyPayload {
+                Some(IntKeyPayload {
                     name: name,
                     verb: "set".to_string(),
                     value: self.set_value,
-                });
+                })
             } else {
                 let names_map_clone = self.names.clone();
                 let index = self.rng.gen_range(0, self.names.len());
@@ -138,16 +138,16 @@ impl Iterator for IntKeyIterator {
                 } else {
                     self.names.remove(name);
                 }
-                return Some(self.gen_inc_or_dec(Some(name.to_string())));
+                Some(self.gen_inc_or_dec(Some(name.to_string())))
             }
         } else {
             // invalid transaction
 
-            return Some(IntKeyPayload {
+            Some(IntKeyPayload {
                 name: self.gen_name(),
                 verb: "invalid".to_string(),
                 value: 0,
-            });
+            })
         };
     }
 }

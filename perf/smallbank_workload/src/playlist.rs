@@ -205,7 +205,7 @@ fn customer_id_address(customer_id: u32) -> String {
 
     let hex = bytes_to_hex_str(hash);
     // Using the precomputed Sha512 hash of "smallbank"
-    return String::from("332514") + &hex[0..64];
+    String::from("332514") + &hex[0..64]
 }
 
 pub fn create_smallbank_playlist(
