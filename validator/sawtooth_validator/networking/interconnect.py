@@ -167,8 +167,7 @@ class _SendReceive(object):
         return self._connection
 
     def _is_connection_lost(self, last_timestamp):
-        return (time.time() - last_timestamp >
-                self._connection_timeout)
+        return (time.time() - last_timestamp) > self._connection_timeout
 
     def _identity_to_connection_id(self, zmq_identity):
         if zmq_identity not in self._identities_to_connection_ids:

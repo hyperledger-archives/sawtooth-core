@@ -229,9 +229,9 @@ class SchedulerIterator(object):
             # and we have returned all the scheduler's transactions or the
             # scheduler was cancelled.
             while True:
-                if (self._scheduler.complete(block=False) and
-                        self._scheduler.count() == self._next_index or
-                        self._scheduler.is_cancelled()):
+                if (self._scheduler.complete(block=False)
+                        and self._scheduler.count() == self._next_index
+                        or self._scheduler.is_cancelled()):
                     raise StopIteration()
 
                 txn = self._scheduler.next_transaction()

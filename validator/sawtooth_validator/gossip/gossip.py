@@ -552,9 +552,9 @@ class ConnectionManager(InstrumentedThread):
 
             with self._lock:
                 unpeered_candidates = list(
-                    set(self._candidate_peer_endpoints) -
-                    set(peered_endpoints) -
-                    set([self._endpoint]))
+                    set(self._candidate_peer_endpoints)
+                    - set(peered_endpoints)
+                    - set([self._endpoint]))
 
             LOGGER.debug(
                 "Peers are: %s. "

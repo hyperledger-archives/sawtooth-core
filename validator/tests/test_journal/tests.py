@@ -1381,8 +1381,8 @@ class TestJournal(unittest.TestCase):
             chain_controller.queue_block(block)
 
             # wait for the chain_head to be updated.
-            wait_until(lambda: btm.chain_head.identifier ==
-                       block.identifier, 2)
+            wait_until(
+                lambda: btm.chain_head.identifier == block.identifier, 2)
             self.assertTrue(btm.chain_head.identifier == block.identifier)
         finally:
             if block_publisher is not None:

@@ -551,8 +551,8 @@ class TestResponder(unittest.TestCase):
 
     def assert_message_sent(self, connection_id, message_type):
         self.assertIsNotNone(self.gossip.sent.get(connection_id))
-        self.assertTrue(self.gossip.sent.get(connection_id)[0][0] ==
-                        message_type)
+        self.assertTrue(
+            self.gossip.sent.get(connection_id)[0][0] == message_type)
 
     def assert_request_pending(self, requested_id, connection_id):
         self.assertIn(connection_id, self.responder.get_request(requested_id))
