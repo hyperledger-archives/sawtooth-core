@@ -248,12 +248,9 @@ pub fn form_request_from_batchlist(
     req.headers_mut().set(ContentType::octet_stream());
     req.headers_mut().set(ContentLength(content_len));
 
-    match basic_auth {
-        Some(ref basic_auth) => {
-            req.headers_mut()
-                .set(Authorization(Basic::from_str(&basic_auth)?));
-        }
-        None => {}
+    if let Some(ref basic_auth) = basic_auth {
+        req.headers_mut()
+            .set(Authorization(Basic::from_str(&basic_auth)?));
     }
 
     Ok((req, batch_id))
@@ -267,28 +264,27 @@ fn handle_http_error(
     batch_map: Rc<RefCell<BatchMap>>,
     counter: Rc<HTTPRequestCounter>,
 ) -> Result<(), HyperError> {
-    match batch_id {
-        Some(batch_id) => match response {
+    if let Some(batch_id) = batch_id {
+        match response {
             Ok(response) => match response.status() {
                 StatusCode::Accepted => {
                     batch_map.borrow_mut().mark_submit_success(batch_id.clone())
                 }
                 StatusCode::TooManyRequests => counter.increment_queue_full(),
 
-                _ => match batch_map.borrow_mut().get_batchlist_to_submit(batch_id) {
-                    Some(batchlist) => batches.borrow_mut().push(batchlist),
-                    None => {}
+                _ => if let Some(batchlist) =
+                    batch_map.borrow_mut().get_batchlist_to_submit(batch_id)
+                {
+                    batches.borrow_mut().push(batchlist)
                 },
             },
             Err(err) => {
-                match batch_map.borrow_mut().get_batchlist_to_submit(batch_id) {
-                    Some(batchlist) => batches.borrow_mut().push(batchlist),
-                    None => {}
+                if let Some(batchlist) = batch_map.borrow_mut().get_batchlist_to_submit(batch_id) {
+                    batches.borrow_mut().push(batchlist)
                 }
                 info!("{}", err);
             }
-        },
-        None => {}
+        }
     }
     Ok(())
 }

@@ -139,20 +139,16 @@ impl<'a> IntKeyTransformer<'a> {
         txn_header.set_outputs(addresses.clone());
 
         if payload.verb == "inc".to_string() || payload.verb == "dec".to_string() {
-            match self.txn_id_by_name.get(&payload.name) {
-                Some(txn_id) => {
-                    let dependencies = RepeatedField::from_vec(vec![txn_id.clone().to_string()]);
-                    txn_header.set_dependencies(dependencies);
-                }
-                None => {}
+            if let Some(txn_id) = self.txn_id_by_name.get(&payload.name) {
+                let dependencies = RepeatedField::from_vec(vec![txn_id.clone().to_string()]);
+                txn_header.set_dependencies(dependencies);
             }
         }
         if self.rng.gen_range(0.0, 1.0) < self.unsatisfiable {
             let random_bytes: Vec<u8> = self.rng.gen_iter::<u8>().take(100).collect();
 
-            match self.signer.sign(random_bytes.as_slice()) {
-                Ok(dep) => txn_header.dependencies.push(dep),
-                Err(_) => (),
+            if let Ok(dep) = self.signer.sign(random_bytes.as_slice()) {
+                txn_header.dependencies.push(dep)
             }
         }
 
