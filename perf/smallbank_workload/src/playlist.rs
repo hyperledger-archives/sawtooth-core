@@ -351,48 +351,48 @@ impl From<SmallbankTransactionPayload> for Yaml {
                 let data = payload.get_create_account();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("create_account"),
-                "customer_id" => Yaml::Integer(data.customer_id as i64),
+                "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
                 "customer_name" => Yaml::String(data.customer_name.clone()),
                 "initial_savings_balance" =>
-                    Yaml::Integer(data.initial_savings_balance as i64),
+                    Yaml::Integer(i64::from(data.initial_savings_balance)),
                 "initial_checking_balance" =>
-                    Yaml::Integer(data.initial_checking_balance as i64)}
+                    Yaml::Integer(i64::from(data.initial_checking_balance))}
             }
             SBPayloadType::DEPOSIT_CHECKING => {
                 let data = payload.get_deposit_checking();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("deposit_checking"),
-                "customer_id" => Yaml::Integer(data.customer_id as i64),
-                "amount" => Yaml::Integer(data.amount as i64)}
+                "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
+                "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::WRITE_CHECK => {
                 let data = payload.get_write_check();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("write_check"),
-                "customer_id" => Yaml::Integer(data.customer_id as i64),
-                "amount" => Yaml::Integer(data.amount as i64)}
+                "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
+                "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::TRANSACT_SAVINGS => {
                 let data = payload.get_transact_savings();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("transact_savings"),
-                "customer_id" => Yaml::Integer(data.customer_id as i64),
-                "amount" => Yaml::Integer(data.amount as i64)}
+                "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
+                "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::SEND_PAYMENT => {
                 let data = payload.get_send_payment();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("send_payment"),
-                "source_customer_id" => Yaml::Integer(data.source_customer_id as i64),
-                "dest_customer_id" => Yaml::Integer(data.dest_customer_id as i64),
-                "amount" => Yaml::Integer(data.amount as i64)}
+                "source_customer_id" => Yaml::Integer(i64::from(data.source_customer_id)),
+                "dest_customer_id" => Yaml::Integer(i64::from(data.dest_customer_id)),
+                "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::AMALGAMATE => {
                 let data = payload.get_amalgamate();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("amalgamate"),
-                "source_customer_id" => Yaml::Integer(data.source_customer_id as i64),
-                "dest_customer_id" => Yaml::Integer(data.dest_customer_id as i64)}
+                "source_customer_id" => Yaml::Integer(i64::from(data.source_customer_id)),
+                "dest_customer_id" => Yaml::Integer(i64::from(data.dest_customer_id))}
             }
             SBPayloadType::PAYLOAD_TYPE_UNSET => panic!("Unset payload type: {:?}", payload),
         }

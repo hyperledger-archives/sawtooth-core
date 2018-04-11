@@ -113,8 +113,8 @@ impl IntkeyPayload {
         };
 
         let value: u32 = match value_raw {
-            &cbor::value::Value::U8(x) => x as u32,
-            &cbor::value::Value::U16(x) => x as u32,
+            &cbor::value::Value::U8(x) => u32::from(x),
+            &cbor::value::Value::U16(x) => u32::from(x),
             &cbor::value::Value::U32(x) => x,
             _ => {
                 return Err(ApplyError::InvalidTransaction(String::from(
@@ -200,8 +200,8 @@ impl<'a> IntkeyState<'a> {
                 let status = match map.get(&Key::Text(Text::Text(String::from(name)))) {
                     Some(v) => match v {
                         &Value::U32(x) => Ok(Some(x)),
-                        &Value::U16(x) => Ok(Some(x as u32)),
-                        &Value::U8(x) => Ok(Some(x as u32)),
+                        &Value::U16(x) => Ok(Some(u32::from(x))),
+                        &Value::U8(x) => Ok(Some(u32::from(x))),
                         _ => Err(ApplyError::InternalError(String::from(
                             "Value returned from state is the wrong type.",
                         ))),

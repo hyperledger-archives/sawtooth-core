@@ -133,7 +133,7 @@ pub fn http_submitter(
                     if count % rate == 0 {
                         let log_duration = time::Instant::now() - last_time;
                         let log_duration_flt = log_duration.as_secs() as f64
-                            + log_duration.subsec_nanos() as f64 * 1e-9;
+                            + f64::from(log_duration.subsec_nanos()) * 1e-9;
 
                         println!(
                             "target: {} target rate: {} count: {} effective rate: {} per sec",

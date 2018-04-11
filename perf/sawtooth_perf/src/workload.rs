@@ -167,7 +167,7 @@ impl HTTPRequestCounter {
     }
 
     pub fn log(&self, seconds: u64, nanoseconds: u32) {
-        let update = seconds as f64 + nanoseconds as f64 * 1e-9;
+        let update = seconds as f64 + f64::from(nanoseconds) * 1e-9;
         println!(
             "{}, Batches/s {:.3}",
             self,
