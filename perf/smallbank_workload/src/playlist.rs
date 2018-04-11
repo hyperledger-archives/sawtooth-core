@@ -236,7 +236,7 @@ pub fn read_smallbank_playlist(
 ) -> Result<Vec<SmallbankTransactionPayload>, PlaylistError> {
     let mut results = Vec::new();
     let buf = try!(read_yaml(input));
-    let yaml_array = try!(load_yaml_array(buf));
+    let yaml_array = try!(load_yaml_array(&buf));
     for yaml in yaml_array.iter() {
         results.push(SmallbankTransactionPayload::from(yaml));
     }
@@ -254,9 +254,8 @@ fn read_yaml(input: &mut Read) -> Result<Cow<str>, PlaylistError> {
     Ok(buf.into())
 }
 
-fn load_yaml_array(yaml_str: Cow<str>) -> Result<Cow<Vec<Yaml>>, PlaylistError> {
-    let mut yaml =
-        try!(YamlLoader::load_from_str(yaml_str.as_ref()).map_err(PlaylistError::YamlInputError));
+fn load_yaml_array(yaml_str: &str) -> Result<Cow<Vec<Yaml>>, PlaylistError> {
+    let mut yaml = try!(YamlLoader::load_from_str(yaml_str).map_err(PlaylistError::YamlInputError));
     let element = yaml.remove(0);
     let yaml_array = element.as_vec().cloned().unwrap().clone();
 
