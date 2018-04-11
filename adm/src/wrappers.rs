@@ -144,25 +144,13 @@ impl Transaction {
             .map(
                 |transaction_header: messages::transaction::TransactionHeader| Transaction {
                     batcher_public_key: String::from(transaction_header.get_batcher_public_key()),
-                    dependencies: transaction_header
-                        .get_dependencies()
-                        .iter()
-                        .cloned()
-                        .collect(),
+                    dependencies: transaction_header.get_dependencies().to_vec(),
                     family_name: String::from(transaction_header.get_family_name()),
                     family_version: String::from(transaction_header.get_family_version()),
                     header_signature: String::from(transaction.get_header_signature()),
-                    inputs: transaction_header
-                        .get_inputs()
-                        .iter()
-                        .cloned()
-                        .collect(),
+                    inputs: transaction_header.get_inputs().to_vec(),
                     nonce: String::from(transaction_header.get_nonce()),
-                    outputs: transaction_header
-                        .get_outputs()
-                        .iter()
-                        .cloned()
-                        .collect(),
+                    outputs: transaction_header.get_outputs().to_vec(),
                     payload: Vec::from(transaction.get_payload()),
                     payload_sha512: String::from(transaction_header.get_payload_sha512()),
                     signer_public_key: String::from(transaction_header.get_signer_public_key()),
