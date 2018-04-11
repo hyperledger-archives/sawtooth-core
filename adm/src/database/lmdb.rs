@@ -20,7 +20,7 @@ use std::path::Path;
 
 use lmdb_zero as lmdb;
 
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 
 const DEFAULT_SIZE: usize = 1 << 40; // 1024 ** 4
 

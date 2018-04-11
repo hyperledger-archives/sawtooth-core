@@ -29,7 +29,7 @@ use sawtooth_sdk::messages::transaction::TransactionHeader;
 
 use blockstore::Blockstore;
 use database::lmdb;
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 use err::CliError;
 use config;
 use wrappers::Block as BlockWrapper;

@@ -19,7 +19,7 @@ use protobuf;
 use protobuf::Message;
 use sawtooth_sdk::messages::block::{Block, BlockHeader};
 
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 use database::lmdb::LmdbDatabase;
 
 pub struct Blockstore<'a> {
