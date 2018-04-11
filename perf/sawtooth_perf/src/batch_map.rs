@@ -139,7 +139,7 @@ mod tests {
     fn generate_batchlists(num: u32) -> Vec<BatchList> {
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();
-        let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
+        let _signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
 
         let mut batchlists = Vec::new();
 
