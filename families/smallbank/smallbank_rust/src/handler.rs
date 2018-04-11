@@ -193,13 +193,13 @@ fn apply_transact_savings(
             )))
         }
         Some(mut account) => {
-            if transact_savings_data.get_amount() < 0 {
-                if (-transact_savings_data.get_amount() as u32) > account.get_savings_balance() {
-                    warn!("Invalid transaction: during TRANSACT_SAVINGS, Insufficient funds in source savings account");
-                    return Err(ApplyError::InvalidTransaction(format!(
-                        "Insufficient funds in source savings account"
-                    )));
-                }
+            if transact_savings_data.get_amount() < 0
+                && (-transact_savings_data.get_amount() as u32) > account.get_savings_balance()
+            {
+                warn!("Invalid transaction: during TRANSACT_SAVINGS, Insufficient funds in source savings account");
+                return Err(ApplyError::InvalidTransaction(format!(
+                    "Insufficient funds in source savings account"
+                )));
             }
 
             let balance = {
