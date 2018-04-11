@@ -148,7 +148,7 @@ impl Iterator for IntKeyIterator {
                 verb: "invalid".to_string(),
                 value: 0,
             })
-        };
+        }
     }
 }
 
