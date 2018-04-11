@@ -199,7 +199,7 @@ fn err_if_out_of_range(val: f32) -> Result<f32, IntKeyCliError> {
 }
 
 fn greater_than_zero32(val: u32) -> Result<u32, IntKeyCliError> {
-    if val <= 0 {
+    if val == 0 {
         return Err(IntKeyCliError {
             msg: "Value must be greater than zero".to_string(),
         });
@@ -208,7 +208,7 @@ fn greater_than_zero32(val: u32) -> Result<u32, IntKeyCliError> {
 }
 
 fn greater_than_zero(val: usize) -> Result<usize, IntKeyCliError> {
-    if val <= 0 {
+    if val == 0 {
         return Err(IntKeyCliError {
             msg: "Value must be greater than zero".to_string(),
         });

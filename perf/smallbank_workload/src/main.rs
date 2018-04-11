@@ -168,7 +168,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         Ok(n) => n,
         Err(_) => 100,
     };
-    if accounts <= 0 {
+    if accounts == 0 {
         return arg_error("The number of accounts must be greater than 0.");
     }
 
