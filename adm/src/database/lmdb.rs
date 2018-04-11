@@ -126,6 +126,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         Ok(val.ok().map(Vec::from))
     }
 
+    #[allow(dead_code)]
     pub fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
         let cursor = self.txn
             .cursor(&self.db.main)
@@ -181,6 +182,7 @@ pub struct LmdbDatabaseReaderCursor<'a> {
 }
 
 impl<'a> LmdbDatabaseReaderCursor<'a> {
+    #[allow(dead_code)]
     pub fn first(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor
             .first(&self.access)
