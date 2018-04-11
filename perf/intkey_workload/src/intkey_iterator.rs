@@ -42,7 +42,7 @@ impl IntKeyPayload {
     pub fn construct(&self) -> Value {
         let name = self.name.clone();
         let verb = self.verb.clone();
-        let value = self.value.clone();
+        let value = self.value;
 
         let mut map = BTreeMap::new();
         map.insert(
