@@ -96,12 +96,12 @@ pub fn http_submitter(
         .build(&core.handle());
 
     let timer = tokio_timer::wheel()
-        .tick_duration(time::Duration::new(0, 1000000))
+        .tick_duration(time::Duration::new(0, 1_000_000))
         .build();
 
     // Define a target timeslice (how often to submit batches) based
     // on number of nanoseconds in a second divided by rate
-    let timeslice = time::Duration::new(0, 1000000000 / rate as u32);
+    let timeslice = time::Duration::new(0, 1_000_000_000 / rate as u32);
 
     let mut uri = target.clone();
     uri.push_str("/batches");

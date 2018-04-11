@@ -292,8 +292,8 @@ impl Iterator for SmallbankGeneratingIter {
             create_account.set_customer_id(self.current_account as u32);
             create_account.set_customer_name(self.rng.gen_iter::<char>().take(20).collect());
 
-            create_account.set_initial_savings_balance(1000000);
-            create_account.set_initial_checking_balance(1000000);
+            create_account.set_initial_savings_balance(1_000_000);
+            create_account.set_initial_checking_balance(1_000_000);
             payload.set_create_account(create_account);
 
             self.current_account += 1;
