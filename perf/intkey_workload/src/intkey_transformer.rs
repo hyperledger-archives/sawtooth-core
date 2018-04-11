@@ -138,7 +138,7 @@ impl<'a> IntKeyTransformer<'a> {
 
         txn_header.set_outputs(addresses.clone());
 
-        if payload.verb == "inc".to_string() || payload.verb == "dec".to_string() {
+        if payload.verb == "inc" || payload.verb == "dec" {
             if let Some(txn_id) = self.txn_id_by_name.get(&payload.name) {
                 let dependencies = RepeatedField::from_vec(vec![txn_id.clone().to_string()]);
                 txn_header.set_dependencies(dependencies);
@@ -163,7 +163,7 @@ impl<'a> IntKeyTransformer<'a> {
 
         let signature = self.signer.sign(&header_bytes.to_vec())?;
 
-        if payload.verb == "set".to_string() {
+        if payload.verb == "set" {
             if !self.txn_id_by_name.contains_key(&payload.name) {
                 self.txn_id_by_name
                     .insert(payload.name.clone(), signature.clone());
