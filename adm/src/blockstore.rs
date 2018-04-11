@@ -188,7 +188,7 @@ impl<'a> Blockstore<'a> {
         let (_, val) = cursor
             .last()
             .ok_or_else(|| DatabaseError::NotFoundError("No chain head".into()))?;
-        String::from_utf8(val.into()).map_err(|err| {
+        String::from_utf8(val).map_err(|err| {
             DatabaseError::CorruptionError(format!("Chain head block id is corrupt: {}", err))
         })
     }
