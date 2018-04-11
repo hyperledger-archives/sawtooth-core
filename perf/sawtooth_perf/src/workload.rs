@@ -310,7 +310,9 @@ pub fn make_request(
                 .map(|_| ())
                 .map_err(|_| ());
 
-            Ok(handle_clone.spawn(response_future))
+            handle_clone.spawn(response_future);
+
+            Ok(())
         }
 
         Err(err) => Err(err),
