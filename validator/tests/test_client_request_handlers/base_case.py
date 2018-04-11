@@ -77,7 +77,8 @@ class ClientHandlerTestCase(unittest.TestCase):
         self._store.clear()
 
     def add_blocks(self, *base_ids):
-        """Adds new blocks to a test case's block store with specified base_ids.
+        """Adds new blocks to a test case's block store with specified
+        base_ids.
         """
         for base_id in base_ids:
             self._store.add_block(base_id)

@@ -311,8 +311,8 @@ class ConsensusState(object):
 
     @staticmethod
     def _block_for_id(block_id, block_cache):
-        """A convenience method retrieving a block given a block ID.  Takes care
-        of the special case of NULL_BLOCK_IDENTIFIER.
+        """A convenience method retrieving a block given a block ID. Takes
+        care of the special case of NULL_BLOCK_IDENTIFIER.
 
         Args:
             block_id (str): The ID of block to retrieve.

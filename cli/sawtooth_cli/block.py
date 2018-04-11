@@ -76,7 +76,8 @@ def add_block_parser(subparsers, parent_parser):
 
 
 def do_block(args):
-    """Runs the block list or block show command, printing output to the console
+    """Runs the block list or block show command, printing output to the
+    console
 
         Args:
             args: The parsed arguments sent to the command at runtime
