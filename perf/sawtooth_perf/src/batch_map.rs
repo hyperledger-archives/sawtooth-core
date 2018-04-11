@@ -61,8 +61,6 @@ impl BatchMap {
 mod tests {
     use super::BatchMap;
 
-    use std::thread::sleep;
-
     use rand::Rng;
     use rand::StdRng;
 
@@ -70,7 +68,6 @@ mod tests {
 
     use sawtooth_sdk::signing;
     use sawtooth_sdk::messages::batch::Batch;
-    use sawtooth_sdk::messages::batch::BatchHeader;
     use sawtooth_sdk::messages::batch::BatchList;
 
     #[test]

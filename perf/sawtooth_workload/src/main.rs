@@ -20,7 +20,6 @@ extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
 
 use std::fs::File;
-use std::io::Write;
 use std::io::Read;
 use std::error::Error;
 
