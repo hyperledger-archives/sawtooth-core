@@ -111,55 +111,50 @@ pub fn http_submitter(
     let mut last_time = time::Instant::now();
     let mut last_trace_time = time::Instant::now();
 
-    loop {
-        match receiver.lock().unwrap().recv().unwrap() {
-            Some(mut batch_list) => {
-                // Set the trace flag on a batch about once every 5 seconds
-                if (time::Instant::now() - last_trace_time).as_secs() > 5 {
-                    batch_list.mut_batches()[0].trace = true;
-                    last_trace_time = time::Instant::now();
-                }
+    while let Some(mut batch_list) = receiver.lock().unwrap().recv().unwrap() {
+        // Set the trace flag on a batch about once every 5 seconds
+        if (time::Instant::now() - last_trace_time).as_secs() > 5 {
+            batch_list.mut_batches()[0].trace = true;
+            last_trace_time = time::Instant::now();
+        }
 
-                let bytes = batch_list.write_to_bytes().unwrap();
+        let bytes = batch_list.write_to_bytes().unwrap();
 
-                let mut req = Request::new(Method::Post, uri.parse().unwrap());
-                req.headers_mut().set(ContentType::octet_stream());
-                req.headers_mut().set(ContentLength(bytes.len() as u64));
-                req.set_body(bytes);
+        let mut req = Request::new(Method::Post, uri.parse().unwrap());
+        req.headers_mut().set(ContentType::octet_stream());
+        req.headers_mut().set(ContentLength(bytes.len() as u64));
+        req.set_body(bytes);
 
-                let work = client.request(req).and_then(|_| {
-                    count += 1;
+        let work = client.request(req).and_then(|_| {
+            count += 1;
 
-                    if count % rate == 0 {
-                        let log_duration = time::Instant::now() - last_time;
-                        let log_duration_flt = log_duration.as_secs() as f64
-                            + f64::from(log_duration.subsec_nanos()) * 1e-9;
+            if count % rate == 0 {
+                let log_duration = time::Instant::now() - last_time;
+                let log_duration_flt =
+                    log_duration.as_secs() as f64 + f64::from(log_duration.subsec_nanos()) * 1e-9;
 
-                        println!(
-                            "target: {} target rate: {} count: {} effective rate: {} per sec",
-                            target,
-                            rate,
-                            count,
-                            (count - last_count) as f64 / log_duration_flt
-                        );
+                println!(
+                    "target: {} target rate: {} count: {} effective rate: {} per sec",
+                    target,
+                    rate,
+                    count,
+                    (count - last_count) as f64 / log_duration_flt
+                );
 
-                        last_count = count;
-                        last_time = time::Instant::now();
-                    }
-
-                    Ok(())
-                });
-
-                let request_time = time::Instant::now();
-                core.run(work).unwrap();
-                let runtime = time::Instant::now() - request_time;
-
-                if let Some(sleep_duration) = timeslice.checked_sub(runtime) {
-                    let sleep = timer.sleep(sleep_duration);
-                    sleep.wait().unwrap();
-                }
+                last_count = count;
+                last_time = time::Instant::now();
             }
-            None => break,
+
+            Ok(())
+        });
+
+        let request_time = time::Instant::now();
+        core.run(work).unwrap();
+        let runtime = time::Instant::now() - request_time;
+
+        if let Some(sleep_duration) = timeslice.checked_sub(runtime) {
+            let sleep = timer.sleep(sleep_duration);
+            sleep.wait().unwrap();
         }
     }
 }
