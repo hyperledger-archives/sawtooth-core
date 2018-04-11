@@ -202,7 +202,8 @@ class MockStateViewFactory(object):
 
 
 class MockStateView(object):
-    """The StateView provides read-only access to a particular merkle tree root.
+    """The StateView provides read-only access to a particular merkle tree
+    root.
 
     The StateView is a read-only view of a merkle tree. Access is limited to
     available addresses, collections of leaf nodes, and specific leaf nodes.
