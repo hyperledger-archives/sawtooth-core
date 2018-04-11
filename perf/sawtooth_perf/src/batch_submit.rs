@@ -128,7 +128,7 @@ pub fn http_submitter(
                 req.set_body(bytes);
 
                 let work = client.request(req).and_then(|_| {
-                    count = count + 1;
+                    count += 1;
 
                     if count % rate == 0 {
                         let log_duration = time::Instant::now() - last_time;
