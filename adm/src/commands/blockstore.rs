@@ -94,7 +94,7 @@ fn run_restore_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     while let Some(block) = restore_block(&mut source)? {
         blockstore
-            .put(block)
+            .put(&block)
             .map_err(|err| CliError::EnvironmentError(format!("Failed to put block: {}", err)))?;
     }
     Ok(())
@@ -306,7 +306,7 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         }
     }
 
-    blockstore.put(block).map_err(|err| {
+    blockstore.put(&block).map_err(|err| {
         CliError::ArgumentError(format!("Failed to put block into database: {}", err))
     })?;
 

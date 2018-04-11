@@ -105,7 +105,7 @@ impl Batch {
                 batch
                     .get_transactions()
                     .iter()
-                    .map(|transaction| Transaction::try_from(transaction.clone()))
+                    .map(|transaction| Transaction::try_from(&transaction.clone()))
                     .collect::<Result<Vec<Transaction>, Error>>()
                     .map(move |transactions| Batch {
                         header_signature: String::from(batch.get_header_signature()),
@@ -133,7 +133,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn try_from(transaction: messages::transaction::Transaction) -> Result<Self, Error> {
+    pub fn try_from(transaction: &messages::transaction::Transaction) -> Result<Self, Error> {
         protobuf::parse_from_bytes(&transaction.header)
             .map_err(|err| {
                 Error::ParseError(format!(

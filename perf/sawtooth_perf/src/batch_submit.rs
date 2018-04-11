@@ -60,7 +60,7 @@ pub fn submit_signed_batches(
     let receiver = Arc::new(Mutex::new(receiver));
 
     let submit_thread = thread::spawn(move || {
-        http_submitter(target, rate as u64, receiver);
+        http_submitter(&target, rate as u64, &receiver);
     });
 
     let mut feeder = BatchListFeeder::new(reader);
@@ -84,9 +84,9 @@ pub fn submit_signed_batches(
 }
 
 pub fn http_submitter(
-    target: String,
+    target: &str,
     rate: u64,
-    receiver: Arc<Mutex<mpsc::Receiver<Option<BatchList>>>>,
+    receiver: &Arc<Mutex<mpsc::Receiver<Option<BatchList>>>>,
 ) {
     let mut core = Core::new().unwrap();
 
@@ -103,7 +103,7 @@ pub fn http_submitter(
     // on number of nanoseconds in a second divided by rate
     let timeslice = time::Duration::new(0, 1_000_000_000 / rate as u32);
 
-    let mut uri = target.clone();
+    let mut uri = target.to_string();
     uri.push_str("/batches");
 
     let mut count = 0;
@@ -165,7 +165,7 @@ pub fn run_workload(
     time_to_wait: u32,
     update_time: u32,
     targets: Vec<String>,
-    basic_auth: Option<String>,
+    basic_auth: &Option<String>,
 ) -> Result<(), workload::WorkloadError> {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
@@ -186,17 +186,17 @@ pub fn run_workload(
         .map_err(workload::WorkloadError::from)
         .map(|_: ()| -> Result<(), workload::WorkloadError> {
             let counter_clone = Rc::clone(&counter);
-            workload::log(counter_clone, &mut log_time, update_time)
+            workload::log(&counter_clone, &mut log_time, update_time)
         })
         .map(move |_| -> Result<BatchList, workload::WorkloadError> {
             let batch_map = Rc::clone(&batch_map_clone);
             let batches_clone = Rc::clone(&batches_clone);
-            workload::get_next_batchlist(batch_list_iter, batch_map, batches_clone)
+            workload::get_next_batchlist(batch_list_iter, &batch_map, &batches_clone)
         })
         .map(|batch_list: Result<BatchList, workload::WorkloadError>| {
             let basic_auth_c = basic_auth.clone();
             let urls_c = &mut urls;
-            workload::form_request_from_batchlist(urls_c, batch_list, basic_auth_c)
+            workload::form_request_from_batchlist(urls_c, batch_list, &basic_auth_c)
         })
         .map_err(workload::WorkloadError::from)
         .and_then(
@@ -206,8 +206,8 @@ pub fn run_workload(
                 let counter_clone = Rc::clone(&counter);
                 let batches_clone = Rc::clone(&batches);
                 workload::make_request(
-                    client_clone,
-                    handle_clone,
+                    &client_clone,
+                    &handle_clone,
                     counter_clone,
                     Rc::clone(&batch_map),
                     batches_clone,

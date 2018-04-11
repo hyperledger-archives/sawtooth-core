@@ -83,7 +83,7 @@ impl<'a> TransactionProcessor<'a> {
         self.handlers.push(handler);
     }
 
-    fn register(&mut self, mut sender: ZmqMessageSender, unregister: Arc<AtomicBool>) -> bool {
+    fn register(&mut self, mut sender: ZmqMessageSender, unregister: &Arc<AtomicBool>) -> bool {
         for handler in &self.handlers {
             for version in handler.family_versions() {
                 let mut request = TpRegisterRequest::new();
@@ -195,7 +195,7 @@ impl<'a> TransactionProcessor<'a> {
             }
 
             // if registration is not succesful, retry
-            if self.register(sender.clone(), unregister.clone()) {
+            if self.register(sender.clone(), &unregister.clone()) {
                 ()
             } else {
                 continue;

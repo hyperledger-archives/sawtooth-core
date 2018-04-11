@@ -98,7 +98,7 @@ impl<'a> IntKeyTransformer<'a> {
 
     pub fn intkey_payload_to_transaction(
         &mut self,
-        payload: IntKeyPayload,
+        payload: &IntKeyPayload,
     ) -> Result<Transaction, Box<Error>> {
         let mut txn = Transaction::new();
         let mut txn_header = TransactionHeader::new();
@@ -128,7 +128,7 @@ impl<'a> IntKeyTransformer<'a> {
 
         let addresses = RepeatedField::from_vec(vec![
             addresser
-                .make_address(payload.name.clone())
+                .make_address(&payload.name)
                 .chars()
                 .take(address_length)
                 .collect(),
@@ -211,7 +211,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 1.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
@@ -252,7 +252,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
@@ -293,7 +293,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 1.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
@@ -331,7 +331,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
@@ -369,7 +369,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 1.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = num_names;
@@ -406,7 +406,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;

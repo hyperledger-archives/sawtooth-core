@@ -228,7 +228,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let mut transformer = SBPayloadTransformer::new(&signer);
 
     let mut transaction_iterator = SmallbankGeneratingIter::new(accounts, seed.as_slice())
-        .map(|payload| transformer.payload_to_transaction(payload))
+        .map(|payload| transformer.payload_to_transaction(&payload))
         .map(|item| item.unwrap());
 
     let mut batch_iter = SignedBatchIterator::new(&mut transaction_iterator, max_txns, &signer);
@@ -241,7 +241,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         time_to_wait,
         update,
         target,
-        basic_auth,
+        &basic_auth,
     ) {
         Ok(_) => Ok(()),
         Err(err) => {

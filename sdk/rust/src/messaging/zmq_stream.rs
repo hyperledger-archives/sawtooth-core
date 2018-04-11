@@ -95,7 +95,7 @@ impl ZmqMessageSender {
         let inbound_router = self.inbound_router.clone();
         thread::spawn(move || {
             let mut inner_stream =
-                SendReceiveStream::new(ctx, &address, outbound_recv, inbound_router);
+                SendReceiveStream::new(&ctx, &address, outbound_recv, inbound_router);
             inner_stream.run();
         });
     }
@@ -220,7 +220,7 @@ const POLL_TIMEOUT: i64 = 10;
 
 impl SendReceiveStream {
     fn new(
-        context: zmq::Context,
+        context: &zmq::Context,
         address: &str,
         outbound_recv: Receiver<SocketCommand>,
         inbound_router: InboundRouter,

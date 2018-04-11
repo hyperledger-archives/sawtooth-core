@@ -79,19 +79,19 @@ impl TransactionHandler for SmallbankTransactionHandler {
                 apply_create_account(payload.take_create_account(), context)
             }
             SmallbankTransactionPayload_PayloadType::DEPOSIT_CHECKING => {
-                apply_deposit_checking(payload.take_deposit_checking(), context)
+                apply_deposit_checking(&payload.take_deposit_checking(), context)
             }
             SmallbankTransactionPayload_PayloadType::WRITE_CHECK => {
-                apply_write_check(payload.take_write_check(), context)
+                apply_write_check(&payload.take_write_check(), context)
             }
             SmallbankTransactionPayload_PayloadType::TRANSACT_SAVINGS => {
-                apply_transact_savings(payload.take_transact_savings(), context)
+                apply_transact_savings(&payload.take_transact_savings(), context)
             }
             SmallbankTransactionPayload_PayloadType::SEND_PAYMENT => {
-                apply_send_payment(payload.take_send_payment(), context)
+                apply_send_payment(&payload.take_send_payment(), context)
             }
             SmallbankTransactionPayload_PayloadType::AMALGAMATE => {
-                apply_amalgamate(payload.take_amalgamate(), context)
+                apply_amalgamate(&payload.take_amalgamate(), context)
             }
             SmallbankTransactionPayload_PayloadType::PAYLOAD_TYPE_UNSET => Err(
                 ApplyError::InvalidTransaction(String::from("Transaction type unset")),
@@ -144,7 +144,7 @@ fn apply_create_account(
 }
 
 fn apply_deposit_checking(
-    deposit_checking_data: SmallbankTransactionPayload_DepositCheckingTransactionData,
+    deposit_checking_data: &SmallbankTransactionPayload_DepositCheckingTransactionData,
     context: &mut TransactionContext,
 ) -> Result<(), ApplyError> {
     match load_account(deposit_checking_data.get_customer_id(), context)? {
@@ -163,7 +163,7 @@ fn apply_deposit_checking(
 }
 
 fn apply_write_check(
-    write_check_data: SmallbankTransactionPayload_WriteCheckTransactionData,
+    write_check_data: &SmallbankTransactionPayload_WriteCheckTransactionData,
     context: &mut TransactionContext,
 ) -> Result<(), ApplyError> {
     match load_account(write_check_data.get_customer_id(), context)? {
@@ -182,7 +182,7 @@ fn apply_write_check(
 }
 
 fn apply_transact_savings(
-    transact_savings_data: SmallbankTransactionPayload_TransactSavingsTransactionData,
+    transact_savings_data: &SmallbankTransactionPayload_TransactSavingsTransactionData,
     context: &mut TransactionContext,
 ) -> Result<(), ApplyError> {
     match load_account(transact_savings_data.get_customer_id(), context)? {
@@ -217,7 +217,7 @@ fn apply_transact_savings(
 }
 
 fn apply_send_payment(
-    send_payment_data: SmallbankTransactionPayload_SendPaymentTransactionData,
+    send_payment_data: &SmallbankTransactionPayload_SendPaymentTransactionData,
     context: &mut TransactionContext,
 ) -> Result<(), ApplyError> {
     fn err() -> ApplyError {
@@ -245,7 +245,7 @@ fn apply_send_payment(
 }
 
 fn apply_amalgamate(
-    amalgamate_data: SmallbankTransactionPayload_AmalgamateTransactionData,
+    amalgamate_data: &SmallbankTransactionPayload_AmalgamateTransactionData,
     context: &mut TransactionContext,
 ) -> Result<(), ApplyError> {
     fn err() -> ApplyError {
@@ -264,7 +264,7 @@ fn apply_amalgamate(
     save_account(&source_account, context).and(save_account(&dest_account, context))
 }
 
-fn unpack_account(account_data: Vec<u8>) -> Result<Account, ApplyError> {
+fn unpack_account(account_data: &[u8]) -> Result<Account, ApplyError> {
     protobuf::parse_from_bytes(&account_data).map_err(|err| {
         warn!(
             "Invalid transaction: Failed to unmarshal Account: {:?}",
@@ -285,7 +285,7 @@ fn load_account(
             ApplyError::InvalidTransaction(format!("Failed to load Account: {:?}", err))
         })?;
     match response {
-        Some(packed) => unpack_account(packed).map(Some),
+        Some(packed) => unpack_account(&packed).map(Some),
         None => Ok(None),
     }
 }

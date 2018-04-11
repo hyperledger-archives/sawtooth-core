@@ -334,7 +334,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     );
 
     let mut transaction_iterator = IntKeyIterator::new(num_names, invalid, &seed)
-        .map(|payload| transformer.intkey_payload_to_transaction(payload))
+        .map(|payload| transformer.intkey_payload_to_transaction(&payload))
         .filter_map(|payload| payload.ok());
     let mut batch_iter =
         SignedBatchIterator::new(&mut transaction_iterator, batch_size, signer_ref);
@@ -353,7 +353,13 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         num_names,
         display);
 
-    match run_workload(&mut batchlist_iter, time_to_wait, display, urls, basic_auth) {
+    match run_workload(
+        &mut batchlist_iter,
+        time_to_wait,
+        display,
+        urls,
+        &basic_auth,
+    ) {
         Ok(_) => Ok(()),
         Err(err) => Err(Box::new(err)),
     }

@@ -112,7 +112,7 @@ impl<'a> Blockstore<'a> {
         Ok(block)
     }
 
-    pub fn put(&self, block: Block) -> Result<(), DatabaseError> {
+    pub fn put(&self, block: &Block) -> Result<(), DatabaseError> {
         let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header).map_err(|err| {
             DatabaseError::CorruptionError(format!("Invalid block header: {}", err))
         })?;
@@ -265,7 +265,7 @@ mod tests {
             header.set_block_num(i);
             block.set_header(header.write_to_bytes().unwrap());
 
-            blockstore.put(block).unwrap();
+            blockstore.put(&block).unwrap();
 
             assert_current_height(i as usize + 1, &blockstore);
             assert_chain_head(format!("block-{}", i), &blockstore);
@@ -302,7 +302,7 @@ mod tests {
         block.set_header(block_header.write_to_bytes().unwrap());
         block.set_batches(protobuf::RepeatedField::from_vec(vec![batch]));
 
-        blockstore.put(block).unwrap();
+        blockstore.put(&block).unwrap();
 
         assert_current_height(6, &blockstore);
         assert_chain_head(String::from("block-with-batch"), &blockstore);
