@@ -247,8 +247,8 @@ class TransactionExecutorThread(object):
                 # the transaction match one namespace listed
                 transaction_family = \
                     next(t for t in transaction_families
-                         if t.get('family') == header.family_name and
-                         t.get('version') == header.family_version)
+                         if t.get('family') == header.family_name
+                         and t.get('version') == header.family_version)
 
                 # if no namespaces are indicated, then the empty prefix is
                 # inserted by default

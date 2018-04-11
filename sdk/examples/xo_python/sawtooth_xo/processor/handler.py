@@ -87,10 +87,10 @@ class XoTransactionHandler(TransactionHandler):
             if game.state in ('P1-WIN', 'P2-WIN', 'TIE'):
                 raise InvalidTransaction('Invalid Action: Game has ended')
 
-            if (game.player1 and game.state == 'P1-NEXT' and
-                game.player1 != signer) or \
-                    (game.player2 and game.state == 'P2-NEXT' and
-                     game.player2 != signer):
+            if (game.player1 and game.state == 'P1-NEXT'
+                and game.player1 != signer) or \
+                    (game.player2 and game.state == 'P2-NEXT'
+                     and game.player2 != signer):
                 raise InvalidTransaction(
                     "Not this player's turn: {}".format(signer[:6]))
 
@@ -118,8 +118,8 @@ class XoTransactionHandler(TransactionHandler):
             _display(
                 "Player {} takes space: {}\n\n".format(
                     signer[:6],
-                    xo_payload.space) +
-                _game_data_to_str(
+                    xo_payload.space)
+                + _game_data_to_str(
                     game.board,
                     game.state,
                     game.player1,

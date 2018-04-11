@@ -905,8 +905,8 @@ class ConsensusState(object):
                         observed_wins > expected_wins:
                     probability = expected_wins / block_count
                     standard_deviation = \
-                        math.sqrt(block_count * probability *
-                                  (1.0 - probability))
+                        math.sqrt(
+                            block_count * probability * (1.0 - probability))
                     z_score = \
                         (observed_wins - expected_wins) / \
                         standard_deviation
