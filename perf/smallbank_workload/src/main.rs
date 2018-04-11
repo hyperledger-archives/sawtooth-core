@@ -27,7 +27,6 @@ mod smallbank;
 mod smallbank_tranformer;
 
 use std::fs::File;
-use std::io;
 use std::io::Write;
 use std::io::Read;
 use std::error::Error;
@@ -78,7 +77,7 @@ fn main() {
     std::process::exit(match result {
         Ok(_) => 0,
         Err(err) => {
-            writeln!(io::stderr(), "Error: {}", err).unwrap();
+            eprintln!("Error: {}", err);
             1
         }
     });
