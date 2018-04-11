@@ -40,9 +40,7 @@ impl BatchMap {
 
     // Get a batchlist by id, to submit it to a validator.
     pub fn get_batchlist_to_submit(&mut self, batch_id: String) -> Option<BatchList> {
-        self.batches_by_id
-            .get(batch_id.as_str())
-            .map(|batchlist| batchlist.clone())
+        self.batches_by_id.get(batch_id.as_str()).cloned()
     }
 
     // Idempotent method for adding a BatchList

@@ -147,7 +147,7 @@ impl Transaction {
                     dependencies: transaction_header
                         .get_dependencies()
                         .iter()
-                        .map(|dependency| dependency.clone())
+                        .cloned()
                         .collect(),
                     family_name: String::from(transaction_header.get_family_name()),
                     family_version: String::from(transaction_header.get_family_version()),
@@ -155,13 +155,13 @@ impl Transaction {
                     inputs: transaction_header
                         .get_inputs()
                         .iter()
-                        .map(|input| input.clone())
+                        .cloned()
                         .collect(),
                     nonce: String::from(transaction_header.get_nonce()),
                     outputs: transaction_header
                         .get_outputs()
                         .iter()
-                        .map(|output| output.clone())
+                        .cloned()
                         .collect(),
                     payload: Vec::from(transaction.get_payload()),
                     payload_sha512: String::from(transaction_header.get_payload_sha512()),
