@@ -359,7 +359,7 @@ fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         println!("Blocks:       {}", block_count);
         println!("Batches:      {}", batch_count);
         println!("Transactions: {}", txn_count);
-        for (family, count) in txn_family_counts.iter() {
+        for (family, count) in &txn_family_counts {
             println!("  {}: {}", family, count);
         }
     } else {
