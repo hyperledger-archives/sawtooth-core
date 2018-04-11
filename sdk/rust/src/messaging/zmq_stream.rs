@@ -177,18 +177,22 @@ impl InboundRouter {
             Ok(message) => {
                 let mut expected_replies = self.expected_replies.lock().unwrap();
                 match expected_replies.remove(message.get_correlation_id()) {
-                    Some(sender) => sender.send(Ok(message)).unwrap(),
-                    None => self.inbound_tx.send(Ok(message)).unwrap(),
+                    Some(sender) => sender.send(Ok(message)).expect("Unable to route reply"),
+                    None => self.inbound_tx
+                        .send(Ok(message))
+                        .expect("Unable to route new message"),
                 }
             }
             Err(ReceiveError::DisconnectedError) => {
                 let mut expected_replies = self.expected_replies.lock().unwrap();
                 for (_, sender) in expected_replies.iter_mut() {
-                    sender.send(Err(ReceiveError::DisconnectedError)).unwrap();
+                    sender
+                        .send(Err(ReceiveError::DisconnectedError))
+                        .unwrap_or_else(|err| error!("Failed to send disconnect reply: {}", err));
                 }
                 self.inbound_tx
                     .send(Err(ReceiveError::DisconnectedError))
-                    .unwrap();
+                    .unwrap_or_else(|err| error!("Failed to send disconnect: {}", err));
             }
             Err(err) => error!("Error: {}", err.description()),
         }
