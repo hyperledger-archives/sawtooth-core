@@ -379,7 +379,7 @@ fn create_context() -> Result<lmdb::LmdbContext, CliError> {
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
 }
 
-fn open_blockstore<'a>(ctx: &'a lmdb::LmdbContext) -> Result<Blockstore<'a>, CliError> {
+fn open_blockstore(ctx: &lmdb::LmdbContext) -> Result<Blockstore, CliError> {
     let blockstore_db = lmdb::LmdbDatabase::new(
         ctx,
         &["index_batch", "index_transaction", "index_block_num"],

@@ -231,8 +231,8 @@ pub fn create_smallbank_playlist(
     Box::new(iter.take(num_transactions))
 }
 
-pub fn read_smallbank_playlist<'a>(
-    input: &'a mut Read,
+pub fn read_smallbank_playlist(
+    input: &mut Read,
 ) -> Result<Vec<SmallbankTransactionPayload>, PlaylistError> {
     let mut results = Vec::new();
     let buf = try!(read_yaml(input));
@@ -244,7 +244,7 @@ pub fn read_smallbank_playlist<'a>(
     Ok(results)
 }
 
-fn read_yaml<'a>(input: &'a mut Read) -> Result<Cow<'a, str>, PlaylistError> {
+fn read_yaml(input: &mut Read) -> Result<Cow<str>, PlaylistError> {
     let mut buf: String = String::new();
     try!(
         input
@@ -254,7 +254,7 @@ fn read_yaml<'a>(input: &'a mut Read) -> Result<Cow<'a, str>, PlaylistError> {
     Ok(buf.into())
 }
 
-fn load_yaml_array<'a>(yaml_str: Cow<'a, str>) -> Result<Cow<'a, Vec<Yaml>>, PlaylistError> {
+fn load_yaml_array(yaml_str: Cow<str>) -> Result<Cow<Vec<Yaml>>, PlaylistError> {
     let mut yaml =
         try!(YamlLoader::load_from_str(yaml_str.as_ref()).map_err(PlaylistError::YamlInputError));
     let element = yaml.remove(0);
