@@ -15,9 +15,9 @@
  * -----------------------------------------------------------------------------
  */
 
-extern crate zmq;
 extern crate protobuf;
 extern crate rand;
+extern crate zmq;
 
 use protobuf::Message as M;
 use protobuf::RepeatedField;
@@ -44,21 +44,21 @@ pub enum ApplyError {
     /// Returned for an Invalid Transaction.
     InvalidTransaction(String),
     /// Returned when an internal error occurs during transaction processing.
-    InternalError(String)
+    InternalError(String),
 }
 
 impl std::error::Error for ApplyError {
     fn description(&self) -> &str {
         match *self {
             ApplyError::InvalidTransaction(ref msg) => msg,
-            ApplyError::InternalError(ref msg) => msg
+            ApplyError::InternalError(ref msg) => msg,
         }
     }
 
     fn cause(&self) -> Option<&std::error::Error> {
         match *self {
             ApplyError::InvalidTransaction(_) => None,
-            ApplyError::InternalError(_) => None
+            ApplyError::InternalError(_) => None,
         }
     }
 }
@@ -66,10 +66,8 @@ impl std::error::Error for ApplyError {
 impl std::fmt::Display for ApplyError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            ApplyError::InvalidTransaction(ref s) =>
-                write!(f, "InvalidTransaction: {}", s),
-            ApplyError::InternalError(ref s) =>
-                write!(f, "InternalError: {}", s)
+            ApplyError::InvalidTransaction(ref s) => write!(f, "InvalidTransaction: {}", s),
+            ApplyError::InternalError(ref s) => write!(f, "InternalError: {}", s),
         }
     }
 }
@@ -117,18 +115,18 @@ impl std::error::Error for ContextError {
 impl std::fmt::Display for ContextError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            ContextError::AuthorizationError(ref s) =>
-                write!(f, "AuthorizationError: {}", s),
-            ContextError::ResponseAttributeError(ref s) =>
-                write!(f, "ResponseAttributeError: {}", s),
-            ContextError::TransactionReceiptError(ref s) =>
-                write!(f, "TransactionReceiptError: {}", s),
-            ContextError::SerializationError(ref err) =>
-                write!(f, "SerializationError: {}", err.description()),
-            ContextError::SendError(ref err) =>
-                write!(f, "SendError: {}", err.description()),
-            ContextError::ReceiveError(ref err) =>
-                write!(f, "ReceiveError: {}", err.description()),
+            ContextError::AuthorizationError(ref s) => write!(f, "AuthorizationError: {}", s),
+            ContextError::ResponseAttributeError(ref s) => {
+                write!(f, "ResponseAttributeError: {}", s)
+            }
+            ContextError::TransactionReceiptError(ref s) => {
+                write!(f, "TransactionReceiptError: {}", s)
+            }
+            ContextError::SerializationError(ref err) => {
+                write!(f, "SerializationError: {}", err.description())
+            }
+            ContextError::SendError(ref err) => write!(f, "SendError: {}", err.description()),
+            ContextError::ReceiveError(ref err) => write!(f, "ReceiveError: {}", err.description()),
         }
     }
 }
@@ -136,9 +134,10 @@ impl std::fmt::Display for ContextError {
 impl From<ContextError> for ApplyError {
     fn from(context_error: ContextError) -> Self {
         match context_error {
-            ContextError::TransactionReceiptError(..) =>
-                ApplyError::InternalError(format!("{}", context_error)),
-            _ => ApplyError::InvalidTransaction(format!("{}", context_error))
+            ContextError::TransactionReceiptError(..) => {
+                ApplyError::InternalError(format!("{}", context_error))
+            }
+            _ => ApplyError::InvalidTransaction(format!("{}", context_error)),
         }
     }
 }
@@ -164,7 +163,7 @@ impl From<ReceiveError> for ContextError {
 #[derive(Clone)]
 pub struct TransactionContext {
     context_id: String,
-    sender: ZmqMessageSender
+    sender: ZmqMessageSender,
 }
 
 impl TransactionContext {
@@ -177,9 +176,9 @@ impl TransactionContext {
     /// * `sender` - for client grpc communication
     /// * `context_id` - the context_id passed in from the validator
     pub fn new(context_id: &str, sender: ZmqMessageSender) -> TransactionContext {
-        TransactionContext{
+        TransactionContext {
             context_id: String::from(context_id),
-            sender: sender
+            sender: sender,
         }
     }
 
@@ -193,33 +192,41 @@ impl TransactionContext {
     pub fn get_state(&mut self, address: &str) -> Result<Option<Vec<u8>>, ContextError> {
         let mut request = TpStateGetRequest::new();
         request.set_context_id(self.context_id.clone());
-        request.set_addresses(RepeatedField::from_vec(vec!(String::from(address))));
+        request.set_addresses(RepeatedField::from_vec(vec![String::from(address)]));
         let serialized = request.write_to_bytes()?;
-        let x : &[u8] = &serialized;
+        let x: &[u8] = &serialized;
 
         let mut future = self.sender.send(
             Message_MessageType::TP_STATE_GET_REQUEST,
             &generate_correlation_id(),
-            x)?;
+            x,
+        )?;
 
         let response: TpStateGetResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
         match response.get_status() {
             TpStateGetResponse_Status::OK => {
-                let entry = match response.get_entries().first(){
+                let entry = match response.get_entries().first() {
                     Some(x) => x,
-                    None => return Err(ContextError::ResponseAttributeError(String::from("TpStateGetResponse is missing entries.")))
+                    None => {
+                        return Err(ContextError::ResponseAttributeError(String::from(
+                            "TpStateGetResponse is missing entries.",
+                        )))
+                    }
                 };
                 match entry.get_data().len() {
                     0 => Ok(None),
-                    _ => Ok(Some(Vec::from(entry.get_data())))
+                    _ => Ok(Some(Vec::from(entry.get_data()))),
                 }
-            },
-            TpStateGetResponse_Status::AUTHORIZATION_ERROR => {
-                Err(ContextError::AuthorizationError(format!("Tried to get unauthorized address: {}", address)))
-            },
-            TpStateGetResponse_Status::STATUS_UNSET => {
-                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpStateGetResponse")))
             }
+            TpStateGetResponse_Status::AUTHORIZATION_ERROR => {
+                Err(ContextError::AuthorizationError(format!(
+                    "Tried to get unauthorized address: {}",
+                    address
+                )))
+            }
+            TpStateGetResponse_Status::STATUS_UNSET => Err(ContextError::ResponseAttributeError(
+                String::from("Status was not set for TpStateGetResponse"),
+            )),
         }
     }
 
@@ -239,27 +246,28 @@ impl TransactionContext {
         request.set_context_id(self.context_id.clone());
         request.set_entries(RepeatedField::from_slice(&[entry]));
         let serialized = request.write_to_bytes()?;
-        let x : &[u8] = &serialized;
+        let x: &[u8] = &serialized;
 
         let mut future = self.sender.send(
             Message_MessageType::TP_STATE_SET_REQUEST,
             &generate_correlation_id(),
-            x)?;
+            x,
+        )?;
 
         let response: TpStateSetResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
         match response.get_status() {
-            TpStateSetResponse_Status::OK => {
-                Ok(())
-            },
+            TpStateSetResponse_Status::OK => Ok(()),
             TpStateSetResponse_Status::AUTHORIZATION_ERROR => {
-                Err(ContextError::AuthorizationError(format!("Tried to set unauthorized address: {}", address)))
-            },
-            TpStateSetResponse_Status::STATUS_UNSET => {
-                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpStateSetResponse")))
+                Err(ContextError::AuthorizationError(format!(
+                    "Tried to set unauthorized address: {}",
+                    address
+                )))
             }
+            TpStateSetResponse_Status::STATUS_UNSET => Err(ContextError::ResponseAttributeError(
+                String::from("Status was not set for TpStateSetResponse"),
+            )),
         }
     }
-
 
     /// delete_state requests that each of the provided addresses be unset
     /// in validator state. A list of successfully deleted addresses
@@ -268,29 +276,37 @@ impl TransactionContext {
     /// # Arguments
     ///
     /// * `addresses` - the addresses to fetch
-    pub fn delete_state(&mut self, addresses: Vec<String>) -> Result<Option<Vec<String>>, ContextError> {
+    pub fn delete_state(
+        &mut self,
+        addresses: Vec<String>,
+    ) -> Result<Option<Vec<String>>, ContextError> {
         let mut request = TpStateDeleteRequest::new();
         request.set_context_id(self.context_id.clone());
         request.set_addresses(RepeatedField::from_vec(addresses.clone()));
 
         let serialized = request.write_to_bytes()?;
-        let x : &[u8] = &serialized;
+        let x: &[u8] = &serialized;
 
         let mut future = self.sender.send(
             Message_MessageType::TP_STATE_DELETE_REQUEST,
             &generate_correlation_id(),
-            x)?;
+            x,
+        )?;
 
-        let response: TpStateDeleteResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
+        let response: TpStateDeleteResponse =
+            protobuf::parse_from_bytes(future.get()?.get_content())?;
         match response.get_status() {
-            TpStateDeleteResponse_Status::OK => {
-                Ok(Some(Vec::from(response.get_addresses())))
-            },
+            TpStateDeleteResponse_Status::OK => Ok(Some(Vec::from(response.get_addresses()))),
             TpStateDeleteResponse_Status::AUTHORIZATION_ERROR => {
-                Err(ContextError::AuthorizationError(format!("Tried to delete unauthorized address: {:?}", addresses)))
-            },
+                Err(ContextError::AuthorizationError(format!(
+                    "Tried to delete unauthorized address: {:?}",
+                    addresses
+                )))
+            }
             TpStateDeleteResponse_Status::STATUS_UNSET => {
-                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpStateDeleteResponse")))
+                Err(ContextError::ResponseAttributeError(String::from(
+                    "Status was not set for TpStateDeleteResponse",
+                )))
             }
         }
     }
@@ -300,29 +316,31 @@ impl TransactionContext {
     /// # Arguments
     ///
     /// * `data` - the data to add
-    pub fn add_receipt_data(&mut self, data: &[u8]) ->  Result<(), ContextError> {
+    pub fn add_receipt_data(&mut self, data: &[u8]) -> Result<(), ContextError> {
         let mut request = TpReceiptAddDataRequest::new();
         request.set_context_id(self.context_id.clone());
         request.set_data(Vec::from(data));
 
         let serialized = request.write_to_bytes()?;
-        let x : &[u8] = &serialized;
+        let x: &[u8] = &serialized;
 
         let mut future = self.sender.send(
             Message_MessageType::TP_RECEIPT_ADD_DATA_REQUEST,
             &generate_correlation_id(),
-            x)?;
+            x,
+        )?;
 
-        let response: TpReceiptAddDataResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
+        let response: TpReceiptAddDataResponse =
+            protobuf::parse_from_bytes(future.get()?.get_content())?;
         match response.get_status() {
-            TpReceiptAddDataResponse_Status::OK => {
-                Ok(())
-            },
-            TpReceiptAddDataResponse_Status::ERROR => {
-                Err(ContextError::TransactionReceiptError(format!("Failed to add receipt data {:?}", data)))
-            },
+            TpReceiptAddDataResponse_Status::OK => Ok(()),
+            TpReceiptAddDataResponse_Status::ERROR => Err(ContextError::TransactionReceiptError(
+                format!("Failed to add receipt data {:?}", data),
+            )),
             TpReceiptAddDataResponse_Status::STATUS_UNSET => {
-                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpReceiptAddDataResponse")))
+                Err(ContextError::ResponseAttributeError(String::from(
+                    "Status was not set for TpReceiptAddDataResponse",
+                )))
             }
         }
     }
@@ -337,8 +355,12 @@ impl TransactionContext {
     ///          validator. Attributes can be used by subscribers to filter the type of events
     ///          they receive.
     /// * `data` - Additional information about the event that is opaque to the validator.
-    pub fn add_event(&mut self, event_type: String, attributes: Vec<(String, String)>, data: &[u8])
-            -> Result<(), ContextError> {
+    pub fn add_event(
+        &mut self,
+        event_type: String,
+        attributes: Vec<(String, String)>,
+        data: &[u8],
+    ) -> Result<(), ContextError> {
         let mut event = Event::new();
         event.set_event_type(event_type);
 
@@ -357,26 +379,24 @@ impl TransactionContext {
         request.set_event(event.clone());
 
         let serialized = request.write_to_bytes()?;
-        let x : &[u8] = &serialized;
+        let x: &[u8] = &serialized;
 
         let mut future = self.sender.send(
             Message_MessageType::TP_RECEIPT_ADD_DATA_REQUEST,
             &generate_correlation_id(),
-            x)?;
+            x,
+        )?;
 
         let response: TpEventAddResponse = protobuf::parse_from_bytes(future.get()?.get_content())?;
         match response.get_status() {
-            TpEventAddResponse_Status::OK => {
-                Ok(())
-            },
-            TpEventAddResponse_Status::ERROR => {
-                Err(ContextError::TransactionReceiptError(format!("Failed to add event {:?}", event)))
-            },
-            TpEventAddResponse_Status::STATUS_UNSET => {
-                Err(ContextError::ResponseAttributeError(String::from("Status was not set for TpEventAddRespons")))
-            }
+            TpEventAddResponse_Status::OK => Ok(()),
+            TpEventAddResponse_Status::ERROR => Err(ContextError::TransactionReceiptError(
+                format!("Failed to add event {:?}", event),
+            )),
+            TpEventAddResponse_Status::STATUS_UNSET => Err(ContextError::ResponseAttributeError(
+                String::from("Status was not set for TpEventAddRespons"),
+            )),
         }
-
     }
 }
 
@@ -402,5 +422,9 @@ pub trait TransactionHandler {
     /// transaction processor upon receiving a TpProcessRequest that the
     /// handler understands and will pass in the TpProcessRequest and an
     /// initialized instance of the Context type.
-    fn apply(&self, request: &TpProcessRequest, context: &mut TransactionContext) -> Result<(), ApplyError>;
+    fn apply(
+        &self,
+        request: &TpProcessRequest,
+        context: &mut TransactionContext,
+    ) -> Result<(), ApplyError>;
 }

@@ -26,14 +26,19 @@ use std::time::Duration;
 ///
 /// A message
 pub trait MessageSender {
+    fn send(
+        &mut self,
+        destination: Message_MessageType,
+        correlation_id: &str,
+        contents: &[u8],
+    ) -> Result<MessageFuture, SendError>;
 
-    fn send(&mut self, destination: Message_MessageType, correlation_id: &str,
-            contents: &[u8])
-        -> Result<MessageFuture, SendError>;
-
-    fn reply(&mut self, destination: Message_MessageType, correlation_id: &str,
-             contents: &[u8])
-        -> Result<(), SendError>;
+    fn reply(
+        &mut self,
+        destination: Message_MessageType,
+        correlation_id: &str,
+        contents: &[u8],
+    ) -> Result<(), SendError>;
 
     fn close(&mut self);
 }
@@ -56,7 +61,7 @@ pub trait MessageConnection<MS: MessageSender> {
 pub enum SendError {
     DisconnectedError,
     TimeoutError,
-    UnknownError
+    UnknownError,
 }
 
 impl std::error::Error for SendError {
@@ -64,7 +69,7 @@ impl std::error::Error for SendError {
         match *self {
             SendError::DisconnectedError => "DisconnectedError",
             SendError::TimeoutError => "TimeoutError",
-            SendError::UnknownError  => "UnknownError"
+            SendError::UnknownError => "UnknownError",
         }
     }
 
@@ -72,7 +77,7 @@ impl std::error::Error for SendError {
         match *self {
             SendError::DisconnectedError => None,
             SendError::TimeoutError => None,
-            SendError::UnknownError => None
+            SendError::UnknownError => None,
         }
     }
 }
@@ -80,12 +85,9 @@ impl std::error::Error for SendError {
 impl std::fmt::Display for SendError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            SendError::DisconnectedError =>
-                write!(f, "DisconnectedError"),
-            SendError::TimeoutError =>
-                write!(f,"TimeoutError"),
-            SendError::UnknownError =>
-                write!(f, "UnknownError")
+            SendError::DisconnectedError => write!(f, "DisconnectedError"),
+            SendError::TimeoutError => write!(f, "TimeoutError"),
+            SendError::UnknownError => write!(f, "UnknownError"),
         }
     }
 }
@@ -95,7 +97,7 @@ impl std::fmt::Display for SendError {
 pub enum ReceiveError {
     TimeoutError,
     ChannelError(RecvError),
-    DisconnectedError
+    DisconnectedError,
 }
 
 impl std::error::Error for ReceiveError {
@@ -103,7 +105,7 @@ impl std::error::Error for ReceiveError {
         match *self {
             ReceiveError::TimeoutError => "TimeoutError",
             ReceiveError::ChannelError(ref err) => err.description(),
-            ReceiveError::DisconnectedError=> "DisconnectedError"
+            ReceiveError::DisconnectedError => "DisconnectedError",
         }
     }
 
@@ -119,26 +121,23 @@ impl std::error::Error for ReceiveError {
 impl std::fmt::Display for ReceiveError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            ReceiveError::TimeoutError =>
-                write!(f,"TimeoutError"),
-            ReceiveError::ChannelError(ref err) =>
-                write!(f, "ChannelError: {}", err.description()),
-            ReceiveError::DisconnectedError=>
-                write!(f, "DisconnectedError"),
+            ReceiveError::TimeoutError => write!(f, "TimeoutError"),
+            ReceiveError::ChannelError(ref err) => write!(f, "ChannelError: {}", err.description()),
+            ReceiveError::DisconnectedError => write!(f, "DisconnectedError"),
         }
     }
 }
 /// MessageFuture is a promise for the reply to a sent message on connection.
 pub struct MessageFuture {
-    inner:  Receiver<MessageResult>,
-    result: Option<MessageResult>
+    inner: Receiver<MessageResult>,
+    result: Option<MessageResult>,
 }
 
 impl MessageFuture {
     pub fn new(inner: Receiver<MessageResult>) -> Self {
         MessageFuture {
             inner: inner,
-            result: None
+            result: None,
         }
     }
 
@@ -152,7 +151,7 @@ impl MessageFuture {
                 self.result = Some(result.clone());
                 result
             }
-            Err(err) => Err(ReceiveError::ChannelError(err))
+            Err(err) => Err(ReceiveError::ChannelError(err)),
         }
     }
 
@@ -166,7 +165,7 @@ impl MessageFuture {
                 self.result = Some(result.clone());
                 result
             }
-            Err(_) => Err(ReceiveError::TimeoutError)
+            Err(_) => Err(ReceiveError::TimeoutError),
         }
     }
 }
@@ -184,7 +183,7 @@ mod tests {
 
     use super::MessageFuture;
 
-    fn make_ping(correlation_id: &str)  -> Message {
+    fn make_ping(correlation_id: &str) -> Message {
         let mut message = Message::new();
         message.set_message_type(Message_MessageType::PING_REQUEST);
         message.set_correlation_id(String::from(correlation_id));
