@@ -232,9 +232,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let urls: Vec<String> = args.value_of("urls")
         .unwrap_or("http://127.0.0.1:8008")
         .parse()
-        .map_err(|_| {
-            String::from("urls are a comma separated list of strings")
-        })
+        .map_err(|_| String::from("urls are a comma separated list of strings"))
         .and_then(|st| {
             let s: String = st;
             let split: Split<&str> = s.split(",");
