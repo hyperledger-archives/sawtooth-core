@@ -51,11 +51,11 @@ The ``rest_api.toml`` configuration file has the following options:
   Specifies the size, in bytes, that the REST API will accept for the body of
   requests. If the body is larger a ``413: Request Entity Too Large`` will be
   returned
-  Default: none. For example:
+  Default: 10485760 (or 10 MB). For example:
 
   .. code-block:: none
 
-    client_max_size = 1048576
+    client_max_size = 10485760
 
 - ``opentsdb_url`` = "`value`"
 

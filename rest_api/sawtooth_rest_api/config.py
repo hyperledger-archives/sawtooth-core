@@ -28,7 +28,8 @@ def load_default_rest_api_config():
     return RestApiConfig(
         bind=["127.0.0.1:8008"],
         connect="tcp://localhost:4004",
-        timeout=300)
+        timeout=300,
+        client_max_size=10485760)
 
 
 def load_toml_rest_api_config(filename):
