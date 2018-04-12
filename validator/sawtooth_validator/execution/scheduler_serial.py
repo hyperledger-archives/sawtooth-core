@@ -80,8 +80,8 @@ class SerialScheduler(Scheduler):
             self, txn_signature, is_valid, context_id, state_changes=None,
             events=None, data=None, error_message="", error_data=b""):
         with self._condition:
-            if (self._in_progress_transaction is None or
-                    self._in_progress_transaction != txn_signature):
+            if (self._in_progress_transaction is None
+                    or self._in_progress_transaction != txn_signature):
                 return
 
             self._in_progress_transaction = None
