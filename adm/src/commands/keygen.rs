@@ -28,42 +28,49 @@ use libc;
 use sawtooth_sdk::signing;
 
 use config;
-use err::{CliError};
+use err::CliError;
 
 pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let path_config = config::get_path_config();
     let key_dir = &path_config.key_dir;
     if !key_dir.exists() {
-        return Err(CliError::EnvironmentError(
-            format!("Key directory does not exist: {:?}", key_dir)));
+        return Err(CliError::EnvironmentError(format!(
+            "Key directory does not exist: {:?}",
+            key_dir
+        )));
     }
 
     let key_name = args.value_of("key_name").unwrap_or("validator");
     let private_key_path = key_dir.join(key_name).with_extension("priv");
     let public_key_path = key_dir.join(key_name).with_extension("pub");
 
-
     if !args.is_present("force") {
         if private_key_path.exists() {
-            return Err(CliError::EnvironmentError(
-                format!("file exists: {:?}", private_key_path)));
+            return Err(CliError::EnvironmentError(format!(
+                "file exists: {:?}",
+                private_key_path
+            )));
         }
         if public_key_path.exists() {
-            return Err(CliError::EnvironmentError(
-                format!("file exists: {:?}", public_key_path)));
+            return Err(CliError::EnvironmentError(format!(
+                "file exists: {:?}",
+                public_key_path
+            )));
         }
     }
 
-    let context = signing::create_context("secp256k1").map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
+    let context = signing::create_context("secp256k1")
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
-    let private_key = context.new_random_private_key().map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
-    let public_key = context.get_public_key(&*private_key).map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
+    let private_key = context
+        .new_random_private_key()
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let public_key = context
+        .get_public_key(&*private_key)
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
-    let key_dir_info = metadata(key_dir).map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
+    let key_dir_info =
+        metadata(key_dir).map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
     let key_dir_uid = key_dir_info.st_uid();
     let key_dir_gid = key_dir_info.st_gid();
 
@@ -80,8 +87,9 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
             .open(private_key_path.as_path())
             .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
-        private_key_file.write(private_key.as_hex().as_bytes()).map_err(|err|
-            CliError::EnvironmentError(format!("{}", err)))?;
+        private_key_file
+            .write(private_key.as_hex().as_bytes())
+            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
     }
 
     {
@@ -97,8 +105,9 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
             .open(public_key_path.as_path())
             .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
-        public_key_file.write(public_key.as_hex().as_bytes()).map_err(|err|
-            CliError::EnvironmentError(format!("{}", err)))?;
+        public_key_file
+            .write(public_key.as_hex().as_bytes())
+            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
     }
 
     chown(private_key_path.as_path(), key_dir_uid, key_dir_gid)?;
@@ -107,16 +116,18 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 }
 
 fn chown(path: &Path, uid: u32, gid: u32) -> Result<(), CliError> {
-    let pathstr = path.to_str().ok_or(
-        CliError::EnvironmentError(format!("Invalid path: {:?}", path)))?;
-    let cpath = CString::new(pathstr).map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
-    let result = unsafe {
-        libc::chown(cpath.as_ptr(), uid, gid)
-    };
+    let pathstr = path.to_str().ok_or(CliError::EnvironmentError(format!(
+        "Invalid path: {:?}",
+        path
+    )))?;
+    let cpath =
+        CString::new(pathstr).map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let result = unsafe { libc::chown(cpath.as_ptr(), uid, gid) };
     match result {
         0 => Ok(()),
-        code =>
-            Err(CliError::EnvironmentError(format!("Error chowning file {}: {}", pathstr, code))),
+        code => Err(CliError::EnvironmentError(format!(
+            "Error chowning file {}: {}",
+            pathstr, code
+        ))),
     }
 }

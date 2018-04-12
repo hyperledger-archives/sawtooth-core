@@ -25,12 +25,12 @@ use protobuf::Message;
 use serde_yaml;
 
 use sawtooth_sdk::messages::block::{Block, BlockHeader};
-use sawtooth_sdk::messages::transaction::{TransactionHeader};
+use sawtooth_sdk::messages::transaction::TransactionHeader;
 
 use blockstore::Blockstore;
 use database::lmdb;
 use database::database::DatabaseError;
-use err::{CliError};
+use err::CliError;
 use config;
 use wrappers::Block as BlockWrapper;
 
@@ -46,7 +46,10 @@ pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         ("export", Some(args)) => run_export_command(args),
         ("import", Some(args)) => run_import_command(args),
         ("stats", Some(args)) => run_stats_command(args),
-        _ => { println!("Invalid subcommand; Pass --help for usage."); Ok(()) },
+        _ => {
+            println!("Invalid subcommand; Pass --help for usage.");
+            Ok(())
+        }
     }
 }
 
@@ -54,21 +57,22 @@ fn run_backup_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let filepath = args.value_of("output").ok_or(
-        CliError::ArgumentError("No output file".into()))?;
-    let mut file = File::create(filepath).map_err(|err|
-        CliError::EnvironmentError(format!("Failed to create file: {}", err)))?;
+    let filepath = args.value_of("output")
+        .ok_or(CliError::ArgumentError("No output file".into()))?;
+    let mut file = File::create(filepath)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to create file: {}", err)))?;
 
     let mut current = match args.value_of("start") {
-        None => blockstore.get_chain_head().map_err(|err|
-            CliError::EnvironmentError(format!("{}", err))),
+        None => blockstore
+            .get_chain_head()
+            .map_err(|err| CliError::EnvironmentError(format!("{}", err))),
         Some(sig) => Ok(sig.into()),
     }?;
 
     while current != NULL_BLOCK_IDENTIFIER {
-        let block = blockstore.get(&current).map_err(|err|
-            CliError::EnvironmentError(format!(
-                "Block in chain missing from blockstore: {}", err)))?;
+        let block = blockstore.get(&current).map_err(|err| {
+            CliError::EnvironmentError(format!("Block in chain missing from blockstore: {}", err))
+        })?;
         backup_block(&block, &mut file)?;
         let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header)
             .map_err(|err| CliError::ParseError(format!("{}", err)))?;
@@ -81,16 +85,17 @@ fn run_restore_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let filepath = args.value_of("input").ok_or(
-        CliError::ArgumentError("No input file".into()))?;
-    let mut file = File::open(filepath).map_err(|err|
-        CliError::EnvironmentError(format!("Failed to open file: {}", err)))?;
+    let filepath = args.value_of("input")
+        .ok_or(CliError::ArgumentError("No input file".into()))?;
+    let mut file = File::open(filepath)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to open file: {}", err)))?;
 
     let mut source = protobuf::CodedInputStream::new(&mut file);
 
     while let Some(block) = restore_block(&mut source)? {
-        blockstore.put(block).map_err(|err|
-            CliError::EnvironmentError(format!("Failed to put block: {}", err)))?;
+        blockstore
+            .put(block)
+            .map_err(|err| CliError::EnvironmentError(format!("Failed to put block: {}", err)))?;
     }
     Ok(())
 }
@@ -103,8 +108,9 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     // Get the chain head
     let head_sig = match args.value_of("start") {
-        None => blockstore.get_chain_head().map_err(|err|
-            CliError::EnvironmentError(format!("{}", err))),
+        None => blockstore
+            .get_chain_head()
+            .map_err(|err| CliError::EnvironmentError(format!("{}", err))),
         Some(sig) => Ok(sig.into()),
     }?;
 
@@ -113,17 +119,23 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     print_block_store_list_header();
 
     while block_id != NULL_BLOCK_IDENTIFIER && count > 0 {
-        let block = blockstore.get(&block_id).map_err(|err|
-            CliError::EnvironmentError(format!("{}", err)))?;
+        let block = blockstore
+            .get(&block_id)
+            .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
         let block_header: BlockHeader = protobuf::parse_from_bytes(&block.header)
             .map_err(|err| CliError::ParseError(format!("{}", err)))?;
         let batches = block.batches.len();
-        let txns = block.batches.iter().fold(0, |acc, batch| acc + batch.transactions.len());
+        let txns = block
+            .batches
+            .iter()
+            .fold(0, |acc, batch| acc + batch.transactions.len());
         print_block_store_list_row(
             block_header.block_num,
             &block.header_signature,
-            batches, txns,
-            &block_header.signer_public_key);
+            batches,
+            txns,
+            &block_header.signer_public_key,
+        );
         block_id = block_header.previous_block_id;
         count -= 1;
     }
@@ -133,13 +145,25 @@ fn run_list_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 fn print_block_store_list_header() {
     println!(
         "{:<5} {:<128} {:<5} {:<5} {}",
-        "NUM", "BLOCK_ID", "BATS", "TXNS", "SIGNER");
+        "NUM", "BLOCK_ID", "BATS", "TXNS", "SIGNER"
+    );
 }
 
-fn print_block_store_list_row(block_num: u64, block_id: &str, batches: usize, txns: usize, signer: &str) {
+fn print_block_store_list_row(
+    block_num: u64,
+    block_id: &str,
+    batches: usize,
+    txns: usize,
+    signer: &str,
+) {
     println!(
         "{:<5} {:<128} {:<5} {:<5} {}...",
-        block_num, block_id, batches, txns, &signer[..6]);
+        block_num,
+        block_id,
+        batches,
+        txns,
+        &signer[..6]
+    );
 }
 
 fn run_show_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
@@ -148,36 +172,34 @@ fn run_show_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     let block = {
         if args.is_present("block") {
-            let block = args.value_of("block").ok_or(
-                CliError::ArgumentError("No block".into()))?;
+            let block = args.value_of("block")
+                .ok_or(CliError::ArgumentError("No block".into()))?;
             blockstore.get(block)
-
         } else if args.is_present("batch") {
-            let batch = args.value_of("batch").ok_or(
-                CliError::ArgumentError("No batch".into()))?;
+            let batch = args.value_of("batch")
+                .ok_or(CliError::ArgumentError("No batch".into()))?;
             blockstore.get_by_batch(batch)
-
         } else if args.is_present("transaction") {
-            let transaction = args.value_of("transaction").ok_or(
-                CliError::ArgumentError("No transaction".into()))?;
+            let transaction = args.value_of("transaction")
+                .ok_or(CliError::ArgumentError("No transaction".into()))?;
             blockstore.get_by_transaction(transaction)
-
         } else if args.is_present("blocknum") {
-            let blocknum = args.value_of("blocknum").ok_or(
-                CliError::ArgumentError("No block num".into()))?;
-            let height: u64 = blocknum.parse().map_err(|err|
-                CliError::ArgumentError(format!("Invalid block num: {}", err)))?;
+            let blocknum = args.value_of("blocknum")
+                .ok_or(CliError::ArgumentError("No block num".into()))?;
+            let height: u64 = blocknum
+                .parse()
+                .map_err(|err| CliError::ArgumentError(format!("Invalid block num: {}", err)))?;
             blockstore.get_by_height(height)
         } else {
             return Err(CliError::ArgumentError("No identifier specified".into()));
         }
     }.map_err(|err| CliError::ArgumentError(format!("Error getting block: {}", err)))?;
 
-    let block_wrapper = BlockWrapper::try_from(block).map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
+    let block_wrapper = BlockWrapper::try_from(block)
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
-    let block_yaml = serde_yaml::to_string(&block_wrapper).map_err(|err|
-        CliError::EnvironmentError(format!("{}", err)))?;
+    let block_yaml = serde_yaml::to_string(&block_wrapper)
+        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
     println!("{}", block_yaml);
     Ok(())
@@ -187,20 +209,25 @@ fn run_prune_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let block_id = args.value_of("block").ok_or(CliError::ArgumentError("No block id".into()))?;
+    let block_id = args.value_of("block")
+        .ok_or(CliError::ArgumentError("No block id".into()))?;
 
-    blockstore.get(block_id).map_err(|_|
-        CliError::ArgumentError(format!("Block not found: {}", block_id)))?;
+    blockstore
+        .get(block_id)
+        .map_err(|_| CliError::ArgumentError(format!("Block not found: {}", block_id)))?;
 
     // Get the chain head
-    let chain_head = blockstore.get_chain_head()
+    let chain_head = blockstore
+        .get_chain_head()
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
-    let mut current = blockstore.get(&chain_head)
+    let mut current = blockstore
+        .get(&chain_head)
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
     loop {
-        blockstore.delete(&current.header_signature)
+        blockstore
+            .delete(&current.header_signature)
             .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
         if current.header_signature == block_id {
             break;
@@ -208,7 +235,8 @@ fn run_prune_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         let header: BlockHeader = protobuf::parse_from_bytes(&current.header)
             .map_err(|err| CliError::ParseError(format!("{}", err)))?;
 
-        current = blockstore.get(&header.previous_block_id)
+        current = blockstore
+            .get(&header.previous_block_id)
             .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
     }
     Ok(())
@@ -218,22 +246,27 @@ fn run_export_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let block_id = args.value_of("block").ok_or(CliError::ArgumentError("No block id".into()))?;
+    let block_id = args.value_of("block")
+        .ok_or(CliError::ArgumentError("No block id".into()))?;
 
-    let block = blockstore.get(block_id).map_err(|_|
-        CliError::ArgumentError(format!("Block not found: {}", block_id)))?;
+    let block = blockstore
+        .get(block_id)
+        .map_err(|_| CliError::ArgumentError(format!("Block not found: {}", block_id)))?;
 
     match args.value_of("output") {
         Some(filepath) => {
-            let mut file = File::create(filepath).map_err(|err|
-                CliError::EnvironmentError(format!("Failed to create file: {}", err)))?;
-            block.write_to_writer(&mut file)
+            let mut file = File::create(filepath).map_err(|err| {
+                CliError::EnvironmentError(format!("Failed to create file: {}", err))
+            })?;
+            block
+                .write_to_writer(&mut file)
                 .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
-        },
+        }
         None => {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            block.write_to_writer(&mut handle)
+            block
+                .write_to_writer(&mut handle)
                 .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
         }
     }
@@ -243,12 +276,13 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let filepath = args.value_of("blockfile").ok_or(CliError::ArgumentError("No file".into()))?;
-    let mut file = File::open(filepath).map_err(|err|
-        CliError::EnvironmentError(format!("Failed to open file: {}", err)))?;
+    let filepath = args.value_of("blockfile")
+        .ok_or(CliError::ArgumentError("No file".into()))?;
+    let mut file = File::open(filepath)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to open file: {}", err)))?;
     let mut packed = Vec::new();
-    file.read_to_end(&mut packed).map_err(|err|
-        CliError::EnvironmentError(format!("Failed to read file: {}", err)))?;
+    file.read_to_end(&mut packed)
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to read file: {}", err)))?;
 
     let block: Block = protobuf::parse_from_bytes(&packed)
         .map_err(|err| CliError::ParseError(format!("{}", err)))?;
@@ -262,17 +296,19 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
             if block_header.previous_block_id != chain_head {
                 return Err(CliError::ArgumentError(format!(
                     "New block must be an immediate child of the current chain head: {}",
-                    chain_head)))
+                    chain_head
+                )));
             }
-        },
+        }
         Err(DatabaseError::NotFoundError(_)) => (),
         Err(err) => {
             return Err(CliError::EnvironmentError(format!("{}", err)));
-        },
+        }
     }
 
-    blockstore.put(block).map_err(|err|
-        CliError::ArgumentError(format!("Failed to put block into database: {}", err)))?;
+    blockstore.put(block).map_err(|err| {
+        CliError::ArgumentError(format!("Failed to put block into database: {}", err))
+    })?;
 
     println!("Block {} added", block_id);
     Ok(())
@@ -282,18 +318,23 @@ fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let ctx = create_context()?;
     let blockstore = open_blockstore(&ctx)?;
 
-    let block_count = blockstore.get_current_height()
+    let block_count = blockstore
+        .get_current_height()
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
-    let batch_count = blockstore.get_batch_count()
+    let batch_count = blockstore
+        .get_batch_count()
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
-    let txn_count = blockstore.get_transaction_count()
+    let txn_count = blockstore
+        .get_transaction_count()
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
     if args.is_present("extended") {
         let mut txn_family_counts = HashMap::new();
-        let chain_head = blockstore.get_chain_head()
+        let chain_head = blockstore
+            .get_chain_head()
             .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
-        let mut block = blockstore.get(&chain_head)
+        let mut block = blockstore
+            .get(&chain_head)
             .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
         loop {
@@ -310,7 +351,8 @@ fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
             if header.previous_block_id == NULL_BLOCK_IDENTIFIER {
                 break;
             }
-            block = blockstore.get(&header.previous_block_id)
+            block = blockstore
+                .get(&header.previous_block_id)
                 .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
         }
 
@@ -320,7 +362,6 @@ fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         for (family, count) in txn_family_counts.iter() {
             println!("  {}: {}", family, count);
         }
-
     } else {
         println!("Blocks:       {}", block_count);
         println!("Batches:      {}", batch_count);
@@ -339,27 +380,30 @@ fn create_context() -> Result<lmdb::LmdbContext, CliError> {
 }
 
 fn open_blockstore<'a>(ctx: &'a lmdb::LmdbContext) -> Result<Blockstore<'a>, CliError> {
-    let blockstore_db = lmdb::LmdbDatabase::new(ctx, &["index_batch", "index_transaction", "index_block_num"])
-        .map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
+    let blockstore_db = lmdb::LmdbDatabase::new(
+        ctx,
+        &["index_batch", "index_transaction", "index_block_num"],
+    ).map_err(|err| CliError::EnvironmentError(format!("{}", err)))?;
 
     Ok(Blockstore::new(blockstore_db))
 }
 
 fn backup_block<W: Write>(block: &Block, writer: &mut W) -> Result<(), CliError> {
-    block.write_length_delimited_to_writer(writer)
+    block
+        .write_length_delimited_to_writer(writer)
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
 }
 
 fn restore_block(source: &mut protobuf::CodedInputStream) -> Result<Option<Block>, CliError> {
-    let eof = source.eof().map_err(|err|
-        CliError::EnvironmentError(format!("Failed to check EOF: {}",err)))?;
+    let eof = source
+        .eof()
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to check EOF: {}", err)))?;
     if eof {
-        return Ok(None)
+        return Ok(None);
     }
 
     let block = protobuf::core::parse_length_delimited_from(source)
-        .map_err(|err|
-            CliError::EnvironmentError(format!("Failed to parse block: {}", err)))?;
+        .map_err(|err| CliError::EnvironmentError(format!("Failed to parse block: {}", err)))?;
 
     Ok(Some(block))
 }

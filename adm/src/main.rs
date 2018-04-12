@@ -44,7 +44,10 @@ fn main() {
         ("blockstore", Some(args)) => commands::blockstore::run(args),
         ("keygen", Some(args)) => commands::keygen::run(args),
         ("genesis", Some(args)) => commands::genesis::run(args),
-        _ => { println!("Invalid subcommand; Pass --help for usage."); Ok(()) },
+        _ => {
+            println!("Invalid subcommand; Pass --help for usage.");
+            Ok(())
+        }
     };
 
     std::process::exit(match result {
@@ -80,7 +83,8 @@ fn parse_args<'a>() -> ArgMatches<'a> {
                     "show a block based on batch id")
                 (@arg transaction: -T --transaction +takes_value conflicts_with[block batch height]
                     "show a block based on transaction id")
-                (@arg blocknum: -n --("block-num") +takes_value conflicts_with[block batch transaction]
+             (@arg blocknum: -n --("block-num")
+              +takes_value conflicts_with[block batch transaction]
                     "show a block based on height"))
             (@subcommand prune =>
                 (about: "remove a block and all children blocks from the blockstore")
@@ -102,7 +106,8 @@ fn parse_args<'a>() -> ArgMatches<'a> {
             (@arg quiet: -q --quiet "do not display output"))
         (@subcommand genesis =>
             (about: "creates the genesis.batch file for initializing the validator")
-            (@arg input_file: +takes_value ... "file or files containing batches to add to the resulting")
+         (@arg input_file:
+          +takes_value ... "file or files containing batches to add to the resulting")
             (@arg output: -o --output "choose the output file for GenesisData"))
         (@arg verbose: -v... "increase the logging level.")
     );
