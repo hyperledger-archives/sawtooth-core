@@ -15,22 +15,24 @@
  * ------------------------------------------------------------------------------
  */
 
- extern crate glob;
- extern crate protoc_rust;
+extern crate glob;
+extern crate protoc_rust;
 
- fn main() {
+fn main() {
+    let proto_src_files = glob_simple("../protos/*.proto");
+    println!("{:?}", proto_src_files);
 
-     let proto_src_files = glob_simple("../protos/*.proto");
-     println!("{:?}", proto_src_files);
+    protoc_rust::run(protoc_rust::Args {
+        out_dir: "./src",
+        input: &proto_src_files
+            .iter()
+            .map(|a| a.as_ref())
+            .collect::<Vec<&str>>(),
+        includes: &["../protos"],
+    }).expect("Error generating rust files from smallbank protos");
+}
 
-     protoc_rust::run(protoc_rust::Args {
-         out_dir: "./src",
-         input: &proto_src_files.iter().map(|a| a.as_ref()).collect::<Vec<&str>>(),
-         includes: &["../protos"],
-     }).expect("Error generating rust files from smallbank protos");
- }
-
- fn glob_simple(pattern: &str) -> Vec<String> {
+fn glob_simple(pattern: &str) -> Vec<String> {
     glob::glob(pattern)
         .expect("glob")
         .map(|g| {
@@ -39,5 +41,6 @@
                 .to_str()
                 .expect("utf-8")
                 .to_owned()
-        }).collect()
- }
+        })
+        .collect()
+}
