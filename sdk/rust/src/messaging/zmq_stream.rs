@@ -18,9 +18,7 @@ use uuid;
 use zmq;
 
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{Receiver, SyncSender, Sender,
-                      sync_channel, channel,
-                      RecvTimeoutError};
+use std::sync::mpsc::{channel, sync_channel, Receiver, RecvTimeoutError, Sender, SyncSender};
 use std::thread;
 use std::time::Duration;
 use std::collections::HashMap;
@@ -55,8 +53,7 @@ impl MessageConnection<ZmqMessageSender> for ZmqMessageConnection {
         // Create the channel for request messages (i.e. non-reply messages)
         let (request_tx, request_rx) = sync_channel(CHANNEL_BUFFER_SIZE);
         let router = InboundRouter::new(request_tx);
-        let mut sender = ZmqMessageSender::new(
-            self.context.clone(), self.address.clone(), router);
+        let mut sender = ZmqMessageSender::new(self.context.clone(), self.address.clone(), router);
 
         sender.start();
 
@@ -67,7 +64,7 @@ impl MessageConnection<ZmqMessageSender> for ZmqMessageConnection {
 #[derive(Debug)]
 enum SocketCommand {
     Send(Message),
-    Shutdown
+    Shutdown,
 }
 
 #[derive(Clone)]
@@ -79,13 +76,12 @@ pub struct ZmqMessageSender {
 }
 
 impl ZmqMessageSender {
-
     fn new(ctx: zmq::Context, address: String, router: InboundRouter) -> Self {
         ZmqMessageSender {
-           context: ctx,
-           address: address,
-           inbound_router: router,
-           outbound_sender: None
+            context: ctx,
+            address: address,
+            inbound_router: router,
+            outbound_sender: None,
         }
     }
 
@@ -98,23 +94,20 @@ impl ZmqMessageSender {
         let address = self.address.clone();
         let inbound_router = self.inbound_router.clone();
         thread::spawn(move || {
-            let mut inner_stream = SendReceiveStream::new(
-                ctx,
-                &address,
-                outbound_recv,
-                inbound_router,
-            );
+            let mut inner_stream =
+                SendReceiveStream::new(ctx, &address, outbound_recv, inbound_router);
             inner_stream.run();
         });
     }
 }
 
-
 impl MessageSender for ZmqMessageSender {
-    fn send(&mut self, destination: Message_MessageType, correlation_id: &str,
-            contents: &[u8])
-        -> Result<MessageFuture, SendError>
-    {
+    fn send(
+        &mut self,
+        destination: Message_MessageType,
+        correlation_id: &str,
+        contents: &[u8],
+    ) -> Result<MessageFuture, SendError> {
         if let Some(ref sender) = self.outbound_sender {
             let mut msg = Message::new();
 
@@ -122,8 +115,10 @@ impl MessageSender for ZmqMessageSender {
             msg.set_correlation_id(String::from(correlation_id));
             msg.set_content(Vec::from(contents));
 
-            let future = MessageFuture::new(self.inbound_router.expect_reply(
-                    String::from(correlation_id)));
+            let future = MessageFuture::new(
+                self.inbound_router
+                    .expect_reply(String::from(correlation_id)),
+            );
 
             sender.send(SocketCommand::Send(msg)).unwrap();
 
@@ -133,10 +128,12 @@ impl MessageSender for ZmqMessageSender {
         }
     }
 
-    fn reply(&mut self, destination: Message_MessageType, correlation_id: &str,
-             contents: &[u8])
-        -> Result<(), SendError>
-    {
+    fn reply(
+        &mut self,
+        destination: Message_MessageType,
+        correlation_id: &str,
+        contents: &[u8],
+    ) -> Result<(), SendError> {
         if let Some(ref sender) = self.outbound_sender {
             let mut msg = Message::new();
             msg.set_message_type(destination);
@@ -145,7 +142,7 @@ impl MessageSender for ZmqMessageSender {
 
             match sender.send(SocketCommand::Send(msg)) {
                 Ok(_) => Ok(()),
-                Err(_) => Err(SendError::UnknownError)
+                Err(_) => Err(SendError::UnknownError),
             }
         } else {
             Err(SendError::DisconnectedError)
@@ -154,9 +151,9 @@ impl MessageSender for ZmqMessageSender {
 
     fn close(&mut self) {
         if let Some(ref sender) = self.outbound_sender.take() {
-            match sender.send(SocketCommand::Shutdown){
+            match sender.send(SocketCommand::Shutdown) {
                 Ok(_) => (),
-                Err(_) => info!("Sender has already closed.")
+                Err(_) => info!("Sender has already closed."),
             }
         }
     }
@@ -172,26 +169,28 @@ impl InboundRouter {
     fn new(inbound_tx: SyncSender<MessageResult>) -> Self {
         InboundRouter {
             inbound_tx: inbound_tx,
-            expected_replies: Arc::new(Mutex::new(HashMap::new()))
+            expected_replies: Arc::new(Mutex::new(HashMap::new())),
         }
     }
     fn route(&mut self, message_result: MessageResult) {
-        match message_result  {
+        match message_result {
             Ok(message) => {
                 let mut expected_replies = self.expected_replies.lock().unwrap();
                 match expected_replies.remove(message.get_correlation_id()) {
                     Some(sender) => sender.send(Ok(message)).unwrap(),
-                    None => self.inbound_tx.send(Ok(message)).unwrap()
+                    None => self.inbound_tx.send(Ok(message)).unwrap(),
                 }
             }
             Err(ReceiveError::DisconnectedError) => {
                 let mut expected_replies = self.expected_replies.lock().unwrap();
-                for (_, sender) in expected_replies.iter_mut(){
+                for (_, sender) in expected_replies.iter_mut() {
                     sender.send(Err(ReceiveError::DisconnectedError)).unwrap();
                 }
-                self.inbound_tx.send(Err(ReceiveError::DisconnectedError)).unwrap();
+                self.inbound_tx
+                    .send(Err(ReceiveError::DisconnectedError))
+                    .unwrap();
             }
-            Err(err) => error!("Error: {}", err.description())
+            Err(err) => error!("Error: {}", err.description()),
         }
     }
 
@@ -210,19 +209,25 @@ struct SendReceiveStream {
     socket: zmq::Socket,
     outbound_recv: Receiver<SocketCommand>,
     inbound_router: InboundRouter,
-    monitor_socket: zmq::Socket
+    monitor_socket: zmq::Socket,
 }
 
 const POLL_TIMEOUT: i64 = 10;
 
 impl SendReceiveStream {
-    fn new(context: zmq::Context, address: &str,
-           outbound_recv: Receiver<SocketCommand>,
-           inbound_router: InboundRouter)
-        -> Self
-    {
+    fn new(
+        context: zmq::Context,
+        address: &str,
+        outbound_recv: Receiver<SocketCommand>,
+        inbound_router: InboundRouter,
+    ) -> Self {
         let socket = context.socket(zmq::DEALER).unwrap();
-        socket.monitor("inproc://monitor-socket", zmq::SocketEvent::DISCONNECTED as i32).is_ok();
+        socket
+            .monitor(
+                "inproc://monitor-socket",
+                zmq::SocketEvent::DISCONNECTED as i32,
+            )
+            .is_ok();
         let monitor_socket = context.socket(zmq::PAIR).unwrap();
 
         let identity = uuid::Uuid::new(uuid::UuidVersion::Random).unwrap();
@@ -233,15 +238,20 @@ impl SendReceiveStream {
             socket: socket,
             outbound_recv: outbound_recv,
             inbound_router: inbound_router,
-            monitor_socket: monitor_socket
+            monitor_socket: monitor_socket,
         }
     }
 
     fn run(&mut self) {
         self.socket.connect(&self.address).unwrap();
-        self.monitor_socket.connect("inproc://monitor-socket").unwrap();
+        self.monitor_socket
+            .connect("inproc://monitor-socket")
+            .unwrap();
         loop {
-            let mut poll_items = [self.socket.as_poll_item(zmq::POLLIN), self.monitor_socket.as_poll_item(zmq::POLLIN)];
+            let mut poll_items = [
+                self.socket.as_poll_item(zmq::POLLIN),
+                self.monitor_socket.as_poll_item(zmq::POLLIN),
+            ];
             zmq::poll(&mut poll_items, POLL_TIMEOUT).unwrap();
             if poll_items[0].is_readable() {
                 trace!("Readable!");
@@ -258,17 +268,16 @@ impl SendReceiveStream {
                     debug!("Empty frame received.");
                 }
             }
-            if poll_items[1].is_readable(){
+            if poll_items[1].is_readable() {
                 self.monitor_socket.recv_multipart(0).unwrap();
                 let message_result = Err(ReceiveError::DisconnectedError);
                 info!("Received Disconnect");
                 self.inbound_router.route(message_result);
                 break;
-
             }
 
-            match self.outbound_recv.recv_timeout(
-                Duration::from_millis(POLL_TIMEOUT as u64))
+            match self.outbound_recv
+                .recv_timeout(Duration::from_millis(POLL_TIMEOUT as u64))
             {
                 Ok(SocketCommand::Send(msg)) => {
                     let message_bytes = protobuf::Message::write_to_bytes(&msg).unwrap();
@@ -283,13 +292,14 @@ impl SendReceiveStream {
                     debug!("Disconnected outbound channel");
                     break;
                 }
-                _ => continue
-
+                _ => continue,
             }
         }
 
         debug!("Exited stream");
         self.socket.disconnect(&self.address).unwrap();
-        self.monitor_socket.disconnect("inproc://monitor-socket").unwrap();
+        self.monitor_socket
+            .disconnect("inproc://monitor-socket")
+            .unwrap();
     }
 }
