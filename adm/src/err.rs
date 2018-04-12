@@ -27,9 +27,9 @@ pub enum CliError {
 impl std::fmt::Display for CliError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            CliError::ArgumentError(ref msg) => write!(f, "ArgumentError: {}",  msg),
-            CliError::EnvironmentError(ref msg) => write!(f, "EnvironmentError: {}",  msg),
-            CliError::ParseError(ref msg) => write!(f, "ParseError: {}",  msg),
+            CliError::ArgumentError(ref msg) => write!(f, "ArgumentError: {}", msg),
+            CliError::EnvironmentError(ref msg) => write!(f, "EnvironmentError: {}", msg),
+            CliError::ParseError(ref msg) => write!(f, "ParseError: {}", msg),
         }
     }
 }
@@ -44,7 +44,7 @@ impl std::error::Error for CliError {
     }
 
     fn cause(&self) -> Option<&std::error::Error> {
-        match * self {
+        match *self {
             CliError::ArgumentError(_) => None,
             CliError::EnvironmentError(_) => None,
             CliError::ParseError(_) => None,

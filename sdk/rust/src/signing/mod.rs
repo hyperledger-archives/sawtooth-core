@@ -59,14 +59,10 @@ impl StdError for Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            Error::NoSuchAlgorithm(ref s) =>
-                write!(f, "NoSuchAlgorithm: {}", s),
-            Error::ParseError(ref s) =>
-                write!(f, "ParseError: {}", s),
-            Error::SigningError(ref err) =>
-                write!(f, "SigningError: {}", err.description()),
-            Error::KeyGenError(ref s) =>
-                write!(f, "KeyGenError: {}", s),
+            Error::NoSuchAlgorithm(ref s) => write!(f, "NoSuchAlgorithm: {}", s),
+            Error::ParseError(ref s) => write!(f, "ParseError: {}", s),
+            Error::SigningError(ref err) => write!(f, "SigningError: {}", err.description()),
+            Error::KeyGenError(ref s) => write!(f, "KeyGenError: {}", s),
         }
     }
 }
@@ -143,22 +139,24 @@ pub trait Context {
 pub fn create_context(algorithm_name: &str) -> Result<Box<Context>, Error> {
     match algorithm_name {
         "secp256k1" => Ok(Box::new(secp256k1::Secp256k1Context::new())),
-        _ => Err(Error::NoSuchAlgorithm(format!("no such algorithm: {}", algorithm_name)))
+        _ => Err(Error::NoSuchAlgorithm(format!(
+            "no such algorithm: {}",
+            algorithm_name
+        ))),
     }
 }
 /// Factory for generating signers.
 pub struct CryptoFactory<'a> {
-    context: &'a Context
+    context: &'a Context,
 }
 
 impl<'a> CryptoFactory<'a> {
-
     /// Constructs a CryptoFactory.
     /// # Arguments
     ///
     /// * `context` - a cryptographic context
     pub fn new(context: &'a Context) -> Self {
-        CryptoFactory{ context: context }
+        CryptoFactory { context: context }
     }
 
     /// Returns the context associated with this factory
@@ -167,7 +165,7 @@ impl<'a> CryptoFactory<'a> {
     ///
     /// * `context` - a cryptographic context
     pub fn get_context(&self) -> &Context {
-        return self.context
+        return self.context;
     }
 
     /// Create a new signer for the given private key.
@@ -187,7 +185,7 @@ impl<'a> CryptoFactory<'a> {
 /// A convenient wrapper of Context and PrivateKey
 pub struct Signer<'a> {
     context: &'a Context,
-    key: &'a PrivateKey
+    key: &'a PrivateKey,
 }
 
 impl<'a> Signer<'a> {
@@ -200,7 +198,7 @@ impl<'a> Signer<'a> {
     pub fn new(context: &'a Context, key: &'a PrivateKey) -> Self {
         Signer {
             context: context,
-            key: key
+            key: key,
         }
     }
 
