@@ -271,7 +271,7 @@ impl TransactionContext {
 
     /// delete_state requests that each of the provided addresses be unset
     /// in validator state. A list of successfully deleted addresses
-    //  is returned.
+    ///  is returned.
     ///
     /// # Arguments
     ///
