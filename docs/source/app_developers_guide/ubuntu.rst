@@ -158,9 +158,9 @@ Use the same terminal window as the previous step.
       $ sawset genesis
       Generated config-genesis.batch
 
-    This settings proposal will change authorized keys in the setting
-    ``sawtooth.settings.vote.authorized_keys``. The change will take effect
-    after the validator and Settings transaction processor have started.
+   This settings proposal will change authorized keys in the setting
+   ``sawtooth.settings.vote.authorized_keys``. The change will take effect
+   after the validator and Settings transaction processor have started.
 
 #. Run the following command:
 
@@ -462,7 +462,7 @@ purposes.
 
       .. code-block:: console
 
-         user@client$ sudo bash -c "tail -10 /var/log/sawtooth/intkey-*-debug.log"
+         user@client$ sudo bash -c "tail -n 10 /var/log/sawtooth/intkey-*-debug.log"
          [2018-03-14 16:24:49.587 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST
          [2018-03-14 16:24:49.588 [MainThread] handler DEBUG] incrementing "MvRznE" by 1
          [2018-03-14 16:24:49.624 [MainThread] core DEBUG] received message of type: TP_PROCESS_REQUEST

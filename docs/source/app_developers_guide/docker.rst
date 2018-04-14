@@ -292,7 +292,7 @@ purposes.
 
    .. code-block:: console
 
-      root@client# intkey load -f batches.intkey -url http://rest-api:8008
+      root@client# intkey load -f batches.intkey --url http://rest-api:8008
       batches: 11 batch/sec: 141.7800162868952
 
 #. The terminal window in which you ran the ``docker-compose`` command displays
