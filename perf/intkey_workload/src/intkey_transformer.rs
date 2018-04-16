@@ -98,7 +98,7 @@ impl<'a> IntKeyTransformer<'a> {
 
     pub fn intkey_payload_to_transaction(
         &mut self,
-        payload: IntKeyPayload,
+        payload: &IntKeyPayload,
     ) -> Result<Transaction, Box<Error>> {
         let mut txn = Transaction::new();
         let mut txn_header = TransactionHeader::new();
@@ -128,7 +128,7 @@ impl<'a> IntKeyTransformer<'a> {
 
         let addresses = RepeatedField::from_vec(vec![
             addresser
-                .make_address(payload.name.clone())
+                .make_address(&payload.name)
                 .chars()
                 .take(address_length)
                 .collect(),
@@ -138,36 +138,30 @@ impl<'a> IntKeyTransformer<'a> {
 
         txn_header.set_outputs(addresses.clone());
 
-        if payload.verb == "inc".to_string() || payload.verb == "dec".to_string() {
-            match self.txn_id_by_name.get(&payload.name) {
-                Some(txn_id) => {
-                    let dependencies = RepeatedField::from_vec(vec![txn_id.clone().to_string()]);
-                    txn_header.set_dependencies(dependencies);
-                }
-                None => {}
+        if payload.verb == "inc" || payload.verb == "dec" {
+            if let Some(txn_id) = self.txn_id_by_name.get(&payload.name) {
+                let dependencies = RepeatedField::from_vec(vec![txn_id.clone().to_string()]);
+                txn_header.set_dependencies(dependencies);
             }
         }
         if self.rng.gen_range(0.0, 1.0) < self.unsatisfiable {
             let random_bytes: Vec<u8> = self.rng.gen_iter::<u8>().take(100).collect();
 
-            match self.signer.sign(random_bytes.as_slice()) {
-                Ok(dep) => txn_header.dependencies.push(dep),
-                Err(_) => (),
+            if let Ok(dep) = self.signer.sign(random_bytes.as_slice()) {
+                txn_header.dependencies.push(dep)
             }
         }
 
-        if self.rng.gen_range(0.0, 1.0) < self.unnecessary {
-            if self.prior_txn_ids.len() > 0 {
-                let txn_id = self.prior_txn_ids.remove(0);
-                txn_header.dependencies.push(txn_id);
-            }
+        if self.rng.gen_range(0.0, 1.0) < self.unnecessary && !self.prior_txn_ids.is_empty() {
+            let txn_id = self.prior_txn_ids.remove(0);
+            txn_header.dependencies.push(txn_id);
         }
 
         let header_bytes = txn_header.write_to_bytes()?;
 
         let signature = self.signer.sign(&header_bytes.to_vec())?;
 
-        if payload.verb == "set".to_string() {
+        if payload.verb == "set" {
             if !self.txn_id_by_name.contains_key(&payload.name) {
                 self.txn_id_by_name
                     .insert(payload.name.clone(), signature.clone());
@@ -217,7 +211,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 1.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
@@ -258,7 +252,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
@@ -299,7 +293,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 1.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
@@ -337,7 +331,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;
@@ -375,7 +369,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 1.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = num_names;
@@ -412,7 +406,7 @@ mod tests {
         let mut transformer = IntKeyTransformer::new(&signer, &seed, 0.0, 0.0, num_names, 0.0);
 
         let transaction_iterator = intkey_iterator
-            .map(|payload| transformer.intkey_payload_to_transaction(payload))
+            .map(|payload| transformer.intkey_payload_to_transaction(&payload))
             .filter_map(|p| p.ok());
 
         let num_to_consider = 1_000;

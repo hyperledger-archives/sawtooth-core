@@ -58,7 +58,7 @@ impl<'a> SBPayloadTransformer<'a> {
         }
     }
 
-    fn get_dependencies_for_customer_ids(&self, customer_ids: Vec<u32>) -> Vec<String> {
+    fn get_dependencies_for_customer_ids(&self, customer_ids: &[u32]) -> Vec<String> {
         customer_ids
             .iter()
             .filter_map(|id| self.dependencies.get_signature(id))
@@ -69,28 +69,28 @@ impl<'a> SBPayloadTransformer<'a> {
     fn get_dependencies(&self, payload: &SmallbankTransactionPayload) -> Vec<String> {
         match payload.get_payload_type() {
             SmallbankTransactionPayload_PayloadType::DEPOSIT_CHECKING => {
-                self.get_dependencies_for_customer_ids(vec![
+                self.get_dependencies_for_customer_ids(&[
                     payload.get_deposit_checking().get_customer_id(),
                 ])
             }
             SmallbankTransactionPayload_PayloadType::WRITE_CHECK => {
-                self.get_dependencies_for_customer_ids(vec![
+                self.get_dependencies_for_customer_ids(&[
                     payload.get_write_check().get_customer_id(),
                 ])
             }
             SmallbankTransactionPayload_PayloadType::TRANSACT_SAVINGS => {
-                self.get_dependencies_for_customer_ids(vec![
+                self.get_dependencies_for_customer_ids(&[
                     payload.get_transact_savings().get_customer_id(),
                 ])
             }
             SmallbankTransactionPayload_PayloadType::SEND_PAYMENT => {
-                self.get_dependencies_for_customer_ids(vec![
+                self.get_dependencies_for_customer_ids(&[
                     payload.get_send_payment().get_source_customer_id(),
                     payload.get_send_payment().get_dest_customer_id(),
                 ])
             }
             SmallbankTransactionPayload_PayloadType::AMALGAMATE => {
-                self.get_dependencies_for_customer_ids(vec![
+                self.get_dependencies_for_customer_ids(&[
                     payload.get_amalgamate().get_source_customer_id(),
                     payload.get_amalgamate().get_dest_customer_id(),
                 ])
@@ -101,7 +101,7 @@ impl<'a> SBPayloadTransformer<'a> {
 
     pub fn payload_to_transaction(
         &mut self,
-        payload: SmallbankTransactionPayload,
+        payload: &SmallbankTransactionPayload,
     ) -> Result<Transaction, Box<Error>> {
         let mut txn = Transaction::new();
         let mut txn_header = TransactionHeader::new();
@@ -196,7 +196,7 @@ mod tests {
         let mut transformer = SBPayloadTransformer::new(&signer);
 
         let mut transaction_iterator = payload_iterator
-            .map(|payload| transformer.payload_to_transaction(payload))
+            .map(|payload| transformer.payload_to_transaction(&payload))
             .filter_map(|transaction| transaction.ok());
 
         let mut create_account_txn_ids = Vec::new();

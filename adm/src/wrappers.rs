@@ -105,7 +105,7 @@ impl Batch {
                 batch
                     .get_transactions()
                     .iter()
-                    .map(|transaction| Transaction::try_from(transaction.clone()))
+                    .map(|transaction| Transaction::try_from(&transaction.clone()))
                     .collect::<Result<Vec<Transaction>, Error>>()
                     .map(move |transactions| Batch {
                         header_signature: String::from(batch.get_header_signature()),
@@ -133,7 +133,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn try_from(transaction: messages::transaction::Transaction) -> Result<Self, Error> {
+    pub fn try_from(transaction: &messages::transaction::Transaction) -> Result<Self, Error> {
         protobuf::parse_from_bytes(&transaction.header)
             .map_err(|err| {
                 Error::ParseError(format!(
@@ -144,25 +144,13 @@ impl Transaction {
             .map(
                 |transaction_header: messages::transaction::TransactionHeader| Transaction {
                     batcher_public_key: String::from(transaction_header.get_batcher_public_key()),
-                    dependencies: transaction_header
-                        .get_dependencies()
-                        .iter()
-                        .map(|dependency| dependency.clone())
-                        .collect(),
+                    dependencies: transaction_header.get_dependencies().to_vec(),
                     family_name: String::from(transaction_header.get_family_name()),
                     family_version: String::from(transaction_header.get_family_version()),
                     header_signature: String::from(transaction.get_header_signature()),
-                    inputs: transaction_header
-                        .get_inputs()
-                        .iter()
-                        .map(|input| input.clone())
-                        .collect(),
+                    inputs: transaction_header.get_inputs().to_vec(),
                     nonce: String::from(transaction_header.get_nonce()),
-                    outputs: transaction_header
-                        .get_outputs()
-                        .iter()
-                        .map(|output| output.clone())
-                        .collect(),
+                    outputs: transaction_header.get_outputs().to_vec(),
                     payload: Vec::from(transaction.get_payload()),
                     payload_sha512: String::from(transaction_header.get_payload_sha512()),
                     signer_public_key: String::from(transaction_header.get_signer_public_key()),

@@ -36,7 +36,7 @@ impl IntKeyAddresser {
         }
     }
 
-    pub fn make_address(&self, name: String) -> String {
+    pub fn make_address(&self, name: &str) -> String {
         let prefix = self.namespace.clone();
         let mut hasher = Sha512::new();
         hasher.input(name.as_bytes());

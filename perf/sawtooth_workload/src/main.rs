@@ -20,8 +20,6 @@ extern crate sawtooth_perf;
 extern crate sawtooth_sdk;
 
 use std::fs::File;
-use std::io;
-use std::io::Write;
 use std::io::Read;
 use std::error::Error;
 
@@ -35,8 +33,8 @@ use sawtooth_perf::batch_submit;
 use sawtooth_sdk::signing;
 use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 
-const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     let arg_matches = App::new(APP_NAME)
@@ -55,7 +53,7 @@ fn main() {
     std::process::exit(match result {
         Ok(_) => 0,
         Err(err) => {
-            writeln!(io::stderr(), "Error: {}", err).unwrap();
+            eprintln!("Error: {}", err);
             1
         }
     });

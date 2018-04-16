@@ -20,7 +20,7 @@ use std::path::Path;
 
 use lmdb_zero as lmdb;
 
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 
 const DEFAULT_SIZE: usize = 1 << 40; // 1024 ** 4
 
@@ -32,10 +32,9 @@ impl LmdbContext {
     pub fn new(filepath: &Path, indexes: u32, size: Option<usize>) -> Result<Self, DatabaseError> {
         let flags = lmdb::open::MAPASYNC | lmdb::open::WRITEMAP | lmdb::open::NOSUBDIR;
 
-        let filepath_str = filepath.to_str().ok_or(DatabaseError::InitError(format!(
-            "Invalid filepath: {:?}",
-            filepath
-        )))?;
+        let filepath_str = filepath
+            .to_str()
+            .ok_or_else(|| DatabaseError::InitError(format!("Invalid filepath: {:?}", filepath)))?;
 
         let mut builder = lmdb::EnvBuilder::new().map_err(|err| {
             DatabaseError::InitError(format!("Failed to initialize environment: {}", err))
@@ -114,22 +113,20 @@ impl<'a> LmdbDatabaseReader<'a> {
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let access = self.txn.access();
         let val: Result<&[u8], _> = access.get(&self.db.main, key);
-        val.ok().map(|v| Vec::from(v))
+        val.ok().map(Vec::from)
     }
 
     pub fn index_get(&self, index: &str, key: &[u8]) -> Result<Option<Vec<u8>>, DatabaseError> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::ReaderError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
         let access = self.txn.access();
         let val: Result<&[u8], _> = access.get(index, key);
-        Ok(val.ok().map(|v| Vec::from(v)))
+        Ok(val.ok().map(Vec::from))
     }
 
+    #[allow(dead_code)]
     pub fn cursor(&self) -> Result<LmdbDatabaseReaderCursor, DatabaseError> {
         let cursor = self.txn
             .cursor(&self.db.main)
@@ -145,10 +142,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::ReaderError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
         let cursor = self.txn
             .cursor(index)
             .map_err(|err| DatabaseError::ReaderError(format!("{}", err)))?;
@@ -172,10 +166,7 @@ impl<'a> LmdbDatabaseReader<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::ReaderError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::ReaderError(format!("Not an index: {}", index)))?;
         self.txn
             .db_stat(index)
             .map_err(|err| {
@@ -191,6 +182,7 @@ pub struct LmdbDatabaseReaderCursor<'a> {
 }
 
 impl<'a> LmdbDatabaseReaderCursor<'a> {
+    #[allow(dead_code)]
     pub fn first(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         self.cursor
             .first(&self.access)
@@ -235,10 +227,7 @@ impl<'a> LmdbDatabaseWriter<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::WriterError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::WriterError(format!("Not an index: {}", index)))?;
         self.txn
             .access()
             .put(index, key, value, lmdb::put::Flags::empty())
@@ -249,10 +238,7 @@ impl<'a> LmdbDatabaseWriter<'a> {
         let index = self.db
             .indexes
             .get(index)
-            .ok_or(DatabaseError::WriterError(format!(
-                "Not an index: {}",
-                index
-            )))?;
+            .ok_or_else(|| DatabaseError::WriterError(format!("Not an index: {}", index)))?;
         self.txn
             .access()
             .del_key(index, key)

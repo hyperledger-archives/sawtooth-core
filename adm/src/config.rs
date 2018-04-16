@@ -18,13 +18,13 @@
 use std::env;
 use std::path::{Path, PathBuf};
 
-const DEFAULT_CONFIG_DIR: &'static str = "/etc/sawtooth";
-const DEFAULT_LOG_DIR: &'static str = "/var/log/sawtooth";
-const DEFAULT_DATA_DIR: &'static str = "/var/lib/sawtooth";
-const DEFAULT_KEY_DIR: &'static str = "/etc/sawtooth/keys";
-const DEFAULT_POLICY_DIR: &'static str = "/etc/sawtooth/policy";
+const DEFAULT_CONFIG_DIR: &str = "/etc/sawtooth";
+const DEFAULT_LOG_DIR: &str = "/var/log/sawtooth";
+const DEFAULT_DATA_DIR: &str = "/var/lib/sawtooth";
+const DEFAULT_KEY_DIR: &str = "/etc/sawtooth/keys";
+const DEFAULT_POLICY_DIR: &str = "/etc/sawtooth/policy";
 
-const DEFAULT_BLOCKSTORE_FILENAME: &'static str = "block-00.lmdb";
+const DEFAULT_BLOCKSTORE_FILENAME: &str = "block-00.lmdb";
 
 pub struct PathConfig {
     pub config_dir: PathBuf,

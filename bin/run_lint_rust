@@ -20,6 +20,7 @@ top_dir=$(cd $(dirname $(dirname $0)) && pwd)
 dirs="
     $top_dir/sdk/rust
     $top_dir/sdk/examples/intkey_rust
+    $top_dir/families/smallbank/smallbank_rust
     $top_dir/adm
     $top_dir/perf/sawtooth_perf
     $top_dir/perf/sawtooth_workload
@@ -65,6 +66,16 @@ for dir in $dirs; do
             echo "Incorrect formatting: $dir"
         fi
     fi
+
+    echo "-- clippy"
+
+    cargo +nightly clippy -- -D warnings -A redundant-field-names -A cyclomatic-complexity -A new-without-default -A print-literal -A useless-format
+    clippy_exit=$?
+
+    if [[ $clippy_exit != 0 ]]; then
+        exitcode=1
+    fi
+
 done
 
 exit $exitcode

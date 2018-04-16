@@ -34,15 +34,13 @@ impl BatchMap {
 
     // Mark that batchlist associated with batch id has been submitted
     // to a validator.
-    pub fn mark_submit_success(&mut self, batch_id: String) {
-        self.batches_by_id.remove(batch_id.as_str());
+    pub fn mark_submit_success(&mut self, batch_id: &str) {
+        self.batches_by_id.remove(batch_id);
     }
 
     // Get a batchlist by id, to submit it to a validator.
-    pub fn get_batchlist_to_submit(&mut self, batch_id: String) -> Option<BatchList> {
-        self.batches_by_id
-            .get(batch_id.as_str())
-            .map(|batchlist| batchlist.clone())
+    pub fn get_batchlist_to_submit(&mut self, batch_id: &str) -> Option<BatchList> {
+        self.batches_by_id.get(batch_id).cloned()
     }
 
     // Idempotent method for adding a BatchList
@@ -63,8 +61,6 @@ impl BatchMap {
 mod tests {
     use super::BatchMap;
 
-    use std::thread::sleep;
-
     use rand::Rng;
     use rand::StdRng;
 
@@ -72,7 +68,6 @@ mod tests {
 
     use sawtooth_sdk::signing;
     use sawtooth_sdk::messages::batch::Batch;
-    use sawtooth_sdk::messages::batch::BatchHeader;
     use sawtooth_sdk::messages::batch::BatchList;
 
     #[test]
@@ -117,26 +112,26 @@ mod tests {
         timed_batch_iterator.add(batchlist2.clone().unwrap());
         timed_batch_iterator.add(batchlist3.clone().unwrap());
 
-        timed_batch_iterator.mark_submit_success(batch_id1.clone());
-        timed_batch_iterator.mark_submit_success(batch_id3.clone());
+        timed_batch_iterator.mark_submit_success(&batch_id1);
+        timed_batch_iterator.mark_submit_success(&batch_id3);
 
         assert_eq!(
-            timed_batch_iterator.get_batchlist_to_submit(batch_id2.clone()),
+            timed_batch_iterator.get_batchlist_to_submit(&batch_id2),
             batchlist2
         );
         assert_eq!(
-            timed_batch_iterator.get_batchlist_to_submit(batch_id1.clone()),
+            timed_batch_iterator.get_batchlist_to_submit(&batch_id1),
             None
         );
         assert_eq!(
-            timed_batch_iterator.get_batchlist_to_submit(batch_id3.clone()),
+            timed_batch_iterator.get_batchlist_to_submit(&batch_id3),
             None
         );
 
-        timed_batch_iterator.mark_submit_success(batch_id2.clone());
+        timed_batch_iterator.mark_submit_success(&batch_id2);
 
         assert_eq!(
-            timed_batch_iterator.get_batchlist_to_submit(batch_id2),
+            timed_batch_iterator.get_batchlist_to_submit(&batch_id2),
             None
         );
     }
@@ -144,7 +139,7 @@ mod tests {
     fn generate_batchlists(num: u32) -> Vec<BatchList> {
         let context = signing::create_context("secp256k1").unwrap();
         let private_key = context.new_random_private_key().unwrap();
-        let signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
+        let _signer = signing::Signer::new(context.as_ref(), private_key.as_ref());
 
         let mut batchlists = Vec::new();
 

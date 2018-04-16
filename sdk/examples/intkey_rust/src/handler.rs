@@ -35,7 +35,7 @@ use sawtooth_sdk::processor::handler::TransactionContext;
 use sawtooth_sdk::processor::handler::TransactionHandler;
 use sawtooth_sdk::messages::processor::TpProcessRequest;
 
-const MAX_VALUE: u32 = 4294967295;
+const MAX_VALUE: u32 = 4_294_967_295;
 const MAX_NAME_LEN: usize = 20;
 
 #[derive(Copy, Clone)]
@@ -82,13 +82,13 @@ impl IntkeyPayload {
 
         let c = cbor::value::Cursor::new(&decoder_value);
 
-        let verb_raw: String = match &c.field("Verb").text_plain() {
-            &None => {
+        let verb_raw: String = match c.field("Verb").text_plain() {
+            None => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Verb must be 'set', 'inc', or 'dec'",
                 )))
             }
-            &Some(verb_raw) => verb_raw.clone(),
+            Some(verb_raw) => verb_raw.clone(),
         };
 
         let verb = match verb_raw.as_str() {
@@ -112,10 +112,10 @@ impl IntkeyPayload {
             }
         };
 
-        let value: u32 = match value_raw {
-            &cbor::value::Value::U8(x) => x as u32,
-            &cbor::value::Value::U16(x) => x as u32,
-            &cbor::value::Value::U32(x) => x,
+        let value: u32 = match *value_raw {
+            cbor::value::Value::U8(x) => u32::from(x),
+            cbor::value::Value::U16(x) => u32::from(x),
+            cbor::value::Value::U32(x) => x,
             _ => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Value must be an integer",
@@ -123,13 +123,13 @@ impl IntkeyPayload {
             }
         };
 
-        let name_raw: String = match &c.field("Name").text_plain() {
-            &None => {
+        let name_raw: String = match c.field("Name").text_plain() {
+            None => {
                 return Err(ApplyError::InvalidTransaction(String::from(
                     "Name must be a string",
                 )))
             }
-            &Some(name_raw) => name_raw.clone(),
+            Some(name_raw) => name_raw.clone(),
         };
 
         if name_raw.len() > MAX_NAME_LEN {
@@ -198,10 +198,10 @@ impl<'a> IntkeyState<'a> {
                 };
 
                 let status = match map.get(&Key::Text(Text::Text(String::from(name)))) {
-                    Some(v) => match v {
-                        &Value::U32(x) => Ok(Some(x)),
-                        &Value::U16(x) => Ok(Some(x as u32)),
-                        &Value::U8(x) => Ok(Some(x as u32)),
+                    Some(v) => match *v {
+                        Value::U32(x) => Ok(Some(x)),
+                        Value::U16(x) => Ok(Some(u32::from(x))),
+                        Value::U8(x) => Ok(Some(u32::from(x))),
                         _ => Err(ApplyError::InternalError(String::from(
                             "Value returned from state is the wrong type.",
                         ))),
@@ -255,15 +255,15 @@ impl IntkeyTransactionHandler {
 
 impl TransactionHandler for IntkeyTransactionHandler {
     fn family_name(&self) -> String {
-        return self.family_name.clone();
+        self.family_name.clone()
     }
 
     fn family_versions(&self) -> Vec<String> {
-        return self.family_versions.clone();
+        self.family_versions.clone()
     }
 
     fn namespaces(&self) -> Vec<String> {
-        return self.namespaces.clone();
+        self.namespaces.clone()
     }
 
     fn apply(

@@ -51,8 +51,8 @@ use workload;
 /// Starts one workload submitter of the appropriate type (http, zmq)
 /// per target. Workload submitters consume from the channel at
 /// the configured rate until the channel is exhausted.
-pub fn submit_signed_batches<'a>(
-    reader: &'a mut Read,
+pub fn submit_signed_batches(
+    reader: &mut Read,
     target: String,
     rate: usize,
 ) -> Result<(), BatchReadingError> {
@@ -60,7 +60,7 @@ pub fn submit_signed_batches<'a>(
     let receiver = Arc::new(Mutex::new(receiver));
 
     let submit_thread = thread::spawn(move || {
-        http_submitter(target, rate as u64, receiver);
+        http_submitter(&target, rate as u64, &receiver);
     });
 
     let mut feeder = BatchListFeeder::new(reader);
@@ -84,9 +84,9 @@ pub fn submit_signed_batches<'a>(
 }
 
 pub fn http_submitter(
-    target: String,
+    target: &str,
     rate: u64,
-    receiver: Arc<Mutex<mpsc::Receiver<Option<BatchList>>>>,
+    receiver: &Arc<Mutex<mpsc::Receiver<Option<BatchList>>>>,
 ) {
     let mut core = Core::new().unwrap();
 
@@ -96,14 +96,14 @@ pub fn http_submitter(
         .build(&core.handle());
 
     let timer = tokio_timer::wheel()
-        .tick_duration(time::Duration::new(0, 1000000))
+        .tick_duration(time::Duration::new(0, 1_000_000))
         .build();
 
     // Define a target timeslice (how often to submit batches) based
     // on number of nanoseconds in a second divided by rate
-    let timeslice = time::Duration::new(0, 1000000000 / rate as u32);
+    let timeslice = time::Duration::new(0, 1_000_000_000 / rate as u32);
 
-    let mut uri = target.clone();
+    let mut uri = target.to_string();
     uri.push_str("/batches");
 
     let mut count = 0;
@@ -111,66 +111,61 @@ pub fn http_submitter(
     let mut last_time = time::Instant::now();
     let mut last_trace_time = time::Instant::now();
 
-    loop {
-        match receiver.lock().unwrap().recv().unwrap() {
-            Some(mut batch_list) => {
-                // Set the trace flag on a batch about once every 5 seconds
-                if (time::Instant::now() - last_trace_time).as_secs() > 5 {
-                    batch_list.mut_batches()[0].trace = true;
-                    last_trace_time = time::Instant::now();
-                }
+    while let Some(mut batch_list) = receiver.lock().unwrap().recv().unwrap() {
+        // Set the trace flag on a batch about once every 5 seconds
+        if (time::Instant::now() - last_trace_time).as_secs() > 5 {
+            batch_list.mut_batches()[0].trace = true;
+            last_trace_time = time::Instant::now();
+        }
 
-                let bytes = batch_list.write_to_bytes().unwrap();
+        let bytes = batch_list.write_to_bytes().unwrap();
 
-                let mut req = Request::new(Method::Post, uri.parse().unwrap());
-                req.headers_mut().set(ContentType::octet_stream());
-                req.headers_mut().set(ContentLength(bytes.len() as u64));
-                req.set_body(bytes);
+        let mut req = Request::new(Method::Post, uri.parse().unwrap());
+        req.headers_mut().set(ContentType::octet_stream());
+        req.headers_mut().set(ContentLength(bytes.len() as u64));
+        req.set_body(bytes);
 
-                let work = client.request(req).and_then(|_| {
-                    count = count + 1;
+        let work = client.request(req).and_then(|_| {
+            count += 1;
 
-                    if count % rate == 0 {
-                        let log_duration = time::Instant::now() - last_time;
-                        let log_duration_flt = log_duration.as_secs() as f64
-                            + log_duration.subsec_nanos() as f64 * 1e-9;
+            if count % rate == 0 {
+                let log_duration = time::Instant::now() - last_time;
+                let log_duration_flt =
+                    log_duration.as_secs() as f64 + f64::from(log_duration.subsec_nanos()) * 1e-9;
 
-                        println!(
-                            "target: {} target rate: {} count: {} effective rate: {} per sec",
-                            target,
-                            rate,
-                            count,
-                            (count - last_count) as f64 / log_duration_flt
-                        );
+                println!(
+                    "target: {} target rate: {} count: {} effective rate: {} per sec",
+                    target,
+                    rate,
+                    count,
+                    (count - last_count) as f64 / log_duration_flt
+                );
 
-                        last_count = count;
-                        last_time = time::Instant::now();
-                    }
-
-                    Ok(())
-                });
-
-                let request_time = time::Instant::now();
-                core.run(work).unwrap();
-                let runtime = time::Instant::now() - request_time;
-
-                if let Some(sleep_duration) = timeslice.checked_sub(runtime) {
-                    let sleep = timer.sleep(sleep_duration);
-                    sleep.wait().unwrap();
-                }
+                last_count = count;
+                last_time = time::Instant::now();
             }
-            None => break,
+
+            Ok(())
+        });
+
+        let request_time = time::Instant::now();
+        core.run(work).unwrap();
+        let runtime = time::Instant::now() - request_time;
+
+        if let Some(sleep_duration) = timeslice.checked_sub(runtime) {
+            let sleep = timer.sleep(sleep_duration);
+            sleep.wait().unwrap();
         }
     }
 }
 
 /// Run a continuous load of the BatchLists that are generated by BatchListIter.
-pub fn run_workload<'a>(
-    batch_list_iter: &'a mut Iterator<Item = BatchListResult>,
+pub fn run_workload(
+    batch_list_iter: &mut Iterator<Item = BatchListResult>,
     time_to_wait: u32,
     update_time: u32,
     targets: Vec<String>,
-    basic_auth: Option<String>,
+    basic_auth: &Option<String>,
 ) -> Result<(), workload::WorkloadError> {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
@@ -188,22 +183,22 @@ pub fn run_workload<'a>(
     let interval = Interval::new(time::Duration::new(0, time_to_wait), &handle).unwrap();
     let mut log_time = time::Instant::now();
     let stream = interval
-        .map_err(|err| workload::WorkloadError::from(err))
+        .map_err(workload::WorkloadError::from)
         .map(|_: ()| -> Result<(), workload::WorkloadError> {
             let counter_clone = Rc::clone(&counter);
-            workload::log(counter_clone, &mut log_time, update_time)
+            workload::log(&counter_clone, &mut log_time, update_time)
         })
         .map(move |_| -> Result<BatchList, workload::WorkloadError> {
             let batch_map = Rc::clone(&batch_map_clone);
             let batches_clone = Rc::clone(&batches_clone);
-            workload::get_next_batchlist(batch_list_iter, batch_map, batches_clone)
+            workload::get_next_batchlist(batch_list_iter, &batch_map, &batches_clone)
         })
         .map(|batch_list: Result<BatchList, workload::WorkloadError>| {
             let basic_auth_c = basic_auth.clone();
             let urls_c = &mut urls;
-            workload::form_request_from_batchlist(urls_c, batch_list, basic_auth_c)
+            workload::form_request_from_batchlist(urls_c, batch_list, &basic_auth_c)
         })
-        .map_err(|err| workload::WorkloadError::from(err))
+        .map_err(workload::WorkloadError::from)
         .and_then(
             |req: Result<(Request, Option<String>), workload::WorkloadError>| {
                 let handle_clone = handle.clone();
@@ -211,8 +206,8 @@ pub fn run_workload<'a>(
                 let counter_clone = Rc::clone(&counter);
                 let batches_clone = Rc::clone(&batches);
                 workload::make_request(
-                    client_clone,
-                    handle_clone,
+                    &client_clone,
+                    &handle_clone,
                     counter_clone,
                     Rc::clone(&batch_map),
                     batches_clone,
@@ -300,7 +295,7 @@ impl<'a> Iterator for BatchListFeeder<'a> {
             Err(err) => return Some(Err(BatchReadingError::MessageError(err))),
         };
 
-        if batches.len() == 0 {
+        if batches.is_empty() {
             return None;
         }
 

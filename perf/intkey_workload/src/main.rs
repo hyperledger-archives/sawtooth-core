@@ -53,8 +53,8 @@ use simplelog::{Config, LevelFilter, SimpleLogger};
 use intkey_iterator::IntKeyIterator;
 use intkey_transformer::IntKeyTransformer;
 
-const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     match SimpleLogger::init(LevelFilter::Warn, Config::default()) {
@@ -199,7 +199,7 @@ fn err_if_out_of_range(val: f32) -> Result<f32, IntKeyCliError> {
 }
 
 fn greater_than_zero32(val: u32) -> Result<u32, IntKeyCliError> {
-    if val <= 0 {
+    if val == 0 {
         return Err(IntKeyCliError {
             msg: "Value must be greater than zero".to_string(),
         });
@@ -208,7 +208,7 @@ fn greater_than_zero32(val: u32) -> Result<u32, IntKeyCliError> {
 }
 
 fn greater_than_zero(val: usize) -> Result<usize, IntKeyCliError> {
-    if val <= 0 {
+    if val == 0 {
         return Err(IntKeyCliError {
             msg: "Value must be greater than zero".to_string(),
         });
@@ -220,13 +220,13 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let batch_size: usize = args.value_of("batch-size")
         .unwrap_or("1")
         .parse()
-        .map_err(|err| IntKeyCliError::from(err))
+        .map_err(IntKeyCliError::from)
         .and_then(greater_than_zero)?;
 
     let num_names: usize = args.value_of("names")
         .unwrap_or("100")
         .parse()
-        .map_err(|err| IntKeyCliError::from(err))
+        .map_err(IntKeyCliError::from)
         .and_then(greater_than_zero)?;
 
     let urls: Vec<String> = args.value_of("urls")
@@ -235,44 +235,44 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         .map_err(|_| String::from("urls are a comma separated list of strings"))
         .and_then(|st| {
             let s: String = st;
-            let split: Split<&str> = s.split(",");
+            let split: Split<char> = s.split(',');
             Ok(split.map(|s| s.to_string()).collect())
         })?;
 
     let rate: usize = args.value_of("rate")
         .unwrap_or("10")
         .parse()
-        .map_err(|err| IntKeyCliError::from(err))
+        .map_err(IntKeyCliError::from)
         .and_then(greater_than_zero)?;
 
     let unsatisfiable: f32 = args.value_of("unsatisfiable")
         .unwrap_or("0.0")
         .parse()
-        .map_err(|err| IntKeyCliError::from(err))
+        .map_err(IntKeyCliError::from)
         .and_then(err_if_out_of_range)?;
 
     let unnecessary: f32 = args.value_of("unnecessary")
         .unwrap_or("0.0")
         .parse()
-        .map_err(|err| IntKeyCliError::from(err))
+        .map_err(IntKeyCliError::from)
         .and_then(err_if_out_of_range)?;
 
     let wildcard: f32 = args.value_of("wildcard")
         .unwrap_or("0.0")
         .parse()
-        .map_err(|err| IntKeyCliError::from(err))
+        .map_err(IntKeyCliError::from)
         .and_then(err_if_out_of_range)?;
 
     let invalid: f32 = args.value_of("invalid")
         .unwrap_or("0.0")
         .parse()
-        .map_err(|err| IntKeyCliError::from(err))
+        .map_err(IntKeyCliError::from)
         .and_then(err_if_out_of_range)?;
 
     let display: u32 = args.value_of("display")
         .unwrap_or("30")
         .parse()
-        .map_err(|err| IntKeyCliError::from(err))
+        .map_err(IntKeyCliError::from)
         .and_then(greater_than_zero32)?;
 
     let username = args.value_of("username");
@@ -289,7 +289,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     };
     let s: Result<Vec<usize>, std::num::ParseIntError> = match args.value_of("seed") {
         Some(s) => {
-            let split: Split<&str> = s.split(",");
+            let split: Split<char> = s.split(',');
             split.map(|s| s.parse()).collect()
         }
         None => {
@@ -334,7 +334,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     );
 
     let mut transaction_iterator = IntKeyIterator::new(num_names, invalid, &seed)
-        .map(|payload| transformer.intkey_payload_to_transaction(payload))
+        .map(|payload| transformer.intkey_payload_to_transaction(&payload))
         .filter_map(|payload| payload.ok());
     let mut batch_iter =
         SignedBatchIterator::new(&mut transaction_iterator, batch_size, signer_ref);
@@ -353,7 +353,13 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         num_names,
         display);
 
-    match run_workload(&mut batchlist_iter, time_to_wait, display, urls, basic_auth) {
+    match run_workload(
+        &mut batchlist_iter,
+        time_to_wait,
+        display,
+        urls,
+        &basic_auth,
+    ) {
         Ok(_) => Ok(()),
         Err(err) => Err(Box::new(err)),
     }

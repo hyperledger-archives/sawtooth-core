@@ -95,7 +95,7 @@ impl ZmqMessageSender {
         let inbound_router = self.inbound_router.clone();
         thread::spawn(move || {
             let mut inner_stream =
-                SendReceiveStream::new(ctx, &address, outbound_recv, inbound_router);
+                SendReceiveStream::new(&ctx, &address, outbound_recv, inbound_router);
             inner_stream.run();
         });
     }
@@ -220,7 +220,7 @@ const POLL_TIMEOUT: i64 = 10;
 
 impl SendReceiveStream {
     fn new(
-        context: zmq::Context,
+        context: &zmq::Context,
         address: &str,
         outbound_recv: Receiver<SocketCommand>,
         inbound_router: InboundRouter,
@@ -264,7 +264,7 @@ impl SendReceiveStream {
                 // Grab the last part, which should contain our message
                 if let Some(received_bytes) = received_parts.pop() {
                     trace!("Received {} bytes", received_bytes.len());
-                    if received_bytes.len() != 0 {
+                    if !received_bytes.is_empty() {
                         let message = protobuf::parse_from_bytes(&received_bytes).unwrap();
                         self.inbound_router.route(Ok(message));
                     }

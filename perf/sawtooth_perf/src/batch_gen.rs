@@ -144,7 +144,7 @@ impl<'a> Iterator for SignedBatchProducer<'a> {
             Ok(txns) => txns,
             Err(err) => return Some(Err(BatchingError::MessageError(err))),
         };
-        if txns.len() == 0 {
+        if txns.is_empty() {
             None
         } else {
             Some(batch_transactions(txns, self.signer))
@@ -415,24 +415,24 @@ mod tests {
 
         fn sign(
             &self,
-            message: &[u8],
-            key: &signing::PrivateKey,
+            _message: &[u8],
+            _key: &signing::PrivateKey,
         ) -> Result<String, signing::Error> {
             Ok(String::from("signed by mock_algorithm"))
         }
 
         fn verify(
             &self,
-            signature: &str,
-            message: &[u8],
-            key: &signing::PublicKey,
+            _signature: &str,
+            _message: &[u8],
+            _key: &signing::PublicKey,
         ) -> Result<bool, signing::Error> {
             Ok(true)
         }
 
         fn get_public_key(
             &self,
-            private_key: &signing::PrivateKey,
+            _private_key: &signing::PrivateKey,
         ) -> Result<Box<signing::PublicKey>, signing::Error> {
             Ok(Box::new(MockPublicKey))
         }

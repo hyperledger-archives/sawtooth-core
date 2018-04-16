@@ -271,11 +271,12 @@ impl TransactionContext {
 
     /// delete_state requests that each of the provided addresses be unset
     /// in validator state. A list of successfully deleted addresses
-    //  is returned.
+    ///  is returned.
     ///
     /// # Arguments
     ///
     /// * `addresses` - the addresses to fetch
+    #[allow(needless_pass_by_value)]
     pub fn delete_state(
         &mut self,
         addresses: Vec<String>,

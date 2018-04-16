@@ -167,7 +167,7 @@ impl HTTPRequestCounter {
     }
 
     pub fn log(&self, seconds: u64, nanoseconds: u32) {
-        let update = seconds as f64 + nanoseconds as f64 * 1e-9;
+        let update = seconds as f64 + f64::from(nanoseconds) * 1e-9;
         println!(
             "{}, Batches/s {:.3}",
             self,
@@ -194,7 +194,7 @@ impl fmt::Display for HTTPRequestCounter {
 
 /// Log if time since last log is greater than update time.
 pub fn log(
-    counter: Rc<HTTPRequestCounter>,
+    counter: &Rc<HTTPRequestCounter>,
     last_log_time: &mut time::Instant,
     update_time: u32,
 ) -> Result<(), WorkloadError> {
@@ -209,8 +209,8 @@ pub fn log(
 /// Call next on the BatchList Iterator and return the batchlist if no error.
 pub fn get_next_batchlist(
     batch_list_iter: &mut Iterator<Item = BatchListResult>,
-    batch_map: Rc<RefCell<BatchMap>>,
-    batches: Rc<RefCell<Vec<BatchList>>>,
+    batch_map: &Rc<RefCell<BatchMap>>,
+    batches: &Rc<RefCell<Vec<BatchList>>>,
 ) -> Result<BatchList, WorkloadError> {
     match batches.borrow_mut().pop() {
         Some(batchlist) => Ok(batchlist),
@@ -219,8 +219,8 @@ pub fn get_next_batchlist(
                 batch_map.borrow_mut().add(batch_list.clone());
                 Ok(batch_list)
             }
-            Some(Err(err)) => return Err(WorkloadError::from(err)),
-            None => return Err(WorkloadError::NoBatchError),
+            Some(Err(err)) => Err(WorkloadError::from(err)),
+            None => Err(WorkloadError::NoBatchError),
         },
     }
 }
@@ -229,7 +229,7 @@ pub fn get_next_batchlist(
 pub fn form_request_from_batchlist(
     targets: &mut Cycle<IntoIter<String>>,
     batch_list: Result<BatchList, WorkloadError>,
-    basic_auth: Option<String>,
+    basic_auth: &Option<String>,
 ) -> Result<(Request, Option<String>), WorkloadError> {
     let mut batch_url = targets.next().unwrap();
     batch_url.push_str("/batches");
@@ -248,12 +248,9 @@ pub fn form_request_from_batchlist(
     req.headers_mut().set(ContentType::octet_stream());
     req.headers_mut().set(ContentLength(content_len));
 
-    match basic_auth {
-        Some(ref basic_auth) => {
-            req.headers_mut()
-                .set(Authorization(Basic::from_str(&basic_auth)?));
-        }
-        None => {}
+    if let Some(ref basic_auth) = *basic_auth {
+        req.headers_mut()
+            .set(Authorization(Basic::from_str(&basic_auth)?));
     }
 
     Ok((req, batch_id))
@@ -263,40 +260,37 @@ pub fn form_request_from_batchlist(
 fn handle_http_error(
     response: Result<Response, HyperError>,
     batch_id: Option<String>,
-    batches: Rc<RefCell<Vec<BatchList>>>,
-    batch_map: Rc<RefCell<BatchMap>>,
-    counter: Rc<HTTPRequestCounter>,
+    batches: &Rc<RefCell<Vec<BatchList>>>,
+    batch_map: &Rc<RefCell<BatchMap>>,
+    counter: &Rc<HTTPRequestCounter>,
 ) -> Result<(), HyperError> {
-    match batch_id {
-        Some(batch_id) => match response {
+    if let Some(batch_id) = batch_id {
+        match response {
             Ok(response) => match response.status() {
-                StatusCode::Accepted => {
-                    batch_map.borrow_mut().mark_submit_success(batch_id.clone())
-                }
+                StatusCode::Accepted => batch_map.borrow_mut().mark_submit_success(&batch_id),
                 StatusCode::TooManyRequests => counter.increment_queue_full(),
 
-                _ => match batch_map.borrow_mut().get_batchlist_to_submit(batch_id) {
-                    Some(batchlist) => batches.borrow_mut().push(batchlist),
-                    None => {}
+                _ => if let Some(batchlist) =
+                    batch_map.borrow_mut().get_batchlist_to_submit(&batch_id)
+                {
+                    batches.borrow_mut().push(batchlist)
                 },
             },
             Err(err) => {
-                match batch_map.borrow_mut().get_batchlist_to_submit(batch_id) {
-                    Some(batchlist) => batches.borrow_mut().push(batchlist),
-                    None => {}
+                if let Some(batchlist) = batch_map.borrow_mut().get_batchlist_to_submit(&batch_id) {
+                    batches.borrow_mut().push(batchlist)
                 }
                 info!("{}", err);
             }
-        },
-        None => {}
+        }
     }
     Ok(())
 }
 
 /// POST the batchlist to the rest api.
 pub fn make_request(
-    client: Rc<Client<HttpConnector>>,
-    handle: Handle,
+    client: &Rc<Client<HttpConnector>>,
+    handle: &Handle,
     counter: Rc<HTTPRequestCounter>,
     batch_map: Rc<RefCell<BatchMap>>,
     batches: Rc<RefCell<Vec<BatchList>>>,
@@ -308,13 +302,15 @@ pub fn make_request(
             counter.increment_sent();
             let response_future = client
                 .request(req)
-                .then(|response: Result<Response, HyperError>| {
-                    handle_http_error(response, batch_id, batches, batch_map, counter)
+                .then(move |response: Result<Response, HyperError>| {
+                    handle_http_error(response, batch_id, &batches, &batch_map, &counter)
                 })
                 .map(|_| ())
                 .map_err(|_| ());
 
-            Ok(handle_clone.spawn(response_future))
+            handle_clone.spawn(response_future);
+
+            Ok(())
         }
 
         Err(err) => Err(err),

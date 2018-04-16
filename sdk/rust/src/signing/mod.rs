@@ -165,7 +165,7 @@ impl<'a> CryptoFactory<'a> {
     ///
     /// * `context` - a cryptographic context
     pub fn get_context(&self) -> &Context {
-        return self.context;
+        self.context
     }
 
     /// Create a new signer for the given private key.

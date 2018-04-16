@@ -83,7 +83,7 @@ impl<'a> TransactionProcessor<'a> {
         self.handlers.push(handler);
     }
 
-    fn register(&mut self, mut sender: ZmqMessageSender, unregister: Arc<AtomicBool>) -> bool {
+    fn register(&mut self, mut sender: ZmqMessageSender, unregister: &Arc<AtomicBool>) -> bool {
         for handler in &self.handlers {
             for version in handler.family_versions() {
                 let mut request = TpRegisterRequest::new();
@@ -120,7 +120,7 @@ impl<'a> TransactionProcessor<'a> {
 
                 // Absorb the TpRegisterResponse message
                 loop {
-                    let _ = match future.get_timeout(Duration::from_millis(10000)) {
+                    match future.get_timeout(Duration::from_millis(10000)) {
                         Ok(_) => break,
                         Err(_) => {
                             if unregister.load(Ordering::SeqCst) {
@@ -158,7 +158,7 @@ impl<'a> TransactionProcessor<'a> {
             }
         };
         // Absorb the TpUnregisterResponse message, wait one second for response then continue
-        let _ = match future.get_timeout(Duration::from_millis(1000)) {
+        match future.get_timeout(Duration::from_millis(1000)) {
             Ok(_) => (),
             Err(err) => {
                 info!("Unregistration failed: {}", err.description());
@@ -195,9 +195,10 @@ impl<'a> TransactionProcessor<'a> {
             }
 
             // if registration is not succesful, retry
-            match self.register(sender.clone(), unregister.clone()) {
-                true => (),
-                false => continue,
+            if self.register(sender.clone(), &unregister.clone()) {
+                ()
+            } else {
+                continue;
             }
 
             loop {

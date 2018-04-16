@@ -29,12 +29,12 @@ use sawtooth_sdk::messages::transaction::TransactionHeader;
 
 use blockstore::Blockstore;
 use database::lmdb;
-use database::database::DatabaseError;
+use database::error::DatabaseError;
 use err::CliError;
 use config;
 use wrappers::Block as BlockWrapper;
 
-const NULL_BLOCK_IDENTIFIER: &'static str = "0000000000000000";
+const NULL_BLOCK_IDENTIFIER: &str = "0000000000000000";
 
 pub fn run<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     match args.subcommand() {
@@ -58,7 +58,7 @@ fn run_backup_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let blockstore = open_blockstore(&ctx)?;
 
     let filepath = args.value_of("output")
-        .ok_or(CliError::ArgumentError("No output file".into()))?;
+        .ok_or_else(|| CliError::ArgumentError("No output file".into()))?;
     let mut file = File::create(filepath)
         .map_err(|err| CliError::EnvironmentError(format!("Failed to create file: {}", err)))?;
 
@@ -86,7 +86,7 @@ fn run_restore_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let blockstore = open_blockstore(&ctx)?;
 
     let filepath = args.value_of("input")
-        .ok_or(CliError::ArgumentError("No input file".into()))?;
+        .ok_or_else(|| CliError::ArgumentError("No input file".into()))?;
     let mut file = File::open(filepath)
         .map_err(|err| CliError::EnvironmentError(format!("Failed to open file: {}", err)))?;
 
@@ -94,7 +94,7 @@ fn run_restore_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
 
     while let Some(block) = restore_block(&mut source)? {
         blockstore
-            .put(block)
+            .put(&block)
             .map_err(|err| CliError::EnvironmentError(format!("Failed to put block: {}", err)))?;
     }
     Ok(())
@@ -173,19 +173,19 @@ fn run_show_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let block = {
         if args.is_present("block") {
             let block = args.value_of("block")
-                .ok_or(CliError::ArgumentError("No block".into()))?;
+                .ok_or_else(|| CliError::ArgumentError("No block".into()))?;
             blockstore.get(block)
         } else if args.is_present("batch") {
             let batch = args.value_of("batch")
-                .ok_or(CliError::ArgumentError("No batch".into()))?;
+                .ok_or_else(|| CliError::ArgumentError("No batch".into()))?;
             blockstore.get_by_batch(batch)
         } else if args.is_present("transaction") {
             let transaction = args.value_of("transaction")
-                .ok_or(CliError::ArgumentError("No transaction".into()))?;
+                .ok_or_else(|| CliError::ArgumentError("No transaction".into()))?;
             blockstore.get_by_transaction(transaction)
         } else if args.is_present("blocknum") {
             let blocknum = args.value_of("blocknum")
-                .ok_or(CliError::ArgumentError("No block num".into()))?;
+                .ok_or_else(|| CliError::ArgumentError("No block num".into()))?;
             let height: u64 = blocknum
                 .parse()
                 .map_err(|err| CliError::ArgumentError(format!("Invalid block num: {}", err)))?;
@@ -210,7 +210,7 @@ fn run_prune_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let blockstore = open_blockstore(&ctx)?;
 
     let block_id = args.value_of("block")
-        .ok_or(CliError::ArgumentError("No block id".into()))?;
+        .ok_or_else(|| CliError::ArgumentError("No block id".into()))?;
 
     blockstore
         .get(block_id)
@@ -247,7 +247,7 @@ fn run_export_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let blockstore = open_blockstore(&ctx)?;
 
     let block_id = args.value_of("block")
-        .ok_or(CliError::ArgumentError("No block id".into()))?;
+        .ok_or_else(|| CliError::ArgumentError("No block id".into()))?;
 
     let block = blockstore
         .get(block_id)
@@ -277,7 +277,7 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
     let blockstore = open_blockstore(&ctx)?;
 
     let filepath = args.value_of("blockfile")
-        .ok_or(CliError::ArgumentError("No file".into()))?;
+        .ok_or_else(|| CliError::ArgumentError("No file".into()))?;
     let mut file = File::open(filepath)
         .map_err(|err| CliError::EnvironmentError(format!("Failed to open file: {}", err)))?;
     let mut packed = Vec::new();
@@ -306,7 +306,7 @@ fn run_import_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         }
     }
 
-    blockstore.put(block).map_err(|err| {
+    blockstore.put(&block).map_err(|err| {
         CliError::ArgumentError(format!("Failed to put block into database: {}", err))
     })?;
 
@@ -359,7 +359,7 @@ fn run_stats_command<'a>(args: &ArgMatches<'a>) -> Result<(), CliError> {
         println!("Blocks:       {}", block_count);
         println!("Batches:      {}", batch_count);
         println!("Transactions: {}", txn_count);
-        for (family, count) in txn_family_counts.iter() {
+        for (family, count) in &txn_family_counts {
             println!("  {}: {}", family, count);
         }
     } else {
@@ -379,7 +379,7 @@ fn create_context() -> Result<lmdb::LmdbContext, CliError> {
         .map_err(|err| CliError::EnvironmentError(format!("{}", err)))
 }
 
-fn open_blockstore<'a>(ctx: &'a lmdb::LmdbContext) -> Result<Blockstore<'a>, CliError> {
+fn open_blockstore(ctx: &lmdb::LmdbContext) -> Result<Blockstore, CliError> {
     let blockstore_db = lmdb::LmdbDatabase::new(
         ctx,
         &["index_batch", "index_transaction", "index_block_num"],

@@ -27,7 +27,6 @@ mod smallbank;
 mod smallbank_tranformer;
 
 use std::fs::File;
-use std::io;
 use std::io::Write;
 use std::io::Read;
 use std::error::Error;
@@ -52,8 +51,8 @@ use sawtooth_sdk::signing::secp256k1::Secp256k1PrivateKey;
 use playlist::SmallbankGeneratingIter;
 use smallbank_tranformer::SBPayloadTransformer;
 
-const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     env_logger::init();
@@ -78,7 +77,7 @@ fn main() {
     std::process::exit(match result {
         Ok(_) => 0,
         Err(err) => {
-            writeln!(io::stderr(), "Error: {}", err).unwrap();
+            eprintln!("Error: {}", err);
             1
         }
     });
@@ -168,7 +167,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         Ok(n) => n,
         Err(_) => 100,
     };
-    if accounts <= 0 {
+    if accounts == 0 {
         return arg_error("The number of accounts must be greater than 0.");
     }
 
@@ -178,7 +177,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     {
         Ok(st) => {
             let s: String = st;
-            let split: Split<&str> = s.split(",");
+            let split: Split<char> = s.split(',');
             split
                 .map(|s| std::string::String::from_str(s).unwrap())
                 .collect()
@@ -229,7 +228,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
     let mut transformer = SBPayloadTransformer::new(&signer);
 
     let mut transaction_iterator = SmallbankGeneratingIter::new(accounts, seed.as_slice())
-        .map(|payload| transformer.payload_to_transaction(payload))
+        .map(|payload| transformer.payload_to_transaction(&payload))
         .map(|item| item.unwrap());
 
     let mut batch_iter = SignedBatchIterator::new(&mut transaction_iterator, max_txns, &signer);
@@ -242,7 +241,7 @@ fn run_load_command(args: &ArgMatches) -> Result<(), Box<Error>> {
         time_to_wait,
         update,
         target,
-        basic_auth,
+        &basic_auth,
     ) {
         Ok(_) => Ok(()),
         Err(err) => {

@@ -205,7 +205,7 @@ fn customer_id_address(customer_id: u32) -> String {
 
     let hex = bytes_to_hex_str(hash);
     // Using the precomputed Sha512 hash of "smallbank"
-    return String::from("332514") + &hex[0..64];
+    String::from("332514") + &hex[0..64]
 }
 
 pub fn create_smallbank_playlist(
@@ -231,12 +231,12 @@ pub fn create_smallbank_playlist(
     Box::new(iter.take(num_transactions))
 }
 
-pub fn read_smallbank_playlist<'a>(
-    input: &'a mut Read,
+pub fn read_smallbank_playlist(
+    input: &mut Read,
 ) -> Result<Vec<SmallbankTransactionPayload>, PlaylistError> {
     let mut results = Vec::new();
     let buf = try!(read_yaml(input));
-    let yaml_array = try!(load_yaml_array(buf));
+    let yaml_array = try!(load_yaml_array(&buf));
     for yaml in yaml_array.iter() {
         results.push(SmallbankTransactionPayload::from(yaml));
     }
@@ -244,7 +244,7 @@ pub fn read_smallbank_playlist<'a>(
     Ok(results)
 }
 
-fn read_yaml<'a>(input: &'a mut Read) -> Result<Cow<'a, str>, PlaylistError> {
+fn read_yaml(input: &mut Read) -> Result<Cow<str>, PlaylistError> {
     let mut buf: String = String::new();
     try!(
         input
@@ -254,9 +254,8 @@ fn read_yaml<'a>(input: &'a mut Read) -> Result<Cow<'a, str>, PlaylistError> {
     Ok(buf.into())
 }
 
-fn load_yaml_array<'a>(yaml_str: Cow<'a, str>) -> Result<Cow<'a, Vec<Yaml>>, PlaylistError> {
-    let mut yaml =
-        try!(YamlLoader::load_from_str(yaml_str.as_ref()).map_err(PlaylistError::YamlInputError));
+fn load_yaml_array(yaml_str: &str) -> Result<Cow<Vec<Yaml>>, PlaylistError> {
+    let mut yaml = try!(YamlLoader::load_from_str(yaml_str).map_err(PlaylistError::YamlInputError));
     let element = yaml.remove(0);
     let yaml_array = element.as_vec().cloned().unwrap().clone();
 
@@ -292,8 +291,8 @@ impl Iterator for SmallbankGeneratingIter {
             create_account.set_customer_id(self.current_account as u32);
             create_account.set_customer_name(self.rng.gen_iter::<char>().take(20).collect());
 
-            create_account.set_initial_savings_balance(1000000);
-            create_account.set_initial_checking_balance(1000000);
+            create_account.set_initial_savings_balance(1_000_000);
+            create_account.set_initial_checking_balance(1_000_000);
             payload.set_create_account(create_account);
 
             self.current_account += 1;
@@ -351,48 +350,48 @@ impl From<SmallbankTransactionPayload> for Yaml {
                 let data = payload.get_create_account();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("create_account"),
-                "customer_id" => Yaml::Integer(data.customer_id as i64),
+                "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
                 "customer_name" => Yaml::String(data.customer_name.clone()),
                 "initial_savings_balance" =>
-                    Yaml::Integer(data.initial_savings_balance as i64),
+                    Yaml::Integer(i64::from(data.initial_savings_balance)),
                 "initial_checking_balance" =>
-                    Yaml::Integer(data.initial_checking_balance as i64)}
+                    Yaml::Integer(i64::from(data.initial_checking_balance))}
             }
             SBPayloadType::DEPOSIT_CHECKING => {
                 let data = payload.get_deposit_checking();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("deposit_checking"),
-                "customer_id" => Yaml::Integer(data.customer_id as i64),
-                "amount" => Yaml::Integer(data.amount as i64)}
+                "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
+                "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::WRITE_CHECK => {
                 let data = payload.get_write_check();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("write_check"),
-                "customer_id" => Yaml::Integer(data.customer_id as i64),
-                "amount" => Yaml::Integer(data.amount as i64)}
+                "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
+                "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::TRANSACT_SAVINGS => {
                 let data = payload.get_transact_savings();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("transact_savings"),
-                "customer_id" => Yaml::Integer(data.customer_id as i64),
-                "amount" => Yaml::Integer(data.amount as i64)}
+                "customer_id" => Yaml::Integer(i64::from(data.customer_id)),
+                "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::SEND_PAYMENT => {
                 let data = payload.get_send_payment();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("send_payment"),
-                "source_customer_id" => Yaml::Integer(data.source_customer_id as i64),
-                "dest_customer_id" => Yaml::Integer(data.dest_customer_id as i64),
-                "amount" => Yaml::Integer(data.amount as i64)}
+                "source_customer_id" => Yaml::Integer(i64::from(data.source_customer_id)),
+                "dest_customer_id" => Yaml::Integer(i64::from(data.dest_customer_id)),
+                "amount" => Yaml::Integer(i64::from(data.amount))}
             }
             SBPayloadType::AMALGAMATE => {
                 let data = payload.get_amalgamate();
                 yaml_map!{
                 "transaction_type" => Yaml::from_str("amalgamate"),
-                "source_customer_id" => Yaml::Integer(data.source_customer_id as i64),
-                "dest_customer_id" => Yaml::Integer(data.dest_customer_id as i64)}
+                "source_customer_id" => Yaml::Integer(i64::from(data.source_customer_id)),
+                "dest_customer_id" => Yaml::Integer(i64::from(data.dest_customer_id))}
             }
             SBPayloadType::PAYLOAD_TYPE_UNSET => panic!("Unset payload type: {:?}", payload),
         }

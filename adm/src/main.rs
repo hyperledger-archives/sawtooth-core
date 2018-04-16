@@ -35,7 +35,7 @@ mod wrappers;
 
 use clap::ArgMatches;
 
-const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     let args = parse_args();
