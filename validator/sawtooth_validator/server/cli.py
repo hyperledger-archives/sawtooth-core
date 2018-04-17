@@ -15,7 +15,6 @@
 
 import logging
 import sys
-import argparse
 import os
 from urllib.parse import urlparse
 import pkg_resources
@@ -42,90 +41,6 @@ from sawtooth_validator import metrics
 
 LOGGER = logging.getLogger(__name__)
 DISTRIBUTION_NAME = 'sawtooth-validator'
-
-
-def parse_args(prog_name, args):
-    parser = argparse.ArgumentParser(
-        prog=prog_name,
-        description='Configures and starts a Sawtooth validator.',
-        formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('--config-dir',
-                        help='specify the configuration directory',
-                        type=str)
-    parser.add_argument('-B', '--bind',
-                        help='set the URL for the network or validator '
-                        'component service endpoints with the format '
-                        'network:<endpoint> or component:<endpoint>. '
-                        'Use two --bind options to specify both '
-                        'endpoints.',
-                        action='append',
-                        type=str)
-    parser.add_argument('-P', '--peering',
-                        help='determine peering type for the validator: '
-                        '\'static\' (must use --peers to list peers) or '
-                        '\'dynamic\' (processes any static peers first, '
-                        'then starts topology buildout).',
-                        choices=['static', 'dynamic'],
-                        type=str)
-    parser.add_argument('-E', '--endpoint',
-                        help='specifies the advertised network endpoint URL',
-                        type=str)
-    parser.add_argument('-s', '--seeds',
-                        help='provide URI(s) for the initial connection to '
-                        'the validator network, in the format '
-                        'tcp://<hostname>:<port>. Specify multiple URIs '
-                        'in a comma-separated list. Repeating the --seeds '
-                             'option is also accepted.',
-                        action='append',
-                        type=str)
-    parser.add_argument('-p', '--peers',
-                        help='list static peers to attempt to connect to '
-                        'in the format tcp://<hostname>:<port>. Specify '
-                        'multiple peers in a comma-separated list. '
-                        'Repeating the --peers option is also accepted.',
-                        action='append',
-                        type=str)
-    parser.add_argument('-v', '--verbose',
-                        action='count',
-                        default=0,
-                        help='enable more verbose output to stderr')
-    parser.add_argument('--scheduler',
-                        choices=['serial', 'parallel'],
-                        help='set scheduler type: serial or parallel')
-    parser.add_argument('--network-auth',
-                        choices=['trust', 'challenge'],
-                        help='identify type of authorization required to join '
-                             'validator network.')
-    parser.add_argument('--opentsdb-url',
-                        help='specify host and port for Open TSDB database \
-                        used for metrics',
-                        type=str)
-    parser.add_argument('--opentsdb-db',
-                        help='specify name of database used for storing \
-                        metrics',
-                        type=str)
-    parser.add_argument('--minimum-peer-connectivity',
-                        help='set the minimum number of peers required before \
-                        stopping peer search',
-                        type=int)
-    parser.add_argument('--maximum-peer-connectivity',
-                        help='set the maximum number of peers to accept',
-                        type=int)
-
-    try:
-        version = pkg_resources.get_distribution(DISTRIBUTION_NAME).version
-    except pkg_resources.DistributionNotFound:
-        version = 'UNKNOWN'
-
-    parser.add_argument(
-        '-V', '--version',
-        action='version',
-        version=(DISTRIBUTION_NAME + ' (Hyperledger Sawtooth) version {}')
-        .format(version),
-        help='display version information')
-
-    return parser.parse_args(args)
 
 
 def check_directory(path, human_readable_name):
@@ -165,15 +80,6 @@ def check_directory(path, human_readable_name):
     return errors
 
 
-def _split_comma_append_args(arg_list):
-    new_arg_list = []
-
-    for arg in arg_list:
-        new_arg_list.extend([x.strip() for x in arg.split(',')])
-
-    return new_arg_list
-
-
 def load_validator_config(first_config, config_dir):
     default_validator_config = load_default_validator_config()
     conf_file = os.path.join(config_dir, 'validator.toml')
@@ -184,62 +90,33 @@ def load_validator_config(first_config, config_dir):
         configs=[first_config, toml_config, default_validator_config])
 
 
-def create_validator_config(opts):
-    bind_network = None
-    bind_component = None
-    if opts.bind:
-        for bind in opts.bind:
-            if "network" in bind:
-                bind_network = bind[bind.find(":") + 1:]
-            if "component" in bind:
-                bind_component = bind[bind.find(":") + 1:]
-    return ValidatorConfig(
-        bind_network=bind_network,
-        bind_component=bind_component,
-        endpoint=opts.endpoint,
-        peering=opts.peering,
-        seeds=opts.seeds,
-        peers=opts.peers,
-        scheduler=opts.scheduler,
-        roles=opts.network_auth,
-        opentsdb_url=opts.opentsdb_url,
-        opentsdb_db=opts.opentsdb_db,
-        minimum_peer_connectivity=opts.minimum_peer_connectivity,
-        maximum_peer_connectivity=opts.maximum_peer_connectivity
-    )
-
-
-def main(args=None):
-    if args is None:
-        prog_name = sys.argv[0]
-        args = sys.argv[1:]
-    else:
-        prog_name = args[0]
-        args = args[1:]
-    opts = parse_args(prog_name, args)
-    verbose_level = opts.verbose
-
-    # Determine if any args which support delimited lists should be
-    # modified
-    if opts.peers:
-        opts.peers = _split_comma_append_args(opts.peers)
-
-    if opts.seeds:
-        opts.seeds = _split_comma_append_args(opts.seeds)
+def main(args):
+    verbose_level = args['verbose']
 
     init_console_logging(verbose_level=verbose_level)
 
-    if opts.network_auth:
-        opts.network_auth = {"network": opts.network_auth}
-
     try:
-        path_config = load_path_config(config_dir=opts.config_dir)
+        path_config = load_path_config(config_dir=args['config_dir'])
     except LocalConfigurationError as local_config_err:
         LOGGER.error(str(local_config_err))
         sys.exit(1)
 
     try:
-        opts_config = create_validator_config(opts)
+        opts_config = ValidatorConfig(
+            bind_component=args['bind_component'],
+            bind_network=args['bind_network'],
+            endpoint=args['endpoint'],
+            maximum_peer_connectivity=args['maximum_peer_connectivity'],
+            minimum_peer_connectivity=args['minimum_peer_connectivity'],
+            roles=args['roles'],
+            opentsdb_db=args['opentsdb_db'],
+            opentsdb_url=args['opentsdb_url'],
+            peering=args['peering'],
+            peers=args['peers'],
+            scheduler=args['scheduler'],
+            seeds=args['seeds'],
+        )
+
         validator_config = \
             load_validator_config(opts_config, path_config.config_dir)
     except LocalConfigurationError as local_config_err:
