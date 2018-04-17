@@ -15,19 +15,17 @@
 
 import os
 import subprocess
+import sys
 
 from setuptools import setup, find_packages
 
-if os.name == 'nt':
-    conf_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\conf"
-    data_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\data"
-    log_dir = "C:\\Program Files (x86)\\Intel\\sawtooth\\logs"
-else:
-    conf_dir = "/etc/sawtooth"
-    data_dir = "/var/lib/sawtooth"
-    log_dir = "/var/log/sawtooth"
+bin_dir = "/usr/bin"
+conf_dir = "/etc/sawtooth"
+data_dir = "/var/lib/sawtooth"
+log_dir = "/var/log/sawtooth"
 
 data_files = [
+    (bin_dir, ['bin/sawtooth-validator']),
     (conf_dir, ['packaging/path.toml.example',
                 'packaging/log_config.toml.example',
                 'packaging/validator.toml.example']),
@@ -66,8 +64,4 @@ setup(
         "pyformance"
     ],
     data_files=data_files,
-    entry_points={
-        'console_scripts': [
-            'sawtooth-validator = sawtooth_validator.server.cli:main'
-        ]
-    })
+    entry_points={})

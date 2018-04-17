@@ -29,8 +29,8 @@ ALL_TARGETS="
         java
         javascript
         poet_sgx
-        python
         rust
+        python
 "
 
 MOUNTED="mounted"
@@ -293,6 +293,7 @@ then
 
     build_python() {
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-dev-python
+        docker_build $top_dir/docker/sawtooth-dev-validator docker/ sawtooth-dev-validator
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-rest-api
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-settings-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-identity-tp
@@ -301,9 +302,10 @@ then
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-intkey-tp-python
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-poet-validator-registry-tp
         docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-xo-tp-python
-        docker_build $top_dir/docker/sawtooth-dev-python docker/ sawtooth-validator
+        docker_build $top_dir/docker/sawtooth-dev-validator docker/ sawtooth-validator
         docker_build $top_dir/docker/sawtooth-validator-mounted docker/ sawtooth-validator-mounted
         docker_run sawtooth-dev-python
+        docker_run sawtooth-dev-validator
     }
 
     build_rust() {
@@ -380,6 +382,9 @@ then
         build_dir=/tmp/build-docker$ISOLATION_ID
         rm -rf $build_dir
         mkdir -p $build_dir
+
+        docker_build $top_dir/docker/sawtooth-dev-validator docker/ sawtooth-dev-validator
+        docker_run sawtooth-dev-validator
 
         cp $top_dir/bin/install_packaging_deps $build_dir
         cp $top_dir/ci/sawtooth-build-debs $build_dir
