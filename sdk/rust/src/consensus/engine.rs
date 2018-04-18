@@ -22,20 +22,20 @@ use consensus::service::Service;
 /// An update from the validator
 pub enum Update {
     PeerConnected(PeerInfo),
-    PeerDisconnected(String),
+    PeerDisconnected(Vec<u8>),
     PeerMessage(PeerMessage),
     BlockNew(Block),
-    BlockValid(String),
-    BlockInvalid(String),
-    BlockCommit(String),
+    BlockValid(Vec<u8>),
+    BlockInvalid(Vec<u8>),
+    BlockCommit(Vec<u8>),
 }
 
 /// All information about a block that is relevant to consensus
 #[derive(Default)]
 pub struct Block {
-    pub block_id: String,
-    pub previous_id: String,
-    pub signer_id: String,
+    pub block_id: Vec<u8>,
+    pub previous_id: Vec<u8>,
+    pub signer_id: Vec<u8>,
     pub block_num: u64,
     pub consensus: Vec<u8>,
 }
@@ -43,7 +43,7 @@ pub struct Block {
 /// Information about a peer that is relevant to consensus
 #[derive(Default)]
 pub struct PeerInfo {
-    pub peer_id: String,
+    pub peer_id: Vec<u8>,
 }
 
 /// A consensus-related message sent between peers

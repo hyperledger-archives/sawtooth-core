@@ -306,10 +306,10 @@ impl Service for ZmqService {
         check_ok!(response, ConsensusBroadcastResponse_Status::OK)
     }
 
-    fn initialize_block(&mut self, previous_id: Option<String>) -> Result<(), Error> {
+    fn initialize_block(&mut self, previous_id: Option<Vec<u8>>) -> Result<(), Error> {
         let mut request = ConsensusInitializeBlockRequest::new();
-        if let Some(previous_id) = previous_id.as_ref() {
-            request.set_previous_id((*previous_id).clone());
+        if let Some(previous_id) = previous_id {
+            request.set_previous_id(previous_id);
         }
 
         let response: ConsensusInitializeBlockResponse = self.rpc(
@@ -325,18 +325,13 @@ impl Service for ZmqService {
         }
 
         if response.get_status() == ConsensusInitializeBlockResponse_Status::UNKNOWN_BLOCK {
-            if let Some(previous_id) = previous_id {
-                return Err(Error::UnknownBlock(format!(
-                    "No block with id '{}' found",
-                    previous_id
-                )));
-            }
+            return Err(Error::UnknownBlock("Block not found".into()));
         }
 
         check_ok!(response, ConsensusInitializeBlockResponse_Status::OK)
     }
 
-    fn finalize_block(&mut self, data: Vec<u8>) -> Result<String, Error> {
+    fn finalize_block(&mut self, data: Vec<u8>) -> Result<Vec<u8>, Error> {
         let mut request = ConsensusFinalizeBlockRequest::new();
         request.set_data(data);
 
@@ -375,7 +370,7 @@ impl Service for ZmqService {
         }
     }
 
-    fn check_blocks(&mut self, priority: Vec<String>) -> Result<(), Error> {
+    fn check_blocks(&mut self, priority: Vec<Vec<u8>>) -> Result<(), Error> {
         let mut request = ConsensusCheckBlockRequest::new();
         request.set_block_ids(protobuf::RepeatedField::from_vec(priority));
 
@@ -392,9 +387,9 @@ impl Service for ZmqService {
         }
     }
 
-    fn commit_block(&mut self, block_id: String) -> Result<(), Error> {
+    fn commit_block(&mut self, block_id: Vec<u8>) -> Result<(), Error> {
         let mut request = ConsensusCommitBlockRequest::new();
-        request.set_block_id(block_id.clone());
+        request.set_block_id(block_id);
 
         let response: ConsensusCommitBlockResponse = self.rpc(
             &request,
@@ -403,18 +398,15 @@ impl Service for ZmqService {
         )?;
 
         if response.get_status() == ConsensusCommitBlockResponse_Status::UNKNOWN_BLOCK {
-            Err(Error::UnknownBlock(format!(
-                "No block with id '{}' found",
-                block_id
-            )))
+            Err(Error::UnknownBlock("Block not found".into()))
         } else {
             check_ok!(response, ConsensusCommitBlockResponse_Status::OK)
         }
     }
 
-    fn ignore_block(&mut self, block_id: String) -> Result<(), Error> {
+    fn ignore_block(&mut self, block_id: Vec<u8>) -> Result<(), Error> {
         let mut request = ConsensusIgnoreBlockRequest::new();
-        request.set_block_id(block_id.clone());
+        request.set_block_id(block_id);
 
         let response: ConsensusIgnoreBlockResponse = self.rpc(
             &request,
@@ -423,18 +415,15 @@ impl Service for ZmqService {
         )?;
 
         if response.get_status() == ConsensusIgnoreBlockResponse_Status::UNKNOWN_BLOCK {
-            Err(Error::UnknownBlock(format!(
-                "No block with id '{}' found",
-                block_id
-            )))
+            Err(Error::UnknownBlock("Block not found".into()))
         } else {
             check_ok!(response, ConsensusIgnoreBlockResponse_Status::OK)
         }
     }
 
-    fn fail_block(&mut self, block_id: String) -> Result<(), Error> {
+    fn fail_block(&mut self, block_id: Vec<u8>) -> Result<(), Error> {
         let mut request = ConsensusFailBlockRequest::new();
-        request.set_block_id(block_id.clone());
+        request.set_block_id(block_id);
 
         let response: ConsensusFailBlockResponse = self.rpc(
             &request,
@@ -443,16 +432,13 @@ impl Service for ZmqService {
         )?;
 
         if response.get_status() == ConsensusFailBlockResponse_Status::UNKNOWN_BLOCK {
-            Err(Error::UnknownBlock(format!(
-                "No block with id '{}' found",
-                block_id
-            )))
+            Err(Error::UnknownBlock("Block not found".into()))
         } else {
             check_ok!(response, ConsensusFailBlockResponse_Status::OK)
         }
     }
 
-    fn get_block(&mut self, block_ids: Vec<String>) -> Result<Vec<Block>, Error> {
+    fn get_block(&mut self, block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error> {
         let mut request = ConsensusBlockGetRequest::new();
         request.set_block_ids(protobuf::RepeatedField::from_vec(block_ids));
 
@@ -477,7 +463,7 @@ impl Service for ZmqService {
 
     fn get_setting(
         &mut self,
-        block_id: String,
+        block_id: Vec<u8>,
         settings: Vec<String>,
     ) -> Result<Vec<Vec<u8>>, Error> {
         let mut request = ConsensusSettingGetRequest::new();
@@ -501,7 +487,7 @@ impl Service for ZmqService {
 
     fn get_state(
         &mut self,
-        block_id: String,
+        block_id: Vec<u8>,
         addresses: Vec<String>,
     ) -> Result<Vec<Vec<u8>>, Error> {
         let mut request = ConsensusStateGetRequest::new();

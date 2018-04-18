@@ -32,10 +32,10 @@ message ConsensusPeerMessage {
 
 // All information about a block that is relevant to consensus
 message ConsensusBlock {
-  string block_id = 1;
-  string previous_id = 2;
+  bytes block_id = 1;
+  bytes previous_id = 2;
   // The id of peer that signed this block
-  string signer_id = 3;
+  bytes signer_id = 3;
   uint64 block_num = 4;
   bytes consensus = 5;
 }
@@ -44,7 +44,7 @@ message ConsensusBlock {
 message ConsensusPeerInfo {
   // The unique id for this peer. This can be correlated with the signer id
   // on consensus blocks.
-  string peer_id = 1;
+  bytes peer_id = 1;
 }
 
 // --== Registration ==--
@@ -83,7 +83,7 @@ message ConsensusNotifyPeerConnected {
 
 // An existing peer was dropped
 message ConsensusNotifyPeerDisconnected {
-  string peer_id = 1;
+  bytes peer_id = 1;
 }
 
 // A new message was received from a peer
@@ -100,17 +100,17 @@ message ConsensusNotifyBlockNew {
 
 // This block can be committed successfully
 message ConsensusNotifyBlockValid {
-  string block_id = 1;
+  bytes block_id = 1;
 }
 
 // This block cannot be committed successfully
 message ConsensusNotifyBlockInvalid {
-  string block_id = 1;
+  bytes block_id = 1;
 }
 
 // This block has been committed
 message ConsensusNotifyBlockCommit {
-  string block_id = 1;
+  bytes block_id = 1;
 }
 
 // Confirm that the notification was received. The validator message
@@ -149,7 +149,7 @@ message ConsensusNotifyAck {}
 // Send a consensus message to a specific, connected peer
 message ConsensusSendToRequest {
   ConsensusPeerMessage message = 1;
-  string peer_id = 2;
+  bytes peer_id = 2;
 }
 
 message ConsensusSendToResponse {
@@ -187,7 +187,7 @@ message ConsensusBroadcastResponse {
 // begin adding batches to it. If no previous id is specified, the current
 // head will be used.
 message ConsensusInitializeBlockRequest {
-  string previous_id = 1;
+  bytes previous_id = 1;
 }
 
 message ConsensusInitializeBlockResponse {
@@ -225,7 +225,7 @@ message ConsensusFinalizeBlockResponse {
   Status status = 1;
 
   // The block id of the newly created block
-  string block_id = 2;
+  bytes block_id = 2;
 }
 
 // Stop adding batches to the current block and abandon it.
@@ -258,7 +258,7 @@ message ConsensusCancelBlockResponse {
 // notifications from the consuming component to learn if the blocks would
 // commit or not.
 message ConsensusCheckBlockRequest {
-  repeated string block_ids = 1;
+  repeated bytes block_ids = 1;
 }
 
 message ConsensusCheckBlockResponse {
@@ -282,7 +282,7 @@ message ConsensusCheckBlockResponse {
 // was received successfully. The engine must listen for notifications from the
 // consuming component to learn when the block commits.
 message ConsensusCommitBlockRequest {
-  string block_id = 1;
+  bytes block_id = 1;
 }
 
 message ConsensusCommitBlockResponse {
@@ -302,7 +302,7 @@ message ConsensusCommitBlockResponse {
 // Inform the consuming component that this block is no longer being considered
 // and can be held or freed as needed.
 message ConsensusIgnoreBlockRequest {
-  string block_id = 1;
+  bytes block_id = 1;
 }
 
 message ConsensusIgnoreBlockResponse {
@@ -321,7 +321,7 @@ message ConsensusIgnoreBlockResponse {
 
 // Fail this block and any of its descendants and purge them as needed.
 message ConsensusFailBlockRequest {
-  string block_id = 1;
+  bytes block_id = 1;
 }
 
 message ConsensusFailBlockResponse {
@@ -343,7 +343,7 @@ message ConsensusFailBlockResponse {
 // Retrieve consensus-related information about blocks. If some blocks could
 // not be found, only the blocks that could be found will be returned.
 message ConsensusBlocksGetRequest {
-  repeated string block_ids = 1;
+  repeated bytes block_ids = 1;
 }
 
 message ConsensusBlockGetResponse {
@@ -363,7 +363,7 @@ message ConsensusBlockGetResponse {
 
 // Read the values of these settings from state as of the given block
 message ConsensusSettingGetRequest {
-  string block_id = 1;
+  bytes block_id = 1;
   repeated string settings = 2;
 }
 
@@ -384,7 +384,7 @@ message ConsensusSettingGetResponse {
 
 // Read the values from at these addresses from state as of the given block
 message ConsensusStateGetRequest {
-  string block_id = 1;
+  bytes block_id = 1;
   repeated string addresses = 2;
 }
 

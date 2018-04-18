@@ -32,12 +32,12 @@ pub trait Service {
     /// Initialize a new block built on the block with the given previous id and
     /// begin adding batches to it. If no previous id is specified, the current
     /// head will be used.
-    fn initialize_block(&mut self, previous_id: Option<String>) -> Result<(), Error>;
+    fn initialize_block(&mut self, previous_id: Option<Vec<u8>>) -> Result<(), Error>;
 
     /// Stop adding batches to the current block and finalize it. Include
     /// the given consensus data in the block. If this call is successful,
     /// the consensus engine will receive it afterwards.
-    fn finalize_block(&mut self, data: Vec<u8>) -> Result<String, Error>;
+    fn finalize_block(&mut self, data: Vec<u8>) -> Result<Vec<u8>, Error>;
 
     /// Stop adding batches to the current block and abandon it.
     fn cancel_block(&mut self) -> Result<(), Error>;
@@ -45,33 +45,33 @@ pub trait Service {
     // -- Block Directives --
 
     /// Update the prioritization of blocks to check
-    fn check_blocks(&mut self, priority: Vec<String>) -> Result<(), Error>;
+    fn check_blocks(&mut self, priority: Vec<Vec<u8>>) -> Result<(), Error>;
 
     /// Update the block that should be committed
-    fn commit_block(&mut self, block_id: String) -> Result<(), Error>;
+    fn commit_block(&mut self, block_id: Vec<u8>) -> Result<(), Error>;
 
     /// Signal that this block is no longer being committed
-    fn ignore_block(&mut self, block_id: String) -> Result<(), Error>;
+    fn ignore_block(&mut self, block_id: Vec<u8>) -> Result<(), Error>;
 
     /// Mark this block as invalid from the perspective of consensus
-    fn fail_block(&mut self, block_id: String) -> Result<(), Error>;
+    fn fail_block(&mut self, block_id: Vec<u8>) -> Result<(), Error>;
 
     // -- Queries --
 
     /// Retrieve consensus-related information about a block
-    fn get_block(&mut self, block_ids: Vec<String>) -> Result<Vec<Block>, Error>;
+    fn get_block(&mut self, block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error>;
 
     /// Read the value of the setting as of the given block
     fn get_setting(
         &mut self,
-        block_id: String,
+        block_id: Vec<u8>,
         settings: Vec<String>,
     ) -> Result<Vec<Vec<u8>>, Error>;
 
     /// Read the value of state at some address as of the given block
     fn get_state(
         &mut self,
-        block_id: String,
+        block_id: Vec<u8>,
         addresses: Vec<String>,
     ) -> Result<Vec<Vec<u8>>, Error>;
 }
@@ -95,40 +95,40 @@ pub mod tests {
         fn broadcast(&mut self, _message_type: &str, _payload: Vec<u8>) -> Result<(), Error> {
             Ok(())
         }
-        fn initialize_block(&mut self, _previous_id: Option<String>) -> Result<(), Error> {
+        fn initialize_block(&mut self, _previous_id: Option<Vec<u8>>) -> Result<(), Error> {
             Ok(())
         }
-        fn finalize_block(&mut self, _data: Vec<u8>) -> Result<String, Error> {
+        fn finalize_block(&mut self, _data: Vec<u8>) -> Result<Vec<u8>, Error> {
             Ok(Default::default())
         }
         fn cancel_block(&mut self) -> Result<(), Error> {
             Ok(())
         }
-        fn check_blocks(&mut self, _priority: Vec<String>) -> Result<(), Error> {
+        fn check_blocks(&mut self, _priority: Vec<Vec<u8>>) -> Result<(), Error> {
             Ok(())
         }
-        fn commit_block(&mut self, _block_id: String) -> Result<(), Error> {
+        fn commit_block(&mut self, _block_id: Vec<u8>) -> Result<(), Error> {
             Ok(())
         }
-        fn ignore_block(&mut self, _block_id: String) -> Result<(), Error> {
+        fn ignore_block(&mut self, _block_id: Vec<u8>) -> Result<(), Error> {
             Ok(())
         }
-        fn fail_block(&mut self, _block_id: String) -> Result<(), Error> {
+        fn fail_block(&mut self, _block_id: Vec<u8>) -> Result<(), Error> {
             Ok(())
         }
-        fn get_block(&mut self, _block_ids: Vec<String>) -> Result<Vec<Block>, Error> {
+        fn get_block(&mut self, _block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error> {
             Ok(Default::default())
         }
         fn get_setting(
             &mut self,
-            _block_id: String,
+            _block_id: Vec<u8>,
             _settings: Vec<String>,
         ) -> Result<Vec<Vec<u8>>, Error> {
             Ok(Default::default())
         }
         fn get_state(
             &mut self,
-            _block_id: String,
+            _block_id: Vec<u8>,
             _addresses: Vec<String>,
         ) -> Result<Vec<Vec<u8>>, Error> {
             Ok(Default::default())
