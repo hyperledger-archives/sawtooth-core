@@ -153,7 +153,11 @@ Instructions for creating your own service provider certificate can be found
 After your certificate is created you'll need to register it with the
 attestation service.
 `Click here <https://software.intel.com/formfill/sgx-onboarding>`_ for the
-registration form.
+registration form. Please select ``Linkable`` option when choosing the
+Attestation policy since PoET relies on "Linkable" EPID signatures.
+This means the device will always present a consistent identity within the
+Attestation service. Further details on Signature Policy can be found
+`here <https://software.intel.com/en-us/articles/signature-policy>`_.
 
 Configure the Validator to Use SGX PoET
 ---------------------------------------
