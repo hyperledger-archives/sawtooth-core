@@ -47,10 +47,14 @@ services:
       - "4004:4004"
     # start the validator with an empty genesis batch
     entrypoint: "bash -c \"\
-        sawadm keygen && \
-        sawtooth keygen my_key && \
-        sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
-        sawadm genesis config-genesis.batch && \
+        if test -e /etc/sawtooth/keys/validator.priv ; then \
+            true ; \
+        else \
+            sawadm keygen && \
+            sawtooth keygen my_key && \
+            sawset genesis -k /root/.sawtooth/keys/my_key.priv && \
+            sawadm genesis config-genesis.batch ; \
+	fi && \
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
@@ -72,6 +76,6 @@ services:
     depends_on:
       - rest-api
     entrypoint: "bash -c \"\
-        sawtooth keygen && \
+        (test -e /etc/sawtooth/keys/validator.priv || sawtooth keygen) && \
         tail -f /dev/null \
         \""
