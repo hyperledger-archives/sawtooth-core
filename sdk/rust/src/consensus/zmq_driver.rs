@@ -74,6 +74,8 @@ impl Driver for ZmqDriver {
                 Box::new(ZmqService::new(
                     validator_sender_clone,
                     ::std::time::Duration::from_secs(10),
+                    engine.name(),
+                    engine.version(),
                 )),
             );
         });
@@ -211,11 +213,23 @@ fn handle_update(
 pub struct ZmqService {
     sender: ZmqMessageSender,
     timeout: ::std::time::Duration,
+    name: String,
+    version: String,
 }
 
 impl ZmqService {
-    pub fn new(sender: ZmqMessageSender, timeout: ::std::time::Duration) -> Self {
-        ZmqService { sender, timeout }
+    pub fn new(
+        sender: ZmqMessageSender,
+        timeout: ::std::time::Duration,
+        name: String,
+        version: String,
+    ) -> Self {
+        ZmqService {
+            sender,
+            timeout,
+            name,
+            version,
+        }
     }
 
     /// Serialize and send a request, wait for the default timeout, and receive and parse an
@@ -259,6 +273,8 @@ impl Service for ZmqService {
         let mut message = ConsensusPeerMessage::new();
         message.set_message_type(message_type.into());
         message.set_content(payload);
+        message.set_name(self.name.clone());
+        message.set_version(self.version.clone());
 
         let mut request = ConsensusSendToRequest::new();
         request.set_message(message);
@@ -767,7 +783,12 @@ mod tests {
         let svc_thread = ::std::thread::spawn(move || {
             let connection = ZmqMessageConnection::new(&addr);
             let (sender, _) = connection.create();
-            let mut svc = ZmqService::new(sender, ::std::time::Duration::from_secs(10));
+            let mut svc = ZmqService::new(
+                sender,
+                ::std::time::Duration::from_secs(10),
+                "mock".into(),
+                "0".into(),
+            );
 
             svc.send_to(Default::default(), Default::default(), Default::default())
                 .unwrap();
