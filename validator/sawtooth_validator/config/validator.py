@@ -31,6 +31,7 @@ def load_default_validator_config():
     return ValidatorConfig(
         bind_network='tcp://127.0.0.1:8800',
         bind_component='tcp://127.0.0.1:4004',
+        bind_consensus='tcp://127.0.0.1:5050',
         endpoint=None,
         peering='static',
         scheduler='serial',
@@ -71,11 +72,14 @@ def load_toml_validator_config(filename):
             "{}".format(", ".join(sorted(list(invalid_keys)))))
     bind_network = None
     bind_component = None
+    bind_consensus = None
     for bind in toml_config.get("bind", []):
         if "network" in bind:
             bind_network = bind[bind.find(":") + 1:]
         if "component" in bind:
             bind_component = bind[bind.find(":") + 1:]
+        if "consensus" in bind:
+            bind_consensus = bind[bind.find(":") + 1:]
 
     network_public_key = None
     network_private_key = None
@@ -89,6 +93,7 @@ def load_toml_validator_config(filename):
     config = ValidatorConfig(
         bind_network=bind_network,
         bind_component=bind_component,
+        bind_consensus=bind_consensus,
         endpoint=toml_config.get("endpoint", None),
         peering=toml_config.get("peering", None),
         seeds=toml_config.get("seeds", None),
@@ -121,6 +126,7 @@ def merge_validator_config(configs):
     """
     bind_network = None
     bind_component = None
+    bind_consensus = None
     endpoint = None
     peering = None
     seeds = None
@@ -143,6 +149,8 @@ def merge_validator_config(configs):
             bind_network = config.bind_network
         if config.bind_component is not None:
             bind_component = config.bind_component
+        if config.bind_consensus is not None:
+            bind_consensus = config.bind_consensus
         if config.endpoint is not None:
             endpoint = config.endpoint
         if config.peering is not None:
@@ -179,6 +187,7 @@ def merge_validator_config(configs):
     return ValidatorConfig(
         bind_network=bind_network,
         bind_component=bind_component,
+        bind_consensus=bind_consensus,
         endpoint=endpoint,
         peering=peering,
         seeds=seeds,
@@ -235,6 +244,7 @@ def parse_permissions(permissions):
 
 class ValidatorConfig:
     def __init__(self, bind_network=None, bind_component=None,
+                 bind_consensus=None,
                  endpoint=None, peering=None, seeds=None,
                  peers=None, network_public_key=None,
                  network_private_key=None,
@@ -247,6 +257,7 @@ class ValidatorConfig:
 
         self._bind_network = bind_network
         self._bind_component = bind_component
+        self._bind_consensus = bind_consensus
         self._endpoint = endpoint
         self._peering = peering
         self._seeds = seeds
@@ -271,6 +282,10 @@ class ValidatorConfig:
     @property
     def bind_component(self):
         return self._bind_component
+
+    @property
+    def bind_consensus(self):
+        return self._bind_consensus
 
     @property
     def endpoint(self):
@@ -339,7 +354,7 @@ class ValidatorConfig:
     def __repr__(self):
         # not including  password for opentsdb
         return (
-            "{}(bind_network={}, bind_component={}, "
+            "{}(bind_network={}, bind_component={}, bind_consensus={}, "
             "endpoint={}, peering={}, seeds={}, peers={}, "
             "network_public_key={}, network_private_key={}, "
             "scheduler={}, permissions={}, roles={} "
@@ -350,6 +365,7 @@ class ValidatorConfig:
             self.__class__.__name__,
             repr(self._bind_network),
             repr(self._bind_component),
+            repr(self._bind_consensus),
             repr(self._endpoint),
             repr(self._peering),
             repr(self._seeds),
@@ -370,6 +386,7 @@ class ValidatorConfig:
         return collections.OrderedDict([
             ('bind_network', self._bind_network),
             ('bind_component', self._bind_component),
+            ('bind_consensus', self._bind_consensus),
             ('endpoint', self._endpoint),
             ('peering', self._peering),
             ('seeds', self._seeds),

@@ -68,6 +68,7 @@ class Validator(object):
     def __init__(self,
                  bind_network,
                  bind_component,
+                 bind_consensus,
                  endpoint,
                  peering,
                  seeds_list,
@@ -108,7 +109,6 @@ class Validator(object):
             identity_signer (str): cryptographic signer the validator uses for
                 signing
         """
-
         # -- Setup Global State Database and Factory -- #
         global_state_db_filename = os.path.join(
             data_dir, 'merkle-{}.lmdb'.format(bind_network[-2:]))
