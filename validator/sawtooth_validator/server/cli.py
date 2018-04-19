@@ -101,6 +101,7 @@ def main(args):
         opts_config = ValidatorConfig(
             bind_component=args['bind_component'],
             bind_network=args['bind_network'],
+            bind_consensus=args['bind_consensus'],
             endpoint=args['endpoint'],
             maximum_peer_connectivity=args['maximum_peer_connectivity'],
             minimum_peer_connectivity=args['minimum_peer_connectivity'],
@@ -186,12 +187,16 @@ def main(args):
         sys.exit(1)
     bind_network = validator_config.bind_network
     bind_component = validator_config.bind_component
+    bind_consensus = validator_config.bind_consensus
 
     if "tcp://" not in bind_network:
         bind_network = "tcp://" + bind_network
 
     if "tcp://" not in bind_component:
         bind_component = "tcp://" + bind_component
+
+    if bind_consensus and "tcp://" not in bind_consensus:
+        bind_consensus = "tcp://" + bind_consensus
 
     if validator_config.network_public_key is None or \
             validator_config.network_private_key is None:
@@ -247,6 +252,7 @@ def main(args):
     validator = Validator(
         bind_network,
         bind_component,
+        bind_consensus,
         endpoint,
         validator_config.peering,
         validator_config.seeds,

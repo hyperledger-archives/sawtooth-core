@@ -68,6 +68,7 @@ class Validator(object):
     def __init__(self,
                  bind_network,
                  bind_component,
+                 bind_consensus,
                  endpoint,
                  peering,
                  seeds_list,
@@ -107,6 +108,11 @@ class Validator(object):
             identity_signer (str): cryptographic signer the validator uses for
                 signing
         """
+        if bind_consensus != "":
+            LOGGER.warning("Enabling experimental consensus engine feature!")
+            consensus_engine_enabled = True
+        else:
+            consensus_engine_enabled = False
 
         # -- Setup Global State Database and Factory -- #
         global_state_db_filename = os.path.join(
