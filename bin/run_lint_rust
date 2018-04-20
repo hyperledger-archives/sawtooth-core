@@ -67,15 +67,6 @@ for dir in $dirs; do
         fi
     fi
 
-    echo "-- clippy"
-
-    cargo +nightly clippy -- -D warnings -A redundant-field-names -A cyclomatic-complexity -A new-without-default -A print-literal -A useless-format
-    clippy_exit=$?
-
-    if [[ $clippy_exit != 0 ]]; then
-        exitcode=1
-    fi
-
 done
 
 exit $exitcode
