@@ -170,7 +170,8 @@ class BlockValidator(object):
 
         # Descendant blocks that are waiting for an in process block
         # to complete
-        self._blocks_pending = ConcurrentMultiMap()
+        self._blocks_pending = ConcurrentSet()
+        self._blocks_pending_descendants = ConcurrentMultiMap()
 
     def stop(self):
         self._thread_pool.shutdown(wait=True)
@@ -520,18 +521,21 @@ class BlockValidator(object):
 
             # If the block was valid, submit all pending blocks for validation
             if block.status == BlockStatus.Valid:
-                blocks_now_ready = self._blocks_pending.pop(
+                blocks_now_ready = self._blocks_pending_descendants.pop(
                     block.identifier, [])
+                for block in blocks_now_ready:
+                    self._blocks_pending.remove(block.identifier)
                 self.submit_blocks_for_verification(blocks_now_ready, callback)
 
             elif block.status == BlockStatus.Invalid:
                 # If the block was invalid, mark all pending blocks as invalid
-                blocks_now_invalid = self._blocks_pending.pop(
+                blocks_now_invalid = self._blocks_pending_descendants.pop(
                     block.identifier, [])
 
                 while blocks_now_invalid:
                     invalid_block = blocks_now_invalid.pop()
                     invalid_block.status = BlockStatus.Invalid
+                    self._blocks_pending.remove(invalid_block.identifier)
 
                     LOGGER.debug(
                         'Marking descendant block invalid: %s',
@@ -539,17 +543,19 @@ class BlockValidator(object):
 
                     # Get descendants of the descendant
                     blocks_now_invalid.extend(
-                        self._blocks_pending.pop(invalid_block.identifier, []))
+                        self._blocks_pending_descendants.pop(
+                            invalid_block.identifier, []))
 
             else:
                 # If an error occured during validation, something is wrong
                 # internally and we need to abort validation of this block
                 # and all its children without marking them as invalid.
-                blocks_to_remove = self._blocks_pending.pop(
+                blocks_to_remove = self._blocks_pending_descendants.pop(
                     block.identifier, [])
 
                 while blocks_to_remove:
                     block = blocks_to_remove.pop()
+                    self._blocks_pending.remove(block.identifier)
 
                     LOGGER.debug(
                         'Removing block from cache and pending due to error '
@@ -559,7 +565,8 @@ class BlockValidator(object):
 
                     # Get descendants of the descendant
                     blocks_to_remove.extend(
-                        self._blocks_pending.pop(block.identifier, []))
+                        self._blocks_pending_descendants.pop(
+                            block.identifier, []))
 
             callback(commit_new_block, result)
 
@@ -572,8 +579,9 @@ class BlockValidator(object):
         return block_id in self._blocks_pending
 
     def _add_block_to_pending(self, block):
+        self._blocks_pending.add(block.identifier)
         previous = block.previous_block_id
-        self._blocks_pending.append(previous, block)
+        self._blocks_pending_descendants.append(previous, block)
 
     def process_block_verification(self, block, callback):
         """
