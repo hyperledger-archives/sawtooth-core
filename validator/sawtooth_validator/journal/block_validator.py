@@ -59,6 +59,10 @@ class ChainHeadUpdated(Exception):
     processing and restart processing with the new chain head.
     """
 
+class ForkResolutionError(Exception):
+    """
+    Indication that an error occured during fork resolution.
+    """
 
 class ForkResolutionResult:
     def __init__(self, block):
@@ -398,7 +402,7 @@ class BlockValidator(object):
             try:
                 blk = self._block_cache[blk.previous_block_id]
             except KeyError:
-                raise BlockValidationError(
+                raise ForkResolutionError(
                     'Failed to build fork diff: block {} missing predecessor'
                     .format(blk))
 
@@ -416,7 +420,7 @@ class BlockValidator(object):
                 # We are at a genesis block and the blocks are not the same
                 for b in new_chain:
                     b.status = BlockStatus.Invalid
-                raise BlockValidationFailure(
+                raise ForkResolutionError(
                     'Block {} rejected due to wrong genesis {}'.format(
                         cur_blkw, new_blkw))
 
@@ -424,7 +428,7 @@ class BlockValidator(object):
             try:
                 new_blkw = self._block_cache[new_blkw.previous_block_id]
             except KeyError:
-                raise BlockValidationError(
+                raise ForkResolutionError(
                     'Block {} rejected due to missing predecessor {}'.format(
                         new_blkw, new_blkw.previous_block_id))
 
@@ -635,17 +639,10 @@ class BlockValidator(object):
                 self._extend_fork_diff_to_common_ancestor(
                     new_block, current_block,
                     result.new_chain, result.current_chain)
-            except BlockValidationFailure as err:
-                LOGGER.warning(
-                    'Block %s failed validation: %s',
-                    block, err)
-                block.status = BlockStatus.Invalid
-                callback(False, result)
-                return
-            except BlockValidationError as err:
+            except ForkResolutionError as err:
                 LOGGER.error(
-                    'Encountered an error while validating %s: %s',
-                    block, err)
+                    'Encountered an error while resolving a fork with head %s:'
+                    ' %s', block, err)
                 callback(False, result)
                 return
 
