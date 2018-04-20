@@ -551,7 +551,10 @@ def _format_batch_statuses(statuses, batch_ids, tracker):
            client_batch_submit_pb2.ClientBatchStatus.INVALID:
             invalid_txns = tracker.get_invalid_txn_info(batch_id)
             for txn_info in invalid_txns:
-                txn_info['transaction_id'] = txn_info.pop('id')
+                try:
+                    txn_info['transaction_id'] = txn_info.pop('id')
+                except KeyError as e:
+                    LOGGER.debug(e)
         else:
             invalid_txns = None
 

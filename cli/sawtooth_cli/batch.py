@@ -281,6 +281,6 @@ def do_batch_submit(args):
             time.sleep(0.2)
 
         print('Wait timed out! Some batches have not yet been committed...')
-        for batch_id, status in statuses.items():
-            print('{:128.128}  {:10.10}'.format(batch_id, status))
+        for batch_id, status in statuses[0].items():
+            print('{}  {}'.format(batch_id, status))
         exit(1)
