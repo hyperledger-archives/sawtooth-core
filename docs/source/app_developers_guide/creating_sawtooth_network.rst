@@ -383,7 +383,7 @@ Confirm Network Functionality
 
        .. code-block:: console
 
-          $ curl http://sawtooth-poet-rest-api-0:8008/peers
+          $ curl http://sawtooth-rest-api-default-0:8008/peers
 
      * Ubuntu: Run the following command, replacing `{rest-api}` with the host
        name and port for the REST API on the first validator node, as determined
