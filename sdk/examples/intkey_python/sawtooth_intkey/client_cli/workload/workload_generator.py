@@ -104,14 +104,14 @@ class WorkloadGenerator(object):
                         'Transaction submission rate for last %d sample(s)'
                         ' is %.2f tps',
                         len(self._submitted_batch_samples),
-                        sum(self._submitted_batch_samples) /
-                        len(self._submitted_batch_samples))
+                        sum(self._submitted_batch_samples)
+                        / len(self._submitted_batch_samples))
                     LOGGER.warning(
                         'Transaction commit rate for last %d sample(s)'
                         ' is %.2f tps',
                         len(self._committed_batch_samples),
-                        sum(self._committed_batch_samples) /
-                        len(self._committed_batch_samples))
+                        sum(self._committed_batch_samples)
+                        / len(self._committed_batch_samples))
 
                     self._submitted_batches_sample = 0
                     self._committed_batches_sample = 0

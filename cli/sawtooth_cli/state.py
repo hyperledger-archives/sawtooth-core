@@ -80,7 +80,8 @@ def add_state_parser(subparsers, parent_parser):
 
 
 def do_state(args):
-    """Runs the batch list or batch show command, printing output to the console
+    """Runs the batch list or batch show command, printing output to the
+    console
 
         Args:
             args: The parsed arguments sent to the command at runtime

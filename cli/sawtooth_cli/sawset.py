@@ -318,8 +318,8 @@ def _create_batch(signer, transactions):
 
 
 def _create_propose_txn(signer, setting_key_value):
-    """Creates an individual sawtooth_settings transaction for the given key and
-    value.
+    """Creates an individual sawtooth_settings transaction for the given
+    key and value.
     """
     setting_key, setting_value = setting_key_value
     nonce = str(datetime.datetime.utcnow().timestamp())

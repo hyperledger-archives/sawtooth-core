@@ -58,8 +58,8 @@ class BlockPublisher(BlockPublisherInterface):
         return block_header.previous_block_id == NULL_BLOCK_IDENTIFIER
 
     def finalize_block(self, block_header):
-        """Returns `True`, as the genesis block is always considered good by the
-        genesis node.
+        """Returns `True`, as the genesis block is always considered good by
+        the genesis node.
         """
         return block_header.previous_block_id == NULL_BLOCK_IDENTIFIER
 

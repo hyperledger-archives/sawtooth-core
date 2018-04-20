@@ -166,7 +166,8 @@ class BaseApiTest(AioHTTPTestCase):
 
     @staticmethod
     def build_handlers(loop, connection):
-        """Returns Rest Api route handlers modified with some a mock connection.
+        """Returns Rest Api route handlers modified with some a mock
+        connection.
 
         Args:
             connection (object): The MockConnection set to `self.connection`
@@ -400,8 +401,8 @@ class Mocks(object):
 
     @staticmethod
     def make_sort_controls(keys, reverse=False):
-        """Returns a ClientSortControls Protobuf in a list. Use concatenation to
-        combine multiple sort controls.
+        """Returns a ClientSortControls Protobuf in a list. Use concatenation
+        to combine multiple sort controls.
         """
         return [ClientSortControls(
             keys=[keys],

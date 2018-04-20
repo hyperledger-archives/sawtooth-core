@@ -435,8 +435,7 @@ class _PoetEnclaveSimulator(object):
                         'Validator is not using the current wait timer')
 
             is_not_genesis_block = \
-                (wait_timer.previous_certificate_id !=
-                 NULL_BLOCK_IDENTIFIER)
+                (wait_timer.previous_certificate_id != NULL_BLOCK_IDENTIFIER)
 
             now = time.time()
             expire_time = \

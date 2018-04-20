@@ -311,8 +311,8 @@ class ConsensusState(object):
 
     @staticmethod
     def _block_for_id(block_id, block_cache):
-        """A convenience method retrieving a block given a block ID.  Takes care
-        of the special case of NULL_BLOCK_IDENTIFIER.
+        """A convenience method retrieving a block given a block ID. Takes
+        care of the special case of NULL_BLOCK_IDENTIFIER.
 
         Args:
             block_id (str): The ID of block to retrieve.
@@ -905,8 +905,8 @@ class ConsensusState(object):
                         observed_wins > expected_wins:
                     probability = expected_wins / block_count
                     standard_deviation = \
-                        math.sqrt(block_count * probability *
-                                  (1.0 - probability))
+                        math.sqrt(
+                            block_count * probability * (1.0 - probability))
                     z_score = \
                         (observed_wins - expected_wins) / \
                         standard_deviation
