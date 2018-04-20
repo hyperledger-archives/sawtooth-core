@@ -27,9 +27,6 @@ services:
   validator-0:
     image: hyperledger/sawtooth-validator:1.0
     container_name: sawtooth-validator-default-0
-    volumes:
-      - ../poet-settings.sh:/etc/sawtooth/config/poet-settings.sh
-      - ../../consensus/poet/simulator/packaging/simulator_rk_pub.pem:/etc/sawtooth/config/simulator_rk_pub.pem
     expose:
       - 4004
       - 8800
@@ -42,14 +39,16 @@ services:
           -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.algorithm=poet \
           sawtooth.poet.report_public_key_pem=\
-          \\\"$$(cat /etc/sawtooth/config/simulator_rk_pub.pem)\\\" \
+          \\\"$$(cat /etc/sawtooth/simulator_rk_pub.pem)\\\" \
           sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
           sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
           -o config.batch && \
         poet registration create -k /etc/sawtooth/keys/validator.priv -o poet.batch && \
         sawset proposal create \
           -k /etc/sawtooth/keys/validator.priv \
-          $$(/etc/sawtooth/config/poet-settings.sh) \
+             sawtooth.poet.target_wait_time=5 \
+             sawtooth.poet.initial_wait_time=25 \
+             sawtooth.publisher.max_batches_per_block=100 \
           -o poet-settings.batch && \
         sawadm genesis \
           config-genesis.batch config.batch poet.batch poet-settings.batch && \
