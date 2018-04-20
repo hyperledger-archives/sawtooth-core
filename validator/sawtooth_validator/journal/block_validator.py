@@ -60,7 +60,7 @@ class ChainHeadUpdated(Exception):
     """
 
 
-class BlockValidationResult:
+class ForkResolutionResult:
     def __init__(self, block):
         self.block = block
         self.chain_head = None
@@ -591,7 +591,7 @@ class BlockValidator(object):
         so that the change over can be made if necessary.
         """
         try:
-            result = BlockValidationResult(block)
+            result = ForkResolutionResult(block)
             LOGGER.info("Starting block validation of : %s", block)
 
             # Get the current chain_head and store it in the result
