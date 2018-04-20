@@ -115,9 +115,7 @@ RUN curl https://sh.rustup.rs -sSf > /usr/bin/rustup-init \
 ENV PATH=$PATH:/project/sawtooth-core/bin:/protoc3/bin:/project/sawtooth-core/bin:/root/.cargo/bin \
     CARGO_INCREMENTAL=0
 
-RUN rustup component add rustfmt-preview \
- && rustup toolchain add nightly \
- && cargo +nightly install clippy
+RUN rustup component add rustfmt-preview
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
