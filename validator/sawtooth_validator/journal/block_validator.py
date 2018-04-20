@@ -598,6 +598,21 @@ class BlockValidator(object):
             chain_head = self._block_cache.block_store.chain_head
             result.chain_head = chain_head
 
+            try:
+                self.validate_block(block)
+            except BlockValidationFailure as err:
+                LOGGER.warning(
+                    'Block %s failed validation: %s',
+                    block, err)
+                block.status = BlockStatus.Invalid
+                callback(False, result)
+                return
+            except BlockValidationError as err:
+                LOGGER.error(
+                    'Encountered an error while validating %s: %s', blk, err)
+                callback(False, result)
+                return
+
             # Create new local variables for current and new block, since
             # these variables get modified later
             current_block = chain_head
@@ -625,6 +640,8 @@ class BlockValidator(object):
                     'Block %s failed validation: %s',
                     block, err)
                 block.status = BlockStatus.Invalid
+                callback(False, result)
+                return
             except BlockValidationError as err:
                 LOGGER.error(
                     'Encountered an error while validating %s: %s',
@@ -632,30 +649,8 @@ class BlockValidator(object):
                 callback(False, result)
                 return
 
-            valid = True
             for blk in reversed(result.new_chain):
-                if valid:
-                    try:
-                        self.validate_block(blk)
-                    except BlockValidationFailure as err:
-                        LOGGER.warning(
-                            'Block %s failed validation: %s',
-                            blk, err)
-                        valid = False
-                    except BlockValidationError as err:
-                        LOGGER.error(
-                            'Encountered an error while validating %s: %s',
-                            blk, err)
-                        callback(False, result)
-                    result.transaction_count += block.num_transactions
-                else:
-                    LOGGER.info(
-                        "Block marked invalid (invalid predecessor): %s", blk)
-                    blk.status = BlockStatus.Invalid
-
-            if not valid:
-                callback(False, result)
-                return
+                result.transaction_count += block.num_transactions
 
             # Ask consensus if the new chain should be committed
             LOGGER.info(
