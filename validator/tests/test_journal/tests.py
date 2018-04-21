@@ -875,9 +875,9 @@ class TestBlockValidator(unittest.TestCase):
             self.commit_new_block = None
             self.result = None
 
-        def on_block_validated(self, commit_new_block, result):
-            self.commit_new_block = commit_new_block
-            self.result = result
+        def on_block_validated(self, block):
+            self.commit_new_block = (block.status == BlockStatus.Valid)
+            self.result = block
 
         def has_result(self):
             return not (self.result is None or self.commit_new_block is None)
@@ -931,6 +931,7 @@ class TestChainController(unittest.TestCase):
             chain_head_lock=self._chain_head_lock,
             on_chain_updated=chain_updated,
             chain_id_manager=self.chain_id_manager,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             chain_observers=[])
@@ -1252,6 +1253,7 @@ class TestChainControllerGenesisPeer(unittest.TestCase):
             chain_head_lock=self.chain_head_lock,
             on_chain_updated=chain_updated,
             chain_id_manager=self.chain_id_manager,
+            identity_signer=self.block_tree_manager.identity_signer,
             data_dir=None,
             config_dir=None,
             chain_observers=[])
@@ -1371,6 +1373,7 @@ class TestJournal(unittest.TestCase):
                 chain_head_lock=block_publisher.chain_head_lock,
                 on_chain_updated=block_publisher.on_chain_updated,
                 chain_id_manager=None,
+                identity_signer=btm.identity_signer,
                 data_dir=None,
                 config_dir=None,
                 chain_observers=[])
