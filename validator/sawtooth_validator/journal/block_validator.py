@@ -399,73 +399,70 @@ class BlockValidator(object):
 
             # Schedule the block for processing
             self._thread_pool.submit(
-                self.process_block_verification, block,
-                self._wrap_callback(block, callback))
+                self.process_block_verification, block, callback)
 
-    def _wrap_callback(self, block, callback):
-        # Internal cleanup after verification
-        def wrapper(block):
-            LOGGER.debug("Removing block from processing %s", block.identifier)
-            try:
-                self._blocks_processing.remove(block.identifier)
-            except KeyError:
-                LOGGER.warning(
-                    "Tried to remove block from in process but it"
-                    " wasn't in processes: %s",
-                    block.identifier)
+    def _release_pending(self, block):
+        """Removes the block from processing and returns any blocks that should
+        now be scheduled for processing, cleaning up the pending block trackers
+        in the process.
+        """
+        LOGGER.debug("Removing block from processing %s", block.identifier)
+        try:
+            self._blocks_processing.remove(block.identifier)
+        except KeyError:
+            LOGGER.warning(
+                "Tried to remove block from in process but it wasn't in"
+                " processes: %s",
+                block.identifier)
 
-            # If the block was valid, submit all pending blocks for validation
-            if block.status == BlockStatus.Valid:
-                blocks_now_ready = self._blocks_pending_descendants.pop(
-                    block.identifier, [])
-                for block in blocks_now_ready:
-                    self._blocks_pending.remove(block.identifier)
-                self.submit_blocks_for_verification(blocks_now_ready, callback)
+        if block.status == BlockStatus.Valid:
+            # Submit all pending blocks for validation
+            blocks_now_ready = self._blocks_pending_descendants.pop(
+                block.identifier, [])
+            for blk in blocks_now_ready:
+                self._blocks_pending.remove(blk.identifier)
+            return blocks_now_ready
 
-            elif block.status == BlockStatus.Invalid:
-                # If the block was invalid, mark all pending blocks as invalid
-                blocks_now_invalid = self._blocks_pending_descendants.pop(
-                    block.identifier, [])
+        if block.status == BlockStatus.Invalid:
+            # Mark all pending blocks as invalid
+            blocks_now_invalid = self._blocks_pending_descendants.pop(
+                block.identifier, [])
 
-                while blocks_now_invalid:
-                    invalid_block = blocks_now_invalid.pop()
-                    invalid_block.status = BlockStatus.Invalid
-                    self._blocks_pending.remove(invalid_block.identifier)
+            while blocks_now_invalid:
+                invalid_block = blocks_now_invalid.pop()
+                invalid_block.status = BlockStatus.Invalid
+                self._blocks_pending.remove(invalid_block.identifier)
 
-                    LOGGER.debug(
-                        'Marking descendant block invalid: %s',
-                        invalid_block)
+                LOGGER.debug(
+                    'Marking descendant block invalid: %s',
+                    invalid_block)
 
-                    # Get descendants of the descendant
-                    blocks_now_invalid.extend(
-                        self._blocks_pending_descendants.pop(
-                            invalid_block.identifier, []))
+                # Get descendants of the descendant
+                blocks_now_invalid.extend(
+                    self._blocks_pending_descendants.pop(
+                        invalid_block.identifier, []))
+            return []
 
-            else:
-                # If an error occured during validation, something is wrong
-                # internally and we need to abort validation of this block
-                # and all its children without marking them as invalid.
-                blocks_to_remove = self._blocks_pending_descendants.pop(
-                    block.identifier, [])
+        # An error occured during validation, something is wrong internally
+        # and we need to abort validation of this block and all its
+        # children without marking them as invalid.
+        blocks_to_remove = self._blocks_pending_descendants.pop(
+            block.identifier, [])
 
-                while blocks_to_remove:
-                    block = blocks_to_remove.pop()
-                    self._blocks_pending.remove(block.identifier)
+        while blocks_to_remove:
+            block = blocks_to_remove.pop()
+            self._blocks_pending.remove(block.identifier)
 
-                    LOGGER.debug(
-                        'Removing block from cache and pending due to error '
-                        'during validation: %s', block)
+            LOGGER.debug(
+                'Removing block from cache and pending due to error '
+                'during validation: %s', block)
 
-                    del self._block_cache[block.identifier]
+            del self._block_cache[block.identifier]
 
-                    # Get descendants of the descendant
-                    blocks_to_remove.extend(
-                        self._blocks_pending_descendants.pop(
-                            block.identifier, []))
-
-            callback(block)
-
-        return wrapper
+            # Get descendants of the descendant
+            blocks_to_remove.extend(
+                self._blocks_pending_descendants.pop(block.identifier, []))
+        return []
 
     def in_process(self, block_id):
         return block_id in self._blocks_processing
@@ -520,5 +517,13 @@ class BlockValidator(object):
                         " block %s. Reprocessing validation.",
                         chain_head, current_chain_head, block)
                     block.status = BlockStatus.Unknown
+
+        try:
+            blocks_now_ready = self._release_pending(block)
+            self.submit_blocks_for_verification(blocks_now_ready, callback)
+        except Exception:  # pylint: disable=broad-except
+            LOGGER.exception(
+                "Submitting pending blocks failed with unexpected error: %s",
+                block)
 
         callback(block)
