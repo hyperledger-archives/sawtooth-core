@@ -58,7 +58,7 @@ pub struct Block {
     pub previous_id: BlockId,
     pub signer_id: PeerId,
     pub block_num: u64,
-    pub consensus: Vec<u8>,
+    pub payload: Vec<u8>,
 }
 
 #[derive(Default)]

@@ -526,7 +526,7 @@ impl From<ConsensusBlock> for Block {
             previous_id: c_block.take_previous_id().into(),
             signer_id: c_block.take_signer_id().into(),
             block_num: c_block.get_block_num(),
-            consensus: c_block.take_consensus(),
+            payload: c_block.take_payload(),
         }
     }
 }

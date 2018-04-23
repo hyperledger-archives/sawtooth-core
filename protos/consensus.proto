@@ -37,7 +37,7 @@ message ConsensusBlock {
   // The id of peer that signed this block
   bytes signer_id = 3;
   uint64 block_num = 4;
-  bytes consensus = 5;
+  bytes payload = 5;
 }
 
 // Information about a peer that is relevant to consensus
