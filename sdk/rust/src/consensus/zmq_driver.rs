@@ -438,20 +438,20 @@ impl Service for ZmqService {
         }
     }
 
-    fn get_block(&mut self, block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error> {
-        let mut request = ConsensusBlockGetRequest::new();
+    fn get_blocks(&mut self, block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error> {
+        let mut request = ConsensusBlocksGetRequest::new();
         request.set_block_ids(protobuf::RepeatedField::from_vec(block_ids));
 
-        let mut response: ConsensusBlockGetResponse = self.rpc(
+        let mut response: ConsensusBlocksGetResponse = self.rpc(
             &request,
-            Message_MessageType::CONSENSUS_BLOCK_GET_REQUEST,
-            Message_MessageType::CONSENSUS_BLOCK_GET_RESPONSE,
+            Message_MessageType::CONSENSUS_BLOCKS_GET_REQUEST,
+            Message_MessageType::CONSENSUS_BLOCKS_GET_RESPONSE,
         )?;
 
-        if response.get_status() == ConsensusBlockGetResponse_Status::UNKNOWN_BLOCK {
+        if response.get_status() == ConsensusBlocksGetResponse_Status::UNKNOWN_BLOCK {
             Err(Error::UnknownBlock("Block not found".into()))
         } else {
-            check_ok!(response, ConsensusBlockGetResponse_Status::OK)
+            check_ok!(response, ConsensusBlocksGetResponse_Status::OK)
         }?;
 
         Ok(response
@@ -461,25 +461,25 @@ impl Service for ZmqService {
             .collect())
     }
 
-    fn get_setting(
+    fn get_settings(
         &mut self,
         block_id: Vec<u8>,
         settings: Vec<String>,
     ) -> Result<Vec<Vec<u8>>, Error> {
-        let mut request = ConsensusSettingGetRequest::new();
+        let mut request = ConsensusSettingsGetRequest::new();
         request.set_block_id(block_id);
         request.set_settings(protobuf::RepeatedField::from_vec(settings));
 
-        let mut response: ConsensusSettingGetResponse = self.rpc(
+        let mut response: ConsensusSettingsGetResponse = self.rpc(
             &request,
-            Message_MessageType::CONSENSUS_SETTING_GET_REQUEST,
-            Message_MessageType::CONSENSUS_SETTING_GET_RESPONSE,
+            Message_MessageType::CONSENSUS_SETTINGS_GET_REQUEST,
+            Message_MessageType::CONSENSUS_SETTINGS_GET_RESPONSE,
         )?;
 
-        if response.get_status() == ConsensusSettingGetResponse_Status::UNKNOWN_BLOCK {
+        if response.get_status() == ConsensusSettingsGetResponse_Status::UNKNOWN_BLOCK {
             Err(Error::UnknownBlock("Block not found".into()))
         } else {
-            check_ok!(response, ConsensusSettingGetResponse_Status::OK)
+            check_ok!(response, ConsensusSettingsGetResponse_Status::OK)
         }?;
 
         Ok(response.take_settings_data().into_vec())
@@ -790,8 +790,8 @@ mod tests {
             svc.ignore_block(Default::default()).unwrap();
             svc.fail_block(Default::default()).unwrap();
 
-            svc.get_block(Default::default()).unwrap();
-            svc.get_setting(Default::default(), Default::default())
+            svc.get_blocks(Default::default()).unwrap();
+            svc.get_settings(Default::default(), Default::default())
                 .unwrap();
             svc.get_state(Default::default(), Default::default())
                 .unwrap();
@@ -880,20 +880,20 @@ mod tests {
 
         service_test!(
             &socket,
-            ConsensusBlockGetResponse::new(),
-            ConsensusBlockGetResponse_Status::OK,
-            Message_MessageType::CONSENSUS_BLOCK_GET_RESPONSE,
-            ConsensusBlockGetRequest,
-            Message_MessageType::CONSENSUS_BLOCK_GET_REQUEST
+            ConsensusBlocksGetResponse::new(),
+            ConsensusBlocksGetResponse_Status::OK,
+            Message_MessageType::CONSENSUS_BLOCKS_GET_RESPONSE,
+            ConsensusBlocksGetRequest,
+            Message_MessageType::CONSENSUS_BLOCKS_GET_REQUEST
         );
 
         service_test!(
             &socket,
-            ConsensusSettingGetResponse::new(),
-            ConsensusSettingGetResponse_Status::OK,
-            Message_MessageType::CONSENSUS_SETTING_GET_RESPONSE,
-            ConsensusSettingGetRequest,
-            Message_MessageType::CONSENSUS_SETTING_GET_REQUEST
+            ConsensusSettingsGetResponse::new(),
+            ConsensusSettingsGetResponse_Status::OK,
+            Message_MessageType::CONSENSUS_SETTINGS_GET_RESPONSE,
+            ConsensusSettingsGetRequest,
+            Message_MessageType::CONSENSUS_SETTINGS_GET_REQUEST
         );
 
         service_test!(

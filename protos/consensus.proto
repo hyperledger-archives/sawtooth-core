@@ -346,7 +346,7 @@ message ConsensusBlocksGetRequest {
   repeated bytes block_ids = 1;
 }
 
-message ConsensusBlockGetResponse {
+message ConsensusBlocksGetResponse {
   enum Status {
     STATUS_UNSET = 0;
     OK = 1;
@@ -362,12 +362,12 @@ message ConsensusBlockGetResponse {
 }
 
 // Read the values of these settings from state as of the given block
-message ConsensusSettingGetRequest {
+message ConsensusSettingsGetRequest {
   bytes block_id = 1;
   repeated string settings = 2;
 }
 
-message ConsensusSettingGetResponse {
+message ConsensusSettingsGetResponse {
   enum Status {
     STATUS_UNSET = 0;
     OK = 1;

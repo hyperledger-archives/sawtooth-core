@@ -58,17 +58,17 @@ pub trait Service {
 
     // -- Queries --
 
-    /// Retrieve consensus-related information about a block
-    fn get_block(&mut self, block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error>;
+    /// Retrieve consensus-related information about blocks
+    fn get_blocks(&mut self, block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error>;
 
-    /// Read the value of the setting as of the given block
-    fn get_setting(
+    /// Read the value of settings as of the given block
+    fn get_settings(
         &mut self,
         block_id: Vec<u8>,
         settings: Vec<String>,
     ) -> Result<Vec<Vec<u8>>, Error>;
 
-    /// Read the value of state at some address as of the given block
+    /// Read values in state as of the given block
     fn get_state(
         &mut self,
         block_id: Vec<u8>,
@@ -116,10 +116,10 @@ pub mod tests {
         fn fail_block(&mut self, _block_id: Vec<u8>) -> Result<(), Error> {
             Ok(())
         }
-        fn get_block(&mut self, _block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error> {
+        fn get_blocks(&mut self, _block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error> {
             Ok(Default::default())
         }
-        fn get_setting(
+        fn get_settings(
             &mut self,
             _block_id: Vec<u8>,
             _settings: Vec<String>,
