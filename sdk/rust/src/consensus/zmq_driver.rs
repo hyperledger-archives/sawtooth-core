@@ -21,7 +21,7 @@ use rand;
 use rand::Rng;
 
 use consensus::service::Service;
-use consensus::engine::{Block, Engine, Error, Exit, PeerInfo, PeerMessage, Update};
+use consensus::engine::*;
 use consensus::driver::Driver;
 
 use messaging::stream::MessageConnection;
@@ -166,7 +166,7 @@ fn handle_update(
         CONSENSUS_NOTIFY_PEER_DISCONNECTED => {
             let mut request: ConsensusNotifyPeerDisconnected =
                 protobuf::parse_from_bytes(msg.get_content())?;
-            Update::PeerDisconnected(request.take_peer_id())
+            Update::PeerDisconnected(request.take_peer_id().into())
         }
         CONSENSUS_NOTIFY_PEER_MESSAGE => {
             let mut request: ConsensusNotifyPeerMessage =
@@ -181,17 +181,17 @@ fn handle_update(
         CONSENSUS_NOTIFY_BLOCK_VALID => {
             let mut request: ConsensusNotifyBlockValid =
                 protobuf::parse_from_bytes(msg.get_content())?;
-            Update::BlockValid(request.take_block_id())
+            Update::BlockValid(request.take_block_id().into())
         }
         CONSENSUS_NOTIFY_BLOCK_INVALID => {
             let mut request: ConsensusNotifyBlockInvalid =
                 protobuf::parse_from_bytes(msg.get_content())?;
-            Update::BlockInvalid(request.take_block_id())
+            Update::BlockInvalid(request.take_block_id().into())
         }
         CONSENSUS_NOTIFY_BLOCK_COMMIT => {
             let mut request: ConsensusNotifyBlockCommit =
                 protobuf::parse_from_bytes(msg.get_content())?;
-            Update::BlockCommit(request.take_block_id())
+            Update::BlockCommit(request.take_block_id().into())
         }
         unexpected => {
             return Err(Error::ReceiveError(format!(
@@ -269,7 +269,12 @@ macro_rules! check_ok {
 }
 
 impl Service for ZmqService {
-    fn send_to(&mut self, peer: &str, message_type: &str, payload: Vec<u8>) -> Result<(), Error> {
+    fn send_to(
+        &mut self,
+        peer: &PeerId,
+        message_type: &str,
+        payload: Vec<u8>,
+    ) -> Result<(), Error> {
         let mut message = ConsensusPeerMessage::new();
         message.set_message_type(message_type.into());
         message.set_content(payload);
@@ -278,7 +283,7 @@ impl Service for ZmqService {
 
         let mut request = ConsensusSendToRequest::new();
         request.set_message(message);
-        request.set_peer_id(peer.into());
+        request.set_peer_id((*peer).clone().into());
 
         let response: ConsensusSendToResponse = self.rpc(
             &request,
@@ -306,10 +311,10 @@ impl Service for ZmqService {
         check_ok!(response, ConsensusBroadcastResponse_Status::OK)
     }
 
-    fn initialize_block(&mut self, previous_id: Option<Vec<u8>>) -> Result<(), Error> {
+    fn initialize_block(&mut self, previous_id: Option<BlockId>) -> Result<(), Error> {
         let mut request = ConsensusInitializeBlockRequest::new();
         if let Some(previous_id) = previous_id {
-            request.set_previous_id(previous_id);
+            request.set_previous_id(previous_id.into());
         }
 
         let response: ConsensusInitializeBlockResponse = self.rpc(
@@ -331,7 +336,7 @@ impl Service for ZmqService {
         check_ok!(response, ConsensusInitializeBlockResponse_Status::OK)
     }
 
-    fn finalize_block(&mut self, data: Vec<u8>) -> Result<Vec<u8>, Error> {
+    fn finalize_block(&mut self, data: Vec<u8>) -> Result<BlockId, Error> {
         let mut request = ConsensusFinalizeBlockRequest::new();
         request.set_data(data);
 
@@ -349,7 +354,7 @@ impl Service for ZmqService {
             check_ok!(response, ConsensusFinalizeBlockResponse_Status::OK)
         }?;
 
-        Ok(response.take_block_id())
+        Ok(response.take_block_id().into())
     }
 
     fn cancel_block(&mut self) -> Result<(), Error> {
@@ -370,9 +375,11 @@ impl Service for ZmqService {
         }
     }
 
-    fn check_blocks(&mut self, priority: Vec<Vec<u8>>) -> Result<(), Error> {
+    fn check_blocks(&mut self, priority: Vec<BlockId>) -> Result<(), Error> {
         let mut request = ConsensusCheckBlockRequest::new();
-        request.set_block_ids(protobuf::RepeatedField::from_vec(priority));
+        request.set_block_ids(protobuf::RepeatedField::from_vec(
+            priority.into_iter().map(Vec::from).collect(),
+        ));
 
         let response: ConsensusCheckBlockResponse = self.rpc(
             &request,
@@ -387,9 +394,9 @@ impl Service for ZmqService {
         }
     }
 
-    fn commit_block(&mut self, block_id: Vec<u8>) -> Result<(), Error> {
+    fn commit_block(&mut self, block_id: BlockId) -> Result<(), Error> {
         let mut request = ConsensusCommitBlockRequest::new();
-        request.set_block_id(block_id);
+        request.set_block_id(block_id.into());
 
         let response: ConsensusCommitBlockResponse = self.rpc(
             &request,
@@ -404,9 +411,9 @@ impl Service for ZmqService {
         }
     }
 
-    fn ignore_block(&mut self, block_id: Vec<u8>) -> Result<(), Error> {
+    fn ignore_block(&mut self, block_id: BlockId) -> Result<(), Error> {
         let mut request = ConsensusIgnoreBlockRequest::new();
-        request.set_block_id(block_id);
+        request.set_block_id(block_id.into());
 
         let response: ConsensusIgnoreBlockResponse = self.rpc(
             &request,
@@ -421,9 +428,9 @@ impl Service for ZmqService {
         }
     }
 
-    fn fail_block(&mut self, block_id: Vec<u8>) -> Result<(), Error> {
+    fn fail_block(&mut self, block_id: BlockId) -> Result<(), Error> {
         let mut request = ConsensusFailBlockRequest::new();
-        request.set_block_id(block_id);
+        request.set_block_id(block_id.into());
 
         let response: ConsensusFailBlockResponse = self.rpc(
             &request,
@@ -438,9 +445,11 @@ impl Service for ZmqService {
         }
     }
 
-    fn get_blocks(&mut self, block_ids: Vec<Vec<u8>>) -> Result<Vec<Block>, Error> {
+    fn get_blocks(&mut self, block_ids: Vec<BlockId>) -> Result<Vec<Block>, Error> {
         let mut request = ConsensusBlocksGetRequest::new();
-        request.set_block_ids(protobuf::RepeatedField::from_vec(block_ids));
+        request.set_block_ids(protobuf::RepeatedField::from_vec(
+            block_ids.into_iter().map(Vec::from).collect(),
+        ));
 
         let mut response: ConsensusBlocksGetResponse = self.rpc(
             &request,
@@ -463,11 +472,11 @@ impl Service for ZmqService {
 
     fn get_settings(
         &mut self,
-        block_id: Vec<u8>,
+        block_id: BlockId,
         settings: Vec<String>,
     ) -> Result<Vec<Vec<u8>>, Error> {
         let mut request = ConsensusSettingsGetRequest::new();
-        request.set_block_id(block_id);
+        request.set_block_id(block_id.into());
         request.set_settings(protobuf::RepeatedField::from_vec(settings));
 
         let mut response: ConsensusSettingsGetResponse = self.rpc(
@@ -487,11 +496,11 @@ impl Service for ZmqService {
 
     fn get_state(
         &mut self,
-        block_id: Vec<u8>,
+        block_id: BlockId,
         addresses: Vec<String>,
     ) -> Result<Vec<Vec<u8>>, Error> {
         let mut request = ConsensusStateGetRequest::new();
-        request.set_block_id(block_id);
+        request.set_block_id(block_id.into());
         request.set_addresses(protobuf::RepeatedField::from_vec(addresses));
 
         let mut response: ConsensusStateGetResponse = self.rpc(
@@ -513,9 +522,9 @@ impl Service for ZmqService {
 impl From<ConsensusBlock> for Block {
     fn from(mut c_block: ConsensusBlock) -> Block {
         Block {
-            block_id: c_block.take_block_id(),
-            previous_id: c_block.take_previous_id(),
-            signer_id: c_block.take_signer_id(),
+            block_id: c_block.take_block_id().into(),
+            previous_id: c_block.take_previous_id().into(),
+            signer_id: c_block.take_signer_id().into(),
             block_num: c_block.get_block_num(),
             consensus: c_block.take_consensus(),
         }
@@ -525,7 +534,7 @@ impl From<ConsensusBlock> for Block {
 impl From<ConsensusPeerInfo> for PeerInfo {
     fn from(mut c_peer_info: ConsensusPeerInfo) -> PeerInfo {
         PeerInfo {
-            peer_id: c_peer_info.take_peer_id(),
+            peer_id: c_peer_info.take_peer_id().into(),
         }
     }
 }
@@ -776,7 +785,7 @@ mod tests {
                 "0".into(),
             );
 
-            svc.send_to(Default::default(), Default::default(), Default::default())
+            svc.send_to(&Default::default(), Default::default(), Default::default())
                 .unwrap();
             svc.broadcast(Default::default(), Default::default())
                 .unwrap();

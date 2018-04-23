@@ -15,6 +15,7 @@
  * ------------------------------------------------------------------------------
  */
 
+use std::ops::Deref;
 use std::sync::{Mutex, atomic::{AtomicBool, Ordering}, mpsc::Receiver};
 
 use consensus::service::Service;
@@ -22,28 +23,68 @@ use consensus::service::Service;
 /// An update from the validator
 pub enum Update {
     PeerConnected(PeerInfo),
-    PeerDisconnected(Vec<u8>),
+    PeerDisconnected(PeerId),
     PeerMessage(PeerMessage),
     BlockNew(Block),
-    BlockValid(Vec<u8>),
-    BlockInvalid(Vec<u8>),
-    BlockCommit(Vec<u8>),
+    BlockValid(BlockId),
+    BlockInvalid(BlockId),
+    BlockCommit(BlockId),
+}
+
+#[derive(Default)]
+pub struct BlockId(Vec<u8>);
+impl Deref for BlockId {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Vec<u8> {
+        &self.0
+    }
+}
+impl From<BlockId> for Vec<u8> {
+    fn from(id: BlockId) -> Vec<u8> {
+        id.0
+    }
+}
+impl From<Vec<u8>> for BlockId {
+    fn from(v: Vec<u8>) -> BlockId {
+        BlockId(v)
+    }
 }
 
 /// All information about a block that is relevant to consensus
 #[derive(Default)]
 pub struct Block {
-    pub block_id: Vec<u8>,
-    pub previous_id: Vec<u8>,
-    pub signer_id: Vec<u8>,
+    pub block_id: BlockId,
+    pub previous_id: BlockId,
+    pub signer_id: PeerId,
     pub block_num: u64,
     pub consensus: Vec<u8>,
+}
+
+#[derive(Default)]
+pub struct PeerId(Vec<u8>);
+impl Deref for PeerId {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Vec<u8> {
+        &self.0
+    }
+}
+impl From<PeerId> for Vec<u8> {
+    fn from(id: PeerId) -> Vec<u8> {
+        id.0
+    }
+}
+impl From<Vec<u8>> for PeerId {
+    fn from(v: Vec<u8>) -> PeerId {
+        PeerId(v)
+    }
 }
 
 /// Information about a peer that is relevant to consensus
 #[derive(Default)]
 pub struct PeerInfo {
-    pub peer_id: Vec<u8>,
+    pub peer_id: PeerId,
 }
 
 /// A consensus-related message sent between peers
