@@ -597,8 +597,8 @@ class RouteHandler(object):
         return self._message_to_dict(content)
 
     async def _send_request(self, request_type, payload):
-        """Uses an executor to send an asynchronous ZMQ request to the validator
-        with the handler's Connection
+        """Uses an executor to send an asynchronous ZMQ request to the
+        validator with the handler's Connection
         """
         try:
             return await self._connection.send(

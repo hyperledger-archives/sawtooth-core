@@ -420,8 +420,8 @@ class ValidatorRegistryTransactionHandler(TransactionHandler):
         hash_value = hashlib.sha256(hash_input).digest()
         expected_report_data = \
             hash_value + \
-            (b'\x00' *
-             (sgx_structs.SgxReportData.STRUCT_SIZE - len(hash_value)))
+            (b'\x00'
+             * (sgx_structs.SgxReportData.STRUCT_SIZE - len(hash_value)))
 
         if sgx_quote.report_body.report_data.d != expected_report_data:
             raise \

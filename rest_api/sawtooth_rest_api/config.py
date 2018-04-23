@@ -28,7 +28,8 @@ def load_default_rest_api_config():
     return RestApiConfig(
         bind=["127.0.0.1:8008"],
         connect="tcp://localhost:4004",
-        timeout=300)
+        timeout=300,
+        client_max_size=10485760)
 
 
 def load_toml_rest_api_config(filename):
@@ -54,7 +55,7 @@ def load_toml_rest_api_config(filename):
 
     invalid_keys = set(toml_config.keys()).difference(
         ['bind', 'connect', 'timeout', 'opentsdb_db', 'opentsdb_url',
-         'opentsdb_username', 'opentsdb_password'])
+         'opentsdb_username', 'opentsdb_password', 'client_max_size'])
     if invalid_keys:
         raise RestApiConfigurationError(
             "Invalid keys in rest api config: {}".format(
@@ -67,6 +68,7 @@ def load_toml_rest_api_config(filename):
         opentsdb_db=toml_config.get('opentsdb_db', None),
         opentsdb_username=toml_config.get('opentsdb_username', None),
         opentsdb_password=toml_config.get('opentsdb_password', None),
+        client_max_size=toml_config.get('client_max_size', None)
     )
 
     return config
@@ -84,6 +86,7 @@ def merge_rest_api_config(configs):
     opentsdb_db = None
     opentsdb_username = None
     opentsdb_password = None
+    client_max_size = None
 
     for config in reversed(configs):
         if config.bind is not None:
@@ -100,6 +103,8 @@ def merge_rest_api_config(configs):
             opentsdb_username = config.opentsdb_username
         if config.opentsdb_password is not None:
             opentsdb_password = config.opentsdb_password
+        if config.client_max_size is not None:
+            client_max_size = config.client_max_size
 
     return RestApiConfig(
         bind=bind,
@@ -108,7 +113,8 @@ def merge_rest_api_config(configs):
         opentsdb_url=opentsdb_url,
         opentsdb_db=opentsdb_db,
         opentsdb_username=opentsdb_username,
-        opentsdb_password=opentsdb_password)
+        opentsdb_password=opentsdb_password,
+        client_max_size=client_max_size)
 
 
 class RestApiConfig:
@@ -120,7 +126,8 @@ class RestApiConfig:
             opentsdb_url=None,
             opentsdb_db=None,
             opentsdb_username=None,
-            opentsdb_password=None):
+            opentsdb_password=None,
+            client_max_size=None):
         self._bind = bind
         self._connect = connect
         self._timeout = timeout
@@ -128,6 +135,7 @@ class RestApiConfig:
         self._opentsdb_db = opentsdb_db
         self._opentsdb_username = opentsdb_username
         self._opentsdb_password = opentsdb_password
+        self._client_max_size = client_max_size
 
     @property
     def bind(self):
@@ -157,11 +165,16 @@ class RestApiConfig:
     def opentsdb_password(self):
         return self._opentsdb_password
 
+    @property
+    def client_max_size(self):
+        return self._client_max_size
+
     def __repr__(self):
         # skip opentsdb_db password
         return \
             "{}(bind={}, connect={}, timeout={}," \
-            "opentsdb_url={}, opentsdb_db={}, opentsdb_username={})" \
+            "opentsdb_url={}, opentsdb_db={}, opentsdb_username={}," \
+            "client_max_size={})" \
             .format(
                 self.__class__.__name__,
                 repr(self._bind),
@@ -169,7 +182,8 @@ class RestApiConfig:
                 repr(self._timeout),
                 repr(self._opentsdb_url),
                 repr(self._opentsdb_db),
-                repr(self._opentsdb_username))
+                repr(self._opentsdb_username),
+                repr(self._client_max_size))
 
     def to_dict(self):
         return collections.OrderedDict([
@@ -180,6 +194,7 @@ class RestApiConfig:
             ('opentsdb_db', self._opentsdb_db),
             ('opentsdb_username', self._opentsdb_username),
             ('opentsdb_password', self._opentsdb_password),
+            ('client_max_size', self._client_max_size)
         ])
 
     def to_toml_string(self):

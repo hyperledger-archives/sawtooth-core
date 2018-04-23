@@ -70,8 +70,8 @@ class XoTransactionHandler(TransactionHandler):
 
         elif action == "take":
             _display(
-                "Player {} takes space: {}\n\n".format(signer[:6], space) +
-                _game_data_to_str(
+                "Player {} takes space: {}\n\n".format(signer[:6], space)
+                + _game_data_to_str(
                     upd_board, upd_state, upd_player1, upd_player2, name))
 
         # 6. Put the game data back in state storage

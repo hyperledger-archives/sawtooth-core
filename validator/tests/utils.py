@@ -32,7 +32,7 @@ def wait_until(lbd, time_out=None):
     if time_out is not None:
         end_time = time.time() + time_out
 
-    while (end_time is None or
-            time.time() < end_time) and \
+    while (end_time is None
+           or time.time() < end_time) and \
             not lbd():
         time.sleep(0.1)
