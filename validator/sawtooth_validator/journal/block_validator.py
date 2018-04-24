@@ -177,6 +177,7 @@ class BlockValidator(object):
         if not blkw.block.batches:
             return
 
+        scheduler = None
         try:
             chain_commit_state = ChainCommitState(
                 blkw.previous_block_id,
@@ -209,12 +210,14 @@ class BlockValidator(object):
         except (DuplicateBatch,
                 DuplicateTransaction,
                 MissingDependency) as err:
-            scheduler.cancel()
+            if scheduler is not None:
+                scheduler.cancel()
             raise BlockValidationFailure(
                 "Block {} failed validation: {}".format(blkw, err))
 
         except Exception:
-            scheduler.cancel()
+            if scheduler is not None:
+                scheduler.cancel()
             raise
 
         scheduler.finalize()
