@@ -47,6 +47,18 @@ message ConsensusPeerInfo {
   bytes peer_id = 1;
 }
 
+// A settings key-value pair
+message ConsensusSettingsEntry {
+  string key = 1;
+  string value = 2;
+}
+
+// A state key-value pair
+message ConsensusStateEntry {
+  string address = 1;
+  bytes data = 2;
+}
+
 // --== Registration ==--
 
 // Sent to connect with the validator
@@ -361,10 +373,12 @@ message ConsensusBlocksGetResponse {
   repeated ConsensusBlock blocks = 2;
 }
 
-// Read the values of these settings from state as of the given block
+// Read the values of these settings from state as of the given block. If some
+// values settings keys cannot be found, the keys that were found will be
+// returned.
 message ConsensusSettingsGetRequest {
   bytes block_id = 1;
-  repeated string settings = 2;
+  repeated string keys = 2;
 }
 
 message ConsensusSettingsGetResponse {
@@ -379,10 +393,12 @@ message ConsensusSettingsGetResponse {
   }
 
   Status status = 1;
-  repeated bytes settings_data = 2;
+  repeated ConsensusSettingsEntry entries = 2;
 }
 
-// Read the values from at these addresses from state as of the given block
+// Read the data at these addresses from state as of the given block. If some
+// addresses cannot be found, state at the addresses that were found will be
+// returned.
 message ConsensusStateGetRequest {
   bytes block_id = 1;
   repeated string addresses = 2;
@@ -400,5 +416,5 @@ message ConsensusStateGetResponse {
   }
 
   Status status = 1;
-  repeated bytes state_data = 2;
+  repeated ConsensusStateEntry entries = 2;
 }

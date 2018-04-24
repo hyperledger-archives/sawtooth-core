@@ -63,11 +63,7 @@ pub trait Service {
     fn get_blocks(&mut self, block_ids: Vec<BlockId>) -> Result<Vec<Block>, Error>;
 
     /// Read the value of settings as of the given block
-    fn get_settings(
-        &mut self,
-        block_id: BlockId,
-        settings: Vec<String>,
-    ) -> Result<Vec<Vec<u8>>, Error>;
+    fn get_settings(&mut self, block_id: BlockId, keys: Vec<String>) -> Result<Vec<String>, Error>;
 
     /// Read values in state as of the given block
     fn get_state(
@@ -124,7 +120,7 @@ pub mod tests {
             &mut self,
             _block_id: BlockId,
             _settings: Vec<String>,
-        ) -> Result<Vec<Vec<u8>>, Error> {
+        ) -> Result<Vec<String>, Error> {
             Ok(Default::default())
         }
         fn get_state(

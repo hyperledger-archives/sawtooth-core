@@ -470,14 +470,10 @@ impl Service for ZmqService {
             .collect())
     }
 
-    fn get_settings(
-        &mut self,
-        block_id: BlockId,
-        settings: Vec<String>,
-    ) -> Result<Vec<Vec<u8>>, Error> {
+    fn get_settings(&mut self, block_id: BlockId, keys: Vec<String>) -> Result<Vec<String>, Error> {
         let mut request = ConsensusSettingsGetRequest::new();
         request.set_block_id(block_id.into());
-        request.set_settings(protobuf::RepeatedField::from_vec(settings));
+        request.set_keys(protobuf::RepeatedField::from_vec(keys));
 
         let mut response: ConsensusSettingsGetResponse = self.rpc(
             &request,
@@ -491,7 +487,11 @@ impl Service for ZmqService {
             check_ok!(response, ConsensusSettingsGetResponse_Status::OK)
         }?;
 
-        Ok(response.take_settings_data().into_vec())
+        Ok(response
+            .take_entries()
+            .into_iter()
+            .map(|mut entry| entry.take_value())
+            .collect())
     }
 
     fn get_state(
@@ -515,7 +515,11 @@ impl Service for ZmqService {
             check_ok!(response, ConsensusStateGetResponse_Status::OK)
         }?;
 
-        Ok(response.take_state_data().into_vec())
+        Ok(response
+            .take_entries()
+            .into_iter()
+            .map(|mut entry| entry.take_data())
+            .collect())
     }
 }
 
