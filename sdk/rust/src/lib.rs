@@ -25,6 +25,7 @@ extern crate secp256k1;
 extern crate uuid;
 extern crate zmq;
 
+pub mod consensus;
 pub mod messages;
 pub mod messaging;
 pub mod signing;

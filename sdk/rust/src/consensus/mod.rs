@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Intel Corporation
+ * Copyright 2018 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,8 @@
  * ------------------------------------------------------------------------------
  */
 
-pub mod consensus;
-pub mod validator;
-pub mod transaction;
-pub mod batch;
-pub mod block;
-pub mod setting;
-pub mod state_context;
-pub mod processor;
-pub mod genesis;
-pub mod client_batch;
-pub mod client_block;
-pub mod client_state;
-pub mod client_transaction;
-pub mod client_batch_submit;
-pub mod client_list_control;
-pub mod client_peers;
-pub mod network;
-pub mod events;
-pub mod client_event;
-pub mod authorization;
-pub mod transaction_receipt;
-pub mod client_receipt;
+pub mod driver;
+pub mod engine;
+pub mod service;
+
+pub mod zmq_driver;
