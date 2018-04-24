@@ -14,15 +14,5 @@
  * limitations under the License.
  * ------------------------------------------------------------------------------
  */
-extern crate cbor;
-extern crate cpython;
-extern crate crypto;
-extern crate libc;
-extern crate lmdb_zero;
 
-#[cfg(test)]
-extern crate rand;
-
-// exported modules
-pub mod database;
-pub mod state;
+pub mod merkle;
