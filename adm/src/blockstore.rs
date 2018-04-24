@@ -242,7 +242,9 @@ mod tests {
 
         let blockstore_path = &path_config.data_dir.join(config::get_blockstore_filename());
 
-        let ctx = LmdbContext::new(blockstore_path, 3, None)
+        // Set the file size to 10MB, so as to support file systems that do
+        // not support sparse files.
+        let ctx = LmdbContext::new(blockstore_path, 3, Some(10 * 1024 * 1024))
             .map_err(|err| DatabaseError::InitError(format!("{}", err)))
             .unwrap();
 
