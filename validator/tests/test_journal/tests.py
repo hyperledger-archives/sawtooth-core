@@ -632,16 +632,15 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_unknown_block(head)
         self.assert_new_block_not_committed()
 
-    def test_fork_invalid_predecessor(self):
+    def test_block_invalid_predecessor(self):
         """"
-        Test the case where new block has an invalid predecessor
+        Test the case where a new block has an invalid predecessor
         """
-        # generate candidate chain 5 long off the current head.
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_cache': True})
 
-        # Mark a predecessor as invalid
-        chain[1].status = BlockStatus.Invalid
+        # Mark the head as invalid
+        chain[3].status = BlockStatus.Invalid
 
         self.validate_block(head)
 
