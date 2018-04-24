@@ -561,20 +561,6 @@ class TestBlockValidator(unittest.TestCase):
         self.permission_verifier = MockPermissionVerifier()
 
     # fork based tests
-    def test_fork_simple(self):
-        """
-        Test a simple case of a new block extending the current root.
-        """
-
-        new_block = self.block_tree_manager.generate_block(
-            previous_block=self.root,
-            add_to_cache=True)
-
-        self.validate_block(new_block)
-
-        self.assert_valid_block(new_block)
-        self.assert_new_block_committed()
-
     def test_good_fork_lower(self):
         """
         Test case of a new block extending on a valid chain but not as long
