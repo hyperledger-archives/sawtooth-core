@@ -616,25 +616,6 @@ class TestBlockValidator(unittest.TestCase):
         self.assert_valid_block(new_head)
         self.assert_new_block_committed()
 
-    def test_fork_different_genesis(self):
-        """"
-        Test the case where new block is from a different genesis
-        """
-        # create a new valid chain 5 long from the current root
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
-
-        self.block_tree_manager.set_chain_head(head)
-
-        # generate candidate chain 5 long from its own genesis
-        _, new_head = self.generate_chain_with_head(
-            None, 5, {'add_to_cache': True})
-
-        self.validate_block(new_head)
-
-        self.assert_invalid_block(new_head)
-        self.assert_new_block_not_committed()
-
     def test_fork_missing_predecessor(self):
         """"
         Test the case where new block is missing the a predecessor
