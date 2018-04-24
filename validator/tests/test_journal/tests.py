@@ -561,47 +561,6 @@ class TestBlockValidator(unittest.TestCase):
         self.permission_verifier = MockPermissionVerifier()
 
     # fork based tests
-    def test_good_fork_lower(self):
-        """
-        Test case of a new block extending on a valid chain but not as long
-        as the current chain.
-        """
-        # create a new valid chain 5 long from the current root
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
-
-        self.block_tree_manager.set_chain_head(head)
-
-        # generate candidate chain 3 long from the same root
-        _, new_head = self.generate_chain_with_head(
-            self.root, 3, {'add_to_cache': True})
-
-        self.validate_block(new_head)
-
-        self.assert_valid_block(new_head)
-        self.assert_new_block_not_committed()
-
-    def test_good_fork_higher(self):
-        """
-        Test case of a new block extending on a valid chain but longer
-        than the current chain. ( similar to test_good_fork_lower but uses
-        a different code path when finding the common root )
-        """
-        # create a new valid chain 5 long from the current root
-        _, head = self.generate_chain_with_head(
-            self.root, 5, {'add_to_store': True})
-
-        self.block_tree_manager.set_chain_head(head)
-
-        # generate candidate chain 8 long from the same root
-        _, new_head = self.generate_chain_with_head(
-            head, 8, {'add_to_cache': True})
-
-        self.validate_block(new_head)
-
-        self.assert_valid_block(new_head)
-        self.assert_new_block_committed()
-
     def test_fork_missing_predecessor(self):
         """"
         Test the case where new block is missing the a predecessor
