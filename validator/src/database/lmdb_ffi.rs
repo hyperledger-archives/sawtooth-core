@@ -50,7 +50,7 @@ pub extern "C" fn lmdb_database_new(
     let ctx = match LmdbContext::new(Path::new(&db_path), 1, Some(file_size)) {
         Ok(ctx) => ctx,
         Err(err) => {
-            println!(
+            error!(
                 "Unable to create LMDB context for db at {}: {:?}",
                 db_path, err
             );
@@ -66,7 +66,7 @@ pub extern "C" fn lmdb_database_new(
             ErrorCode::Success
         }
         Err(err) => {
-            println!("Unable to create Database at {}: {:?}", db_path, err);
+            error!("Unable to create Database at {}: {:?}", db_path, err);
             ErrorCode::InitializeDatabaseError
         }
     }

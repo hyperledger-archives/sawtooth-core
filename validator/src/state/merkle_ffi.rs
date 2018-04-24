@@ -95,7 +95,10 @@ fn make_merkle_db(
         }
         Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
         Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
-        _ => ErrorCode::Unknown,
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
+        }
     }
 }
 
@@ -153,7 +156,10 @@ pub extern "C" fn merkle_db_set_merkle_root(
         Ok(()) => ErrorCode::Success,
         Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
         Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
-        _ => ErrorCode::Unknown,
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
+        }
     }
 }
 
@@ -181,7 +187,10 @@ pub extern "C" fn merkle_db_contains(merkle_db: *mut c_void, address: *const c_c
             Ok(false) => ErrorCode::NotFound,
             Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
             Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
-            _ => ErrorCode::Unknown,
+            Err(err) => {
+                error!("Unknown Error!: {:?}", err);
+                ErrorCode::Unknown
+            }
         }
     }
 }
@@ -222,7 +231,10 @@ pub extern "C" fn merkle_db_get(
             Ok(None) => ErrorCode::NotFound,
             Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
             Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
-            _ => ErrorCode::Unknown,
+            Err(err) => {
+                error!("Unknown Error!: {:?}", err);
+                ErrorCode::Unknown
+            }
         }
     }
 }
@@ -267,7 +279,10 @@ pub extern "C" fn merkle_db_set(
                 ErrorCode::Success
             }
             Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
-            _ => ErrorCode::Unknown,
+            Err(err) => {
+                error!("Unknown Error!: {:?}", err);
+                ErrorCode::Unknown
+            }
         }
     }
 }
@@ -306,7 +321,7 @@ pub extern "C" fn merkle_db_delete(
             Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
             Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
             Err(err) => {
-                println!("Unknown Error!: {:?}", err);
+                error!("Unknown Error!: {:?}", err);
                 ErrorCode::Unknown
             }
         }
@@ -395,7 +410,10 @@ pub extern "C" fn merkle_db_update(
                 ErrorCode::Success
             }
             Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
-            _ => ErrorCode::Unknown,
+            Err(err) => {
+                error!("Unknown Error!: {:?}", err);
+                ErrorCode::Unknown
+            }
         }
     }
 }
@@ -431,7 +449,10 @@ pub extern "C" fn merkle_db_leaf_iterator_new(
         }
         Err(MerkleDatabaseError::DatabaseError(_)) => ErrorCode::DatabaseError,
         Err(MerkleDatabaseError::NotFound(_)) => ErrorCode::NotFound,
-        Err(_) => ErrorCode::Unknown,
+        Err(err) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
+        }
     }
 }
 
@@ -472,6 +493,9 @@ pub extern "C" fn merkle_db_leaf_iterator_next(
         },
         None => ErrorCode::StopIteration,
         Some(Err(MerkleDatabaseError::DatabaseError(_))) => ErrorCode::DatabaseError,
-        Some(Err(_)) => ErrorCode::Unknown,
+        Some(Err(err)) => {
+            error!("Unknown Error!: {:?}", err);
+            ErrorCode::Unknown
+        }
     }
 }
