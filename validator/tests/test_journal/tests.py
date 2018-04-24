@@ -560,17 +560,16 @@ class TestBlockValidator(unittest.TestCase):
         self.block_validation_handler = self.BlockValidationHandler()
         self.permission_verifier = MockPermissionVerifier()
 
-    # fork based tests
-    def test_fork_missing_predecessor(self):
+    def test_block_missing_predecessor(self):
         """"
-        Test the case where new block is missing the a predecessor
+        Test the case where a new block is missing a predecessor
         """
         # generate candidate chain 5 long off the current head.
         chain, head = self.generate_chain_with_head(
             self.root, 5, {'add_to_cache': True})
 
         # remove one of the new blocks
-        del self.block_tree_manager.block_cache[chain[1].identifier]
+        del self.block_tree_manager.block_cache[chain[3].identifier]
 
         self.validate_block(head)
 
