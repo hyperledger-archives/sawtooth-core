@@ -17,3 +17,4 @@
 
 pub mod database;
 pub mod lmdb;
+pub mod lmdb_ffi;
