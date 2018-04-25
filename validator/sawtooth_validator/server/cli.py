@@ -91,10 +91,6 @@ def load_validator_config(first_config, config_dir):
 
 
 def main(args):
-    verbose_level = args['verbose']
-
-    init_console_logging(verbose_level=verbose_level)
-
     try:
         path_config = load_path_config(config_dir=args['config_dir'])
     except LocalConfigurationError as local_config_err:
@@ -143,7 +139,7 @@ def main(args):
         if log_config is not None:
             log_configuration(log_config=log_config)
             if log_config.get('root') is not None:
-                init_console_logging(verbose_level=verbose_level)
+                init_console_logging(verbose_level=args['verbose'])
         else:
             log_configuration(log_dir=path_config.log_dir,
                               name="validator")

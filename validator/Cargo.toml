@@ -6,6 +6,7 @@ authors = ["Intel Corporation"]
 [dependencies]
 clap = "2"
 cpython = "0.2"
+log = { version = "0.4", features = ["std"] }
 
 [[bin]]
 name = "sawtooth-validator"
