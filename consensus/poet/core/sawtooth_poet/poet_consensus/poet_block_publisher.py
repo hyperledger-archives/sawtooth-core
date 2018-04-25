@@ -536,9 +536,11 @@ class PoetBlockPublisher(BlockPublisherInterface):
                 block_cache=self._block_cache,
                 poet_enclave_module=poet_enclave_module):
             LOGGER.info(
-                'Reject building on block %s: Validator is claiming blocks '
+                'Reject building on block %s: '
+                'Validator (signing public key: %s) is claiming blocks '
                 'too frequently.',
-                block_header.previous_block_id[:8])
+                block_header.previous_block_id[:8],
+                block_header.signer_public_key)
             return False
 
         # At this point, we know that if we are able to claim the block we are

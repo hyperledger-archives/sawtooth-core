@@ -621,7 +621,7 @@ class TestPoetBlockPublisher(TestCase):
             # function fails for the reason we expect.
 
             (message, *_), _ = mock_logger.info.call_args
-            self.assertTrue('Validator is claiming blocks too '
+            self.assertTrue('is claiming blocks too '
                             'frequently' in message)
 
     @mock.patch('sawtooth_poet.poet_consensus.poet_block_publisher.'
